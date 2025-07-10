@@ -40,9 +40,10 @@ import {
 const sidebarItems = [
   { title: 'Dashboard', url: '/admin/dashboard', icon: BarChart3 },
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
+  { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
-  { title: 'Analytics', url: '/admin/analytics', icon: ClipboardList },
+  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Settings', url: '/admin/settings', icon: Settings },
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];

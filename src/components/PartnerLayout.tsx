@@ -32,12 +32,14 @@ import {
   Settings,
   LogOut,
   Menu,
+  ClipboardList,
 } from 'lucide-react';
 
 const sidebarItems = [
   { title: 'Dashboard', url: '/partner/dashboard', icon: BarChart3 },
   { title: 'Submit Work Order', url: '/partner/work-orders/new', icon: Plus },
   { title: 'View Work Orders', url: '/partner/work-orders', icon: FileText },
+  { title: 'Reports', url: '/partner/reports', icon: ClipboardList },
 ];
 
 function PartnerSidebar() {

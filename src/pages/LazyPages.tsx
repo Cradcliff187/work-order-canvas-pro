@@ -25,3 +25,9 @@ export const ReportDetail = lazy(() => import('@/pages/subcontractor/ReportDetai
 export const Auth = lazy(() => import('@/pages/Auth'));
 export const Dashboard = lazy(() => import('@/pages/Dashboard'));
 export const DevTools = lazy(() => import('@/pages/DevTools'));
+
+// Report Pages
+export const AdminReports = lazy(() => import('@/pages/admin/AdminReports'));
+export const AdminReportDetail = lazy(() => import('@/pages/admin/AdminReportDetail'));
+export const PartnerReports = lazy(() => import('@/pages/partner/PartnerReports'));
+export const PartnerReportDetail = lazy(() => import('@/pages/partner/PartnerReportDetail'));

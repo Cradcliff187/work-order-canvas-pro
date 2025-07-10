@@ -23,10 +23,14 @@ import {
   AdminOrganizations,
   AdminWorkOrders,
   AdminAnalytics,
+  AdminReports,
+  AdminReportDetail,
   PartnerDashboard,
   SubmitWorkOrder,
   WorkOrderList,
   WorkOrderDetail,
+  PartnerReports,
+  PartnerReportDetail,
   SubcontractorDashboard,
   SubcontractorWorkOrders,
   SubcontractorWorkOrderDetail,
@@ -117,6 +121,24 @@ const App = () => (
                 </AdminLayout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/reports" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminReports />
+                  </Suspense>
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/reports/:id" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminReportDetail />
+                  </Suspense>
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/dev-tools" element={
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
@@ -160,6 +182,24 @@ const App = () => (
                 <PartnerLayout>
                   <Suspense fallback={<LoadingSpinner />}>
                     <WorkOrderDetail />
+                  </Suspense>
+                </PartnerLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/partner/reports" element={
+              <ProtectedRoute requiredUserType="partner">
+                <PartnerLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PartnerReports />
+                  </Suspense>
+                </PartnerLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/partner/reports/:id" element={
+              <ProtectedRoute requiredUserType="partner">
+                <PartnerLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PartnerReportDetail />
                   </Suspense>
                 </PartnerLayout>
               </ProtectedRoute>
