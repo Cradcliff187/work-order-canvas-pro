@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ClipboardList, FileText, Home, LogOut, Menu, History } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SubcontractorLayoutProps {
   children: ReactNode;
@@ -14,6 +16,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   const navigation = [
     { name: "Dashboard", href: "/subcontractor/dashboard", icon: Home },
@@ -100,10 +103,13 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 md:ml-64">
+        <main className={`flex-1 md:ml-64 ${isMobile ? 'pb-20' : ''}`}>
           <div className="container py-6">{children}</div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <MobileBottomNav />}
     </div>
   );
 }

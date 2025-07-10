@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
 import { Search, FileText, Calendar, MapPin } from "lucide-react";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileWorkOrderCard } from "@/components/MobileWorkOrderCard";
+import { MobilePullToRefresh } from "@/components/MobilePullToRefresh";
 import {
   Select,
   SelectContent,
@@ -19,6 +22,16 @@ export default function SubcontractorWorkOrders() {
   const { assignedWorkOrders } = useSubcontractorWorkOrders();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
+  const handleRefresh = async () => {
+    await assignedWorkOrders.refetch();
+  };
+
+  const handleWorkOrderTap = (workOrder: any) => {
+    navigate(`/subcontractor/work-orders/${workOrder.id}`);
+  };
 
   const workOrders = assignedWorkOrders.data || [];
 
@@ -80,13 +93,13 @@ export default function SubcontractorWorkOrders() {
     );
   }
 
-  return (
+  const content = (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">My Work Orders</h1>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Always visible */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -111,7 +124,7 @@ export default function SubcontractorWorkOrders() {
       </div>
 
       {/* Work Orders List */}
-      <div className="grid gap-4">
+      <div className={isMobile ? "space-y-4" : "grid gap-4"}>
         {filteredWorkOrders.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
@@ -122,76 +135,93 @@ export default function SubcontractorWorkOrders() {
             </CardContent>
           </Card>
         ) : (
-          filteredWorkOrders.map((workOrder) => (
-            <Card key={workOrder.id} className={hasUnsubmittedReport(workOrder) ? "border-orange-200 bg-orange-50" : ""}>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg">
-                        {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`}
-                      </h3>
-                      <Badge className={getStatusColor(workOrder.status)}>
-                        {formatStatus(workOrder.status)}
-                      </Badge>
-                      {hasUnsubmittedReport(workOrder) && (
-                        <Badge variant="destructive">Report Due</Badge>
+          filteredWorkOrders.map((workOrder) => 
+            isMobile ? (
+              <MobileWorkOrderCard
+                key={workOrder.id}
+                workOrder={workOrder}
+                onTap={handleWorkOrderTap}
+                showActions={true}
+              />
+            ) : (
+              <Card key={workOrder.id} className={hasUnsubmittedReport(workOrder) ? "border-orange-200 bg-orange-50" : ""}>
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-lg">
+                          {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`}
+                        </h3>
+                        <Badge className={getStatusColor(workOrder.status)}>
+                          {formatStatus(workOrder.status)}
+                        </Badge>
+                        {hasUnsubmittedReport(workOrder) && (
+                          <Badge variant="destructive">Report Due</Badge>
+                        )}
+                      </div>
+
+                      <h4 className="font-medium text-foreground">{workOrder.title}</h4>
+
+                      {workOrder.store_location && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{workOrder.store_location}</span>
+                          {workOrder.street_address && (
+                            <span>• {workOrder.street_address}</span>
+                          )}
+                        </div>
+                      )}
+
+                      {workOrder.trades && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Trade:</span> {workOrder.trades.name}
+                        </div>
+                      )}
+
+                      {workOrder.due_date && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>Due: {format(new Date(workOrder.due_date), "MMM d, yyyy")}</span>
+                        </div>
+                      )}
+
+                      {workOrder.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {workOrder.description}
+                        </p>
                       )}
                     </div>
 
-                    <h4 className="font-medium text-foreground">{workOrder.title}</h4>
-
-                    {workOrder.store_location && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span>{workOrder.store_location}</span>
-                        {workOrder.street_address && (
-                          <span>• {workOrder.street_address}</span>
-                        )}
-                      </div>
-                    )}
-
-                    {workOrder.trades && (
-                      <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Trade:</span> {workOrder.trades.name}
-                      </div>
-                    )}
-
-                    {workOrder.due_date && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>Due: {format(new Date(workOrder.due_date), "MMM d, yyyy")}</span>
-                      </div>
-                    )}
-
-                    {workOrder.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {workOrder.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:items-end">
-                    <Link to={`/subcontractor/work-orders/${workOrder.id}`}>
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                    </Link>
-                    {(workOrder.status === "assigned" || workOrder.status === "in_progress") && (
-                      <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
-                        <Button size="sm" className="w-full sm:w-auto">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Submit Report
+                    <div className="flex flex-col gap-2 sm:items-end">
+                      <Link to={`/subcontractor/work-orders/${workOrder.id}`}>
+                        <Button variant="outline" size="sm">
+                          View Details
                         </Button>
                       </Link>
-                    )}
+                      {(workOrder.status === "assigned" || workOrder.status === "in_progress") && (
+                        <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
+                          <Button size="sm" className="w-full sm:w-auto">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Submit Report
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            )
+          )
         )}
       </div>
     </div>
+  );
+
+  return isMobile ? (
+    <MobilePullToRefresh onRefresh={handleRefresh}>
+      {content}
+    </MobilePullToRefresh>
+  ) : (
+    content
   );
 }
