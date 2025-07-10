@@ -23,17 +23,6 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     sourcemap: false,
     cssCodeSplit: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
-          supabase: ['@supabase/supabase-js'],
-          query: ['@tanstack/react-query'],
-        },
-      },
-    },
     chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
