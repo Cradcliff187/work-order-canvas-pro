@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,29 +8,39 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./components/AdminLayout";
 import PartnerLayout from "./components/PartnerLayout";
+import { SubcontractorLayout } from "./components/SubcontractorLayout";
 import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminWorkOrders from "./pages/admin/AdminWorkOrders";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminOrganizations from "./pages/admin/AdminOrganizations";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
-import PartnerDashboard from "./pages/partner/PartnerDashboard";
-import SubmitWorkOrder from "./pages/partner/SubmitWorkOrder";
-import WorkOrderList from "./pages/partner/WorkOrderList";
-import WorkOrderDetail from "./pages/partner/WorkOrderDetail";
-import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
-import { SubcontractorLayout } from "./components/SubcontractorLayout";
-import SubcontractorWorkOrders from "./pages/subcontractor/SubcontractorWorkOrders";
-import SubcontractorWorkOrderDetail from "./pages/subcontractor/SubcontractorWorkOrderDetail";
-import SubmitReport from "./pages/subcontractor/SubmitReport";
-import ReportHistory from "./pages/subcontractor/ReportHistory";
-import ReportDetail from "./pages/subcontractor/ReportDetail";
-import DevTools from "./pages/DevTools";
-import DebugAuth from "./pages/DebugAuth";
 import NotFound from "./pages/NotFound";
+
+// Lazy-loaded page imports
+import {
+  Auth,
+  Dashboard,
+  DevTools,
+  AdminDashboard,
+  AdminUsers,
+  AdminOrganizations,
+  AdminWorkOrders,
+  AdminAnalytics,
+  PartnerDashboard,
+  SubmitWorkOrder,
+  WorkOrderList,
+  WorkOrderDetail,
+  SubcontractorDashboard,
+  SubcontractorWorkOrders,
+  SubcontractorWorkOrderDetail,
+  SubmitReport,
+  ReportHistory,
+  ReportDetail,
+} from "./pages/LazyPages";
+
+// Loading component for Suspense
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-[200px]">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -41,129 +52,176 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/debug-auth" element={<DebugAuth />} />
+            {/* Auth routes - immediate loading */}
+            <Route path="/auth" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <Auth />
+              </Suspense>
+            } />
+            
+            {/* Main dashboard route */}
             <Route path="/" element={
               <ProtectedRoute>
                 <div className="min-h-screen bg-background">
                   <Navbar />
-                  <Dashboard />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Dashboard />
+                  </Suspense>
                 </div>
               </ProtectedRoute>
             } />
+
+            {/* Admin routes - lazy loaded as group */}
             <Route path="/admin/dashboard" element={
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
-                  <AdminDashboard />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminDashboard />
+                  </Suspense>
                 </AdminLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/work-orders" element={
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
-                  <AdminWorkOrders />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminWorkOrders />
+                  </Suspense>
                 </AdminLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
-                  <AdminUsers />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminUsers />
+                  </Suspense>
                 </AdminLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/organizations" element={
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
-                  <AdminOrganizations />
-                </AdminLayout>
-              </ProtectedRoute>
-             } />
-            <Route path="/admin/analytics" element={
-              <ProtectedRoute requiredUserType="admin">
-                <AdminLayout>
-                  <AdminAnalytics />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminOrganizations />
+                  </Suspense>
                 </AdminLayout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/analytics" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminAnalytics />
+                  </Suspense>
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/dev-tools" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <DevTools />
+                  </Suspense>
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* Partner routes - lazy loaded as group */}
             <Route path="/partner/dashboard" element={
               <ProtectedRoute requiredUserType="partner">
                 <PartnerLayout>
-                  <PartnerDashboard />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PartnerDashboard />
+                  </Suspense>
                 </PartnerLayout>
               </ProtectedRoute>
             } />
             <Route path="/partner/work-orders/new" element={
               <ProtectedRoute requiredUserType="partner">
                 <PartnerLayout>
-                  <SubmitWorkOrder />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubmitWorkOrder />
+                  </Suspense>
                 </PartnerLayout>
               </ProtectedRoute>
             } />
             <Route path="/partner/work-orders" element={
               <ProtectedRoute requiredUserType="partner">
                 <PartnerLayout>
-                  <WorkOrderList />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <WorkOrderList />
+                  </Suspense>
                 </PartnerLayout>
               </ProtectedRoute>
             } />
             <Route path="/partner/work-orders/:id" element={
               <ProtectedRoute requiredUserType="partner">
                 <PartnerLayout>
-                  <WorkOrderDetail />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <WorkOrderDetail />
+                  </Suspense>
                 </PartnerLayout>
               </ProtectedRoute>
             } />
+
+            {/* Subcontractor routes - lazy loaded as group */}
             <Route path="/subcontractor/dashboard" element={
               <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
-                  <SubcontractorDashboard />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubcontractorDashboard />
+                  </Suspense>
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/work-orders" element={
               <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
-                  <SubcontractorWorkOrders />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubcontractorWorkOrders />
+                  </Suspense>
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/work-orders/:id" element={
               <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
-                  <SubcontractorWorkOrderDetail />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubcontractorWorkOrderDetail />
+                  </Suspense>
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/reports/new/:workOrderId" element={
               <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
-                  <SubmitReport />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubmitReport />
+                  </Suspense>
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/reports" element={
               <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
-                  <ReportHistory />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ReportHistory />
+                  </Suspense>
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/reports/:id" element={
               <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
-                  <ReportDetail />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ReportDetail />
+                  </Suspense>
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
-            <Route path="/dev-tools" element={
-              <ProtectedRoute requiredUserType="admin">
-                <AdminLayout>
-                  <DevTools />
-                </AdminLayout>
-              </ProtectedRoute>
-            } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+            {/* 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
