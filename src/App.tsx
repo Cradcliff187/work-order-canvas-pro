@@ -12,6 +12,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminWorkOrders from "./pages/admin/AdminWorkOrders";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminOrganizations from "./pages/admin/AdminOrganizations";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
 import DevTools from "./pages/DevTools";
@@ -49,6 +51,20 @@ const App = () => (
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
                   <AdminWorkOrders />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/users" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <AdminUsers />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/organizations" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <AdminOrganizations />
                 </AdminLayout>
               </ProtectedRoute>
             } />
