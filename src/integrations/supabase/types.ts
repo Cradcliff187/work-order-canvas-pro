@@ -740,6 +740,10 @@ export type Database = {
       }
     }
     Functions: {
+      auth_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       calculate_completion_time_by_trade: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
