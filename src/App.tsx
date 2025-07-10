@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
 import DevTools from "./pages/DevTools";
+import DebugAuth from "./pages/DebugAuth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/debug-auth" element={<DebugAuth />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <div className="min-h-screen bg-background">

@@ -7,6 +7,7 @@ import { Copy, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-rea
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Database } from '@/integrations/supabase/types';
 
 interface DebugInfo {
   authUid: string | null;
@@ -71,7 +72,7 @@ const DebugAuth = () => {
       }
 
       // Test RLS on various tables
-      const tables = ['profiles', 'organizations', 'work_orders', 'trades'];
+      const tables: Array<keyof Database['public']['Tables']> = ['profiles', 'organizations', 'work_orders', 'trades'];
       
       for (const table of tables) {
         try {
@@ -85,7 +86,7 @@ const DebugAuth = () => {
             error: error?.message,
             rowCount: data?.length || 0
           };
-        } catch (error) {
+        } catch (error: any) {
           info.rlsTests[table] = {
             success: false,
             error: error.message,
