@@ -1,1 +1,19 @@
 project_id = "inudoymofztrvxhrlrek"
+
+[functions.email-work-order-created]
+verify_jwt = false
+
+[functions.email-work-order-assigned]
+verify_jwt = false
+
+[functions.email-report-submitted]
+verify_jwt = false
+
+[functions.email-report-reviewed]
+verify_jwt = false
+
+[functions.email-work-order-completed]
+verify_jwt = false
+
+[functions.resend-webhook]
+verify_jwt = false
