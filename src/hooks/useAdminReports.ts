@@ -9,11 +9,20 @@ type WorkOrderReport = Database['public']['Tables']['work_order_reports']['Row']
     work_order_number: string | null;
     title: string;
     organizations: { name: string } | null;
+    trades: { name: string } | null;
+    store_location: string | null;
+    street_address: string | null;
+    city: string | null;
+    state: string | null;
+    zip_code: string | null;
+    description: string | null;
   } | null;
   subcontractor: {
     first_name: string;
     last_name: string;
     company_name: string | null;
+    email: string;
+    phone: string | null;
   } | null;
   reviewed_by: {
     first_name: string;

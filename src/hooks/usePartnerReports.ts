@@ -6,6 +6,14 @@ type WorkOrderReport = Database['public']['Tables']['work_order_reports']['Row']
   work_orders: {
     work_order_number: string | null;
     title: string;
+    organizations: { name: string } | null;
+    trades: { name: string } | null;
+    store_location: string | null;
+    street_address: string | null;
+    city: string | null;
+    state: string | null;
+    zip_code: string | null;
+    description: string | null;
   } | null;
   subcontractor: {
     first_name: string;
@@ -50,7 +58,14 @@ export function usePartnerReports(
           work_orders!work_order_id(
             work_order_number,
             title,
-            organization_id
+            store_location,
+            street_address,
+            city,
+            state,
+            zip_code,
+            description,
+            organizations!organization_id(name),
+            trades!trade_id(name)
           ),
           subcontractor:profiles!subcontractor_user_id(
             first_name,
