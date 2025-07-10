@@ -55,7 +55,7 @@ export const WorkOrderReceived = ({
 
         <Section style={section}>
           <Text style={label}>Description:</Text>
-          <Text style={description}>{description}</Text>
+          <Text style={descriptionStyle}>{description}</Text>
         </Section>
 
         <Section style={section}>
@@ -117,7 +117,7 @@ const detail = {
   margin: '4px 0',
 };
 
-const description = {
+const descriptionStyle = {
   color: '#374151',
   fontSize: '14px',
   lineHeight: '20px',
@@ -125,7 +125,7 @@ const description = {
   padding: '12px',
   borderRadius: '6px',
   border: '1px solid #e5e7eb',
-};
+} as const;
 
 const button = {
   backgroundColor: '#2563eb',
