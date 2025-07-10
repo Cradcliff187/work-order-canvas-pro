@@ -115,7 +115,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Organizations</SelectItem>
-              {organizations?.map((org) => (
+              {Array.isArray(organizations) && organizations.map((org) => (
                 <SelectItem key={org.id} value={org.id}>
                   {org.name}
                 </SelectItem>
@@ -139,7 +139,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Trades</SelectItem>
-              {trades?.map((trade) => (
+              {Array.isArray(trades) && trades.map((trade) => (
                 <SelectItem key={trade.id} value={trade.id}>
                   {trade.name}
                 </SelectItem>
