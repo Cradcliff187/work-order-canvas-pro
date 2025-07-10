@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,19 +105,19 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
         <div className="space-y-2">
           <label className="text-sm font-medium">Organization</label>
           <Select
-            value={filters.organization_id || ''}
+            value={filters.organization_id || 'all-organizations'}
             onValueChange={(value) => onFiltersChange({ 
               ...filters, 
-              organization_id: value === 'all' ? undefined : value 
+              organization_id: value === 'all-organizations' ? undefined : value 
             })}
           >
             <SelectTrigger>
               <SelectValue placeholder="All Organizations" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Organizations</SelectItem>
+              <SelectItem value="all-organizations">All Organizations</SelectItem>
               {Array.isArray(organizations) && organizations.map((org) => (
-                <SelectItem key={org.id} value={org.id}>
+                <SelectItem key={org.id} value={org.id || `org-${org.name}`}>
                   {org.name}
                 </SelectItem>
               ))}
@@ -128,19 +129,19 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
         <div className="space-y-2">
           <label className="text-sm font-medium">Trade</label>
           <Select
-            value={filters.trade_id || ''}
+            value={filters.trade_id || 'all-trades'}
             onValueChange={(value) => onFiltersChange({ 
               ...filters, 
-              trade_id: value === 'all' ? undefined : value 
+              trade_id: value === 'all-trades' ? undefined : value 
             })}
           >
             <SelectTrigger>
               <SelectValue placeholder="All Trades" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Trades</SelectItem>
+              <SelectItem value="all-trades">All Trades</SelectItem>
               {Array.isArray(trades) && trades.map((trade) => (
-                <SelectItem key={trade.id} value={trade.id}>
+                <SelectItem key={trade.id} value={trade.id || `trade-${trade.name}`}>
                   {trade.name}
                 </SelectItem>
               ))}
