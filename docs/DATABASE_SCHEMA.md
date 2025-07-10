@@ -853,62 +853,6 @@ $function$
 4. **report_reviewed** - Notification when admin reviews/approves report
 5. **work_order_completed** - Notification when work order is marked complete
 
-## Schema Issues & Notes
-
-### Critical Issues
-
-#### 1. Hardcoded Admin UUID Dependency
-**Issue**: System relies on hardcoded UUID `2e2832d0-72aa-44df-b7a7-5e7b61a4bd5a` for admin access
-**Location**: Migration `20250710165735-ae10a6f3-10dc-424a-85c1-f66dbbebae34.sql`
-**Impact**: Not scalable, prevents multiple admins
-**RLS Policy**: `"Known admin users can manage all profiles"`
-
-#### 2. RLS Infinite Recursion History
-**Issue**: Multiple attempts to fix RLS infinite recursion in profiles table
-**Migrations Affected**: 
-- `20250710165118-8a79b2fc-4c0d-49ef-8ad5-591f85de7a2f.sql` - Created security definer functions
-- `20250710165735-ae10a6f3-10dc-424a-85c1-f66dbbebae34.sql` - Replaced with hardcoded UUID approach
-**Current Solution**: Uses `get_user_type_secure()` function with SECURITY DEFINER to bypass RLS
-
-#### 3. Removed Tables During Development
-**Tables Removed**: `projects`, `work_order_comments`
-**Migration**: `20250710161623-d1384cdd-3a6d-4826-8471-358d5d142cb1.sql`
-**Impact**: Originally planned for 14 tables, reduced to 12 tables
-**References**: All foreign keys and policies properly cleaned up
-
-### Design Concerns
-
-#### 1. Storage Bucket Dependency
-**Issue**: Work order functionality depends on `work-order-photos` storage bucket
-**Migration**: `20250710173317-553aa188-441e-4fc2-85d9-e5f8af7c515d.sql`
-**Dependencies**: Storage policies reference RLS functions that must exist first
-
-#### 2. Complex RLS Policies
-**Issue**: Some RLS policies are complex with multiple JOIN operations
-**Example**: Subcontractor organization access policies
-**Performance**: May impact query performance on large datasets
-
-#### 3. Missing Foreign Key Constraints
-**Issue**: Some relationships rely on application-level enforcement rather than database constraints
-**Examples**: 
-- work_order_attachments to work_orders (nullable work_order_id)
-- Email logs to work orders (nullable work_order_id)
-
-### Migration History Summary
-
-| Migration | Date | Purpose | Major Changes |
-|-----------|------|---------|---------------|
-| 001 | 2025-01-07 | Initial schema | Created basic project-based schema with 14 tables |
-| 002 | 2025-01-07 | Core schema | Created comprehensive 12-table schema aligned with requirements |
-| 003 | 2025-01-07 | Schema cleanup | Removed projects and work_order_comments tables |
-| 004 | 2025-01-07 | RLS policies | Comprehensive RLS implementation |
-| 005 | 2025-01-07 | Fix RLS recursion | Created security definer functions |
-| 006 | 2025-01-07 | Admin user setup | Set specific user as admin |
-| 007 | 2025-01-07 | Hard-coded admin | Replaced with hardcoded UUID approach |
-| 008 | 2025-01-07 | Performance indexes | Added performance indexes and unique constraints |
-| 009 | 2025-01-07 | Storage setup | Created work-order-photos bucket and policies |
-| 010 | 2025-01-07 | Email templates | Inserted default email templates |
-| 011 | 2025-01-07 | Analytics views | Created materialized views and analytics functions |
 
 ## Performance Considerations
 
