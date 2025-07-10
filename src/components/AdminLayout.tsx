@@ -42,7 +42,7 @@ const sidebarItems = [
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
-  { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
+  { title: 'Analytics', url: '/admin/analytics', icon: ClipboardList },
   { title: 'Settings', url: '/admin/settings', icon: Settings },
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];

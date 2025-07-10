@@ -15,6 +15,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminWorkOrders from "./pages/admin/AdminWorkOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrganizations from "./pages/admin/AdminOrganizations";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import SubmitWorkOrder from "./pages/partner/SubmitWorkOrder";
 import WorkOrderList from "./pages/partner/WorkOrderList";
@@ -75,6 +76,13 @@ const App = () => (
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
                   <AdminOrganizations />
+                </AdminLayout>
+              </ProtectedRoute>
+             } />
+            <Route path="/admin/analytics" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <AdminAnalytics />
                 </AdminLayout>
               </ProtectedRoute>
             } />

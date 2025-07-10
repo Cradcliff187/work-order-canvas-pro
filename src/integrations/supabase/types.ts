@@ -50,6 +50,13 @@ export type Database = {
             foreignKeyName: "audit_logs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -131,6 +138,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_settings_updated_by_user_id_fkey"
+            columns: ["updated_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
           },
           {
             foreignKeyName: "email_settings_updated_by_user_id_fkey"
@@ -285,6 +299,13 @@ export type Database = {
             foreignKeyName: "system_settings_updated_by_user_id_fkey"
             columns: ["updated_by_user_id"]
             isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "system_settings_updated_by_user_id_fkey"
+            columns: ["updated_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -345,6 +366,13 @@ export type Database = {
             foreignKeyName: "user_organizations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "user_organizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -385,6 +413,13 @@ export type Database = {
           work_order_report_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "work_order_attachments_uploaded_by_user_id_fkey"
+            columns: ["uploaded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
           {
             foreignKeyName: "work_order_attachments_uploaded_by_user_id_fkey"
             columns: ["uploaded_by_user_id"]
@@ -465,8 +500,22 @@ export type Database = {
             foreignKeyName: "work_order_reports_reviewed_by_user_id_fkey"
             columns: ["reviewed_by_user_id"]
             isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "work_order_reports_reviewed_by_user_id_fkey"
+            columns: ["reviewed_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_reports_subcontractor_user_id_fkey"
+            columns: ["subcontractor_user_id"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
           },
           {
             foreignKeyName: "work_order_reports_subcontractor_user_id_fkey"
@@ -598,8 +647,22 @@ export type Database = {
             foreignKeyName: "work_orders_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "work_orders_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
           },
           {
             foreignKeyName: "work_orders_created_by_fkey"
@@ -626,9 +689,70 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_subcontractor_performance: {
+        Row: {
+          avg_completion_hours: number | null
+          avg_invoice_amount: number | null
+          company_name: string | null
+          completed_jobs: number | null
+          first_name: string | null
+          last_name: string | null
+          on_time_jobs: number | null
+          quality_score: number | null
+          subcontractor_id: string | null
+          total_invoice_amount: number | null
+          total_jobs: number | null
+        }
+        Relationships: []
+      }
+      mv_work_order_analytics: {
+        Row: {
+          assigned_count: number | null
+          avg_completion_hours: number | null
+          cancelled_count: number | null
+          completed_count: number | null
+          in_progress_count: number | null
+          organization_id: string | null
+          received_count: number | null
+          submission_date: string | null
+          submission_month: string | null
+          submission_week: string | null
+          total_invoice_amount: number | null
+          total_orders: number | null
+          trade_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      calculate_completion_time_by_trade: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          trade_name: string
+          avg_completion_hours: number
+          total_orders: number
+          completed_orders: number
+        }[]
+      }
+      calculate_first_time_fix_rate: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: number
+      }
       generate_work_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -636,6 +760,15 @@ export type Database = {
       get_current_user_type: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_type"]
+      }
+      get_geographic_distribution: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          state: string
+          city: string
+          work_order_count: number
+          avg_completion_hours: number
+        }[]
       }
       get_user_organizations: {
         Args: Record<PropertyKey, never>
@@ -650,6 +783,10 @@ export type Database = {
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      refresh_analytics_views: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       user_assigned_to_work_order: {
         Args: { wo_id: string }
