@@ -643,6 +643,10 @@ export type Database = {
           organization_id: string
         }[]
       }
+      get_user_type_secure: {
+        Args: { user_uuid?: string }
+        Returns: Database["public"]["Enums"]["user_type"]
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
