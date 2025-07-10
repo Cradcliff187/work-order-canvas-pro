@@ -104,7 +104,7 @@ const Dashboard = () => {
     }
   };
 
-  const canCreateWorkOrders = profile?.role && ['admin', 'project_manager', 'foreman'].includes(profile.role);
+  const canCreateWorkOrders = profile?.user_type && ['admin', 'partner'].includes(profile.user_type);
 
   return (
     <div className="flex-1 space-y-6 p-6">

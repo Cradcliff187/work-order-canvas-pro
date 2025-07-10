@@ -23,17 +23,17 @@ const Navbar = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
+  const getUserTypeColor = (userType: string) => {
+    switch (userType) {
       case 'admin': return 'text-destructive';
-      case 'project_manager': return 'text-primary';
-      case 'foreman': return 'text-warning';
+      case 'partner': return 'text-primary';
+      case 'subcontractor': return 'text-secondary';
       default: return 'text-muted-foreground';
     }
   };
 
-  const formatRole = (role: string) => {
-    return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const formatUserType = (userType: string) => {
+    return userType.charAt(0).toUpperCase() + userType.slice(1);
   };
 
   return (
@@ -71,8 +71,8 @@ const Navbar = () => {
                 <p className="text-xs leading-none text-muted-foreground">
                   {profile?.email}
                 </p>
-                <p className={`text-xs leading-none font-medium ${getRoleColor(profile?.role || '')}`}>
-                  {formatRole(profile?.role || '')}
+                <p className={`text-xs leading-none font-medium ${getUserTypeColor(profile?.user_type || '')}`}>
+                  {formatUserType(profile?.user_type || '')}
                 </p>
               </div>
             </DropdownMenuLabel>

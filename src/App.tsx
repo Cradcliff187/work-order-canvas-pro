@@ -9,6 +9,9 @@ import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import PartnerDashboard from "./pages/partner/PartnerDashboard";
+import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +30,30 @@ const App = () => (
                 <div className="min-h-screen bg-background">
                   <Navbar />
                   <Dashboard />
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/dashboard" element={
+              <ProtectedRoute requiredUserType="admin">
+                <div className="min-h-screen bg-background">
+                  <Navbar />
+                  <AdminDashboard />
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/partner/dashboard" element={
+              <ProtectedRoute requiredUserType="partner">
+                <div className="min-h-screen bg-background">
+                  <Navbar />
+                  <PartnerDashboard />
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/subcontractor/dashboard" element={
+              <ProtectedRoute requiredUserType="subcontractor">
+                <div className="min-h-screen bg-background">
+                  <Navbar />
+                  <SubcontractorDashboard />
                 </div>
               </ProtectedRoute>
             } />

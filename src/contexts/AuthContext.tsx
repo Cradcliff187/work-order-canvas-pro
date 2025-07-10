@@ -8,7 +8,7 @@ interface Profile {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'project_manager' | 'foreman' | 'subcontractor';
+  user_type: 'admin' | 'partner' | 'subcontractor';
   company_name?: string;
   phone?: string;
   avatar_url?: string;
@@ -73,6 +73,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(async () => {
             const profileData = await fetchProfile(session.user.id);
             setProfile(profileData);
+            
+            // Redirect based on user type after login
+            if (event === 'SIGNED_IN' && profileData?.user_type) {
+              const redirectPaths = {
+                'admin': '/admin/dashboard',
+                'partner': '/partner/dashboard',
+                'subcontractor': '/subcontractor/dashboard'
+              };
+              const redirectPath = redirectPaths[profileData.user_type];
+              if (redirectPath && window.location.pathname === '/') {
+                window.location.href = redirectPath;
+              }
+            }
           }, 100);
         } else {
           setProfile(null);

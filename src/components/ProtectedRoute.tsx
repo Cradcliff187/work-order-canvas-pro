@@ -5,10 +5,10 @@ import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'project_manager' | 'foreman' | 'subcontractor';
+  requiredUserType?: 'admin' | 'partner' | 'subcontractor';
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
   const { user, profile, loading } = useAuth();
 
   if (loading) {
@@ -26,17 +26,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredRole && profile?.role !== requiredRole) {
+  if (requiredUserType && profile?.user_type !== requiredUserType) {
     // Check if user has sufficient permissions
-    const roleHierarchy = {
-      'admin': 4,
-      'project_manager': 3,
-      'foreman': 2,
+    const userTypeHierarchy = {
+      'admin': 3,
+      'partner': 2,
       'subcontractor': 1
     };
 
-    const userLevel = roleHierarchy[profile?.role || 'subcontractor'];
-    const requiredLevel = roleHierarchy[requiredRole];
+    const userLevel = userTypeHierarchy[profile?.user_type || 'subcontractor'];
+    const requiredLevel = userTypeHierarchy[requiredUserType];
 
     if (userLevel < requiredLevel) {
       return (
