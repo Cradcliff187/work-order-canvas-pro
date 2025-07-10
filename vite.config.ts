@@ -21,17 +21,16 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: 'esnext',
-    minify: 'terser',
     sourcemap: false,
     cssCodeSplit: true,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
           supabase: ['@supabase/supabase-js'],
-          charts: ['recharts'],
-          utils: ['date-fns', 'clsx', 'class-variance-authority'],
+          query: ['@tanstack/react-query'],
         },
       },
     },
@@ -45,10 +44,5 @@ export default defineConfig(({ mode }) => ({
       '@supabase/supabase-js',
       '@tanstack/react-query',
     ],
-  },
-  // Performance optimizations for mobile
-  esbuild: {
-    target: 'esnext',
-    treeShaking: true,
   },
 }));
