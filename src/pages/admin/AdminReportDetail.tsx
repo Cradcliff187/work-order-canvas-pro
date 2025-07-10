@@ -28,7 +28,12 @@ export default function AdminReportDetail() {
   const navigate = useNavigate();
   const [reviewNotes, setReviewNotes] = useState('');
   
-  const { data: report, isLoading, error } = useAdminReportDetail(id!);
+  // Validate ID format and prevent literal ":id" from being used
+  const isValidId = id && id !== ':id' && id.length > 8;
+  
+  console.log('[AdminReportDetail] Route ID:', id, 'Valid:', isValidId);
+  
+  const { data: report, isLoading, error } = useAdminReportDetail(isValidId ? id! : '');
   const { reviewReport } = useAdminReportMutations();
 
   const getStatusBadge = (status: string) => {
@@ -47,7 +52,7 @@ export default function AdminReportDetail() {
   };
 
   const handleReview = (status: 'approved' | 'rejected') => {
-    if (!id) return;
+    if (!id || !isValidId) return;
     reviewReport.mutate({ 
       reportId: id, 
       status, 
@@ -81,6 +86,24 @@ export default function AdminReportDetail() {
     );
   }
 
+  if (!isValidId) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <p className="text-destructive">Invalid report ID. Please select a report from the list.</p>
+              <Button onClick={() => navigate('/admin/reports')} variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Reports
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (error || !report) {
     return (
       <div className="p-6">
@@ -88,6 +111,9 @@ export default function AdminReportDetail() {
           <CardContent className="p-6">
             <div className="text-center space-y-4">
               <p className="text-destructive">Error loading report details</p>
+              {error && (
+                <p className="text-sm text-red-600">Error: {error.message}</p>
+              )}
               <Button onClick={() => navigate('/admin/reports')} variant="outline">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Reports

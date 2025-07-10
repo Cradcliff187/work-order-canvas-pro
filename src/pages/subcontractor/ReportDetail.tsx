@@ -10,10 +10,15 @@ import { format } from "date-fns";
 export default function ReportDetail() {
   const { id } = useParams<{ id: string }>();
 
+  // Validate ID format and prevent literal ":id" from being used
+  const isValidId = id && id !== ':id' && id.length > 8;
+
   const reportQuery = useQuery({
     queryKey: ["report-detail", id],
     queryFn: async () => {
-      if (!id) throw new Error("Report ID is required");
+      if (!id || !isValidId) throw new Error("Invalid report ID");
+      
+      console.log('[ReportDetail] Querying with ID:', id);
       
       const { data, error } = await supabase
         .from("work_order_reports")
@@ -48,7 +53,7 @@ export default function ReportDetail() {
       if (error) throw error;
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && isValidId,
   });
 
   const handlePrint = () => {
@@ -78,6 +83,26 @@ export default function ReportDetail() {
     );
   }
 
+  if (!isValidId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/subcontractor/reports">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Invalid report ID. Please select a report from the list.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (reportQuery.error || !reportQuery.data) {
     return (
       <div className="space-y-6">
@@ -92,6 +117,11 @@ export default function ReportDetail() {
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             Report not found or you don't have access to view it.
+            {reportQuery.error && (
+              <p className="text-sm text-red-600 mt-2">
+                Error: {reportQuery.error.message}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
