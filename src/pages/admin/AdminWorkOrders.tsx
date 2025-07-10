@@ -21,6 +21,7 @@ import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrder
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
+import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { useToast } from '@/hooks/use-toast';
 import { Database } from '@/integrations/supabase/types';
 import { exportWorkOrders } from '@/lib/utils/export';
@@ -50,6 +51,8 @@ export default function AdminWorkOrders() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [filters, setFilters] = useState<WorkOrderFilters>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
 
   // Fetch data with server-side pagination and filtering
   const { data: workOrdersData, isLoading, error, refetch } = useWorkOrders(
@@ -75,6 +78,10 @@ export default function AdminWorkOrders() {
         deleteWorkOrder.mutate(workOrder.id);
       }
     },
+    onAssign: (workOrder) => {
+      setAssignmentWorkOrders([workOrder]);
+      setShowAssignModal(true);
+    },
   }), [deleteWorkOrder]);
 
   // React Table configuration
@@ -98,6 +105,7 @@ export default function AdminWorkOrders() {
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map(row => row.original.id);
+  const selectedWorkOrders = selectedRows.map(row => row.original);
 
   const handleClearFilters = () => {
     setFilters({});
@@ -124,6 +132,11 @@ export default function AdminWorkOrders() {
         variant: 'destructive' 
       });
     }
+  };
+
+  const handleBulkAssign = (workOrders: WorkOrder[]) => {
+    setAssignmentWorkOrders(workOrders);
+    setShowAssignModal(true);
   };
 
   const renderTableSkeleton = () => (
@@ -316,14 +329,26 @@ export default function AdminWorkOrders() {
       <BulkActionsBar
         selectedCount={selectedRows.length}
         selectedIds={selectedIds}
+        selectedWorkOrders={selectedWorkOrders}
         onClearSelection={handleClearSelection}
         onExport={handleExport}
+        onBulkAssign={handleBulkAssign}
       />
 
       {/* Create Modal */}
       <CreateWorkOrderModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+      />
+
+      {/* Assignment Modal */}
+      <AssignWorkOrderModal
+        isOpen={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false);
+          setAssignmentWorkOrders([]);
+        }}
+        workOrders={assignmentWorkOrders}
       />
     </div>
   );

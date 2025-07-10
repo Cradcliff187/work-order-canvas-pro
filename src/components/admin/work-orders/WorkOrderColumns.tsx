@@ -3,7 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Trash2, UserPlus } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
@@ -27,9 +27,10 @@ interface WorkOrderColumnsProps {
   onEdit: (workOrder: WorkOrder) => void;
   onView: (workOrder: WorkOrder) => void;
   onDelete: (workOrder: WorkOrder) => void;
+  onAssign: (workOrder: WorkOrder) => void;
 }
 
-export const createWorkOrderColumns = ({ onEdit, onView, onDelete }: WorkOrderColumnsProps): ColumnDef<WorkOrder>[] => [
+export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: WorkOrderColumnsProps): ColumnDef<WorkOrder>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -141,6 +142,12 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete }: WorkOrderCo
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
+            {(workOrder.status === 'received' || workOrder.status === 'assigned') && (
+              <DropdownMenuItem onClick={() => onAssign(workOrder)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Assign
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => onEdit(workOrder)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit

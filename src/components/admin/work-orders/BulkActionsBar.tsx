@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Users, Download, RotateCcw, X } from 'lucide-react';
+import { Users, Download, RotateCcw, X, UserPlus } from 'lucide-react';
 import { useUsers, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { Database } from '@/integrations/supabase/types';
 
@@ -12,8 +12,10 @@ type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 interface BulkActionsBarProps {
   selectedCount: number;
   selectedIds: string[];
+  selectedWorkOrders: any[];
   onClearSelection: () => void;
   onExport: (ids: string[]) => void;
+  onBulkAssign: (workOrders: any[]) => void;
 }
 
 const statusOptions: { value: WorkOrderStatus; label: string }[] = [
@@ -24,7 +26,7 @@ const statusOptions: { value: WorkOrderStatus; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-export function BulkActionsBar({ selectedCount, selectedIds, onClearSelection, onExport }: BulkActionsBarProps) {
+export function BulkActionsBar({ selectedCount, selectedIds, selectedWorkOrders, onClearSelection, onExport, onBulkAssign }: BulkActionsBarProps) {
   const [selectedStatus, setSelectedStatus] = useState<WorkOrderStatus | ''>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
   
@@ -61,6 +63,21 @@ export function BulkActionsBar({ selectedCount, selectedIds, onClearSelection, o
 
   const handleExport = () => {
     onExport(selectedIds);
+  };
+
+  const handleBulkAssign = () => {
+    onBulkAssign(selectedWorkOrders);
+  };
+
+  // Check if all selected work orders have the same trade and can be assigned
+  const canBulkAssign = () => {
+    if (selectedWorkOrders.length === 0) return false;
+    
+    const trades = [...new Set(selectedWorkOrders.map(wo => wo.trade_id))];
+    const assignableStatuses = ['received', 'assigned'];
+    const allAssignable = selectedWorkOrders.every(wo => assignableStatuses.includes(wo.status));
+    
+    return trades.length === 1 && allAssignable;
   };
 
   if (selectedCount === 0) return null;
@@ -126,6 +143,17 @@ export function BulkActionsBar({ selectedCount, selectedIds, onClearSelection, o
         </div>
 
         <Separator orientation="vertical" className="h-6" />
+
+        {/* Bulk Assign */}
+        {canBulkAssign() && (
+          <>
+            <Button size="sm" onClick={handleBulkAssign}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Bulk Assign
+            </Button>
+            <Separator orientation="vertical" className="h-6" />
+          </>
+        )}
 
         {/* Export */}
         <Button size="sm" variant="outline" onClick={handleExport}>
