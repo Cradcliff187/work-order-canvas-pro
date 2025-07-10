@@ -80,13 +80,13 @@ const AdminDashboard = () => {
                 )}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {isLoading ? (
                 <Skeleton className="h-3 w-20" />
               ) : (
                 `${metrics?.totalWorkOrders.lastMonth || 0} last month`
               )}
-            </p>
+            </div>
           </CardContent>
         </Card>
 
