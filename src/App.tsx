@@ -101,11 +101,45 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/dashboard" element={
-              <ProtectedRoute requiredUserType="subcontractor">
-                <div className="min-h-screen bg-background">
-                  <Navbar />
+              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+                <SubcontractorLayout>
                   <SubcontractorDashboard />
-                </div>
+                </SubcontractorLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/subcontractor/work-orders" element={
+              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+                <SubcontractorLayout>
+                  <SubcontractorWorkOrders />
+                </SubcontractorLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/subcontractor/work-orders/:id" element={
+              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+                <SubcontractorLayout>
+                  <SubcontractorWorkOrderDetail />
+                </SubcontractorLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/subcontractor/reports/new/:workOrderId" element={
+              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+                <SubcontractorLayout>
+                  <SubmitReport />
+                </SubcontractorLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/subcontractor/reports" element={
+              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+                <SubcontractorLayout>
+                  <ReportHistory />
+                </SubcontractorLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/subcontractor/reports/:id" element={
+              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+                <SubcontractorLayout>
+                  <ReportDetail />
+                </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/dev-tools" element={
