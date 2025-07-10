@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
+import DevTools from "./pages/DevTools";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,14 @@ const App = () => (
                 <div className="min-h-screen bg-background">
                   <Navbar />
                   <SubcontractorDashboard />
+                </div>
+              </ProtectedRoute>
+            } />
+            <Route path="/dev-tools" element={
+              <ProtectedRoute requiredUserType="admin">
+                <div className="min-h-screen bg-background">
+                  <Navbar />
+                  <DevTools />
                 </div>
               </ProtectedRoute>
             } />
