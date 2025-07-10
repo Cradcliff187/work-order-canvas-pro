@@ -154,23 +154,21 @@ const AdminDashboard = () => {
                 }}
                 className="h-48"
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={60}
-                      dataKey="count"
-                      label={({ status, percentage }) => `${status} (${percentage}%)`}
-                    >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[entry.status.toLowerCase().replace(' ', '_')] || 'hsl(var(--muted))'} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <PieChart width={300} height={192}>
+                  <Pie
+                    data={statusDistribution}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={60}
+                    dataKey="count"
+                    label={({ status, percentage }) => `${status} (${percentage}%)`}
+                  >
+                    {statusDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[entry.status.toLowerCase().replace(' ', '_')] || 'hsl(var(--muted))'} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
               </ChartContainer>
             ) : (
               <div className="h-48 flex items-center justify-center text-muted-foreground">
@@ -196,22 +194,20 @@ const AdminDashboard = () => {
                 }}
                 className="h-48"
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailySubmissions}>
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(value) => new Date(value).getDate().toString()}
-                    />
-                    <YAxis />
-                    <Line 
-                      type="monotone" 
-                      dataKey="count" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <LineChart width={300} height={192} data={dailySubmissions}>
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => new Date(value).getDate().toString()}
+                  />
+                  <YAxis />
+                  <Line 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </LineChart>
               </ChartContainer>
             ) : (
               <div className="h-48 flex items-center justify-center text-muted-foreground">
@@ -237,14 +233,12 @@ const AdminDashboard = () => {
                 }}
                 className="h-48"
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={tradeVolumes} layout="horizontal">
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="trade" width={80} />
-                    <Bar dataKey="count" fill="hsl(var(--primary))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <BarChart width={300} height={192} data={tradeVolumes} layout="horizontal">
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="trade" width={80} />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </BarChart>
               </ChartContainer>
             ) : (
               <div className="h-48 flex items-center justify-center text-muted-foreground">
