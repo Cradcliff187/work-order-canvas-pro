@@ -22,13 +22,13 @@ const statusColors = {
 const WorkOrderList = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [tradeFilter, setTradeFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [tradeFilter, setTradeFilter] = useState<string>('all');
   
   const filters = {
     search: search || undefined,
-    status: statusFilter ? [statusFilter] : undefined,
-    trade_id: tradeFilter || undefined,
+    status: statusFilter && statusFilter !== 'all' ? [statusFilter] : undefined,
+    trade_id: tradeFilter && tradeFilter !== 'all' ? tradeFilter : undefined,
   };
 
   const { data: workOrdersData, isLoading } = usePartnerWorkOrders(filters);
@@ -76,7 +76,7 @@ const WorkOrderList = () => {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="received">Received</SelectItem>
                 <SelectItem value="assigned">Assigned</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
@@ -90,7 +90,7 @@ const WorkOrderList = () => {
                 <SelectValue placeholder="Filter by trade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Trades</SelectItem>
+                <SelectItem value="all">All Trades</SelectItem>
                 {trades?.map((trade) => (
                   <SelectItem key={trade.id} value={trade.id}>
                     {trade.name}
@@ -100,15 +100,15 @@ const WorkOrderList = () => {
             </Select>
           </div>
 
-          {(search || statusFilter || tradeFilter) && (
+          {(search || (statusFilter && statusFilter !== 'all') || (tradeFilter && tradeFilter !== 'all')) && (
             <div className="mt-4 flex gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSearch('');
-                  setStatusFilter('');
-                  setTradeFilter('');
+                  setStatusFilter('all');
+                  setTradeFilter('all');
                 }}
               >
                 Clear Filters
