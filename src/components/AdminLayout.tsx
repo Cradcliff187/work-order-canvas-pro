@@ -34,7 +34,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  Wrench
+  Wrench,
+  Mail
 } from 'lucide-react';
 
 const sidebarItems = [
@@ -43,6 +44,7 @@ const sidebarItems = [
   { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
+  { title: 'Email Templates', url: '/admin/email-templates', icon: Mail },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Settings', url: '/admin/settings', icon: Settings },
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },

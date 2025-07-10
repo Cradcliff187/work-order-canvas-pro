@@ -25,6 +25,7 @@ import {
   AdminWorkOrderDetail,
   AdminWorkOrderEdit,
   AdminAnalytics,
+  AdminEmailTemplates,
   AdminReports,
   AdminReportDetail,
   PartnerDashboard,
@@ -137,6 +138,15 @@ const App = () => (
                 <AdminLayout>
                   <Suspense fallback={<LoadingSpinner />}>
                     <AdminAnalytics />
+                  </Suspense>
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/email-templates" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminEmailTemplates />
                   </Suspense>
                 </AdminLayout>
               </ProtectedRoute>

@@ -8,6 +8,7 @@ export const AdminWorkOrders = lazy(() => import('@/pages/admin/AdminWorkOrders'
 export const AdminWorkOrderDetail = lazy(() => import('@/pages/admin/AdminWorkOrderDetail'));
 export const AdminWorkOrderEdit = lazy(() => import('@/pages/admin/AdminWorkOrderEdit'));
 export const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'));
+export const AdminEmailTemplates = lazy(() => import('@/pages/admin/AdminEmailTemplates'));
 
 // Partner Pages
 export const PartnerDashboard = lazy(() => import('@/pages/partner/PartnerDashboard'));
