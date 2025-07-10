@@ -2,13 +2,13 @@
 
 ## Executive Summary
 
-WorkOrderPro uses a comprehensive 12-table PostgreSQL database with Row Level Security (RLS) to manage construction work orders across three user types: Admins, Partners, and Subcontractors. The schema supports work order lifecycle management, user organization relationships, reporting, email notifications, and comprehensive audit logging.
+WorkOrderPro uses a comprehensive **12-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across three user types: Admins, Partners, and Subcontractors. The schema supports work order lifecycle management, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
 ## Database Architecture Overview
 
 ### Core Tables (12)
 1. **organizations** - Company/organization information
-2. **user_organizations** - Many-to-many user-organization relationships
+2. **user_organizations** - Many-to-many user-organization relationships  
 3. **profiles** - Extended user profile information
 4. **trades** - Available trade skills (Plumbing, HVAC, etc.)
 5. **work_orders** - Main work order records
@@ -20,13 +20,26 @@ WorkOrderPro uses a comprehensive 12-table PostgreSQL database with Row Level Se
 11. **system_settings** - Global system configuration
 12. **audit_logs** - Complete audit trail for all changes
 
+### Materialized Views (2)
+- **mv_work_order_analytics** - Performance analytics for work orders
+- **mv_subcontractor_performance** - Subcontractor performance metrics
+
+### Storage Buckets (1)
+- **work-order-photos** - Public bucket for work order photo attachments
+
 ### Custom Enums (6)
 - `user_type`: 'admin', 'partner', 'subcontractor'
 - `work_order_status`: 'received', 'assigned', 'in_progress', 'completed', 'cancelled'
 - `assignment_type`: 'internal', 'subcontractor'
-- `report_status`: 'submitted', 'reviewed', 'approved', 'rejected'
+- `report_status`: 'submitted', 'reviewed', 'approved', 'rejected'  
 - `email_status`: 'sent', 'delivered', 'failed', 'bounced'
 - `file_type`: 'photo', 'invoice', 'document'
+
+### Custom Functions (13)
+- User management functions for RLS and security
+- Work order lifecycle functions
+- Analytics and reporting functions
+- Email notification functions
 
 ## Entity Relationship Diagram
 
@@ -56,7 +69,7 @@ erDiagram
     
     organizations {
         uuid id PK
-        text name
+        text name UK
         text contact_email
         text contact_phone
         text address
@@ -230,11 +243,14 @@ erDiagram
 | created_at | timestamp | No | now() | Creation timestamp |
 | updated_at | timestamp | No | now() | Last update timestamp |
 
+**Constraints**:
+- `organizations_name_unique` UNIQUE (name)
+
 **Indexes**:
 - `idx_organizations_active` ON (is_active)
 - `idx_organizations_contact_email` ON (contact_email)
 
-### 2. user_organizations
+### 2. user_organizations  
 **Purpose**: Junction table linking users to organizations (many-to-many relationship).
 
 | Column | Type | Nullable | Default | Description |
@@ -246,7 +262,7 @@ erDiagram
 
 **Indexes**:
 - `idx_user_organizations_user_id` ON (user_id)
-- `idx_user_organizations_org_id` ON (organization_id)
+- `idx_user_organizations_organization_id` ON (organization_id)
 
 ### 3. profiles
 **Purpose**: Extended user profile information beyond Supabase Auth.
@@ -328,6 +344,10 @@ erDiagram
 - `idx_work_orders_assigned_status` ON (assigned_to, status)
 - `idx_work_orders_trade` ON (trade_id)
 - `idx_work_orders_created_by` ON (created_by)
+- `idx_work_orders_status` ON (status)
+- `idx_work_orders_organization_id` ON (organization_id)
+- `idx_work_orders_assigned_to` ON (assigned_to)
+- `idx_work_orders_trade_id` ON (trade_id)
 
 ### 6. work_order_reports
 **Purpose**: Subcontractor completion reports with review workflow.
@@ -388,6 +408,12 @@ erDiagram
 | is_active | boolean | No | true | Whether template is active |
 | created_at | timestamp | No | now() | Creation timestamp |
 | updated_at | timestamp | No | now() | Last update timestamp |
+
+**Constraints**:
+- `email_templates_template_name_unique` UNIQUE (template_name)
+
+**Indexes**:
+- `idx_email_templates_is_active` ON (is_active)
 
 ### 9. email_logs
 **Purpose**: Email delivery tracking and status.
@@ -453,9 +479,70 @@ erDiagram
 - `idx_audit_logs_user` ON (user_id)
 - `idx_audit_logs_created_at` ON (created_at)
 
+## Materialized Views
+
+### 1. mv_work_order_analytics
+**Purpose**: Performance analytics for work orders with aggregated data.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| submission_date | date | Daily submission date |
+| submission_week | date | Weekly submission date |
+| submission_month | date | Monthly submission date |
+| total_orders | bigint | Total work orders |
+| received_count | bigint | Orders in received status |
+| assigned_count | bigint | Orders in assigned status |
+| in_progress_count | bigint | Orders in progress |
+| completed_count | bigint | Completed orders |
+| cancelled_count | bigint | Cancelled orders |
+| avg_completion_hours | numeric | Average completion time in hours |
+| total_invoice_amount | numeric | Total invoice amounts |
+| trade_id | uuid | Trade category |
+| organization_id | uuid | Organization |
+
+**Indexes**:
+- `idx_mv_work_order_analytics_submission_date` ON (submission_date)
+- `idx_mv_work_order_analytics_trade_id` ON (trade_id)
+- `idx_mv_work_order_analytics_organization_id` ON (organization_id)
+
+### 2. mv_subcontractor_performance
+**Purpose**: Subcontractor performance metrics and quality scores.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| subcontractor_id | uuid | Subcontractor profile ID |
+| first_name | text | Subcontractor first name |
+| last_name | text | Subcontractor last name |
+| company_name | text | Company name |
+| total_jobs | bigint | Total jobs assigned |
+| completed_jobs | bigint | Successfully completed jobs |
+| on_time_jobs | bigint | Jobs completed on time |
+| avg_completion_hours | numeric | Average completion time |
+| avg_invoice_amount | numeric | Average invoice amount |
+| total_invoice_amount | numeric | Total invoice amount |
+| quality_score | numeric | Quality score based on report approvals |
+
+## Storage Configuration
+
+### Storage Buckets
+
+#### work-order-photos
+**Purpose**: Public bucket for work order photo attachments
+- **Bucket ID**: `work-order-photos`
+- **Public**: Yes
+- **Used by**: Work order reports and attachments
+
+**Storage Policies**:
+- Subcontractors can upload photos for their reports
+- All authenticated users can view photos based on their role
+- Subcontractors can update/delete their own photos
+- File organization: `/{user_id}/{filename}`
+
 ## Database Functions
 
-### 1. get_current_user_type()
+### User Management Functions
+
+#### 1. get_current_user_type()
 **Purpose**: Returns the current user's type for RLS policies.
 ```sql
 CREATE OR REPLACE FUNCTION public.get_current_user_type()
@@ -464,17 +551,47 @@ LANGUAGE plpgsql
 STABLE SECURITY DEFINER
 AS $function$
 BEGIN
-  RETURN (
-    SELECT user_type 
-    FROM public.profiles 
-    WHERE user_id = auth.uid()
-    LIMIT 1
-  );
+  RETURN public.get_user_type_secure(auth.uid());
 END;
 $function$
 ```
 
-### 2. get_user_organizations()
+#### 2. get_user_type_secure(user_uuid)
+**Purpose**: Secure function to get user type without RLS recursion.
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_type_secure(user_uuid uuid DEFAULT auth.uid())
+RETURNS user_type
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+AS $function$
+DECLARE
+  result user_type;
+BEGIN
+  SELECT user_type INTO result 
+  FROM public.profiles 
+  WHERE user_id = user_uuid 
+  LIMIT 1;
+  
+  RETURN COALESCE(result, 'subcontractor'::user_type);
+END;
+$function$
+```
+
+#### 3. is_admin()
+**Purpose**: Check if current user is admin.
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+AS $function$
+BEGIN
+  RETURN public.get_user_type_secure(auth.uid()) = 'admin';
+END;
+$function$
+```
+
+#### 4. get_user_organizations()
 **Purpose**: Returns organizations the current user belongs to.
 ```sql
 CREATE OR REPLACE FUNCTION public.get_user_organizations()
@@ -492,22 +609,8 @@ END;
 $function$
 ```
 
-### 3. is_admin()
-**Purpose**: Checks if current user is an admin.
-```sql
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean
-LANGUAGE plpgsql
-STABLE SECURITY DEFINER
-AS $function$
-BEGIN
-  RETURN public.get_current_user_type() = 'admin';
-END;
-$function$
-```
-
-### 4. user_belongs_to_organization()
-**Purpose**: Checks if user belongs to specific organization.
+#### 5. user_belongs_to_organization(org_id)
+**Purpose**: Check if user belongs to specific organization.
 ```sql
 CREATE OR REPLACE FUNCTION public.user_belongs_to_organization(org_id uuid)
 RETURNS boolean
@@ -524,8 +627,8 @@ END;
 $function$
 ```
 
-### 5. user_assigned_to_work_order()
-**Purpose**: Checks if user is assigned to specific work order.
+#### 6. user_assigned_to_work_order(wo_id)
+**Purpose**: Check if user is assigned to specific work order.
 ```sql
 CREATE OR REPLACE FUNCTION public.user_assigned_to_work_order(wo_id uuid)
 RETURNS boolean
@@ -543,8 +646,10 @@ END;
 $function$
 ```
 
-### 6. generate_work_order_number()
-**Purpose**: Generates unique work order numbers.
+### Work Order Functions
+
+#### 7. generate_work_order_number()
+**Purpose**: Auto-generate work order numbers.
 ```sql
 CREATE OR REPLACE FUNCTION public.generate_work_order_number()
 RETURNS text
@@ -574,8 +679,87 @@ END;
 $function$
 ```
 
-### 7. handle_new_user()
-**Purpose**: Creates profile when new user signs up.
+### Analytics Functions
+
+#### 8. calculate_completion_time_by_trade(start_date, end_date)
+**Purpose**: Calculate average completion times by trade category.
+```sql
+CREATE OR REPLACE FUNCTION public.calculate_completion_time_by_trade(
+  start_date date DEFAULT CURRENT_DATE - INTERVAL '30 days',
+  end_date date DEFAULT CURRENT_DATE
+)
+RETURNS TABLE (
+  trade_name text,
+  avg_completion_hours numeric,
+  total_orders bigint,
+  completed_orders bigint
+)
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+```
+
+#### 9. calculate_first_time_fix_rate(start_date, end_date)
+**Purpose**: Calculate first-time fix rate percentage.
+```sql
+CREATE OR REPLACE FUNCTION public.calculate_first_time_fix_rate(
+  start_date date DEFAULT CURRENT_DATE - INTERVAL '30 days',
+  end_date date DEFAULT CURRENT_DATE
+)
+RETURNS numeric
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+```
+
+#### 10. get_geographic_distribution(start_date, end_date)
+**Purpose**: Get work order distribution by geographic location.
+```sql
+CREATE OR REPLACE FUNCTION public.get_geographic_distribution(
+  start_date date DEFAULT CURRENT_DATE - INTERVAL '30 days',
+  end_date date DEFAULT CURRENT_DATE
+)
+RETURNS TABLE (
+  state text,
+  city text,
+  work_order_count bigint,
+  avg_completion_hours numeric
+)
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+```
+
+#### 11. refresh_analytics_views()
+**Purpose**: Refresh materialized views for analytics.
+```sql
+CREATE OR REPLACE FUNCTION public.refresh_analytics_views()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+BEGIN
+  REFRESH MATERIALIZED VIEW public.mv_work_order_analytics;
+  REFRESH MATERIALIZED VIEW public.mv_subcontractor_performance;
+END;
+$function$
+```
+
+### Utility Functions
+
+#### 12. update_updated_at_column()
+**Purpose**: Trigger function to update timestamp columns.
+```sql
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$function$
+```
+
+#### 13. handle_new_user()
+**Purpose**: Automatically create profile when user signs up.
 ```sql
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
@@ -595,445 +779,153 @@ END;
 $function$
 ```
 
-### 8. update_updated_at_column()
-**Purpose**: Trigger function to update updated_at timestamps.
-```sql
-CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$function$
-```
-
 ## Row Level Security (RLS) Policies
 
-### organizations Table Policies
+### profiles table
+- **"Known admin users can manage all profiles"** - Admin with hardcoded UUID has full access
+- **"Authenticated users can view profiles"** - All authenticated users can view profiles
+- **"Users can update their own profile"** - Users can update own profile data
+- **"Users can insert their own profile"** - Users can create own profile
 
-**1. Admins can manage all organizations**
-```sql
-CREATE POLICY "Admins can manage all organizations" ON public.organizations
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
+### organizations table  
+- **"Admins can manage all organizations"** - Admins have full CRUD access
+- **"Partners can view their organizations"** - Partners see only their associated organizations
+- **"Subcontractors can view organizations they work for"** - Subcontractors see organizations for assigned work orders
 
-**2. Partners can view their organizations**
-```sql
-CREATE POLICY "Partners can view their organizations" ON public.organizations
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  user_belongs_to_organization(id)
-);
-```
+### user_organizations table
+- **"Admins can manage all user organizations"** - Admin full access to relationships
+- **"Partners can manage their organization relationships"** - Partners manage their org relationships  
+- **"Users can view their own organization relationships"** - Users see their own relationships
 
-**3. Subcontractors can view organizations they work for**
-```sql
-CREATE POLICY "Subcontractors can view organizations they work for" ON public.organizations
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = 'subcontractor'::user_type) AND 
-  (id IN (
-    SELECT DISTINCT wo.organization_id
-    FROM work_orders wo
-    JOIN profiles p ON p.id = wo.assigned_to
-    WHERE p.user_id = auth.uid()
-  ))
-);
-```
+### trades table
+- **"Admins can manage all trades"** - Admin CRUD access to trade categories
+- **"Partners and subcontractors can view trades"** - Read-only access for partners/subcontractors
 
-### user_organizations Table Policies
+### work_orders table
+- **"Admins can manage all work orders"** - Admin full access to all work orders
+- **"Partners can manage work orders in their organizations"** - Partners manage their org's work orders
+- **"Subcontractors can view assigned work orders"** - Subcontractors see only assigned work orders
 
-**1. Admins can manage all user organizations**
-```sql
-CREATE POLICY "Admins can manage all user organizations" ON public.user_organizations
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
+### work_order_reports table
+- **"Admins can manage all work order reports"** - Admin full access to all reports
+- **"Partners can view reports for their organization work orders"** - Partners view reports for their work orders
+- **"Partners can review reports for their organization"** - Partners can approve/reject reports
+- **"Subcontractors can manage their own reports"** - Subcontractors CRUD their own reports
 
-**2. Partners can manage their organization relationships**
-```sql
-CREATE POLICY "Partners can manage their organization relationships" ON public.user_organizations
-FOR ALL TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  user_belongs_to_organization(organization_id)
-)
-WITH CHECK (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  user_belongs_to_organization(organization_id)
-);
-```
+### work_order_attachments table
+- **"Admins can manage all work order attachments"** - Admin full access to all attachments
+- **"Partners can view attachments for their organization work orders"** - Partners view their org's attachments
+- **"Subcontractors can manage attachments for their work"** - Subcontractors manage their work attachments
 
-**3. Users can view their own organization relationships**
-```sql
-CREATE POLICY "Users can view their own organization relationships" ON public.user_organizations
-FOR SELECT TO authenticated
-USING (
-  user_id IN (
-    SELECT profiles.id
-    FROM profiles
-    WHERE profiles.user_id = auth.uid()
-  )
-);
-```
+### email_templates table
+- **"Admins can manage email templates"** - Admin CRUD access to templates
+- **"Partners and subcontractors can view email templates"** - Read-only access to active templates
 
-### profiles Table Policies
+### email_logs table
+- **"Admins can view email logs"** - Admin access to all email logs
+- **"Partners can view email logs for their organization"** - Partners see logs for their work orders
 
-**1. Admins can manage all profiles**
-```sql
-CREATE POLICY "Admins can manage all profiles" ON public.profiles
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
+### email_settings table
+- **"Admins can manage email settings"** - Admin CRUD access to email configuration
 
-**2. Partners can view profiles in their organizations**
-```sql
-CREATE POLICY "Partners can view profiles in their organizations" ON public.profiles
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  (
-    (user_id = auth.uid()) OR 
-    (id IN (
-      SELECT uo.user_id
-      FROM user_organizations uo
-      WHERE uo.organization_id IN (
-        SELECT organization_id
-        FROM get_user_organizations()
-      )
-    ))
-  )
-);
-```
+### system_settings table
+- **"Admins can manage system settings"** - Admin CRUD access to system configuration
 
-**3. Subcontractors can view all profiles**
-```sql
-CREATE POLICY "Subcontractors can view all profiles" ON public.profiles
-FOR SELECT TO authenticated
-USING (get_current_user_type() = 'subcontractor'::user_type);
-```
+### audit_logs table
+- **"Admins can view audit logs"** - Admin read-only access to audit trail
 
-**4. Users can update their own profile**
-```sql
-CREATE POLICY "Users can update their own profile" ON public.profiles
-FOR UPDATE TO authenticated
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
-```
+## Triggers
 
-**5. Users can insert their own profile**
-```sql
-CREATE POLICY "Users can insert their own profile" ON public.profiles
-FOR INSERT TO authenticated
-WITH CHECK (user_id = auth.uid());
-```
+### Update Timestamp Triggers
+- **Organizations**: `update_organizations_updated_at` - Updates `updated_at` on row changes
+- **Profiles**: `update_profiles_updated_at` - Updates `updated_at` on row changes
+- **Work Orders**: `update_work_orders_updated_at` - Updates `updated_at` on row changes
 
-### trades Table Policies
+### User Management Triggers
+- **Auth User Creation**: `on_auth_user_created` - Automatically creates profile when user signs up
 
-**1. Admins can manage all trades**
-```sql
-CREATE POLICY "Admins can manage all trades" ON public.trades
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
+## Email Templates
 
-**2. Partners and subcontractors can view trades**
-```sql
-CREATE POLICY "Partners and subcontractors can view trades" ON public.trades
-FOR SELECT TO authenticated
-USING (get_current_user_type() = ANY (ARRAY['partner'::user_type, 'subcontractor'::user_type]));
-```
+### Default Templates (Inserted via Migration)
+1. **work_order_received** - Notification when new work order is submitted
+2. **work_order_assigned** - Notification when work order is assigned to subcontractor
+3. **report_submitted** - Notification when subcontractor submits completion report
+4. **report_reviewed** - Notification when admin reviews/approves report
+5. **work_order_completed** - Notification when work order is marked complete
 
-### work_orders Table Policies
+## Schema Issues & Notes
 
-**1. Admins can manage all work orders**
-```sql
-CREATE POLICY "Admins can manage all work orders" ON public.work_orders
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
+### Critical Issues
 
-**2. Partners can manage work orders in their organizations**
-```sql
-CREATE POLICY "Partners can manage work orders in their organizations" ON public.work_orders
-FOR ALL TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  user_belongs_to_organization(organization_id)
-)
-WITH CHECK (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  user_belongs_to_organization(organization_id)
-);
-```
+#### 1. Hardcoded Admin UUID Dependency
+**Issue**: System relies on hardcoded UUID `2e2832d0-72aa-44df-b7a7-5e7b61a4bd5a` for admin access
+**Location**: Migration `20250710165735-ae10a6f3-10dc-424a-85c1-f66dbbebae34.sql`
+**Impact**: Not scalable, prevents multiple admins
+**RLS Policy**: `"Known admin users can manage all profiles"`
 
-**3. Subcontractors can view assigned work orders**
-```sql
-CREATE POLICY "Subcontractors can view assigned work orders" ON public.work_orders
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = 'subcontractor'::user_type) AND 
-  user_assigned_to_work_order(id)
-);
-```
+#### 2. RLS Infinite Recursion History
+**Issue**: Multiple attempts to fix RLS infinite recursion in profiles table
+**Migrations Affected**: 
+- `20250710165118-8a79b2fc-4c0d-49ef-8ad5-591f85de7a2f.sql` - Created security definer functions
+- `20250710165735-ae10a6f3-10dc-424a-85c1-f66dbbebae34.sql` - Replaced with hardcoded UUID approach
+**Current Solution**: Uses `get_user_type_secure()` function with SECURITY DEFINER to bypass RLS
 
-### work_order_reports Table Policies
+#### 3. Removed Tables During Development
+**Tables Removed**: `projects`, `work_order_comments`
+**Migration**: `20250710161623-d1384cdd-3a6d-4826-8471-358d5d142cb1.sql`
+**Impact**: Originally planned for 14 tables, reduced to 12 tables
+**References**: All foreign keys and policies properly cleaned up
 
-**1. Admins can manage all work order reports**
-```sql
-CREATE POLICY "Admins can manage all work order reports" ON public.work_order_reports
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
+### Design Concerns
 
-**2. Partners can view reports for their organization work orders**
-```sql
-CREATE POLICY "Partners can view reports for their organization work orders" ON public.work_order_reports
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  (work_order_id IN (
-    SELECT wo.id
-    FROM work_orders wo
-    WHERE user_belongs_to_organization(wo.organization_id)
-  ))
-);
-```
+#### 1. Storage Bucket Dependency
+**Issue**: Work order functionality depends on `work-order-photos` storage bucket
+**Migration**: `20250710173317-553aa188-441e-4fc2-85d9-e5f8af7c515d.sql`
+**Dependencies**: Storage policies reference RLS functions that must exist first
 
-**3. Partners can review reports for their organization**
-```sql
-CREATE POLICY "Partners can review reports for their organization" ON public.work_order_reports
-FOR UPDATE TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  (work_order_id IN (
-    SELECT wo.id
-    FROM work_orders wo
-    WHERE user_belongs_to_organization(wo.organization_id)
-  ))
-)
-WITH CHECK (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  (work_order_id IN (
-    SELECT wo.id
-    FROM work_orders wo
-    WHERE user_belongs_to_organization(wo.organization_id)
-  ))
-);
-```
+#### 2. Complex RLS Policies
+**Issue**: Some RLS policies are complex with multiple JOIN operations
+**Example**: Subcontractor organization access policies
+**Performance**: May impact query performance on large datasets
 
-**4. Subcontractors can manage their own reports**
-```sql
-CREATE POLICY "Subcontractors can manage their own reports" ON public.work_order_reports
-FOR ALL TO authenticated
-USING (
-  (get_current_user_type() = 'subcontractor'::user_type) AND 
-  (subcontractor_user_id IN (
-    SELECT profiles.id
-    FROM profiles
-    WHERE profiles.user_id = auth.uid()
-  ))
-)
-WITH CHECK (
-  (get_current_user_type() = 'subcontractor'::user_type) AND 
-  (subcontractor_user_id IN (
-    SELECT profiles.id
-    FROM profiles
-    WHERE profiles.user_id = auth.uid()
-  ))
-);
-```
+#### 3. Missing Foreign Key Constraints
+**Issue**: Some relationships rely on application-level enforcement rather than database constraints
+**Examples**: 
+- work_order_attachments to work_orders (nullable work_order_id)
+- Email logs to work orders (nullable work_order_id)
 
-### work_order_attachments Table Policies
+### Migration History Summary
 
-**1. Admins can manage all work order attachments**
-```sql
-CREATE POLICY "Admins can manage all work order attachments" ON public.work_order_attachments
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
-
-**2. Partners can view attachments for their organization work orders**
-```sql
-CREATE POLICY "Partners can view attachments for their organization work order" ON public.work_order_attachments
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  (
-    (work_order_id IN (
-      SELECT wo.id
-      FROM work_orders wo
-      WHERE user_belongs_to_organization(wo.organization_id)
-    )) OR 
-    (work_order_report_id IN (
-      SELECT wor.id
-      FROM work_order_reports wor
-      JOIN work_orders wo ON wo.id = wor.work_order_id
-      WHERE user_belongs_to_organization(wo.organization_id)
-    ))
-  )
-);
-```
-
-**3. Subcontractors can manage attachments for their work**
-```sql
-CREATE POLICY "Subcontractors can manage attachments for their work" ON public.work_order_attachments
-FOR ALL TO authenticated
-USING (
-  (get_current_user_type() = 'subcontractor'::user_type) AND 
-  (
-    (uploaded_by_user_id IN (
-      SELECT profiles.id
-      FROM profiles
-      WHERE profiles.user_id = auth.uid()
-    )) OR 
-    (work_order_id IN (
-      SELECT wo.id
-      FROM work_orders wo
-      WHERE user_assigned_to_work_order(wo.id)
-    )) OR 
-    (work_order_report_id IN (
-      SELECT wor.id
-      FROM work_order_reports wor
-      WHERE wor.subcontractor_user_id IN (
-        SELECT profiles.id
-        FROM profiles
-        WHERE profiles.user_id = auth.uid()
-      )
-    ))
-  )
-)
-WITH CHECK (
-  (get_current_user_type() = 'subcontractor'::user_type) AND 
-  (uploaded_by_user_id IN (
-    SELECT profiles.id
-    FROM profiles
-    WHERE profiles.user_id = auth.uid()
-  ))
-);
-```
-
-### email_templates Table Policies
-
-**1. Admins can manage email templates**
-```sql
-CREATE POLICY "Admins can manage email templates" ON public.email_templates
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
-
-**2. Partners and subcontractors can view email templates**
-```sql
-CREATE POLICY "Partners and subcontractors can view email templates" ON public.email_templates
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = ANY (ARRAY['partner'::user_type, 'subcontractor'::user_type])) AND 
-  (is_active = true)
-);
-```
-
-### email_logs Table Policies
-
-**1. Admins can view email logs**
-```sql
-CREATE POLICY "Admins can view email logs" ON public.email_logs
-FOR SELECT TO authenticated
-USING (is_admin());
-```
-
-**2. Partners can view email logs for their organization**
-```sql
-CREATE POLICY "Partners can view email logs for their organization" ON public.email_logs
-FOR SELECT TO authenticated
-USING (
-  (get_current_user_type() = 'partner'::user_type) AND 
-  (work_order_id IN (
-    SELECT wo.id
-    FROM work_orders wo
-    WHERE user_belongs_to_organization(wo.organization_id)
-  ))
-);
-```
-
-### email_settings Table Policies
-
-**1. Admins can manage email settings**
-```sql
-CREATE POLICY "Admins can manage email settings" ON public.email_settings
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
-
-### system_settings Table Policies
-
-**1. Admins can manage system settings**
-```sql
-CREATE POLICY "Admins can manage system settings" ON public.system_settings
-FOR ALL TO authenticated
-USING (is_admin())
-WITH CHECK (is_admin());
-```
-
-### audit_logs Table Policies
-
-**1. Admins can view audit logs**
-```sql
-CREATE POLICY "Admins can view audit logs" ON public.audit_logs
-FOR SELECT TO authenticated
-USING (is_admin());
-```
-
-## Security Model Summary
-
-### User Type Hierarchy
-1. **Admin**: Full system access, can manage all data
-2. **Partner**: Organization-scoped access, can manage their work orders
-3. **Subcontractor**: Assignment-scoped access, can only see assigned work
-
-### Access Patterns
-- **Organization-scoped**: Partners can access data for their organizations
-- **Assignment-scoped**: Subcontractors can access data for assigned work orders
-- **User-scoped**: All users can manage their own profiles
-- **Admin-scoped**: Admins have unrestricted access
-
-### Security Functions
-All RLS policies use SECURITY DEFINER functions to prevent infinite recursion and ensure consistent access control logic across the system.
+| Migration | Date | Purpose | Major Changes |
+|-----------|------|---------|---------------|
+| 001 | 2025-01-07 | Initial schema | Created basic project-based schema with 14 tables |
+| 002 | 2025-01-07 | Core schema | Created comprehensive 12-table schema aligned with requirements |
+| 003 | 2025-01-07 | Schema cleanup | Removed projects and work_order_comments tables |
+| 004 | 2025-01-07 | RLS policies | Comprehensive RLS implementation |
+| 005 | 2025-01-07 | Fix RLS recursion | Created security definer functions |
+| 006 | 2025-01-07 | Admin user setup | Set specific user as admin |
+| 007 | 2025-01-07 | Hard-coded admin | Replaced with hardcoded UUID approach |
+| 008 | 2025-01-07 | Performance indexes | Added performance indexes and unique constraints |
+| 009 | 2025-01-07 | Storage setup | Created work-order-photos bucket and policies |
+| 010 | 2025-01-07 | Email templates | Inserted default email templates |
+| 011 | 2025-01-07 | Analytics views | Created materialized views and analytics functions |
 
 ## Performance Considerations
 
-### Indexing Strategy
-- **Composite indexes** on frequently queried column combinations
-- **Status-based indexes** for work order filtering
-- **User-organization indexes** for permission checking
-- **Timestamp indexes** for audit and reporting queries
+### Indexes
+- **Primary Keys**: All tables have UUID primary keys with automatic indexes
+- **Foreign Keys**: All foreign key relationships have supporting indexes
+- **RLS Performance**: Composite indexes on commonly filtered combinations (organization_id + status)
+- **Analytics**: Dedicated indexes on materialized views for dashboard performance
+
+### Materialized Views
+- **Refresh Strategy**: Manual refresh via `refresh_analytics_views()` function
+- **Performance**: Pre-computed aggregations for dashboard analytics
+- **Storage**: Additional storage overhead for materialized data
 
 ### Query Optimization
-- RLS policies use efficient helper functions
-- Foreign key relationships support JOIN operations
-- JSONB columns use appropriate GIN indexes where needed
+- **RLS Functions**: Use SECURITY DEFINER to avoid repeated policy evaluations
+- **Joins**: Indexed foreign key relationships for efficient joins
+- **Filtering**: Composite indexes on commonly filtered column combinations
 
-## Data Integrity
-
-### Foreign Key Constraints
-All relationships are enforced with foreign key constraints to maintain referential integrity.
-
-### Check Constraints
-- Enum types ensure valid status values
-- Boolean fields have appropriate defaults
-- Timestamp fields use consistent timezone handling
-
-### Audit Trail
-Complete audit logging captures all data changes with before/after values for compliance and debugging.
+This documentation reflects the exact current state of the database as of the latest migration on 2025-01-10.
