@@ -1,14 +1,9 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.4"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { Resend } from "npm:resend@4.6.0"
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
-
-interface EmailTemplate {
-  subject: string
-  html_content: string
-  template_name: string
-}
 
 interface WorkOrderCreatedPayload {
   work_order_id: string
@@ -66,9 +61,8 @@ serve(async (req: Request) => {
       .from('work_orders')
       .select(`
         *,
-        organizations:organization_id(name, contact_email),
-        trades:trade_id(name),
-        profiles:created_by(first_name, last_name, email)
+        organizations:organization_id(name),
+        trades:trade_id(name)
       `)
       .eq('id', work_order_id)
       .single()
@@ -84,8 +78,12 @@ serve(async (req: Request) => {
       .eq('user_type', 'admin')
       .eq('is_active', true)
 
-    if (adminError) {
-      throw new Error(`Failed to fetch admin users: ${adminError.message}`)
+    if (adminError || !adminUsers || adminUsers.length === 0) {
+      console.log('No admin users found to notify')
+      return new Response(
+        JSON.stringify({ success: true, message: 'No admin users to notify' }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      )
     }
 
     // Get email template
@@ -102,21 +100,21 @@ serve(async (req: Request) => {
 
     // Prepare template variables
     const variables = {
-      workOrderNumber: workOrder.work_order_number,
+      workOrderNumber: workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`,
       organizationName: workOrder.organizations?.name || 'Unknown Organization',
       storeLocation: workOrder.store_location || '',
-      tradeName: workOrder.trades?.name || 'Unknown Trade',
-      description: workOrder.description || '',
+      tradeName: workOrder.trades?.name || 'General',
+      description: workOrder.description || 'No description provided',
       submittedDate: new Date(workOrder.date_submitted).toLocaleDateString(),
       adminDashboardUrl: `${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://').replace('.supabase.co', '.lovableproject.com')}/admin/work-orders`
     }
 
-    // Send emails to all admin users
-    const emailPromises = adminUsers?.map(async (admin) => {
-      try {
-        const subject = await interpolateTemplate(template.subject, variables)
-        const html = await interpolateTemplate(template.html_content, variables)
+    const subject = await interpolateTemplate(template.subject, variables)
+    const html = await interpolateTemplate(template.html_content, variables)
 
+    // Send emails to all admin users
+    const emailPromises = adminUsers.map(async (admin) => {
+      try {
         const emailResponse = await resend.emails.send({
           from: 'WorkOrderPro <notifications@workorderpro.com>',
           to: [admin.email],
@@ -132,19 +130,18 @@ serve(async (req: Request) => {
             status: 'failed',
             error_message: emailResponse.error.message,
           })
-          console.error('Failed to send email to admin:', emailResponse.error)
-        } else {
-          await logEmail(supabase, {
-            work_order_id,
-            template_name: 'work_order_received',
-            recipient_email: admin.email,
-            resend_message_id: emailResponse.data?.id,
-            status: 'sent',
-          })
-          console.log('Email sent successfully to admin:', admin.email)
+          return { success: false, error: emailResponse.error.message, email: admin.email }
         }
 
-        return emailResponse
+        await logEmail(supabase, {
+          work_order_id,
+          template_name: 'work_order_received',
+          recipient_email: admin.email,
+          resend_message_id: emailResponse.data?.id,
+          status: 'sent',
+        })
+
+        return { success: true, messageId: emailResponse.data?.id, email: admin.email }
       } catch (error) {
         await logEmail(supabase, {
           work_order_id,
@@ -153,23 +150,25 @@ serve(async (req: Request) => {
           status: 'failed',
           error_message: error.message,
         })
-        console.error('Error sending email to admin:', error)
-        return { error: error.message }
+        return { success: false, error: error.message, email: admin.email }
       }
-    }) || []
+    })
 
     const results = await Promise.all(emailPromises)
-    const successCount = results.filter(r => !r.error).length
-    const failureCount = results.filter(r => r.error).length
+    const successful = results.filter(r => r.success)
+    const failed = results.filter(r => !r.success)
 
-    console.log(`Email notifications sent: ${successCount} successful, ${failureCount} failed`)
+    console.log(`Work order notification emails sent: ${successful.length} successful, ${failed.length} failed`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        sent: successCount, 
-        failed: failureCount,
-        work_order_id 
+        results: {
+          successful: successful.length,
+          failed: failed.length,
+          details: results
+        },
+        work_order_id
       }),
       { 
         status: 200, 

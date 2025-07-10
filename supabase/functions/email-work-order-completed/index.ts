@@ -1,5 +1,6 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.4"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { Resend } from "npm:resend@4.6.0"
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
@@ -55,19 +56,14 @@ serve(async (req: Request) => {
     const { work_order_id }: WorkOrderCompletedPayload = await req.json()
     console.log('Processing work order completion notification for:', work_order_id)
 
-    // Fetch work order details with latest report
+    // Fetch work order details with related data
     const { data: workOrder, error: workOrderError } = await supabase
       .from('work_orders')
       .select(`
         *,
         organizations:organization_id(name, contact_email),
         trades:trade_id(name),
-        assigned_profile:assigned_to(first_name, last_name, email),
-        work_order_reports(
-          invoice_amount,
-          work_performed,
-          submitted_at
-        )
+        assigned_user:assigned_to(first_name, last_name)
       `)
       .eq('id', work_order_id)
       .single()
@@ -76,26 +72,15 @@ serve(async (req: Request) => {
       throw new Error(`Failed to fetch work order: ${workOrderError?.message}`)
     }
 
-    // Get the latest report for this work order
-    const latestReport = workOrder.work_order_reports?.[0]
-    if (!latestReport) {
-      throw new Error('No report found for completed work order')
-    }
-
-    // Get partner users for this organization
-    const { data: partnerUsers, error: partnerError } = await supabase
-      .from('profiles')
-      .select(`
-        email, first_name, last_name,
-        user_organizations!inner(organization_id)
-      `)
-      .eq('user_type', 'partner')
-      .eq('is_active', true)
-      .eq('user_organizations.organization_id', workOrder.organization_id)
-
-    if (partnerError) {
-      throw new Error(`Failed to fetch partner users: ${partnerError.message}`)
-    }
+    // Get the latest approved report for this work order
+    const { data: report, error: reportError } = await supabase
+      .from('work_order_reports')
+      .select('invoice_amount, work_performed, submitted_at')
+      .eq('work_order_id', work_order_id)
+      .eq('status', 'approved')
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .single()
 
     // Get email template
     const { data: template, error: templateError } = await supabase
@@ -111,89 +96,82 @@ serve(async (req: Request) => {
 
     // Prepare template variables
     const variables = {
-      workOrderNumber: workOrder.work_order_number,
+      workOrderNumber: workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`,
       organizationName: workOrder.organizations?.name || 'Unknown Organization',
       storeLocation: workOrder.store_location || '',
-      streetAddress: workOrder.street_address || '',
-      city: workOrder.city || '',
-      state: workOrder.state || '',
-      zipCode: workOrder.zip_code || '',
-      tradeName: workOrder.trades?.name || 'Unknown Trade',
-      subcontractorName: workOrder.assigned_profile ? 
-        `${workOrder.assigned_profile.first_name} ${workOrder.assigned_profile.last_name}` : 'Unknown',
-      completedDate: workOrder.final_completion_date ? 
-        new Date(workOrder.final_completion_date).toLocaleDateString() : 
-        new Date().toLocaleDateString(),
-      workPerformed: latestReport.work_performed,
-      invoiceAmount: latestReport.invoice_amount.toFixed(2),
+      tradeName: workOrder.trades?.name || 'General',
+      completedBy: workOrder.assigned_user ? `${workOrder.assigned_user.first_name} ${workOrder.assigned_user.last_name}` : 'Unknown',
+      completionDate: workOrder.actual_completion_date ? new Date(workOrder.actual_completion_date).toLocaleDateString() : new Date().toLocaleDateString(),
+      workPerformed: report?.work_performed || 'Work completed as requested',
+      totalAmount: report?.invoice_amount ? `$${report.invoice_amount.toFixed(2)}` : 'TBD',
       workOrderUrl: `${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://').replace('.supabase.co', '.lovableproject.com')}/partner/work-orders/${work_order_id}`
     }
 
-    // Send emails to all partner users
-    const emailPromises = partnerUsers?.map(async (partner) => {
-      try {
-        const subject = await interpolateTemplate(template.subject, variables)
-        const html = await interpolateTemplate(template.html_content, variables)
+    const subject = await interpolateTemplate(template.subject, variables)
+    const html = await interpolateTemplate(template.html_content, variables)
 
-        const emailResponse = await resend.emails.send({
-          from: 'WorkOrderPro <notifications@workorderpro.com>',
-          to: [partner.email],
-          subject,
-          html,
-        })
+    // Send email to organization contact
+    const recipientEmail = workOrder.organizations?.contact_email
+    if (!recipientEmail) {
+      console.log('No organization contact email found for completion notification')
+      return new Response(
+        JSON.stringify({ success: true, message: 'No organization contact email to notify' }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      )
+    }
 
-        if (emailResponse.error) {
-          await logEmail(supabase, {
-            work_order_id,
-            template_name: 'work_order_completed',
-            recipient_email: partner.email,
-            status: 'failed',
-            error_message: emailResponse.error.message,
-          })
-          console.error('Failed to send email to partner:', emailResponse.error)
-        } else {
-          await logEmail(supabase, {
-            work_order_id,
-            template_name: 'work_order_completed',
-            recipient_email: partner.email,
-            resend_message_id: emailResponse.data?.id,
-            status: 'sent',
-          })
-          console.log('Email sent successfully to partner:', partner.email)
-        }
+    try {
+      const emailResponse = await resend.emails.send({
+        from: 'WorkOrderPro <notifications@workorderpro.com>',
+        to: [recipientEmail],
+        subject,
+        html,
+      })
 
-        return emailResponse
-      } catch (error) {
+      if (emailResponse.error) {
         await logEmail(supabase, {
           work_order_id,
           template_name: 'work_order_completed',
-          recipient_email: partner.email,
+          recipient_email: recipientEmail,
           status: 'failed',
-          error_message: error.message,
+          error_message: emailResponse.error.message,
         })
-        console.error('Error sending email to partner:', error)
-        return { error: error.message }
+        throw new Error(emailResponse.error.message)
       }
-    }) || []
 
-    const results = await Promise.all(emailPromises)
-    const successCount = results.filter(r => !r.error).length
-    const failureCount = results.filter(r => r.error).length
+      await logEmail(supabase, {
+        work_order_id,
+        template_name: 'work_order_completed',
+        recipient_email: recipientEmail,
+        resend_message_id: emailResponse.data?.id,
+        status: 'sent',
+      })
 
-    console.log(`Work order completion notifications sent: ${successCount} successful, ${failureCount} failed`)
+      console.log('Completion notification email sent successfully to:', recipientEmail)
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        sent: successCount, 
-        failed: failureCount,
-        work_order_id 
-      }),
-      { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      }
-    )
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message_id: emailResponse.data?.id,
+          recipient: recipientEmail,
+          work_order_id
+        }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      )
+
+    } catch (error) {
+      await logEmail(supabase, {
+        work_order_id,
+        template_name: 'work_order_completed',
+        recipient_email: recipientEmail,
+        status: 'failed',
+        error_message: error.message,
+      })
+      throw error
+    }
 
   } catch (error) {
     console.error('Error in email-work-order-completed function:', error)
