@@ -1,0 +1,187 @@
+import React from 'react';
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Link,
+  Preview,
+  Section,
+  Text,
+  Button,
+  Hr,
+} from '@react-email/components';
+
+interface WorkOrderAssignedProps {
+  subcontractorName: string;
+  workOrderNumber: string;
+  organizationName: string;
+  storeLocation: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  tradeName: string;
+  description: string;
+  estimatedCompletionDate?: string;
+  workOrderUrl: string;
+}
+
+export const WorkOrderAssigned = ({
+  subcontractorName,
+  workOrderNumber,
+  organizationName,
+  storeLocation,
+  streetAddress,
+  city,
+  state,
+  zipCode,
+  tradeName,
+  description,
+  estimatedCompletionDate,
+  workOrderUrl,
+}: WorkOrderAssignedProps) => (
+  <Html>
+    <Head />
+    <Preview>Work order #{workOrderNumber} has been assigned to you</Preview>
+    <Body style={main}>
+      <Container style={container}>
+        <Heading style={h1}>Work Order Assignment</Heading>
+        
+        <Text style={text}>
+          Hello {subcontractorName},
+        </Text>
+
+        <Text style={text}>
+          You have been assigned a new work order. Please review the details below and begin work as soon as possible.
+        </Text>
+
+        <Section style={section}>
+          <Text style={label}>Work Order Details:</Text>
+          <Text style={detail}><strong>Work Order #:</strong> {workOrderNumber}</Text>
+          <Text style={detail}><strong>Organization:</strong> {organizationName}</Text>
+          <Text style={detail}><strong>Store Location:</strong> {storeLocation}</Text>
+          <Text style={detail}><strong>Trade:</strong> {tradeName}</Text>
+          {estimatedCompletionDate && (
+            <Text style={detail}><strong>Expected Completion:</strong> {estimatedCompletionDate}</Text>
+          )}
+        </Section>
+
+        <Section style={section}>
+          <Text style={label}>Work Location:</Text>
+          <Text style={detail}>{streetAddress}</Text>
+          <Text style={detail}>{city}, {state} {zipCode}</Text>
+        </Section>
+
+        <Section style={section}>
+          <Text style={label}>Work Description:</Text>
+          <Text style={description}>{description}</Text>
+        </Section>
+
+        <Section style={section}>
+          <Button style={button} href={workOrderUrl}>
+            View Work Order Details
+          </Button>
+        </Section>
+
+        <Section style={section}>
+          <Text style={text}>
+            <strong>Next Steps:</strong>
+          </Text>
+          <Text style={text}>
+            1. Review the work order details thoroughly<br/>
+            2. Contact the site if you need additional information<br/>
+            3. Complete the work as described<br/>
+            4. Submit your completion report with photos and invoice details
+          </Text>
+        </Section>
+
+        <Hr style={hr} />
+
+        <Text style={footer}>
+          This email was sent by WorkOrderPro - Work Order Management System
+        </Text>
+      </Container>
+    </Body>
+  </Html>
+);
+
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif',
+};
+
+const container = {
+  margin: '0 auto',
+  padding: '20px 0 48px',
+  maxWidth: '580px',
+};
+
+const h1 = {
+  color: '#1f2937',
+  fontSize: '24px',
+  fontWeight: 'bold',
+  margin: '40px 0',
+  padding: '0',
+};
+
+const text = {
+  color: '#374151',
+  fontSize: '16px',
+  lineHeight: '26px',
+};
+
+const section = {
+  margin: '24px 0',
+};
+
+const label = {
+  color: '#1f2937',
+  fontSize: '14px',
+  fontWeight: 'bold',
+  margin: '0 0 8px 0',
+};
+
+const detail = {
+  color: '#374151',
+  fontSize: '14px',
+  lineHeight: '20px',
+  margin: '4px 0',
+};
+
+const description = {
+  color: '#374151',
+  fontSize: '14px',
+  lineHeight: '20px',
+  backgroundColor: '#f9fafb',
+  padding: '12px',
+  borderRadius: '6px',
+  border: '1px solid #e5e7eb',
+};
+
+const button = {
+  backgroundColor: '#2563eb',
+  borderRadius: '6px',
+  color: '#ffffff',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  textDecoration: 'none',
+  textAlign: 'center' as const,
+  display: 'block',
+  padding: '12px 24px',
+  margin: '16px 0',
+};
+
+const hr = {
+  borderColor: '#e5e7eb',
+  margin: '32px 0',
+};
+
+const footer = {
+  color: '#6b7280',
+  fontSize: '12px',
+  textAlign: 'center' as const,
+};
+
+export default WorkOrderAssigned;
