@@ -252,60 +252,6 @@ export type Database = {
         }
         Relationships: []
       }
-      projects: {
-        Row: {
-          address: string | null
-          created_at: string
-          created_by: string
-          description: string | null
-          end_date: string | null
-          id: string
-          name: string
-          project_manager_id: string | null
-          start_date: string | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string
-          created_by: string
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          name: string
-          project_manager_id?: string | null
-          start_date?: string | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          name?: string
-          project_manager_id?: string | null
-          start_date?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_project_manager_id_fkey"
-            columns: ["project_manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       system_settings: {
         Row: {
           category: string
@@ -462,45 +408,6 @@ export type Database = {
           },
         ]
       }
-      work_order_comments: {
-        Row: {
-          author_id: string
-          comment: string
-          created_at: string
-          id: string
-          work_order_id: string
-        }
-        Insert: {
-          author_id: string
-          comment: string
-          created_at?: string
-          id?: string
-          work_order_id: string
-        }
-        Update: {
-          author_id?: string
-          comment?: string
-          created_at?: string
-          id?: string
-          work_order_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "work_order_comments_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_order_comments_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       work_order_reports: {
         Row: {
           hours_worked: number | null
@@ -602,7 +509,6 @@ export type Database = {
           labor_cost: number | null
           materials_cost: number | null
           organization_id: string | null
-          project_id: string
           state: string | null
           status: Database["public"]["Enums"]["work_order_status"]
           store_location: string | null
@@ -639,7 +545,6 @@ export type Database = {
           labor_cost?: number | null
           materials_cost?: number | null
           organization_id?: string | null
-          project_id: string
           state?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
@@ -676,7 +581,6 @@ export type Database = {
           labor_cost?: number | null
           materials_cost?: number | null
           organization_id?: string | null
-          project_id?: string
           state?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
@@ -709,13 +613,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_orders_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
