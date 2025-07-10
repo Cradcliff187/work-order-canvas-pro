@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./components/AdminLayout";
+import PartnerLayout from "./components/PartnerLayout";
 import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -15,6 +16,9 @@ import AdminWorkOrders from "./pages/admin/AdminWorkOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrganizations from "./pages/admin/AdminOrganizations";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
+import SubmitWorkOrder from "./pages/partner/SubmitWorkOrder";
+import WorkOrderList from "./pages/partner/WorkOrderList";
+import WorkOrderDetail from "./pages/partner/WorkOrderDetail";
 import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
 import DevTools from "./pages/DevTools";
 import DebugAuth from "./pages/DebugAuth";
@@ -70,10 +74,30 @@ const App = () => (
             } />
             <Route path="/partner/dashboard" element={
               <ProtectedRoute requiredUserType="partner">
-                <div className="min-h-screen bg-background">
-                  <Navbar />
+                <PartnerLayout>
                   <PartnerDashboard />
-                </div>
+                </PartnerLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/partner/work-orders/new" element={
+              <ProtectedRoute requiredUserType="partner">
+                <PartnerLayout>
+                  <SubmitWorkOrder />
+                </PartnerLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/partner/work-orders" element={
+              <ProtectedRoute requiredUserType="partner">
+                <PartnerLayout>
+                  <WorkOrderList />
+                </PartnerLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/partner/work-orders/:id" element={
+              <ProtectedRoute requiredUserType="partner">
+                <PartnerLayout>
+                  <WorkOrderDetail />
+                </PartnerLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/dashboard" element={
