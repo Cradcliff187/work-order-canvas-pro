@@ -84,16 +84,16 @@ export const useDevTools = () => {
       
       toast({
         title: "Success",
-        description: "Database seeded successfully",
+        description: "Database seeded successfully! Check console for details.",
       });
       
       // Refresh counts
-      await fetchCounts();
+      setTimeout(() => fetchCounts(), 1000); // Small delay to ensure data is committed
     } catch (error: any) {
-      console.error('Seed error:', error);
+      console.error('Comprehensive seed error:', error);
       toast({
-        title: "Error",
-        description: `Failed to seed database: ${error.message}`,
+        title: "Seeding Failed",
+        description: `Error: ${error.message || 'Unknown error'}. Check console for details.`,
         variant: "destructive",
       });
     } finally {

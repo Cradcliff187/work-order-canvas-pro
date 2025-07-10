@@ -37,6 +37,19 @@ const users = [
   { email: 'landscaper@trade.com', first_name: 'Green', last_name: 'Thumb', user_type: 'subcontractor' as const, company_name: 'Green Thumb Landscaping' }
 ];
 
+const trades = [
+  { name: 'Plumbing', description: 'Plumbing repairs and maintenance' },
+  { name: 'Electrical', description: 'Electrical work and repairs' },
+  { name: 'HVAC', description: 'Heating, ventilation, and air conditioning' },
+  { name: 'Carpentry', description: 'Wood work and construction' },
+  { name: 'Painting', description: 'Interior and exterior painting' },
+  { name: 'General Maintenance', description: 'General repairs and maintenance' },
+  { name: 'Landscaping', description: 'Grounds and landscaping work' },
+  { name: 'Roofing', description: 'Roof repairs and maintenance' },
+  { name: 'Flooring', description: 'Floor installation and repair' },
+  { name: 'Appliance Repair', description: 'Kitchen and laundry appliance repairs' }
+];
+
 const emailTemplates = [
   {
     template_name: 'work_order_received',
@@ -78,22 +91,49 @@ export const seedDatabase = async () => {
     console.log('📁 Creating organizations...');
     const { data: createdOrgs, error: orgError } = await supabase
       .from('organizations')
-      .upsert(organizations, { onConflict: 'name' })
+      .upsert(organizations, { 
+        onConflict: 'name',
+        ignoreDuplicates: false 
+      })
       .select();
 
-    if (orgError) throw orgError;
-    console.log(`✅ Created ${createdOrgs?.length} organizations`);
+    if (orgError) {
+      console.error('Organization creation error:', orgError);
+      throw new Error(`Failed to create organizations: ${orgError.message}`);
+    }
+    console.log(`✅ Created/updated ${createdOrgs?.length} organizations`);
 
     // 2. Create email templates
     console.log('📧 Creating email templates...');
     const { error: templateError } = await supabase
       .from('email_templates')
-      .upsert(emailTemplates, { onConflict: 'template_name' });
+      .upsert(emailTemplates, { 
+        onConflict: 'template_name',
+        ignoreDuplicates: false 
+      });
 
-    if (templateError) throw templateError;
-    console.log(`✅ Created ${emailTemplates.length} email templates`);
+    if (templateError) {
+      console.error('Email template creation error:', templateError);
+      throw new Error(`Failed to create email templates: ${templateError.message}`);
+    }
+    console.log(`✅ Created/updated ${emailTemplates.length} email templates`);
 
-    // 3. Create users (simplified for browser)
+    // 3. Create trades
+    console.log('🔧 Creating trades...');
+    const { error: tradesError } = await supabase
+      .from('trades')
+      .upsert(trades, { 
+        onConflict: 'name',
+        ignoreDuplicates: false 
+      });
+
+    if (tradesError) {
+      console.error('Trades creation error:', tradesError);
+      throw new Error(`Failed to create trades: ${tradesError.message}`);
+    }
+    console.log(`✅ Created/updated ${trades.length} trades`);
+
+    // 4. Create users (simplified for browser)
     console.log('👥 Creating users...');
     let createdUserCount = 0;
 

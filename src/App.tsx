@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminWorkOrders from "./pages/admin/AdminWorkOrders";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
 import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
 import DevTools from "./pages/DevTools";
@@ -41,6 +42,13 @@ const App = () => (
               <ProtectedRoute requiredUserType="admin">
                 <AdminLayout>
                   <AdminDashboard />
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/work-orders" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <AdminWorkOrders />
                 </AdminLayout>
               </ProtectedRoute>
             } />
