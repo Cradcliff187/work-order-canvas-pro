@@ -643,6 +643,18 @@ export type Database = {
           organization_id: string
         }[]
       }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      user_assigned_to_work_order: {
+        Args: { wo_id: string }
+        Returns: boolean
+      }
+      user_belongs_to_organization: {
+        Args: { org_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       assignment_type: "internal" | "subcontractor"
