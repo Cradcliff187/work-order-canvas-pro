@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminLayout from "./components/AdminLayout";
 import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -36,10 +37,9 @@ const App = () => (
             } />
             <Route path="/admin/dashboard" element={
               <ProtectedRoute requiredUserType="admin">
-                <div className="min-h-screen bg-background">
-                  <Navbar />
+                <AdminLayout>
                   <AdminDashboard />
-                </div>
+                </AdminLayout>
               </ProtectedRoute>
             } />
             <Route path="/partner/dashboard" element={
@@ -60,10 +60,9 @@ const App = () => (
             } />
             <Route path="/dev-tools" element={
               <ProtectedRoute requiredUserType="admin">
-                <div className="min-h-screen bg-background">
-                  <Navbar />
+                <AdminLayout>
                   <DevTools />
-                </div>
+                </AdminLayout>
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

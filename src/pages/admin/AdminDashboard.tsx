@@ -1,63 +1,368 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FileText, Settings, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { useAdminDashboard } from '@/hooks/useAdminDashboard';
+import { 
+  FileText, 
+  Clock, 
+  AlertTriangle, 
+  CheckCircle, 
+  TrendingUp, 
+  TrendingDown,
+  Plus,
+  ClipboardList,
+  Users as UsersIcon
+} from 'lucide-react';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+
+const COLORS = {
+  received: 'hsl(var(--primary))',
+  assigned: 'hsl(var(--warning))', 
+  in_progress: 'hsl(210 95% 56%)',
+  completed: 'hsl(var(--success))',
+  cancelled: 'hsl(var(--destructive))',
+};
 
 const AdminDashboard = () => {
+  const {
+    metrics,
+    statusDistribution,
+    dailySubmissions,
+    tradeVolumes,
+    recentWorkOrders,
+    recentReports,
+    isLoading,
+    isError
+  } = useAdminDashboard();
+
+  if (isError) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Dashboard</h1>
+          <p className="text-muted-foreground">Please try refreshing the page or check your connection.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage system settings, users, and monitor overall performance</p>
+        <p className="text-muted-foreground">Monitor system performance and manage work orders</p>
       </div>
 
+      {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">—</div>
-            <p className="text-xs text-muted-foreground">System users</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Work Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Work Orders</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">—</div>
-            <p className="text-xs text-muted-foreground">Total work orders</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16 mb-1" />
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="text-2xl font-bold">{metrics?.totalWorkOrders.current || 0}</div>
+                {metrics?.totalWorkOrders.trend && (
+                  <div className="flex items-center gap-1">
+                    {metrics.totalWorkOrders.trend === 'up' ? (
+                      <TrendingUp className="h-4 w-4 text-success" />
+                    ) : metrics.totalWorkOrders.trend === 'down' ? (
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {isLoading ? (
+                <Skeleton className="h-3 w-20" />
+              ) : (
+                `${metrics?.totalWorkOrders.lastMonth || 0} last month`
+              )}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Organizations</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending Assignments</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">—</div>
-            <p className="text-xs text-muted-foreground">Partner organizations</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-12 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold">{metrics?.pendingAssignments || 0}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Awaiting assignment</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Health</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">Good</div>
-            <p className="text-xs text-muted-foreground">All systems operational</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-8 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-destructive">{metrics?.overdueWorkOrders || 0}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Past due date</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-12 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-success">{metrics?.completedThisMonth || 0}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Successfully completed</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="text-center text-muted-foreground">
-        <p>Admin dashboard functionality will be implemented in future updates.</p>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Status Distribution Pie Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Work Orders by Status</CardTitle>
+            <CardDescription>Distribution of current work order statuses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-48 w-full" />
+            ) : statusDistribution && statusDistribution.length > 0 ? (
+              <ChartContainer
+                config={{
+                  count: { label: "Count" }
+                }}
+                className="h-48"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={60}
+                      dataKey="count"
+                      label={({ status, percentage }) => `${status} (${percentage}%)`}
+                    >
+                      {statusDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[entry.status.toLowerCase().replace(' ', '_')] || 'hsl(var(--muted))'} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-muted-foreground">
+                No data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Daily Submissions Line Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Daily Submissions</CardTitle>
+            <CardDescription>Work orders submitted in the last 7 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-48 w-full" />
+            ) : dailySubmissions && dailySubmissions.length > 0 ? (
+              <ChartContainer
+                config={{
+                  count: { label: "Submissions", color: "hsl(var(--primary))" }
+                }}
+                className="h-48"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dailySubmissions}>
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => new Date(value).getDate().toString()}
+                    />
+                    <YAxis />
+                    <Line 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-muted-foreground">
+                No data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Trades Bar Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Trades</CardTitle>
+            <CardDescription>Most active trades by work order volume</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-48 w-full" />
+            ) : tradeVolumes && tradeVolumes.length > 0 ? (
+              <ChartContainer
+                config={{
+                  count: { label: "Work Orders", color: "hsl(var(--primary))" }
+                }}
+                className="h-48"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={tradeVolumes} layout="horizontal">
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="trade" width={80} />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-muted-foreground">
+                No data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-8">
+        <Button className="h-16 flex flex-col gap-1">
+          <Plus className="h-5 w-5" />
+          Create Work Order
+        </Button>
+        <Button variant="outline" className="h-16 flex flex-col gap-1">
+          <UsersIcon className="h-5 w-5" />
+          View Unassigned
+        </Button>
+        <Button variant="outline" className="h-16 flex flex-col gap-1">
+          <ClipboardList className="h-5 w-5" />
+          Pending Reports
+        </Button>
+        <Button variant="outline" className="h-16 flex flex-col gap-1">
+          <FileText className="h-5 w-5" />
+          All Work Orders
+        </Button>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Work Orders */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Work Orders</CardTitle>
+            <CardDescription>Latest work orders in the system</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : recentWorkOrders && recentWorkOrders.length > 0 ? (
+              <div className="space-y-3">
+                {recentWorkOrders.map((workOrder) => (
+                  <div key={workOrder.id} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{workOrder.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {workOrder.work_order_number} • {new Date(workOrder.created_at).toLocaleDateString()}
+                        {workOrder.assigned_to_name && ` • ${workOrder.assigned_to_name}`}
+                      </p>
+                    </div>
+                    <Badge variant={workOrder.status === 'completed' ? 'default' : 'secondary'}>
+                      {workOrder.status.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No recent work orders
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Reports */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Reports</CardTitle>
+            <CardDescription>Latest submitted work order reports</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : recentReports && recentReports.length > 0 ? (
+              <div className="space-y-3">
+                {recentReports.map((report) => (
+                  <div key={report.id} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{report.work_order_title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {report.work_order_number} • {report.subcontractor_name} • {new Date(report.submitted_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant={report.status === 'approved' ? 'default' : 'secondary'}>
+                      {report.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No recent reports
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
