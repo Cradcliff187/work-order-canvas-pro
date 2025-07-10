@@ -22,22 +22,14 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: [
-      "react", 
-      "react-dom", 
       "react-router-dom",
       "@tanstack/react-query",
       "@radix-ui/react-slot"
     ],
-    exclude: ["react", "react-dom"],
   },
   build: {
     commonjsOptions: {
       include: [/node_modules/],
-    },
-    rollupOptions: {
-      external: (id) => {
-        return id === 'react' || id === 'react-dom';
-      },
     },
   },
 }));
