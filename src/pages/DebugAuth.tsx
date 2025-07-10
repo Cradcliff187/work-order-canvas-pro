@@ -71,29 +71,33 @@ const DebugAuth = () => {
         info.errors.push(`is_admin failed: ${error.message}`);
       }
 
-      // Test RLS on various tables
-      const tables: Array<keyof Database['public']['Tables']> = ['profiles', 'organizations', 'work_orders', 'trades'];
-      
-      for (const table of tables) {
+      // Test RLS on various tables with individual calls for type safety
+      const testTable = async (tableName: string, tableQuery: () => Promise<any>) => {
         try {
-          const { data, error } = await supabase
-            .from(table)
-            .select('*')
-            .limit(1);
-          
-          info.rlsTests[table] = {
-            success: !error,
-            error: error?.message,
-            rowCount: data?.length || 0
+          const result = await tableQuery();
+          info.rlsTests[tableName] = {
+            success: !result.error,
+            error: result.error?.message,
+            rowCount: result.data?.length || 0
           };
         } catch (error: any) {
-          info.rlsTests[table] = {
+          info.rlsTests[tableName] = {
             success: false,
             error: error.message,
             rowCount: 0
           };
         }
-      }
+      };
+
+      await Promise.all([
+        testTable('profiles', async () => await supabase.from('profiles').select('*').limit(1)),
+        testTable('organizations', async () => await supabase.from('organizations').select('*').limit(1)),
+        testTable('work_orders', async () => await supabase.from('work_orders').select('*').limit(1)),
+        testTable('trades', async () => await supabase.from('trades').select('*').limit(1)),
+        testTable('user_organizations', async () => await supabase.from('user_organizations').select('*').limit(1)),
+        testTable('work_order_reports', async () => await supabase.from('work_order_reports').select('*').limit(1)),
+        testTable('work_order_attachments', async () => await supabase.from('work_order_attachments').select('*').limit(1))
+      ]);
 
       // Test direct profile query
       try {
