@@ -736,6 +736,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_type"]
+      }
+      get_user_organizations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          organization_id: string
+        }[]
+      }
     }
     Enums: {
       assignment_type: "internal" | "subcontractor"
