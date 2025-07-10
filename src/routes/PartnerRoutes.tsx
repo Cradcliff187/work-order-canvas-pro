@@ -10,6 +10,7 @@ import {
   WorkOrderDetail,
   PartnerReports,
   PartnerReportDetail,
+  PartnerProfile,
 } from '@/pages/LazyPages';
 
 export const PartnerRoutes = () => (
@@ -69,6 +70,16 @@ export const PartnerRoutes = () => (
         <PartnerLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <PartnerReportDetail />
+          </Suspense>
+        </PartnerLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/partner/profile" element={
+      <ProtectedRoute requiredUserType="partner">
+        <PartnerLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <PartnerProfile />
           </Suspense>
         </PartnerLayout>
       </ProtectedRoute>

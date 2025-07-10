@@ -109,9 +109,11 @@ function PartnerSidebar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Profile Settings
+                <DropdownMenuItem asChild>
+                  <Link to="/partner/profile" className="flex items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
@@ -132,9 +134,11 @@ function PartnerSidebar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Profile Settings
+                <DropdownMenuItem asChild>
+                  <Link to="/partner/profile" className="flex items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>

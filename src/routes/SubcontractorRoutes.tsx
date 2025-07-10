@@ -10,6 +10,7 @@ import {
   SubmitReport,
   ReportHistory,
   ReportDetail,
+  SubcontractorProfile,
 } from '@/pages/LazyPages';
 
 export const SubcontractorRoutes = () => (
@@ -69,6 +70,16 @@ export const SubcontractorRoutes = () => (
         <SubcontractorLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <ReportDetail />
+          </Suspense>
+        </SubcontractorLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/subcontractor/profile" element={
+      <ProtectedRoute requiredUserType="subcontractor">
+        <SubcontractorLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <SubcontractorProfile />
           </Suspense>
         </SubcontractorLayout>
       </ProtectedRoute>

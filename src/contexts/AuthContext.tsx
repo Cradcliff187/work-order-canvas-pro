@@ -13,6 +13,7 @@ interface Profile {
   company_name?: string;
   phone?: string;
   avatar_url?: string;
+  is_active?: boolean;
 }
 
 interface AuthContextType {
@@ -24,6 +25,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -184,6 +186,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    const profileData = await fetchProfile(user.id);
+    setProfile(profileData);
+  };
+
   const value = {
     user,
     session,
@@ -193,6 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signOut,
     updateProfile,
+    refreshProfile,
   };
 
   return (

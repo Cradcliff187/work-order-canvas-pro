@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -34,6 +35,15 @@ const Navbar = () => {
 
   const formatUserType = (userType: string) => {
     return userType.charAt(0).toUpperCase() + userType.slice(1);
+  };
+
+  const getProfilePath = () => {
+    switch (profile?.user_type) {
+      case 'admin': return '/admin/profile';
+      case 'partner': return '/partner/profile';
+      case 'subcontractor': return '/subcontractor/profile';
+      default: return '/admin/profile';
+    }
   };
 
   return (
@@ -77,9 +87,11 @@ const Navbar = () => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
+            <DropdownMenuItem asChild>
+              <Link to={getProfilePath()} className="flex items-center">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile Settings</span>
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />

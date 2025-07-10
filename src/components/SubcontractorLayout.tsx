@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { ClipboardList, FileText, Home, LogOut, Menu, History } from "lucide-react";
+import { ClipboardList, FileText, Home, LogOut, Menu, History, User } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -22,6 +22,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
     { name: "Dashboard", href: "/subcontractor/dashboard", icon: Home },
     { name: "My Work Orders", href: "/subcontractor/work-orders", icon: ClipboardList },
     { name: "Report History", href: "/subcontractor/reports", icon: History },
+    { name: "Profile Settings", href: "/subcontractor/profile", icon: User },
   ];
 
   const NavItems = () => (

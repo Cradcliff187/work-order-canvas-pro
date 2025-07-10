@@ -9,12 +9,14 @@ export const AdminWorkOrderDetail = lazy(() => import('@/pages/admin/AdminWorkOr
 export const AdminWorkOrderEdit = lazy(() => import('@/pages/admin/AdminWorkOrderEdit'));
 export const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'));
 export const AdminEmailTemplates = lazy(() => import('@/pages/admin/AdminEmailTemplates'));
+export const AdminProfile = lazy(() => import('@/pages/admin/AdminProfile'));
 
 // Partner Pages
 export const PartnerDashboard = lazy(() => import('@/pages/partner/PartnerDashboard'));
 export const SubmitWorkOrder = lazy(() => import('@/pages/partner/SubmitWorkOrder'));
 export const WorkOrderList = lazy(() => import('@/pages/partner/WorkOrderList'));
 export const WorkOrderDetail = lazy(() => import('@/pages/partner/WorkOrderDetail'));
+export const PartnerProfile = lazy(() => import('@/pages/partner/PartnerProfile'));
 
 // Subcontractor Pages
 export const SubcontractorDashboard = lazy(() => import('@/pages/subcontractor/SubcontractorDashboard'));
@@ -23,6 +25,7 @@ export const SubcontractorWorkOrderDetail = lazy(() => import('@/pages/subcontra
 export const SubmitReport = lazy(() => import('@/pages/subcontractor/SubmitReport'));
 export const ReportHistory = lazy(() => import('@/pages/subcontractor/ReportHistory'));
 export const ReportDetail = lazy(() => import('@/pages/subcontractor/ReportDetail'));
+export const SubcontractorProfile = lazy(() => import('@/pages/subcontractor/SubcontractorProfile'));
 
 // Other Pages
 export const Auth = lazy(() => import('@/pages/Auth'));
