@@ -20,6 +20,12 @@ import SubmitWorkOrder from "./pages/partner/SubmitWorkOrder";
 import WorkOrderList from "./pages/partner/WorkOrderList";
 import WorkOrderDetail from "./pages/partner/WorkOrderDetail";
 import SubcontractorDashboard from "./pages/subcontractor/SubcontractorDashboard";
+import { SubcontractorLayout } from "./components/SubcontractorLayout";
+import SubcontractorWorkOrders from "./pages/subcontractor/SubcontractorWorkOrders";
+import SubcontractorWorkOrderDetail from "./pages/subcontractor/SubcontractorWorkOrderDetail";
+import SubmitReport from "./pages/subcontractor/SubmitReport";
+import ReportHistory from "./pages/subcontractor/ReportHistory";
+import ReportDetail from "./pages/subcontractor/ReportDetail";
 import DevTools from "./pages/DevTools";
 import DebugAuth from "./pages/DebugAuth";
 import NotFound from "./pages/NotFound";
@@ -101,42 +107,42 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/dashboard" element={
-              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+              <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
                   <SubcontractorDashboard />
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/work-orders" element={
-              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+              <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
                   <SubcontractorWorkOrders />
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/work-orders/:id" element={
-              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+              <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
                   <SubcontractorWorkOrderDetail />
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/reports/new/:workOrderId" element={
-              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+              <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
                   <SubmitReport />
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/reports" element={
-              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+              <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
                   <ReportHistory />
                 </SubcontractorLayout>
               </ProtectedRoute>
             } />
             <Route path="/subcontractor/reports/:id" element={
-              <ProtectedRoute allowedUserTypes={["subcontractor"]}>
+              <ProtectedRoute requiredUserType="subcontractor">
                 <SubcontractorLayout>
                   <ReportDetail />
                 </SubcontractorLayout>
