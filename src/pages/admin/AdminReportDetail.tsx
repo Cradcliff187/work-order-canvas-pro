@@ -19,7 +19,8 @@ import {
   Download,
   ExternalLink
 } from 'lucide-react';
-import { useAdminReportDetail, useAdminReportMutations } from '@/hooks/useAdminReports';
+import { useAdminReportDetail } from '@/hooks/useAdminReportDetail';
+import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { format } from 'date-fns';
 
 export default function AdminReportDetail() {

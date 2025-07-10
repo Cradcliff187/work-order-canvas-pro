@@ -34,7 +34,9 @@ import {
   Filter,
   X
 } from 'lucide-react';
-import { useAdminReports, useAdminReportMutations, useSubcontractors } from '@/hooks/useAdminReports';
+import { useAdminReports } from '@/hooks/useAdminReports';
+import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
+import { useSubcontractors } from '@/hooks/useSubcontractors';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
