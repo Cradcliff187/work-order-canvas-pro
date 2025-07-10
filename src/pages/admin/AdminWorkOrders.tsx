@@ -23,6 +23,7 @@ import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
 import { useToast } from '@/hooks/use-toast';
 import { Database } from '@/integrations/supabase/types';
+import { exportWorkOrders } from '@/lib/utils/export';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -107,10 +108,22 @@ export default function AdminWorkOrders() {
   };
 
   const handleExport = (ids: string[]) => {
-    // TODO: Implement CSV export
-    const selectedData = workOrdersData?.data.filter(wo => ids.includes(wo.id));
-    console.log('Export data:', selectedData);
-    toast({ title: `Exporting ${ids.length} work orders...` });
+    try {
+      const selectedData = workOrdersData?.data.filter(wo => ids.includes(wo.id));
+      if (!selectedData || selectedData.length === 0) {
+        toast({ title: 'No data to export', variant: 'destructive' });
+        return;
+      }
+      
+      exportWorkOrders(selectedData);
+      toast({ title: `Successfully exported ${ids.length} work orders` });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Failed to export work orders. Please try again.',
+        variant: 'destructive' 
+      });
+    }
   };
 
   const renderTableSkeleton = () => (
@@ -182,7 +195,22 @@ export default function AdminWorkOrders() {
                 Clear Selection ({selectedRows.length})
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => handleExport(workOrdersData?.data.map(wo => wo.id) || [])}>
+            <Button variant="outline" size="sm" onClick={() => {
+              try {
+                if (!workOrdersData?.data || workOrdersData.data.length === 0) {
+                  toast({ title: 'No data to export', variant: 'destructive' });
+                  return;
+                }
+                exportWorkOrders(workOrdersData.data);
+                toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
+              } catch (error) {
+                toast({ 
+                  title: 'Export failed', 
+                  description: 'Failed to export work orders. Please try again.',
+                  variant: 'destructive' 
+                });
+              }
+            }}>
               <Download className="w-4 h-4 mr-2" />
               Export All
             </Button>

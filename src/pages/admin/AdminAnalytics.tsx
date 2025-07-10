@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { exportAnalyticsKPIs, exportSubcontractorPerformance } from '@/lib/utils/export';
 
 const AdminAnalytics: React.FC = () => {
   const { toast } = useToast();
@@ -53,11 +54,28 @@ const AdminAnalytics: React.FC = () => {
   };
 
   const handleExport = () => {
-    toast({
-      title: 'Export Started',
-      description: 'Your analytics report is being generated and will be downloaded shortly.',
-    });
-    // TODO: Implement export functionality
+    try {
+      if (!kpiMetrics) {
+        toast({
+          title: 'No data to export',
+          description: 'Analytics data is not available yet.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      exportAnalyticsKPIs(kpiMetrics);
+      toast({
+        title: 'Export Completed',
+        description: 'Your analytics KPI report has been downloaded.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export analytics data. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -258,6 +276,34 @@ const AdminAnalytics: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                      <div className="flex justify-end mt-4">
+                        <Button variant="outline" size="sm" onClick={() => {
+                          try {
+                            if (!chartData?.subcontractorPerformance || chartData.subcontractorPerformance.length === 0) {
+                              toast({
+                                title: 'No data to export',
+                                description: 'Subcontractor performance data is not available.',
+                                variant: 'destructive',
+                              });
+                              return;
+                            }
+                            exportSubcontractorPerformance(chartData.subcontractorPerformance);
+                            toast({
+                              title: 'Export Completed',
+                              description: 'Subcontractor performance data has been downloaded.',
+                            });
+                          } catch (error) {
+                            toast({
+                              title: 'Export Failed',
+                              description: 'Failed to export subcontractor data.',
+                              variant: 'destructive',
+                            });
+                          }
+                        }}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Export Performance Data
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="h-80 flex items-center justify-center text-muted-foreground">
