@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useSubcontractorWorkOrders, compressImage } from "@/hooks/useSubcontractorWorkOrders";
-import { ArrowLeft, Upload, X, Camera, FileText } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { FileUpload } from "@/components/FileUpload";
+import { ArrowLeft, FileText } from "lucide-react";
 
 const reportSchema = z.object({
   workPerformed: z.string().min(10, "Please provide at least 10 characters describing the work performed"),
@@ -29,8 +30,12 @@ export default function SubmitReport() {
   const { getWorkOrder, submitReport } = useSubcontractorWorkOrders();
   const workOrderQuery = getWorkOrder(workOrderId!);
   
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  
+  const { uploadFiles, uploadProgress, isUploading } = useFileUpload({
+    maxFiles: 10,
+    maxSizeBytes: 10 * 1024 * 1024, // 10MB
+  });
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -44,32 +49,8 @@ export default function SubmitReport() {
     },
   });
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    
-    if (files.length === 0) return;
-
-    setUploading(true);
-    try {
-      const compressedFiles = await Promise.all(
-        files.map(async (file) => {
-          if (file.type.startsWith("image/")) {
-            return await compressImage(file, 1); // 1MB max
-          }
-          return file;
-        })
-      );
-
-      setPhotos(prev => [...prev, ...compressedFiles]);
-    } catch (error) {
-      console.error("Error compressing images:", error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(files);
   };
 
   const onSubmit = async (data: ReportFormData) => {
@@ -84,7 +65,7 @@ export default function SubmitReport() {
         invoiceAmount: data.invoiceAmount,
         invoiceNumber: data.invoiceNumber,
         notes: data.notes,
-        photos,
+        photos: selectedFiles,
       });
 
       navigate("/subcontractor/work-orders");
@@ -282,64 +263,18 @@ export default function SubmitReport() {
               <div className="space-y-4">
                 <div>
                   <FormLabel>Work Photos</FormLabel>
-                  <p className="text-sm text-muted-foreground">Upload photos of the completed work (max 1MB each)</p>
+                  <p className="text-sm text-muted-foreground">
+                    Upload photos of the completed work (up to 10 photos, max 10MB each)
+                  </p>
                 </div>
                 
-                <div className="grid gap-4">
-                  {/* Upload Button */}
-                  <div className="flex items-center gap-4">
-                    <label htmlFor="photo-upload" className="cursor-pointer">
-                      <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-muted-foreground rounded-lg hover:border-foreground transition-colors">
-                        <Camera className="h-4 w-4" />
-                        <span className="text-sm">Add Photos</span>
-                      </div>
-                      <input
-                        id="photo-upload"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handlePhotoUpload}
-                        disabled={uploading}
-                      />
-                    </label>
-                    {uploading && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Upload className="h-4 w-4 animate-spin" />
-                        Compressing images...
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Photo Previews */}
-                  {photos.length > 0 && (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {photos.map((photo, index) => (
-                        <div key={index} className="relative group">
-                          <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                            <img
-                              src={URL.createObjectURL(photo)}
-                              alt={`Work photo ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removePhoto(index)}
-                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                          <div className="absolute bottom-2 left-2 right-2">
-                            <Badge variant="secondary" className="text-xs">
-                              {photo.name} ({(photo.size / 1024 / 1024).toFixed(1)}MB)
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <FileUpload
+                  onFilesSelected={handleFilesSelected}
+                  maxFiles={10}
+                  maxSizeBytes={10 * 1024 * 1024}
+                  uploadProgress={uploadProgress}
+                  disabled={submitReport.isPending || isUploading}
+                />
               </div>
 
               {/* Additional Notes */}
@@ -370,13 +305,13 @@ export default function SubmitReport() {
                 </Link>
                 <Button 
                   type="submit" 
-                  disabled={submitReport.isPending || uploading}
+                  disabled={submitReport.isPending || isUploading}
                   className="min-w-32"
                 >
-                  {submitReport.isPending ? (
+                  {submitReport.isPending || isUploading ? (
                     <>
-                      <Upload className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting...
+                      <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      {isUploading ? "Uploading..." : "Submitting..."}
                     </>
                   ) : (
                     <>

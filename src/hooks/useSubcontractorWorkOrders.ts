@@ -195,7 +195,7 @@ export function useSubcontractorWorkOrders() {
           const fileName = `${user.id}/${report.id}/${Date.now()}_${index}_${photo.name}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("work-order-photos")
+            .from("work-order-attachments")
             .upload(fileName, photo);
 
           if (uploadError) throw uploadError;
