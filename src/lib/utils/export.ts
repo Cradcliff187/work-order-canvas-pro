@@ -54,6 +54,15 @@ function formatCSVValue(value: any, type: ExportColumn['type'] = 'string'): stri
 }
 
 /**
+ * Gets nested property value from object using dot notation
+ */
+function getNestedValue(obj: any, path: string): any {
+  return path.split('.').reduce((current, key) => {
+    return current && current[key] !== undefined ? current[key] : null;
+  }, obj);
+}
+
+/**
  * Generates a CSV filename with timestamp
  */
 export function generateFilename(prefix: string, extension: string = 'csv'): string {
@@ -98,15 +107,6 @@ function arrayToCSV(data: any[], columns: ExportColumn[]): string {
   });
 
   return [headerRow, ...dataRows].join('\n');
-}
-
-/**
- * Gets nested property value from object using dot notation
- */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => {
-    return current && current[key] !== undefined ? current[key] : null;
-  }, obj);
 }
 
 /**
