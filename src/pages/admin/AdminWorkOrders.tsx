@@ -68,8 +68,7 @@ export default function AdminWorkOrders() {
   // Column definitions with action handlers
   const columns = useMemo(() => createWorkOrderColumns({
     onEdit: (workOrder) => {
-      // TODO: Navigate to edit page or open edit modal
-      console.log('Edit work order:', workOrder);
+      navigate(`/admin/work-orders/${workOrder.id}/edit`);
     },
     onView: (workOrder) => {
       navigate(`/admin/work-orders/${workOrder.id}`);
