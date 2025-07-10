@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Profile {
@@ -40,6 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
+  const navigate = useNavigate();
 
   const fetchProfile = async (userId: string, retryCount = 0): Promise<Profile | null> => {
     try {
@@ -69,51 +72,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch profile data with retry logic for new users
-          const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
-          
-          // Redirect based on user type after login
-          if (event === 'SIGNED_IN' && profileData?.user_type) {
-            const redirectPaths = {
-              'admin': '/admin/dashboard',
-              'partner': '/partner/dashboard',
-              'subcontractor': '/subcontractor/dashboard'
-            };
-            const redirectPath = redirectPaths[profileData.user_type];
-            if (redirectPath && window.location.pathname === '/') {
-              window.location.href = redirectPath;
+          // Fetch profile data asynchronously
+          fetchProfile(session.user.id).then((profileData) => {
+            if (!mounted) return;
+            
+            setProfile(profileData);
+            
+            // Only redirect on actual sign-in events and if we're on the root page
+            if (event === 'SIGNED_IN' && profileData?.user_type && window.location.pathname === '/') {
+              const redirectPaths = {
+                'admin': '/admin/dashboard',
+                'partner': '/partner/dashboard',
+                'subcontractor': '/subcontractor/dashboard'
+              };
+              const redirectPath = redirectPaths[profileData.user_type];
+              if (redirectPath) {
+                setTimeout(() => navigate(redirectPath, { replace: true }), 0);
+              }
             }
-          }
+            
+            setLoading(false);
+          });
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
+        fetchProfile(session.user.id).then((profileData) => {
+          if (!mounted) return;
+          setProfile(profileData);
+          setLoading(false);
+          setInitializing(false);
+        });
+      } else {
+        setLoading(false);
+        setInitializing(false);
       }
-      
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -144,6 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    navigate('/', { replace: true });
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -165,7 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     profile,
-    loading,
+    loading: loading || initializing,
     signUp,
     signIn,
     signOut,
