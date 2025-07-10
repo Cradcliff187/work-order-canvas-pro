@@ -20,6 +20,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { format } from 'date-fns';
 
 const getStatusColor = (status: string) => {
@@ -136,6 +137,9 @@ export default function AdminWorkOrderDetail() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Breadcrumb */}
+      <WorkOrderBreadcrumb />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

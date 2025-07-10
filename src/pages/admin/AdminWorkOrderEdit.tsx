@@ -22,6 +22,7 @@ import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { useSubcontractorsByTrade } from '@/hooks/useWorkOrderAssignment';
 import { useToast } from '@/hooks/use-toast';
+import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -235,6 +236,9 @@ export default function AdminWorkOrderEdit() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Breadcrumb */}
+      <WorkOrderBreadcrumb />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

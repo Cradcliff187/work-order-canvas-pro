@@ -23,6 +23,7 @@ import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilter
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
+import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { useToast } from '@/hooks/use-toast';
 import { Database } from '@/integrations/supabase/types';
 import { exportWorkOrders } from '@/lib/utils/export';
@@ -177,6 +178,9 @@ export default function AdminWorkOrders() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Breadcrumb */}
+      <WorkOrderBreadcrumb />
+      
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
