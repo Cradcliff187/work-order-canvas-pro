@@ -23,6 +23,7 @@ import {
   AdminOrganizations,
   AdminWorkOrders,
   AdminWorkOrderDetail,
+  AdminWorkOrderEdit,
   AdminAnalytics,
   AdminReports,
   AdminReportDetail,
@@ -100,6 +101,15 @@ const App = () => (
                 <AdminLayout>
                   <Suspense fallback={<LoadingSpinner />}>
                     <AdminWorkOrderDetail />
+                  </Suspense>
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/work-orders/:id/edit" element={
+              <ProtectedRoute requiredUserType="admin">
+                <AdminLayout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminWorkOrderEdit />
                   </Suspense>
                 </AdminLayout>
               </ProtectedRoute>

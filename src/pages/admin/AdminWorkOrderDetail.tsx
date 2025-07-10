@@ -157,7 +157,7 @@ export default function AdminWorkOrderDetail() {
           <Badge className={getStatusColor(workOrder.status)}>
             {workOrder.status.replace('_', ' ')}
           </Badge>
-          <Button onClick={() => console.log('Edit work order')}>
+          <Button onClick={() => navigate(`/admin/work-orders/${id}/edit`)}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Work Order
           </Button>

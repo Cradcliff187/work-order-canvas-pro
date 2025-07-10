@@ -6,6 +6,7 @@ export const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 export const AdminOrganizations = lazy(() => import('@/pages/admin/AdminOrganizations'));
 export const AdminWorkOrders = lazy(() => import('@/pages/admin/AdminWorkOrders'));
 export const AdminWorkOrderDetail = lazy(() => import('@/pages/admin/AdminWorkOrderDetail'));
+export const AdminWorkOrderEdit = lazy(() => import('@/pages/admin/AdminWorkOrderEdit'));
 export const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'));
 
 // Partner Pages
