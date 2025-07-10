@@ -48,7 +48,6 @@ export default defineConfig(({ mode }) => ({
   },
   // Performance optimizations for mobile
   esbuild: {
-    jsxInject: `import React from 'react'`,
     target: 'esnext',
     treeShaking: true,
   },
