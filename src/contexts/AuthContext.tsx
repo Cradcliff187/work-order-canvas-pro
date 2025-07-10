@@ -41,17 +41,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, retryCount = 0): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
         return null;
+      }
+
+      if (!data && retryCount < 3) {
+        // Profile might not be created yet, retry with exponential backoff
+        const delay = Math.pow(2, retryCount) * 100; // 100ms, 200ms, 400ms
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchProfile(userId, retryCount + 1);
       }
 
       return data;
@@ -69,24 +76,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch profile data with a small delay to ensure DB trigger has completed
-          setTimeout(async () => {
-            const profileData = await fetchProfile(session.user.id);
-            setProfile(profileData);
-            
-            // Redirect based on user type after login
-            if (event === 'SIGNED_IN' && profileData?.user_type) {
-              const redirectPaths = {
-                'admin': '/admin/dashboard',
-                'partner': '/partner/dashboard',
-                'subcontractor': '/subcontractor/dashboard'
-              };
-              const redirectPath = redirectPaths[profileData.user_type];
-              if (redirectPath && window.location.pathname === '/') {
-                window.location.href = redirectPath;
-              }
+          // Fetch profile data with retry logic for new users
+          const profileData = await fetchProfile(session.user.id);
+          setProfile(profileData);
+          
+          // Redirect based on user type after login
+          if (event === 'SIGNED_IN' && profileData?.user_type) {
+            const redirectPaths = {
+              'admin': '/admin/dashboard',
+              'partner': '/partner/dashboard',
+              'subcontractor': '/subcontractor/dashboard'
+            };
+            const redirectPath = redirectPaths[profileData.user_type];
+            if (redirectPath && window.location.pathname === '/') {
+              window.location.href = redirectPath;
             }
-          }, 100);
+          }
         } else {
           setProfile(null);
         }
