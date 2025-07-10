@@ -34,3 +34,6 @@ export const AdminReports = lazy(() => import('@/pages/admin/AdminReports'));
 export const AdminReportDetail = lazy(() => import('@/pages/admin/AdminReportDetail'));
 export const PartnerReports = lazy(() => import('@/pages/partner/PartnerReports'));
 export const PartnerReportDetail = lazy(() => import('@/pages/partner/PartnerReportDetail'));
+
+// System Pages
+export const SystemHealthCheck = lazy(() => import('@/pages/admin/SystemHealthCheck'));
