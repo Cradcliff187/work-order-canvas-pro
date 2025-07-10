@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   useReactTable,
   getCoreRowModel,
@@ -43,6 +44,7 @@ interface WorkOrderFilters {
 
 export default function AdminWorkOrders() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -70,8 +72,7 @@ export default function AdminWorkOrders() {
       console.log('Edit work order:', workOrder);
     },
     onView: (workOrder) => {
-      // TODO: Navigate to detail page
-      console.log('View work order:', workOrder);
+      navigate(`/admin/work-orders/${workOrder.id}`);
     },
     onDelete: (workOrder) => {
       if (confirm('Are you sure you want to delete this work order?')) {
