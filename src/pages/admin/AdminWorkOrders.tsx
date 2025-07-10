@@ -1,89 +1,148 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  ColumnDef,
+  flexRender,
+  PaginationState,
+  SortingState,
+  RowSelectionState,
+} from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, Plus, Eye, Edit, Trash2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Download, RotateCcw } from 'lucide-react';
+import { useWorkOrders, useWorkOrderMutations } from '@/hooks/useWorkOrders';
+import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
+import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
+import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
+import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
+import { useToast } from '@/hooks/use-toast';
 import { Database } from '@/integrations/supabase/types';
 
-type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
-
-interface WorkOrder {
-  id: string;
-  work_order_number: string | null;
-  title: string;
-  status: WorkOrderStatus;
-  created_at: string;
-  organization: { name: string } | null;
-  trade: { name: string } | null;
+type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
+  organizations: { name: string } | null;
+  trades: { name: string } | null;
   assigned_user: { first_name: string; last_name: string } | null;
+};
+
+interface WorkOrderFilters {
+  status?: string[];
+  trade_id?: string;
+  organization_id?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 export default function AdminWorkOrders() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { toast } = useToast();
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 25,
+  });
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [filters, setFilters] = useState<WorkOrderFilters>({});
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const { data: workOrders, isLoading, error } = useQuery({
-    queryKey: ['admin-work-orders', searchTerm, statusFilter],
-    queryFn: async () => {
-      let query = supabase
-        .from('work_orders')
-        .select(`
-          id,
-          work_order_number,
-          title,
-          status,
-          created_at,
-          organizations!organization_id(name),
-          trades!trade_id(name)
-        `)
-        .order('created_at', { ascending: false });
+  // Fetch data with server-side pagination and filtering
+  const { data: workOrdersData, isLoading, error, refetch } = useWorkOrders(
+    pagination,
+    sorting,
+    filters
+  );
 
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,work_order_number.ilike.%${searchTerm}%`);
-      }
+  const { deleteWorkOrder } = useWorkOrderMutations();
 
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter as WorkOrderStatus);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      return (data || []).map(item => ({
-        id: item.id,
-        work_order_number: item.work_order_number,
-        title: item.title,
-        status: item.status,
-        created_at: item.created_at,
-        organization: item.organizations ? { name: (item.organizations as any).name } : null,
-        trade: item.trades ? { name: (item.trades as any).name } : null,
-        assigned_user: null, // Simplified for now
-      })) as WorkOrder[];
+  // Column definitions with action handlers
+  const columns = useMemo(() => createWorkOrderColumns({
+    onEdit: (workOrder) => {
+      // TODO: Navigate to edit page or open edit modal
+      console.log('Edit work order:', workOrder);
     },
+    onView: (workOrder) => {
+      // TODO: Navigate to detail page
+      console.log('View work order:', workOrder);
+    },
+    onDelete: (workOrder) => {
+      if (confirm('Are you sure you want to delete this work order?')) {
+        deleteWorkOrder.mutate(workOrder.id);
+      }
+    },
+  }), [deleteWorkOrder]);
+
+  // React Table configuration
+  const table = useReactTable({
+    data: workOrdersData?.data || [],
+    columns,
+    pageCount: workOrdersData?.pageCount || 0,
+    state: {
+      pagination,
+      sorting,
+      rowSelection,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    manualSorting: true,
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'received': return 'bg-blue-100 text-blue-800';
-      case 'assigned': return 'bg-yellow-100 text-yellow-800';
-      case 'in_progress': return 'bg-orange-100 text-orange-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedIds = selectedRows.map(row => row.original.id);
+
+  const handleClearFilters = () => {
+    setFilters({});
   };
+
+  const handleClearSelection = () => {
+    setRowSelection({});
+  };
+
+  const handleExport = (ids: string[]) => {
+    // TODO: Implement CSV export
+    const selectedData = workOrdersData?.data.filter(wo => ids.includes(wo.id));
+    console.log('Export data:', selectedData);
+    toast({ title: `Exporting ${ids.length} work orders...` });
+  };
+
+  const renderTableSkeleton = () => (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex space-x-4">
+          <Skeleton className="h-4 w-8" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+      ))}
+    </div>
+  );
 
   if (error) {
     return (
       <div className="p-6">
         <Card>
           <CardContent className="p-6">
-            <p className="text-destructive">Error loading work orders: {error.message}</p>
+            <div className="text-center space-y-4">
+              <p className="text-destructive">Error loading work orders: {error.message}</p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -92,128 +151,152 @@ export default function AdminWorkOrders() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Work Orders Management</h1>
-          <p className="text-muted-foreground">Manage all work orders across organizations</p>
+          <p className="text-muted-foreground">
+            {workOrdersData?.totalCount ? `${workOrdersData.totalCount} total work orders` : 'Manage all work orders across organizations'}
+          </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4 mr-2" />
           New Work Order
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search by title or work order number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="received">Received</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters */}
+      <WorkOrderFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        onClearFilters={handleClearFilters}
+      />
 
+      {/* Data Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Work Orders</CardTitle>
+          <div className="flex items-center gap-2">
+            {selectedRows.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleClearSelection}>
+                Clear Selection ({selectedRows.length})
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => handleExport(workOrdersData?.data.map(wo => wo.id) || [])}>
+              <Download className="w-4 h-4 mr-2" />
+              Export All
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : workOrders?.length === 0 ? (
+            renderTableSkeleton()
+          ) : workOrdersData?.data.length === 0 ? (
             <div className="text-center p-8 text-muted-foreground">
               No work orders found matching your criteria.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Work Order #</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Trade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workOrders?.map((workOrder) => (
-                  <TableRow key={workOrder.id}>
-                    <TableCell className="font-mono">
-                      {workOrder.work_order_number || 'N/A'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {workOrder.title}
-                    </TableCell>
-                    <TableCell>
-                      {workOrder.organization?.name || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {workOrder.trade?.name || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(workOrder.status)}>
-                        {workOrder.status.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {workOrder.assigned_user 
-                        ? `${workOrder.assigned_user.first_name} ${workOrder.assigned_user.last_name}`
-                        : 'Unassigned'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      {new Date(workOrder.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() && "selected"}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center"
+                        >
+                          No results.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between space-x-2 py-4">
+                <div className="flex-1 text-sm text-muted-foreground">
+                  {selectedRows.length > 0 && (
+                    <span>
+                      {selectedRows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedRows.length}
+        selectedIds={selectedIds}
+        onClearSelection={handleClearSelection}
+        onExport={handleExport}
+      />
+
+      {/* Create Modal */}
+      <CreateWorkOrderModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
     </div>
   );
 }
