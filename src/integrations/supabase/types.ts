@@ -14,7 +14,220 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company_name: string | null
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          project_manager_id: string | null
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          project_manager_id?: string | null
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          project_manager_id?: string | null
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_project_manager_id_fkey"
+            columns: ["project_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_comments: {
+        Row: {
+          author_id: string
+          comment: string
+          created_at: string
+          id: string
+          work_order_id: string
+        }
+        Insert: {
+          author_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          work_order_id: string
+        }
+        Update: {
+          author_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_comments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          actual_hours: number | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          estimated_hours: number | null
+          id: string
+          labor_cost: number | null
+          materials_cost: number | null
+          priority: Database["public"]["Enums"]["priority_level"]
+          project_id: string
+          status: Database["public"]["Enums"]["work_order_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          labor_cost?: number | null
+          materials_cost?: number | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          project_id: string
+          status?: Database["public"]["Enums"]["work_order_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          labor_cost?: number | null
+          materials_cost?: number | null
+          priority?: Database["public"]["Enums"]["priority_level"]
+          project_id?: string
+          status?: Database["public"]["Enums"]["work_order_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +236,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      priority_level: "low" | "medium" | "high" | "urgent"
+      user_role: "admin" | "project_manager" | "foreman" | "subcontractor"
+      work_order_status:
+        | "draft"
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +370,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      priority_level: ["low", "medium", "high", "urgent"],
+      user_role: ["admin", "project_manager", "foreman", "subcontractor"],
+      work_order_status: [
+        "draft",
+        "pending",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
+    },
   },
 } as const
