@@ -153,6 +153,38 @@ export const seedDatabase = async () => {
   console.log('🌱 Starting comprehensive database seeding...');
 
   try {
+    // First, clean up existing test data to ensure fresh start
+    console.log('🧹 Cleaning up existing test data...');
+    
+    const testEmails = [
+      'admin@workorderpro.com', 'employee@workorderpro.com',
+      'partner1@abc.com', 'partner2@xyz.com', 'partner3@premium.com',
+      'plumber1@trade.com', 'plumber2@trade.com', 'electrician@trade.com',
+      'hvac1@trade.com', 'hvac2@trade.com', 'maintenance@trade.com'
+    ];
+
+    // Clean up in correct order to respect foreign key constraints
+    await supabase.from('receipt_work_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('employee_reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('receipts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('invoice_work_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('work_order_reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('work_order_assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('work_order_attachments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('work_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('partner_locations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('user_organizations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    
+    // Delete profiles for test users
+    await supabase.from('profiles').delete().in('email', testEmails);
+    
+    // Delete organizations (except potentially existing non-test ones)
+    const testOrgNames = organizations.map(org => org.name);
+    await supabase.from('organizations').delete().in('name', testOrgNames);
+
+    console.log('✅ Cleanup completed');
+
     // 1. Create organizations
     console.log('📁 Creating organizations...');
     const { data: createdOrgs, error: orgError } = await supabase
@@ -523,6 +555,15 @@ export const seedDatabase = async () => {
     // 7. Create work order assignments
     if (createdWorkOrders && createdWorkOrders.length > 0) {
       console.log('👥 Creating work order assignments...');
+      
+      // Validate that we have all required user profiles
+      const requiredUsers = ['plumber1@trade.com', 'hvac1@trade.com', 'hvac2@trade.com', 'electrician@trade.com', 'admin@workorderpro.com'];
+      const missingUsers = requiredUsers.filter(email => !userProfiles.get(email)?.id);
+      
+      if (missingUsers.length > 0) {
+        console.warn(`⚠️ Missing user profiles for assignments: ${missingUsers.join(', ')}`);
+      }
+      
       const assignments = [
         {
           work_order_id: createdWorkOrders[0].id, // Plumbing repair
@@ -555,7 +596,12 @@ export const seedDatabase = async () => {
           assignment_type: 'lead',
           assigned_organization_id: orgMap.get('Sparks Electric')
         }
-      ];
+      ].filter(assignment => 
+        assignment.assigned_to && 
+        assignment.assigned_by && 
+        assignment.work_order_id && 
+        assignment.assigned_organization_id
+      );
 
       const { error: assignmentsError } = await supabase
         .from('work_order_assignments')
