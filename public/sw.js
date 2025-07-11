@@ -1,35 +1,29 @@
-const CACHE_NAME = 'workorderpro-v1';
-const STATIC_CACHE = 'workorderpro-static-v1';
-const API_CACHE = 'workorderpro-api-v1';
+const CACHE_VERSION = 'v2';
+const STATIC_CACHE = `static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
+const API_CACHE = `api-${CACHE_VERSION}`;
 
-// Static assets to cache
-const STATIC_ASSETS = [
+// Essential resources that we know exist
+const CORE_ASSETS = [
   '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-maskable.png'
+  '/offline.html'
 ];
 
-// Supabase API endpoints to cache
+// Supabase API patterns to cache
 const API_PATTERNS = [
-  '/rest/v1/work_orders',
-  '/rest/v1/profiles',
-  '/rest/v1/organizations',
-  '/rest/v1/trades',
-  '/rest/v1/work_order_reports',
-  '/rest/v1/user_organizations'
+  'supabase.co',
+  '/rest/v1/'
 ];
 
-// Install event - cache static assets
+// Install event - initialize caches
 self.addEventListener('install', (event) => {
   event.waitUntil(
     Promise.all([
-      caches.open(STATIC_CACHE).then((cache) => {
-        return cache.addAll(STATIC_ASSETS);
-      }),
-      caches.open(API_CACHE)
+      caches.open(STATIC_CACHE),
+      caches.open(DYNAMIC_CACHE),
+      caches.open(API_CACHE),
+      // Pre-cache only essential resources
+      cacheEssentialResources()
     ])
   );
   self.skipWaiting();
@@ -38,33 +32,57 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== STATIC_CACHE && cacheName !== API_CACHE) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    cleanupCaches()
   );
   self.clients.claim();
 });
+
+// Helper functions
+async function cacheEssentialResources() {
+  const cache = await caches.open(STATIC_CACHE);
+  const promises = CORE_ASSETS.map(async (url) => {
+    try {
+      const response = await fetch(url);
+      if (isValidResponse(response)) {
+        return cache.put(url, response);
+      }
+    } catch (error) {
+      console.log(`Failed to cache ${url}:`, error);
+    }
+  });
+  return Promise.allSettled(promises);
+}
+
+async function cleanupCaches() {
+  const cacheNames = await caches.keys();
+  const validCaches = [STATIC_CACHE, DYNAMIC_CACHE, API_CACHE];
+  
+  return Promise.all(
+    cacheNames
+      .filter(name => !validCaches.includes(name))
+      .map(name => caches.delete(name))
+  );
+}
 
 // Fetch event - implement caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Handle API requests
-  if (url.pathname.includes('/rest/v1/')) {
+  // Skip non-http requests
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Handle API requests (Supabase)
+  if (isApiRequest(url)) {
     event.respondWith(networkFirstWithCache(request, API_CACHE));
     return;
   }
 
-  // Handle static assets
-  if (STATIC_ASSETS.some(asset => url.pathname === asset)) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
+  // Handle static assets dynamically
+  if (isStaticAsset(url)) {
+    event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
     return;
   }
 
@@ -74,36 +92,44 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Default to network first
-  event.respondWith(fetch(request));
+  // Default to network first for other requests
+  event.respondWith(networkFirst(request));
 });
 
-// Cache strategies
-async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  
-  if (cached) {
-    return cached;
-  }
-  
-  try {
-    const response = await fetch(request);
-    cache.put(request, response.clone());
-    return response;
-  } catch (error) {
-    return new Response('Offline', { status: 503 });
-  }
+// Helper functions for request classification
+function isApiRequest(url) {
+  return API_PATTERNS.some(pattern => url.href.includes(pattern));
 }
 
-async function networkFirstWithCache(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  
+function isStaticAsset(url) {
+  const staticExtensions = ['.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2'];
+  return staticExtensions.some(ext => url.pathname.endsWith(ext)) || 
+         url.pathname === '/manifest.json';
+}
+
+function isValidResponse(response) {
+  return response && response.status === 200 && response.type !== 'opaque';
+}
+
+function shouldCache(request, response) {
+  return request.method === 'GET' && 
+         isValidResponse(response) && 
+         !response.headers.get('cache-control')?.includes('no-store');
+}
+
+// Cache strategies
+async function networkFirst(request) {
   try {
     const response = await fetch(request);
-    cache.put(request, response.clone());
+    
+    if (shouldCache(request, response)) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, response.clone());
+    }
+    
     return response;
   } catch (error) {
+    const cache = await caches.open(DYNAMIC_CACHE);
     const cached = await cache.match(request);
     if (cached) {
       return cached;
@@ -112,38 +138,83 @@ async function networkFirstWithCache(request, cacheName) {
   }
 }
 
+async function networkFirstWithCache(request, cacheName) {
+  try {
+    const response = await fetch(request);
+    
+    if (shouldCache(request, response)) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+    
+    return response;
+  } catch (error) {
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    throw error;
+  }
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  
+  const fetchPromise = fetch(request).then(response => {
+    if (shouldCache(request, response)) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  }).catch(() => null);
+  
+  return cached || fetchPromise;
+}
+
 async function networkFirstWithFallback(request) {
   try {
-    return await fetch(request);
+    const response = await fetch(request);
+    
+    if (shouldCache(request, response)) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, response.clone());
+    }
+    
+    return response;
   } catch (error) {
+    // Try to get from cache first
     const cache = await caches.open(STATIC_CACHE);
-    return cache.match('/index.html');
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    
+    // Fall back to offline page
+    return cache.match('/offline.html') || 
+           new Response('You are offline', { status: 503 });
   }
 }
 
 // Background sync for form submissions
 self.addEventListener('sync', (event) => {
   if (event.tag === 'work-order-report') {
-    event.waitUntil(syncWorkOrderReports());
+    event.waitUntil(handleBackgroundSync());
   }
 });
 
-async function syncWorkOrderReports() {
-  // Get pending reports from IndexedDB and sync them
+async function handleBackgroundSync() {
+  // Use postMessage to communicate with main thread
   try {
-    const db = await openDB();
-    const pendingReports = await db.getAll('pendingReports');
-    
-    for (const report of pendingReports) {
-      try {
-        await submitReport(report);
-        await db.delete('pendingReports', report.id);
-      } catch (error) {
-        console.error('Failed to sync report:', error);
-      }
-    }
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'BACKGROUND_SYNC',
+        tag: 'work-order-report'
+      });
+    });
   } catch (error) {
-    console.error('Background sync failed:', error);
+    console.error('Background sync communication failed:', error);
   }
 }
 
@@ -173,43 +244,25 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Helper functions
-async function openDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('WorkOrderProDB', 1);
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      
-      if (!db.objectStoreNames.contains('pendingReports')) {
-        const store = db.createObjectStore('pendingReports', { keyPath: 'id' });
-        store.createIndex('timestamp', 'timestamp');
-      }
-      
-      if (!db.objectStoreNames.contains('workOrders')) {
-        const store = db.createObjectStore('workOrders', { keyPath: 'id' });
-        store.createIndex('status', 'status');
-      }
-    };
-  });
-}
-
-async function submitReport(report) {
-  // Implementation would depend on your API structure
-  const response = await fetch('/api/work-order-reports', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(report)
-  });
+// Message handling for communication with main thread
+self.addEventListener('message', (event) => {
+  const { type, data } = event.data;
   
-  if (!response.ok) {
-    throw new Error('Failed to submit report');
+  switch (type) {
+    case 'SKIP_WAITING':
+      self.skipWaiting();
+      break;
+    case 'CACHE_CLEAR':
+      clearAllCaches().then(() => {
+        event.ports[0]?.postMessage({ success: true });
+      });
+      break;
+    default:
+      console.log('Unknown message type:', type);
   }
-  
-  return response.json();
+});
+
+async function clearAllCaches() {
+  const cacheNames = await caches.keys();
+  return Promise.all(cacheNames.map(name => caches.delete(name)));
 }

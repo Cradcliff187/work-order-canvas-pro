@@ -23,8 +23,83 @@ export function useOfflineStorage() {
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
+  // Define processPendingSyncs early for use in service worker message handler
+  const processPendingSyncs = useCallback(async (): Promise<void> => {
+    try {
+      const syncQueue = await storageManager.getSyncQueue();
+      let processedCount = 0;
+
+      for (const item of syncQueue) {
+        try {
+          // Skip if not ready for retry
+          if (item.nextAttempt && item.nextAttempt > Date.now()) {
+            continue;
+          }
+
+          // Process different sync types
+          if (item.type === 'report_submit') {
+            console.log('Processing report submission:', item.data);
+          } else if (item.type === 'photo_upload') {
+            console.log('Processing photo upload:', item.data);
+          }
+
+          await storageManager.removeSyncQueueItem(item.id);
+          processedCount++;
+        } catch (error) {
+          const nextAttempt = Date.now() + (item.retryCount + 1) * 60000;
+          
+          if (item.retryCount >= item.maxRetries) {
+            await storageManager.removeSyncQueueItem(item.id);
+          } else {
+            const updatedItem = {
+              ...item,
+              retryCount: item.retryCount + 1,
+              lastAttempt: Date.now(),
+              nextAttempt,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            };
+            await storageManager.addToSyncQueue(updatedItem);
+          }
+        }
+      }
+
+      if (processedCount > 0) {
+        toast({
+          title: "Sync Complete",
+          description: `Synced ${processedCount} items successfully`,
+        });
+      }
+    } catch (error) {
+      console.error('Error processing sync queue:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to process pending syncs",
+        variant: "destructive",
+      });
+    }
+  }, [storageManager, toast]);
+
+  const handleServiceWorkerMessage = useCallback((event: MessageEvent) => {
+    const { type, tag } = event.data;
+    
+    if (type === 'BACKGROUND_SYNC' && tag === 'work-order-report') {
+      processPendingSyncs();
+    }
+  }, [processPendingSyncs]);
+
   useEffect(() => {
     initializeStorage();
+    
+    // Listen for service worker messages
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    }
+    
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
+    };
   }, []);
 
   // Separate effect for setting up the interval only after DB is ready
@@ -352,66 +427,6 @@ export function useOfflineStorage() {
     }
   }, [storageManager]);
 
-  const processPendingSyncs = useCallback(async (): Promise<void> => {
-    try {
-      const syncQueue = await storageManager.getSyncQueue();
-      let processedCount = 0;
-
-      for (const item of syncQueue) {
-        try {
-          // Skip if not ready for retry
-          if (item.nextAttempt && item.nextAttempt > Date.now()) {
-            continue;
-          }
-
-          // Process different sync types
-          if (item.type === 'report_submit') {
-            // Implementation would call your report submission API
-            console.log('Processing report submission:', item.data);
-          } else if (item.type === 'photo_upload') {
-            // Implementation would call your photo upload API
-            console.log('Processing photo upload:', item.data);
-          }
-
-          // Remove from queue on success
-          await storageManager.removeSyncQueueItem(item.id);
-          processedCount++;
-        } catch (error) {
-          // Update retry count and schedule next attempt
-          const nextAttempt = Date.now() + (item.retryCount + 1) * 60000; // Exponential backoff
-          
-          if (item.retryCount >= item.maxRetries) {
-            await storageManager.removeSyncQueueItem(item.id);
-          } else {
-            const updatedItem = {
-              ...item,
-              retryCount: item.retryCount + 1,
-              lastAttempt: Date.now(),
-              nextAttempt,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            };
-            await storageManager.addToSyncQueue(updatedItem);
-          }
-        }
-      }
-
-      await updateStats();
-      
-      if (processedCount > 0) {
-        toast({
-          title: "Sync Complete",
-          description: `Synced ${processedCount} items successfully`,
-        });
-      }
-    } catch (error) {
-      console.error('Error processing sync queue:', error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to process pending syncs",
-        variant: "destructive",
-      });
-    }
-  }, [storageManager, toast]);
 
   const exportData = useCallback(async () => {
     try {
