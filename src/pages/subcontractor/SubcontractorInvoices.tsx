@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, DollarSign } from "lucide-react";
+import { Plus, Search, DollarSign, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -148,6 +148,12 @@ const SubcontractorInvoices = () => {
                         <span className="text-sm text-muted-foreground">
                           ({invoice.external_invoice_number})
                         </span>
+                      )}
+                      {(invoice.attachment_count || 0) > 0 && (
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <Paperclip className="h-4 w-4" />
+                          <span className="text-xs">{invoice.attachment_count}</span>
+                        </div>
                       )}
                       <Badge className={getStatusColor(invoice.status)}>
                         {formatStatus(invoice.status)}

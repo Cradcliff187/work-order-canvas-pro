@@ -25,6 +25,7 @@ export interface Invoice {
   approval_notes: string | null;
   created_at: string;
   updated_at: string;
+  attachment_count?: number;
   subcontractor_organization: {
     id: string;
     name: string;
@@ -95,7 +96,8 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
               work_order_number,
               title
             )
-          )
+          ),
+          attachment_count:invoice_attachments(count)
         `)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -126,8 +128,16 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         throw error;
       }
 
+      // Transform attachment count from array to number
+      const transformedData = data?.map(invoice => ({
+        ...invoice,
+        attachment_count: Array.isArray(invoice.attachment_count) 
+          ? (invoice.attachment_count[0]?.count || 0)
+          : (invoice.attachment_count || 0)
+      })) || [];
+
       return {
-        data: data as Invoice[],
+        data: transformedData as Invoice[],
         count: count || 0,
       };
     },

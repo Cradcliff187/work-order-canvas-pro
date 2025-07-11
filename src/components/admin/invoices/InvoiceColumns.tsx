@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { MoreHorizontal, Eye, CheckCircle, XCircle, DollarSign, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 
@@ -66,6 +66,23 @@ export const createInvoiceColumns = ({
         <div className="font-mono text-sm">
           {external || <span className="text-muted-foreground">—</span>}
         </div>
+      );
+    },
+  },
+  {
+    accessorKey: 'attachment_count',
+    header: 'Attachments',
+    cell: ({ row }) => {
+      const count = row.original.attachment_count || 0;
+      return count > 0 ? (
+        <div className="flex items-center gap-1">
+          <Paperclip className="h-4 w-4 text-blue-600" />
+          <Badge variant="outline" className="h-5 px-1.5 text-xs">
+            {count}
+          </Badge>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">—</span>
       );
     },
   },
