@@ -21,13 +21,13 @@ const DashboardRouter: React.FC = () => {
   // Redirect to appropriate dashboard based on user type
   switch (profile.user_type) {
     case 'admin':
-      return <Navigate to="/admin" replace />;
+      return <Navigate to="/admin/dashboard" replace />;
     case 'partner':
-      return <Navigate to="/partner" replace />;
+      return <Navigate to="/partner/dashboard" replace />;
     case 'subcontractor':
-      return <Navigate to="/subcontractor" replace />;
+      return <Navigate to="/subcontractor/dashboard" replace />;
     case 'employee':
-      return <Navigate to="/admin/employee" replace />;
+      return <Navigate to="/admin/employee-dashboard" replace />;
     default:
       // Fallback for unknown user types
       return <Navigate to="/auth" replace />;
