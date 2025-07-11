@@ -74,7 +74,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       // If no assignees selected, remove all assignments
       await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
       
-      // Clear assigned_to in work_orders table
+      // Clear assigned_to in work_orders table and reset status
       await supabase
         .from('work_orders')
         .update({
@@ -111,10 +111,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         })
       );
 
-      // Create all new assignments atomically
+      // Create all new assignments atomically - status will be automatically updated by trigger
       await bulkAddAssignments.mutateAsync(assignments);
 
-      // Update work_orders table with lead assignee for backward compatibility
+      // Update work_orders table with lead assignee for backward compatibility (status handled by trigger)
       const leadAssignee = selectedAssignees[0];
       if (leadAssignee) {
         const assignee = allAssignees.find(a => a.id === leadAssignee);
@@ -125,8 +125,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
           .update({
             assigned_to: leadAssignee,
             assigned_to_type: assignedToType,
-            status: 'assigned' as const,
-            date_assigned: new Date().toISOString(),
           })
           .in('id', workOrders.map(wo => wo.id));
 
