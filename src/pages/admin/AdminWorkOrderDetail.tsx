@@ -23,6 +23,7 @@ import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { format } from 'date-fns';
+import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -236,20 +237,33 @@ export default function AdminWorkOrderDetail() {
             <Separator />
             
             <div>
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                Location
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Location
+                </label>
+                {generateMapUrl(workOrder) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(generateMapUrl(workOrder)!, '_blank')}
+                  >
+                    <MapPin className="h-3 w-3 mr-1" />
+                    Directions
+                  </Button>
+                )}
+              </div>
               {workOrder.store_location && (
                 <p className="font-medium">{workOrder.store_location}</p>
               )}
-              {workOrder.street_address && (
+              {workOrder.partner_location_number && (
+                <p className="text-sm text-muted-foreground">Loc: {workOrder.partner_location_number}</p>
+              )}
+              {hasAddress(workOrder) && (
                 <div className="text-sm text-muted-foreground">
-                  <p>{workOrder.street_address}</p>
-                  <p>
-                    {workOrder.city && `${workOrder.city}, `}
-                    {workOrder.state} {workOrder.zip_code}
-                  </p>
+                  {formatAddressMultiline(workOrder).map((line, index) => (
+                    <p key={index}>{line}</p>
+                  ))}
                 </div>
               )}
             </div>

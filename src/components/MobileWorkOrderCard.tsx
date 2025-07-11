@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
+import { formatLocationDisplay } from '@/lib/utils/addressUtils';
 
 interface WorkOrder {
   id: string;
@@ -13,9 +14,18 @@ interface WorkOrder {
   description?: string;
   status: string;
   store_location?: string;
+  partner_location_number?: string;
+  location_name?: string;
+  // Structured address fields
+  location_street_address?: string;
+  location_city?: string;
+  location_state?: string;
+  location_zip_code?: string;
+  // Legacy address fields
   street_address?: string;
   city?: string;
   state?: string;
+  zip_code?: string;
   estimated_completion_date?: string;
   date_submitted: string;
   trades?: { name: string };
@@ -125,16 +135,12 @@ export function MobileWorkOrderCard({
         </div>
 
         <div className="space-y-2">
-          {workOrder.store_location && (
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="truncate">
-                {workOrder.store_location}
-                {workOrder.city && `, ${workOrder.city}`}
-                {workOrder.state && `, ${workOrder.state}`}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="truncate">
+              {formatLocationDisplay(workOrder)}
+            </span>
+          </div>
 
           {workOrder.trades && (
             <div className="flex items-center gap-2 text-sm">

@@ -424,6 +424,37 @@ The database is now in a **mature, production-ready state** with:
 4. **Maintain audit coverage** when adding new tables
 5. **Use helper functions** for any complex RLS logic
 
+## Recent Migrations
+
+### Migration 20250711140142 - Partner Reference Fields and Structured Addresses
+**Date**: 2025-07-11  
+**Purpose**: Enhanced partner integration and structured address management
+
+**Changes**:
+- **Partner Reference Fields**: Added `partner_po_number` and `partner_location_number` to work_orders table
+- **Structured Address Fields**: Added `location_name`, `location_street_address`, `location_city`, `location_state`, `location_zip_code` for improved address handling
+- **Performance Indexes**: Added indexes on new fields for efficient partner-based queries and geographic reporting
+- **Backwards Compatibility**: Retained legacy address fields (`street_address`, `city`, `state`, `zip_code`) for seamless transition
+
+**Business Impact**: 
+- Partners can now reference their internal location numbers and PO systems
+- Better address data quality with structured fields enabling mapping integrations
+- Enhanced reporting capabilities for geographic distribution analysis
+- Foundation for future mapping and location-based features
+
+**Technical Impact**:
+- Applications should migrate to structured address fields for new entries
+- Address utility functions provide consistent formatting and validation
+- Legacy fields remain functional for existing data
+
+## Migration Best Practices
+
+1. **Always document migration purpose** in comments
+2. **Test RLS changes** thoroughly before deployment  
+3. **Consider performance impact** of new policies/triggers
+4. **Maintain audit coverage** when adding new tables
+5. **Use helper functions** for any complex RLS logic
+
 ## Related Documentation
 
 - [Database Schema](./DATABASE_SCHEMA.md) - Current table structure

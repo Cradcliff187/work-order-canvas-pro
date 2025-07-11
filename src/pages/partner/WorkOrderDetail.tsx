@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, MapPin, Calendar, User, Wrench, FileText, Clock, Printer } from 'lucide-react';
 import { useWorkOrderById } from '@/hooks/usePartnerWorkOrders';
 import { format } from 'date-fns';
+import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 
 const statusColors = {
   received: 'bg-blue-100 text-blue-800',
@@ -141,17 +142,40 @@ const WorkOrderDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium">Store Location</h4>
-                <p className="text-muted-foreground">{workOrder.store_location}</p>
-              </div>
-              <div>
-                <h4 className="font-medium">Address</h4>
-                <p className="text-muted-foreground">
-                  {workOrder.street_address}<br />
-                  {workOrder.city}, {workOrder.state} {workOrder.zip_code}
-                </p>
-              </div>
+              {workOrder.store_location && (
+                <div>
+                  <h4 className="font-medium">Store Location</h4>
+                  <p className="text-muted-foreground">{workOrder.store_location}</p>
+                </div>
+              )}
+              {workOrder.partner_location_number && (
+                <div>
+                  <h4 className="font-medium">Location Number</h4>
+                  <p className="text-muted-foreground">{workOrder.partner_location_number}</p>
+                </div>
+              )}
+              {hasAddress(workOrder) && (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Address</h4>
+                    {generateMapUrl(workOrder) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(generateMapUrl(workOrder)!, '_blank')}
+                      >
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Get Directions
+                      </Button>
+                    )}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {formatAddressMultiline(workOrder).map((line, index) => (
+                      <p key={index}>{line}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -131,6 +131,13 @@ erDiagram
         text title
         text description
         text store_location
+        text partner_po_number
+        text partner_location_number
+        text location_name
+        text location_street_address
+        text location_city
+        text location_state
+        text location_zip_code
         text street_address
         text city
         text state

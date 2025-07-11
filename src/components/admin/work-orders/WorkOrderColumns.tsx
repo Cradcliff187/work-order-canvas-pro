@@ -3,9 +3,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Trash2, UserPlus } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Trash2, UserPlus, MapPin } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Database } from '@/integrations/supabase/types';
+import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -89,8 +90,43 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
   },
   {
     accessorKey: 'store_location',
-    header: 'Store Location',
-    cell: ({ row }) => row.getValue('store_location') || 'N/A',
+    header: 'Location',
+    cell: ({ row }) => {
+      const workOrder = row.original;
+      const locationDisplay = formatLocationDisplay(workOrder);
+      const tooltip = formatLocationTooltip(workOrder);
+      const mapUrl = generateMapUrl(workOrder);
+      
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2">
+                <span className="truncate max-w-32">{locationDisplay}</span>
+                {mapUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(mapUrl, '_blank');
+                    }}
+                  >
+                    <MapPin className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="whitespace-pre-line text-sm max-w-64">
+                {tooltip}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    },
   },
   {
     accessorKey: 'trades.name',
