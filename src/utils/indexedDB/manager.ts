@@ -7,13 +7,17 @@ import type {
   DatabaseIntegrityReport,
   RepairStrategy,
   RepairResult,
-  OfflineConfig
+  OfflineConfig,
+  StorageTestResult,
+  StorageHealthStatus,
+  StorageMigrationInfo
 } from '@/types/offline';
 import type { IndexedDBConfig } from './types';
 import { MIGRATIONS, createCompleteSchema } from './schema';
 import { DatabaseOperations } from './operations';
 import { DatabaseIntegrity } from './integrity';
 import { DatabaseCleanup } from './cleanup';
+import { StorageDebugUtils, attachDebugUtilities } from './debug';
 
 export class IndexedDBManager implements StorageManager {
   private static instance: IndexedDBManager | null = null;
@@ -27,6 +31,7 @@ export class IndexedDBManager implements StorageManager {
   private operations: DatabaseOperations | null = null;
   private integrity: DatabaseIntegrity | null = null;
   private cleanupManager: DatabaseCleanup | null = null;
+  private debugUtils: StorageDebugUtils | null = null;
 
   private defaultConfig: OfflineConfig = {
     maxDraftsPerWorkOrder: 5,
@@ -109,6 +114,10 @@ export class IndexedDBManager implements StorageManager {
           this.operations = new DatabaseOperations(this.db);
           this.integrity = new DatabaseIntegrity(this.db, this.dbName, this.expectedVersion, this.operations);
           this.cleanupManager = new DatabaseCleanup(this.db, this.expectedVersion, this.defaultConfig, this.operations);
+          this.debugUtils = new StorageDebugUtils(this);
+          
+          // Attach debug utilities in development
+          attachDebugUtilities(this);
           
           resolve();
         };
@@ -137,6 +146,10 @@ export class IndexedDBManager implements StorageManager {
         this.operations = new DatabaseOperations(this.db);
         this.integrity = new DatabaseIntegrity(this.db, this.dbName, this.expectedVersion, this.operations);
         this.cleanupManager = new DatabaseCleanup(this.db, this.expectedVersion, this.defaultConfig, this.operations);
+        this.debugUtils = new StorageDebugUtils(this);
+        
+        // Attach debug utilities in development
+        attachDebugUtilities(this);
         
         resolve();
       };
@@ -213,5 +226,21 @@ export class IndexedDBManager implements StorageManager {
   async repairDatabase(strategies?: RepairStrategy[]): Promise<RepairResult> {
     if (!this.integrity) throw new Error('Database not initialized');
     return this.integrity.repairDatabase(strategies, () => this.performInit());
+  }
+
+  // Debug methods (development only)
+  async getMigrationInfo(): Promise<StorageMigrationInfo> {
+    if (!this.debugUtils) throw new Error('Debug utilities not initialized');
+    return this.debugUtils.getMigrationInfo();
+  }
+
+  async getHealthStatus(): Promise<StorageHealthStatus> {
+    if (!this.debugUtils) throw new Error('Debug utilities not initialized');
+    return this.debugUtils.getHealthStatus();
+  }
+
+  async runStorageTests(): Promise<StorageTestResult[]> {
+    if (!this.debugUtils) throw new Error('Debug utilities not initialized');
+    return this.debugUtils.testStorageInitialization();
   }
 }

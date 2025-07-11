@@ -68,6 +68,49 @@ export interface StorageStats {
   };
 }
 
+export interface StorageState {
+  isReady: boolean;
+  isInitializing: boolean;
+  isCleanupRunning: boolean;
+  isUsingFallback: boolean;
+  pendingCount: number;
+  initializationError: StorageError | null;
+  retryCount: number;
+}
+
+export interface StorageError {
+  type: 'VersionError' | 'QuotaError' | 'CorruptionError' | 'SecurityError' | 'UnknownError';
+  message: string;
+  recoverable: boolean;
+  timestamp: number;
+}
+
+export interface StorageMigrationInfo {
+  currentVersion: number;
+  expectedVersion: number;
+  migrationPath: string[];
+  lastMigrationTime: number | null;
+  hasPendingMigrations: boolean;
+}
+
+export interface StorageTestResult {
+  testName: string;
+  passed: boolean;
+  duration: number;
+  error?: string;
+  details?: Record<string, any>;
+}
+
+export interface StorageHealthStatus {
+  overallHealth: 'healthy' | 'warning' | 'error' | 'critical';
+  schemaValid: boolean;
+  indexesValid: boolean;
+  dataIntegrity: boolean;
+  performanceScore: number;
+  lastHealthCheck: number;
+  recommendations: string[];
+}
+
 export interface OfflineConfig {
   maxDraftsPerWorkOrder: number;
   maxTotalDrafts: number;
@@ -140,4 +183,9 @@ export interface StorageManager {
   cleanup(): Promise<void>;
   verifyDatabaseIntegrity(): Promise<DatabaseIntegrityReport>;
   repairDatabase(strategies?: RepairStrategy[]): Promise<RepairResult>;
+  
+  // Debug methods (development only)
+  getMigrationInfo?(): Promise<StorageMigrationInfo>;
+  getHealthStatus?(): Promise<StorageHealthStatus>;
+  runStorageTests?(): Promise<StorageTestResult[]>;
 }

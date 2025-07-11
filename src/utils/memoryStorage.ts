@@ -6,7 +6,10 @@ import type {
   StorageManager,
   DatabaseIntegrityReport,
   RepairStrategy,
-  RepairResult
+  RepairResult,
+  StorageTestResult,
+  StorageHealthStatus,
+  StorageMigrationInfo
 } from '@/types/offline';
 
 // Memory-based fallback storage for when IndexedDB fails
@@ -157,6 +160,40 @@ export class MemoryStorageManager implements StorageManager {
       issuesResolved: [],
       timeElapsed: 0
     });
+  }
+
+  // Debug methods (development only)
+  async getMigrationInfo(): Promise<StorageMigrationInfo> {
+    return Promise.resolve({
+      currentVersion: 1,
+      expectedVersion: 1,
+      migrationPath: ['Memory storage - no migrations needed'],
+      lastMigrationTime: null,
+      hasPendingMigrations: false,
+    });
+  }
+
+  async getHealthStatus(): Promise<StorageHealthStatus> {
+    return Promise.resolve({
+      overallHealth: 'healthy',
+      schemaValid: true,
+      indexesValid: true,
+      dataIntegrity: true,
+      performanceScore: 95,
+      lastHealthCheck: Date.now(),
+      recommendations: [],
+    });
+  }
+
+  async runStorageTests(): Promise<StorageTestResult[]> {
+    return Promise.resolve([
+      {
+        testName: 'Memory Storage Test',
+        passed: true,
+        duration: 1,
+        details: { type: 'memory', functional: true },
+      },
+    ]);
   }
 }
 

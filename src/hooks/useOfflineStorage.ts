@@ -4,12 +4,21 @@ import { useStorageInitialization } from './useStorageInitialization';
 import { useStorageCleanup } from './useStorageCleanup';
 import { useDraftManagement } from './useDraftManagement';
 import { useSyncOperations } from './useSyncOperations';
-import type { StorageStats, PhotoAttachment } from '@/types/offline';
+import type { StorageStats, PhotoAttachment, StorageState } from '@/types/offline';
 
 export function useOfflineStorage() {
   const [isReady, setIsReady] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
+  const [storageState, setStorageState] = useState<StorageState>({
+    isReady: false,
+    isInitializing: false,
+    isCleanupRunning: false,
+    isUsingFallback: false,
+    pendingCount: 0,
+    initializationError: null,
+    retryCount: 0,
+  });
   const { toast } = useToast();
 
   // Initialize storage
@@ -96,8 +105,24 @@ export function useOfflineStorage() {
 
   // Update ready state when initialization completes
   useEffect(() => {
-    setIsReady(initializationState === 'ready' || initializationState === 'fallback');
-  }, [initializationState]);
+    const ready = initializationState === 'ready' || initializationState === 'fallback';
+    setIsReady(ready);
+    
+    // Update comprehensive storage state
+    setStorageState(prev => ({
+      ...prev,
+      isReady: ready,
+      isInitializing: initializationState === 'initializing' || initializationState === 'retrying' || initializationState === 'upgrading',
+      isCleanupRunning: cleanupInProgress,
+      isUsingFallback,
+      pendingCount,
+      initializationError: initializationError ? {
+        ...initializationError,
+        timestamp: Date.now(),
+      } : null,
+      retryCount,
+    }));
+  }, [initializationState, cleanupInProgress, isUsingFallback, pendingCount, initializationError, retryCount]);
 
   // Update stats periodically when ready
   useEffect(() => {
@@ -162,6 +187,7 @@ export function useOfflineStorage() {
     isReady,
     pendingCount,
     storageStats,
+    storageState,
     isUsingFallback,
     initializationState,
     initializationError,
@@ -182,5 +208,8 @@ export function useOfflineStorage() {
     clearCache: clearCacheWithToast,
     retryInitialization,
     resetStorageWithConfirmation,
+    
+    // Debug operations (development only)
+    storageManager,
   };
 }
