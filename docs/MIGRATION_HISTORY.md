@@ -126,18 +126,24 @@ This document provides a complete chronological history of all database migratio
 - **Problem**: Still had some policies using recursive helper functions
 - **Result**: Reduced but did not eliminate RLS recursion errors
 
-#### 20250711_fix_profiles_rls_recursion_complete.sql
+#### 20250711042337-final-recursion-fix.sql
 **Purpose**: **DEFINITIVE FIX** - Complete elimination of profiles table RLS recursion
-- **Issue**: All previous attempts still had recursive function calls in policies
-- **Root Cause**: Any use of `auth_user_type()`, `auth_profile_id()`, `auth_is_admin()` in profiles policies causes recursion
-- **Solution**: **ZERO HELPER FUNCTIONS** approach:
-  - Dropped ALL existing policies on profiles table
-  - Created bootstrap policies using ONLY `auth.uid()` directly
-  - Replaced all role-based policies with direct SQL subqueries
-  - No helper function calls whatsoever in any profiles policy
-- **Key Innovation**: Direct subqueries prevent ALL recursion possibilities
-- **Architecture**: Pure SQL approach with no circular dependencies
-- **Result**: **COMPLETE** elimination of RLS recursion, all users can log in successfully
+- **Critical Issue**: ALL previous attempts had subqueries to profiles table within profiles policies
+- **Root Cause**: ANY query to profiles table from within a profiles policy causes infinite recursion
+- **Failed Approaches**: 
+  - Helper functions that query profiles (recursion)
+  - EXISTS subqueries to profiles (recursion)  
+  - Direct subqueries to check user types (recursion)
+  - Admin policies with `SELECT FROM profiles` (recursion)
+- **Final Solution**: 
+  - Stripped down to 3 minimal policies using ONLY `auth.uid()`
+  - NO subqueries to profiles table whatsoever
+  - Advanced permissions moved to application layer
+  - Removed "Temp admin access" policy that contained recursive subquery
+- **Result**: Complete elimination of error "infinite recursion detected in policy for relation 'profiles'"
+- **Status**: **RECURSION RESOLVED** - Users can now log in successfully
+
+**Key Learning**: Policies on the profiles table can NEVER query the profiles table - not even for admin access.
 
 ### 2025-01-11: Final Optimizations and Audit System
 
