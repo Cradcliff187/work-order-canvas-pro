@@ -61,40 +61,40 @@ export function WorkOrderBreadcrumb({ className }: WorkOrderBreadcrumbProps) {
             {isListPage ? (
               <BreadcrumbPage>Work Orders</BreadcrumbPage>
             ) : (
-              <>
-                <BreadcrumbLink asChild>
-                  <Link to="/admin/work-orders">Work Orders</Link>
-                </BreadcrumbLink>
-                <BreadcrumbSeparator />
-              </>
+              <BreadcrumbLink asChild>
+                <Link to="/admin/work-orders">Work Orders</Link>
+              </BreadcrumbLink>
             )}
           </BreadcrumbItem>
 
           {/* Show work order detail if on detail or edit page */}
           {(isDetailPage || isEditPage) && (
-            <BreadcrumbItem>
-              {isDetailPage ? (
-                <BreadcrumbPage>
-                  Work Order {workOrder?.work_order_number || `#${params.id?.slice(-8)}`}
-                </BreadcrumbPage>
-              ) : (
-                <>
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                {isDetailPage ? (
+                  <BreadcrumbPage>
+                    Work Order {workOrder?.work_order_number || `#${params.id?.slice(-8)}`}
+                  </BreadcrumbPage>
+                ) : (
                   <BreadcrumbLink asChild>
                     <Link to={`/admin/work-orders/${params.id}`}>
                       Work Order {workOrder?.work_order_number || `#${params.id?.slice(-8)}`}
                     </Link>
                   </BreadcrumbLink>
-                  <BreadcrumbSeparator />
-                </>
-              )}
-            </BreadcrumbItem>
+                )}
+              </BreadcrumbItem>
+            </>
           )}
 
           {/* Show edit if on edit page */}
           {isEditPage && (
-            <BreadcrumbItem>
-              <BreadcrumbPage>Edit</BreadcrumbPage>
-            </BreadcrumbItem>
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Edit</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
           )}
         </BreadcrumbList>
       </Breadcrumb>

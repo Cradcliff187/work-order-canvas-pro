@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -187,6 +187,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             <Users className="h-5 w-5" />
             Assign Work Order{workOrders.length > 1 ? 's' : ''}
           </DialogTitle>
+          <DialogDescription>
+            Select one or more people to assign this work order to
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
