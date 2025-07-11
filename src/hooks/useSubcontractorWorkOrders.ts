@@ -19,7 +19,7 @@ export function useSubcontractorWorkOrders() {
         .select(`
           *,
           trades (name),
-          organizations (name),
+          organizations!organization_id (name),
           work_order_reports (
             id,
             status,
@@ -107,7 +107,7 @@ export function useSubcontractorWorkOrders() {
           .select(`
             *,
             trades (name, description),
-            organizations (name, contact_email, contact_phone),
+            organizations!organization_id (name, contact_email, contact_phone),
             profiles!created_by (first_name, last_name, email),
             work_order_reports (
               *,
