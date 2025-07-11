@@ -14,7 +14,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
-import { sidebarItems, adminOnlyItems } from './sidebarConfig';
+import { sidebarItems, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
 import { UserProfileDropdown } from './UserProfileDropdown';
 
 export function AdminSidebar() {
@@ -24,6 +24,7 @@ export function AdminSidebar() {
   const collapsed = state === 'collapsed';
   
   const isAdmin = profile?.user_type === 'admin';
+  const isEmployee = profile?.is_employee === true;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -48,6 +49,11 @@ export function AdminSidebar() {
               {sidebarItems.map((item) => {
                 // Hide admin-only items for employees
                 if (!isAdmin && adminOnlyItems.includes(item.title)) {
+                  return null;
+                }
+                
+                // For employees, only show employee-accessible items
+                if (isEmployee && !isAdmin && !employeeAccessItems.includes(item.title)) {
                   return null;
                 }
                 

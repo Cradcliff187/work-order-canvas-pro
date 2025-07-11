@@ -14,6 +14,7 @@ interface Profile {
   phone?: string;
   avatar_url?: string;
   is_active?: boolean;
+  is_employee?: boolean;
 }
 
 interface AuthContextType {
