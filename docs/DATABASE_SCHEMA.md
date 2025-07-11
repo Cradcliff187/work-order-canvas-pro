@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-WorkOrderPro uses a comprehensive **15-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
+WorkOrderPro uses a comprehensive **18-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
 ## Database Architecture Overview
 
-### Core Tables (15)
+### Core Tables (18)
 1. **organizations** - Company/organization information
 2. **user_organizations** - Many-to-many user-organization relationships  
 3. **profiles** - Extended user profile information
@@ -17,11 +17,14 @@ WorkOrderPro uses a comprehensive **15-table** PostgreSQL database with Row Leve
 8. **work_order_attachments** - File attachments for work orders and reports
 9. **invoices** - Subcontractor invoice management with dual numbering
 10. **invoice_work_orders** - Junction table linking invoices to work orders
-11. **email_templates** - System email templates
-12. **email_logs** - Email delivery tracking
-13. **email_settings** - Email configuration per organization
-14. **system_settings** - Global system configuration
-15. **audit_logs** - Complete audit trail for all changes
+11. **employee_reports** - Employee time tracking and work reporting
+12. **receipts** - Employee expense receipt management
+13. **receipt_work_orders** - Junction table for receipt allocation to work orders
+14. **email_templates** - System email templates
+15. **email_logs** - Email delivery tracking
+16. **email_settings** - Email configuration per organization
+17. **system_settings** - Global system configuration
+18. **audit_logs** - Complete audit trail for all changes
 
 ### Materialized Views (2)
 - **mv_work_order_analytics** - Performance analytics for work orders
@@ -505,7 +508,107 @@ erDiagram
 - **Multi-Organization**: Supports teams from different organizations
 - **Audit Trail**: Tracks who made assignments and when
 
-### 13. invoices
+### 13. employee_reports
+
+**Purpose**: Employee time tracking and work reporting with automatic cost calculation.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| work_order_id | uuid | No | - | References work_orders.id (CASCADE DELETE) |
+| employee_user_id | uuid | No | - | References profiles.id (CASCADE DELETE) |
+| report_date | date | No | - | Date of work performed |
+| hours_worked | decimal(5,2) | No | - | Hours spent on work order |
+| hourly_rate_snapshot | decimal(10,2) | No | - | Employee's rate at time of report |
+| total_labor_cost | decimal(10,2) | - | GENERATED | **GENERATED COLUMN** (hours × rate) |
+| work_performed | text | No | - | Description of work completed |
+| notes | text | Yes | - | Additional notes or comments |
+| created_at | timestamp | No | now() | Creation timestamp |
+| updated_at | timestamp | No | now() | Last update timestamp |
+
+**Constraints**:
+- `employee_reports_work_order_date_unique` UNIQUE (work_order_id, employee_user_id, report_date)
+- CHECK (hours_worked >= 0)
+- CHECK (hourly_rate_snapshot >= 0)
+
+**Indexes**:
+- `idx_employee_reports_work_order` ON (work_order_id)
+- `idx_employee_reports_employee` ON (employee_user_id)
+- `idx_employee_reports_date` ON (report_date)
+- `idx_employee_reports_employee_date` ON (employee_user_id, report_date)
+
+**Business Rules**:
+- One report per employee per work order per day
+- Rate snapshot preserves historical cost accuracy
+- Total cost automatically calculated and stored
+- Integrates with work order labor cost tracking
+
+---
+
+### 14. receipts
+
+**Purpose**: Employee expense receipt management and tracking.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| employee_user_id | uuid | No | - | References profiles.id (CASCADE DELETE) |
+| vendor_name | text | No | - | Who the expense was paid to |
+| receipt_date | date | No | - | Date of purchase/expense |
+| amount | decimal(10,2) | No | - | Total receipt amount |
+| description | text | Yes | - | What was purchased |
+| receipt_image_url | text | Yes | - | Optional photo of receipt (Supabase Storage) |
+| notes | text | Yes | - | Additional context or explanations |
+| created_at | timestamp | No | now() | Creation timestamp |
+| updated_at | timestamp | No | now() | Last update timestamp |
+
+**Constraints**:
+- CHECK (amount >= 0)
+
+**Indexes**:
+- `idx_receipts_employee` ON (employee_user_id)
+- `idx_receipts_date` ON (receipt_date)
+- `idx_receipts_vendor` ON (vendor_name)
+- `idx_receipts_amount` ON (amount)
+
+**Business Rules**:
+- Tracks employee out-of-pocket expenses
+- Supports receipt photo uploads for documentation
+- Can be allocated across multiple work orders
+- Separate from subcontractor material costs
+
+---
+
+### 15. receipt_work_orders
+
+**Purpose**: Junction table for allocating receipt expenses across work orders.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| receipt_id | uuid | No | - | References receipts.id (CASCADE DELETE) |
+| work_order_id | uuid | No | - | References work_orders.id (CASCADE DELETE) |
+| allocated_amount | decimal(10,2) | No | - | Portion of receipt allocated to this work order |
+| allocation_notes | text | Yes | - | Explanation for allocation logic |
+| created_at | timestamp | No | now() | Creation timestamp |
+
+**Constraints**:
+- UNIQUE(receipt_id, work_order_id) - No duplicate allocations per work order
+- CHECK (allocated_amount >= 0)
+
+**Indexes**:
+- `idx_receipt_work_orders_receipt` ON (receipt_id)
+- `idx_receipt_work_orders_work_order` ON (work_order_id)
+
+**Business Rules**:
+- Enables flexible expense distribution
+- Supports partial receipt allocation
+- Sum of allocations should not exceed receipt amount
+- Allows detailed expense tracking per work order
+
+---
+
+### 16. invoices
 
 **Purpose**: Manages subcontractor invoices with dual numbering system and approval workflow.
 

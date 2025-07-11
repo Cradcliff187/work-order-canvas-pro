@@ -188,6 +188,70 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_reports: {
+        Row: {
+          created_at: string
+          employee_user_id: string
+          hourly_rate_snapshot: number
+          hours_worked: number
+          id: string
+          notes: string | null
+          report_date: string
+          total_labor_cost: number | null
+          updated_at: string
+          work_order_id: string
+          work_performed: string
+        }
+        Insert: {
+          created_at?: string
+          employee_user_id: string
+          hourly_rate_snapshot: number
+          hours_worked: number
+          id?: string
+          notes?: string | null
+          report_date: string
+          total_labor_cost?: number | null
+          updated_at?: string
+          work_order_id: string
+          work_performed: string
+        }
+        Update: {
+          created_at?: string
+          employee_user_id?: string
+          hourly_rate_snapshot?: number
+          hours_worked?: number
+          id?: string
+          notes?: string | null
+          report_date?: string
+          total_labor_cost?: number | null
+          updated_at?: string
+          work_order_id?: string
+          work_performed?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_reports_employee_user_id_fkey"
+            columns: ["employee_user_id"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "employee_reports_employee_user_id_fkey"
+            columns: ["employee_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_reports_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_work_orders: {
         Row: {
           amount: number
@@ -419,6 +483,102 @@ export type Database = {
           user_type?: Database["public"]["Enums"]["user_type"]
         }
         Relationships: []
+      }
+      receipt_work_orders: {
+        Row: {
+          allocated_amount: number
+          allocation_notes: string | null
+          created_at: string
+          id: string
+          receipt_id: string
+          work_order_id: string
+        }
+        Insert: {
+          allocated_amount: number
+          allocation_notes?: string | null
+          created_at?: string
+          id?: string
+          receipt_id: string
+          work_order_id: string
+        }
+        Update: {
+          allocated_amount?: number
+          allocation_notes?: string | null
+          created_at?: string
+          id?: string
+          receipt_id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_work_orders_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipts: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          employee_user_id: string
+          id: string
+          notes: string | null
+          receipt_date: string
+          receipt_image_url: string | null
+          updated_at: string
+          vendor_name: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          employee_user_id: string
+          id?: string
+          notes?: string | null
+          receipt_date: string
+          receipt_image_url?: string | null
+          updated_at?: string
+          vendor_name: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          employee_user_id?: string
+          id?: string
+          notes?: string | null
+          receipt_date?: string
+          receipt_image_url?: string | null
+          updated_at?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_employee_user_id_fkey"
+            columns: ["employee_user_id"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "receipts_employee_user_id_fkey"
+            columns: ["employee_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {

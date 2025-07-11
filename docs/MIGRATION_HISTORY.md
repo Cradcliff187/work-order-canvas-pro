@@ -187,6 +187,19 @@ This document provides a complete chronological history of all database migratio
 - **Business Impact**: Enables consolidated subcontractor billing across multiple work orders
 - **Result**: Complete invoice management infrastructure with professional numbering and approval workflow
 
+### 2025-01-11: Employee Reporting System
+
+#### 20250711_add_employee_reporting_tables.sql
+**Purpose**: **MAJOR** - Employee time tracking and expense receipt management
+- Created `employee_reports` table with generated column for automatic cost calculation
+- Added `receipts` table for employee expense tracking with vendor management
+- Created `receipt_work_orders` junction table for flexible expense allocation
+- Implemented hourly rate snapshots for audit integrity and historical accuracy
+- Added comprehensive indexing for performance optimization with employee-specific queries
+- Integrated with existing audit logging and timestamp management systems
+- **Business Impact**: Enables internal employee time tracking separate from subcontractor workflows
+- **Result**: Complete employee reporting infrastructure with automatic cost calculation and expense management
+
 ### 2025-01-11: IndexedDB Storage Implementation
 
 #### IndexedDB v1 (Initial Implementation)
@@ -279,9 +292,11 @@ This document provides a complete chronological history of all database migratio
 
 The database is now in a **mature, production-ready state** with:
 
-✅ **Complete 15-table schema** aligned with business requirements  
+✅ **Complete 18-table schema** aligned with business requirements  
 ✅ **Multi-assignee work order support** for team-based workflows
 ✅ **Invoice management system** with dual numbering and approval workflow
+✅ **Employee reporting system** with time tracking and expense management
+✅ **Generated column calculations** for automatic cost computation
 ✅ **Clean RLS implementation** with no recursion issues  
 ✅ **Comprehensive audit logging** on all core tables  
 ✅ **Optimized performance** with strategic indexes  
