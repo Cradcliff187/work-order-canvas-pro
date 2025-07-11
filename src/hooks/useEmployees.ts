@@ -114,12 +114,15 @@ export function useEmployeeMutations() {
           hourly_billable_rate: ratesData.hourly_billable_rate,
         })
         .eq('id', employeeId)
-        .eq('is_employee', true)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to update employee rates: ${error.message}`);
+      }
+
+      if (!profile) {
+        throw new Error('Employee not found');
       }
 
       return profile;
