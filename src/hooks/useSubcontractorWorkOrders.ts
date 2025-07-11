@@ -108,6 +108,13 @@ export function useSubcontractorWorkOrders() {
     return useQuery({
       queryKey: ["work-order", id],
       queryFn: async () => {
+        if (!id) throw new Error('Work order ID is required');
+        
+        // Validate UUID format
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+          throw new Error('Invalid work order ID format');
+        }
+
         const { data, error } = await supabase
           .from("work_orders")
           .select(`
@@ -121,12 +128,13 @@ export function useSubcontractorWorkOrders() {
             )
           `)
           .eq("id", id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
+        if (!data) throw new Error('Work order not found');
         return data;
       },
-      enabled: !!id,
+      enabled: !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
     });
   };
 

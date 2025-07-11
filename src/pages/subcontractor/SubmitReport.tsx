@@ -31,7 +31,29 @@ export default function SubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { getWorkOrder, submitReport } = useSubcontractorWorkOrders();
-  const workOrderQuery = getWorkOrder(workOrderId!);
+  
+  // Validate workOrderId parameter
+  if (!workOrderId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workOrderId)) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/subcontractor/work-orders">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Invalid work order ID provided.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const workOrderQuery = getWorkOrder(workOrderId);
   
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [photoAttachments, setPhotoAttachments] = useState<PhotoAttachment[]>([]);

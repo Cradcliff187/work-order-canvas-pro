@@ -10,7 +10,29 @@ import { format } from "date-fns";
 export default function SubcontractorWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { getWorkOrder } = useSubcontractorWorkOrders();
-  const workOrderQuery = getWorkOrder(id!);
+  
+  // Validate ID parameter
+  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/subcontractor/work-orders">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Invalid work order ID provided.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const workOrderQuery = getWorkOrder(id);
 
   if (workOrderQuery.isLoading) {
     return (
