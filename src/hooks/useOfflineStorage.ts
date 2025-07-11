@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { indexedDBManager } from '@/utils/indexedDB';
+import { memoryStorageManager } from '@/utils/memoryStorage';
 import { useToast } from '@/components/ui/use-toast';
-import type { ReportDraft, PhotoAttachment, StorageStats, SyncQueueItem } from '@/types/offline';
+import type { ReportDraft, PhotoAttachment, StorageStats, SyncQueueItem, StorageManager } from '@/types/offline';
 
 export function useOfflineStorage() {
   const [isReady, setIsReady] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
+  const [storageManager, setStorageManager] = useState<StorageManager>(indexedDBManager);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,18 +31,37 @@ export function useOfflineStorage() {
   const initializeStorage = async () => {
     try {
       await indexedDBManager.init();
+      setStorageManager(indexedDBManager);
+      setIsUsingFallback(false);
       setIsReady(true);
       await updateStats();
       
       // Run cleanup on startup
       await indexedDBManager.cleanup();
     } catch (error) {
-      console.error('Error initializing storage:', error);
-      toast({
-        title: "Storage Error",
-        description: "Failed to initialize offline storage",
-        variant: "destructive",
-      });
+      console.error('IndexedDB initialization failed, falling back to memory storage:', error);
+      
+      // Fallback to memory storage
+      try {
+        await memoryStorageManager.init();
+        setStorageManager(memoryStorageManager);
+        setIsUsingFallback(true);
+        setIsReady(true);
+        await updateStats();
+        
+        toast({
+          title: "Storage Fallback",
+          description: "Using temporary storage - data won't persist after page reload",
+          variant: "destructive",
+        });
+      } catch (fallbackError) {
+        console.error('Memory storage fallback also failed:', fallbackError);
+        toast({
+          title: "Storage Error",
+          description: "Failed to initialize any storage system",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -47,14 +69,14 @@ export function useOfflineStorage() {
     if (!isReady) return;
     
     try {
-      const stats = await indexedDBManager.getStorageStats();
+      const stats = await storageManager.getStorageStats();
       setStorageStats(stats);
       
-      const syncQueue = await indexedDBManager.getSyncQueue();
+      const syncQueue = await storageManager.getSyncQueue();
       setPendingCount(syncQueue.length);
       
-      // Warn if storage is getting full
-      if (stats.usedSpace / stats.totalSpace > 0.9) {
+      // Warn if storage is getting full (but not for memory storage)
+      if (!isUsingFallback && stats.usedSpace / stats.totalSpace > 0.9) {
         toast({
           title: "Storage Almost Full",
           description: "Consider syncing or clearing old drafts",
@@ -108,13 +130,14 @@ export function useOfflineStorage() {
         updatedAt: now,
       };
 
-      await indexedDBManager.saveDraft(draft);
+      await storageManager.saveDraft(draft);
       await updateStats();
       
       if (isManual) {
+        const storageType = isUsingFallback ? "(temporary)" : "";
         toast({
           title: "Draft Saved",
-          description: "Report draft saved successfully",
+          description: `Report draft saved successfully ${storageType}`,
         });
       }
       
@@ -128,29 +151,29 @@ export function useOfflineStorage() {
       });
       throw error;
     }
-  }, [isReady, toast]);
+  }, [isReady, storageManager, isUsingFallback, toast]);
 
   const getDrafts = useCallback(async (workOrderId: string): Promise<ReportDraft[]> => {
     if (!isReady) return [];
     
     try {
-      return await indexedDBManager.getDraftsByWorkOrder(workOrderId);
+      return await storageManager.getDraftsByWorkOrder(workOrderId);
     } catch (error) {
       console.error('Error getting drafts:', error);
       return [];
     }
-  }, [isReady]);
+  }, [isReady, storageManager]);
 
   const loadDraft = useCallback(async (draftId: string): Promise<ReportDraft | null> => {
     if (!isReady) return null;
     
     try {
-      return await indexedDBManager.getDraft(draftId);
+      return await storageManager.getDraft(draftId);
     } catch (error) {
       console.error('Error loading draft:', error);
       return null;
     }
-  }, [isReady]);
+  }, [isReady, storageManager]);
 
   const deleteDraft = useCallback(async (draftId: string): Promise<void> => {
     if (!isReady) {
@@ -163,7 +186,7 @@ export function useOfflineStorage() {
     }
     
     try {
-      await indexedDBManager.deleteDraft(draftId);
+      await storageManager.deleteDraft(draftId);
       await updateStats();
       toast({
         title: "Draft Deleted",
@@ -177,7 +200,7 @@ export function useOfflineStorage() {
         variant: "destructive",
       });
     }
-  }, [isReady, toast]);
+  }, [isReady, storageManager, toast]);
 
   const queueSync = useCallback(async (
     type: SyncQueueItem['type'],
@@ -195,16 +218,16 @@ export function useOfflineStorage() {
         createdAt: Date.now(),
       };
 
-      await indexedDBManager.addToSyncQueue(syncItem);
+      await storageManager.addToSyncQueue(syncItem);
       await updateStats();
     } catch (error) {
       console.error('Error queueing sync:', error);
     }
-  }, []);
+  }, [storageManager]);
 
   const processPendingSyncs = useCallback(async (): Promise<void> => {
     try {
-      const syncQueue = await indexedDBManager.getSyncQueue();
+      const syncQueue = await storageManager.getSyncQueue();
       let processedCount = 0;
 
       for (const item of syncQueue) {
@@ -224,14 +247,14 @@ export function useOfflineStorage() {
           }
 
           // Remove from queue on success
-          await indexedDBManager.removeSyncQueueItem(item.id);
+          await storageManager.removeSyncQueueItem(item.id);
           processedCount++;
         } catch (error) {
           // Update retry count and schedule next attempt
           const nextAttempt = Date.now() + (item.retryCount + 1) * 60000; // Exponential backoff
           
           if (item.retryCount >= item.maxRetries) {
-            await indexedDBManager.removeSyncQueueItem(item.id);
+            await storageManager.removeSyncQueueItem(item.id);
           } else {
             const updatedItem = {
               ...item,
@@ -240,7 +263,7 @@ export function useOfflineStorage() {
               nextAttempt,
               error: error instanceof Error ? error.message : 'Unknown error',
             };
-            await indexedDBManager.addToSyncQueue(updatedItem);
+            await storageManager.addToSyncQueue(updatedItem);
           }
         }
       }
@@ -261,11 +284,11 @@ export function useOfflineStorage() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [storageManager, toast]);
 
   const exportData = useCallback(async () => {
     try {
-      const data = await indexedDBManager.exportData();
+      const data = await storageManager.exportData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
@@ -288,12 +311,12 @@ export function useOfflineStorage() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [storageManager, toast]);
 
   const clearCache = useCallback(async (): Promise<void> => {
     try {
       // This would clear everything - implement with caution
-      await indexedDBManager.cleanup();
+      await storageManager.cleanup();
       await updateStats();
       
       toast({
@@ -308,12 +331,13 @@ export function useOfflineStorage() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [storageManager, toast]);
 
   return {
     isReady,
     pendingCount,
     storageStats,
+    isUsingFallback,
     saveDraft,
     getDrafts,
     loadDraft,

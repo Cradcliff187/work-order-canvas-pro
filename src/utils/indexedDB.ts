@@ -1,10 +1,13 @@
 import * as LZString from 'lz-string';
-import type { ReportDraft, PhotoAttachment, SyncQueueItem, StorageStats, OfflineConfig, ExportData } from '@/types/offline';
+import type { ReportDraft, PhotoAttachment, SyncQueueItem, StorageStats, OfflineConfig, ExportData, StorageManager } from '@/types/offline';
 
-export class IndexedDBManager {
+export class IndexedDBManager implements StorageManager {
+  private static instance: IndexedDBManager | null = null;
   private dbName = 'WorkOrderProDB';
   private version = 2;
   private db: IDBDatabase | null = null;
+  private isInitializing = false;
+  private initPromise: Promise<void> | null = null;
 
   private defaultConfig: OfflineConfig = {
     maxDraftsPerWorkOrder: 5,
@@ -17,13 +20,56 @@ export class IndexedDBManager {
     cleanupThresholdDays: 30,
   };
 
+  // Singleton pattern
+  static getInstance(): IndexedDBManager {
+    if (!IndexedDBManager.instance) {
+      IndexedDBManager.instance = new IndexedDBManager();
+    }
+    return IndexedDBManager.instance;
+  }
+
   async init(): Promise<void> {
+    // Prevent multiple concurrent initializations
+    if (this.isInitializing && this.initPromise) {
+      return this.initPromise;
+    }
+
+    if (this.db) {
+      return Promise.resolve();
+    }
+
+    this.isInitializing = true;
+    this.initPromise = this.performInit();
+    
+    try {
+      await this.initPromise;
+    } finally {
+      this.isInitializing = false;
+    }
+  }
+
+  private performInit(): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        console.error('IndexedDB initialization failed:', request.error);
+        // Safari fallback - try without version
+        if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+          this.initSafariFallback().then(resolve).catch(reject);
+        } else {
+          reject(request.error);
+        }
+      };
+      
       request.onsuccess = () => {
         this.db = request.result;
+        
+        // Add error handler for the database
+        this.db.onerror = (event) => {
+          console.error('IndexedDB error:', event);
+        };
+        
         resolve();
       };
 
@@ -56,6 +102,29 @@ export class IndexedDBManager {
         // Create metadata store
         if (!db.objectStoreNames.contains('metadata')) {
           db.createObjectStore('metadata', { keyPath: 'key' });
+        }
+      };
+    });
+  }
+
+  // Safari fallback initialization
+  private initSafariFallback(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        
+        // Create minimal schema for Safari
+        if (!db.objectStoreNames.contains('drafts')) {
+          const draftsStore = db.createObjectStore('drafts', { keyPath: 'id' });
+          draftsStore.createIndex('workOrderId', 'workOrderId', { unique: false });
         }
       };
     });
@@ -324,12 +393,18 @@ export class IndexedDBManager {
     compressedDraft.photos = await Promise.all(
       draft.photos.map(async (photo) => {
         if (photo.base64Data && !photo.compressedSize) {
-          const compressed = LZString.compressToUTF16(photo.base64Data);
-          return {
-            ...photo,
-            base64Data: compressed,
-            compressedSize: compressed.length * 2, // UTF-16 is 2 bytes per char
-          };
+          try {
+            const compressed = LZString.compressToUTF16(photo.base64Data);
+            if (compressed && compressed.length < photo.base64Data.length) {
+              return {
+                ...photo,
+                base64Data: compressed,
+                compressedSize: compressed.length * 2, // UTF-16 is 2 bytes per char
+              };
+            }
+          } catch (error) {
+            console.warn('Compression failed, using original data:', error);
+          }
         }
         return photo;
       })
@@ -343,11 +418,16 @@ export class IndexedDBManager {
     
     decompressedDraft.photos = draft.photos.map((photo) => {
       if (photo.compressedSize) {
-        const decompressed = LZString.decompressFromUTF16(photo.base64Data);
-        return {
-          ...photo,
-          base64Data: decompressed || photo.base64Data,
-        };
+        try {
+          const decompressed = LZString.decompressFromUTF16(photo.base64Data);
+          return {
+            ...photo,
+            base64Data: decompressed || photo.base64Data,
+          };
+        } catch (error) {
+          console.warn('Decompression failed, using original data:', error);
+          return photo;
+        }
       }
       return photo;
     });
@@ -401,4 +481,4 @@ export class IndexedDBManager {
   }
 }
 
-export const indexedDBManager = new IndexedDBManager();
+export const indexedDBManager = IndexedDBManager.getInstance();

@@ -82,3 +82,18 @@ export interface ExportData {
     deviceInfo: string;
   };
 }
+
+export interface StorageManager {
+  init(): Promise<void>;
+  saveDraft(draft: ReportDraft): Promise<void>;
+  getDraft(id: string): Promise<ReportDraft | null>;
+  getDraftsByWorkOrder(workOrderId: string): Promise<ReportDraft[]>;
+  deleteDraft(id: string): Promise<void>;
+  addToSyncQueue(item: SyncQueueItem): Promise<void>;
+  getSyncQueue(): Promise<SyncQueueItem[]>;
+  removeSyncQueueItem(id: string): Promise<void>;
+  getStorageStats(): Promise<StorageStats>;
+  exportData(): Promise<ExportData>;
+  importData(data: ExportData): Promise<void>;
+  cleanup(): Promise<void>;
+}

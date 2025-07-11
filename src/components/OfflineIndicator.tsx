@@ -6,11 +6,11 @@ import { WifiOff, Wifi, RefreshCw, Clock, HardDrive } from 'lucide-react';
 
 export function OfflineIndicator() {
   const { isOnline, isSlowConnection } = useNetworkStatus();
-  const { pendingCount, processPendingSyncs, storageStats } = useOfflineStorage();
+  const { pendingCount, processPendingSyncs, storageStats, isUsingFallback } = useOfflineStorage();
 
   const isStorageFull = storageStats && (storageStats.usedSpace / storageStats.totalSpace) > 0.9;
   
-  if (isOnline && !isSlowConnection && pendingCount === 0 && !isStorageFull) {
+  if (isOnline && !isSlowConnection && pendingCount === 0 && !isStorageFull && !isUsingFallback) {
     return null;
   }
 
@@ -40,6 +40,14 @@ export function OfflineIndicator() {
         icon: <HardDrive className="h-4 w-4 text-destructive" />,
         message: 'Storage almost full',
         className: 'border-destructive bg-destructive/10'
+      };
+    }
+
+    if (isUsingFallback) {
+      return {
+        icon: <Clock className="h-4 w-4 text-yellow-600" />,
+        message: 'Using temporary storage',
+        className: 'border-yellow-500 bg-yellow-500/10'
       };
     }
     
