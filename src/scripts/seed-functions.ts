@@ -209,80 +209,149 @@ export const seedDatabase = async () => {
     }
     console.log(`✅ Created/updated ${trades.length} trades`);
 
-    // 4. Create users (simplified for browser)
-    console.log('👥 Creating users...');
+    // 4. Create users and profiles
+    console.log('👥 Creating users and profiles...');
     let createdUserCount = 0;
+    let updatedUserCount = 0;
 
     for (const user of users) {
       try {
-        // Check if user exists
+        console.log(`Processing user: ${user.email}`);
+        
+        // Check if profile already exists (indicates auth user exists)
         const { data: existingProfile } = await supabase
           .from('profiles')
-          .select('email')
+          .select('id, user_id, user_type, is_employee')
           .eq('email', user.email)
           .single();
+        
+        let authUserId: string;
+        let profileId: string;
 
-        if (!existingProfile) {
-          // Create auth user
+        if (existingProfile) {
+          // User exists, get their auth user ID
+          authUserId = existingProfile.user_id;
+          profileId = existingProfile.id;
+          // Update profile if needed
+          if (existingProfile.user_type !== user.user_type || 
+              existingProfile.is_employee !== (user.user_type === 'admin')) {
+            await supabase
+              .from('profiles')
+              .update({
+                user_type: user.user_type,
+                is_employee: user.user_type === 'admin',
+                company_name: user.company_name
+              })
+              .eq('id', profileId);
+            console.log(`  ↻ Updated profile for ${user.email}`);
+          }
+          updatedUserCount++;
+        } else {
+          // Create new auth user using signUp (browser compatible)
           const { data: authUser, error: authError } = await supabase.auth.signUp({
             email: user.email,
             password: 'Test123!',
             options: {
               data: {
                 first_name: user.first_name,
-                last_name: user.last_name
+                last_name: user.last_name,
+                user_type: user.user_type
               }
             }
           });
 
           if (authError) {
-            console.warn(`Failed to create auth user ${user.email}:`, authError.message);
+            console.warn(`  ⚠️ Failed to create auth user ${user.email}:`, authError.message);
             continue;
           }
 
-          if (authUser.user) {
-            // Create profile
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .insert({
-                user_id: authUser.user.id,
-                email: user.email,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                user_type: user.user_type,
-                company_name: user.company_name,
-                is_employee: user.user_type === 'admin'
-              });
+          if (!authUser.user) {
+            console.warn(`  ⚠️ No user returned for ${user.email}`);
+            continue;
+          }
 
-            if (!profileError) {
-              createdUserCount++;
-              
-              // Create user-organization relationship
-              if (user.organization_name) {
-                const { data: org } = await supabase
-                  .from('organizations')
-                  .select('id')
-                  .eq('name', user.organization_name)
-                  .single();
+          authUserId = authUser.user.id;
 
-                if (org) {
-                  await supabase
-                    .from('user_organizations')
-                    .insert({
-                      user_id: authUser.user.id,
-                      organization_id: org.id
-                    });
-                }
+          // Create profile (will be handled by trigger, but let's ensure it exists)
+          const { data: newProfile, error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              user_id: authUserId,
+              email: user.email,
+              first_name: user.first_name,
+              last_name: user.last_name,
+              user_type: user.user_type,
+              company_name: user.company_name,
+              is_employee: user.user_type === 'admin'
+            }, {
+              onConflict: 'user_id'
+            })
+            .select('id')
+            .single();
+
+          if (profileError) {
+            console.warn(`  ⚠️ Failed to create profile for ${user.email}:`, profileError.message);
+            continue;
+          }
+          profileId = newProfile.id;
+          createdUserCount++;
+          console.log(`  ✓ Created user and profile for ${user.email}`);
+        }
+
+        // Handle user-organization relationship
+        if (user.organization_name && profileId) {
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('id')
+            .eq('name', user.organization_name)
+            .single();
+
+          if (org) {
+            // Check if relationship already exists
+            const { data: existingRelation } = await supabase
+              .from('user_organizations')
+              .select('id')
+              .eq('user_id', profileId)
+              .eq('organization_id', org.id)
+              .single();
+
+            if (!existingRelation) {
+              const { error: relationError } = await supabase
+                .from('user_organizations')
+                .insert({
+                  user_id: profileId,
+                  organization_id: org.id
+                });
+
+              if (relationError) {
+                console.warn(`  ⚠️ Failed to create organization relationship for ${user.email}:`, relationError.message);
+              } else {
+                console.log(`  ✓ Linked ${user.email} to ${user.organization_name}`);
               }
             }
+          } else {
+            console.warn(`  ⚠️ Organization not found: ${user.organization_name}`);
           }
         }
+
       } catch (error) {
-        console.warn(`Error creating user ${user.email}:`, error);
+        console.warn(`❌ Error processing user ${user.email}:`, error);
       }
     }
 
-    console.log(`✅ Created/verified ${createdUserCount} users`);
+    console.log(`✅ Created ${createdUserCount} new users, updated ${updatedUserCount} existing users`);
+    
+    // Validate results
+    const { data: finalProfiles } = await supabase
+      .from('profiles')
+      .select('email, user_type, is_employee')
+      .in('email', users.map(u => u.email));
+
+    const { data: finalRelations } = await supabase
+      .from('user_organizations')
+      .select('*');
+
+    console.log(`📊 Final validation: ${finalProfiles?.length || 0} profiles, ${finalRelations?.length || 0} organization relationships`);
     console.log('🎉 Database seeding completed successfully!');
 
   } catch (error) {

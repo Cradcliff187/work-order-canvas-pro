@@ -104,13 +104,12 @@ export const useDevTools = () => {
   const clearTestData = async () => {
     setLoading(true);
     try {
-      // Delete test data in reverse dependency order
       console.log('Clearing test data...');
       
-      // Get test user IDs first
+      // Get test user profiles
       const { data: testProfiles } = await supabase
         .from('profiles')
-        .select('id, user_id')
+        .select('id, user_id, email')
         .in('email', TEST_EMAILS);
 
       if (!testProfiles?.length) {
@@ -122,28 +121,56 @@ export const useDevTools = () => {
         return;
       }
 
-      const testUserIds = testProfiles.map(p => p.id);
-      const authUserIds = testProfiles.map(p => p.user_id);
+      const testProfileIds = testProfiles.map(p => p.id);
+      console.log(`Found ${testProfiles.length} test profiles to clean`);
 
-      // Clear in dependency order
-      await supabase.from('work_order_attachments').delete().in('uploaded_by_user_id', testUserIds);
-      await supabase.from('work_order_reports').delete().in('subcontractor_user_id', testUserIds);
-      await supabase.from('work_orders').delete().in('created_by', testUserIds);
-      await supabase.from('user_organizations').delete().in('user_id', testUserIds);
-      await supabase.from('email_templates').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Keep if any real ones exist
-      await supabase.from('organizations').delete().in('name', ['ABC Property Management', 'XYZ Commercial Properties', 'Premium Facilities Group']);
+      // Clear in dependency order (use profile IDs)
+      console.log('Deleting work order attachments...');
+      await supabase.from('work_order_attachments').delete().in('uploaded_by_user_id', testProfileIds);
       
-      // Delete profiles
+      console.log('Deleting work order reports...');
+      await supabase.from('work_order_reports').delete().in('subcontractor_user_id', testProfileIds);
+      
+      console.log('Deleting work orders...');
+      await supabase.from('work_orders').delete().in('created_by', testProfileIds);
+      
+      console.log('Deleting user organization relationships...');
+      await supabase.from('user_organizations').delete().in('user_id', testProfileIds);
+      
+      console.log('Deleting test organizations...');
+      const testOrgNames = [
+        'ABC Property Management', 
+        'XYZ Commercial Properties', 
+        'Premium Facilities Group',
+        'Pipes & More Plumbing',
+        'Sparks Electric',
+        'Cool Air HVAC',
+        'Wood Works Carpentry',
+        'Brush Strokes Painting',
+        'Fix-It Maintenance',
+        'Green Thumb Landscaping'
+      ];
+      await supabase.from('organizations').delete().in('name', testOrgNames);
+      
+      console.log('Deleting email templates...');
+      const templateNames = [
+        'work_order_received',
+        'work_order_assigned', 
+        'report_submitted',
+        'report_approved',
+        'work_order_completed'
+      ];
+      await supabase.from('email_templates').delete().in('template_name', templateNames);
+      
+      console.log('Deleting test profiles...');
       await supabase.from('profiles').delete().in('email', TEST_EMAILS);
       
-      // Delete auth users
-      for (const authUserId of authUserIds) {
-        await supabase.auth.admin.deleteUser(authUserId);
-      }
+      // Note: Cannot delete auth users in browser context (requires service role)
+      // This is a limitation of running in the browser vs server environment
 
       toast({
-        title: "Success",
-        description: "Test data cleared successfully",
+        title: "Success", 
+        description: `Cleared test data for ${testProfiles.length} users. Note: Auth users remain due to browser limitations.`,
       });
       
       // Refresh counts
