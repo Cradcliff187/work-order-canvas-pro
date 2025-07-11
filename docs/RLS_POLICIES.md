@@ -205,6 +205,14 @@ With Check: (user_id = auth.uid())
 Note: Simple direct comparison - no recursion possible
 ```
 
+**Admins can update employee profiles**
+```sql
+Policy: UPDATE
+Using: (auth_is_admin() AND is_employee = true)
+With Check: (auth_is_admin() AND is_employee = true)
+Note: Enhancement policy allowing admins to manage employee rates and details. Safe to use helper function as this operates after profile bootstrap.
+```
+
 **Users create own profile**
 ```sql
 Policy: INSERT
