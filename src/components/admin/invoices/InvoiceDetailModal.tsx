@@ -12,12 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Calendar } from '@/components/ui/calendar';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, FileText, Table as TableIcon, Image, Download, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -40,6 +41,8 @@ import {
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
+import { formatFileSize } from '@/utils/imageCompression';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InvoiceDetailModalProps {
   invoice: Invoice | null;
@@ -122,6 +125,39 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   const canApprove = invoice.status === 'submitted';
   const canReject = invoice.status === 'submitted';
   const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
+
+  const getFileIcon = (fileType: string, fileName: string) => {
+    const lowerType = fileType.toLowerCase();
+    const lowerName = fileName.toLowerCase();
+    
+    if (lowerType.includes('image') || lowerName.match(/\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/)) {
+      return Image;
+    }
+    if (lowerType.includes('spreadsheet') || lowerName.match(/\.(xlsx|xls|csv)$/)) {
+      return TableIcon;
+    }
+    return FileText;
+  };
+
+  const getFileTypeColor = (fileType: string, fileName: string) => {
+    const lowerType = fileType.toLowerCase();
+    const lowerName = fileName.toLowerCase();
+    
+    if (lowerType.includes('image') || lowerName.match(/\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/)) {
+      return 'text-green-600';
+    }
+    if (lowerType.includes('spreadsheet') || lowerName.match(/\.(xlsx|xls|csv)$/)) {
+      return 'text-blue-600';
+    }
+    return 'text-gray-600';
+  };
+
+  const handleDownload = (fileUrl: string) => {
+    const { data } = supabase.storage
+      .from('work-order-attachments')
+      .getPublicUrl(fileUrl);
+    window.open(data.publicUrl, '_blank');
+  };
 
   return (
     <>
@@ -269,6 +305,51 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                       </div>
                     </div>
                   )}
+                </div>
+              </>
+            )}
+
+            {/* Attachments */}
+            {invoice.invoice_attachments && invoice.invoice_attachments.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Attachments</h3>
+                  <div className="space-y-2">
+                    {invoice.invoice_attachments.map((attachment) => {
+                      const FileIcon = getFileIcon(attachment.file_type, attachment.file_name);
+                      const iconColor = getFileTypeColor(attachment.file_type, attachment.file_name);
+                      
+                      return (
+                        <div 
+                          key={attachment.id} 
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            <FileIcon className={`h-5 w-5 ${iconColor} flex-shrink-0`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">
+                                {attachment.file_name}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {attachment.file_size ? formatFileSize(attachment.file_size) : 'Unknown size'}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownload(attachment.file_url)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span>Download</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </>
             )}
