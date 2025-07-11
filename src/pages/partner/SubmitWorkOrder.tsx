@@ -15,6 +15,7 @@ import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
+import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { LocationFields } from '@/components/LocationFields';
 
 const workOrderSchema = z.object({
@@ -72,6 +73,15 @@ const SubmitWorkOrder = () => {
     },
   });
 
+  // Watch form values for work order number generation
+  const organizationId = form.watch('organization_id');
+  const locationNumber = form.watch('partner_location_number');
+  
+  const { workOrderNumber, isLoading: isGeneratingNumber, error: numberError } = useWorkOrderNumberGeneration({
+    organizationId,
+    locationNumber,
+  });
+
   const handleNext = async () => {
     const currentStepFields = getCurrentStepFields();
     const isValid = await form.trigger(currentStepFields);
@@ -100,18 +110,22 @@ const SubmitWorkOrder = () => {
 
   const onSubmit = async (data: WorkOrderFormData) => {
     try {
-      const result = await createWorkOrder.mutateAsync(data as {
-        title: string;
-        store_location: string;
-        street_address: string;
-        city: string;
-        state: string;
-        zip_code: string;
-        trade_id: string;
-        description: string;
-        organization_id: string;
-        partner_po_number?: string;
-        partner_location_number?: string;
+      const result = await createWorkOrder.mutateAsync({
+        title: data.title,
+        store_location: data.store_location || '',
+        street_address: data.street_address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zip_code: data.zip_code || '',
+        location_street_address: data.location_street_address || '',
+        location_city: data.location_city || '',
+        location_state: data.location_state || '',
+        location_zip_code: data.location_zip_code || '',
+        trade_id: data.trade_id,
+        description: data.description,
+        organization_id: data.organization_id,
+        partner_po_number: data.partner_po_number || null,
+        partner_location_number: data.partner_location_number || null,
       });
       setSubmittedWorkOrder(result);
       setCurrentStep(4); // Success step
@@ -349,6 +363,30 @@ const SubmitWorkOrder = () => {
                     </FormItem>
                   )}
                 />
+
+                {/* Work Order Number Preview */}
+                {organizationId && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <h4 className="font-medium mb-2 text-primary">Generated Work Order Number</h4>
+                    {isGeneratingNumber ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                        <span className="text-sm text-muted-foreground">Generating number...</span>
+                      </div>
+                    ) : numberError ? (
+                      <div className="text-destructive text-sm">
+                        <p>Error generating work order number: {numberError}</p>
+                        <p className="text-xs mt-1">A fallback number will be assigned upon submission.</p>
+                      </div>
+                    ) : workOrderNumber ? (
+                      <div className="text-2xl font-bold text-primary">
+                        {workOrderNumber}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Select organization to generate number</span>
+                    )}
+                  </div>
+                )}
 
                 <div className="border rounded-lg p-4 bg-muted/50">
                   <h4 className="font-medium mb-3">Work Order Summary</h4>

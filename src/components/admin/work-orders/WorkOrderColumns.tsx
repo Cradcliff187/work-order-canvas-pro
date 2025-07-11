@@ -3,7 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Trash2, UserPlus, MapPin } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Trash2, UserPlus, MapPin, Copy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Database } from '@/integrations/supabase/types';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
@@ -64,15 +64,30 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
   {
     accessorKey: 'work_order_number',
     header: 'Work Order #',
-    cell: ({ row }) => (
-      <Button
-        variant="link"
-        className="p-0 h-auto font-mono text-primary"
-        onClick={() => onView(row.original)}
-      >
-        {row.getValue('work_order_number') || 'N/A'}
-      </Button>
-    ),
+    cell: ({ row }) => {
+      const number = row.getValue('work_order_number') as string;
+      return (
+        <div className="flex items-center gap-2">
+          <Badge variant="default" className="font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground">
+            {number || 'Pending'}
+          </Badge>
+          {number && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-muted"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(number);
+              }}
+              title="Copy work order number"
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'title',

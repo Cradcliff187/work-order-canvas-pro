@@ -185,6 +185,10 @@ export function useCreateWorkOrder() {
       city: string;
       state: string;
       zip_code: string;
+      location_street_address?: string;
+      location_city?: string;
+      location_state?: string;
+      location_zip_code?: string;
       trade_id: string;
       description: string;
       organization_id: string;
@@ -197,7 +201,19 @@ export function useCreateWorkOrder() {
       const { data, error } = await supabase
         .from('work_orders')
         .insert({
-          ...workOrder,
+          title: workOrder.title,
+          description: workOrder.description,
+          organization_id: workOrder.organization_id,
+          trade_id: workOrder.trade_id,
+          store_location: workOrder.store_location || null,
+          street_address: workOrder.street_address || null,
+          city: workOrder.city || null,
+          state: workOrder.state || null,
+          zip_code: workOrder.zip_code || null,
+          location_street_address: workOrder.location_street_address || null,
+          location_city: workOrder.location_city || null,
+          location_state: workOrder.location_state || null,
+          location_zip_code: workOrder.location_zip_code || null,
           partner_po_number: workOrder.partner_po_number || null,
           partner_location_number: workOrder.partner_location_number || null,
           created_by: profile.id,

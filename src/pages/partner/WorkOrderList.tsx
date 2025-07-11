@@ -159,7 +159,11 @@ const WorkOrderList = () => {
                   {workOrders.map((workOrder) => (
                     <TableRow key={workOrder.id}>
                       <TableCell className="font-medium">
-                        {workOrder.work_order_number}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground">
+                            {workOrder.work_order_number || 'Pending'}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <TooltipProvider>

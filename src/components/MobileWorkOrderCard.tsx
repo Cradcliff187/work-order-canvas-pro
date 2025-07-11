@@ -117,9 +117,11 @@ export function MobileWorkOrderCard({
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-sm truncate">
-                #{workOrder.work_order_number}
-              </h3>
+              {workOrder.work_order_number && (
+                <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground text-xs">
+                  {workOrder.work_order_number}
+                </Badge>
+              )}
               <Badge 
                 variant="secondary"
                 className={statusColors[workOrder.status as keyof typeof statusColors]}
@@ -127,9 +129,9 @@ export function MobileWorkOrderCard({
                 {workOrder.status.replace('_', ' ')}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground truncate">
+            <h3 className="font-semibold text-sm truncate">
               {workOrder.title}
-            </p>
+            </h3>
           </div>
           <ChevronRight className="h-5 w-5 text-muted-foreground ml-2 flex-shrink-0" />
         </div>
