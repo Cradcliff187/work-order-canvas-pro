@@ -606,6 +606,41 @@ erDiagram
 
 ---
 
+### 9. partner_locations
+
+**Purpose**: Manages multiple locations for partner organizations with complete contact information.
+**RLS**: ✅ Enabled - Enforces organization-based access control for multi-site partners
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| organization_id | uuid | No | - | References organizations.id |
+| location_number | text | No | - | Partner's internal location identifier |
+| location_name | text | No | - | Descriptive name for the location |
+| street_address | text | Yes | - | Street address |
+| city | text | Yes | - | City |
+| state | text | Yes | - | State |
+| zip_code | text | Yes | - | ZIP code |
+| contact_name | text | Yes | - | Location contact person |
+| contact_phone | text | Yes | - | Location phone number |
+| contact_email | text | Yes | - | Location email address |
+| is_active | boolean | No | true | Whether location is active |
+| created_at | timestamp | No | now() | Creation timestamp |
+| updated_at | timestamp | No | now() | Last update timestamp |
+
+**Indexes**:
+- `idx_partner_locations_organization` ON (organization_id)
+- `idx_partner_locations_active` ON (is_active)
+- `idx_partner_locations_location_number` ON (location_number)
+
+**Business Rules**:
+- Enables partner organizations to manage multiple store/site locations
+- Location numbers should be unique within an organization
+- Used for work order location context and routing
+- Supports detailed contact information per location
+
+---
+
 ### 19. receipts
 
 **Purpose**: Employee expense receipt management and tracking.
@@ -672,6 +707,7 @@ erDiagram
 ### 16. invoices
 
 **Purpose**: Manages subcontractor invoices with dual numbering system and approval workflow.
+**RLS**: ✅ Enabled - Enforces subcontractor financial privacy and organization-based access control
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
@@ -779,6 +815,7 @@ erDiagram
 ### 18. invoice_work_orders
 
 **Purpose**: Junction table linking invoices to multiple work orders with itemized amounts.
+**RLS**: ✅ Enabled - Matches parent invoice permissions for data consistency
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|

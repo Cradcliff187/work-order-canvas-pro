@@ -530,6 +530,22 @@ The database is now in a **mature, production-ready state** with:
 - Address utility functions provide consistent formatting and validation
 - Legacy fields remain functional for existing data
 
+### 2025-07-11: RLS Security Fix
+
+#### 20250711194500-enable-rls-on-tables-with-policies.sql
+**Purpose**: **SECURITY FIX** - Enable RLS on tables with existing policies
+- **Issue**: Supabase linter detected tables with RLS policies but RLS not enabled
+- **Fixed Tables**: 
+  - `invoices` - Enabled RLS (had 6 existing policies)
+  - `invoice_work_orders` - Enabled RLS (had 2 existing policies)
+  - `partner_locations` - Enabled RLS and added 3 new policies
+- **Added Policies for partner_locations**:
+  - Admin management (full access)
+  - Partner organization-based access
+  - Subcontractor read access for assigned work orders
+- **Result**: Fixed Supabase linter warnings and ensured defined security policies are enforced
+- **Impact**: Zero functionality change, pure security hardening
+
 ## Migration Best Practices
 
 1. **Always document migration purpose** in comments
