@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 const editWorkOrderSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled', 'estimate_needed']),
   assigned_to: z.string().optional(),
   trade_id: z.string().min(1, 'Trade is required'),
   due_date: z.string().optional(),
@@ -47,6 +47,7 @@ type EditWorkOrderForm = z.infer<typeof editWorkOrderSchema>;
 const statusOptions = [
   { value: 'received', label: 'Received' },
   { value: 'assigned', label: 'Assigned' },
+  { value: 'estimate_needed', label: 'Estimate Needed' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },

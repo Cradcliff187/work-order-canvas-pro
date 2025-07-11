@@ -1282,6 +1282,10 @@ export type Database = {
         Args: { start_date?: string; end_date?: string }
         Returns: number
       }
+      check_assignment_completion_status: {
+        Args: { work_order_id: string }
+        Returns: boolean
+      }
       generate_internal_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1325,6 +1329,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      transition_work_order_status: {
+        Args: {
+          work_order_id: string
+          new_status: Database["public"]["Enums"]["work_order_status"]
+          reason?: string
+          user_id?: string
+        }
+        Returns: boolean
+      }
       user_assigned_to_work_order: {
         Args: { wo_id: string }
         Returns: boolean
@@ -1347,6 +1360,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+        | "estimate_needed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1486,6 +1500,7 @@ export const Constants = {
         "in_progress",
         "completed",
         "cancelled",
+        "estimate_needed",
       ],
     },
   },

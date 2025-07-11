@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Users, Briefcase, Clock, Mail, UserCheck } from 'lucide-react';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info } from 'lucide-react';
 import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
@@ -227,6 +227,21 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               </div>
             </CardContent>
           </Card>
+
+          {/* Status Preview */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-sm text-blue-800 mb-2">
+              <Info className="h-4 w-4" />
+              <span className="font-medium">Status Change Preview</span>
+            </div>
+            <div className="text-sm text-blue-700">
+              {selectedAssignees.length > 0 ? (
+                <>Work orders will automatically change from <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> to <Badge className="mx-1 bg-yellow-100 text-yellow-800 text-xs">Assigned</Badge> when assignments are created.</>
+              ) : (
+                <>Work orders will be returned to <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status when all assignments are removed.</>
+              )}
+            </div>
+          </div>
 
           {/* Validation Errors */}
           {validationErrors.length > 0 && (
