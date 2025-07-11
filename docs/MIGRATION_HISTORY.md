@@ -399,6 +399,18 @@ This document provides a complete chronological history of all database migratio
 - **Business Impact**: Enables automatic work order completion while preserving admin control
 - **Result**: Complete automated completion detection with manual override capabilities and email notifications
 
+### Invoice Attachments Table Creation
+- **Purpose**: Enable invoice document uploads for subcontractors  
+- **Details**:
+  - Created `invoice_attachments` table with 8 columns following existing attachment patterns
+  - Uses existing `file_type` enum with 'document' default value
+  - Foreign key constraints to `invoices` and `profiles` tables with CASCADE delete
+  - Performance indexes on `invoice_id` and `uploaded_by` columns
+  - Files automatically deleted when parent invoice is removed
+  - Supports PDFs, images, and documents for invoice submissions
+  - Follows established attachment table structure from `work_order_attachments`
+- **Business Impact**: Enables subcontractors to upload supporting documents with invoice submissions
+
 ### Previous Migration Categories
 
 #### 20250711172637-dede9565-e252-4d72-944c-77b5568b4ce1.sql

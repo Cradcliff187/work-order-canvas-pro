@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-WorkOrderPro uses a comprehensive **19-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, partner location management, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
+WorkOrderPro uses a comprehensive **20-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, partner location management, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
 ## Database Architecture Overview
 
-### Core Tables (19)
+### Core Tables (20)
 1. **organizations** - Company/organization information
 2. **user_organizations** - Many-to-many user-organization relationships  
 3. **profiles** - Extended user profile information
@@ -17,15 +17,16 @@ WorkOrderPro uses a comprehensive **19-table** PostgreSQL database with Row Leve
 8. **work_order_attachments** - File attachments for work orders and reports
 9. **partner_locations** - Partner location management for multi-site organizations
 10. **invoices** - Subcontractor invoice management with dual numbering
-11. **invoice_work_orders** - Junction table linking invoices to work orders
-12. **employee_reports** - Employee time tracking and work reporting
-13. **receipts** - Employee expense receipt management
-14. **receipt_work_orders** - Junction table for receipt allocation to work orders
-15. **email_templates** - System email templates
-16. **email_logs** - Email delivery tracking
-17. **email_settings** - Email configuration per organization
-18. **system_settings** - Global system configuration
-19. **audit_logs** - Complete audit trail for all changes
+11. **invoice_attachments** - Invoice document uploads (PDFs, images)
+12. **invoice_work_orders** - Junction table linking invoices to work orders
+13. **employee_reports** - Employee time tracking and work reporting
+14. **receipts** - Employee expense receipt management
+15. **receipt_work_orders** - Junction table for receipt allocation to work orders
+16. **email_templates** - System email templates
+17. **email_logs** - Email delivery tracking
+18. **email_settings** - Email configuration per organization
+19. **system_settings** - Global system configuration
+20. **audit_logs** - Complete audit trail for all changes
 
 ### Materialized Views (2)
 - **mv_work_order_analytics** - Performance analytics for work orders
@@ -605,7 +606,7 @@ erDiagram
 
 ---
 
-### 14. receipts
+### 19. receipts
 
 **Purpose**: Employee expense receipt management and tracking.
 
@@ -639,7 +640,7 @@ erDiagram
 
 ---
 
-### 15. receipt_work_orders
+### 20. receipt_work_orders
 
 **Purpose**: Junction table for allocating receipt expenses across work orders.
 
@@ -671,6 +672,68 @@ erDiagram
 ### 16. invoices
 
 **Purpose**: Manages subcontractor invoices with dual numbering system and approval workflow.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| internal_invoice_number | text | No | - | Auto-generated internal reference (INV-YYYY-00001) |
+| external_invoice_number | text | Yes | - | Subcontractor's invoice number (optional) |
+| subcontractor_organization_id | uuid | No | - | References organizations.id |
+| submitted_by | uuid | Yes | - | References profiles.id (user who submitted) |
+| submitted_at | timestamp | Yes | - | Submission timestamp |
+| status | text | No | 'submitted' | Current status (submitted/approved/rejected/paid) |
+| total_amount | decimal(12,2) | Yes | - | Total invoice amount |
+| approved_by | uuid | Yes | - | References profiles.id (admin who approved) |
+| approved_at | timestamp | Yes | - | Approval timestamp |
+| approval_notes | text | Yes | - | Admin approval or rejection notes |
+| paid_at | timestamp | Yes | - | Payment completion timestamp |
+| payment_reference | text | Yes | - | Payment reference number |
+| created_at | timestamp | No | now() | Creation timestamp |
+| updated_at | timestamp | No | now() | Last update timestamp |
+
+**Constraints**:
+- `invoices_internal_number_unique` UNIQUE (internal_invoice_number)
+
+**Indexes**:
+- `idx_invoices_organization` ON (subcontractor_organization_id)
+- `idx_invoices_status` ON (status)
+- `idx_invoices_submitted_by` ON (submitted_by)
+- `idx_invoices_approved_by` ON (approved_by)
+
+**Business Rules**:
+- Dual numbering: internal system number + optional external number
+- Approval workflow with status tracking
+- Payment tracking with reference numbers
+- Audit trail for all status changes
+
+### 17. invoice_attachments
+
+**Purpose**: Stores uploaded invoice documents and files (PDFs, images) for invoice submissions
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| invoice_id | uuid | No | - | Associated invoice |
+| file_name | text | No | - | Original filename |
+| file_url | text | No | - | Storage URL for file |
+| file_type | file_type | No | 'document' | Type of file (document, photo, invoice) |
+| file_size | integer | Yes | - | File size in bytes |
+| uploaded_by | uuid | No | - | User who uploaded file |
+| created_at | timestamp | No | now() | Upload timestamp |
+
+**Constraints**:
+- Foreign keys: invoice_id → invoices(id) ON DELETE CASCADE, uploaded_by → profiles(id)
+- Enum constraints: file_type must be valid enum value
+
+**Indexes**:
+- `idx_invoice_attachments_invoice` ON (invoice_id)
+- `idx_invoice_attachments_uploader` ON (uploaded_by)
+
+**Business Rules**:
+- Files are deleted when parent invoice is deleted
+- File type defaults to 'document' for invoice submissions
+- Upload tracking maintains user accountability
+- Supports multiple attachments per invoice
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
@@ -713,7 +776,7 @@ erDiagram
 - **Amount validation**: Must be positive monetary amount
 - **Payment tracking**: Reference and timestamp required when paid
 
-### 14. invoice_work_orders
+### 18. invoice_work_orders
 
 **Purpose**: Junction table linking invoices to multiple work orders with itemized amounts.
 
