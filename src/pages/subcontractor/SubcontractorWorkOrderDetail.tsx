@@ -253,6 +253,31 @@ export default function SubcontractorWorkOrderDetail() {
           </CardContent>
         </Card>
 
+        {/* Partner References */}
+        {(workOrder.partner_po_number || workOrder.partner_location_number) && (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Partner References</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-6">
+                {workOrder.partner_po_number && (
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">PO Number</h4>
+                    <p className="text-sm">{workOrder.partner_po_number}</p>
+                  </div>
+                )}
+                {workOrder.partner_location_number && (
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Location Number</h4>
+                    <p className="text-sm">{workOrder.partner_location_number}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Previous Reports */}
         {workOrder.work_order_reports && workOrder.work_order_reports.length > 0 && (
           <Card className="lg:col-span-2">
