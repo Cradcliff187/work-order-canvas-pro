@@ -241,6 +241,11 @@ erDiagram
 ### 1. organizations
 **Purpose**: Stores company information for partners (work order submitters), subcontractors (work performers), and internal (general contractor) organizations.
 
+**Organization Types**:
+- **internal**: The general contractor company (WorkOrderPro Internal) - houses admin users and employees
+- **partner**: Property management companies that submit work orders 
+- **subcontractor**: Trade companies that perform the work
+
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
 | id | uuid | No | gen_random_uuid() | Primary key |
@@ -249,7 +254,7 @@ erDiagram
 | contact_phone | text | Yes | - | Contact phone number |
 | address | text | Yes | - | Organization address |
 | organization_type | organization_type | No | 'partner' | Organization type: partner/subcontractor/internal |
-| initials | text | Yes | - | Organization abbreviation for work order numbering |
+| initials | text | Yes | - | Organization abbreviation for work order numbering (e.g., 'ABC', 'WOP') |
 | next_sequence_number | integer | No | 1 | Next available sequence number for this organization |
 | is_active | boolean | No | true | Whether organization is active |
 | created_at | timestamp | No | now() | Creation timestamp |
