@@ -462,6 +462,23 @@ export class IndexedDBManager implements StorageManager {
 
     if (!this.db) throw new Error('Database not initialized');
 
+    // Verify database version before cleanup
+    if (this.actualVersion !== this.expectedVersion) {
+      console.warn('Cleanup aborted - database version mismatch');
+      return;
+    }
+
+    if (this.db.version !== 3) {
+      console.warn('Cleanup aborted - database not at version 3');
+      return;
+    }
+
+    // Verify required stores exist
+    if (!this.db.objectStoreNames.contains('drafts') || !this.db.objectStoreNames.contains('syncQueue')) {
+      console.warn('Cleanup aborted - required stores missing');
+      return;
+    }
+
     const transaction = this.db.transaction(['drafts', 'syncQueue'], 'readwrite');
     
     // Clean old drafts using safe index access
@@ -504,24 +521,46 @@ export class IndexedDBManager implements StorageManager {
       });
     }
 
-    // Clean old sync queue items
+    // Clean old sync queue items with safe index access
     const syncStore = transaction.objectStore('syncQueue');
-    const syncRequest = syncStore.openCursor();
-
-    await new Promise<void>((resolve, reject) => {
-      syncRequest.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest).result;
-        if (cursor) {
-          if (cursor.value.createdAt < cutoffTime && cursor.value.retryCount >= cursor.value.maxRetries) {
-            cursor.delete();
+    
+    // Check if we can use indexes for better performance
+    const typeIndex = this.safeGetIndex(syncStore, 'type');
+    if (typeIndex) {
+      // Use index if available
+      const syncRequest = syncStore.openCursor();
+      await new Promise<void>((resolve, reject) => {
+        syncRequest.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest).result;
+          if (cursor) {
+            if (cursor.value.createdAt < cutoffTime && cursor.value.retryCount >= cursor.value.maxRetries) {
+              cursor.delete();
+            }
+            cursor.continue();
+          } else {
+            resolve();
           }
-          cursor.continue();
-        } else {
-          resolve();
-        }
-      };
-      syncRequest.onerror = () => reject(syncRequest.error);
-    });
+        };
+        syncRequest.onerror = () => reject(syncRequest.error);
+      });
+    } else {
+      // Fallback to full table scan if indexes are missing
+      const syncRequest = syncStore.openCursor();
+      await new Promise<void>((resolve, reject) => {
+        syncRequest.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest).result;
+          if (cursor) {
+            if (cursor.value.createdAt < cutoffTime && cursor.value.retryCount >= cursor.value.maxRetries) {
+              cursor.delete();
+            }
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+        syncRequest.onerror = () => reject(syncRequest.error);
+      });
+    }
 
     // Update cleanup timestamp
     try {

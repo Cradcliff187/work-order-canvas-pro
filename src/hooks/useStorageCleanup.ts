@@ -22,6 +22,53 @@ export function useStorageCleanup(
         return false;
       }
 
+      // Check database version compatibility
+      if ('actualVersion' in storageManager && 'expectedVersion' in storageManager) {
+        const manager = storageManager as any;
+        if (manager.actualVersion !== manager.expectedVersion) {
+          console.warn('Cleanup skipped - database version mismatch');
+          return false;
+        }
+      }
+
+      // Verify database is at expected version (v3)
+      if ('db' in storageManager) {
+        const manager = storageManager as any;
+        const db = manager.db;
+        if (db && db.version !== 3) {
+          console.warn('Cleanup skipped - database not at version 3');
+          return false;
+        }
+
+        // Verify required indexes exist
+        if (db && db.objectStoreNames.contains('drafts')) {
+          const transaction = db.transaction(['drafts'], 'readonly');
+          const draftsStore = transaction.objectStore('drafts');
+          
+          const requiredIndexes = ['workOrderId', 'updatedAt', 'isManual'];
+          for (const indexName of requiredIndexes) {
+            if (!draftsStore.indexNames.contains(indexName)) {
+              console.warn(`Cleanup skipped - missing index: ${indexName}`);
+              return false;
+            }
+          }
+        }
+
+        // Verify sync queue store exists
+        if (db && db.objectStoreNames.contains('syncQueue')) {
+          const transaction = db.transaction(['syncQueue'], 'readonly');
+          const syncStore = transaction.objectStore('syncQueue');
+          
+          const requiredSyncIndexes = ['type', 'priority', 'nextAttempt'];
+          for (const indexName of requiredSyncIndexes) {
+            if (!syncStore.indexNames.contains(indexName)) {
+              console.warn(`Cleanup skipped - missing sync index: ${indexName}`);
+              return false;
+            }
+          }
+        }
+      }
+
       return true;
     } catch (error) {
       console.warn('Cleanup safety check failed:', error);
@@ -78,6 +125,7 @@ export function useStorageCleanup(
     isInProgress: cleanupInProgress,
     lastRun: lastCleanupTime,
     nextScheduled: cleanupScheduled ? Date.now() + 30000 : null,
+    isSafe: isReady && !isUsingFallback && !cleanupInProgress,
   });
 
   return {
