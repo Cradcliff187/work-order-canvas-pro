@@ -7,7 +7,8 @@ import {
   Settings,
   Wrench,
   Mail,
-  Activity
+  Activity,
+  Receipt
 } from 'lucide-react';
 
 export interface SidebarItem {
@@ -20,6 +21,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Dashboard', url: '/admin/dashboard', icon: BarChart3 },
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
   { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
+  { title: 'Invoices', url: '/admin/invoices', icon: Receipt },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
   { title: 'Employees', url: '/admin/employees', icon: Users },
@@ -30,4 +32,4 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
-export const adminOnlyItems = ['Users', 'Organizations', 'Employees', 'Settings', 'System Health', 'Dev Tools'];
+export const adminOnlyItems = ['Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Dev Tools'];

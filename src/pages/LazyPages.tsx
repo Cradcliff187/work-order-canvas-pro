@@ -11,6 +11,7 @@ export const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'))
 export const AdminEmailTemplates = lazy(() => import('@/pages/admin/AdminEmailTemplates'));
 export const AdminProfile = lazy(() => import('@/pages/admin/AdminProfile'));
 export const AdminEmployees = lazy(() => import('@/pages/admin/AdminEmployees'));
+export const AdminInvoices = lazy(() => import('@/pages/admin/AdminInvoices'));
 
 // Partner Pages
 export const PartnerDashboard = lazy(() => import('@/pages/partner/PartnerDashboard'));

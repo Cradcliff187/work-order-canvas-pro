@@ -16,6 +16,7 @@ import {
   AdminReportDetail,
   AdminProfile,
   AdminEmployees,
+  AdminInvoices,
   SystemHealthCheck,
   DevTools,
 } from '@/pages/LazyPages';
@@ -127,6 +128,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminEmployees />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/invoices" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminInvoices />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
