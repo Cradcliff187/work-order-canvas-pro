@@ -110,7 +110,7 @@ export function ReceiptUpload() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="container mx-auto py-6 px-4 lg:px-6 space-y-6">
       {/* Breadcrumb Navigation */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -173,7 +173,7 @@ export function ReceiptUpload() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="vendor_name"
@@ -217,7 +217,7 @@ export function ReceiptUpload() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="amount"
