@@ -15,19 +15,26 @@ import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
+import { LocationFields } from '@/components/LocationFields';
 
 const workOrderSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  store_location: z.string().min(1, 'Store location is required'),
-  street_address: z.string().min(1, 'Street address is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  zip_code: z.string().min(5, 'ZIP code must be at least 5 characters'),
+  store_location: z.string().optional(),
+  street_address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip_code: z.string().optional(),
+  // New structured location fields
+  location_street_address: z.string().optional(),
+  location_city: z.string().optional(),
+  location_state: z.string().optional(),
+  location_zip_code: z.string().optional(),
   trade_id: z.string().min(1, 'Trade selection is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   organization_id: z.string().min(1, 'Organization is required'),
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
+  due_date: z.string().optional(),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
@@ -81,7 +88,7 @@ const SubmitWorkOrder = () => {
   const getCurrentStepFields = (): (keyof WorkOrderFormData)[] => {
     switch (currentStep) {
       case 1:
-        return ['title', 'store_location', 'street_address', 'city', 'state', 'zip_code', 'partner_po_number', 'partner_location_number'];
+        return ['title'];
       case 2:
         return ['trade_id', 'description'];
       case 3:
@@ -243,118 +250,11 @@ const SubmitWorkOrder = () => {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="store_location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Store Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Store name or identifier" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <LocationFields 
+                  form={form}
+                  organizationId={form.watch('organization_id')}
+                  showPoNumber={true}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="street_address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Street Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Street address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl>
-                          <Input placeholder="City" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <FormControl>
-                          <Input placeholder="State" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="zip_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ZIP Code</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ZIP Code" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <FormField
-                    control={form.control}
-                    name="partner_po_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Partner PO Number (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., PO-2024-001234" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="partner_location_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location Number (Optional)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="e.g., LOC-001, Store-123"
-                            list="location-history"
-                            {...field}
-                          />
-                        </FormControl>
-                        <datalist id="location-history">
-                          {locationHistory?.map((location, index) => (
-                            <option key={index} value={location.partner_location_number || ''}>
-                              {location.store_location} - {location.partner_location_number}
-                            </option>
-                          ))}
-                        </datalist>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </CardContent>
             </Card>
           )}

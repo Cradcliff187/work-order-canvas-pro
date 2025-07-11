@@ -1019,7 +1019,11 @@ export type Database = {
           id: string
           labor_cost: number | null
           location_address: string | null
+          location_city: string | null
           location_name: string | null
+          location_state: string | null
+          location_street_address: string | null
+          location_zip_code: string | null
           materials_cost: number | null
           organization_id: string | null
           partner_location_number: string | null
@@ -1060,7 +1064,11 @@ export type Database = {
           id?: string
           labor_cost?: number | null
           location_address?: string | null
+          location_city?: string | null
           location_name?: string | null
+          location_state?: string | null
+          location_street_address?: string | null
+          location_zip_code?: string | null
           materials_cost?: number | null
           organization_id?: string | null
           partner_location_number?: string | null
@@ -1101,7 +1109,11 @@ export type Database = {
           id?: string
           labor_cost?: number | null
           location_address?: string | null
+          location_city?: string | null
           location_name?: string | null
+          location_state?: string | null
+          location_street_address?: string | null
+          location_zip_code?: string | null
           materials_cost?: number | null
           organization_id?: string | null
           partner_location_number?: string | null

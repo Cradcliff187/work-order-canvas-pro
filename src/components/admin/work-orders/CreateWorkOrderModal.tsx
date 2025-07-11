@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useOrganizationsForWorkOrders, useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
+import { LocationFields } from '@/components/LocationFields';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
@@ -25,6 +26,11 @@ const createWorkOrderSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   zip_code: z.string().optional(),
+  // New structured location fields
+  location_street_address: z.string().optional(),
+  location_city: z.string().optional(),
+  location_state: z.string().optional(),
+  location_zip_code: z.string().optional(),
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
 });
@@ -86,6 +92,10 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
         city: data.city,
         state: data.state,
         zip_code: data.zip_code,
+        location_street_address: data.location_street_address,
+        location_city: data.location_city,
+        location_state: data.location_state,
+        location_zip_code: data.location_zip_code,
         partner_po_number: data.partner_po_number || null,
         partner_location_number: data.partner_location_number || null,
         work_order_number: workOrderNumber || null,
@@ -222,123 +232,12 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
               />
             </div>
 
-            {/* Location Information */}
-            <div className="space-y-4">
-              <h4 className="font-medium">Location Information</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="store_location"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Store Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Store #123, Main Branch" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="street_address"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Street Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123 Main Street" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormControl>
-                        <Input placeholder="City" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State</FormLabel>
-                      <FormControl>
-                        <Input placeholder="State" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="zip_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ZIP Code</FormLabel>
-                      <FormControl>
-                        <Input placeholder="12345" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Partner References */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="partner_po_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Partner PO Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., PO-2024-001234" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="partner_location_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location Number</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g., LOC-001, Store-123"
-                          list="admin-location-history"
-                          {...field}
-                        />
-                      </FormControl>
-                      <datalist id="admin-location-history">
-                        {locationHistory?.map((location, index) => (
-                          <option key={index} value={location.partner_location_number || ''}>
-                            {location.store_location} - {location.partner_location_number}
-                          </option>
-                        ))}
-                      </datalist>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+            {/* Location Information - Always show for admin modal */}
+            <LocationFields 
+              form={form}
+              organizationId={organizationId}
+              showPoNumber={true}
+            />
 
             {/* Description */}
             <FormField
