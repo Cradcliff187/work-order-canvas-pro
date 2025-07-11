@@ -66,14 +66,14 @@ export function InvoiceFilters({
         
         <div className="flex-1">
           <Label className="text-sm font-medium">Payment Status</Label>
-          <Select value={paymentStatus || ''} onValueChange={(value) => 
-            onPaymentStatusChange(value as 'paid' | 'unpaid' | undefined || undefined)
+          <Select value={paymentStatus || 'all'} onValueChange={(value) => 
+            onPaymentStatusChange(value === 'all' ? undefined : value as 'paid' | 'unpaid')
           }>
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="All payment statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All payment statuses</SelectItem>
+              <SelectItem value="all">All payment statuses</SelectItem>
               <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="unpaid">Unpaid</SelectItem>
             </SelectContent>
