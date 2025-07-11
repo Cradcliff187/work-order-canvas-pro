@@ -33,7 +33,7 @@ export function useUsers() {
         .from('profiles')
         .select(`
           *,
-          user_organizations!inner(
+          user_organizations(
             organization:organizations(id, name)
           )
         `)
