@@ -8,6 +8,7 @@ import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2 } from '
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 const statusColors = {
@@ -29,10 +30,26 @@ const PartnerDashboard = () => {
   const recentOrders = recentWorkOrders?.data?.slice(0, 10) || [];
   
   // Check if user's organizations have initials set up for smart numbering
-  const userOrganizations = organizations?.organizations?.filter(org => 
-    org.initials && org.initials.trim() !== ''
-  ) || [];
-  const hasInitialsConfigured = userOrganizations.length > 0;
+  const userOrganizations = React.useMemo(async () => {
+    if (!profile?.id) return [];
+    
+    const { data: userOrgs } = await supabase
+      .from('user_organizations')
+      .select(`
+        organization:organizations(id, name, initials)
+      `)
+      .eq('user_id', profile.id);
+    
+    return userOrgs?.map(uo => uo.organization).filter(org => 
+      org?.initials && org.initials.trim() !== ''
+    ) || [];
+  }, [profile?.id]);
+  
+  const [hasInitialsConfigured, setHasInitialsConfigured] = React.useState(true);
+  
+  React.useEffect(() => {
+    userOrganizations.then(orgs => setHasInitialsConfigured(orgs.length > 0));
+  }, [userOrganizations]);
 
   return (
     <div className="container mx-auto px-6 py-8">
