@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
-import { Plus, Search, Download, MoreHorizontal, Edit, Trash2, Building2, Users, FileText, Eye } from 'lucide-react';
+import { Plus, Search, Download, MoreHorizontal, Edit, Trash2, Building2, Users, FileText, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,13 +79,16 @@ const AdminOrganizations = () => {
       accessorKey: 'initials',
       header: 'Initials',
       cell: ({ row }) => (
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           {row.original.initials ? (
             <Badge variant="outline" className="font-mono text-sm">
               {row.original.initials}
             </Badge>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <div className="flex items-center gap-1">
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              <span className="text-muted-foreground text-sm">Not set</span>
+            </div>
           )}
         </div>
       ),

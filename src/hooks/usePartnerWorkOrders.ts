@@ -193,19 +193,13 @@ export function useCreateWorkOrder() {
     }) => {
       if (!profile?.id) throw new Error('No user profile');
 
-      // Generate work order number
-      const { data: workOrderNumber, error: numberError } = await supabase
-        .rpc('generate_work_order_number');
-
-      if (numberError) throw numberError;
-
+      // Let the database trigger handle work order number generation
       const { data, error } = await supabase
         .from('work_orders')
         .insert({
           ...workOrder,
           partner_po_number: workOrder.partner_po_number || null,
           partner_location_number: workOrder.partner_location_number || null,
-          work_order_number: workOrderNumber,
           created_by: profile.id,
           status: 'received',
           date_submitted: new Date().toISOString(),

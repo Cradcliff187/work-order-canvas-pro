@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2 } from 'lucide-react';
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
+import { useOrganizations } from '@/hooks/useOrganizations';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
 const statusColors = {
@@ -18,11 +20,19 @@ const statusColors = {
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { data: stats, isLoading: statsLoading } = usePartnerWorkOrderStats();
   const { data: recentWorkOrders, isLoading: workOrdersLoading } = usePartnerWorkOrders();
+  const { data: organizations } = useOrganizations();
 
   // Get last 10 work orders for recent activity
   const recentOrders = recentWorkOrders?.data?.slice(0, 10) || [];
+  
+  // Check if user's organizations have initials set up for smart numbering
+  const userOrganizations = organizations?.organizations?.filter(org => 
+    org.initials && org.initials.trim() !== ''
+  ) || [];
+  const hasInitialsConfigured = userOrganizations.length > 0;
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -36,6 +46,26 @@ const PartnerDashboard = () => {
           New Work Order
         </Button>
       </div>
+
+      {/* Organization Numbering Status */}
+      {!hasInitialsConfigured && (
+        <Card className="mb-6 border-orange-200 bg-orange-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-orange-100 p-2">
+                <Building2 className="h-4 w-4 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-orange-900">Work Order Numbering</h3>
+                <p className="text-sm text-orange-700">
+                  Your organization doesn't have initials configured. Work orders will use generic numbering (WO-2025-0001). 
+                  Contact your administrator to set up custom numbering with your organization's initials.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
