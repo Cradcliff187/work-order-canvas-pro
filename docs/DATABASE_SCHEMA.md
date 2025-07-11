@@ -28,7 +28,7 @@ WorkOrderPro uses a comprehensive **12-table** PostgreSQL database with Row Leve
 - **work-order-photos** - Public bucket for work order photo attachments
 
 ### Custom Enums (7)
-- `user_type`: 'admin', 'partner', 'subcontractor'
+- `user_type`: 'admin', 'partner', 'subcontractor', 'employee'
 - `organization_type`: 'partner', 'subcontractor', 'internal'
 - `work_order_status`: 'received', 'assigned', 'in_progress', 'completed', 'cancelled'
 - `assignment_type`: 'internal', 'subcontractor'
@@ -283,6 +283,9 @@ erDiagram
 | company_name | text | Yes | - | Company name for subcontractors |
 | phone | text | Yes | - | Phone number |
 | avatar_url | text | Yes | - | Profile picture URL |
+| hourly_cost_rate | decimal(10,2) | Yes | - | Internal cost rate for employee hours |
+| hourly_billable_rate | decimal(10,2) | Yes | - | Rate charged to clients for employee hours |
+| is_employee | boolean | No | false | Flag to identify employees vs external users |
 | is_active | boolean | No | true | Whether user is active |
 | created_at | timestamp | No | now() | Creation timestamp |
 | updated_at | timestamp | No | now() | Last update timestamp |

@@ -149,6 +149,17 @@ This document provides a complete chronological history of all database migratio
 - Added strategic indexes for performance optimization
 - **Result**: Enhanced multi-tenant architecture enabling sophisticated workflow routing
 
+### 2025-01-11: Employee Support Implementation
+
+#### 20250711024200_add_employee_support.sql
+**Purpose**: **MAJOR** - Employee support with rate tracking
+- Extended user_type enum to include 'employee' for internal general contractor staff
+- Added hourly_cost_rate and hourly_billable_rate DECIMAL(10,2) columns to profiles table
+- Added is_employee BOOLEAN flag to distinguish employees from external users
+- Updated existing admin users to have is_employee = true for backward compatibility
+- Added performance indexes for employee rate queries
+- **Result**: Complete employee rate tracking system enabling internal labor cost management
+
 ### 2025-01-11: IndexedDB Storage Implementation
 
 #### IndexedDB v1 (Initial Implementation)

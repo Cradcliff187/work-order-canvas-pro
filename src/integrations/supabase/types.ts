@@ -231,8 +231,11 @@ export type Database = {
           created_at: string
           email: string
           first_name: string
+          hourly_billable_rate: number | null
+          hourly_cost_rate: number | null
           id: string
           is_active: boolean
+          is_employee: boolean
           last_name: string
           phone: string | null
           updated_at: string
@@ -245,8 +248,11 @@ export type Database = {
           created_at?: string
           email: string
           first_name: string
+          hourly_billable_rate?: number | null
+          hourly_cost_rate?: number | null
           id?: string
           is_active?: boolean
+          is_employee?: boolean
           last_name: string
           phone?: string | null
           updated_at?: string
@@ -259,8 +265,11 @@ export type Database = {
           created_at?: string
           email?: string
           first_name?: string
+          hourly_billable_rate?: number | null
+          hourly_cost_rate?: number | null
           id?: string
           is_active?: boolean
+          is_employee?: boolean
           last_name?: string
           phone?: string | null
           updated_at?: string
@@ -836,7 +845,7 @@ export type Database = {
       file_type: "photo" | "invoice" | "document"
       organization_type: "partner" | "subcontractor" | "internal"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
-      user_type: "admin" | "partner" | "subcontractor"
+      user_type: "admin" | "partner" | "subcontractor" | "employee"
       work_order_status:
         | "received"
         | "assigned"
@@ -975,7 +984,7 @@ export const Constants = {
       file_type: ["photo", "invoice", "document"],
       organization_type: ["partner", "subcontractor", "internal"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
-      user_type: ["admin", "partner", "subcontractor"],
+      user_type: ["admin", "partner", "subcontractor", "employee"],
       work_order_status: [
         "received",
         "assigned",
