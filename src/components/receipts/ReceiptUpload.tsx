@@ -96,7 +96,7 @@ export function ReceiptUpload() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -106,26 +106,27 @@ export function ReceiptUpload() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Receipt Image Upload */}
-              <div className="space-y-2">
-                <Label>Receipt Image</Label>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* Section 1: Receipt Image Upload */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Receipt Image</Label>
                 <FileUpload
                   onFilesSelected={handleFileSelect}
                   maxFiles={1}
                   className="h-32"
                 />
                 {receiptFile && (
-                  <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">{receiptFile.name}</span>
+                      <span className="text-sm font-medium">{receiptFile.name}</span>
                     </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={handleFileRemove}
+                      className="h-8"
                     >
                       Remove
                     </Button>
@@ -133,64 +134,101 @@ export function ReceiptUpload() {
                 )}
               </div>
 
-              {/* Receipt Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="vendor_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Vendor Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter vendor name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Section 2: Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="vendor_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vendor Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter vendor name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
+                  <FormField
+                    control={form.control}
+                    name="receipt_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Receipt Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Section 3: Financial Information */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Financial Details
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total Amount</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter description" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Section 4: Additional Details */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Additional Details
+                </h3>
                 <FormField
                   control={form.control}
-                  name="amount"
+                  name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Amount</FormLabel>
+                      <FormLabel>Notes (Optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
+                        <Textarea
+                          placeholder="Additional notes about this receipt"
+                          className="resize-none min-h-[80px]"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="receipt_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Receipt Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter description" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -198,36 +236,23 @@ export function ReceiptUpload() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Additional notes about this receipt"
-                        className="resize-none"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Work Order Allocation */}
+              {/* Section 5: Work Order Allocation */}
               {watchedAmount > 0 && (
-                <WorkOrderSelector
-                  workOrders={availableWorkOrders.data || []}
-                  allocations={allocations}
-                  totalAmount={watchedAmount}
-                  onAllocationChange={setAllocations}
-                />
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Work Order Allocation
+                  </h3>
+                  <WorkOrderSelector
+                    workOrders={availableWorkOrders.data || []}
+                    allocations={allocations}
+                    totalAmount={watchedAmount}
+                    onAllocationChange={setAllocations}
+                  />
+                </div>
               )}
 
-              <div className="flex justify-end space-x-3">
+              {/* Section 6: Actions */}
+              <div className="flex items-center justify-end gap-3 pt-6 border-t">
                 <Button
                   type="button"
                   variant="outline"
@@ -237,12 +262,14 @@ export function ReceiptUpload() {
                     setReceiptFile(null);
                   }}
                   disabled={isUploading}
+                  className="min-w-[100px]"
                 >
                   Clear
                 </Button>
                 <Button
                   type="submit"
                   disabled={isUploading || !isValidAllocation || allocations.length === 0}
+                  className="min-w-[140px]"
                 >
                   {isUploading ? (
                     <>
