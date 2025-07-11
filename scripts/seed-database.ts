@@ -100,6 +100,7 @@ async function clearExistingData() {
   await supabaseAdmin.from('work_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabaseAdmin.from('user_organizations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabaseAdmin.from('email_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabaseAdmin.from('partner_locations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   
   // Delete profiles (will cascade to auth users via trigger)
   const { data: profiles } = await supabaseAdmin.from('profiles').select('user_id');
@@ -182,7 +183,46 @@ async function seedDatabase() {
     if (partner2) await assignUserToOrganization(partner2.id, xyzOrg.id);
     if (partner3) await assignUserToOrganization(partner3.id, premiumOrg.id);
 
-    // 3. Get existing trades
+    // 3. Create Partner Locations
+    console.log('📍 Creating partner locations...');
+    const partnerLocations = [
+      // ABC Property Management locations
+      { org: abcOrg, number: '504', name: 'Downtown Office Complex', address: '504 N Michigan Ave', city: 'Chicago', state: 'IL', zip: '60611', contact: 'Mike Johnson', phone: '(312) 555-0104', email: 'downtown@abcproperty.com', active: true },
+      { org: abcOrg, number: '605', name: 'Lincoln Park Warehouse', address: '605 W Fullerton Pkwy', city: 'Chicago', state: 'IL', zip: '60614', contact: 'Sarah Mitchell', phone: '(312) 555-0105', email: 'warehouse@abcproperty.com', active: true },
+      { org: abcOrg, number: '1201', name: 'River North Retail Space', address: '1201 N State St', city: 'Chicago', state: 'IL', zip: '60610', contact: 'David Chen', phone: '(312) 555-0106', email: 'retail@abcproperty.com', active: false },
+      { org: abcOrg, number: '1450', name: 'South Loop Distribution Center', address: '1450 S Michigan Ave', city: 'Chicago', state: 'IL', zip: '60605', contact: 'Lisa Rodriguez', phone: '(312) 555-0107', email: 'distribution@abcproperty.com', active: true },
+      
+      // XYZ Commercial Properties locations
+      { org: xyzOrg, number: '301', name: 'Downtown Dallas Office', address: '301 Commerce St', city: 'Dallas', state: 'TX', zip: '75202', contact: 'James Wilson', phone: '(214) 555-0201', email: 'downtown@xyzcommercial.com', active: true },
+      { org: xyzOrg, number: '425', name: 'Uptown Business Center', address: '425 McKinney Ave', city: 'Dallas', state: 'TX', zip: '75204', contact: 'Amanda Foster', phone: '(214) 555-0202', email: 'uptown@xyzcommercial.com', active: true },
+      { org: xyzOrg, number: '850', name: 'Deep Ellum Creative Space', address: '850 Elm St', city: 'Dallas', state: 'TX', zip: '75226', contact: 'Marcus Thompson', phone: '(214) 555-0203', email: 'creative@xyzcommercial.com', active: false },
+      { org: xyzOrg, number: '1100', name: 'Legacy West Office Park', address: '1100 Legacy Dr', city: 'Plano', state: 'TX', zip: '75024', contact: 'Jennifer Lee', phone: '(972) 555-0204', email: 'legacy@xyzcommercial.com', active: true },
+      { org: xyzOrg, number: '1375', name: 'Arlington Distribution Hub', address: '1375 W Arkansas Ln', city: 'Arlington', state: 'TX', zip: '76013', contact: 'Robert Garcia', phone: '(817) 555-0205', email: 'arlington@xyzcommercial.com', active: false },
+      
+      // Premium Facilities Group locations
+      { org: premiumOrg, number: '200', name: 'Brickell Financial Center', address: '200 S Biscayne Blvd', city: 'Miami', state: 'FL', zip: '33131', contact: 'Carlos Rodriguez', phone: '(305) 555-0301', email: 'brickell@premiumfacilities.com', active: true },
+      { org: premiumOrg, number: '375', name: 'Wynwood Arts District', address: '375 NW 26th St', city: 'Miami', state: 'FL', zip: '33127', contact: 'Isabella Martinez', phone: '(305) 555-0302', email: 'wynwood@premiumfacilities.com', active: true },
+      { org: premiumOrg, number: '600', name: 'Coral Gables Office Plaza', address: '600 Biltmore Way', city: 'Coral Gables', state: 'FL', zip: '33134', contact: 'Michael Thompson', phone: '(305) 555-0303', email: 'coralgables@premiumfacilities.com', active: false },
+      { org: premiumOrg, number: '925', name: 'Aventura Business Park', address: '925 NE 199th St', city: 'Aventura', state: 'FL', zip: '33180', contact: 'Sandra Lopez', phone: '(305) 555-0304', email: 'aventura@premiumfacilities.com', active: true }
+    ];
+
+    await Promise.all(partnerLocations.map(location =>
+      supabaseAdmin.from('partner_locations').insert({
+        organization_id: location.org.id,
+        location_number: location.number,
+        location_name: location.name,
+        street_address: location.address,
+        city: location.city,
+        state: location.state,
+        zip_code: location.zip,
+        contact_name: location.contact,
+        contact_phone: location.phone,
+        contact_email: location.email,
+        is_active: location.active
+      })
+    ));
+
+    // 4. Get existing trades
     console.log('🔧 Getting trades...');
     const { data: trades } = await supabaseAdmin.from('trades').select('*');
     const tradesMap = new Map(trades?.map(t => [t.name, t]) || []);
