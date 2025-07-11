@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,9 +11,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
+import { useInvoiceDrafts, type InvoiceDraftData } from '@/hooks/useInvoiceDrafts';
+import { Save, FileText, Trash2, Clock } from 'lucide-react';
 
+// Relaxed schema for drafts
+const draftInvoiceSchema = z.object({
+  external_invoice_number: z.string().optional(),
+  work_orders: z.array(z.object({
+    work_order_id: z.string(),
+    amount: z.coerce.number().min(0, 'Amount cannot be negative'),
+    selected: z.boolean(),
+  })),
+  notes: z.string().optional(),
+});
+
+// Strict schema for submission
 const invoiceSchema = z.object({
   external_invoice_number: z.string().optional(),
   work_orders: z.array(z.object({
@@ -36,9 +52,13 @@ const SubmitInvoice = () => {
   const navigate = useNavigate();
   const { completedWorkOrdersForInvoicing } = useSubcontractorWorkOrders();
   const invoiceSubmission = useInvoiceSubmission();
+  const invoiceDrafts = useInvoiceDrafts();
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [isSubmissionMode, setIsSubmissionMode] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const form = useForm<InvoiceFormData>({
-    resolver: zodResolver(invoiceSchema),
+    resolver: zodResolver(isSubmissionMode ? invoiceSchema : draftInvoiceSchema),
     defaultValues: {
       external_invoice_number: '',
       work_orders: [],
@@ -53,7 +73,7 @@ const SubmitInvoice = () => {
         work_order_id: wo.id,
         amount: 0,
         selected: false,
-      }));
+      } as { work_order_id: string; amount: number; selected: boolean }));
       form.setValue('work_orders', workOrdersFormData);
     }
   }, [completedWorkOrdersForInvoicing.data, form]);
@@ -118,29 +138,113 @@ const SubmitInvoice = () => {
     form.setValue('work_orders', newWorkOrders);
   };
 
-  const onSubmit = async (data: InvoiceFormData) => {
-    try {
-      const selectedWorkOrders = data.work_orders
-        .filter(wo => wo.selected)
-        .map(wo => ({
-          work_order_id: wo.work_order_id,
-          amount: wo.amount,
-        }));
-
-      const totalAmount = selectedWorkOrders.reduce((sum, wo) => sum + wo.amount, 0);
+  // Auto-save effect
+  useEffect(() => {
+    const formData = form.getValues();
+    const hasData = formData.external_invoice_number || 
+                   formData.work_orders.some(wo => wo.selected) || 
+                   formData.notes;
+    
+    if (hasData && !isSubmissionMode) {
+      // Ensure all work orders have the required properties
+      const validatedWorkOrders = formData.work_orders.map(wo => ({
+        work_order_id: wo.work_order_id || '',
+        amount: wo.amount || 0,
+        selected: wo.selected || false,
+      }));
       
-      await invoiceSubmission.submitInvoiceAsync({
-        externalInvoiceNumber: data.external_invoice_number,
-        totalAmount,
-        workOrders: selectedWorkOrders.map(wo => ({
-          workOrderId: wo.work_order_id,
-          amount: wo.amount,
-          description: data.notes
-        }))
+      invoiceDrafts.autoSave(currentDraftId, {
+        external_invoice_number: formData.external_invoice_number,
+        total_amount: runningTotal,
+        work_orders: validatedWorkOrders,
+        notes: formData.notes,
       });
+    }
+  }, [form.watch(), currentDraftId, runningTotal, invoiceDrafts, isSubmissionMode]);
+
+  const handleSaveDraft = async () => {
+    const data = form.getValues();
+    
+    // Ensure all work orders have the required properties
+    const validatedWorkOrders = data.work_orders.map(wo => ({
+      work_order_id: wo.work_order_id || '',
+      amount: wo.amount || 0,
+      selected: wo.selected || false,
+    }));
+    
+    const draftData: InvoiceDraftData = {
+      external_invoice_number: data.external_invoice_number,
+      total_amount: runningTotal,
+      work_orders: validatedWorkOrders,
+      notes: data.notes,
+    };
+
+    if (currentDraftId) {
+      invoiceDrafts.updateDraft(currentDraftId, draftData);
+    } else {
+      invoiceDrafts.saveDraft(draftData);
+    }
+    setLastSavedAt(new Date());
+  };
+
+  const handleLoadDraft = (draft: any) => {
+    form.setValue('external_invoice_number', draft.external_invoice_number || '');
+    form.setValue('notes', draft.notes || '');
+    
+    // Load work order selections ensuring all required fields are present
+    const draftWorkOrders = completedWorkOrdersForInvoicing.data?.map(wo => {
+      const draftWo = draft.work_orders?.find((dwo: any) => dwo.work_order_id === wo.id);
+      return {
+        work_order_id: wo.id,
+        amount: draftWo?.amount || 0,
+        selected: !!draftWo,
+      } as { work_order_id: string; amount: number; selected: boolean };
+    }) || [];
+    
+    form.setValue('work_orders', draftWorkOrders);
+    setCurrentDraftId(draft.id);
+  };
+
+  const handleDeleteDraft = (draftId: string) => {
+    invoiceDrafts.deleteDraft(draftId);
+    if (currentDraftId === draftId) {
+      setCurrentDraftId(null);
+    }
+  };
+
+  const onSubmit = async (data: InvoiceFormData) => {
+    setIsSubmissionMode(true);
+    
+    try {
+      if (currentDraftId) {
+        // Convert draft to submission
+        await invoiceDrafts.convertDraftToSubmission(currentDraftId);
+      } else {
+        // Direct submission
+        const selectedWorkOrders = data.work_orders
+          .filter(wo => wo.selected)
+          .map(wo => ({
+            work_order_id: wo.work_order_id,
+            amount: wo.amount,
+          }));
+
+        const totalAmount = selectedWorkOrders.reduce((sum, wo) => sum + wo.amount, 0);
+        
+        await invoiceSubmission.submitInvoiceAsync({
+          externalInvoiceNumber: data.external_invoice_number,
+          totalAmount,
+          workOrders: selectedWorkOrders.map(wo => ({
+            workOrderId: wo.work_order_id,
+            amount: wo.amount,
+            description: data.notes
+          }))
+        });
+      }
       navigate('/subcontractor/work-orders');
     } catch (error) {
       // Error is handled in the mutation
+    } finally {
+      setIsSubmissionMode(false);
     }
   };
 
@@ -151,13 +255,79 @@ const SubmitInvoice = () => {
   const selectedCount = workOrdersFormData?.filter(wo => wo.selected).length || 0;
 
   return (
-    <div className="container max-w-4xl mx-auto py-6">
+    <div className="container max-w-4xl mx-auto py-6 space-y-6">
+      {/* Draft Management Section */}
+      {invoiceDrafts.drafts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Draft Invoices ({invoiceDrafts.drafts.length})
+            </CardTitle>
+            <CardDescription>
+              Load and continue working on saved drafts
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3">
+              {invoiceDrafts.drafts.map((draft) => (
+                <div key={draft.id} className="flex items-center justify-between border rounded-lg p-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {draft.external_invoice_number || 'Untitled Draft'}
+                      </span>
+                      <Badge variant="secondary">Draft</Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {draft.work_orders?.length || 0} work orders • 
+                      Updated {format(new Date(draft.updated_at), 'PPp')}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleLoadDraft(draft)}
+                      disabled={currentDraftId === draft.id}
+                    >
+                      {currentDraftId === draft.id ? 'Current' : 'Load'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteDraft(draft.id)}
+                      disabled={invoiceDrafts.isDeleting}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Submit Invoice</CardTitle>
-          <CardDescription>
-            Create an invoice for one or more completed work orders
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                Submit Invoice
+                {currentDraftId && <Badge variant="secondary">Editing Draft</Badge>}
+              </CardTitle>
+              <CardDescription>
+                Create an invoice for one or more completed work orders
+              </CardDescription>
+            </div>
+            {lastSavedAt && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                Last saved {format(lastSavedAt, 'HH:mm')}
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -313,20 +483,39 @@ const SubmitInvoice = () => {
                 )}
               />
 
+              <Separator />
+              
               <div className="flex gap-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => navigate('/subcontractor/work-orders')}
-                  disabled={invoiceSubmission.isSubmitting}
+                  disabled={invoiceSubmission.isSubmitting || invoiceDrafts.isSaving}
                 >
                   Cancel
                 </Button>
                 <Button
-                  type="submit"
-                  disabled={invoiceSubmission.isSubmitting || selectedCount === 0}
+                  type="button"
+                  variant="outline"
+                  onClick={handleSaveDraft}
+                  disabled={invoiceDrafts.isSaving || invoiceSubmission.isSubmitting}
+                  className="flex items-center gap-2"
                 >
-                  {invoiceSubmission.isSubmitting ? 'Submitting...' : `Submit Invoice (${selectedCount} orders)`}
+                  <Save className="h-4 w-4" />
+                  {invoiceDrafts.isSaving ? 'Saving...' : 'Save as Draft'}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    invoiceSubmission.isSubmitting || 
+                    invoiceDrafts.isSubmitting || 
+                    selectedCount === 0 ||
+                    invoiceDrafts.isSaving
+                  }
+                >
+                  {(invoiceSubmission.isSubmitting || invoiceDrafts.isSubmitting) 
+                    ? 'Submitting...' 
+                    : `Submit Invoice (${selectedCount} orders)`}
                 </Button>
               </div>
             </form>

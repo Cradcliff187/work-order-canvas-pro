@@ -1,12 +1,14 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { ClipboardList, FileText, Home, LogOut, Menu, History, User } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
 
 interface SubcontractorLayoutProps {
   children: ReactNode;
@@ -17,11 +19,17 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const { profile } = useUserProfile();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { draftCount } = useInvoiceDrafts();
 
-  const navigation = [
+  const navigation: Array<{name: string, href: string, icon: any, badge?: number}> = [
     { name: "Dashboard", href: "/subcontractor/dashboard", icon: Home },
     { name: "My Work Orders", href: "/subcontractor/work-orders", icon: ClipboardList },
-    { name: "Submit Invoice", href: "/subcontractor/submit-invoice", icon: FileText },
+    { 
+      name: "Submit Invoice", 
+      href: "/subcontractor/submit-invoice", 
+      icon: FileText,
+      badge: draftCount > 0 ? draftCount : undefined
+    },
     { name: "Report History", href: "/subcontractor/reports", icon: History },
     { name: "Profile Settings", href: "/subcontractor/profile", icon: User },
   ];
@@ -42,7 +50,12 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
             }`}
           >
             <Icon className="mr-3 h-4 w-4" />
-            {item.name}
+            <span className="flex-1">{item.name}</span>
+            {item.badge && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {item.badge}
+              </Badge>
+            )}
           </Link>
         );
       })}

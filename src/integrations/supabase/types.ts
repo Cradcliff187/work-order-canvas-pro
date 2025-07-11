@@ -316,10 +316,10 @@ export type Database = {
           paid_at: string | null
           payment_reference: string | null
           status: string
-          subcontractor_organization_id: string
+          subcontractor_organization_id: string | null
           submitted_at: string | null
-          submitted_by: string
-          total_amount: number
+          submitted_by: string | null
+          total_amount: number | null
           updated_at: string
         }
         Insert: {
@@ -333,10 +333,10 @@ export type Database = {
           paid_at?: string | null
           payment_reference?: string | null
           status?: string
-          subcontractor_organization_id: string
+          subcontractor_organization_id?: string | null
           submitted_at?: string | null
-          submitted_by: string
-          total_amount: number
+          submitted_by?: string | null
+          total_amount?: number | null
           updated_at?: string
         }
         Update: {
@@ -350,10 +350,10 @@ export type Database = {
           paid_at?: string | null
           payment_reference?: string | null
           status?: string
-          subcontractor_organization_id?: string
+          subcontractor_organization_id?: string | null
           submitted_at?: string | null
-          submitted_by?: string
-          total_amount?: number
+          submitted_by?: string | null
+          total_amount?: number | null
           updated_at?: string
         }
         Relationships: [
