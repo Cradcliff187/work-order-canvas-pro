@@ -623,6 +623,65 @@ WHERE subcontractor_user_id = auth_profile_id();
 3. **User Type Specific**: Include user type when policy is role-specific
 4. **Descriptive**: Policy name should explain the access being granted
 
+## Storage Policies (work-order-attachments bucket)
+
+### Invoice Attachments
+
+**Financial Privacy**: Partners cannot access invoice attachments to maintain financial confidentiality.
+
+**Path Pattern**: `/{user_id}/invoices/{invoice_id}/{filename}`
+
+#### Required Storage Policies (Apply via Supabase Dashboard)
+
+**1. Subcontractors can upload invoice attachments (INSERT)**
+```sql
+bucket_id = 'work-order-attachments' 
+AND auth.uid()::text = (storage.foldername(name))[1]
+AND get_current_user_type() = 'subcontractor'
+AND name LIKE '%/invoices/%'
+```
+
+**2. View invoice attachments (SELECT)**
+```sql
+bucket_id = 'work-order-attachments'
+AND name LIKE '%/invoices/%'
+AND (
+  -- Subcontractors can view their own invoice attachments
+  (get_current_user_type() = 'subcontractor' AND auth.uid()::text = (storage.foldername(name))[1])
+  -- Admins can view all invoice attachments
+  OR get_current_user_type() = 'admin'
+  -- Partners CANNOT view invoice attachments (financial privacy)
+)
+```
+
+**3. Subcontractors can update their own invoice attachments (UPDATE)**
+```sql
+bucket_id = 'work-order-attachments' 
+AND auth.uid()::text = (storage.foldername(name))[1]
+AND get_current_user_type() = 'subcontractor'
+AND name LIKE '%/invoices/%'
+```
+
+**4. Subcontractors can delete their own invoice attachments (DELETE)**
+```sql
+bucket_id = 'work-order-attachments' 
+AND auth.uid()::text = (storage.foldername(name))[1]
+AND get_current_user_type() = 'subcontractor'
+AND name LIKE '%/invoices/%'
+```
+
+#### Access Control Summary
+- **Subcontractors**: Can upload, view, update, delete their own invoice attachments
+- **Admins**: Can view all invoice attachments
+- **Partners**: No access (financial privacy)
+- **Employees**: No access to invoice attachments
+
+#### Security Features
+1. **User Isolation**: Users can only access files in their own folder (`/{user_id}/`)
+2. **Financial Privacy**: Partners blocked from viewing invoice documents
+3. **Path Enforcement**: Files must be in `/invoices/` subdirectory
+4. **Role-Based Access**: Different permissions per user type
+
 ## Troubleshooting Common RLS Issues
 
 ### Issue: "Infinite recursion detected in policy for relation 'profiles'"
