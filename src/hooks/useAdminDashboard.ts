@@ -13,6 +13,7 @@ interface DashboardMetrics {
   completedThisMonth: number;
   pendingInvoices: number;
   unpaidApprovedInvoices: number;
+  employeesOnDuty: number;
   recentPayments: Array<{
     id: string;
     internal_invoice_number: string;
@@ -108,6 +109,19 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     .eq('status', 'approved')
     .is('paid_at', null);
 
+  // Employees on duty (employees with recent time reports)
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  
+  const { data: activeEmployeesData } = await supabase
+    .from('employee_reports')
+    .select('employee_user_id')
+    .gte('report_date', threeDaysAgo.toISOString().split('T')[0]);
+
+  const uniqueActiveEmployees = new Set(
+    (activeEmployeesData || []).map(report => report.employee_user_id)
+  );
+
   // Recent payments (last 7 days)
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -152,6 +166,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     completedThisMonth: completedCount || 0,
     pendingInvoices: pendingInvoicesCount || 0,
     unpaidApprovedInvoices: unpaidApprovedCount || 0,
+    employeesOnDuty: uniqueActiveEmployees.size,
     recentPayments,
   };
 };

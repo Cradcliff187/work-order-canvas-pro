@@ -19,7 +19,8 @@ export interface SidebarItem {
 }
 
 export const sidebarItems: SidebarItem[] = [
-  { title: 'Dashboard', url: '/admin/dashboard', icon: BarChart3 },
+  { title: 'Admin Dashboard', url: '/admin/dashboard', icon: BarChart3 },
+  { title: 'Employee Dashboard', url: '/admin/employee-dashboard', icon: BarChart3 },
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
   { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
   { title: 'Time Reports', url: '/admin/time-reports', icon: Clock },
@@ -35,5 +36,5 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
-export const adminOnlyItems = ['Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Dev Tools'];
-export const employeeAccessItems = ['Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];
+export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Dev Tools'];
+export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];

@@ -3,20 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
+import { useInvoices } from "@/hooks/useInvoices";
 import { 
   ClipboardList, 
   FileText, 
   Calendar, 
   DollarSign, 
-  AlertTriangle
+  AlertTriangle,
+  Receipt
 } from "lucide-react";
 import { format } from "date-fns";
 
 const SubcontractorDashboard = () => {
   const { assignedWorkOrders, dashboardStats } = useSubcontractorWorkOrders();
+  const { data: invoicesData, isLoading: invoicesLoading } = useInvoices();
 
   const workOrders = assignedWorkOrders.data || [];
   const stats = dashboardStats.data;
+  const invoices = invoicesData?.data || [];
+  
+  // Get pending invoices (submitted, waiting for approval)
+  const pendingInvoices = invoices.filter(invoice => invoice.status === 'submitted');
+  const approvedInvoices = invoices.filter(invoice => invoice.status === 'approved');
+  const paidInvoices = invoices.filter(invoice => invoice.status === 'paid');
 
   // Get recent work orders (last 5)
   const recentWorkOrders = workOrders.slice(0, 5);
@@ -98,7 +107,7 @@ const SubcontractorDashboard = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
@@ -121,6 +130,19 @@ const SubcontractorDashboard = () => {
             <p className="text-2xl font-bold mt-2">{stats?.pendingReports || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Need to submit reports
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Pending Invoices</span>
+            </div>
+            <p className="text-2xl font-bold mt-2 text-warning">{pendingInvoices.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Awaiting approval
             </p>
           </CardContent>
         </Card>
@@ -153,6 +175,40 @@ const SubcontractorDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Invoice Status Section */}
+      {invoices.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Invoice Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="text-center p-4 bg-warning/10 rounded-lg">
+                <div className="text-2xl font-bold text-warning">{pendingInvoices.length}</div>
+                <div className="text-sm text-muted-foreground">Submitted</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  ${pendingInvoices.reduce((sum, inv) => sum + inv.total_amount, 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="text-center p-4 bg-success/10 rounded-lg">
+                <div className="text-2xl font-bold text-success">{approvedInvoices.length}</div>
+                <div className="text-sm text-muted-foreground">Approved</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  ${approvedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="text-center p-4 bg-primary/10 rounded-lg">
+                <div className="text-2xl font-bold text-primary">{paidInvoices.length}</div>
+                <div className="text-sm text-muted-foreground">Paid</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  ${paidInvoices.reduce((sum, inv) => sum + inv.total_amount, 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Work Orders */}
       <Card>

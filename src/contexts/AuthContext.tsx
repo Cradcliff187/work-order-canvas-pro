@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (event === 'SIGNED_IN' && profileData?.user_type && window.location.pathname === '/') {
               const redirectPaths = {
                 'admin': '/admin/dashboard',
-                'employee': '/admin/dashboard',
+                'employee': '/admin/employee-dashboard',
                 'partner': '/partner/dashboard',
                 'subcontractor': '/subcontractor/dashboard'
               };

@@ -2,6 +2,7 @@ import { lazy } from 'react';
 
 // Admin Pages
 export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
+export const EmployeeDashboard = lazy(() => import('@/pages/admin/EmployeeDashboard'));
 export const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 export const AdminOrganizations = lazy(() => import('@/pages/admin/AdminOrganizations'));
 export const AdminWorkOrders = lazy(() => import('@/pages/admin/AdminWorkOrders'));
