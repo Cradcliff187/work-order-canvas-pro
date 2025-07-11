@@ -623,6 +623,64 @@ WHERE subcontractor_user_id = auth_profile_id();
 3. **User Type Specific**: Include user type when policy is role-specific
 4. **Descriptive**: Policy name should explain the access being granted
 
+## Invoice Attachments Table
+
+**Purpose**: Stores uploaded invoice documents and files with financial privacy enforcement.
+
+**Financial Privacy**: Partners cannot access invoice attachments to maintain financial confidentiality between organizations.
+
+### RLS Policies
+
+#### 1. Admins can manage all invoice attachments (ALL)
+```sql
+USING: auth_is_admin()
+WITH CHECK: auth_is_admin()
+```
+- **Access**: Full CRUD access to all invoice attachments
+- **Use Case**: Administrative oversight and support
+
+#### 2. Subcontractors can manage own invoice attachments (ALL)
+```sql
+USING: auth_user_type() = 'subcontractor'
+       AND EXISTS (SELECT 1 FROM invoices i WHERE i.id = invoice_attachments.invoice_id 
+                   AND auth_user_belongs_to_organization(i.subcontractor_organization_id))
+WITH CHECK: auth_user_type() = 'subcontractor'
+            AND uploaded_by = auth_profile_id()
+            AND EXISTS (SELECT 1 FROM invoices i WHERE i.id = invoice_attachments.invoice_id 
+                        AND auth_user_belongs_to_organization(i.subcontractor_organization_id))
+```
+- **Access**: Full CRUD for own organization's invoice attachments
+- **Verification**: Through invoices table organization membership
+- **Upload Restriction**: Must set self as uploader
+
+#### 3. View invoice attachments (SELECT)
+```sql
+USING: auth_is_admin() 
+       OR (auth_user_type() = 'subcontractor' 
+           AND EXISTS (SELECT 1 FROM invoices i WHERE i.id = invoice_attachments.invoice_id 
+                       AND auth_user_belongs_to_organization(i.subcontractor_organization_id)))
+```
+- **Admins**: Can view all invoice attachments
+- **Subcontractors**: Can view own organization's attachments only
+- **Partners**: Explicitly blocked (financial privacy)
+- **Employees**: No access to invoice attachments
+
+### Access Control Summary
+| User Type | CREATE | READ | UPDATE | DELETE | Notes |
+|-----------|--------|------|--------|--------|--------|
+| **Admin** | ✅ | ✅ | ✅ | ✅ | Full access |
+| **Subcontractor** | ✅* | ✅* | ✅* | ✅* | Own organization only |
+| **Partner** | ❌ | ❌ | ❌ | ❌ | Financial privacy |
+| **Employee** | ❌ | ❌ | ❌ | ❌ | No invoice access |
+
+*Subcontractors must be uploading to their own organization's invoice and setting themselves as the uploader.
+
+### Security Features
+1. **Organization Verification**: Access controlled through invoices.subcontractor_organization_id
+2. **Financial Privacy**: Partners blocked from viewing invoice documents
+3. **Uploader Authentication**: Users must set themselves as uploader on CREATE
+4. **Cascade Protection**: Policies align with foreign key CASCADE DELETE
+
 ## Storage Policies (work-order-attachments bucket)
 
 ### Invoice Attachments
