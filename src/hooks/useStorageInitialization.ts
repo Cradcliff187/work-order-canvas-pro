@@ -47,6 +47,14 @@ export function useStorageInitialization() {
           db.name?.includes('WorkOrderPro') || db.name?.includes('workorder')
         );
         
+        // Check for version conflicts and force reset if needed
+        for (const db of workOrderDBs) {
+          if (db.name && db.version && db.version > 3) {
+            console.log(`Database ${db.name} has version ${db.version}, forcing reset...`);
+            await indexedDB.deleteDatabase(db.name);
+          }
+        }
+        
         if (workOrderDBs.length > 1) {
           console.log('Multiple WorkOrder databases detected, cleaning up...');
           for (const db of workOrderDBs.slice(1)) {
@@ -85,7 +93,7 @@ export function useStorageInitialization() {
     }
   };
 
-  const initializeStorageWithRetry = async (maxRetries = 3): Promise<void> => {
+  const initializeStorageWithRetry = useCallback(async (maxRetries = 3): Promise<void> => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       setRetryCount(attempt - 1);
       
@@ -131,7 +139,7 @@ export function useStorageInitialization() {
         }
       }
     }
-  };
+  }, [toast]);
 
   const retryInitialization = useCallback(async (): Promise<void> => {
     setInitializationError(null);

@@ -49,11 +49,16 @@ export function useOfflineStorage() {
     processPendingSyncs,
   } = useSyncOperations(storageManager);
 
-  // Initialize storage on mount
+  // Initialize storage on mount - run once only
   useEffect(() => {
+    let isCancelled = false;
+    
     const initializeStorage = async () => {
+      if (isCancelled) return;
+      
       await initializeStorageWithRetry();
-      setIsReady(initializationState === 'ready' || initializationState === 'fallback');
+      
+      if (isCancelled) return;
       
       // Schedule cleanup after successful initialization
       if (initializationState === 'ready') {
@@ -63,7 +68,13 @@ export function useOfflineStorage() {
 
     initializeStorage();
 
-    // Listen for service worker messages
+    return () => {
+      isCancelled = true;
+    };
+  }, [initializeStorageWithRetry]); // Only depend on the function, not state
+
+  // Listen for service worker messages
+  useEffect(() => {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       const { type, tag } = event.data;
       
@@ -81,7 +92,7 @@ export function useOfflineStorage() {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [initializationState, scheduleCleanup, processPendingSyncs]);
+  }, [processPendingSyncs]);
 
   // Update ready state when initialization completes
   useEffect(() => {

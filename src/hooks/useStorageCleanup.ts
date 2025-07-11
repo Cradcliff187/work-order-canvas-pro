@@ -30,7 +30,7 @@ export function useStorageCleanup(
   };
 
   const scheduleCleanup = useCallback(() => {
-    if (cleanupScheduled || isUsingFallback) {
+    if (cleanupScheduled || isUsingFallback || !isReady) {
       return;
     }
 
@@ -59,7 +59,7 @@ export function useStorageCleanup(
         setCleanupScheduled(false);
       }
     }, 30000); // 30 seconds delay
-  }, [cleanupScheduled, isUsingFallback, storageManager, cleanupInProgress, isReady]);
+  }, [cleanupScheduled, isUsingFallback, isReady]); // Remove storageManager dependency
 
   const clearCache = useCallback(async (): Promise<void> => {
     try {
