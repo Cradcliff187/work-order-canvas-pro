@@ -44,9 +44,11 @@ WorkOrderPro uses a comprehensive **20-table** PostgreSQL database with Row Leve
 - `email_status`: 'sent', 'delivered', 'failed', 'bounced'
 - `file_type`: 'photo', 'invoice', 'document'
 
-### Custom Functions (17)
-- User management functions for RLS and security (7)
-- Work order lifecycle functions (3)
+### Custom Functions (24)
+- Auth helper functions for RLS and security (8)
+- Trigger functions for automation (3)
+- Email notification functions (4)
+- Utility functions (5)
 - Work order completion functions (4)
 - Analytics and reporting functions (3)
 
@@ -1589,6 +1591,147 @@ window.__resetStorage()     // Safe storage reset
 - WebSocket connections for live sync status
 - Real-time notifications when sync completes
 - Automatic retry on connection restoration
+
+---
+
+## Database Triggers
+
+WorkOrderPro implements several database triggers for automated functionality including audit logging, email notifications, and data consistency.
+
+### Audit Triggers
+
+The system has comprehensive audit triggers on all major tables using the `audit_trigger_function()`:
+
+```sql
+-- Example audit trigger (applied to all core tables)
+CREATE TRIGGER audit_work_orders
+  AFTER INSERT OR UPDATE OR DELETE ON work_orders
+  FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
+```
+
+**Tables with audit triggers:**
+- organizations
+- profiles  
+- work_orders
+- work_order_reports
+- work_order_assignments
+- work_order_attachments
+- partner_locations
+- invoices
+- invoice_work_orders
+- employee_reports
+- receipts
+
+### Email Notification Triggers
+
+Automated email system triggers that call edge functions:
+
+```sql
+-- Work order creation notification
+CREATE TRIGGER trigger_work_order_created_email
+  AFTER INSERT ON work_orders
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_work_order_created();
+
+-- Report submission notification  
+CREATE TRIGGER trigger_report_submitted_email
+  AFTER INSERT ON work_order_reports
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_report_submitted();
+
+-- Report review notification
+CREATE TRIGGER trigger_report_reviewed_email
+  AFTER UPDATE OF status ON work_order_reports
+  FOR EACH ROW
+  WHEN (OLD.status != NEW.status AND NEW.status IN ('approved', 'rejected'))
+  EXECUTE FUNCTION notify_report_reviewed();
+
+-- User welcome email
+CREATE TRIGGER trigger_user_welcome_email
+  AFTER INSERT ON profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_user_welcome();
+```
+
+### Workflow Automation Triggers
+
+```sql
+-- Automatic work order number generation
+CREATE TRIGGER trigger_work_order_number_v2
+  BEFORE INSERT ON work_orders
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_generate_work_order_number_v2();
+
+-- Work order status transitions
+CREATE TRIGGER trigger_auto_report_status_enhanced
+  AFTER INSERT OR UPDATE ON work_order_reports
+  FOR EACH ROW
+  EXECUTE FUNCTION auto_update_report_status_enhanced();
+
+-- Assignment status updates
+CREATE TRIGGER trigger_auto_assignment_status
+  AFTER INSERT ON work_order_assignments
+  FOR EACH ROW
+  EXECUTE FUNCTION auto_update_assignment_status();
+
+-- Invoice number generation
+CREATE TRIGGER trigger_generate_invoice_number
+  BEFORE INSERT OR UPDATE ON invoices
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_generate_invoice_number();
+
+-- Invoice status validation
+CREATE TRIGGER trigger_validate_invoice_status
+  BEFORE UPDATE ON invoices
+  FOR EACH ROW
+  EXECUTE FUNCTION validate_invoice_status_change();
+
+-- Timestamp updates
+CREATE TRIGGER update_organizations_updated_at
+  BEFORE UPDATE ON organizations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+-- (Similar triggers on all tables with updated_at columns)
+```
+
+### Email System Integration
+
+The trigger-based email system provides:
+
+**Automated Notifications:**
+- New work order submissions → Notify admins
+- Report submissions → Notify reviewers
+- Report approvals/rejections → Notify subcontractors
+- User account creation → Send welcome emails
+
+**Edge Function Integration:**
+- Triggers call Supabase Edge Functions via `pg_net.http_post`
+- Edge functions handle email templating and delivery via Resend
+- Email delivery status tracked in `email_logs` table
+
+**Error Resilience:**
+- Email failures logged as warnings, don't block main operations
+- Asynchronous processing prevents workflow delays
+- Comprehensive error logging for monitoring
+
+### Trigger Dependencies
+
+```mermaid
+graph TB
+    A[Work Order Insert] --> B[Number Generation Trigger]
+    A --> C[Email Notification Trigger]
+    A --> D[Audit Trigger]
+    
+    E[Report Insert] --> F[Status Transition Trigger]
+    E --> G[Email Notification Trigger]
+    E --> H[Audit Trigger]
+    
+    F --> I[Completion Check]
+    I --> J[Completion Email]
+    
+    K[Profile Insert] --> L[Welcome Email Trigger]
+    K --> M[Audit Trigger]
+```
 
 ---
 

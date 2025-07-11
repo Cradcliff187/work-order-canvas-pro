@@ -6,14 +6,17 @@ WorkOrderPro uses PostgreSQL functions to implement authentication helpers, audi
 
 ## Function Categories
 
-### Auth Helper Functions (7)
+### Auth Helper Functions (8)
 SECURITY DEFINER functions that provide safe access to user context for RLS policies
 
-### Trigger Functions (2)  
-Functions executed by database triggers for audit logging and user profile creation
+### Trigger Functions (3)  
+Functions executed by database triggers for audit logging, user profile creation, and work order numbering
 
-### Utility Functions (3)
-General-purpose functions for work order numbering and analytics view management
+### Email Notification Functions (4)
+SECURITY DEFINER functions that call edge functions for automated email notifications
+
+### Utility Functions (5)
+General-purpose functions for work order numbering, invoice numbering, and analytics view management
 
 ### Work Order Completion Functions (4)
 Automatic completion detection and manual override functions for work order lifecycle management
@@ -222,6 +225,153 @@ $$;
 - Admins can view all assignments
 - Users can view assignments they are directly assigned to
 - Partners can view assignments for their organization's work orders
+
+## Email Notification Functions
+
+WorkOrderPro includes an integrated email notification system that automatically sends emails when key events occur. These functions use the `pg_net` extension to call Supabase Edge Functions, which handle the actual email delivery through Resend.
+
+### notify_work_order_created()
+
+**Purpose**: Automatically send email notification when new work orders are created
+
+```sql
+CREATE OR REPLACE FUNCTION public.notify_work_order_created()
+RETURNS TRIGGER AS $$
+BEGIN
+  BEGIN
+    PERFORM net.http_post(
+      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-order-created',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json'
+      ),
+      body := jsonb_build_object('work_order_id', NEW.id)
+    );
+  EXCEPTION WHEN OTHERS THEN
+    -- Log error but don't fail the main operation
+    RAISE WARNING 'Failed to send work order created email for %: %', NEW.id, SQLERRM;
+  END;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Trigger**: `trigger_work_order_created_email` on `work_orders` table (AFTER INSERT)  
+**Edge Function**: `email-work-order-created`  
+**Recipients**: System administrators and relevant stakeholders  
+**Security**: Uses SECURITY DEFINER to access `pg_net` extension  
+
+### notify_report_submitted()
+
+**Purpose**: Send email notification when subcontractors submit work order reports
+
+```sql
+CREATE OR REPLACE FUNCTION public.notify_report_submitted()
+RETURNS TRIGGER AS $$
+BEGIN
+  BEGIN
+    PERFORM net.http_post(
+      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-report-submitted',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json'
+      ),
+      body := jsonb_build_object('work_order_report_id', NEW.id)
+    );
+  EXCEPTION WHEN OTHERS THEN
+    -- Log error but don't fail the main operation
+    RAISE WARNING 'Failed to send report submitted email for %: %', NEW.id, SQLERRM;
+  END;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Trigger**: `trigger_report_submitted_email` on `work_order_reports` table (AFTER INSERT)  
+**Edge Function**: `email-report-submitted`  
+**Recipients**: Administrators and report reviewers  
+**Security**: Error-resilient design prevents email failures from blocking report submission  
+
+### notify_report_reviewed()
+
+**Purpose**: Send email notification when work order reports are reviewed (approved/rejected)
+
+```sql
+CREATE OR REPLACE FUNCTION public.notify_report_reviewed()
+RETURNS TRIGGER AS $$
+BEGIN
+  BEGIN
+    PERFORM net.http_post(
+      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-report-reviewed',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json'
+      ),
+      body := jsonb_build_object(
+        'work_order_report_id', NEW.id,
+        'status', NEW.status,
+        'review_notes', NEW.review_notes
+      )
+    );
+  EXCEPTION WHEN OTHERS THEN
+    -- Log error but don't fail the main operation
+    RAISE WARNING 'Failed to send report reviewed email for %: %', NEW.id, SQLERRM;
+  END;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Trigger**: `trigger_report_reviewed_email` on `work_order_reports` table (AFTER UPDATE OF status)  
+**Condition**: Fires when status changes to 'approved' or 'rejected'  
+**Edge Function**: `email-report-reviewed`  
+**Recipients**: Subcontractor who submitted the report  
+**Content**: Includes review status and admin review notes  
+
+### notify_user_welcome()
+
+**Purpose**: Send welcome email when new user profiles are created
+
+```sql
+CREATE OR REPLACE FUNCTION public.notify_user_welcome()
+RETURNS TRIGGER AS $$
+BEGIN
+  BEGIN
+    PERFORM net.http_post(
+      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-welcome',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json'
+      ),
+      body := jsonb_build_object(
+        'user_id', NEW.id,
+        'email', NEW.email,
+        'first_name', NEW.first_name,
+        'last_name', NEW.last_name,
+        'user_type', NEW.user_type
+      )
+    );
+  EXCEPTION WHEN OTHERS THEN
+    -- Log error but don't fail the main operation
+    RAISE WARNING 'Failed to send welcome email for user %: %', NEW.id, SQLERRM;
+  END;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Trigger**: `trigger_user_welcome_email` on `profiles` table (AFTER INSERT)  
+**Edge Function**: `email-welcome`  
+**Recipients**: Newly created user  
+**Content**: Welcome message with account setup instructions  
+**Template**: Uses `welcome_email` template from `email_templates` table  
+
+**Email System Architecture:**
+- **Asynchronous Processing**: Email sending happens asynchronously to avoid blocking main operations
+- **Error Resilience**: Email failures are logged as warnings but don't prevent database operations
+- **Template System**: Uses `email_templates` table for customizable email content
+- **Delivery Tracking**: All emails are logged in `email_logs` table with delivery status
+- **External Integration**: Leverages Resend service for reliable email delivery
 
 ## Trigger Functions
 

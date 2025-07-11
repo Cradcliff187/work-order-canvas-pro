@@ -342,6 +342,12 @@ Policy: SELECT
 Using: (auth_user_type() = ANY(ARRAY['partner', 'subcontractor']) AND is_active = true)
 ```
 
+**Email System Security:**
+- Email notification functions use `SECURITY DEFINER` to access `pg_net` extension
+- Templates are version-controlled through `is_active` flag
+- `welcome_email` template provides account setup instructions for new users
+- Email delivery tracked in `email_logs` with status monitoring
+
 ### email_logs
 
 **Admins can view all email logs**
@@ -861,8 +867,37 @@ CREATE INDEX idx_receipts_user ON receipts(employee_user_id);
 - SECURITY DEFINER prevents infinite recursion
 - Functions avoid complex JOINs where possible
 
+## Email System Security Model
+
+### Function Security
+- **Email notification functions** use `SECURITY DEFINER` to access `pg_net` extension safely
+- **Template access** restricted through `is_active` flag for version control
+- **Edge function integration** provides asynchronous email delivery
+- **Error isolation** ensures email failures don't block main database operations
+
+### Email Templates Access
+- **Admin users**: Full management of all email templates
+- **Partner/Subcontractor users**: Read-only access to active templates only
+- **Welcome email template**: Available to system for new user onboarding
+
+### Email Logging and Privacy
+- **Email logs** visible to admins for system monitoring
+- **Partner organizations** can view logs for their work orders only
+- **Delivery tracking** includes status updates from Resend service
+- **Error logging** captures failures for troubleshooting
+
+### pg_net Extension Security
+The `pg_net` extension is used exclusively by SECURITY DEFINER functions for:
+- Calling Supabase Edge Functions for email delivery
+- Maintaining security isolation between user contexts and external API calls
+- Preventing direct user access to HTTP functionality
+
 ## Related Documentation
 
 - [Database Schema](./DATABASE_SCHEMA.md) - Complete table structure
 - [Database Functions](./DATABASE_FUNCTIONS.md) - All helper function details  
 - [Audit System](./AUDIT_SYSTEM.md) - How audit logging interacts with RLS
+
+---
+
+*Documentation updated December 2025*
