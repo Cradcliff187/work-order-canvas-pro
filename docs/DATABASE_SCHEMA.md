@@ -82,6 +82,8 @@ erDiagram
         text contact_phone
         text address
         organization_type organization_type
+        text initials
+        integer next_sequence_number
         boolean is_active
         timestamp created_at
         timestamp updated_at
