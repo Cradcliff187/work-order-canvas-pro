@@ -14,12 +14,12 @@ const SubcontractorInvoices = () => {
   const initialStatus = searchParams.get('status');
   const initialPayment = searchParams.get('payment');
   
-  const [statusFilter, setStatusFilter] = useState(initialStatus || "");
+  const [statusFilter, setStatusFilter] = useState(initialStatus || "all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
   const filters = {
-    status: statusFilter ? [statusFilter] : undefined,
+    status: statusFilter && statusFilter !== "all" ? [statusFilter] : undefined,
     paymentStatus: initialPayment as 'paid' | 'unpaid' | undefined,
     search: searchQuery || undefined,
     page,
@@ -102,7 +102,7 @@ const SubcontractorInvoices = () => {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="submitted">Submitted</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
