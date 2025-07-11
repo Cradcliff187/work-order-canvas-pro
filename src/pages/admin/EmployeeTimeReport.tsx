@@ -42,7 +42,7 @@ export default function EmployeeTimeReport() {
     defaultValues: {
       workPerformed: "",
       materialsUsed: "",
-      hoursWorked: undefined,
+      hoursWorked: 0,
       notes: "",
     },
   });
