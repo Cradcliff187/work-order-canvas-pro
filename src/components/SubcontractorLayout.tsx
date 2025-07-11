@@ -21,6 +21,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const navigation = [
     { name: "Dashboard", href: "/subcontractor/dashboard", icon: Home },
     { name: "My Work Orders", href: "/subcontractor/work-orders", icon: ClipboardList },
+    { name: "Submit Invoice", href: "/subcontractor/submit-invoice", icon: FileText },
     { name: "Report History", href: "/subcontractor/reports", icon: History },
     { name: "Profile Settings", href: "/subcontractor/profile", icon: User },
   ];
