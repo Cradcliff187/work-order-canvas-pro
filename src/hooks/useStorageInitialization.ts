@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { indexedDBManager } from '@/utils/indexedDB';
+import { indexedDBManager } from '@/utils/indexedDB/index';
 import { memoryStorageManager } from '@/utils/memoryStorage';
 import { useToast } from '@/hooks/use-toast';
 import type { StorageManager } from '@/types/offline';
