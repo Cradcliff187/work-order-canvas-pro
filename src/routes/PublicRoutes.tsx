@@ -3,7 +3,8 @@ import { Route } from 'react-router-dom';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Auth, Dashboard } from '@/pages/LazyPages';
+import { Auth } from '@/pages/LazyPages';
+import DashboardRouter from '@/components/DashboardRouter';
 
 export const PublicRoutes = () => (
   <>
@@ -14,15 +15,10 @@ export const PublicRoutes = () => (
       </Suspense>
     } />
     
-    {/* Main dashboard route */}
+    {/* Main dashboard route - redirects to appropriate user dashboard */}
     <Route path="/" element={
       <ProtectedRoute>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <Suspense fallback={<LoadingSpinner />}>
-            <Dashboard />
-          </Suspense>
-        </div>
+        <DashboardRouter />
       </ProtectedRoute>
     } />
   </>
