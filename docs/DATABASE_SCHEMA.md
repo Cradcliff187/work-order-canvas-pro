@@ -794,19 +794,90 @@ erDiagram
 
 ## Storage Configuration
 
+The system uses **3 storage buckets** for file uploads and management:
+
 ### Storage Buckets
 
-#### work-order-photos
-**Purpose**: Public bucket for work order photo attachments
-- **Bucket ID**: `work-order-photos`
-- **Public**: Yes
-- **Used by**: Work order reports and attachments
+#### avatars
+- **Purpose**: Store user profile pictures for all user types
+- **Public Access**: Yes (enables direct URL access for display)
+- **File Types**: Images (JPEG, PNG, WEBP)  
+- **Size Limit**: 5MB
+- **Path Structure**: `/{user_id}/{filename}`
+- **Allowed MIME Types**: `image/jpeg`, `image/png`, `image/webp`
 
-**Storage Policies**:
-- Subcontractors can upload photos for their reports
-- All authenticated users can view photos based on their role
-- Subcontractors can update/delete their own photos
-- File organization: `/{user_id}/{filename}`
+#### work-order-attachments
+- **Purpose**: Store various file attachments for work orders and reports
+- **Public Access**: Yes (enables direct URL access)
+- **File Types**: Photos, invoices, documents, receipts
+- **Path Structure**: `/{user_id}/{work_order_id|report_id}/{filename}`
+- **Usage**: Work order reports, employee time reports, receipt images
+
+#### work-order-photos
+- **Purpose**: Legacy bucket for work order report photos (superseded by work-order-attachments)
+- **Public Access**: Yes
+- **File Types**: Images (JPEG, PNG, WEBP)
+- **Path Structure**: `/{user_id}/{work_order_id}/{timestamp}_{filename}`
+
+### Storage Policies
+
+Storage policies control access to uploaded files across all buckets:
+
+#### Avatar Policies (avatars bucket)
+1. **Avatar images are publicly accessible** (SELECT)
+   - Allows public read access to all avatar images
+   - Enables profile picture display across the application
+
+2. **Users can upload their own avatar** (INSERT)
+   - Users can upload files to their own user folder
+   - Validates ownership through folder path matching user ID
+
+3. **Users can update their own avatar** (UPDATE)
+   - Allows users to modify their avatar file metadata
+   - Restricted to files in user's own folder
+
+4. **Users can delete their own avatar** (DELETE)
+   - Enables users to remove their profile pictures
+   - Restricted to files in user's own folder
+
+#### Work Order Attachment Policies (work-order-attachments bucket)
+5. **Subcontractors can upload attachments for their reports** (INSERT)
+   - Allows subcontractors to upload files for work order reports
+   - Validates user ownership and subcontractor status
+
+6. **Employees can upload attachments for their time reports** (INSERT)
+   - Allows admin users who are employees to upload receipt images
+   - Validates employee status through profiles.is_employee flag
+   - Used for time report receipt documentation
+
+7. **Users can view work order attachments** (SELECT)
+   - Complex access control:
+   - Subcontractors: Own attachments only
+   - Admins: All attachments
+   - Partners: Attachments for their organization's work orders
+
+8. **Subcontractors can update their own attachments** (UPDATE)
+   - Allows file metadata updates for owned files
+   - Restricted to subcontractor's own uploads
+
+9. **Subcontractors can delete their own attachments** (DELETE)
+   - Enables file removal for owned files
+   - Restricted to subcontractor's own uploads
+
+#### Work Order Photo Policies (work-order-photos bucket)
+10. **Subcontractors can upload photos for their reports** (INSERT)
+    - Legacy policy for photo uploads
+    - Validates user ownership and subcontractor status
+
+11. **Users can view work order photos** (SELECT)
+    - Multi-tier access control similar to attachments
+    - Supports subcontractor, admin, and partner access levels
+
+12. **Subcontractors can update their own photos** (UPDATE)
+    - File metadata modification for owned photos
+
+13. **Subcontractors can delete their own photos** (DELETE)
+    - File removal for owned photos
 
 ## Database Functions
 
