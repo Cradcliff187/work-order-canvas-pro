@@ -21,6 +21,9 @@ export function useOfflineStorage() {
   const [initializationState, setInitializationState] = useState<InitializationState>('initializing');
   const [initializationError, setInitializationError] = useState<StorageError | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [cleanupScheduled, setCleanupScheduled] = useState(false);
+  const [cleanupInProgress, setCleanupInProgress] = useState(false);
+  const [lastCleanupTime, setLastCleanupTime] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Define processPendingSyncs early for use in service worker message handler
@@ -156,6 +159,63 @@ export function useOfflineStorage() {
     }
   };
 
+  const isCleanupSafe = async (): Promise<boolean> => {
+    try {
+      if (!isReady || isUsingFallback || cleanupInProgress) {
+        return false;
+      }
+
+      // Check if using IndexedDB manager
+      if (storageManager !== indexedDBManager) {
+        return false;
+      }
+
+      // Test basic database access
+      const stats = await storageManager.getStorageStats();
+      if (!stats) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.warn('Cleanup safety check failed:', error);
+      return false;
+    }
+  };
+
+  const scheduleCleanup = useCallback(() => {
+    if (cleanupScheduled || isUsingFallback) {
+      return;
+    }
+
+    setCleanupScheduled(true);
+    
+    setTimeout(async () => {
+      try {
+        const isSafe = await isCleanupSafe();
+        if (!isSafe) {
+          console.log('Cleanup skipped - safety check failed');
+          setCleanupScheduled(false);
+          return;
+        }
+
+        setCleanupInProgress(true);
+        console.log('Running scheduled cleanup...');
+        
+        await storageManager.cleanup();
+        setLastCleanupTime(Date.now());
+        console.log('Scheduled cleanup completed successfully');
+        
+      } catch (error) {
+        console.error('Scheduled cleanup failed:', error);
+        // Don't show toast for cleanup failures to keep it silent
+      } finally {
+        setCleanupInProgress(false);
+        setCleanupScheduled(false);
+      }
+    }, 30000); // 30 seconds delay
+  }, [cleanupScheduled, isUsingFallback, storageManager, cleanupInProgress, isReady]);
+
   const initializeStorageWithRetry = async (maxRetries = 3): Promise<void> => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       setRetryCount(attempt - 1);
@@ -185,7 +245,9 @@ export function useOfflineStorage() {
         setInitializationError(null);
         
         await updateStats();
-        await indexedDBManager.cleanup();
+        
+        // Schedule cleanup for 30 seconds after successful initialization
+        scheduleCleanup();
         return;
         
       } catch (error) {
@@ -284,7 +346,19 @@ export function useOfflineStorage() {
     
     try {
       const stats = await storageManager.getStorageStats();
-      setStorageStats(stats);
+      
+      // Add cleanup status to stats
+      const enhancedStats = {
+        ...stats,
+        cleanupStatus: {
+          isScheduled: cleanupScheduled,
+          isInProgress: cleanupInProgress,
+          lastRun: lastCleanupTime,
+          nextScheduled: cleanupScheduled ? Date.now() + 30000 : null,
+        }
+      };
+      
+      setStorageStats(enhancedStats);
       
       const syncQueue = await storageManager.getSyncQueue();
       setPendingCount(syncQueue.length);

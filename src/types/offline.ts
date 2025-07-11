@@ -60,6 +60,12 @@ export interface StorageStats {
   photoCount: number;
   syncQueueSize: number;
   lastCleanup?: number;
+  cleanupStatus?: {
+    isScheduled: boolean;
+    isInProgress: boolean;
+    lastRun: number | null;
+    nextScheduled: number | null;
+  };
 }
 
 export interface OfflineConfig {
