@@ -873,3 +873,270 @@ $function$
 - **Filtering**: Composite indexes on commonly filtered column combinations
 
 This documentation reflects the exact current state of the database as of the latest migration on 2025-01-10.
+
+---
+
+## Offline Storage Schema (IndexedDB)
+
+### Overview
+
+WorkOrderPro implements offline-first functionality using IndexedDB for client-side storage. This enables subcontractors to create and edit work order reports even without internet connectivity, with automatic synchronization when connectivity is restored.
+
+**Current Schema Version**: v3  
+**Database Name**: `WorkOrderProDB`  
+**Storage Quota**: 50MB maximum
+
+### IndexedDB Architecture
+
+```mermaid
+erDiagram
+    drafts ||--o{ attachments : "has"
+    drafts ||--o{ syncQueue : "generates"
+    metadata ||--|| drafts : "configures"
+    
+    drafts {
+        string id PK
+        string workOrderId FK
+        string workPerformed
+        string materialsUsed
+        number hoursWorked
+        number invoiceAmount
+        string invoiceNumber
+        string notes
+        array photos
+        object metadata
+        number createdAt
+        number updatedAt
+    }
+    
+    attachments {
+        string id PK
+        string draftId FK
+        string fileName
+        blob compressedData
+        number originalSize
+        number compressedSize
+        string mimeType
+        object metadata
+        number uploadedAt
+    }
+    
+    syncQueue {
+        string id PK
+        string type
+        number priority
+        object payload
+        number attempts
+        number nextAttempt
+        number createdAt
+        number lastAttempt
+        string status
+    }
+    
+    metadata {
+        string key PK
+        any value
+        number updatedAt
+    }
+```
+
+### Object Store Definitions
+
+#### 1. drafts
+**Purpose**: Stores offline work order report drafts with automatic compression and versioning.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Primary key (generated UUID) |
+| workOrderId | string | References work_orders.id |
+| workPerformed | string | Description of work performed |
+| materialsUsed | string | Materials used (optional) |
+| hoursWorked | number | Hours worked (optional) |
+| invoiceAmount | number | Invoice amount (optional) |
+| invoiceNumber | string | Invoice number (optional) |
+| notes | string | Additional notes (optional) |
+| photos | array | Photo attachment references |
+| metadata | object | Draft metadata and versioning |
+| createdAt | number | Creation timestamp |
+| updatedAt | number | Last update timestamp |
+
+**Indexes**:
+- `workOrderId` (non-unique) - Query drafts by work order
+- `updatedAt` (non-unique) - Cleanup and sorting
+- `isManual` (non-unique) - Filter manual vs auto-saved drafts
+
+#### 2. attachments
+**Purpose**: Stores compressed photo attachments with metadata and size optimization.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Primary key (generated UUID) |
+| draftId | string | References drafts.id |
+| fileName | string | Original file name |
+| compressedData | blob | Compressed image data |
+| originalSize | number | Original file size in bytes |
+| compressedSize | number | Compressed file size in bytes |
+| mimeType | string | MIME type (image/jpeg, image/png, etc.) |
+| metadata | object | EXIF data and compression settings |
+| uploadedAt | number | Upload timestamp |
+
+**Indexes**:
+- `draftId` (non-unique) - Query attachments by draft
+- `size` (non-unique) - Storage management and cleanup
+
+#### 3. syncQueue
+**Purpose**: Manages pending synchronization operations with retry logic and priority handling.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Primary key (generated UUID) |
+| type | string | Operation type ('create_report', 'upload_photo', etc.) |
+| priority | number | Sync priority (1=high, 5=low) |
+| payload | object | Operation data and parameters |
+| attempts | number | Number of sync attempts |
+| nextAttempt | number | Next retry timestamp |
+| createdAt | number | Creation timestamp |
+| lastAttempt | number | Last attempt timestamp |
+| status | string | Sync status ('pending', 'failed', 'completed') |
+
+**Indexes**:
+- `type` (non-unique) - Filter by operation type
+- `priority` (non-unique) - Priority-based processing
+- `nextAttempt` (non-unique) - Retry scheduling
+
+#### 4. metadata
+**Purpose**: Stores configuration, cleanup state, and system metadata.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| key | string | Primary key (setting identifier) |
+| value | any | Setting value (JSON serializable) |
+| updatedAt | number | Last update timestamp |
+
+**Common Keys**:
+- `lastCleanup` - Last cleanup operation timestamp
+- `storageQuota` - Current storage usage statistics
+- `syncStatus` - Overall synchronization status
+- `debugMode` - Debug logging configuration
+
+### Schema Evolution & Migrations
+
+#### Version 1 (Initial)
+- Created `drafts` object store with basic indexes
+- Supported work order draft storage
+
+#### Version 2 (Enhanced)
+- Added `attachments` object store for photo storage
+- Created `syncQueue` for offline sync management  
+- Added `metadata` store for configuration
+- Enhanced `drafts` with `isManual` index
+
+#### Version 3 (Current)
+- Complete schema consolidation
+- Enhanced index validation and repair
+- Improved migration error handling
+- Added comprehensive debug utilities
+
+**Migration Strategy**:
+- Automatic schema upgrades on database open
+- Graceful fallback for Safari compatibility
+- Data preservation during schema changes
+- Validation and repair functions for corrupted schemas
+
+### Data Mapping & Sync Strategy
+
+#### IndexedDB → Supabase Mapping
+
+| IndexedDB Store | Supabase Table | Sync Direction | Notes |
+|----------------|----------------|----------------|--------|
+| `drafts` | `work_order_reports` | Upload only | Drafts become final reports |
+| `attachments` | `work_order_attachments` | Upload only | Photos uploaded to storage |
+| `syncQueue` | N/A | Local only | Sync operation management |
+| `metadata` | N/A | Local only | Client configuration |
+
+#### Sync Lifecycle
+
+1. **Draft Creation**: User creates draft in `drafts` store
+2. **Photo Attachment**: Photos compressed and stored in `attachments`
+3. **Queue Generation**: Sync operations added to `syncQueue`
+4. **Background Sync**: Operations processed by priority when online
+5. **Completion**: Successful sync removes draft and queue items
+6. **Cleanup**: Periodic cleanup removes old/completed items
+
+#### Conflict Resolution
+
+- **No conflicts**: Drafts are upload-only (never download/merge)
+- **Duplicate prevention**: Work order ID validation before draft creation
+- **Retry logic**: Failed syncs retry with exponential backoff
+- **Manual resolution**: Failed items flagged for manual intervention
+
+### Performance & Storage Management
+
+#### Storage Limits
+
+| Resource | Limit | Management |
+|----------|-------|------------|
+| Total Storage | 50MB | Automatic cleanup when approaching limit |
+| Drafts per Work Order | 5 | Oldest drafts auto-deleted |
+| Total Drafts | 50 | LRU cleanup based on `updatedAt` |
+| Photo Size | 5MB each | Automatic compression to 0.8 quality |
+
+#### Compression Strategy
+
+- **Photos**: JPEG compression at 0.8 quality ratio
+- **Data**: LZ-string compression for large text fields
+- **Metadata**: Minimal overhead with essential fields only
+
+#### Performance Indexes
+
+All queries optimized with appropriate indexes:
+- Work order lookups: O(log n) via `workOrderId` index
+- Cleanup operations: O(log n) via `updatedAt` index  
+- Sync processing: O(log n) via `priority` and `nextAttempt` indexes
+
+### Error Recovery & Integrity
+
+#### Database Repair Functions
+
+- **Schema validation**: Verify all object stores and indexes exist
+- **Data integrity**: Check for orphaned records and invalid references
+- **Automatic repair**: Recreate missing indexes and stores
+- **Manual recovery**: Export/import functionality for data rescue
+
+#### Debug Utilities (Development Mode)
+
+```javascript
+// Console commands for debugging storage
+window.__testStorage()      // Run comprehensive storage tests
+window.__storageHealth()    // Quick health check
+window.__storageStats()     // Detailed storage statistics  
+window.__resetStorage()     // Safe storage reset
+```
+
+#### Health Monitoring
+
+- **Initialization checks**: Verify database opens and schema is correct
+- **Operation validation**: Test CRUD operations on all stores
+- **Performance metrics**: Track operation timing and success rates
+- **Error classification**: Categorize and report different error types
+
+### Integration with Supabase
+
+#### Authentication Context
+- All offline operations tagged with user context
+- Sync operations include authentication tokens
+- RLS policies enforced during upload operations
+
+#### Storage Buckets
+- Photos uploaded to `work-order-photos` bucket
+- Automatic file naming with timestamp and user ID
+- Public bucket for easy access from reports
+
+#### Real-time Sync
+- WebSocket connections for live sync status
+- Real-time notifications when sync completes
+- Automatic retry on connection restoration
+
+---
+
+*This documentation provides a complete reference for both the Supabase database schema and IndexedDB offline storage. For implementation details and migration history, see the migration files in `supabase/migrations/` and `src/utils/indexedDB/`.*
