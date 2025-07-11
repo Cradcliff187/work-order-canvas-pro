@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,14 +21,14 @@ const editOrganizationSchema = z.object({
   initials: z.string()
     .regex(/^[A-Z]{2,4}$/, 'Must be 2-4 uppercase letters')
     .optional(),
-}).refine((data) => {
+}).superRefine((data, ctx) => {
   if (data.organization_type === 'partner' && !data.initials) {
-    return false;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Initials are required for partner organizations',
+      path: ['initials'],
+    });
   }
-  return true;
-}, {
-  message: 'Initials are required for partner organizations',
-  path: ['initials'],
 });
 
 type EditOrganizationFormData = z.infer<typeof editOrganizationSchema>;
@@ -192,32 +191,6 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
 
             <FormField
               control={form.control}
-              name="organization_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Organization Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select organization type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="partner">Partner</SelectItem>
-                      <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                      <SelectItem value="internal">Internal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    The type of organization determines their role in the system
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="initials"
               render={({ field }) => (
                 <FormItem>
@@ -237,6 +210,32 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
                   <FormDescription>
                     2-4 letter code for work order numbering (e.g., ABC)
                     {form.watch('organization_type') === 'partner' && ' - Required for partners'}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="organization_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select organization type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="partner">Partner</SelectItem>
+                      <SelectItem value="subcontractor">Subcontractor</SelectItem>
+                      <SelectItem value="internal">Internal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    The type of organization determines their role in the system
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
