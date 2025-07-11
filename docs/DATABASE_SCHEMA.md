@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-WorkOrderPro uses a comprehensive **13-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
+WorkOrderPro uses a comprehensive **15-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
 ## Database Architecture Overview
 
-### Core Tables (13)
+### Core Tables (15)
 1. **organizations** - Company/organization information
 2. **user_organizations** - Many-to-many user-organization relationships  
 3. **profiles** - Extended user profile information
@@ -14,12 +14,14 @@ WorkOrderPro uses a comprehensive **13-table** PostgreSQL database with Row Leve
 5. **work_orders** - Main work order records
 6. **work_order_assignments** - Multiple assignees per work order with roles
 7. **work_order_reports** - Subcontractor completion reports
-7. **work_order_attachments** - File attachments for work orders and reports
-8. **email_templates** - System email templates
-9. **email_logs** - Email delivery tracking
-10. **email_settings** - Email configuration per organization
-11. **system_settings** - Global system configuration
-12. **audit_logs** - Complete audit trail for all changes
+8. **work_order_attachments** - File attachments for work orders and reports
+9. **invoices** - Subcontractor invoice management with dual numbering
+10. **invoice_work_orders** - Junction table linking invoices to work orders
+11. **email_templates** - System email templates
+12. **email_logs** - Email delivery tracking
+13. **email_settings** - Email configuration per organization
+14. **system_settings** - Global system configuration
+15. **audit_logs** - Complete audit trail for all changes
 
 ### Materialized Views (2)
 - **mv_work_order_analytics** - Performance analytics for work orders
@@ -503,7 +505,81 @@ erDiagram
 - **Multi-Organization**: Supports teams from different organizations
 - **Audit Trail**: Tracks who made assignments and when
 
-### 13. audit_logs
+### 13. invoices
+
+**Purpose**: Manages subcontractor invoices with dual numbering system and approval workflow.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| internal_invoice_number | text | No | - | Auto-generated internal reference (INV-YYYY-00001) |
+| external_invoice_number | text | Yes | - | Subcontractor's invoice number (optional) |
+| subcontractor_organization_id | uuid | No | - | References organizations.id |
+| submitted_by | uuid | No | - | References profiles.id (invoice creator) |
+| total_amount | decimal(10,2) | No | - | Total invoice amount |
+| status | text | No | 'submitted' | Invoice status workflow |
+| submitted_at | timestamp | Yes | - | Submission timestamp |
+| approved_by | uuid | Yes | - | References profiles.id (approver) |
+| approved_at | timestamp | Yes | - | Approval timestamp |
+| approval_notes | text | Yes | - | Approval/rejection notes |
+| payment_reference | text | Yes | - | Payment reference (check number, etc.) |
+| paid_at | timestamp | Yes | - | Payment completion timestamp |
+| created_at | timestamp | No | now() | Creation timestamp |
+| updated_at | timestamp | No | now() | Last update timestamp |
+
+**Constraints**:
+- `invoices_internal_invoice_number_unique` UNIQUE (internal_invoice_number)
+- CHECK (total_amount >= 0)
+- CHECK (status IN ('draft', 'submitted', 'approved', 'rejected', 'paid'))
+
+**Indexes**:
+- `idx_invoices_organization` ON (subcontractor_organization_id)
+- `idx_invoices_submitted_by` ON (submitted_by)
+- `idx_invoices_status` ON (status)
+- `idx_invoices_internal_number` ON (internal_invoice_number)
+- `idx_invoices_approved_by` ON (approved_by)
+- `idx_invoices_submitted_at` ON (submitted_at)
+- `idx_invoices_paid_at` ON (paid_at)
+- `idx_invoices_org_status` ON (subcontractor_organization_id, status)
+- `idx_invoices_status_dates` ON (status, submitted_at, paid_at)
+
+**Business Rules**:
+- **Internal numbering**: Auto-generated format INV-YYYY-00001 with annual sequence
+- **External numbering**: Optional subcontractor's own invoice number
+- **Status workflow**: draft → submitted → approved/rejected → paid
+- **Amount validation**: Must be positive monetary amount
+- **Payment tracking**: Reference and timestamp required when paid
+
+### 14. invoice_work_orders
+
+**Purpose**: Junction table linking invoices to multiple work orders with itemized amounts.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| invoice_id | uuid | No | - | References invoices.id (CASCADE DELETE) |
+| work_order_id | uuid | No | - | References work_orders.id |
+| work_order_report_id | uuid | Yes | - | References work_order_reports.id (optional) |
+| amount | decimal(10,2) | No | - | Amount allocated to this work order |
+| description | text | Yes | - | Optional line item description |
+| created_at | timestamp | No | now() | Creation timestamp |
+
+**Constraints**:
+- UNIQUE(invoice_id, work_order_id) - No duplicate work orders per invoice
+- CHECK (amount >= 0)
+
+**Indexes**:
+- `idx_invoice_work_orders_invoice` ON (invoice_id)
+- `idx_invoice_work_orders_work_order` ON (work_order_id)
+- `idx_invoice_work_orders_report` ON (work_order_report_id)
+
+**Business Rules**:
+- **Multi-work-order billing**: Single invoice can cover multiple work orders
+- **Itemized amounts**: Individual amount allocation per work order
+- **Report linkage**: Optional connection to specific work order reports
+- **Cascade deletion**: Invoice deletion removes all line items
+
+### 15. audit_logs
 **Purpose**: Complete audit trail for all system changes.
 
 | Column | Type | Nullable | Default | Description |

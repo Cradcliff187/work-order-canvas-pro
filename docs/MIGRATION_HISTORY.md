@@ -173,6 +173,20 @@ This document provides a complete chronological history of all database migratio
 - **Business Impact**: Supports mixed teams (employees + subcontractors)
 - **Result**: Foundation for advanced team-based work order management
 
+### 2025-01-11: Invoice Management System
+
+#### 20250711_add_invoice_management_tables.sql
+**Purpose**: **MAJOR** - Complete invoice management system implementation
+- Created `invoices` table with dual numbering system (internal auto-generated + external)
+- Added comprehensive approval workflow with status tracking (draft/submitted/approved/rejected/paid)
+- Created `invoice_work_orders` junction table for multi-work-order billing
+- Implemented `generate_internal_invoice_number()` function with year-based sequence (INV-YYYY-00001)
+- Added auto-generation trigger for internal invoice numbers
+- Created strategic performance indexes for all query patterns
+- Integrated with existing audit logging and timestamp management systems
+- **Business Impact**: Enables consolidated subcontractor billing across multiple work orders
+- **Result**: Complete invoice management infrastructure with professional numbering and approval workflow
+
 ### 2025-01-11: IndexedDB Storage Implementation
 
 #### IndexedDB v1 (Initial Implementation)
@@ -265,8 +279,9 @@ This document provides a complete chronological history of all database migratio
 
 The database is now in a **mature, production-ready state** with:
 
-✅ **Complete 13-table schema** aligned with business requirements  
+✅ **Complete 15-table schema** aligned with business requirements  
 ✅ **Multi-assignee work order support** for team-based workflows
+✅ **Invoice management system** with dual numbering and approval workflow
 ✅ **Clean RLS implementation** with no recursion issues  
 ✅ **Comprehensive audit logging** on all core tables  
 ✅ **Optimized performance** with strategic indexes  

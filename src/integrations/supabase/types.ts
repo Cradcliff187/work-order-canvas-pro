@@ -188,6 +188,148 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_work_orders: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          invoice_id: string
+          work_order_id: string
+          work_order_report_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id: string
+          work_order_id: string
+          work_order_report_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          work_order_id?: string
+          work_order_report_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_work_orders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_work_orders_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_work_orders_work_order_report_id_fkey"
+            columns: ["work_order_report_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          external_invoice_number: string | null
+          id: string
+          internal_invoice_number: string
+          paid_at: string | null
+          payment_reference: string | null
+          status: string
+          subcontractor_organization_id: string
+          submitted_at: string | null
+          submitted_by: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          external_invoice_number?: string | null
+          id?: string
+          internal_invoice_number: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          status?: string
+          subcontractor_organization_id: string
+          submitted_at?: string | null
+          submitted_by: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          external_invoice_number?: string | null
+          id?: string
+          internal_invoice_number?: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          status?: string
+          subcontractor_organization_id?: string
+          submitted_at?: string | null
+          submitted_by?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "invoices_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_subcontractor_organization_id_fkey"
+            columns: ["subcontractor_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "invoices_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           address: string | null
@@ -876,6 +1018,10 @@ export type Database = {
       calculate_first_time_fix_rate: {
         Args: { start_date?: string; end_date?: string }
         Returns: number
+      }
+      generate_internal_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       generate_work_order_number: {
         Args: Record<PropertyKey, never>
