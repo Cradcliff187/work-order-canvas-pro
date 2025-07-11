@@ -416,6 +416,12 @@ With Check: (Same as Using expression)
 
 ### employee_reports
 
+**Admins can view all employee reports**
+```sql
+Policy: SELECT
+Using: auth_is_admin()
+```
+
 **Admins can manage all employee reports**
 ```sql
 Policy: ALL
@@ -423,14 +429,31 @@ Using: auth_is_admin()
 With Check: auth_is_admin()
 ```
 
-**Employees can manage their own reports**
+**Employees can view their own reports**
 ```sql
-Policy: ALL
-Using: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
-With Check: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
+Policy: SELECT
+Using: (employee_user_id = auth_profile_id())
+```
+
+**Employees can create their own reports**
+```sql
+Policy: INSERT
+With Check: (employee_user_id = auth_profile_id())
+```
+
+**Employees can update their own reports**
+```sql
+Policy: UPDATE
+Using: (employee_user_id = auth_profile_id())
 ```
 
 ### receipts
+
+**Admins can view all receipts**
+```sql
+Policy: SELECT
+Using: auth_is_admin()
+```
 
 **Admins can manage all receipts**
 ```sql
@@ -439,27 +462,49 @@ Using: auth_is_admin()
 With Check: auth_is_admin()
 ```
 
-**Employees can manage their own receipts**
+**Employees can view their own receipts**
 ```sql
-Policy: ALL
-Using: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
-With Check: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
+Policy: SELECT
+Using: (employee_user_id = auth_profile_id())
+```
+
+**Employees can create their own receipts**
+```sql
+Policy: INSERT
+With Check: (employee_user_id = auth_profile_id())
+```
+
+**Employees can update their own receipts**
+```sql
+Policy: UPDATE
+Using: (employee_user_id = auth_profile_id())
 ```
 
 ### receipt_work_orders
 
-**Admins can manage all receipt work orders**
+**Admins can view all receipt allocations**
+```sql
+Policy: SELECT
+Using: auth_is_admin()
+```
+
+**Admins can manage all receipt allocations**
 ```sql
 Policy: ALL
 Using: auth_is_admin()
 With Check: auth_is_admin()
 ```
 
-**Employees can manage receipt work orders for their receipts**
+**Employees can view their receipt allocations**
 ```sql
-Policy: ALL
-Using: (auth_user_type() = 'employee' AND receipt_id IN (SELECT r.id FROM receipts r WHERE r.employee_user_id = auth_profile_id()))
-With Check: (Same as Using expression)
+Policy: SELECT
+Using: (EXISTS (SELECT 1 FROM receipts r WHERE r.id = receipt_work_orders.receipt_id AND r.employee_user_id = auth_profile_id()))
+```
+
+**Employees can create their receipt allocations**
+```sql
+Policy: INSERT
+With Check: (EXISTS (SELECT 1 FROM receipts r WHERE r.id = receipt_work_orders.receipt_id AND r.employee_user_id = auth_profile_id()))
 ```
 
 ### audit_logs
