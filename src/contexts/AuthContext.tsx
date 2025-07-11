@@ -27,6 +27,10 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
   refreshProfile: () => Promise<void>;
+  impersonatedProfile: Profile | null;
+  setImpersonation: (profile: Profile | null) => void;
+  clearImpersonation: () => void;
+  isImpersonating: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,7 +49,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
+  const [impersonatedProfile, setImpersonatedProfile] = useState<Profile | null>(null);
   const navigate = useNavigate();
+
+  // Load impersonation from sessionStorage on mount
+  useEffect(() => {
+    const storedImpersonation = sessionStorage.getItem('impersonatedProfile');
+    if (storedImpersonation) {
+      try {
+        setImpersonatedProfile(JSON.parse(storedImpersonation));
+      } catch (error) {
+        console.error('Error parsing stored impersonation:', error);
+        sessionStorage.removeItem('impersonatedProfile');
+      }
+    }
+  }, []);
 
   const fetchProfile = async (userId: string, retryCount = 0): Promise<Profile | null> => {
     try {
@@ -169,8 +187,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Clear impersonation on logout
+    clearImpersonation();
     await supabase.auth.signOut();
     navigate('/', { replace: true });
+  };
+
+  const setImpersonation = (profile: Profile | null) => {
+    setImpersonatedProfile(profile);
+    if (profile) {
+      sessionStorage.setItem('impersonatedProfile', JSON.stringify(profile));
+    } else {
+      sessionStorage.removeItem('impersonatedProfile');
+    }
+  };
+
+  const clearImpersonation = () => {
+    setImpersonatedProfile(null);
+    sessionStorage.removeItem('impersonatedProfile');
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -198,13 +232,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     session,
-    profile,
+    profile: impersonatedProfile || profile, // Return impersonated profile if active
     loading: loading || initializing,
     signUp,
     signIn,
     signOut,
     updateProfile,
     refreshProfile,
+    impersonatedProfile,
+    setImpersonation,
+    clearImpersonation,
+    isImpersonating: !!impersonatedProfile,
   };
 
   return (

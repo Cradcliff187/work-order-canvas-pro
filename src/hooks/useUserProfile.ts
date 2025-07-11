@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useUserProfile = () => {
-  const { profile, loading } = useAuth();
+  const { profile, loading, isImpersonating } = useAuth();
 
   const isAdmin = () => profile?.user_type === 'admin';
   const isEmployee = () => profile?.user_type === 'employee';
@@ -32,6 +32,7 @@ export const useUserProfile = () => {
     isPartner,
     isSubcontractor,
     hasPermission,
-    userType: profile?.user_type
+    userType: profile?.user_type,
+    isImpersonating
   };
 };
