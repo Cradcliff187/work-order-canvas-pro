@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,8 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { useDraftAutoSave } from "@/hooks/useDraftAutoSave";
 import { FileUpload } from "@/components/FileUpload";
-import { ArrowLeft, FileText } from "lucide-react";
+import { DraftIndicator } from "@/components/DraftIndicator";
+import { ArrowLeft, FileText, Save } from "lucide-react";
+import type { PhotoAttachment, ReportDraft } from "@/types/offline";
 
 const reportSchema = z.object({
   workPerformed: z.string().min(10, "Please provide at least 10 characters describing the work performed"),
@@ -31,6 +34,7 @@ export default function SubmitReport() {
   const workOrderQuery = getWorkOrder(workOrderId!);
   
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [photoAttachments, setPhotoAttachments] = useState<PhotoAttachment[]>([]);
   
   const { uploadFiles, uploadProgress, isUploading } = useFileUpload({
     maxFiles: 10,
@@ -49,9 +53,92 @@ export default function SubmitReport() {
     },
   });
 
-  const handleFilesSelected = (files: File[]) => {
+  // Auto-save functionality
+  const { manualSave, lastSavedDraftId, isAutoSaveEnabled } = useDraftAutoSave({
+    workOrderId: workOrderId!,
+    watch: form.watch,
+    getValues: form.getValues,
+    photos: photoAttachments,
+    enabled: !!workOrderId,
+  });
+
+  // Convert files to photo attachments
+  const convertFilesToAttachments = useCallback(async (files: File[]): Promise<PhotoAttachment[]> => {
+    const attachments: PhotoAttachment[] = [];
+    
+    for (const file of files) {
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        attachments.push({
+          id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          base64Data: base64,
+          mimeType: file.type,
+          size: file.size,
+          originalFile: {
+            name: file.name,
+            lastModified: file.lastModified,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to convert file to attachment:', error);
+      }
+    }
+    
+    return attachments;
+  }, []);
+
+  const handleFilesSelected = useCallback(async (files: File[]) => {
     setSelectedFiles(files);
-  };
+    const attachments = await convertFilesToAttachments(files);
+    setPhotoAttachments(attachments);
+  }, [convertFilesToAttachments]);
+
+  const handleLoadDraft = useCallback((draft: ReportDraft) => {
+    // Load draft data into form
+    form.reset({
+      workPerformed: draft.workPerformed,
+      materialsUsed: draft.materialsUsed,
+      hoursWorked: draft.hoursWorked,
+      invoiceAmount: draft.invoiceAmount,
+      invoiceNumber: draft.invoiceNumber,
+      notes: draft.notes,
+    });
+
+    // Load photos
+    setPhotoAttachments(draft.photos);
+    
+    // Convert back to File objects for display
+    const files = draft.photos.map(photo => {
+      // Create a mock file for display purposes
+      const dataUrl = photo.base64Data;
+      const byteString = atob(dataUrl.split(',')[1]);
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
+      }
+      
+      return new File([arrayBuffer], photo.name, { type: photo.mimeType });
+    });
+    
+    setSelectedFiles(files);
+  }, [form]);
+
+  const handleManualSave = useCallback(async () => {
+    try {
+      await manualSave();
+    } catch (error) {
+      console.error('Manual save failed:', error);
+    }
+  }, [manualSave]);
 
   const onSubmit = async (data: ReportFormData) => {
     if (!workOrderId) return;
@@ -119,18 +206,39 @@ export default function SubmitReport() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to={`/subcontractor/work-orders/${workOrderId}`}>
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">Submit Work Report</h1>
-          <p className="text-muted-foreground">
-            {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`} - {workOrder.title}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link to={`/subcontractor/work-orders/${workOrderId}`}>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Submit Work Report</h1>
+            <p className="text-muted-foreground">
+              {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`} - {workOrder.title}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <DraftIndicator
+            workOrderId={workOrderId!}
+            onLoadDraft={handleLoadDraft}
+            currentDraftId={lastSavedDraftId}
+          />
+          {isAutoSaveEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualSave}
+              className="h-8"
+            >
+              <Save className="h-3 w-3 mr-1" />
+              Save Draft
+            </Button>
+          )}
         </div>
       </div>
 

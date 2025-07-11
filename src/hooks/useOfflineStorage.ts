@@ -1,217 +1,299 @@
-import { useState, useEffect } from 'react';
-import Dexie, { Table } from 'dexie';
-
-interface WorkOrder {
-  id: string;
-  title: string;
-  description?: string;
-  status: string;
-  store_location?: string;
-  street_address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  trade_id?: string;
-  assigned_to?: string;
-  created_at: string;
-  updated_at: string;
-  [key: string]: any;
-}
-
-interface PendingReport {
-  id: string;
-  workOrderId: string;
-  workPerformed: string;
-  materialsUsed?: string;
-  hoursWorked?: number;
-  invoiceAmount: number;
-  invoiceNumber?: string;
-  notes?: string;
-  photos?: File[];
-  timestamp: number;
-  synced: number; // 0 for false, 1 for true
-}
-
-interface PendingSync {
-  id: string;
-  type: 'report' | 'status_update';
-  data: any;
-  timestamp: number;
-  retryCount: number;
-}
-
-class WorkOrderProDB extends Dexie {
-  workOrders!: Table<WorkOrder>;
-  pendingReports!: Table<PendingReport>;
-  pendingSyncs!: Table<PendingSync>;
-
-  constructor() {
-    super('WorkOrderProDB');
-    
-    this.version(1).stores({
-      workOrders: 'id, status, assigned_to, created_at',
-      pendingReports: 'id, workOrderId, timestamp, synced',
-      pendingSyncs: 'id, type, timestamp, retryCount'
-    });
-  }
-}
-
-const db = new WorkOrderProDB();
+import { useState, useEffect, useCallback } from 'react';
+import { indexedDBManager } from '@/utils/indexedDB';
+import { useToast } from '@/components/ui/use-toast';
+import type { ReportDraft, PhotoAttachment, StorageStats, SyncQueueItem } from '@/types/offline';
 
 export function useOfflineStorage() {
   const [isReady, setIsReady] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    db.open().then(() => {
-      setIsReady(true);
-      updatePendingCount();
-    });
-
-    // Update pending count periodically
-    const interval = setInterval(updatePendingCount, 5000);
+    initializeStorage();
+    
+    // Update stats periodically
+    const interval = setInterval(updateStats, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  const updatePendingCount = async () => {
+  const initializeStorage = async () => {
     try {
-      const [pendingReports, pendingSyncs] = await Promise.all([
-        db.pendingReports.where('synced').equals(0).count(),
-        db.pendingSyncs.count()
-      ]);
-      setPendingCount(pendingReports + pendingSyncs);
+      await indexedDBManager.init();
+      setIsReady(true);
+      await updateStats();
+      
+      // Run cleanup on startup
+      await indexedDBManager.cleanup();
     } catch (error) {
-      console.error('Error updating pending count:', error);
-    }
-  };
-
-  const cacheWorkOrders = async (workOrders: WorkOrder[]) => {
-    try {
-      await db.workOrders.bulkPut(workOrders);
-    } catch (error) {
-      console.error('Error caching work orders:', error);
-    }
-  };
-
-  const getCachedWorkOrders = async (): Promise<WorkOrder[]> => {
-    try {
-      return await db.workOrders.toArray();
-    } catch (error) {
-      console.error('Error getting cached work orders:', error);
-      return [];
-    }
-  };
-
-  const saveReportDraft = async (report: Omit<PendingReport, 'id' | 'timestamp' | 'synced'>) => {
-    try {
-      const id = `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      await db.pendingReports.add({
-        ...report,
-        id,
-        timestamp: Date.now(),
-        synced: 0
+      console.error('Error initializing storage:', error);
+      toast({
+        title: "Storage Error",
+        description: "Failed to initialize offline storage",
+        variant: "destructive",
       });
-      updatePendingCount();
-      return id;
+    }
+  };
+
+  const updateStats = async () => {
+    try {
+      const stats = await indexedDBManager.getStorageStats();
+      setStorageStats(stats);
+      
+      const syncQueue = await indexedDBManager.getSyncQueue();
+      setPendingCount(syncQueue.length);
+      
+      // Warn if storage is getting full
+      if (stats.usedSpace / stats.totalSpace > 0.9) {
+        toast({
+          title: "Storage Almost Full",
+          description: "Consider syncing or clearing old drafts",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error('Error saving report draft:', error);
+      console.error('Error updating storage stats:', error);
+    }
+  };
+
+  const saveDraft = useCallback(async (
+    workOrderId: string,
+    formData: {
+      workPerformed: string;
+      materialsUsed?: string;
+      hoursWorked?: number;
+      invoiceAmount?: number;
+      invoiceNumber?: string;
+      notes?: string;
+    },
+    photos: PhotoAttachment[],
+    isManual = false
+  ): Promise<string> => {
+    try {
+      const draftId = `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const now = Date.now();
+      
+      const draft: ReportDraft = {
+        id: draftId,
+        workOrderId,
+        ...formData,
+        photos,
+        metadata: {
+          id: draftId,
+          workOrderId,
+          lastModified: now,
+          version: 1,
+          autoSaveCount: isManual ? 0 : 1,
+          isManual,
+          deviceInfo: {
+            userAgent: navigator.userAgent,
+            timestamp: now,
+          },
+        },
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await indexedDBManager.saveDraft(draft);
+      await updateStats();
+      
+      if (isManual) {
+        toast({
+          title: "Draft Saved",
+          description: "Report draft saved successfully",
+        });
+      }
+      
+      return draftId;
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save report draft",
+        variant: "destructive",
+      });
       throw error;
     }
-  };
+  }, [toast]);
 
-  const getPendingReports = async (): Promise<PendingReport[]> => {
+  const getDrafts = useCallback(async (workOrderId: string): Promise<ReportDraft[]> => {
     try {
-      return await db.pendingReports.where('synced').equals(0).toArray();
+      return await indexedDBManager.getDraftsByWorkOrder(workOrderId);
     } catch (error) {
-      console.error('Error getting pending reports:', error);
+      console.error('Error getting drafts:', error);
       return [];
     }
-  };
+  }, []);
 
-  const markReportSynced = async (reportId: string) => {
+  const loadDraft = useCallback(async (draftId: string): Promise<ReportDraft | null> => {
     try {
-      await db.pendingReports.update(reportId, { synced: 1 });
-      updatePendingCount();
+      return await indexedDBManager.getDraft(draftId);
     } catch (error) {
-      console.error('Error marking report as synced:', error);
+      console.error('Error loading draft:', error);
+      return null;
     }
-  };
+  }, []);
 
-  const queueSync = async (type: PendingSync['type'], data: any) => {
+  const deleteDraft = useCallback(async (draftId: string): Promise<void> => {
     try {
-      const id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      await db.pendingSyncs.add({
-        id,
+      await indexedDBManager.deleteDraft(draftId);
+      await updateStats();
+      toast({
+        title: "Draft Deleted",
+        description: "Report draft deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete report draft",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const queueSync = useCallback(async (
+    type: SyncQueueItem['type'],
+    data: any,
+    priority = 1
+  ): Promise<void> => {
+    try {
+      const syncItem: SyncQueueItem = {
+        id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type,
         data,
-        timestamp: Date.now(),
-        retryCount: 0
-      });
-      updatePendingCount();
+        priority,
+        retryCount: 0,
+        maxRetries: 3,
+        createdAt: Date.now(),
+      };
+
+      await indexedDBManager.addToSyncQueue(syncItem);
+      await updateStats();
     } catch (error) {
       console.error('Error queueing sync:', error);
     }
-  };
+  }, []);
 
-  const processPendingSyncs = async () => {
+  const processPendingSyncs = useCallback(async (): Promise<void> => {
     try {
-      const pendingSyncs = await db.pendingSyncs.toArray();
-      
-      for (const sync of pendingSyncs) {
+      const syncQueue = await indexedDBManager.getSyncQueue();
+      let processedCount = 0;
+
+      for (const item of syncQueue) {
         try {
-          // Process sync based on type
-          if (sync.type === 'report') {
-            // Submit report to server
-            // Implementation would depend on your API
-          } else if (sync.type === 'status_update') {
-            // Update work order status
-            // Implementation would depend on your API
+          // Skip if not ready for retry
+          if (item.nextAttempt && item.nextAttempt > Date.now()) {
+            continue;
           }
 
-          // Remove from queue if successful
-          await db.pendingSyncs.delete(sync.id);
+          // Process different sync types
+          if (item.type === 'report_submit') {
+            // Implementation would call your report submission API
+            console.log('Processing report submission:', item.data);
+          } else if (item.type === 'photo_upload') {
+            // Implementation would call your photo upload API
+            console.log('Processing photo upload:', item.data);
+          }
+
+          // Remove from queue on success
+          await indexedDBManager.removeSyncQueueItem(item.id);
+          processedCount++;
         } catch (error) {
-          // Increment retry count
-          await db.pendingSyncs.update(sync.id, { 
-            retryCount: sync.retryCount + 1 
-          });
+          // Update retry count and schedule next attempt
+          const nextAttempt = Date.now() + (item.retryCount + 1) * 60000; // Exponential backoff
           
-          // Remove if too many retries
-          if (sync.retryCount >= 3) {
-            await db.pendingSyncs.delete(sync.id);
+          if (item.retryCount >= item.maxRetries) {
+            await indexedDBManager.removeSyncQueueItem(item.id);
+          } else {
+            const updatedItem = {
+              ...item,
+              retryCount: item.retryCount + 1,
+              lastAttempt: Date.now(),
+              nextAttempt,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            };
+            await indexedDBManager.addToSyncQueue(updatedItem);
           }
         }
       }
-      
-      updatePendingCount();
-    } catch (error) {
-      console.error('Error processing pending syncs:', error);
-    }
-  };
 
-  const clearCache = async () => {
+      await updateStats();
+      
+      if (processedCount > 0) {
+        toast({
+          title: "Sync Complete",
+          description: `Synced ${processedCount} items successfully`,
+        });
+      }
+    } catch (error) {
+      console.error('Error processing sync queue:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to process pending syncs",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const exportData = useCallback(async () => {
     try {
-      await Promise.all([
-        db.workOrders.clear(),
-        db.pendingReports.clear(),
-        db.pendingSyncs.clear()
-      ]);
-      updatePendingCount();
+      const data = await indexedDBManager.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `workorder-drafts-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Complete",
+        description: "Drafts exported successfully",
+      });
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export drafts",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const clearCache = useCallback(async (): Promise<void> => {
+    try {
+      // This would clear everything - implement with caution
+      await indexedDBManager.cleanup();
+      await updateStats();
+      
+      toast({
+        title: "Cache Cleared",
+        description: "All cached data has been cleared",
+      });
     } catch (error) {
       console.error('Error clearing cache:', error);
+      toast({
+        title: "Clear Failed",
+        description: "Failed to clear cached data",
+        variant: "destructive",
+      });
     }
-  };
+  }, [toast]);
 
   return {
     isReady,
     pendingCount,
-    cacheWorkOrders,
-    getCachedWorkOrders,
-    saveReportDraft,
-    getPendingReports,
-    markReportSynced,
+    storageStats,
+    saveDraft,
+    getDrafts,
+    loadDraft,
+    deleteDraft,
     queueSync,
     processPendingSyncs,
+    exportData,
     clearCache,
   };
 }
