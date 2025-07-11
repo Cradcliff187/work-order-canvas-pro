@@ -4,7 +4,8 @@ import type { ReportDraft, PhotoAttachment, SyncQueueItem, StorageStats, Offline
 export class IndexedDBManager implements StorageManager {
   private static instance: IndexedDBManager | null = null;
   private dbName = 'WorkOrderProDB';
-  private version = 2;
+  private expectedVersion = 2;
+  private actualVersion: number | null = null;
   private db: IDBDatabase | null = null;
   private isInitializing = false;
   private initPromise: Promise<void> | null = null;
@@ -20,12 +21,67 @@ export class IndexedDBManager implements StorageManager {
     cleanupThresholdDays: 30,
   };
 
+  // Migration functions for each version
+  private migrations: Record<number, (db: IDBDatabase) => void> = {
+    1: this.upgradeToV1.bind(this),
+    2: this.upgradeToV2.bind(this),
+  };
+
+  private upgradeToV1(db: IDBDatabase): void {
+    // Initial schema creation
+    if (!db.objectStoreNames.contains('drafts')) {
+      const draftsStore = db.createObjectStore('drafts', { keyPath: 'id' });
+      draftsStore.createIndex('workOrderId', 'workOrderId', { unique: false });
+      draftsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+    }
+  }
+
+  private upgradeToV2(db: IDBDatabase): void {
+    // Add additional stores and indexes
+    if (!db.objectStoreNames.contains('attachments')) {
+      const attachmentsStore = db.createObjectStore('attachments', { keyPath: 'id' });
+      attachmentsStore.createIndex('draftId', 'draftId', { unique: false });
+      attachmentsStore.createIndex('size', 'size', { unique: false });
+    }
+
+    if (!db.objectStoreNames.contains('syncQueue')) {
+      const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+      syncStore.createIndex('type', 'type', { unique: false });
+      syncStore.createIndex('priority', 'priority', { unique: false });
+      syncStore.createIndex('nextAttempt', 'nextAttempt', { unique: false });
+    }
+
+    if (!db.objectStoreNames.contains('metadata')) {
+      db.createObjectStore('metadata', { keyPath: 'key' });
+    }
+
+    // Add missing indexes to drafts store if they don't exist
+    const draftsStore = db.objectStoreNames.contains('drafts') ? 
+      db.transaction('drafts').objectStore('drafts') : null;
+    
+    if (draftsStore && !draftsStore.indexNames.contains('isManual')) {
+      draftsStore.createIndex('isManual', 'metadata.isManual', { unique: false });
+    }
+  }
+
   // Singleton pattern
   static getInstance(): IndexedDBManager {
     if (!IndexedDBManager.instance) {
       IndexedDBManager.instance = new IndexedDBManager();
     }
     return IndexedDBManager.instance;
+  }
+
+  private async detectCurrentVersion(): Promise<number> {
+    return new Promise((resolve) => {
+      const testRequest = indexedDB.open(this.dbName);
+      testRequest.onsuccess = () => {
+        const currentVersion = testRequest.result.version;
+        testRequest.result.close();
+        resolve(currentVersion);
+      };
+      testRequest.onerror = () => resolve(1);
+    });
   }
 
   async init(): Promise<void> {
@@ -48,63 +104,72 @@ export class IndexedDBManager implements StorageManager {
     }
   }
 
-  private performInit(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
-
-      request.onerror = () => {
-        console.error('IndexedDB initialization failed:', request.error);
-        // Safari fallback - try without version
-        if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
-          this.initSafariFallback().then(resolve).catch(reject);
-        } else {
-          reject(request.error);
-        }
-      };
+  private async performInit(): Promise<void> {
+    try {
+      // Detect current version and calculate next version
+      const currentVersion = await this.detectCurrentVersion();
+      this.actualVersion = Math.max(currentVersion + 1, this.expectedVersion);
       
-      request.onsuccess = () => {
-        this.db = request.result;
-        
-        // Add error handler for the database
-        this.db.onerror = (event) => {
-          console.error('IndexedDB error:', event);
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.dbName, this.actualVersion);
+
+        request.onerror = () => {
+          console.error('IndexedDB initialization failed:', request.error);
+          // Safari fallback - try without version
+          if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+            this.initSafariFallback().then(resolve).catch(reject);
+          } else {
+            reject(request.error);
+          }
         };
         
-        resolve();
-      };
+        request.onsuccess = () => {
+          this.db = request.result;
+          
+          // Add error handler for the database
+          this.db.onerror = (event) => {
+            console.error('IndexedDB error:', event);
+          };
+          
+          resolve();
+        };
 
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
 
-        // Create drafts store
-        if (!db.objectStoreNames.contains('drafts')) {
-          const draftsStore = db.createObjectStore('drafts', { keyPath: 'id' });
-          draftsStore.createIndex('workOrderId', 'workOrderId', { unique: false });
-          draftsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-          draftsStore.createIndex('isManual', 'metadata.isManual', { unique: false });
-        }
+          // Create drafts store
+          if (!db.objectStoreNames.contains('drafts')) {
+            const draftsStore = db.createObjectStore('drafts', { keyPath: 'id' });
+            draftsStore.createIndex('workOrderId', 'workOrderId', { unique: false });
+            draftsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            draftsStore.createIndex('isManual', 'metadata.isManual', { unique: false });
+          }
 
-        // Create attachments store
-        if (!db.objectStoreNames.contains('attachments')) {
-          const attachmentsStore = db.createObjectStore('attachments', { keyPath: 'id' });
-          attachmentsStore.createIndex('draftId', 'draftId', { unique: false });
-          attachmentsStore.createIndex('size', 'size', { unique: false });
-        }
+          // Create attachments store
+          if (!db.objectStoreNames.contains('attachments')) {
+            const attachmentsStore = db.createObjectStore('attachments', { keyPath: 'id' });
+            attachmentsStore.createIndex('draftId', 'draftId', { unique: false });
+            attachmentsStore.createIndex('size', 'size', { unique: false });
+          }
 
-        // Create sync queue store
-        if (!db.objectStoreNames.contains('syncQueue')) {
-          const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-          syncStore.createIndex('type', 'type', { unique: false });
-          syncStore.createIndex('priority', 'priority', { unique: false });
-          syncStore.createIndex('nextAttempt', 'nextAttempt', { unique: false });
-        }
+          // Create sync queue store
+          if (!db.objectStoreNames.contains('syncQueue')) {
+            const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+            syncStore.createIndex('type', 'type', { unique: false });
+            syncStore.createIndex('priority', 'priority', { unique: false });
+            syncStore.createIndex('nextAttempt', 'nextAttempt', { unique: false });
+          }
 
-        // Create metadata store
-        if (!db.objectStoreNames.contains('metadata')) {
-          db.createObjectStore('metadata', { keyPath: 'key' });
-        }
-      };
-    });
+          // Create metadata store
+          if (!db.objectStoreNames.contains('metadata')) {
+            db.createObjectStore('metadata', { keyPath: 'key' });
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Failed to perform init:', error);
+      throw error;
+    }
   }
 
   // Safari fallback initialization
@@ -288,7 +353,7 @@ export class IndexedDBManager implements StorageManager {
       syncQueue,
       metadata: {
         exportedAt: Date.now(),
-        version: this.version.toString(),
+        version: (this.actualVersion || this.expectedVersion).toString(),
         deviceInfo: navigator.userAgent,
       },
     };
