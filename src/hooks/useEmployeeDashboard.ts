@@ -93,6 +93,19 @@ const fetchRecentReceipts = async (employeeId: string): Promise<EmployeeReceipt[
   return data || [];
 };
 
+// Fetch employee's monthly expenses total
+const fetchMonthlyExpenses = async (employeeId: string, startDate: Date, endDate: Date): Promise<number> => {
+  const { data, error } = await supabase
+    .from('receipts')
+    .select('amount')
+    .eq('employee_user_id', employeeId)
+    .gte('receipt_date', format(startDate, 'yyyy-MM-dd'))
+    .lte('receipt_date', format(endDate, 'yyyy-MM-dd'));
+
+  if (error) throw error;
+  return (data || []).reduce((total, receipt) => total + receipt.amount, 0);
+};
+
 // Get total hours for a date range
 const getTotalHours = (timeReports: EmployeeTimeReport[]): number => {
   return timeReports.reduce((total, report) => total + report.hours_worked, 0);
@@ -171,6 +184,14 @@ export const useEmployeeDashboard = () => {
     refetchInterval: 30000,
   });
 
+  // Monthly expenses
+  const monthlyExpensesQuery = useQuery({
+    queryKey: ['employee-monthly-expenses', employeeId, monthStart, monthEnd],
+    queryFn: () => fetchMonthlyExpenses(employeeId!, monthStart, monthEnd),
+    enabled: !!employeeId,
+    refetchInterval: 30000,
+  });
+
   // Pending time reports
   const pendingTimeReportsQuery = useQuery({
     queryKey: ['employee-pending-time-reports', employeeId],
@@ -204,6 +225,7 @@ export const useEmployeeDashboard = () => {
     pendingTimeReports: pendingTimeReportsQuery.data,
     totalHoursThisWeek,
     totalHoursThisMonth,
+    monthlyExpenses: monthlyExpensesQuery.data || 0,
     recentTimeReports: recentTimeReportsQuery.data,
     isLoading: 
       activeAssignmentsQuery.isLoading ||
@@ -211,13 +233,15 @@ export const useEmployeeDashboard = () => {
       hoursThisMonthQuery.isLoading ||
       recentReceiptsQuery.isLoading ||
       pendingTimeReportsQuery.isLoading ||
-      recentTimeReportsQuery.isLoading,
+      recentTimeReportsQuery.isLoading ||
+      monthlyExpensesQuery.isLoading,
     isError: 
       activeAssignmentsQuery.isError ||
       hoursThisWeekQuery.isError ||
       hoursThisMonthQuery.isError ||
       recentReceiptsQuery.isError ||
       pendingTimeReportsQuery.isError ||
-      recentTimeReportsQuery.isError,
+      recentTimeReportsQuery.isError ||
+      monthlyExpensesQuery.isError,
   };
 };

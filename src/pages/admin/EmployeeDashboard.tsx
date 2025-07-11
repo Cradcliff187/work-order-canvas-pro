@@ -27,6 +27,7 @@ const EmployeeDashboard = () => {
     pendingTimeReports,
     totalHoursThisWeek,
     totalHoursThisMonth,
+    monthlyExpenses,
     recentTimeReports,
     isLoading,
     isError
@@ -99,16 +100,16 @@ const EmployeeDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Reports</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Expenses This Month</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-8 w-8 mb-1" />
+              <Skeleton className="h-8 w-20 mb-1" />
             ) : (
-              <div className="text-2xl font-bold text-warning">{pendingTimeReports || 0}</div>
+              <div className="text-2xl font-bold">${(monthlyExpenses || 0).toFixed(2)}</div>
             )}
-            <p className="text-xs text-muted-foreground">Need to submit</p>
+            <p className="text-xs text-muted-foreground">Total this month</p>
           </CardContent>
         </Card>
       </div>
