@@ -360,30 +360,32 @@ $$;
 
 ### generate_work_order_number_v2()
 
-**Purpose**: Generate partner-specific work order numbers using organization initials and location
+**Purpose**: Generate partner-specific work order numbers using organization initials and location with enhanced error handling
 
 ```sql
 CREATE OR REPLACE FUNCTION public.generate_work_order_number_v2(
   org_id uuid,
   location_number text DEFAULT NULL
 )
-RETURNS text
+RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
 DECLARE
   org_initials text;
   sequence_num integer;
   work_order_num text;
+  fallback_num text;
+  org_name text;
 BEGIN
-  -- Get organization initials and lock row for sequence update
-  SELECT initials INTO org_initials 
+  -- Get organization details and lock row for sequence update
+  SELECT initials, name INTO org_initials, org_name
   FROM public.organizations 
   WHERE id = org_id AND is_active = true
   FOR UPDATE;
   
-  -- Validate initials exist
-  IF org_initials IS NULL OR org_initials = '' THEN
-    RAISE EXCEPTION 'Organization initials are required for work order numbering. Please set initials for organization ID: %', org_id;
+  -- If organization not found
+  IF org_name IS NULL THEN
+    RAISE EXCEPTION 'Organization not found or inactive: %', org_id;
   END IF;
   
   -- Get and increment sequence number atomically
@@ -392,6 +394,20 @@ BEGIN
   WHERE id = org_id
   RETURNING next_sequence_number - 1 INTO sequence_num;
   
+  -- Generate fallback number
+  fallback_num := public.generate_work_order_number();
+  
+  -- If initials are missing or empty, return warning with fallback
+  IF org_initials IS NULL OR org_initials = '' THEN
+    RETURN jsonb_build_object(
+      'work_order_number', fallback_num,
+      'is_fallback', true,
+      'warning', 'Organization "' || org_name || '" needs initials for smart numbering. Using fallback number.',
+      'organization_name', org_name,
+      'requires_initials', true
+    );
+  END IF;
+  
   -- Build work order number based on location presence
   IF location_number IS NOT NULL AND location_number != '' THEN
     work_order_num := org_initials || '-' || location_number || '-' || LPAD(sequence_num::text, 3, '0');
@@ -399,10 +415,25 @@ BEGIN
     work_order_num := org_initials || '-' || LPAD(sequence_num::text, 4, '0');
   END IF;
   
-  RETURN work_order_num;
+  RETURN jsonb_build_object(
+    'work_order_number', work_order_num,
+    'is_fallback', false,
+    'organization_name', org_name,
+    'requires_initials', false
+  );
 EXCEPTION
   WHEN NO_DATA_FOUND THEN
     RAISE EXCEPTION 'Organization not found or inactive: %', org_id;
+  WHEN OTHERS THEN
+    -- If anything else fails, return fallback with error info
+    RAISE WARNING 'Work order numbering failed for org %: %, using fallback', org_id, SQLERRM;
+    RETURN jsonb_build_object(
+      'work_order_number', public.generate_work_order_number(),
+      'is_fallback', true,
+      'warning', 'Work order numbering system encountered an error. Using fallback number.',
+      'error', SQLERRM,
+      'requires_initials', false
+    );
 END;
 $$;
 ```
@@ -411,32 +442,57 @@ $$;
 - `org_id` (uuid) - Organization ID for initials lookup
 - `location_number` (text, optional) - Location number for location-specific numbering
 
-**Returns**: Formatted work order number  
-**Format:**
+**Returns**: Structured JSON response with enhanced error handling  
+**Response Format:**
+```json
+{
+  "work_order_number": "ABC-504-001",
+  "is_fallback": false,
+  "organization_name": "Organization Name",
+  "requires_initials": false
+}
+```
+
+**Response Fields:**
+- `work_order_number` (text) - The generated work order number
+- `is_fallback` (boolean) - Whether fallback numbering was used
+- `organization_name` (text) - Name of the organization
+- `requires_initials` (boolean) - Whether organization needs initials set
+- `warning` (text, optional) - User-friendly warning message
+- `error` (text, optional) - Technical error details
+
+**Number Format:**
 - With location: `INITIALS-LOCATION-SEQUENCE` (e.g., "ABC-504-001")
 - Without location: `INITIALS-SEQUENCE` (e.g., "ABC-0001")
+- Fallback: `WO-YYYY-NNNN` (e.g., "WO-2025-0001")
 
 **Features:**
 - Uses per-organization sequence numbers from `organizations.next_sequence_number`
 - Atomic sequence increment with SELECT...FOR UPDATE for concurrency safety
-- Clear error messages for missing organization initials
-- Supports both location-specific and general numbering formats
+- Graceful fallback to legacy numbering when organization initials are missing
+- Structured error responses for better user experience
+- Enhanced logging for troubleshooting
 
 **Usage Examples:**
 ```sql
--- With location
+-- With location and organization initials
 SELECT generate_work_order_number_v2('org-uuid', '504');
--- Returns: ABC-504-001
+-- Returns: {"work_order_number": "ABC-504-001", "is_fallback": false, ...}
 
 -- Without location  
 SELECT generate_work_order_number_v2('org-uuid', NULL);
--- Returns: ABC-0001
+-- Returns: {"work_order_number": "ABC-0001", "is_fallback": false, ...}
+
+-- Organization without initials (fallback)
+SELECT generate_work_order_number_v2('no-initials-org-uuid', '504');
+-- Returns: {"work_order_number": "WO-2025-0001", "is_fallback": true, "warning": "...", ...}
 ```
 
 **Error Handling:**
-- Raises exception if organization initials are NULL or empty
-- Raises exception if organization not found or inactive
-- Prevents race conditions with row-level locking
+- Returns structured warnings for missing organization initials
+- Graceful fallback to legacy numbering system
+- Comprehensive error logging for monitoring
+- User-friendly error messages for UI display
 
 ### update_updated_at_column()
 
@@ -457,33 +513,74 @@ $$;
 **Usage**: Applied to tables with updated_at columns  
 **Trigger**: BEFORE UPDATE on multiple tables
 
+### generate_work_order_number_simple()
+
+**Purpose**: Simple wrapper function for backward compatibility
+
+```sql
+CREATE OR REPLACE FUNCTION public.generate_work_order_number_simple(
+  org_id uuid,
+  location_number text DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  result := public.generate_work_order_number_v2(org_id, location_number);
+  RETURN result->>'work_order_number';
+END;
+$$;
+```
+
+**Parameters:**
+- `org_id` (uuid) - Organization ID for initials lookup
+- `location_number` (text, optional) - Location number for location-specific numbering
+
+**Returns**: Work order number as text (extracts from v2 JSON response)  
+**Usage**: For code that needs simple text return instead of structured JSON
+
 ### trigger_generate_work_order_number_v2()
 
-**Purpose**: Trigger function for automatic work order number generation with fallback
+**Purpose**: Enhanced trigger function for automatic work order number generation with structured error handling
 
 ```sql
 CREATE OR REPLACE FUNCTION public.trigger_generate_work_order_number_v2()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
+DECLARE
+  numbering_result jsonb;
 BEGIN
   -- Only generate if work_order_number is not already set
   IF NEW.work_order_number IS NULL OR NEW.work_order_number = '' THEN
-    -- Use organization_id (submitter) for numbering by default
-    -- Use partner_location_number if provided
-    NEW.work_order_number := public.generate_work_order_number_v2(
-      NEW.organization_id,
-      NEW.partner_location_number
-    );
+    BEGIN
+      -- Use organization_id (submitter) for numbering by default
+      -- Use partner_location_number if provided
+      numbering_result := public.generate_work_order_number_v2(
+        NEW.organization_id,
+        NEW.partner_location_number
+      );
+      
+      -- Extract the work order number from the result
+      NEW.work_order_number := numbering_result->>'work_order_number';
+      
+      -- Log warnings or errors for monitoring
+      IF numbering_result->>'is_fallback' = 'true' THEN
+        RAISE WARNING 'Work order % using fallback numbering: %', 
+          NEW.id, numbering_result->>'warning';
+      END IF;
+      
+    EXCEPTION
+      WHEN OTHERS THEN
+        -- Ultimate fallback to legacy system
+        RAISE WARNING 'Advanced work order numbering failed (%), falling back to legacy numbering', SQLERRM;
+        NEW.work_order_number := public.generate_work_order_number();
+    END;
   END IF;
   
   RETURN NEW;
-EXCEPTION
-  WHEN OTHERS THEN
-    -- If advanced numbering fails, fall back to legacy system
-    RAISE WARNING 'Advanced work order numbering failed (%), falling back to legacy numbering', SQLERRM;
-    NEW.work_order_number := public.generate_work_order_number();
-    RETURN NEW;
 END;
 $$;
 ```
@@ -491,10 +588,12 @@ $$;
 **Trigger**: `trigger_work_order_number_v2` on `work_orders` table BEFORE INSERT  
 **Features:**
 - Automatic work order number generation on insert
-- Uses advanced numbering with organization initials when possible
+- Uses enhanced v2 numbering with structured error handling
+- Extracts work order number from JSON response
+- Logs fallback warnings for monitoring and troubleshooting
 - Falls back to legacy WO-YYYY-NNNN format if advanced numbering fails
 - Only generates numbers if not already provided
-- Error-resilient with warning logs for troubleshooting
+- Multiple layers of error resilience
 
 ### refresh_analytics_views()
 
