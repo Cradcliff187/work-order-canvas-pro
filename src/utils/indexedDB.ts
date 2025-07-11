@@ -4,7 +4,7 @@ import type { ReportDraft, PhotoAttachment, SyncQueueItem, StorageStats, Offline
 export class IndexedDBManager implements StorageManager {
   private static instance: IndexedDBManager | null = null;
   private dbName = 'WorkOrderProDB';
-  private expectedVersion = 2;
+  private expectedVersion = 3;
   private actualVersion: number | null = null;
   private db: IDBDatabase | null = null;
   private isInitializing = false;
@@ -25,6 +25,7 @@ export class IndexedDBManager implements StorageManager {
   private migrations: Record<number, (db: IDBDatabase) => void> = {
     1: this.upgradeToV1.bind(this),
     2: this.upgradeToV2.bind(this),
+    3: this.upgradeToV3.bind(this),
   };
 
   private upgradeToV1(db: IDBDatabase): void {
@@ -61,6 +62,41 @@ export class IndexedDBManager implements StorageManager {
     
     if (draftsStore && !draftsStore.indexNames.contains('isManual')) {
       draftsStore.createIndex('isManual', 'metadata.isManual', { unique: false });
+    }
+  }
+
+  private upgradeToV3(db: IDBDatabase): void {
+    // Version 3: Complete schema consolidation and index validation
+    this.createCompleteSchema(db);
+  }
+
+  private createCompleteSchema(db: IDBDatabase): void {
+    // Create drafts store with all required indexes
+    if (!db.objectStoreNames.contains('drafts')) {
+      const draftsStore = db.createObjectStore('drafts', { keyPath: 'id' });
+      draftsStore.createIndex('workOrderId', 'workOrderId', { unique: false });
+      draftsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+      draftsStore.createIndex('isManual', 'metadata.isManual', { unique: false });
+    }
+
+    // Create attachments store
+    if (!db.objectStoreNames.contains('attachments')) {
+      const attachmentsStore = db.createObjectStore('attachments', { keyPath: 'id' });
+      attachmentsStore.createIndex('draftId', 'draftId', { unique: false });
+      attachmentsStore.createIndex('size', 'size', { unique: false });
+    }
+
+    // Create sync queue store
+    if (!db.objectStoreNames.contains('syncQueue')) {
+      const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+      syncStore.createIndex('type', 'type', { unique: false });
+      syncStore.createIndex('priority', 'priority', { unique: false });
+      syncStore.createIndex('nextAttempt', 'nextAttempt', { unique: false });
+    }
+
+    // Create metadata store
+    if (!db.objectStoreNames.contains('metadata')) {
+      db.createObjectStore('metadata', { keyPath: 'key' });
     }
   }
 
@@ -106,12 +142,11 @@ export class IndexedDBManager implements StorageManager {
 
   private async performInit(): Promise<void> {
     try {
-      // Detect current version and calculate next version
-      const currentVersion = await this.detectCurrentVersion();
-      this.actualVersion = Math.max(currentVersion + 1, this.expectedVersion);
+      // Use fixed version 3 instead of dynamic calculation
+      this.actualVersion = this.expectedVersion;
       
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open(this.dbName, this.actualVersion);
+        const request = indexedDB.open(this.dbName, this.expectedVersion);
 
         request.onerror = () => {
           console.error('IndexedDB initialization failed:', request.error);
@@ -172,7 +207,7 @@ export class IndexedDBManager implements StorageManager {
     }
   }
 
-  // Safari fallback initialization
+  // Safari fallback initialization with complete schema
   private initSafariFallback(): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName);
@@ -186,13 +221,34 @@ export class IndexedDBManager implements StorageManager {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         
-        // Create minimal schema for Safari
-        if (!db.objectStoreNames.contains('drafts')) {
-          const draftsStore = db.createObjectStore('drafts', { keyPath: 'id' });
-          draftsStore.createIndex('workOrderId', 'workOrderId', { unique: false });
-        }
+        // Create complete schema for Safari fallback
+        this.createCompleteSchema(db);
       };
     });
+  }
+
+  // Helper method to safely check if an index exists
+  private indexExists(store: IDBObjectStore, indexName: string): boolean {
+    try {
+      return store.indexNames.contains(indexName);
+    } catch (error) {
+      console.warn(`Error checking index ${indexName}:`, error);
+      return false;
+    }
+  }
+
+  // Helper method to safely access an index
+  private safeGetIndex(store: IDBObjectStore, indexName: string): IDBIndex | null {
+    try {
+      if (this.indexExists(store, indexName)) {
+        return store.index(indexName);
+      }
+      console.warn(`Index ${indexName} not found in store ${store.name}`);
+      return null;
+    } catch (error) {
+      console.error(`Error accessing index ${indexName}:`, error);
+      return null;
+    }
   }
 
   async saveDraft(draft: ReportDraft): Promise<void> {
@@ -240,7 +296,22 @@ export class IndexedDBManager implements StorageManager {
 
     const transaction = this.db.transaction(['drafts'], 'readonly');
     const store = transaction.objectStore('drafts');
-    const index = store.index('workOrderId');
+    const index = this.safeGetIndex(store, 'workOrderId');
+
+    if (!index) {
+      // Fallback to full table scan if index doesn't exist
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => {
+          const allDrafts = request.result
+            .filter(draft => draft.workOrderId === workOrderId)
+            .map(draft => this.decompressDraft(draft));
+          allDrafts.sort((a, b) => b.updatedAt - a.updatedAt);
+          resolve(allDrafts);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
 
     return new Promise((resolve, reject) => {
       const request = index.getAll(workOrderId);
@@ -393,25 +464,45 @@ export class IndexedDBManager implements StorageManager {
 
     const transaction = this.db.transaction(['drafts', 'syncQueue'], 'readwrite');
     
-    // Clean old drafts
+    // Clean old drafts using safe index access
     const draftsStore = transaction.objectStore('drafts');
-    const draftsIndex = draftsStore.index('updatedAt');
-    const draftsRequest = draftsIndex.openCursor();
+    const draftsIndex = this.safeGetIndex(draftsStore, 'updatedAt');
 
-    await new Promise<void>((resolve, reject) => {
-      draftsRequest.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest).result;
-        if (cursor) {
-          if (cursor.value.updatedAt < cutoffTime && !cursor.value.metadata.isManual) {
-            cursor.delete();
+    if (draftsIndex) {
+      // Use index if available
+      const draftsRequest = draftsIndex.openCursor();
+      await new Promise<void>((resolve, reject) => {
+        draftsRequest.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest).result;
+          if (cursor) {
+            if (cursor.value.updatedAt < cutoffTime && !cursor.value.metadata?.isManual) {
+              cursor.delete();
+            }
+            cursor.continue();
+          } else {
+            resolve();
           }
-          cursor.continue();
-        } else {
-          resolve();
-        }
-      };
-      draftsRequest.onerror = () => reject(draftsRequest.error);
-    });
+        };
+        draftsRequest.onerror = () => reject(draftsRequest.error);
+      });
+    } else {
+      // Fallback to full table scan
+      const draftsRequest = draftsStore.openCursor();
+      await new Promise<void>((resolve, reject) => {
+        draftsRequest.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest).result;
+          if (cursor) {
+            if (cursor.value.updatedAt < cutoffTime && !cursor.value.metadata?.isManual) {
+              cursor.delete();
+            }
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+        draftsRequest.onerror = () => reject(draftsRequest.error);
+      });
+    }
 
     // Clean old sync queue items
     const syncStore = transaction.objectStore('syncQueue');
@@ -433,7 +524,11 @@ export class IndexedDBManager implements StorageManager {
     });
 
     // Update cleanup timestamp
-    await this.setMetadata('lastCleanup', Date.now());
+    try {
+      await this.setMetadata('lastCleanup', Date.now());
+    } catch (error) {
+      console.warn('Failed to update cleanup timestamp:', error);
+    }
   }
 
   private async getAllDrafts(): Promise<ReportDraft[]> {
