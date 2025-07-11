@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredUserType?: 'admin' | 'partner' | 'subcontractor';
+  requiredUserType?: 'admin' | 'partner' | 'subcontractor' | 'employee';
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
@@ -29,7 +29,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
   if (requiredUserType && profile?.user_type !== requiredUserType) {
     // Check if user has sufficient permissions
     const userTypeHierarchy = {
-      'admin': 3,
+      'admin': 4,
+      'employee': 3,
       'partner': 2,
       'subcontractor': 1
     };

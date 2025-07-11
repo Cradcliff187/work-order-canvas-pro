@@ -94,7 +94,7 @@ export function UserFilters({ table }: UserFiltersProps) {
             <div className="space-y-2">
               <h5 className="text-sm font-medium">User Type</h5>
               <div className="space-y-2">
-                {['admin', 'partner', 'subcontractor'].map((type) => (
+                {['admin', 'employee', 'partner', 'subcontractor'].map((type) => (
                   <div key={type} className="flex items-center space-x-2">
                     <Checkbox
                       id={`type-${type}`}

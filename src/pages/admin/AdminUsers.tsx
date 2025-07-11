@@ -20,7 +20,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor';
+  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   is_active: boolean;
   phone?: string;
   company_name?: string;
@@ -87,6 +87,7 @@ const AdminUsers = () => {
         const type = row.original.user_type;
         const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
           admin: "destructive",
+          employee: "outline",
           partner: "default",
           subcontractor: "secondary"
         };

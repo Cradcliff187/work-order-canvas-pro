@@ -7,7 +7,7 @@ export interface CreateUserData {
   email: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor';
+  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   phone?: string;
   company_name?: string;
   organization_ids?: string[];
@@ -17,7 +17,7 @@ export interface CreateUserData {
 export interface UpdateUserData {
   first_name?: string;
   last_name?: string;
-  user_type?: 'admin' | 'partner' | 'subcontractor';
+  user_type?: 'admin' | 'partner' | 'subcontractor' | 'employee';
   phone?: string;
   company_name?: string;
   is_active?: boolean;

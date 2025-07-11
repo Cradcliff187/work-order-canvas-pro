@@ -20,7 +20,7 @@ const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
-  user_type: z.enum(['admin', 'partner', 'subcontractor'], {
+  user_type: z.enum(['admin', 'partner', 'subcontractor', 'employee'], {
     required_error: 'User type is required',
   }),
   phone: z.string().optional(),
@@ -241,6 +241,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="employee">Employee</SelectItem>
                           <SelectItem value="partner">Partner</SelectItem>
                           <SelectItem value="subcontractor">Subcontractor</SelectItem>
                         </SelectContent>
@@ -264,7 +265,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                 />
               </div>
 
-              {(watchedUserType === 'partner' || watchedUserType === 'subcontractor') && (
+              {(watchedUserType === 'partner' || watchedUserType === 'subcontractor' || watchedUserType === 'employee') && (
                 <FormField
                   control={form.control}
                   name="company_name"

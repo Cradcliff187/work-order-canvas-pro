@@ -9,7 +9,7 @@ interface Profile {
   email: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor';
+  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   company_name?: string;
   phone?: string;
   avatar_url?: string;
@@ -95,6 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (event === 'SIGNED_IN' && profileData?.user_type && window.location.pathname === '/') {
               const redirectPaths = {
                 'admin': '/admin/dashboard',
+                'employee': '/admin/dashboard',
                 'partner': '/partner/dashboard',
                 'subcontractor': '/subcontractor/dashboard'
               };
