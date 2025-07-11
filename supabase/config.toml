@@ -15,5 +15,8 @@ verify_jwt = false
 [functions.email-work-order-completed]
 verify_jwt = false
 
+[functions.email-welcome]
+verify_jwt = false
+
 [functions.resend-webhook]
 verify_jwt = false
