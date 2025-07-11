@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -31,6 +32,7 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function AdminInvoices() {
+  const [searchParams] = useSearchParams();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -41,6 +43,18 @@ export default function AdminInvoices() {
     page: 1,
     limit: 10,
   });
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    const paymentStatusParam = searchParams.get('paymentStatus');
+    
+    setFilters(prev => ({
+      ...prev,
+      status: statusParam ? [statusParam] : [],
+      paymentStatus: paymentStatusParam as 'paid' | 'unpaid' | undefined,
+    }));
+  }, [searchParams]);
 
   const { data, isLoading, error } = useInvoices(filters);
 

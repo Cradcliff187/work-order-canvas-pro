@@ -19,6 +19,7 @@ interface DashboardMetrics {
     internal_invoice_number: string;
     total_amount: number;
     paid_at: string;
+    payment_reference: string | null;
     subcontractor_name: string;
   }>;
 }
@@ -133,6 +134,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
       internal_invoice_number,
       total_amount,
       paid_at,
+      payment_reference,
       subcontractor_organization:subcontractor_organization_id (name)
     `)
     .eq('status', 'paid')
@@ -145,6 +147,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     internal_invoice_number: payment.internal_invoice_number,
     total_amount: payment.total_amount,
     paid_at: payment.paid_at!,
+    payment_reference: payment.payment_reference,
     subcontractor_name: payment.subcontractor_organization?.name || 'Unknown'
   }));
 

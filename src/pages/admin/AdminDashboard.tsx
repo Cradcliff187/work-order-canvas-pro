@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,10 +14,12 @@ import {
   TrendingDown,
   Plus,
   ClipboardList,
-  Users as UsersIcon
+  Users as UsersIcon,
+  DollarSign
 } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
 
 const COLORS = {
   received: 'hsl(var(--primary))',
@@ -27,6 +30,7 @@ const COLORS = {
 };
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const {
     metrics,
     statusDistribution,
@@ -37,6 +41,19 @@ const AdminDashboard = () => {
     isLoading,
     isError
   } = useAdminDashboard();
+
+  const navigateToInvoices = (filter?: string) => {
+    const params = new URLSearchParams();
+    if (filter === 'pending') {
+      params.set('status', 'submitted');
+    } else if (filter === 'unpaid') {
+      params.set('paymentStatus', 'unpaid');
+      params.set('status', 'approved');
+    } else if (filter === 'paid') {
+      params.set('paymentStatus', 'paid');
+    }
+    navigate(`/admin/invoices?${params.toString()}`);
+  };
 
   if (isError) {
     return (
@@ -105,7 +122,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => navigateToInvoices('pending')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -120,7 +137,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => navigateToInvoices('unpaid')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unpaid Approved</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -183,7 +200,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => navigateToInvoices('paid')}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recent Payments</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -350,7 +367,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Work Orders */}
         <Card>
           <CardHeader>
@@ -433,6 +450,54 @@ const AdminDashboard = () => {
             ) : (
               <div className="text-center text-muted-foreground py-8">
                 No recent reports
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Payments */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Payments</CardTitle>
+            <CardDescription>Latest processed payments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : metrics?.recentPayments && metrics.recentPayments.length > 0 ? (
+              <div className="space-y-3">
+                {metrics.recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{payment.internal_invoice_number}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {payment.subcontractor_name} • {format(new Date(payment.paid_at), 'MMM d')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-success">
+                        ${payment.total_amount.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {payment.payment_reference?.slice(0, 8)}...
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No recent payments
               </div>
             )}
           </CardContent>
