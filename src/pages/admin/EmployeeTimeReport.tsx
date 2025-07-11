@@ -42,6 +42,7 @@ export default function EmployeeTimeReport() {
   const form = useForm<TimeReportFormData>({
     resolver: zodResolver(timeReportSchema),
     defaultValues: {
+      reportDate: new Date(),
       workPerformed: "",
       materialsUsed: "",
       hoursWorked: 0,
@@ -86,6 +87,7 @@ export default function EmployeeTimeReport() {
   const handleCancelEdit = () => {
     setEditingReport(null);
     form.reset({
+      reportDate: new Date(),
       workPerformed: "",
       materialsUsed: "",
       hoursWorked: 0,

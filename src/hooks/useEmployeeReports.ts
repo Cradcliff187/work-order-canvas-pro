@@ -171,6 +171,7 @@ export function useEmployeeReports() {
       
       if (reportData.existingReportId) {
         // Update existing report
+        // Note: total_labor_cost is a GENERATED column (hours_worked * hourly_rate_snapshot) and should never be included in INSERT/UPDATE
         const { data: updatedReport, error: updateError } = await supabase
           .from("employee_reports")
           .update({
@@ -187,6 +188,7 @@ export function useEmployeeReports() {
         report = updatedReport;
       } else {
         // Create new report
+        // Note: total_labor_cost is a GENERATED column (hours_worked * hourly_rate_snapshot) and should never be included in INSERT/UPDATE
         const { data: newReport, error: insertError } = await supabase
           .from("employee_reports")
           .insert({
@@ -248,10 +250,19 @@ export function useEmployeeReports() {
       queryClient.invalidateQueries({ queryKey: ["employee-time-reports"] });
       queryClient.invalidateQueries({ queryKey: ["existing-time-report"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      let errorMessage = "Failed to submit time report. Please try again.";
+      
+      // Handle specific database errors
+      if (error?.message?.includes("duplicate key value violates unique constraint")) {
+        errorMessage = "A time report for this date already exists. Please edit the existing report or choose a different date.";
+      } else if (error?.message?.includes("total_labor_cost")) {
+        errorMessage = "There was an error calculating the labor cost. Please contact support.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to submit time report. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       console.error("Time report submission error:", error);
