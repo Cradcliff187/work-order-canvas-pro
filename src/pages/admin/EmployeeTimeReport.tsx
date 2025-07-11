@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,9 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEmployeeReports } from "@/hooks/useEmployeeReports";
 import { FileUpload } from "@/components/FileUpload";
-import { ArrowLeft, Clock, CalendarIcon, Save } from "lucide-react";
+import { ArrowLeft, Clock, CalendarIcon, Save, Edit, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const timeReportSchema = z.object({
@@ -31,12 +32,13 @@ type TimeReportFormData = z.infer<typeof timeReportSchema>;
 export default function EmployeeTimeReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
-  const { getWorkOrder, submitTimeReport, employeeProfile } = useEmployeeReports();
+  const { getWorkOrder, getExistingTimeReport, submitTimeReport, employeeProfile } = useEmployeeReports();
   const workOrderQuery = getWorkOrder(workOrderId!);
   const profileQuery = employeeProfile;
   
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-
+  const [editingReport, setEditingReport] = useState<any>(null);
+  
   const form = useForm<TimeReportFormData>({
     resolver: zodResolver(timeReportSchema),
     defaultValues: {
@@ -47,13 +49,49 @@ export default function EmployeeTimeReport() {
     },
   });
 
+  const watchedDate = form.watch("reportDate");
+  const watchedHours = form.watch("hoursWorked");
+  const hourlyRate = profileQuery.data?.hourly_cost_rate || 0;
+  const calculatedLaborCost = (watchedHours || 0) * hourlyRate;
+
+  // Check for existing report when date changes
+  const existingReportQuery = getExistingTimeReport(
+    workOrderId!,
+    watchedDate ? format(watchedDate, "yyyy-MM-dd") : ""
+  );
+
+  const existingReport = existingReportQuery.data;
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingReport) {
+      form.setValue("workPerformed", editingReport.work_performed || "");
+      form.setValue("materialsUsed", editingReport.materials_used || "");
+      form.setValue("hoursWorked", editingReport.hours_worked || 0);
+      form.setValue("notes", editingReport.notes || "");
+      form.setValue("reportDate", new Date(editingReport.report_date));
+    }
+  }, [editingReport, form]);
+
   const handleFilesSelected = useCallback((files: File[]) => {
     setSelectedFiles(files);
   }, []);
 
-  const watchedHours = form.watch("hoursWorked");
-  const hourlyRate = profileQuery.data?.hourly_cost_rate || 0;
-  const calculatedLaborCost = (watchedHours || 0) * hourlyRate;
+  const handleEditExisting = () => {
+    if (existingReport) {
+      setEditingReport(existingReport);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReport(null);
+    form.reset({
+      workPerformed: "",
+      materialsUsed: "",
+      hoursWorked: 0,
+      notes: "",
+    });
+  };
 
   const onSubmit = async (data: TimeReportFormData) => {
     if (!workOrderId) return;
@@ -67,6 +105,7 @@ export default function EmployeeTimeReport() {
         hoursWorked: data.hoursWorked,
         notes: data.notes,
         receipts: selectedFiles,
+        existingReportId: editingReport?.id,
       });
 
       navigate("/admin/time-reports");
@@ -128,7 +167,9 @@ export default function EmployeeTimeReport() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Submit Time Report</h1>
+          <h1 className="text-2xl font-bold">
+            {editingReport ? "Edit Time Report" : "Submit Time Report"}
+          </h1>
           <p className="text-muted-foreground">
             {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`} - {workOrder.title}
           </p>
@@ -158,10 +199,43 @@ export default function EmployeeTimeReport() {
         </CardContent>
       </Card>
 
+      {/* Existing Report Alert */}
+      {existingReport && !editingReport && watchedDate && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between w-full">
+            <span>
+              A time report already exists for {format(watchedDate, "PPP")}. 
+              Hours: {existingReport.hours_worked}, Labor Cost: ${existingReport.total_labor_cost?.toFixed(2) || '0.00'}
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleEditExisting}
+              className="ml-4"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Report
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Time Report Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Time Report Details</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Time Report Details</CardTitle>
+            {editingReport && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCancelEdit}
+              >
+                Cancel Edit
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -333,13 +407,18 @@ export default function EmployeeTimeReport() {
                 </Link>
                 <Button 
                   type="submit" 
-                  disabled={submitTimeReport.isPending}
+                  disabled={submitTimeReport.isPending || (existingReport && !editingReport)}
                   className="min-w-32"
                 >
                   {submitTimeReport.isPending ? (
                     <>
                       <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Submitting...
+                    </>
+                  ) : editingReport ? (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Update Time Report
                     </>
                   ) : (
                     <>
