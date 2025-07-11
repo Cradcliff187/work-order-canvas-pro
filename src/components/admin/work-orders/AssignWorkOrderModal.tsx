@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
-import { Users, Briefcase, Clock, Mail } from 'lucide-react';
-import { useSubcontractorsByTrade, useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Users, Briefcase, Clock, Mail, UserCheck } from 'lucide-react';
+import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
+import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
@@ -24,7 +24,7 @@ interface AssignWorkOrderModalProps {
 }
 
 export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWorkOrderModalProps) {
-  const [selectedSubcontractor, setSelectedSubcontractor] = useState('');
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [sendEmail, setSendEmail] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -35,18 +35,43 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const tradeId = workOrders[0]?.trade_id;
   const tradeName = workOrders[0]?.trades?.name;
   
-  const { data: subcontractors, isLoading: isLoadingSubcontractors } = useSubcontractorsByTrade(tradeId);
+  const { employees, subcontractors, isLoading } = useAllAssignees(tradeId);
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSubcontractor('');
+      setSelectedAssignees([]);
       setNotes('');
       setSendEmail(true);
       setValidationErrors([]);
     }
   }, [isOpen]);
 
+  const toggleAssignee = (assigneeId: string) => {
+    setSelectedAssignees(prev => 
+      prev.includes(assigneeId) 
+        ? prev.filter(id => id !== assigneeId)
+        : [...prev, assigneeId]
+    );
+  };
+
+  const selectAllEmployees = () => {
+    const employeeIds = employees.map(emp => emp.id);
+    setSelectedAssignees(prev => {
+      const nonEmployeeIds = prev.filter(id => !employeeIds.includes(id));
+      return [...nonEmployeeIds, ...employeeIds];
+    });
+  };
+
+  const clearAllSelections = () => {
+    setSelectedAssignees([]);
+  };
+
   const handleAssign = async () => {
+    // For now, we'll use the first selected subcontractor for backward compatibility
+    const selectedSubcontractor = selectedAssignees.find(id => 
+      subcontractors.some(sub => sub.id === id)
+    );
+    
     if (!selectedSubcontractor) return;
 
     try {
@@ -76,7 +101,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     }
   };
 
-  const selectedSubcontractorData = subcontractors?.find(s => s.id === selectedSubcontractor);
+  const allAssignees = [...employees, ...subcontractors];
+  const selectedAssigneeData = allAssignees.filter(assignee => 
+    selectedAssignees.includes(assignee.id)
+  );
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -147,61 +175,144 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </div>
           )}
 
-          {/* Subcontractor Selection */}
-          <div className="space-y-3">
-            <Label>Select Subcontractor</Label>
-            <Select value={selectedSubcontractor} onValueChange={setSelectedSubcontractor}>
-              <SelectTrigger>
-                <SelectValue placeholder={isLoadingSubcontractors ? "Loading..." : "Choose a subcontractor"} />
-              </SelectTrigger>
-              <SelectContent>
-                {subcontractors?.map((subcontractor) => (
-                  <SelectItem key={subcontractor.id} value={subcontractor.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <span>
-                        {subcontractor.first_name} {subcontractor.last_name}
-                        {subcontractor.company_name && ` (${subcontractor.company_name})`}
-                      </span>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className={`text-xs ${getWorkloadColor(subcontractor.workload || 0)}`}>
-                          {getWorkloadLabel(subcontractor.workload || 0)}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {subcontractor.workload || 0} active
-                        </Badge>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Assignee Selection */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Select Assignees</Label>
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={selectAllEmployees}
+                  disabled={employees.length === 0}
+                >
+                  <UserCheck className="h-4 w-4 mr-1" />
+                  Select All Employees
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={clearAllSelections}
+                  disabled={selectedAssignees.length === 0}
+                >
+                  Clear All
+                </Button>
+              </div>
+            </div>
 
-            {/* Selected Subcontractor Details */}
-            {selectedSubcontractorData && (
+            {isLoading ? (
+              <div className="text-center py-4 text-muted-foreground">Loading assignees...</div>
+            ) : (
+              <div className="space-y-4">
+                {/* Employees Section */}
+                {employees.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4" />
+                        <span className="font-medium">Employees</span>
+                        <Badge variant="secondary">{employees.length}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-3">
+                        {employees.map((employee) => (
+                          <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedAssignees.includes(employee.id)}
+                                onCheckedChange={() => toggleAssignee(employee.id)}
+                              />
+                              <div>
+                                <div className="font-medium">
+                                  {employee.first_name} {employee.last_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {employee.organization}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs ${getWorkloadColor(employee.workload)}`}>
+                                {getWorkloadLabel(employee.workload)}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {employee.workload} active
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Subcontractors Section */}
+                {subcontractors.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        <span className="font-medium">Subcontractors</span>
+                        <Badge variant="secondary">{subcontractors.length}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-3">
+                        {subcontractors.map((subcontractor) => (
+                          <div key={subcontractor.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedAssignees.includes(subcontractor.id)}
+                                onCheckedChange={() => toggleAssignee(subcontractor.id)}
+                              />
+                              <div>
+                                <div className="font-medium">
+                                  {subcontractor.first_name} {subcontractor.last_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {subcontractor.organization}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs ${getWorkloadColor(subcontractor.workload)}`}>
+                                {getWorkloadLabel(subcontractor.workload)}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {subcontractor.workload} active
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {employees.length === 0 && subcontractors.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No assignees available for this trade
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Selected Assignees Summary */}
+            {selectedAssigneeData.length > 0 && (
               <Card>
                 <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">
-                        {selectedSubcontractorData.first_name} {selectedSubcontractorData.last_name}
-                      </div>
-                      {selectedSubcontractorData.company_name && (
-                        <div className="text-sm text-muted-foreground">
-                          {selectedSubcontractorData.company_name}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span className={`text-sm ${getWorkloadColor(selectedSubcontractorData.workload || 0)}`}>
-                          {getWorkloadLabel(selectedSubcontractorData.workload || 0)}
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {selectedSubcontractorData.workload || 0} active work orders
-                      </div>
-                    </div>
+                  <div className="text-sm font-medium mb-2">
+                    Selected ({selectedAssigneeData.length}):
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAssigneeData.map((assignee) => (
+                      <Badge key={assignee.id} variant="secondary">
+                        {assignee.first_name} {assignee.last_name} ({assignee.type})
+                      </Badge>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -242,7 +353,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </Button>
             <Button 
               onClick={handleAssign}
-              disabled={!selectedSubcontractor || isAssigning}
+              disabled={selectedAssignees.length === 0 || isAssigning}
             >
               {isAssigning ? 'Assigning...' : `Assign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}`}
             </Button>
