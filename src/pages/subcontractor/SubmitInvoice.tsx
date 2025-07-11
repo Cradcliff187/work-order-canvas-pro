@@ -127,10 +127,16 @@ const SubmitInvoice = () => {
           amount: wo.amount,
         }));
 
-      await invoiceSubmission.mutateAsync({
-        external_invoice_number: data.external_invoice_number,
-        work_orders: selectedWorkOrders,
-        notes: data.notes
+      const totalAmount = selectedWorkOrders.reduce((sum, wo) => sum + wo.amount, 0);
+      
+      await invoiceSubmission.submitInvoiceAsync({
+        externalInvoiceNumber: data.external_invoice_number,
+        totalAmount,
+        workOrders: selectedWorkOrders.map(wo => ({
+          workOrderId: wo.work_order_id,
+          amount: wo.amount,
+          description: data.notes
+        }))
       });
       navigate('/subcontractor/work-orders');
     } catch (error) {
@@ -312,15 +318,15 @@ const SubmitInvoice = () => {
                   type="button"
                   variant="outline"
                   onClick={() => navigate('/subcontractor/work-orders')}
-                  disabled={invoiceSubmission.isPending}
+                  disabled={invoiceSubmission.isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={invoiceSubmission.isPending || selectedCount === 0}
+                  disabled={invoiceSubmission.isSubmitting || selectedCount === 0}
                 >
-                  {invoiceSubmission.isPending ? 'Submitting...' : `Submit Invoice (${selectedCount} orders)`}
+                  {invoiceSubmission.isSubmitting ? 'Submitting...' : `Submit Invoice (${selectedCount} orders)`}
                 </Button>
               </div>
             </form>

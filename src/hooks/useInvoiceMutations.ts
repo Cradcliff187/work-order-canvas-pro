@@ -35,6 +35,21 @@ export const useInvoiceMutations = () => {
         .single();
 
       if (error) throw error;
+
+      // Send status change notification
+      try {
+        await supabase.functions.invoke('invoice-status-changed', {
+          body: {
+            invoice_id: invoiceId,
+            status: 'approved',
+            notes: notes
+          }
+        });
+      } catch (emailError) {
+        console.warn('Failed to send approval notification:', emailError);
+        // Don't fail the entire operation for email issues
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -42,7 +57,7 @@ export const useInvoiceMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
       toast({
         title: 'Invoice Approved',
-        description: 'The invoice has been successfully approved.',
+        description: 'The invoice has been successfully approved and the subcontractor has been notified.',
       });
     },
     onError: (error) => {
@@ -68,6 +83,21 @@ export const useInvoiceMutations = () => {
         .single();
 
       if (error) throw error;
+
+      // Send status change notification
+      try {
+        await supabase.functions.invoke('invoice-status-changed', {
+          body: {
+            invoice_id: invoiceId,
+            status: 'rejected',
+            notes: notes
+          }
+        });
+      } catch (emailError) {
+        console.warn('Failed to send rejection notification:', emailError);
+        // Don't fail the entire operation for email issues
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -75,7 +105,7 @@ export const useInvoiceMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
       toast({
         title: 'Invoice Rejected',
-        description: 'The invoice has been rejected.',
+        description: 'The invoice has been rejected and the subcontractor has been notified.',
       });
     },
     onError: (error) => {
@@ -102,6 +132,21 @@ export const useInvoiceMutations = () => {
         .single();
 
       if (error) throw error;
+
+      // Send payment notification
+      try {
+        await supabase.functions.invoke('invoice-status-changed', {
+          body: {
+            invoice_id: invoiceId,
+            status: 'paid',
+            payment_reference: paymentReference
+          }
+        });
+      } catch (emailError) {
+        console.warn('Failed to send payment notification:', emailError);
+        // Don't fail the entire operation for email issues
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -109,7 +154,7 @@ export const useInvoiceMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
       toast({
         title: 'Invoice Marked as Paid',
-        description: 'The invoice has been marked as paid.',
+        description: 'The invoice has been marked as paid and the subcontractor has been notified.',
       });
     },
     onError: (error) => {

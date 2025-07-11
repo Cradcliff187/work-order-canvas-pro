@@ -107,7 +107,40 @@ const AdminDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-8 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-warning">{metrics?.pendingInvoices || 0}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unpaid Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-12 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-success">{metrics?.unpaidApprovedInvoices || 0}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Ready for payment</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Second row - Additional metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Overdue Work Orders</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -132,6 +165,38 @@ const AdminDashboard = () => {
               <div className="text-2xl font-bold text-success">{metrics?.completedThisMonth || 0}</div>
             )}
             <p className="text-xs text-muted-foreground">Successfully completed</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Recent Payments</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-8 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-primary">{metrics?.recentPayments.length || 0}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Last 7 days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Payment Value</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-20 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-primary">
+                ${(metrics?.recentPayments.reduce((sum, payment) => sum + payment.total_amount, 0) || 0).toLocaleString()}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Last 7 days</p>
           </CardContent>
         </Card>
       </div>

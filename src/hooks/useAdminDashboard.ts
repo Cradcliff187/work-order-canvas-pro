@@ -11,6 +11,15 @@ interface DashboardMetrics {
   pendingAssignments: number;
   overdueWorkOrders: number;
   completedThisMonth: number;
+  pendingInvoices: number;
+  unpaidApprovedInvoices: number;
+  recentPayments: Array<{
+    id: string;
+    internal_invoice_number: string;
+    total_amount: number;
+    paid_at: string;
+    subcontractor_name: string;
+  }>;
 }
 
 interface StatusDistribution {
@@ -86,6 +95,45 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     .eq('status', 'completed')
     .gte('completed_at', firstDayCurrentMonth.toISOString());
 
+  // Pending invoices
+  const { count: pendingInvoicesCount } = await supabase
+    .from('invoices')
+    .select('id', { count: 'exact' })
+    .eq('status', 'submitted');
+
+  // Unpaid approved invoices
+  const { count: unpaidApprovedCount } = await supabase
+    .from('invoices')
+    .select('id', { count: 'exact' })
+    .eq('status', 'approved')
+    .is('paid_at', null);
+
+  // Recent payments (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const { data: recentPaymentsData } = await supabase
+    .from('invoices')
+    .select(`
+      id,
+      internal_invoice_number,
+      total_amount,
+      paid_at,
+      subcontractor_organization:subcontractor_organization_id (name)
+    `)
+    .eq('status', 'paid')
+    .gte('paid_at', sevenDaysAgo.toISOString())
+    .order('paid_at', { ascending: false })
+    .limit(5);
+
+  const recentPayments = (recentPaymentsData || []).map(payment => ({
+    id: payment.id,
+    internal_invoice_number: payment.internal_invoice_number,
+    total_amount: payment.total_amount,
+    paid_at: payment.paid_at!,
+    subcontractor_name: payment.subcontractor_organization?.name || 'Unknown'
+  }));
+
   const currentTotal = currentMonthData?.length || 0;
   const lastMonthTotal = lastMonthData?.length || 0;
   
@@ -102,6 +150,9 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     pendingAssignments: pendingCount || 0,
     overdueWorkOrders: overdueCount || 0,
     completedThisMonth: completedCount || 0,
+    pendingInvoices: pendingInvoicesCount || 0,
+    unpaidApprovedInvoices: unpaidApprovedCount || 0,
+    recentPayments,
   };
 };
 
