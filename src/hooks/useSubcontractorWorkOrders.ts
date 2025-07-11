@@ -255,12 +255,43 @@ export function useSubcontractorWorkOrders() {
     },
   });
 
+  // Get completed work orders with invoice status for invoice submission
+  const completedWorkOrdersForInvoicing = useQuery({
+    queryKey: ["completed-work-orders-for-invoicing", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("work_orders")
+        .select(`
+          id,
+          work_order_number,
+          title,
+          description,
+          completed_at,
+          date_completed,
+          invoice_work_orders (
+            id,
+            invoice_id
+          )
+        `)
+        .eq("assigned_to_type", "subcontractor")
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
   return {
     assignedWorkOrders,
     dashboardStats,
     reports,
     getWorkOrder,
     submitReport,
+    completedWorkOrdersForInvoicing,
   };
 }
 
