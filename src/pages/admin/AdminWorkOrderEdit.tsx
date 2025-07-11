@@ -34,7 +34,7 @@ const editWorkOrderSchema = z.object({
   trade_id: z.string().min(1, 'Trade is required'),
   due_date: z.string().optional(),
   estimated_completion_date: z.string().optional(),
-  estimated_hours: z.coerce.number().optional(),
+  estimated_hours: z.string().optional(),
   store_location: z.string().optional(),
   street_address: z.string().optional(),
   city: z.string().optional(),
@@ -94,7 +94,7 @@ export default function AdminWorkOrderEdit() {
       trade_id: '',
       due_date: '',
       estimated_completion_date: '',
-      estimated_hours: undefined,
+      estimated_hours: '',
       store_location: '',
       street_address: '',
       city: '',
@@ -118,7 +118,7 @@ export default function AdminWorkOrderEdit() {
         trade_id: workOrder.trade_id || '',
         due_date: workOrder.due_date || '',
         estimated_completion_date: workOrder.estimated_completion_date || '',
-        estimated_hours: workOrder.estimated_hours || undefined,
+        estimated_hours: workOrder.estimated_hours?.toString() || '',
         store_location: workOrder.store_location || '',
         street_address: workOrder.street_address || '',
         city: workOrder.city || '',
@@ -186,7 +186,7 @@ export default function AdminWorkOrderEdit() {
         trade_id: data.trade_id,
         due_date: data.due_date || null,
         estimated_completion_date: data.estimated_completion_date || null,
-        estimated_hours: data.estimated_hours || null,
+        estimated_hours: data.estimated_hours ? Number(data.estimated_hours) : null,
         store_location: data.store_location || null,
         street_address: data.street_address || null,
         city: data.city || null,
@@ -482,12 +482,11 @@ export default function AdminWorkOrderEdit() {
                     <FormItem>
                       <FormLabel>Estimated Hours</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="0" 
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                        />
+                         <Input 
+                           type="number" 
+                           placeholder="0" 
+                           {...field}
+                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
