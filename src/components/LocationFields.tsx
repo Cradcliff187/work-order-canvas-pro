@@ -36,7 +36,7 @@ export function LocationFields({
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
     organizationId,
     searchTerm: locationSearchValue,
-    enabled: !!organizationId && locationSearchOpen
+    enabled: !!organizationId
   });
 
   const handleLocationSelect = (suggestion: LocationSuggestion) => {
@@ -148,37 +148,74 @@ export function LocationFields({
                           />
                           <CommandList>
                             <CommandEmpty>
-                              {isLoading ? "Searching..." : "No locations found."}
+                              {isLoading ? "Searching..." : locationSearchValue ? "No matching locations found." : "Type to add a new location."}
                             </CommandEmpty>
-                            <CommandGroup>
-                              {locationSuggestions?.map((suggestion) => (
-                                <CommandItem
-                                  key={suggestion.location_number}
-                                  value={suggestion.location_number}
-                                  onSelect={() => handleLocationSelect(suggestion)}
-                                  className="flex flex-col items-start gap-1"
-                                >
-                                  <div className="flex items-center gap-2 w-full">
-                                    <Badge variant="secondary">
-                                      {suggestion.location_number}
-                                    </Badge>
-                                    {suggestion.location_name && (
-                                      <span className="font-medium">
-                                        {suggestion.location_name}
+                            {!locationSearchValue && locationSuggestions && locationSuggestions.length > 0 && (
+                              <CommandGroup heading="Recent Locations">
+                                {locationSuggestions.slice(0, 10).map((suggestion) => (
+                                  <CommandItem
+                                    key={suggestion.location_number || suggestion.location_name}
+                                    value={suggestion.location_number || suggestion.location_name}
+                                    onSelect={() => handleLocationSelect(suggestion)}
+                                    className="flex flex-col items-start gap-1"
+                                  >
+                                    <div className="flex items-center gap-2 w-full">
+                                      {suggestion.location_number && (
+                                        <Badge variant="secondary">
+                                          {suggestion.location_number}
+                                        </Badge>
+                                      )}
+                                      {suggestion.location_name && (
+                                        <span className="font-medium">
+                                          {suggestion.location_name}
+                                        </span>
+                                      )}
+                                      <Badge variant="outline" className="ml-auto">
+                                        Used {suggestion.usage_count}x
+                                      </Badge>
+                                    </div>
+                                    {suggestion.full_address && (
+                                      <span className="text-sm text-muted-foreground">
+                                        {suggestion.full_address}
                                       </span>
                                     )}
-                                    <Badge variant="outline" className="ml-auto">
-                                      Used {suggestion.usage_count}x
-                                    </Badge>
-                                  </div>
-                                  {suggestion.full_address && (
-                                    <span className="text-sm text-muted-foreground">
-                                      {suggestion.full_address}
-                                    </span>
-                                  )}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+                            {locationSearchValue && (
+                              <CommandGroup heading={locationSuggestions && locationSuggestions.length > 0 ? "Search Results" : "No Results"}>
+                                {locationSuggestions?.map((suggestion) => (
+                                  <CommandItem
+                                    key={suggestion.location_number || suggestion.location_name}
+                                    value={suggestion.location_number || suggestion.location_name}
+                                    onSelect={() => handleLocationSelect(suggestion)}
+                                    className="flex flex-col items-start gap-1"
+                                  >
+                                    <div className="flex items-center gap-2 w-full">
+                                      {suggestion.location_number && (
+                                        <Badge variant="secondary">
+                                          {suggestion.location_number}
+                                        </Badge>
+                                      )}
+                                      {suggestion.location_name && (
+                                        <span className="font-medium">
+                                          {suggestion.location_name}
+                                        </span>
+                                      )}
+                                      <Badge variant="outline" className="ml-auto">
+                                        Used {suggestion.usage_count}x
+                                      </Badge>
+                                    </div>
+                                    {suggestion.full_address && (
+                                      <span className="text-sm text-muted-foreground">
+                                        {suggestion.full_address}
+                                      </span>
+                                    )}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
                           </CommandList>
                         </Command>
                       </PopoverContent>

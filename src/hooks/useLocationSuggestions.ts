@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useLocationHistory, LocationHistoryItem } from './useLocationHistory';
 
 export interface LocationSuggestion {
   location_number: string;
@@ -43,10 +44,51 @@ export function useLocationSuggestions({
   enabled = true
 }: UseLocationSuggestionsOptions) {
   const debouncedSearchTerm = useDebounce(searchTerm.trim(), 300);
+  
+  // Get location history for recent locations
+  const { data: locationHistory } = useLocationHistory(organizationId);
 
   const fetchLocationSuggestions = useCallback(async (): Promise<LocationSuggestion[]> => {
     if (!organizationId) return [];
 
+    // If no search term, return location history as suggestions
+    if (!debouncedSearchTerm && locationHistory) {
+      return locationHistory.map(item => ({
+        location_number: item.partner_location_number || '',
+        location_name: item.store_location,
+        location_street_address: '',
+        location_city: '',
+        location_state: '',
+        location_zip_code: '',
+        full_address: '',
+        usage_count: item.usage_count,
+        last_used: new Date().toISOString()
+      }));
+    }
+
+    // When searching, filter location history first
+    if (debouncedSearchTerm && locationHistory) {
+      const filteredHistory = locationHistory.filter(item => 
+        item.store_location.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (item.partner_location_number && item.partner_location_number.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
+      );
+
+      if (filteredHistory.length > 0) {
+        return filteredHistory.map(item => ({
+          location_number: item.partner_location_number || '',
+          location_name: item.store_location,
+          location_street_address: '',
+          location_city: '',
+          location_state: '',
+          location_zip_code: '',
+          full_address: '',
+          usage_count: item.usage_count,
+          last_used: new Date().toISOString()
+        }));
+      }
+    }
+
+    // Fallback to broader search in work_orders table
     let query = supabase
       .from('work_orders')
       .select(`
@@ -159,13 +201,13 @@ export function useLocationSuggestions({
       });
 
     return suggestions;
-  }, [organizationId, debouncedSearchTerm]);
+  }, [organizationId, debouncedSearchTerm, locationHistory]);
 
   return useQuery({
     queryKey: ['location-suggestions', organizationId, debouncedSearchTerm],
     queryFn: fetchLocationSuggestions,
     enabled: enabled && !!organizationId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes,
   });
 }
 

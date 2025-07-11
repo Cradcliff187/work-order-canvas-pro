@@ -274,7 +274,7 @@ const SubmitWorkOrder = () => {
 
                 <LocationFields 
                   form={form}
-                  organizationId={form.watch('organization_id')}
+                  organizationId={organizationId}
                   showPoNumber={true}
                 />
               </CardContent>
