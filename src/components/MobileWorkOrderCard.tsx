@@ -2,8 +2,9 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, DollarSign, Clock, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 
 interface WorkOrder {
   id: string;
@@ -19,6 +20,19 @@ interface WorkOrder {
   date_submitted: string;
   trades?: { name: string };
   subcontractor_invoice_amount?: number;
+  assigned_user?: { 
+    first_name: string; 
+    last_name: string; 
+    user_type?: string; 
+  };
+  work_order_assignments?: Array<{
+    assigned_to: string;
+    assignment_type: string;
+    assignee_profile: {
+      first_name: string;
+      last_name: string;
+    } | null;
+  }> | null;
 }
 
 interface MobileWorkOrderCardProps {
@@ -128,6 +142,15 @@ export function MobileWorkOrderCard({
               <span className="truncate">{workOrder.trades.name}</span>
             </div>
           )}
+
+          <div className="flex items-center gap-2 text-sm">
+            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <AssigneeDisplay 
+              assignments={workOrder.work_order_assignments}
+              assignedUser={workOrder.assigned_user}
+              showIcons={false}
+            />
+          </div>
 
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />

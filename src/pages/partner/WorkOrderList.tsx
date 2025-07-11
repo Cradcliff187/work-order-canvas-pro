@@ -10,6 +10,7 @@ import { Search, Filter, Eye, Plus } from 'lucide-react';
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { format } from 'date-fns';
+import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 
 const statusColors = {
   received: 'bg-blue-100 text-blue-800',
@@ -145,6 +146,7 @@ const WorkOrderList = () => {
                     <TableHead>Work Order #</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Trade</TableHead>
+                    <TableHead>Assigned To</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead>Est. Completion</TableHead>
@@ -167,6 +169,12 @@ const WorkOrderList = () => {
                       </TableCell>
                       <TableCell>
                         {workOrder.trades?.name || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <AssigneeDisplay 
+                          assignments={workOrder.work_order_assignments}
+                          assignedUser={workOrder.assigned_user}
+                        />
                       </TableCell>
                       <TableCell>
                         <Badge 

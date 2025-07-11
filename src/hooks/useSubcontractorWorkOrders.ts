@@ -25,6 +25,12 @@ export function useSubcontractorWorkOrders() {
             status,
             submitted_at,
             invoice_amount
+          ),
+          assigned_user:profiles!assigned_to (first_name, last_name, user_type),
+          work_order_assignments (
+            assigned_to,
+            assignment_type,
+            assignee_profile:profiles!assigned_to (first_name, last_name)
           )
         `)
         .eq("assigned_to_type", "subcontractor")
