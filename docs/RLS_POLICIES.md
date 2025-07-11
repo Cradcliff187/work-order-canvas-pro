@@ -9,7 +9,8 @@ WorkOrderPro implements comprehensive Row Level Security (RLS) to ensure proper 
 | User Type | Access Level | Description |
 |-----------|--------------|-------------|
 | **admin** | Full access to all data | System administrators with unrestricted access |
-| **partner** | Organization-scoped access | Access limited to their organization's data |
+| **employee** | Full access to all profiles | Internal employees with broad operational access |
+| **partner** | Organization-scoped access | Access limited to their organization's data (excluding employees) |
 | **subcontractor** | Assignment-based access | Access limited to work orders assigned to them |
 
 ## Helper Functions
@@ -164,10 +165,41 @@ Using: auth_is_admin()
 With Check: auth_is_admin()
 ```
 
-**Authenticated users can view profiles**
+**Users can view their own profile**
 ```sql
 Policy: SELECT
-Using: true
+Using: (id = auth_profile_id())
+```
+
+**Employees can view all profiles**
+```sql
+Policy: SELECT
+Using: (auth_user_type() = 'employee')
+```
+
+**Partners can view profiles in their organizations**
+```sql
+Policy: SELECT
+Using: (auth_user_type() = 'partner' AND id IN (
+  SELECT p.id FROM profiles p
+  JOIN user_organizations uo ON p.id = uo.user_id
+  WHERE auth_user_belongs_to_organization(uo.organization_id)
+  AND p.user_type != 'employee'
+))
+```
+
+**Subcontractors can view relevant profiles**
+```sql
+Policy: SELECT
+Using: (auth_user_type() = 'subcontractor' AND (
+  id = auth_profile_id() OR id IN (
+    SELECT DISTINCT p.id FROM profiles p
+    JOIN user_organizations uo ON p.id = uo.user_id
+    JOIN work_orders wo ON wo.organization_id = uo.organization_id
+    WHERE wo.assigned_to = auth_profile_id()
+    AND p.user_type = 'partner'
+  )
+))
 ```
 
 **Users can update their own profile**
