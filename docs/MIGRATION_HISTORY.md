@@ -107,10 +107,28 @@ This document provides a complete chronological history of all database migratio
 **Purpose**: Unknown/undocumented migration
 
 #### 20250710231829-66e11eca-c557-4820-87da-9b8c6138e381.sql
-**Purpose**: Unknown/undocumented migration
+**Purpose**: **INCOMPLETE** - Attempted RLS recursion fix (did not resolve issue)
+- Attempted to fix infinite recursion in profiles table RLS policies
+- Still used helper functions that query profiles table
+- **Issue**: Continued to cause "infinite recursion detected in policy" errors
+- **Result**: System remained inaccessible, required additional fix
 
 #### 20250710233253-1f8e068a-1441-4432-84e8-6b59796b9e43.sql
 **Purpose**: Unknown/undocumented migration
+
+### 2025-01-11: Critical RLS Fix and System Optimizations
+
+#### 20250711035529-3ab24d6e-e01e-4941-97d0-b8c908d4523b.sql
+**Purpose**: **CRITICAL FIX** - Resolve infinite recursion in profiles table RLS policies
+- **Issue**: Previous RLS migrations (including 20250710231829) still caused "infinite recursion detected in policy for relation 'profiles'"
+- **Root Cause**: ALL policies were calling helper functions that query profiles table (`auth_user_type()`, `auth_profile_id()`)
+- **Solution**: Implemented layered bootstrap approach:
+  - Bootstrap policy uses `auth.uid()` directly (no helper functions)
+  - Role-based policies can safely use helper functions after bootstrap succeeds
+  - PostgreSQL's OR logic ensures basic access always works
+- **Key Innovation**: "Users can always read own profile via auth uid" prevents all recursion
+- **Architecture**: Layered policy design prevents circular dependencies
+- **Result**: Complete elimination of RLS recursion, all users can log in and access system
 
 ### 2025-01-11: Final Optimizations and Audit System
 
@@ -240,8 +258,9 @@ This document provides a complete chronological history of all database migratio
 
 ### RLS and Security
 - **Early RLS**: Multiple attempts with recursion issues
-- **Recursion Fixes**: 20250710165118, 20250710165735
-- **Final Solution**: 20250711000000 (SECURITY DEFINER functions)
+- **Incomplete Fix**: 20250710231829 (attempted but failed to resolve recursion)
+- **Critical Bootstrap Fix**: 20250711035529 (layered bootstrap approach with auth.uid() directly)
+- **Helper Functions**: 20250711000000 (SECURITY DEFINER functions for complex logic)
 
 ### Audit System
 - **Implementation**: 20250711000002 (complete system)
@@ -274,19 +293,26 @@ This document provides a complete chronological history of all database migratio
 - Temporary hardcoded solutions
 - Policy refinement iterations
 
-### Phase 4: Maturity (2025-01-11)
-- **Complete RLS solution** with helper functions
+### Phase 4: RLS Crisis and Resolution (2025-01-11)
+- **Critical RLS Bug**: 20250711035529 - Bootstrap pattern implementation
+- **Helper Functions**: 20250711000000 - SECURITY DEFINER functions
 - **Full audit system** implementation  
 - **Performance optimization** with analytics
-- **IndexedDB offline storage** with cross-browser support
+- **IndexedDB offline storage** with cross-browser compatibility
+
+### Phase 5: Production Maturity (2025-01-11)
+- **Advanced business features**: Multi-assignee work orders, invoicing, employee reporting
+- **Sophisticated numbering systems**: Partner-specific work order numbers
+- **Complete organizational hierarchy**: Internal/partner/subcontractor structure
 - **Production-ready** database and client storage
 
 ## Key Milestones
 
 1. **Schema Stability**: 20250710160818 established the 12-table foundation
-2. **RLS Resolution**: 20250711000000 eliminated all recursion issues  
-3. **Audit Implementation**: 20250711000002 added complete change tracking
-4. **Performance Optimization**: 20250711000005 optimized for production use
+2. **Critical RLS Fix**: 20250711035529 resolved infinite recursion with bootstrap pattern
+3. **Helper Functions**: 20250711000000 added SECURITY DEFINER functions for complex logic
+4. **Audit Implementation**: 20250711000002 added complete change tracking
+5. **Performance Optimization**: 20250711000005 optimized for production use
 
 ### 2025-01-11: Advanced Work Order Numbering
 
@@ -341,8 +367,10 @@ The database is now in a **mature, production-ready state** with:
 ## Lessons Learned
 
 ### RLS Implementation
-- **Avoid recursion**: Never query the same table in RLS policies
-- **Use helper functions**: SECURITY DEFINER functions prevent recursion
+- **Bootstrap Pattern**: Use `auth.uid()` directly for basic user access policies
+- **Avoid recursion**: Never query the same table in RLS policies without bootstrap
+- **Layered approach**: Bootstrap policies first, then role-based policies
+- **Use helper functions**: SECURITY DEFINER functions prevent recursion in complex logic
 - **Keep policies simple**: Complex logic belongs in functions, not policies
 
 ### Migration Strategy  
