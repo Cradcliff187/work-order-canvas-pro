@@ -185,6 +185,18 @@ Using: (user_id = auth.uid())
 Note: Simple direct comparison - no recursion possible
 ```
 
+**Authenticated users can read basic profile info**
+```sql
+Policy: SELECT
+Using: (true)
+To: authenticated
+Note: Allows all authenticated users to read profile information. Safe because:
+- READ-ONLY access (no modification rights)
+- Business requirement (app needs to display user names)
+- No recursion risk (simple 'true' condition)
+- Existing INSERT/UPDATE/DELETE policies still restrict modifications
+```
+
 **Users update own profile**
 ```sql
 Policy: UPDATE  
