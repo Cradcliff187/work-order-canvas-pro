@@ -8,6 +8,15 @@ type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
   trades: { name: string } | null;
   assigned_user: { first_name: string; last_name: string } | null;
+  assignments?: Array<{
+    id: string;
+    assigned_to: string;
+    assignment_type: string;
+    assignee: {
+      first_name: string;
+      last_name: string;
+    };
+  }>;
 };
 
 interface WorkOrderFilters {
@@ -45,7 +54,13 @@ export function useWorkOrders(
           *,
           organizations!organization_id(name),
           trades!trade_id(name),
-          assigned_user:profiles!assigned_to(first_name, last_name)
+          assigned_user:profiles!assigned_to(first_name, last_name),
+          assignments:work_order_assignments(
+            id,
+            assigned_to,
+            assignment_type,
+            assignee:profiles!assigned_to(first_name, last_name)
+          )
         `, { count: 'exact' });
 
       // Apply filters

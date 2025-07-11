@@ -20,6 +20,7 @@ import {
   Mail
 } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { format } from 'date-fns';
 
@@ -75,6 +76,7 @@ export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: workOrder, isLoading, error } = useWorkOrderDetail(id!);
+  const { data: assignments = [], isLoading: isLoadingAssignments } = useWorkOrderAssignments(id);
 
   if (!id) {
     return (
@@ -278,11 +280,41 @@ export default function AdminWorkOrderDetail() {
                 <User className="h-3 w-3" />
                 Assigned To
               </label>
-              {workOrder.assigned_user ? (
-                <div>
-                  <p className="font-medium">
-                    {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
-                  </p>
+              {isLoadingAssignments ? (
+                <p className="text-muted-foreground">Loading assignments...</p>
+              ) : assignments.length > 0 ? (
+                <div className="space-y-3">
+                  {assignments.map((assignment) => (
+                    <div key={assignment.id} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium">
+                          {assignment.assignee.first_name} {assignment.assignee.last_name}
+                        </p>
+                        <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
+                          {assignment.assignment_type}
+                        </Badge>
+                      </div>
+                      {assignment.assignee.company_name && (
+                        <p className="text-sm text-muted-foreground">{assignment.assignee.company_name}</p>
+                      )}
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                        <Mail className="h-3 w-3" />
+                        {assignment.assignee.email}
+                      </div>
+                      {assignment.notes && (
+                        <p className="text-sm text-muted-foreground mt-2 italic">{assignment.notes}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : workOrder.assigned_user ? (
+                <div className="border rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-medium">
+                      {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
+                    </p>
+                    <Badge variant="outline">legacy</Badge>
+                  </div>
                   {workOrder.assigned_user.company_name && (
                     <p className="text-sm text-muted-foreground">{workOrder.assigned_user.company_name}</p>
                   )}
@@ -295,11 +327,6 @@ export default function AdminWorkOrderDetail() {
                       <Phone className="h-3 w-3" />
                       {workOrder.assigned_user.phone}
                     </div>
-                  )}
-                  {workOrder.assigned_to_type && (
-                    <Badge variant="outline" className="mt-2">
-                      {workOrder.assigned_to_type === 'subcontractor' ? 'Subcontractor' : 'Internal'}
-                    </Badge>
                   )}
                 </div>
               ) : (

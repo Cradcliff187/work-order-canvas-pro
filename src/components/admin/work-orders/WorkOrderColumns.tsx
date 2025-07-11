@@ -4,12 +4,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Eye, Edit, Trash2, UserPlus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
   trades: { name: string } | null;
   assigned_user: { first_name: string; last_name: string } | null;
+  assignments?: Array<{
+    id: string;
+    assigned_to: string;
+    assignment_type: string;
+    assignee: {
+      first_name: string;
+      last_name: string;
+    };
+  }>;
 };
 
 const getStatusColor = (status: string) => {
@@ -103,8 +113,43 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
     accessorKey: 'assigned_user',
     header: 'Assigned To',
     cell: ({ row }) => {
-      const user = row.original.assigned_user;
-      return user ? `${user.first_name} ${user.last_name}` : 'Unassigned';
+      const assignments = row.original.assignments || [];
+      const fallbackUser = row.original.assigned_user;
+      
+      if (assignments.length === 0) {
+        return fallbackUser ? `${fallbackUser.first_name} ${fallbackUser.last_name}` : 'Unassigned';
+      }
+      
+      if (assignments.length === 1) {
+        const assignee = assignments[0].assignee;
+        return `${assignee.first_name} ${assignee.last_name}`;
+      }
+      
+      const lead = assignments.find(a => a.assignment_type === 'lead') || assignments[0];
+      const leadName = `${lead.assignee.first_name} ${lead.assignee.last_name.charAt(0)}.`;
+      const additionalCount = assignments.length - 1;
+      
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help">
+                {leadName} + {additionalCount} more
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="space-y-1">
+                {assignments.map((assignment, index) => (
+                  <div key={assignment.id} className="text-sm">
+                    {assignment.assignee.first_name} {assignment.assignee.last_name}
+                    {assignment.assignment_type === 'lead' && ' (Lead)'}
+                  </div>
+                ))}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
     },
   },
   {

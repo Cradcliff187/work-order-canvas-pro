@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Users, Briefcase, Clock, Mail, UserCheck } from 'lucide-react';
 import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
+import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
@@ -30,6 +31,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
+  const { bulkAddAssignments } = useWorkOrderAssignmentMutations();
   
   // Get the trade ID from the first work order (they should all be the same trade for bulk assignment)
   const tradeId = workOrders[0]?.trade_id;
@@ -67,38 +69,52 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   };
 
   const handleAssign = async () => {
-    // For now, we'll use the first selected subcontractor for backward compatibility
-    const selectedSubcontractor = selectedAssignees.find(id => 
-      subcontractors.some(sub => sub.id === id)
-    );
-    
-    if (!selectedSubcontractor) return;
+    if (selectedAssignees.length === 0) return;
 
     try {
-      // Validate assignment
-      const validation = await validateAssignment(
-        workOrders.map(wo => wo.id),
-        selectedSubcontractor
-      );
-
-      if (!validation.isValid) {
-        setValidationErrors(validation.errors);
-        return;
-      }
-
       setValidationErrors([]);
 
-      await assignWorkOrders.mutateAsync({
-        workOrderIds: workOrders.map(wo => wo.id),
-        subcontractorId: selectedSubcontractor,
-        notes,
-        sendEmail
-      });
+      // Prepare assignments for all work orders and selected assignees
+      const assignments = workOrders.flatMap((wo, woIndex) => 
+        selectedAssignees.map((assigneeId, assigneeIndex) => {
+          const assignee = allAssignees.find(a => a.id === assigneeId);
+          const isSubcontractor = assignee?.type === 'subcontractor';
+          
+          return {
+            work_order_id: wo.id,
+            assigned_to: assigneeId,
+            assigned_organization_id: isSubcontractor ? getSubcontractorOrganizationId(assigneeId) : null,
+            assignment_type: assigneeIndex === 0 ? 'lead' as const : 'support' as const,
+            notes
+          };
+        })
+      );
+
+      // Create all assignments
+      await bulkAddAssignments.mutateAsync(assignments);
+
+      // Update work_orders table with lead assignee for backward compatibility
+      const leadAssignee = selectedAssignees[0];
+      if (leadAssignee) {
+        await assignWorkOrders.mutateAsync({
+          workOrderIds: workOrders.map(wo => wo.id),
+          subcontractorId: leadAssignee,
+          notes,
+          sendEmail
+        });
+      }
 
       onClose();
     } catch (error) {
       console.error('Assignment failed:', error);
+      setValidationErrors(['Assignment failed. Please try again.']);
     }
+  };
+
+  const getSubcontractorOrganizationId = (assigneeId: string) => {
+    // For now, we'll return null since we need to implement proper organization mapping
+    // This would typically come from the subcontractor's profile or organization relationship
+    return null;
   };
 
   const allAssignees = [...employees, ...subcontractors];
@@ -353,9 +369,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </Button>
             <Button 
               onClick={handleAssign}
-              disabled={selectedAssignees.length === 0 || isAssigning}
+              disabled={selectedAssignees.length === 0 || isAssigning || bulkAddAssignments.isPending}
             >
-              {isAssigning ? 'Assigning...' : `Assign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}`}
+              {(isAssigning || bulkAddAssignments.isPending) ? 'Assigning...' : `Assign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>
