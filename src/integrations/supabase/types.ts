@@ -1004,8 +1004,11 @@ export type Database = {
           assigned_to_type:
             | Database["public"]["Enums"]["assignment_type"]
             | null
+          auto_completion_blocked: boolean | null
           city: string | null
           completed_at: string | null
+          completion_checked_at: string | null
+          completion_method: string | null
           created_at: string
           created_by: string
           date_assigned: string | null
@@ -1049,8 +1052,11 @@ export type Database = {
           assigned_to_type?:
             | Database["public"]["Enums"]["assignment_type"]
             | null
+          auto_completion_blocked?: boolean | null
           city?: string | null
           completed_at?: string | null
+          completion_checked_at?: string | null
+          completion_method?: string | null
           created_at?: string
           created_by: string
           date_assigned?: string | null
@@ -1094,8 +1100,11 @@ export type Database = {
           assigned_to_type?:
             | Database["public"]["Enums"]["assignment_type"]
             | null
+          auto_completion_blocked?: boolean | null
           city?: string | null
           completed_at?: string | null
+          completion_checked_at?: string | null
+          completion_method?: string | null
           created_at?: string
           created_by?: string
           date_assigned?: string | null
@@ -1286,6 +1295,10 @@ export type Database = {
         Args: { work_order_id: string }
         Returns: boolean
       }
+      check_assignment_completion_status_enhanced: {
+        Args: { work_order_id: string }
+        Returns: boolean
+      }
       generate_internal_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1333,6 +1346,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      set_manual_completion_block: {
+        Args: { work_order_id: string; blocked?: boolean }
+        Returns: undefined
+      }
       transition_work_order_status: {
         Args: {
           work_order_id: string
@@ -1341,6 +1358,10 @@ export type Database = {
           user_id?: string
         }
         Returns: boolean
+      }
+      trigger_completion_email: {
+        Args: { work_order_id: string }
+        Returns: undefined
       }
       user_assigned_to_work_order: {
         Args: { wo_id: string }
