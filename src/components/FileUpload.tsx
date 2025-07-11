@@ -10,7 +10,9 @@ import {
   Image as ImageIcon, 
   AlertCircle, 
   CheckCircle2,
-  Loader2
+  Loader2,
+  FileText,
+  File
 } from "lucide-react";
 import { formatFileSize, isSupportedImageType, isValidFileSize } from "@/utils/imageCompression";
 import { cn } from "@/lib/utils";
@@ -23,12 +25,14 @@ interface FileUploadProps {
   uploadProgress?: UploadProgress[];
   disabled?: boolean;
   className?: string;
+  acceptedTypes?: string[];
 }
 
 interface FilePreview {
   file: File;
   id: string;
-  previewUrl: string;
+  previewUrl: string | null;
+  fileType: 'image' | 'document';
 }
 
 export function FileUpload({
@@ -37,11 +41,77 @@ export function FileUpload({
   maxSizeBytes = 10 * 1024 * 1024, // 10MB
   uploadProgress = [],
   disabled = false,
-  className
+  className,
+  acceptedTypes = ['image/*']
 }: FileUploadProps) {
   const [previews, setPreviews] = useState<FilePreview[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper functions
+  const isImageAccepted = acceptedTypes.some(type => type.includes('image'));
+  const isDocumentMode = acceptedTypes.some(type => 
+    type.includes('.pdf') || type.includes('.xlsx') || type.includes('.xls') || 
+    type.includes('.doc') || type.includes('.docx') || type.includes('.csv')
+  );
+
+  const getFileType = (file: File): 'image' | 'document' => {
+    return file.type.startsWith('image/') ? 'image' : 'document';
+  };
+
+  const isValidFileType = (file: File): boolean => {
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    return acceptedTypes.some(type => {
+      if (type === 'image/*') return file.type.startsWith('image/');
+      if (type.startsWith('.')) return fileExtension === type;
+      return file.type === type;
+    });
+  };
+
+  const getSupportedFormatsText = (): string => {
+    const types = [];
+    if (isImageAccepted) types.push('Images');
+    if (isDocumentMode) types.push('PDF, Excel, Word, CSV');
+    return types.join(', ');
+  };
+
+  const getDropzoneAccept = () => {
+    const accept: Record<string, string[]> = {};
+    
+    acceptedTypes.forEach(type => {
+      if (type === 'image/*') {
+        accept['image/*'] = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'];
+      } else if (type.includes('pdf')) {
+        accept['application/pdf'] = ['.pdf'];
+      } else if (type.includes('xlsx') || type.includes('xls')) {
+        accept['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'] = ['.xlsx'];
+        accept['application/vnd.ms-excel'] = ['.xls'];
+      } else if (type.includes('csv')) {
+        accept['text/csv'] = ['.csv'];
+      } else if (type.includes('doc')) {
+        accept['application/vnd.openxmlformats-officedocument.wordprocessingml.document'] = ['.docx'];
+        accept['application/msword'] = ['.doc'];
+      } else if (type.startsWith('.')) {
+        // Handle file extensions
+        const extension = type;
+        if (extension === '.pdf') {
+          accept['application/pdf'] = ['.pdf'];
+        } else if (extension === '.xlsx') {
+          accept['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'] = ['.xlsx'];
+        } else if (extension === '.xls') {
+          accept['application/vnd.ms-excel'] = ['.xls'];
+        } else if (extension === '.csv') {
+          accept['text/csv'] = ['.csv'];
+        } else if (extension === '.docx') {
+          accept['application/vnd.openxmlformats-officedocument.wordprocessingml.document'] = ['.docx'];
+        } else if (extension === '.doc') {
+          accept['application/msword'] = ['.doc'];
+        }
+      }
+    });
+
+    return accept;
+  };
 
   // Validate files
   const validateFiles = useCallback((files: File[]): { valid: File[]; errors: string[] } => {
@@ -63,8 +133,8 @@ export function FileUpload({
       }
 
       // Check file type
-      if (!isSupportedImageType(file)) {
-        errors.push(`${file.name}: Only image files are allowed (JPG, PNG, WebP, HEIC)`);
+      if (!isValidFileType(file)) {
+        errors.push(`${file.name}: File type not supported. Accepted: ${getSupportedFormatsText()}`);
         return;
       }
 
@@ -89,11 +159,15 @@ export function FileUpload({
 
     if (valid.length > 0) {
       // Create previews for valid files
-      const newPreviews: FilePreview[] = valid.map((file, index) => ({
-        file,
-        id: `${Date.now()}_${index}`,
-        previewUrl: URL.createObjectURL(file)
-      }));
+      const newPreviews: FilePreview[] = valid.map((file, index) => {
+        const fileType = getFileType(file);
+        return {
+          file,
+          id: `${Date.now()}_${index}`,
+          previewUrl: fileType === 'image' ? URL.createObjectURL(file) : null,
+          fileType
+        };
+      });
 
       setPreviews(prev => [...prev, ...newPreviews]);
       
@@ -106,9 +180,7 @@ export function FileUpload({
   // Dropzone configuration
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop: handleFilesSelected,
-    accept: {
-      'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']
-    },
+    accept: getDropzoneAccept(),
     multiple: true,
     disabled,
     maxFiles,
@@ -121,7 +193,7 @@ export function FileUpload({
       const updated = prev.filter(p => p.id !== id);
       // Revoke URL to prevent memory leaks
       const removed = prev.find(p => p.id === id);
-      if (removed) {
+      if (removed?.previewUrl) {
         URL.revokeObjectURL(removed.previewUrl);
       }
       
@@ -140,7 +212,9 @@ export function FileUpload({
   const clearAll = useCallback(() => {
     // Revoke all preview URLs
     previews.forEach(preview => {
-      URL.revokeObjectURL(preview.previewUrl);
+      if (preview.previewUrl) {
+        URL.revokeObjectURL(preview.previewUrl);
+      }
     });
     
     setPreviews([]);
@@ -162,7 +236,9 @@ export function FileUpload({
   React.useEffect(() => {
     return () => {
       previews.forEach(preview => {
-        URL.revokeObjectURL(preview.previewUrl);
+        if (preview.previewUrl) {
+          URL.revokeObjectURL(preview.previewUrl);
+        }
       });
     };
   }, []);
@@ -200,14 +276,16 @@ export function FileUpload({
                   ? isDragReject 
                     ? "Invalid file type" 
                     : "Drop files here"
-                  : "Drag & drop images here"
+                  : isImageAccepted && !isDocumentMode 
+                    ? "Drag & drop images here"
+                    : "Drag & drop files here"
                 }
               </h3>
               <p className="text-sm text-muted-foreground">
                 or <Button variant="link" className="h-auto p-0 text-primary">browse files</Button>
               </p>
               <p className="text-xs text-muted-foreground">
-                Supports JPG, PNG, WebP, HEIC • Max {formatFileSize(maxSizeBytes)} per file • Up to {maxFiles} files
+                Supports {getSupportedFormatsText()} • Max {formatFileSize(maxSizeBytes)} per file • Up to {maxFiles} files
               </p>
             </div>
           </div>
@@ -259,11 +337,22 @@ export function FileUpload({
                   <div key={preview.id} className="relative group">
                     <Card className="overflow-hidden">
                       <div className="aspect-video bg-muted relative">
-                        <img
-                          src={preview.previewUrl}
-                          alt={preview.file.name}
-                          className="w-full h-full object-cover"
-                        />
+                        {preview.fileType === 'image' && preview.previewUrl ? (
+                          <img
+                            src={preview.previewUrl}
+                            alt={preview.file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="text-center">
+                              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                              <div className="text-sm font-medium text-muted-foreground">
+                                {preview.file.name.split('.').pop()?.toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         
                         {/* Remove button */}
                         <Button
@@ -322,7 +411,11 @@ export function FileUpload({
                       
                       <div className="p-3">
                         <div className="flex items-center space-x-2">
-                          <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                          {preview.fileType === 'image' ? (
+                            <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <File className="w-4 h-4 text-muted-foreground" />
+                          )}
                           <span className="text-sm font-medium truncate">
                             {preview.file.name}
                           </span>

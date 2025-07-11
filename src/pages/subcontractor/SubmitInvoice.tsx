@@ -515,6 +515,7 @@ const SubmitInvoice = () => {
                     maxSizeBytes={10 * 1024 * 1024}
                     uploadProgress={uploadProgress}
                     disabled={invoiceSubmission.isSubmitting || isUploading || invoiceDrafts.isSaving}
+                    acceptedTypes={['.pdf', '.xlsx', '.xls', '.csv', '.doc', '.docx', 'image/*']}
                   />
                 </CardContent>
               </Card>
