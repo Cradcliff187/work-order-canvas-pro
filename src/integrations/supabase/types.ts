@@ -1274,6 +1274,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_work_order_number_v2: {
+        Args: { org_id: string; location_number?: string }
+        Returns: string
+      }
       get_current_user_type: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_type"]

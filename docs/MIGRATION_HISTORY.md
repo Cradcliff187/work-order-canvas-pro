@@ -288,6 +288,20 @@ This document provides a complete chronological history of all database migratio
 3. **Audit Implementation**: 20250711000002 added complete change tracking
 4. **Performance Optimization**: 20250711000005 optimized for production use
 
+### 2025-01-11: Advanced Work Order Numbering
+
+#### 20250711_advanced_work_order_numbering.sql
+**Purpose**: **MAJOR** - Partner-specific work order numbering system
+- Created `generate_work_order_number_v2()` function for partner-initials-based numbering
+- Implemented format: `INITIALS-LOCATION-SEQUENCE` or `INITIALS-SEQUENCE`
+- Added `trigger_generate_work_order_number_v2()` with fallback to legacy numbering
+- Created `trigger_work_order_number_v2` on work_orders table for automatic generation
+- Enhanced concurrency safety with SELECT...FOR UPDATE row locking
+- Uses `organizations.initials` and `next_sequence_number` for per-organization sequences
+- **Backward Compatible**: Maintains existing `generate_work_order_number()` function
+- **Business Impact**: Enables partner-branded work order numbering (e.g., "ABC-504-001")
+- **Result**: Advanced numbering system with graceful fallback for missing organization data
+
 ## Current State (as of 2025-01-11)
 
 The database is now in a **mature, production-ready state** with:
@@ -296,6 +310,7 @@ The database is now in a **mature, production-ready state** with:
 ✅ **Multi-assignee work order support** for team-based workflows
 ✅ **Invoice management system** with dual numbering and approval workflow
 ✅ **Employee reporting system** with time tracking and expense management
+✅ **Advanced work order numbering** with partner-specific initials and locations
 ✅ **Generated column calculations** for automatic cost computation
 ✅ **Clean RLS implementation** with no recursion issues  
 ✅ **Comprehensive audit logging** on all core tables  

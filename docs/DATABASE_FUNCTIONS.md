@@ -309,6 +309,86 @@ $$;
 **Usage**: Called when creating new work orders  
 **Format**: WO-{YEAR}-{4-digit-sequence}
 
+### generate_work_order_number_v2()
+
+**Purpose**: Generate partner-specific work order numbers using organization initials and location
+
+```sql
+CREATE OR REPLACE FUNCTION public.generate_work_order_number_v2(
+  org_id uuid,
+  location_number text DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  org_initials text;
+  sequence_num integer;
+  work_order_num text;
+BEGIN
+  -- Get organization initials and lock row for sequence update
+  SELECT initials INTO org_initials 
+  FROM public.organizations 
+  WHERE id = org_id AND is_active = true
+  FOR UPDATE;
+  
+  -- Validate initials exist
+  IF org_initials IS NULL OR org_initials = '' THEN
+    RAISE EXCEPTION 'Organization initials are required for work order numbering. Please set initials for organization ID: %', org_id;
+  END IF;
+  
+  -- Get and increment sequence number atomically
+  UPDATE public.organizations 
+  SET next_sequence_number = next_sequence_number + 1
+  WHERE id = org_id
+  RETURNING next_sequence_number - 1 INTO sequence_num;
+  
+  -- Build work order number based on location presence
+  IF location_number IS NOT NULL AND location_number != '' THEN
+    work_order_num := org_initials || '-' || location_number || '-' || LPAD(sequence_num::text, 3, '0');
+  ELSE
+    work_order_num := org_initials || '-' || LPAD(sequence_num::text, 4, '0');
+  END IF;
+  
+  RETURN work_order_num;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RAISE EXCEPTION 'Organization not found or inactive: %', org_id;
+END;
+$$;
+```
+
+**Parameters:**
+- `org_id` (uuid) - Organization ID for initials lookup
+- `location_number` (text, optional) - Location number for location-specific numbering
+
+**Returns**: Formatted work order number  
+**Format:**
+- With location: `INITIALS-LOCATION-SEQUENCE` (e.g., "ABC-504-001")
+- Without location: `INITIALS-SEQUENCE` (e.g., "ABC-0001")
+
+**Features:**
+- Uses per-organization sequence numbers from `organizations.next_sequence_number`
+- Atomic sequence increment with SELECT...FOR UPDATE for concurrency safety
+- Clear error messages for missing organization initials
+- Supports both location-specific and general numbering formats
+
+**Usage Examples:**
+```sql
+-- With location
+SELECT generate_work_order_number_v2('org-uuid', '504');
+-- Returns: ABC-504-001
+
+-- Without location  
+SELECT generate_work_order_number_v2('org-uuid', NULL);
+-- Returns: ABC-0001
+```
+
+**Error Handling:**
+- Raises exception if organization initials are NULL or empty
+- Raises exception if organization not found or inactive
+- Prevents race conditions with row-level locking
+
 ### update_updated_at_column()
 
 **Purpose**: Trigger function to automatically update timestamp columns
@@ -327,6 +407,45 @@ $$;
 
 **Usage**: Applied to tables with updated_at columns  
 **Trigger**: BEFORE UPDATE on multiple tables
+
+### trigger_generate_work_order_number_v2()
+
+**Purpose**: Trigger function for automatic work order number generation with fallback
+
+```sql
+CREATE OR REPLACE FUNCTION public.trigger_generate_work_order_number_v2()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Only generate if work_order_number is not already set
+  IF NEW.work_order_number IS NULL OR NEW.work_order_number = '' THEN
+    -- Use organization_id (submitter) for numbering by default
+    -- Use partner_location_number if provided
+    NEW.work_order_number := public.generate_work_order_number_v2(
+      NEW.organization_id,
+      NEW.partner_location_number
+    );
+  END IF;
+  
+  RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- If advanced numbering fails, fall back to legacy system
+    RAISE WARNING 'Advanced work order numbering failed (%), falling back to legacy numbering', SQLERRM;
+    NEW.work_order_number := public.generate_work_order_number();
+    RETURN NEW;
+END;
+$$;
+```
+
+**Trigger**: `trigger_work_order_number_v2` on `work_orders` table BEFORE INSERT  
+**Features:**
+- Automatic work order number generation on insert
+- Uses advanced numbering with organization initials when possible
+- Falls back to legacy WO-YYYY-NNNN format if advanced numbering fails
+- Only generates numbers if not already provided
+- Error-resilient with warning logs for troubleshooting
 
 ### refresh_analytics_views()
 
