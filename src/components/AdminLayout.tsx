@@ -45,6 +45,7 @@ const sidebarItems = [
   { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
+  { title: 'Employees', url: '/admin/employees', icon: Users },
   { title: 'Email Templates', url: '/admin/email-templates', icon: Mail },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Settings', url: '/admin/settings', icon: Settings },
@@ -86,7 +87,7 @@ function AdminSidebar() {
             <SidebarMenu>
               {sidebarItems.map((item) => {
                 // Hide admin-only items for employees
-                const adminOnlyItems = ['Users', 'Organizations', 'Settings', 'System Health', 'Dev Tools'];
+                const adminOnlyItems = ['Users', 'Organizations', 'Employees', 'Settings', 'System Health', 'Dev Tools'];
                 if (!isAdmin && adminOnlyItems.includes(item.title)) {
                   return null;
                 }
