@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Checkbox } from '@/components/ui/checkbox';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
+import { EditOrganizationModal } from '@/components/admin/organizations/EditOrganizationModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -19,6 +20,7 @@ export interface Organization {
   contact_email: string;
   contact_phone?: string;
   address?: string;
+  organization_type: 'partner' | 'subcontractor' | 'internal';
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -34,7 +36,10 @@ const AdminOrganizations = () => {
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [showOnlyActive, setShowOnlyActive] = useState(true);
+  const [selectedType, setSelectedType] = useState<string>('all');
   
   const { toast } = useToast();
   const { data: organizationsData, isLoading, refetch } = useOrganizations();
@@ -68,6 +73,24 @@ const AdminOrganizations = () => {
           <span className="font-medium">{row.original.name}</span>
         </div>
       ),
+    },
+    {
+      accessorKey: 'organization_type',
+      header: 'Type',
+      cell: ({ row }) => {
+        const type = row.original.organization_type;
+        const typeConfig = {
+          partner: { label: 'Partner', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+          subcontractor: { label: 'Subcontractor', className: 'bg-green-100 text-green-800 border-green-200' },
+          internal: { label: 'Internal', className: 'bg-purple-100 text-purple-800 border-purple-200' }
+        };
+        const config = typeConfig[type];
+        return (
+          <Badge variant="outline" className={config.className}>
+            {config.label}
+          </Badge>
+        );
+      },
     },
     {
       accessorKey: 'contact_email',
@@ -144,7 +167,10 @@ const AdminOrganizations = () => {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                setSelectedOrganization(org);
+                setShowEditModal(true);
+              }}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Organization
               </DropdownMenuItem>
@@ -168,11 +194,18 @@ const AdminOrganizations = () => {
 
   const filteredData = useMemo(() => {
     if (!organizationsData?.organizations) return [];
+    let filtered = organizationsData.organizations;
+    
     if (showOnlyActive) {
-      return organizationsData.organizations.filter(org => org.is_active);
+      filtered = filtered.filter(org => org.is_active);
     }
-    return organizationsData.organizations;
-  }, [organizationsData?.organizations, showOnlyActive]);
+    
+    if (selectedType !== 'all') {
+      filtered = filtered.filter(org => org.organization_type === selectedType);
+    }
+    
+    return filtered;
+  }, [organizationsData?.organizations, showOnlyActive, selectedType]);
 
   const table = useReactTable({
     data: filteredData,
@@ -229,6 +262,9 @@ const AdminOrganizations = () => {
     active: organizationsData?.organizations?.filter(o => o.is_active).length || 0,
     totalUsers: organizationsData?.organizations?.reduce((acc, o) => acc + (o.users_count || 0), 0) || 0,
     totalWorkOrders: organizationsData?.organizations?.reduce((acc, o) => acc + (o.work_orders_count || 0), 0) || 0,
+    partners: organizationsData?.organizations?.filter(o => o.organization_type === 'partner').length || 0,
+    subcontractors: organizationsData?.organizations?.filter(o => o.organization_type === 'subcontractor').length || 0,
+    internal: organizationsData?.organizations?.filter(o => o.organization_type === 'internal').length || 0,
   };
 
   return (
@@ -286,16 +322,24 @@ const AdminOrganizations = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Users/Org</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">By Type</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.total > 0 ? Math.round(stats.totalUsers / stats.total) : 0}
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Partners:</span>
+                <span className="font-medium">{stats.partners}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Subcontractors:</span>
+                <span className="font-medium">{stats.subcontractors}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Internal:</span>
+                <span className="font-medium">{stats.internal}</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Per organization
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -314,6 +358,16 @@ const AdminOrganizations = () => {
                   className="pl-8 w-72"
                 />
               </div>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="h-8 rounded border border-input bg-background px-2 text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="partner">Partners</option>
+                <option value="subcontractor">Subcontractors</option>
+                <option value="internal">Internal</option>
+              </select>
               <Button
                 variant={showOnlyActive ? "default" : "outline"}
                 size="sm"
@@ -461,6 +515,19 @@ const AdminOrganizations = () => {
           toast({
             title: "Organization created",
             description: "The new organization has been created successfully.",
+          });
+        }}
+      />
+
+      <EditOrganizationModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        organization={selectedOrganization}
+        onSuccess={() => {
+          refetch();
+          toast({
+            title: "Organization updated",
+            description: "The organization has been updated successfully.",
           });
         }}
       />

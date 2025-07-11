@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Building2, Mail, Phone, MapPin } from 'lucide-react';
-import { useOrganizationMutations, CreateOrganizationData } from '@/hooks/useOrganizations';
+import { useOrganizationMutations, UpdateOrganizationData } from '@/hooks/useOrganizations';
+import { Organization } from '@/pages/admin/AdminOrganizations';
 
-const createOrganizationSchema = z.object({
+const editOrganizationSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
   contact_email: z.string().email('Invalid email address'),
   contact_phone: z.string().optional(),
@@ -19,42 +20,59 @@ const createOrganizationSchema = z.object({
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
 });
 
-type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
+type EditOrganizationFormData = z.infer<typeof editOrganizationSchema>;
 
-interface CreateOrganizationModalProps {
+interface EditOrganizationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  organization: Organization | null;
   onSuccess: () => void;
 }
 
-export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: CreateOrganizationModalProps) {
-  const { createOrganization } = useOrganizationMutations();
+export function EditOrganizationModal({ open, onOpenChange, organization, onSuccess }: EditOrganizationModalProps) {
+  const { updateOrganization } = useOrganizationMutations();
   
-  const form = useForm<CreateOrganizationFormData>({
-    resolver: zodResolver(createOrganizationSchema),
+  const form = useForm<EditOrganizationFormData>({
+    resolver: zodResolver(editOrganizationSchema),
     defaultValues: {
-      name: '',
-      contact_email: '',
-      contact_phone: '',
-      address: '',
-      organization_type: 'partner' as const,
+      name: organization?.name || '',
+      contact_email: organization?.contact_email || '',
+      contact_phone: organization?.contact_phone || '',
+      address: organization?.address || '',
+      organization_type: organization?.organization_type || 'partner',
     },
   });
 
-  const onSubmit = async (data: CreateOrganizationFormData) => {
-    try {
-      await createOrganization.mutateAsync({
-        name: data.name!,
-        contact_email: data.contact_email!,
-        contact_phone: data.contact_phone,
-        address: data.address,
-        organization_type: data.organization_type,
+  React.useEffect(() => {
+    if (organization) {
+      form.reset({
+        name: organization.name,
+        contact_email: organization.contact_email,
+        contact_phone: organization.contact_phone || '',
+        address: organization.address || '',
+        organization_type: organization.organization_type,
       });
-      form.reset();
+    }
+  }, [organization, form]);
+
+  const onSubmit = async (data: EditOrganizationFormData) => {
+    if (!organization) return;
+    
+    try {
+      await updateOrganization.mutateAsync({
+        organizationId: organization.id,
+        orgData: {
+          name: data.name,
+          contact_email: data.contact_email,
+          contact_phone: data.contact_phone,
+          address: data.address,
+          organization_type: data.organization_type,
+        },
+      });
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error('Failed to create organization:', error);
+      console.error('Failed to update organization:', error);
     }
   };
 
@@ -69,10 +87,10 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Create New Organization
+            Edit Organization
           </DialogTitle>
           <DialogDescription>
-            Add a new organization to the system. Users can be assigned to this organization later.
+            Update the organization details below.
           </DialogDescription>
         </DialogHeader>
 
@@ -163,7 +181,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Organization Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select organization type" />
@@ -187,8 +205,8 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createOrganization.isPending}>
-                {createOrganization.isPending ? 'Creating...' : 'Create Organization'}
+              <Button type="submit" disabled={updateOrganization.isPending}>
+                {updateOrganization.isPending ? 'Updating...' : 'Update Organization'}
               </Button>
             </DialogFooter>
           </form>
