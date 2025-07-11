@@ -370,6 +370,37 @@ This document provides a complete chronological history of all database migratio
 
 ### 2025-07-11: Enhanced Work Order Numbering with Error Handling
 
+#### 20250711175108-1c20f242-d23a-4736-81b6-bc40efc7cde7.sql
+**Purpose**: **MAJOR** - Enhanced work order completion detection with automatic completion
+- Added completion tracking columns to work_orders table:
+  - `completion_method` (text) - Tracks how work order was completed ('automatic', 'manual', 'manual_override')
+  - `auto_completion_blocked` (boolean) - Admin flag to prevent automatic completion  
+  - `completion_checked_at` (timestamp) - Last time completion logic ran
+- Created `check_assignment_completion_status_enhanced()` function with improved logic:
+  - Supports both legacy (single assignee) and new (multi-assignee) models
+  - Handles automatic completion when all required assignees submit approved reports
+  - Respects manual completion blocks set by administrators
+  - Updates completion tracking and triggers email notifications
+- Added `trigger_completion_email()` function for email notifications:
+  - Uses `pg_net.http_post` to call edge function for completion emails
+  - Error-resilient design that doesn't block completion process
+  - Includes proper authorization headers for service-to-service calls
+- Enhanced `auto_update_report_status_enhanced()` trigger function:
+  - Replaces `auto_update_report_status()` with enhanced completion logic
+  - Transitions work orders from 'assigned' to 'in_progress' on first report
+  - Automatically checks completion eligibility when reports are approved
+- Added `set_manual_completion_block()` admin function:
+  - Allows administrators to manually block/unblock automatic completion
+  - Creates audit trail for completion override actions
+  - Admin-only security with proper authorization checks
+- Updated database triggers:
+  - Replaced `trigger_auto_report_status` with enhanced version
+  - Maintained backward compatibility with existing work order workflows
+- **Business Impact**: Enables automatic work order completion while preserving admin control
+- **Result**: Complete automated completion detection with manual override capabilities and email notifications
+
+### Previous Migration Categories
+
 #### 20250711172637-dede9565-e252-4d72-944c-77b5568b4ce1.sql
 **Purpose**: **MAJOR** - Enhanced work order numbering v2 with better error handling
 - Updated `generate_work_order_number_v2()` to return structured JSON response instead of simple text

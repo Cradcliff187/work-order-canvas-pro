@@ -43,11 +43,11 @@ WorkOrderPro uses a comprehensive **19-table** PostgreSQL database with Row Leve
 - `email_status`: 'sent', 'delivered', 'failed', 'bounced'
 - `file_type`: 'photo', 'invoice', 'document'
 
-### Custom Functions (13)
-- User management functions for RLS and security
-- Work order lifecycle functions
-- Analytics and reporting functions
-- Email notification functions
+### Custom Functions (17)
+- User management functions for RLS and security (7)
+- Work order lifecycle functions (3)
+- Work order completion functions (4)
+- Analytics and reporting functions (3)
 
 ## Entity Relationship Diagram
 
@@ -373,6 +373,9 @@ erDiagram
 | subcontractor_invoice_amount | numeric | Yes | - | Subcontractor invoice amount |
 | subcontractor_report_submitted | boolean | Yes | false | Whether report submitted |
 | admin_completion_notes | text | Yes | - | Admin completion notes |
+| completion_method | text | Yes | 'manual' | How work order was completed ('automatic', 'manual', 'manual_override') |
+| auto_completion_blocked | boolean | Yes | false | Admin flag to prevent automatic completion |
+| completion_checked_at | timestamp | Yes | - | Last time completion logic was checked |
 | created_at | timestamp | No | now() | Creation timestamp |
 | updated_at | timestamp | No | now() | Last update timestamp |
 

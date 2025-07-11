@@ -15,7 +15,10 @@ Functions executed by database triggers for audit logging and user profile creat
 ### Utility Functions (3)
 General-purpose functions for work order numbering and analytics view management
 
-### Analytics Functions (3)
+### Work Order Completion Functions (4)
+Automatic completion detection and manual override functions for work order lifecycle management
+
+### Analytics Functions (3)  
 Business intelligence functions for reporting and performance metrics
 
 ## Auth Helper Functions
@@ -613,6 +616,208 @@ $$;
 
 **Usage**: Called periodically to update analytics data  
 **Performance**: Should be run during off-peak hours
+
+## Work Order Completion Functions
+
+These functions manage automatic work order completion detection, email notifications, and manual overrides for completion behavior.
+
+### 1. check_assignment_completion_status_enhanced(work_order_id uuid)
+
+**Purpose**: Enhanced completion status check with both legacy and new assignment model support
+
+```sql
+CREATE OR REPLACE FUNCTION public.check_assignment_completion_status_enhanced(work_order_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  current_status work_order_status;
+  lead_assignments_count INTEGER;
+  completed_lead_reports INTEGER;
+  total_assignments_count INTEGER;
+  is_legacy_model boolean DEFAULT false;
+  work_order_rec RECORD;
+BEGIN
+  -- Get current work order details
+  SELECT status, auto_completion_blocked, assigned_to 
+  INTO work_order_rec
+  FROM work_orders 
+  WHERE id = work_order_id;
+  
+  -- Exit early if work order not found
+  IF work_order_rec IS NULL THEN
+    RETURN FALSE;
+  END IF;
+  
+  current_status := work_order_rec.status;
+  
+  -- Only check completion for in_progress work orders
+  IF current_status != 'in_progress' THEN
+    RETURN FALSE;
+  END IF;
+  
+  -- Don't auto-complete if manually blocked
+  IF work_order_rec.auto_completion_blocked = true THEN
+    RETURN FALSE;
+  END IF;
+  
+  -- Check if work order should be completed and trigger transition
+  PERFORM public.transition_work_order_status(
+    work_order_id,
+    'completed'::work_order_status,
+    'Auto-completed: All required assignees submitted approved reports'
+  );
+  
+  -- Trigger completion email notification
+  PERFORM public.trigger_completion_email(work_order_id);
+  
+  RETURN TRUE;
+END;
+$$;
+```
+
+**Parameters**: `work_order_id` - UUID of work order to check
+**Returns**: TRUE if work order was completed, FALSE otherwise
+**Features**:
+- Handles both legacy (single assignee) and new (multi-assignee) models
+- Checks for manually blocked auto-completion
+- Only processes work orders in 'in_progress' status
+- Automatically transitions to 'completed' status when requirements met
+- Triggers email notifications upon completion
+- Updates completion tracking fields
+
+### 2. trigger_completion_email(work_order_id uuid)
+
+**Purpose**: Send completion email notification using edge function integration
+
+```sql
+CREATE OR REPLACE FUNCTION public.trigger_completion_email(work_order_id uuid)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+BEGIN
+  -- Use pg_net to call the completion email edge function
+  PERFORM net.http_post(
+    url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-order-completed',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true)
+    ),
+    body := jsonb_build_object('work_order_id', work_order_id)
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the completion process
+    RAISE WARNING 'Failed to trigger completion email for work order %: %', work_order_id, SQLERRM;
+END;
+$$;
+```
+
+**Parameters**: `work_order_id` - UUID of completed work order
+**Returns**: void
+**Features**:
+- Uses `pg_net.http_post` to call edge function
+- Error-resilient (email failures don't block completion)
+- Includes proper authorization headers
+- Comprehensive error logging
+
+### 3. auto_update_report_status_enhanced()
+
+**Purpose**: Enhanced trigger function for automatic work order status transitions based on report submissions and approvals
+
+```sql
+CREATE OR REPLACE FUNCTION public.auto_update_report_status_enhanced()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  current_status work_order_status;
+BEGIN
+  -- Get current work order status
+  SELECT status INTO current_status 
+  FROM work_orders 
+  WHERE id = NEW.work_order_id;
+  
+  -- When first report is submitted, transition to in_progress
+  IF TG_OP = 'INSERT' AND current_status = 'assigned' THEN
+    PERFORM public.transition_work_order_status(
+      NEW.work_order_id,
+      'in_progress'::work_order_status,
+      'First report submitted by: ' || NEW.subcontractor_user_id
+    );
+  END IF;
+  
+  -- When report is approved, check if work order should be completed
+  IF TG_OP = 'UPDATE' AND NEW.status = 'approved' AND OLD.status != 'approved' THEN
+    PERFORM public.check_assignment_completion_status_enhanced(NEW.work_order_id);
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+```
+
+**Trigger Context**: Used by `trigger_auto_report_status` on work_order_reports table
+**Features**:
+- Transitions work orders from 'assigned' to 'in_progress' on first report submission
+- Checks for completion eligibility when reports are approved
+- Uses enhanced completion checking function
+- Maintains audit trail through transition functions
+
+### 4. set_manual_completion_block(work_order_id uuid, blocked boolean)
+
+**Purpose**: Allow administrators to manually block or unblock automatic completion
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_manual_completion_block(
+  work_order_id uuid, 
+  blocked boolean DEFAULT true
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+BEGIN
+  -- Only admins can block/unblock auto-completion
+  IF NOT public.auth_is_admin() THEN
+    RAISE EXCEPTION 'Only administrators can modify completion settings';
+  END IF;
+  
+  UPDATE work_orders 
+  SET auto_completion_blocked = blocked,
+      completion_method = CASE WHEN blocked THEN 'manual_override' ELSE completion_method END
+  WHERE id = work_order_id;
+  
+  -- Log the action
+  INSERT INTO audit_logs (
+    table_name, record_id, action, new_values, user_id
+  ) VALUES (
+    'work_orders', work_order_id, 'COMPLETION_BLOCK_CHANGE',
+    jsonb_build_object('auto_completion_blocked', blocked, 'changed_by', public.auth_profile_id()),
+    public.auth_user_id()
+  );
+END;
+$$;
+```
+
+**Parameters**: 
+- `work_order_id` - UUID of work order to modify
+- `blocked` - Whether to block automatic completion (default: true)
+**Returns**: void
+**Security**: Admin-only access
+**Features**:
+- Prevents automatic completion when blocked
+- Updates completion method when blocking
+- Creates audit log entry for the action
+- Only accessible to administrators
+
+**Completion Detection Logic**:
+
+1. **Legacy Model Support**: Handles work orders with single assignee in `work_orders.assigned_to`
+2. **New Assignment Model**: Supports multiple assignees with lead/support roles
+3. **Automatic Triggers**: Reports approval automatically triggers completion checks
+4. **Manual Override**: Administrators can block automatic completion
+5. **Email Integration**: Completed work orders trigger notification emails
+6. **Audit Trail**: All completion actions are logged for tracking
 
 ## Analytics Functions
 
