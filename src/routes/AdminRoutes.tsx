@@ -22,7 +22,7 @@ import {
 export const AdminRoutes = () => (
   <>
     <Route path="/admin/dashboard" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminDashboard />
@@ -32,7 +32,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/work-orders" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminWorkOrders />
@@ -42,7 +42,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/work-orders/:id" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminWorkOrderDetail />
@@ -52,7 +52,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/work-orders/:id/edit" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminWorkOrderEdit />
@@ -82,7 +82,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/analytics" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminAnalytics />
@@ -92,7 +92,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/email-templates" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminEmailTemplates />
@@ -102,7 +102,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/reports" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminReports />
@@ -112,7 +112,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/reports/:id" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminReportDetail />
@@ -122,7 +122,7 @@ export const AdminRoutes = () => (
     } />
     
     <Route path="/admin/profile" element={
-      <ProtectedRoute requiredUserType="admin">
+      <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminProfile />

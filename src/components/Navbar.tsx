@@ -27,6 +27,7 @@ const Navbar = () => {
   const getUserTypeColor = (userType: string) => {
     switch (userType) {
       case 'admin': return 'text-destructive';
+      case 'employee': return 'text-blue-600';
       case 'partner': return 'text-primary';
       case 'subcontractor': return 'text-secondary';
       default: return 'text-muted-foreground';
@@ -40,6 +41,7 @@ const Navbar = () => {
   const getProfilePath = () => {
     switch (profile?.user_type) {
       case 'admin': return '/admin/profile';
+      case 'employee': return '/admin/profile';
       case 'partner': return '/partner/profile';
       case 'subcontractor': return '/subcontractor/profile';
       default: return '/admin/profile';

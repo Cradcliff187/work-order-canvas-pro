@@ -57,6 +57,8 @@ function AdminSidebar() {
   const { state } = useSidebar();
   const { profile, signOut } = useAuth();
   const collapsed = state === 'collapsed';
+  
+  const isAdmin = profile?.user_type === 'admin';
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -82,20 +84,28 @@ function AdminSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {sidebarItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild
-                    isActive={isActive(item.url)}
-                    className={isActive(item.url) ? "bg-sidebar-accent" : ""}
-                  >
-                    <Link to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {sidebarItems.map((item) => {
+                // Hide admin-only items for employees
+                const adminOnlyItems = ['Users', 'Organizations', 'Settings', 'System Health', 'Dev Tools'];
+                if (!isAdmin && adminOnlyItems.includes(item.title)) {
+                  return null;
+                }
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={isActive(item.url)}
+                      className={isActive(item.url) ? "bg-sidebar-accent" : ""}
+                    >
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
