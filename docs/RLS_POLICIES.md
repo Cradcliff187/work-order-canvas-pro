@@ -357,12 +357,124 @@ Using: auth_is_admin()
 With Check: auth_is_admin()
 ```
 
+### invoices
+
+**Admins can manage all invoices**
+```sql
+Policy: ALL
+Using: auth_is_admin()
+With Check: auth_is_admin()
+```
+
+**Subcontractors can update modifiable invoices from their organization**
+```sql
+Policy: UPDATE
+Using: (auth_user_type() = 'subcontractor' AND auth_user_belongs_to_organization(subcontractor_organization_id) AND status IN ('submitted', 'rejected'))
+With Check: (auth_user_type() = 'subcontractor' AND auth_user_belongs_to_organization(subcontractor_organization_id) AND status IN ('submitted', 'rejected') AND approved_by IS NULL AND approved_at IS NULL AND paid_at IS NULL AND payment_reference IS NULL)
+```
+
+**Critical Security Features:**
+- **Status Restrictions**: Subcontractors can only modify invoices with 'submitted' or 'rejected' status
+- **Field Protection**: Prevents modification of approval_by, approved_at, paid_at, payment_reference fields
+- **Validation Trigger**: `validate_invoice_status_change()` enforces status transition rules
+
+### invoice_work_orders
+
+**Admins can manage all invoice work orders**
+```sql
+Policy: ALL
+Using: auth_is_admin()
+With Check: auth_is_admin()
+```
+
+**Subcontractors can manage invoice work orders for modifiable invoices**
+```sql
+Policy: ALL
+Using: (auth_user_type() = 'subcontractor' AND EXISTS (SELECT 1 FROM invoices i WHERE i.id = invoice_id AND auth_user_belongs_to_organization(i.subcontractor_organization_id) AND i.status IN ('submitted', 'rejected')))
+With Check: (Same as Using expression)
+```
+
+### employee_reports
+
+**Admins can manage all employee reports**
+```sql
+Policy: ALL
+Using: auth_is_admin()
+With Check: auth_is_admin()
+```
+
+**Employees can manage their own reports**
+```sql
+Policy: ALL
+Using: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
+With Check: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
+```
+
+### receipts
+
+**Admins can manage all receipts**
+```sql
+Policy: ALL
+Using: auth_is_admin()
+With Check: auth_is_admin()
+```
+
+**Employees can manage their own receipts**
+```sql
+Policy: ALL
+Using: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
+With Check: (auth_user_type() = 'employee' AND employee_user_id = auth_profile_id())
+```
+
+### receipt_work_orders
+
+**Admins can manage all receipt work orders**
+```sql
+Policy: ALL
+Using: auth_is_admin()
+With Check: auth_is_admin()
+```
+
+**Employees can manage receipt work orders for their receipts**
+```sql
+Policy: ALL
+Using: (auth_user_type() = 'employee' AND receipt_id IN (SELECT r.id FROM receipts r WHERE r.employee_user_id = auth_profile_id()))
+With Check: (Same as Using expression)
+```
+
 ### audit_logs
 
 **Admins can view all audit logs**
 ```sql
 Policy: SELECT
 Using: auth_is_admin()
+```
+
+## Financial Data Access Patterns
+
+### Organization-Level vs Individual-Level Access
+
+**Organization-Level Access (Invoices)**
+- Subcontractors access invoices through organization membership
+- Uses `auth_user_belongs_to_organization()` helper function
+- Restricted by invoice status ('submitted', 'rejected' only)
+
+**Individual-Level Access (Reports & Receipts)**
+- Employees access only their own reports and receipts
+- Uses direct profile ID comparison (`employee_user_id = auth_profile_id()`)
+- No status restrictions - employees have full CRUD access to their data
+
+### Status-Based Security Model
+
+**Invoice Status Transitions (Enforced by Trigger)**
+```sql
+-- Allowed transitions for subcontractors:
+'rejected' → 'submitted'  -- Resubmit after rejection
+
+-- Blocked transitions for subcontractors:
+'submitted' → 'approved'  -- Only admins can approve
+'submitted' → 'rejected'  -- Only admins can reject
+'approved' → 'paid'       -- Only admins can mark as paid
 ```
 
 ## Access Examples by User Type
@@ -465,6 +577,36 @@ VALUES ('Test', 'user_org_id', auth_profile_id());
 2. Ensure helper functions are marked STABLE
 3. Consider materialized views for complex access patterns
 
+### Issue: "Subcontractors can only resubmit rejected invoices" error
+
+**Cause**: Attempting to change invoice status in violation of business rules
+
+**Solution**: Follow proper status transition workflow
+```sql
+-- WRONG: Direct status change from 'submitted' to 'approved'
+UPDATE invoices SET status = 'approved' WHERE id = 'invoice_id';
+
+-- CORRECT: Only admins can approve, subcontractors can only resubmit rejected
+-- Subcontractor resubmitting after rejection:
+UPDATE invoices SET status = 'submitted', external_invoice_number = 'INV-123' 
+WHERE id = 'invoice_id' AND status = 'rejected';
+```
+
+### Issue: "Cannot modify approval or payment fields" error
+
+**Cause**: Subcontractors trying to update protected financial fields
+
+**Solution**: Only modify allowed fields for subcontractors
+```sql
+-- WRONG: Subcontractor trying to set approval fields
+UPDATE invoices SET approved_by = 'admin_id', total_amount = 500.00 
+WHERE id = 'invoice_id';
+
+-- CORRECT: Subcontractor updating only allowed fields
+UPDATE invoices SET total_amount = 500.00, external_invoice_number = 'INV-456'
+WHERE id = 'invoice_id' AND status IN ('submitted', 'rejected');
+```
+
 ## Performance Considerations
 
 ### Indexes Supporting RLS
@@ -482,6 +624,12 @@ CREATE INDEX idx_work_orders_organization_id ON work_orders(organization_id);
 -- Profile lookups
 CREATE INDEX idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX idx_profiles_user_type ON profiles(user_type);
+
+-- Financial table performance indexes
+CREATE INDEX idx_invoices_status_org ON invoices(status, subcontractor_organization_id);
+CREATE INDEX idx_invoices_organization ON invoices(subcontractor_organization_id);
+CREATE INDEX idx_employee_reports_user ON employee_reports(employee_user_id);
+CREATE INDEX idx_receipts_user ON receipts(employee_user_id);
 ```
 
 ### Function Performance
