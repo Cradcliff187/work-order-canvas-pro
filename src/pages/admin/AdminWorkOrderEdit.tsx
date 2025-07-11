@@ -90,7 +90,7 @@ export default function AdminWorkOrderEdit() {
       title: '',
       description: '',
       status: 'received',
-      assigned_to: '',
+      assigned_to: 'unassigned',
       trade_id: '',
       due_date: '',
       estimated_completion_date: '',
@@ -114,7 +114,7 @@ export default function AdminWorkOrderEdit() {
         title: workOrder.title || '',
         description: workOrder.description || '',
         status: workOrder.status,
-        assigned_to: workOrder.assigned_to || '',
+        assigned_to: workOrder.assigned_to || 'unassigned',
         trade_id: workOrder.trade_id || '',
         due_date: workOrder.due_date || '',
         estimated_completion_date: workOrder.estimated_completion_date || '',
@@ -195,7 +195,7 @@ export default function AdminWorkOrderEdit() {
       };
 
       // Handle assignment
-      if (data.assigned_to) {
+      if (data.assigned_to && data.assigned_to !== 'unassigned') {
         updates.assigned_to = data.assigned_to;
         updates.assigned_to_type = 'subcontractor';
         if (!workOrder.date_assigned) {
@@ -371,7 +371,7 @@ export default function AdminWorkOrderEdit() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Unassigned</SelectItem>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
                             {subcontractors?.map((sub) => (
                               <SelectItem key={sub.id} value={sub.id}>
                                 {sub.first_name} {sub.last_name}
