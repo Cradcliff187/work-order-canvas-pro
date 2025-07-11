@@ -33,7 +33,7 @@ export default function ReportDetail() {
             state,
             zip_code,
             trades (name),
-            organizations (name)
+            organizations!organization_id (name)
           ),
           work_order_attachments (
             id,

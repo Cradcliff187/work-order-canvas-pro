@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, format } from 'date-fns';
@@ -143,7 +144,7 @@ export const useAnalytics = (dateRange: DateRange) => {
         end_date: endDate
       });
 
-      // Organization Analysis
+      // Organization Analysis - Fix the ambiguous relationship
       const { data: orgData } = await supabase
         .from('work_orders')
         .select(`
@@ -151,7 +152,7 @@ export const useAnalytics = (dateRange: DateRange) => {
           status,
           completed_at,
           date_assigned,
-          organizations(name)
+          organizations!organization_id(name)
         `)
         .gte('date_submitted', startDate)
         .lte('date_submitted', endDate);
