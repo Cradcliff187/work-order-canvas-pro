@@ -80,8 +80,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle static assets dynamically
-  if (isStaticAsset(url)) {
+  // Handle static assets dynamically (including JS chunks)
+  if (isStaticAsset(url) || isJavaScriptChunk(url)) {
     event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
     return;
   }
@@ -102,9 +102,14 @@ function isApiRequest(url) {
 }
 
 function isStaticAsset(url) {
-  const staticExtensions = ['.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2'];
+  const staticExtensions = ['.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2'];
   return staticExtensions.some(ext => url.pathname.endsWith(ext)) || 
          url.pathname === '/manifest.json';
+}
+
+function isJavaScriptChunk(url) {
+  return url.pathname.endsWith('.js') && 
+         (url.pathname.includes('/assets/') || url.pathname.includes('chunk'));
 }
 
 function isValidResponse(response) {
