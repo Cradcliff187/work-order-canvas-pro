@@ -16,9 +16,11 @@ import { Separator } from '@/components/ui/separator';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
 import { useInvoiceDrafts, type InvoiceDraftData } from '@/hooks/useInvoiceDrafts';
+import { useInvoiceFileUpload } from '@/hooks/useInvoiceFileUpload';
 import { Save, FileText, Trash2, Clock, TrendingUp } from 'lucide-react';
 import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
+import { FileUpload } from '@/components/FileUpload';
 
 // Relaxed schema for drafts
 const draftInvoiceSchema = z.object({
@@ -58,6 +60,11 @@ const SubmitInvoice = () => {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [isSubmissionMode, setIsSubmissionMode] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const { uploadProgress, isUploading } = useInvoiceFileUpload({
+    maxFiles: 5,
+    maxSizeBytes: 10 * 1024 * 1024, // 10MB
+  });
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(isSubmissionMode ? invoiceSchema : draftInvoiceSchema),
@@ -266,9 +273,11 @@ const SubmitInvoice = () => {
             workOrderId: wo.work_order_id,
             amount: wo.amount,
             description: data.notes
-          }))
+          })),
+          attachments: selectedFiles
         });
       }
+      setSelectedFiles([]);
       navigate('/subcontractor/work-orders');
     } catch (error) {
       // Error is handled in the mutation
@@ -491,6 +500,24 @@ const SubmitInvoice = () => {
                   />
                 </div>
               </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Supporting Documents</CardTitle>
+                  <CardDescription>
+                    Upload invoice documents (PDF, Excel, Word, images) - Max 5 files, 10MB each
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FileUpload
+                    onFilesSelected={setSelectedFiles}
+                    maxFiles={5}
+                    maxSizeBytes={10 * 1024 * 1024}
+                    uploadProgress={uploadProgress}
+                    disabled={invoiceSubmission.isSubmitting || isUploading || invoiceDrafts.isSaving}
+                  />
+                </CardContent>
+              </Card>
 
               <Separator />
               
