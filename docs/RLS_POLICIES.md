@@ -2,7 +2,17 @@
 
 ## Overview
 
-WorkOrderPro implements comprehensive Row Level Security (RLS) to ensure proper data isolation between different user types and organizations. The system uses 7 SECURITY DEFINER helper functions to avoid infinite recursion and provide efficient access control.
+WorkOrderPro implements comprehensive Row Level Security (RLS) to ensure proper data isolation between different user types and organizations. The system uses 7 SECURITY DEFINER helper functions and a layered policy approach to avoid infinite recursion while providing efficient access control.
+
+## Infinite Recursion Prevention
+
+**Critical Issue:** RLS policies that call helper functions which query the same table they're protecting cause infinite recursion errors.
+
+**Solution:** A layered policy approach:
+1. **Base Policies** - Use `auth.uid()` directly for basic self-access (no helper functions)
+2. **Enhancement Policies** - Use helper functions safely after initial profile bootstrap
+
+This ensures users can always fetch their own profile data, which then allows helper functions to work without recursion.
 
 ## User Types and Access Matrix
 
@@ -15,7 +25,7 @@ WorkOrderPro implements comprehensive Row Level Security (RLS) to ensure proper 
 
 ## Helper Functions
 
-All RLS policies use these SECURITY DEFINER functions to avoid infinite recursion:
+These SECURITY DEFINER helper functions are used in enhancement policies. **Critical:** Base policies should use `auth.uid()` directly to prevent recursion.
 
 ### 1. auth_user_id()
 ```sql
@@ -158,41 +168,67 @@ With Check: (auth_user_type() = 'partner' AND auth_user_belongs_to_organization(
 
 ### profiles
 
-**Admins can manage all profiles**
+**CRITICAL:** The profiles table uses a layered policy approach to prevent infinite recursion. Base policies use `auth.uid()` directly, while enhancement policies can safely use helper functions.
+
+#### Base Policies (Prevent Recursion)
+
+**Users can always read own profile via auth uid**
+```sql
+Policy: SELECT
+Using: (user_id = auth.uid())
+Comment: 'Critical policy that prevents recursion by allowing users to fetch their own profile using auth.uid() directly'
+```
+
+**Users can update own profile**
+```sql
+Policy: UPDATE
+Using: (user_id = auth.uid())
+With Check: (user_id = auth.uid())
+```
+
+**Users can create own profile**
+```sql
+Policy: INSERT
+With Check: (user_id = auth.uid())
+```
+
+#### Enhancement Policies (Use Helper Functions Safely)
+
+**Admins full profile access**
 ```sql
 Policy: ALL
-Using: auth_is_admin()
-With Check: auth_is_admin()
+Using: (user_id = auth.uid() OR auth_is_admin())
+With Check: (user_id = auth.uid() OR auth_is_admin())
+Comment: 'Admins have full access to all profiles - safe to use helper functions as this is evaluated after initial profile fetch'
 ```
 
-**Users can view their own profile**
+**Employees view all profiles**
 ```sql
 Policy: SELECT
-Using: (id = auth_profile_id())
+Using: (user_id = auth.uid() OR auth_user_type() = 'employee')
+Comment: 'Employees can view all profiles for operational purposes - uses helper function safely'
 ```
 
-**Employees can view all profiles**
+**Partners view organization profiles**
 ```sql
 Policy: SELECT
-Using: (auth_user_type() = 'employee')
-```
-
-**Partners can view profiles in their organizations**
-```sql
-Policy: SELECT
-Using: (auth_user_type() = 'partner' AND id IN (
-  SELECT p.id FROM profiles p
-  JOIN user_organizations uo ON p.id = uo.user_id
-  WHERE auth_user_belongs_to_organization(uo.organization_id)
-  AND p.user_type != 'employee'
+Using: (user_id = auth.uid() OR (
+  auth_user_type() = 'partner' AND id IN (
+    SELECT p.id FROM profiles p
+    JOIN user_organizations uo ON p.id = uo.user_id
+    WHERE uo.organization_id IN (
+      SELECT organization_id FROM auth_user_organizations()
+    )
+    AND p.user_type != 'employee'
+  )
 ))
 ```
 
-**Subcontractors can view relevant profiles**
+**Subcontractors view limited profiles**
 ```sql
 Policy: SELECT
-Using: (auth_user_type() = 'subcontractor' AND (
-  id = auth_profile_id() OR id IN (
+Using: (user_id = auth.uid() OR (
+  auth_user_type() = 'subcontractor' AND id IN (
     SELECT DISTINCT p.id FROM profiles p
     JOIN user_organizations uo ON p.id = uo.user_id
     JOIN work_orders wo ON wo.organization_id = uo.organization_id
@@ -200,19 +236,6 @@ Using: (auth_user_type() = 'subcontractor' AND (
     AND p.user_type = 'partner'
   )
 ))
-```
-
-**Users can update their own profile**
-```sql
-Policy: UPDATE
-Using: (user_id = auth_user_id())
-With Check: (user_id = auth_user_id())
-```
-
-**Users can insert their own profile**
-```sql
-Policy: INSERT
-With Check: (user_id = auth_user_id())
 ```
 
 ### trades
@@ -407,6 +430,31 @@ WHERE subcontractor_user_id = auth_profile_id();
 4. **Descriptive**: Policy name should explain the access being granted
 
 ## Troubleshooting Common RLS Issues
+
+### Issue: "Infinite recursion detected in policy for relation 'profiles'"
+
+**Cause**: RLS policies calling helper functions that query the same table being protected
+
+**Solution**: Use the layered policy approach:
+1. Create base policies using `auth.uid()` directly (no helper functions)
+2. Create enhancement policies that can safely use helper functions
+3. Ensure the base policy allows users to read their own profile
+
+**Example Fix**:
+```sql
+-- WRONG: This causes recursion
+CREATE POLICY "Users can view profiles" ON profiles
+FOR SELECT USING (auth_user_type() = 'admin'); -- auth_user_type() queries profiles!
+
+-- CORRECT: Layered approach
+-- Base policy - no recursion
+CREATE POLICY "Users can read own profile" ON profiles 
+FOR SELECT USING (user_id = auth.uid());
+
+-- Enhancement policy - safe to use helper functions
+CREATE POLICY "Admins can view all profiles" ON profiles
+FOR SELECT USING (user_id = auth.uid() OR auth_user_type() = 'admin');
+```
 
 ### Issue: "Row violates row-level security policy"
 
