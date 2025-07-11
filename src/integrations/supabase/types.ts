@@ -401,8 +401,10 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           id: string
+          initials: string | null
           is_active: boolean
           name: string
+          next_sequence_number: number | null
           organization_type: Database["public"]["Enums"]["organization_type"]
           updated_at: string
         }
@@ -412,8 +414,10 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           id?: string
+          initials?: string | null
           is_active?: boolean
           name: string
+          next_sequence_number?: number | null
           organization_type?: Database["public"]["Enums"]["organization_type"]
           updated_at?: string
         }
@@ -423,12 +427,73 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           id?: string
+          initials?: string | null
           is_active?: boolean
           name?: string
+          next_sequence_number?: number | null
           organization_type?: Database["public"]["Enums"]["organization_type"]
           updated_at?: string
         }
         Relationships: []
+      }
+      partner_locations: {
+        Row: {
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          location_name: string
+          location_number: string
+          organization_id: string
+          state: string | null
+          street_address: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_name: string
+          location_number: string
+          organization_id: string
+          state?: string | null
+          street_address?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_name?: string
+          location_number?: string
+          organization_id?: string
+          state?: string | null
+          street_address?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_locations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -934,6 +999,7 @@ export type Database = {
           actual_completion_date: string | null
           actual_hours: number | null
           admin_completion_notes: string | null
+          assigned_organization_id: string | null
           assigned_to: string | null
           assigned_to_type:
             | Database["public"]["Enums"]["assignment_type"]
@@ -952,8 +1018,12 @@ export type Database = {
           final_completion_date: string | null
           id: string
           labor_cost: number | null
+          location_address: string | null
+          location_name: string | null
           materials_cost: number | null
           organization_id: string | null
+          partner_location_number: string | null
+          partner_po_number: string | null
           state: string | null
           status: Database["public"]["Enums"]["work_order_status"]
           store_location: string | null
@@ -970,6 +1040,7 @@ export type Database = {
           actual_completion_date?: string | null
           actual_hours?: number | null
           admin_completion_notes?: string | null
+          assigned_organization_id?: string | null
           assigned_to?: string | null
           assigned_to_type?:
             | Database["public"]["Enums"]["assignment_type"]
@@ -988,8 +1059,12 @@ export type Database = {
           final_completion_date?: string | null
           id?: string
           labor_cost?: number | null
+          location_address?: string | null
+          location_name?: string | null
           materials_cost?: number | null
           organization_id?: string | null
+          partner_location_number?: string | null
+          partner_po_number?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
@@ -1006,6 +1081,7 @@ export type Database = {
           actual_completion_date?: string | null
           actual_hours?: number | null
           admin_completion_notes?: string | null
+          assigned_organization_id?: string | null
           assigned_to?: string | null
           assigned_to_type?:
             | Database["public"]["Enums"]["assignment_type"]
@@ -1024,8 +1100,12 @@ export type Database = {
           final_completion_date?: string | null
           id?: string
           labor_cost?: number | null
+          location_address?: string | null
+          location_name?: string | null
           materials_cost?: number | null
           organization_id?: string | null
+          partner_location_number?: string | null
+          partner_po_number?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
@@ -1039,6 +1119,13 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "work_orders_assigned_organization_id_fkey"
+            columns: ["assigned_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_orders_assigned_to_fkey"
             columns: ["assigned_to"]

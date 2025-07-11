@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-WorkOrderPro uses a comprehensive **18-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
+WorkOrderPro uses a comprehensive **19-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, partner location management, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
 ## Database Architecture Overview
 
-### Core Tables (18)
+### Core Tables (19)
 1. **organizations** - Company/organization information
 2. **user_organizations** - Many-to-many user-organization relationships  
 3. **profiles** - Extended user profile information
@@ -15,16 +15,17 @@ WorkOrderPro uses a comprehensive **18-table** PostgreSQL database with Row Leve
 6. **work_order_assignments** - Multiple assignees per work order with roles
 7. **work_order_reports** - Subcontractor completion reports
 8. **work_order_attachments** - File attachments for work orders and reports
-9. **invoices** - Subcontractor invoice management with dual numbering
-10. **invoice_work_orders** - Junction table linking invoices to work orders
-11. **employee_reports** - Employee time tracking and work reporting
-12. **receipts** - Employee expense receipt management
-13. **receipt_work_orders** - Junction table for receipt allocation to work orders
-14. **email_templates** - System email templates
-15. **email_logs** - Email delivery tracking
-16. **email_settings** - Email configuration per organization
-17. **system_settings** - Global system configuration
-18. **audit_logs** - Complete audit trail for all changes
+9. **partner_locations** - Partner location management for multi-site organizations
+10. **invoices** - Subcontractor invoice management with dual numbering
+11. **invoice_work_orders** - Junction table linking invoices to work orders
+12. **employee_reports** - Employee time tracking and work reporting
+13. **receipts** - Employee expense receipt management
+14. **receipt_work_orders** - Junction table for receipt allocation to work orders
+15. **email_templates** - System email templates
+16. **email_logs** - Email delivery tracking
+17. **email_settings** - Email configuration per organization
+18. **system_settings** - Global system configuration
+19. **audit_logs** - Complete audit trail for all changes
 
 ### Materialized Views (2)
 - **mv_work_order_analytics** - Performance analytics for work orders
@@ -248,6 +249,8 @@ erDiagram
 | contact_phone | text | Yes | - | Contact phone number |
 | address | text | Yes | - | Organization address |
 | organization_type | organization_type | No | 'partner' | Organization type: partner/subcontractor/internal |
+| initials | text | Yes | - | Organization abbreviation for work order numbering |
+| next_sequence_number | integer | No | 1 | Next available sequence number for this organization |
 | is_active | boolean | No | true | Whether organization is active |
 | created_at | timestamp | No | now() | Creation timestamp |
 | updated_at | timestamp | No | now() | Last update timestamp |
@@ -260,6 +263,7 @@ erDiagram
 - `idx_organizations_contact_email` ON (contact_email)
 - `idx_organizations_type` ON (organization_type)
 - `idx_organizations_type_active` ON (organization_type, is_active)
+- `idx_organizations_initials` ON (initials)
 
 ### 2. user_organizations  
 **Purpose**: Junction table linking users to organizations (many-to-many relationship).
@@ -322,7 +326,8 @@ erDiagram
 |--------|------|----------|---------|-------------|
 | id | uuid | No | gen_random_uuid() | Primary key |
 | work_order_number | text | Yes | - | Auto-generated work order number |
-| organization_id | uuid | Yes | - | References organizations.id |
+| organization_id | uuid | Yes | - | References organizations.id (submitting organization) |
+| assigned_organization_id | uuid | Yes | - | References organizations.id (assigned organization) |
 | trade_id | uuid | Yes | - | References trades.id |
 | created_by | uuid | No | - | References profiles.id |
 | assigned_to | uuid | Yes | - | References profiles.id |
@@ -335,6 +340,10 @@ erDiagram
 | city | text | Yes | - | City |
 | state | text | Yes | - | State |
 | zip_code | text | Yes | - | ZIP code |
+| partner_po_number | text | Yes | - | Partner's purchase order reference |
+| partner_location_number | text | Yes | - | Partner's internal location identifier |
+| location_address | text | Yes | - | Full address override for specific job site |
+| location_name | text | Yes | - | Descriptive name for the work location |
 | due_date | date | Yes | - | Due date |
 | estimated_completion_date | date | Yes | - | Estimated completion |
 | actual_completion_date | date | Yes | - | Actual completion |
@@ -362,6 +371,10 @@ erDiagram
 - `idx_work_orders_organization_id` ON (organization_id)
 - `idx_work_orders_assigned_to` ON (assigned_to)
 - `idx_work_orders_trade_id` ON (trade_id)
+- `idx_work_orders_partner_po` ON (partner_po_number)
+- `idx_work_orders_partner_location` ON (partner_location_number)
+- `idx_work_orders_assigned_org` ON (assigned_organization_id)
+- `idx_work_orders_location_name` ON (location_name)
 
 ### 6. work_order_reports
 **Purpose**: Subcontractor completion reports with review workflow.
