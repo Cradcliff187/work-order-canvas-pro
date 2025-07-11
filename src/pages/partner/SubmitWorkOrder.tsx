@@ -77,7 +77,15 @@ const SubmitWorkOrder = () => {
   const organizationId = form.watch('organization_id');
   const locationNumber = form.watch('partner_location_number');
   
-  const { workOrderNumber, isLoading: isGeneratingNumber, error: numberError } = useWorkOrderNumberGeneration({
+  const { 
+    workOrderNumber, 
+    isLoading: isGeneratingNumber, 
+    error: numberError,
+    isFallback,
+    warning,
+    requiresInitials,
+    organizationName
+  } = useWorkOrderNumberGeneration({
     organizationId,
     locationNumber,
   });
@@ -373,14 +381,40 @@ const SubmitWorkOrder = () => {
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
                         <span className="text-sm text-muted-foreground">Generating number...</span>
                       </div>
+                    ) : warning ? (
+                      <div className="space-y-2">
+                        <div className="text-2xl font-bold text-primary">
+                          {workOrderNumber}
+                        </div>
+                        <div className="text-warning text-sm border-l-2 border-warning pl-2">
+                          <p>{warning}</p>
+                          {requiresInitials && organizationName && (
+                            <p className="text-xs mt-1">
+                              Contact an admin to add initials for "{organizationName}" to enable smart numbering.
+                            </p>
+                          )}
+                        </div>
+                        {isFallback && (
+                          <div className="text-xs text-muted-foreground">
+                            Using fallback numbering format
+                          </div>
+                        )}
+                      </div>
                     ) : numberError ? (
                       <div className="text-destructive text-sm">
                         <p>Error generating work order number: {numberError}</p>
                         <p className="text-xs mt-1">A fallback number will be assigned upon submission.</p>
                       </div>
                     ) : workOrderNumber ? (
-                      <div className="text-2xl font-bold text-primary">
-                        {workOrderNumber}
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-primary">
+                          {workOrderNumber}
+                        </div>
+                        {isFallback && (
+                          <div className="text-xs text-muted-foreground">
+                            Using fallback numbering format
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <span className="text-muted-foreground text-sm">Select organization to generate number</span>

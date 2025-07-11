@@ -70,7 +70,15 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
   const organizationId = form.watch('organization_id');
   const locationNumber = form.watch('partner_location_number');
   
-  const { workOrderNumber, isLoading: isGeneratingNumber, error: numberError } = useWorkOrderNumberGeneration({
+  const { 
+    workOrderNumber, 
+    isLoading: isGeneratingNumber, 
+    error: numberError,
+    isFallback,
+    warning,
+    requiresInitials,
+    organizationName
+  } = useWorkOrderNumberGeneration({
     organizationId,
     locationNumber,
   });
@@ -144,22 +152,34 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
                 )}
               </div>
               
-              {/* Organization initials warning */}
-              {organizationId && selectedOrganization && !selectedOrganization.initials && (
+              {/* Enhanced error and warning display */}
+              {warning && (
                 <Alert className="mt-2">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Organization needs initials for smart numbering. Work order will use fallback numbering.
+                    {warning}
+                    {requiresInitials && organizationName && (
+                      <div className="mt-2 text-xs">
+                        <strong>Action needed:</strong> Contact an admin to add initials for "{organizationName}" to enable smart numbering.
+                      </div>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
               
-              {/* Number generation error */}
-              {numberError && (
+              {/* Fallback number indicator */}
+              {isFallback && workOrderNumber && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Using fallback numbering format
+                </div>
+              )}
+              
+              {/* Hard error fallback */}
+              {numberError && !warning && (
                 <Alert variant="destructive" className="mt-2">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    {numberError}. Work order will use fallback numbering.
+                    {numberError}. A fallback number will be assigned automatically.
                   </AlertDescription>
                 </Alert>
               )}
