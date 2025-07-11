@@ -197,6 +197,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          organization_type: Database["public"]["Enums"]["organization_type"]
           updated_at: string
         }
         Insert: {
@@ -207,6 +208,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          organization_type?: Database["public"]["Enums"]["organization_type"]
           updated_at?: string
         }
         Update: {
@@ -217,6 +219,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          organization_type?: Database["public"]["Enums"]["organization_type"]
           updated_at?: string
         }
         Relationships: []
@@ -831,6 +834,7 @@ export type Database = {
       assignment_type: "internal" | "subcontractor"
       email_status: "sent" | "delivered" | "failed" | "bounced"
       file_type: "photo" | "invoice" | "document"
+      organization_type: "partner" | "subcontractor" | "internal"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
       user_type: "admin" | "partner" | "subcontractor"
       work_order_status:
@@ -969,6 +973,7 @@ export const Constants = {
       assignment_type: ["internal", "subcontractor"],
       email_status: ["sent", "delivered", "failed", "bounced"],
       file_type: ["photo", "invoice", "document"],
+      organization_type: ["partner", "subcontractor", "internal"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
       user_type: ["admin", "partner", "subcontractor"],
       work_order_status: [

@@ -139,6 +139,16 @@ This document provides a complete chronological history of all database migratio
 - Added analytics functions for reporting
 - **Result**: Significantly improved query performance
 
+### 2025-01-11: Organization Type Enhancement
+
+#### 20250711003800_add_organization_types.sql
+**Purpose**: **MAJOR** - Organization type classification system
+- Added comprehensive organization type system to support three business models
+- Created enum for 'partner' (work order submitters), 'subcontractor' (work performers), 'internal' (general contractor)
+- Defaulted all existing organizations to 'partner' type for backward compatibility
+- Added strategic indexes for performance optimization
+- **Result**: Enhanced multi-tenant architecture enabling sophisticated workflow routing
+
 ### 2025-01-11: IndexedDB Storage Implementation
 
 #### IndexedDB v1 (Initial Implementation)

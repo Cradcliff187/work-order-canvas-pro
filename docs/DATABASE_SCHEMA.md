@@ -27,8 +27,9 @@ WorkOrderPro uses a comprehensive **12-table** PostgreSQL database with Row Leve
 ### Storage Buckets (1)
 - **work-order-photos** - Public bucket for work order photo attachments
 
-### Custom Enums (6)
+### Custom Enums (7)
 - `user_type`: 'admin', 'partner', 'subcontractor'
+- `organization_type`: 'partner', 'subcontractor', 'internal'
 - `work_order_status`: 'received', 'assigned', 'in_progress', 'completed', 'cancelled'
 - `assignment_type`: 'internal', 'subcontractor'
 - `report_status`: 'submitted', 'reviewed', 'approved', 'rejected'  
@@ -73,6 +74,7 @@ erDiagram
         text contact_email
         text contact_phone
         text address
+        organization_type organization_type
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -230,7 +232,7 @@ erDiagram
 ## Table Definitions
 
 ### 1. organizations
-**Purpose**: Stores partner company information that submit work orders.
+**Purpose**: Stores company information for partners (work order submitters), subcontractors (work performers), and internal (general contractor) organizations.
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
@@ -239,6 +241,7 @@ erDiagram
 | contact_email | text | No | - | Primary contact email |
 | contact_phone | text | Yes | - | Contact phone number |
 | address | text | Yes | - | Organization address |
+| organization_type | organization_type | No | 'partner' | Organization type: partner/subcontractor/internal |
 | is_active | boolean | No | true | Whether organization is active |
 | created_at | timestamp | No | now() | Creation timestamp |
 | updated_at | timestamp | No | now() | Last update timestamp |
@@ -249,6 +252,8 @@ erDiagram
 **Indexes**:
 - `idx_organizations_active` ON (is_active)
 - `idx_organizations_contact_email` ON (contact_email)
+- `idx_organizations_type` ON (organization_type)
+- `idx_organizations_type_active` ON (organization_type, is_active)
 
 ### 2. user_organizations  
 **Purpose**: Junction table linking users to organizations (many-to-many relationship).
