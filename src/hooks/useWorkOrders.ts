@@ -205,7 +205,7 @@ export function useOrganizationsForWorkOrders() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('organizations')
-        .select('id, name')
+        .select('id, name, initials')
         .eq('is_active', true)
         .order('name');
       
