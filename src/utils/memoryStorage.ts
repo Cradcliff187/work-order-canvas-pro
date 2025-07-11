@@ -1,4 +1,13 @@
-import type { ReportDraft, SyncQueueItem, StorageStats, ExportData, StorageManager } from '@/types/offline';
+import type { 
+  ReportDraft, 
+  SyncQueueItem, 
+  StorageStats, 
+  ExportData, 
+  StorageManager,
+  DatabaseIntegrityReport,
+  RepairStrategy,
+  RepairResult
+} from '@/types/offline';
 
 // Memory-based fallback storage for when IndexedDB fails
 export class MemoryStorageManager implements StorageManager {
@@ -125,6 +134,29 @@ export class MemoryStorageManager implements StorageManager {
     this.drafts.clear();
     this.syncQueue.clear();
     return Promise.resolve();
+  }
+
+  async verifyDatabaseIntegrity(): Promise<DatabaseIntegrityReport> {
+    // Memory storage is always healthy by design
+    return Promise.resolve({
+      isHealthy: true,
+      issues: [],
+      repairRecommendations: [],
+      dataAtRisk: false,
+      lastChecked: Date.now()
+    });
+  }
+
+  async repairDatabase(strategies?: RepairStrategy[]): Promise<RepairResult> {
+    // Memory storage doesn't need repairs
+    return Promise.resolve({
+      success: true,
+      repairsAttempted: [],
+      dataPreserved: true,
+      backupCreated: null,
+      issuesResolved: [],
+      timeElapsed: 0
+    });
   }
 }
 

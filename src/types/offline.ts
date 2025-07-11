@@ -89,6 +89,42 @@ export interface ExportData {
   };
 }
 
+export interface IntegrityIssue {
+  type: 'missing_store' | 'missing_index' | 'corrupted_data' | 'version_mismatch' | 'invalid_schema';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  affectedStore?: string;
+  affectedIndex?: string;
+  repairAction: RepairStrategy;
+}
+
+export interface DatabaseIntegrityReport {
+  isHealthy: boolean;
+  issues: IntegrityIssue[];
+  repairRecommendations: RepairStrategy[];
+  dataAtRisk: boolean;
+  lastChecked: number;
+}
+
+export interface RepairStrategy {
+  level: 1 | 2 | 3 | 4;
+  name: string;
+  description: string;
+  dataBackupRequired: boolean;
+  estimatedDuration: number;
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
+export interface RepairResult {
+  success: boolean;
+  repairsAttempted: RepairStrategy[];
+  dataPreserved: boolean;
+  backupCreated: string | null;
+  errorDetails?: string;
+  issuesResolved: IntegrityIssue[];
+  timeElapsed: number;
+}
+
 export interface StorageManager {
   init(): Promise<void>;
   saveDraft(draft: ReportDraft): Promise<void>;
@@ -102,4 +138,6 @@ export interface StorageManager {
   exportData(): Promise<ExportData>;
   importData(data: ExportData): Promise<void>;
   cleanup(): Promise<void>;
+  verifyDatabaseIntegrity(): Promise<DatabaseIntegrityReport>;
+  repairDatabase(strategies?: RepairStrategy[]): Promise<RepairResult>;
 }

@@ -114,6 +114,35 @@ export function useStorageInitialization() {
         setInitializationState('upgrading');
         await indexedDBManager.init();
         
+        // Verify database integrity after initialization
+        console.log('Verifying database integrity...');
+        const integrityReport = await indexedDBManager.verifyDatabaseIntegrity();
+        
+        if (!integrityReport.isHealthy) {
+          console.warn('Database integrity issues detected, attempting repairs...');
+          
+          // Attempt automatic repair for minor issues
+          const minorIssues = integrityReport.issues.filter(issue => 
+            issue.severity === 'low' || issue.severity === 'medium'
+          );
+          
+          if (minorIssues.length > 0) {
+            const repairResult = await indexedDBManager.repairDatabase(
+              minorIssues.map(issue => issue.repairAction)
+            );
+            
+            if (repairResult.success) {
+              console.log('Database repairs completed successfully');
+              toast({
+                title: "Database Repaired",
+                description: `Fixed ${repairResult.issuesResolved.length} issues automatically`,
+              });
+            } else {
+              console.warn('Database repairs failed, some issues may persist');
+            }
+          }
+        }
+        
         setStorageManager(indexedDBManager);
         setIsUsingFallback(false);
         setInitializationState('ready');
@@ -125,6 +154,20 @@ export function useStorageInitialization() {
         setInitializationError(storageError);
         
         console.error(`Storage init attempt ${attempt} failed:`, error);
+        
+        // If this is a recoverable error, try repair before retrying
+        if (storageError.recoverable && attempt < maxRetries) {
+          try {
+            console.log('Attempting database repair before retry...');
+            const repairResult = await indexedDBManager.repairDatabase();
+            if (repairResult.success) {
+              console.log('Database repaired, continuing with initialization');
+              continue;
+            }
+          } catch (repairError) {
+            console.warn('Database repair failed:', repairError);
+          }
+        }
         
         if (attempt < maxRetries) {
           toast({
