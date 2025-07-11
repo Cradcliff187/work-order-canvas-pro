@@ -21,7 +21,7 @@ serve(async (req: Request) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { user_id, email, first_name, last_name, user_type } = await req.json();
+    const { user_id, email, first_name, last_name, user_type, temporary_password } = await req.json();
 
     console.log('Processing welcome email for user:', { user_id, email, first_name, last_name, user_type });
 
@@ -44,6 +44,7 @@ serve(async (req: Request) => {
       last_name: last_name || '',
       email: email,
       user_type: user_type || 'user',
+      temporary_password: temporary_password || '',
       site_url: supabaseUrl.replace('.supabase.co', '.lovable.app') || 'https://workorderpro.com'
     };
 

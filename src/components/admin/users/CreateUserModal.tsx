@@ -73,9 +73,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
 
   const onSubmit = async (data: CreateUserFormData) => {
     try {
-      const tempPassword = generatePassword();
-      
-      await createUser.mutateAsync({
+      const result = await createUser.mutateAsync({
         email: data.email!,
         first_name: data.first_name!,
         last_name: data.last_name!,
@@ -86,12 +84,14 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
         send_welcome_email: data.send_welcome_email,
       });
 
-      // For demo purposes, show generated credentials
-      setGeneratedCredentials({
-        email: data.email,
-        password: tempPassword,
-      });
-      setShowCredentials(true);
+      // Show the actual generated credentials from the server
+      if (result.temporaryPassword) {
+        setGeneratedCredentials({
+          email: data.email,
+          password: result.temporaryPassword,
+        });
+        setShowCredentials(true);
+      }
       
       // Reset form but keep modal open to show credentials
       form.reset();

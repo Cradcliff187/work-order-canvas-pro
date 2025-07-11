@@ -3,6 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/pages/admin/AdminUsers';
 import { useToast } from '@/hooks/use-toast';
 
+// Generate a secure password for new users
+function generateSecurePassword(): string {
+  const length = 12;
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
+}
+
 export interface CreateUserData {
   email: string;
   first_name: string;
@@ -101,29 +112,45 @@ export function useUserMutations() {
 
   const createUser = useMutation({
     mutationFn: async (userData: CreateUserData) => {
-      // First, create the user via Supabase Auth
-      // Note: In a real app, this would need to be done via a server-side function
-      // For now, we'll simulate user creation by directly inserting into profiles
+      // Generate a secure temporary password
+      const tempPassword = generateSecurePassword();
       
-      // Generate a UUID for the user_id (normally this would come from auth.users)
-      const tempUserId = crypto.randomUUID();
-
-      // Create the profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: tempUserId, // In real app, this comes from auth.users
-          email: userData.email,
+      // Create the user via Supabase Auth Admin API
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        password: tempPassword,
+        email_confirm: true, // Auto-confirm email for admin-created users
+        user_metadata: {
           first_name: userData.first_name,
           last_name: userData.last_name,
           user_type: userData.user_type,
           phone: userData.phone,
           company_name: userData.company_name,
-        })
-        .select()
+        }
+      });
+
+      if (authError) {
+        throw new Error(`Failed to create user account: ${authError.message}`);
+      }
+
+      if (!authUser.user) {
+        throw new Error('User creation failed - no user returned');
+      }
+
+      // The profile will be created automatically by the database trigger
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Fetch the created profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authUser.user.id)
         .single();
 
       if (profileError) {
+        // If profile creation failed, clean up the auth user
+        await supabase.auth.admin.deleteUser(authUser.user.id);
         throw new Error(`Failed to create user profile: ${profileError.message}`);
       }
 
@@ -139,13 +166,36 @@ export function useUserMutations() {
           .insert(orgRelationships);
 
         if (orgError) {
-          // Rollback: delete the profile if organization assignment fails
-          await supabase.from('profiles').delete().eq('id', profile.id);
+          // Rollback: delete the auth user and profile
+          await supabase.auth.admin.deleteUser(authUser.user.id);
           throw new Error(`Failed to assign organizations: ${orgError.message}`);
         }
       }
 
-      return profile;
+      // Send welcome email if requested
+      if (userData.send_welcome_email) {
+        try {
+          await supabase.functions.invoke('email-welcome', {
+            body: {
+              user_id: authUser.user.id,
+              email: userData.email,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              user_type: userData.user_type,
+              temporary_password: tempPassword
+            }
+          });
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError);
+          // Don't fail the user creation if email fails
+        }
+      }
+
+      return { 
+        profile, 
+        authUser: authUser.user,
+        temporaryPassword: tempPassword 
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });

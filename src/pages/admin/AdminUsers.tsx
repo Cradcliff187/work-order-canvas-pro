@@ -8,10 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsers, useUserMutations } from '@/hooks/useUsers';
 import { UserFilters } from '@/components/admin/users/UserFilters';
-import { BulkUserActions } from '@/components/admin/users/BulkUserActions';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
+import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -37,9 +37,37 @@ const AdminUsers = () => {
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
   const { toast } = useToast();
   const { data: usersData, isLoading, refetch } = useUsers();
+  const { deleteUser, toggleUserStatus } = useUserMutations();
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    if (confirm(`Are you sure you want to delete ${user.first_name} ${user.last_name}?`)) {
+      try {
+        await deleteUser.mutateAsync(user.id);
+        refetch();
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+      }
+    }
+  };
+
+  const handleToggleStatus = async (user: User) => {
+    try {
+      await toggleUserStatus.mutateAsync({ userId: user.id, isActive: !user.is_active });
+      refetch();
+    } catch (error) {
+      console.error('Failed to toggle user status:', error);
+    }
+  };
 
   const columns: ColumnDef<User>[] = useMemo(() => [
     {
@@ -162,7 +190,7 @@ const AdminUsers = () => {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEditUser(user)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit User
               </DropdownMenuItem>
@@ -171,11 +199,11 @@ const AdminUsers = () => {
                 Reset Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {user.is_active ? 'Deactivate' : 'Activate'}
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete User
               </DropdownMenuItem>
@@ -264,16 +292,6 @@ const AdminUsers = () => {
         </Button>
       </div>
 
-      {selectedRowCount > 0 && (
-        <BulkUserActions
-          selectedCount={selectedRowCount}
-          selectedUsers={table.getFilteredSelectedRowModel().rows.map(row => row.original)}
-          onSuccess={() => {
-            setRowSelection({});
-            refetch();
-          }}
-        />
-      )}
 
       <Card>
         <CardHeader>
@@ -430,6 +448,19 @@ const AdminUsers = () => {
           toast({
             title: "User created",
             description: "The new user has been created successfully.",
+          });
+        }}
+      />
+
+      <EditUserModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        user={selectedUser}
+        onSuccess={() => {
+          refetch();
+          toast({
+            title: "User updated",
+            description: "The user has been updated successfully.",
           });
         }}
       />
