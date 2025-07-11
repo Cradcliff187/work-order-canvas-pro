@@ -1,4 +1,37 @@
-import type { SchemaStore, MigrationFunction } from './types';
+import type { SchemaStore, MigrationFunction, ExpectedSchemaDefinition } from './types';
+
+export const EXPECTED_SCHEMA: ExpectedSchemaDefinition = {
+  version: 3,
+  stores: {
+    drafts: {
+      keyPath: 'id',
+      indexes: {
+        workOrderId: { keyPath: 'workOrderId', unique: false },
+        updatedAt: { keyPath: 'updatedAt', unique: false },
+        isManual: { keyPath: 'metadata.isManual', unique: false }
+      }
+    },
+    attachments: {
+      keyPath: 'id',
+      indexes: {
+        draftId: { keyPath: 'draftId', unique: false },
+        size: { keyPath: 'size', unique: false }
+      }
+    },
+    syncQueue: {
+      keyPath: 'id',
+      indexes: {
+        type: { keyPath: 'type', unique: false },
+        priority: { keyPath: 'priority', unique: false },
+        nextAttempt: { keyPath: 'nextAttempt', unique: false }
+      }
+    },
+    metadata: {
+      keyPath: 'key',
+      indexes: {}
+    }
+  }
+};
 
 export const SCHEMA_STORES: SchemaStore[] = [
   {

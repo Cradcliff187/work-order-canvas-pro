@@ -5,7 +5,9 @@ import type {
   ReportDraft,
   SyncQueueItem
 } from '@/types/offline';
+import type { SchemaValidationResult } from './types';
 import { IndexedDBManager } from './manager';
+import { EXPECTED_SCHEMA } from './schema';
 
 export class StorageDebugUtils {
   private manager: IndexedDBManager;
@@ -26,13 +28,20 @@ export class StorageDebugUtils {
       return { connected: true };
     }));
 
-    // Test 2: Schema Validation
+    // Test 2: Schema Validation  
     results.push(await this.runTest('Schema Validation', async () => {
-      const integrity = await this.manager.verifyDatabaseIntegrity();
-      if (!integrity.isHealthy) {
-        throw new Error(`Schema issues: ${integrity.issues.map(i => i.description).join(', ')}`);
+      const validation = await this.manager.validateSchema();
+      if (!validation.isValid) {
+        const criticalIssues = validation.issues.filter(i => i.severity === 'critical');
+        if (criticalIssues.length > 0) {
+          throw new Error(`Critical schema issues: ${criticalIssues.map(i => i.message).join(', ')}`);
+        }
       }
-      return { schemaValid: true, issueCount: integrity.issues.length };
+      return { 
+        schemaValid: validation.isValid, 
+        issueCount: validation.issues.length,
+        validationTime: validation.performance.validationTime
+      };
     }));
 
     // Test 3: Basic CRUD Operations
@@ -261,6 +270,30 @@ export function attachDebugUtilities(manager: IndexedDBManager): void {
     return migration;
   };
 
+  (window as any).__validateSchema = async () => {
+    console.log('🔍 Validating schema...');
+    const validation = await manager.validateSchema();
+    console.log('Schema Validation Result:', validation);
+    
+    if (!validation.isValid) {
+      console.group('🚨 Schema Issues Found:');
+      validation.issues.forEach(issue => {
+        const icon = issue.severity === 'critical' ? '🚨' : issue.severity === 'high' ? '⚠️' : 'ℹ️';
+        console.log(`${icon} ${issue.message}`);
+        console.log(`   💡 ${issue.suggestion}`);
+      });
+      console.groupEnd();
+    }
+    
+    return validation;
+  };
+
+  (window as any).__showExpectedSchema = () => {
+    console.log('📋 Expected Schema:');
+    console.log(JSON.stringify(EXPECTED_SCHEMA, null, 2));
+    return EXPECTED_SCHEMA;
+  };
+
   (window as any).__resetStorage = async () => {
     if (!confirm('⚠️ This will clear ALL storage data. Are you sure?')) {
       return;
@@ -275,10 +308,25 @@ export function attachDebugUtilities(manager: IndexedDBManager): void {
     }
   };
 
+  // Expose WorkOrderPro namespace for enhanced debugging
+  if (!(window as any).WorkOrderPro) {
+    (window as any).WorkOrderPro = {};
+  }
+  (window as any).WorkOrderPro.storage = {
+    manager,
+    schema: EXPECTED_SCHEMA,
+    validateSchema: () => manager.validateSchema(),
+    getValidationConfig: () => manager.getValidationConfig(),
+    updateValidationConfig: (config: any) => manager.updateValidationConfig(config)
+  };
+
   console.log('🔧 Storage debug utilities attached to window:');
   console.log('  - window.__testStorage() - Run comprehensive tests');
   console.log('  - window.__storageHealth() - Check storage health');  
   console.log('  - window.__storageStats() - View storage statistics');
   console.log('  - window.__storageMigration() - View migration info');
+  console.log('  - window.__validateSchema() - Validate database schema');
+  console.log('  - window.__showExpectedSchema() - Show expected schema');
   console.log('  - window.__resetStorage() - Reset all storage (DESTRUCTIVE)');
+  console.log('  - window.WorkOrderPro.storage - Enhanced storage API');
 }
