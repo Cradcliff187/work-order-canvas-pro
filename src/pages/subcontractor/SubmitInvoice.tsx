@@ -16,7 +16,9 @@ import { Separator } from '@/components/ui/separator';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
 import { useInvoiceDrafts, type InvoiceDraftData } from '@/hooks/useInvoiceDrafts';
-import { Save, FileText, Trash2, Clock } from 'lucide-react';
+import { Save, FileText, Trash2, Clock, TrendingUp } from 'lucide-react';
+import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
+import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
 
 // Relaxed schema for drafts
 const draftInvoiceSchema = z.object({
@@ -104,6 +106,33 @@ const SubmitInvoice = () => {
       wo => wo.invoice_work_orders && wo.invoice_work_orders.length > 0
     ) || [];
   }, [completedWorkOrdersForInvoicing.data]);
+
+  // Calculate suggested total from work order reports
+  const suggestedTotal = useMemo(() => {
+    if (!workOrdersFormData) return 0;
+    return workOrdersFormData
+      .filter(wo => wo.selected)
+      .reduce((sum, formWo) => {
+        const workOrder = availableWorkOrders.find(wo => wo.id === formWo.work_order_id);
+        const approvedReport = workOrder?.work_order_reports?.find(report => report.status === 'approved');
+        return sum + (approvedReport?.invoice_amount || 0);
+      }, 0);
+  }, [workOrdersFormData, availableWorkOrders]);
+
+  // Prepare selected work orders summary
+  const selectedWorkOrdersSummary = useMemo(() => {
+    if (!workOrdersFormData) return [];
+    return workOrdersFormData
+      .filter(wo => wo.selected)
+      .map(formWo => {
+        const workOrder = availableWorkOrders.find(wo => wo.id === formWo.work_order_id);
+        return {
+          id: formWo.work_order_id,
+          work_order_number: workOrder?.work_order_number || 'Unknown',
+          amount: formWo.amount || 0,
+        };
+      });
+  }, [workOrdersFormData, availableWorkOrders]);
 
   const handleSelectAll = () => {
     const newWorkOrders = workOrdersFormData?.map(wo => {
@@ -379,109 +408,89 @@ const SubmitInvoice = () => {
                   </div>
                 </div>
 
-                <div className="border rounded-lg p-4 space-y-4 max-h-96 overflow-y-auto">
+                <div className="space-y-4 max-h-96 overflow-y-auto">
                   {availableWorkOrders.length === 0 && alreadyInvoicedWorkOrders.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      No completed work orders available for invoicing
-                    </p>
+                    <div className="text-center py-8">
+                      <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-sm text-muted-foreground">
+                        No completed work orders available for invoicing
+                      </p>
+                    </div>
                   )}
 
                   {/* Available work orders */}
                   {availableWorkOrders.map(workOrder => {
                     const formWorkOrder = workOrdersFormData?.find(wo => wo.work_order_id === workOrder.id);
                     const isSelected = formWorkOrder?.selected || false;
+                    const amount = formWorkOrder?.amount || 0;
 
                     return (
-                      <div key={workOrder.id} className="border rounded-lg p-4 space-y-3">
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={(checked) => 
-                              handleWorkOrderSelection(workOrder.id, checked === true)
-                            }
-                            className="mt-1"
-                          />
-                          <div className="flex-1 space-y-1">
-                            <div className="font-medium">{workOrder.work_order_number}</div>
-                            <div className="text-sm">{workOrder.title}</div>
-                            {workOrder.description && (
-                              <div className="text-sm text-muted-foreground">{workOrder.description}</div>
-                            )}
-                            <div className="text-xs text-muted-foreground">
-                              Completed: {workOrder.completed_at ? format(new Date(workOrder.completed_at), 'PPP') : 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {isSelected && (
-                          <div className="ml-6">
-                            <FormLabel className="text-sm">Amount</FormLabel>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0.01"
-                              placeholder="0.00"
-                              value={formWorkOrder?.amount || ''}
-                              onChange={(e) => handleAmountChange(workOrder.id, parseFloat(e.target.value) || 0)}
-                              className="w-32"
-                            />
-                          </div>
-                        )}
-                      </div>
+                      <WorkOrderAmountCard
+                        key={workOrder.id}
+                        workOrder={workOrder}
+                        isSelected={isSelected}
+                        amount={amount}
+                        onSelectionChange={(checked) => handleWorkOrderSelection(workOrder.id, checked)}
+                        onAmountChange={(newAmount) => handleAmountChange(workOrder.id, newAmount)}
+                        showWorkSummary={true}
+                      />
                     );
                   })}
 
                   {/* Already invoiced work orders (disabled) */}
                   {alreadyInvoicedWorkOrders.map(workOrder => (
-                    <div key={workOrder.id} className="border rounded-lg p-4 space-y-3 opacity-50">
-                      <div className="flex items-start gap-3">
-                        <Checkbox checked={false} disabled className="mt-1" />
-                        <div className="flex-1 space-y-1">
-                          <div className="font-medium">{workOrder.work_order_number}</div>
-                          <div className="text-sm">{workOrder.title}</div>
-                          {workOrder.description && (
-                            <div className="text-sm text-muted-foreground">{workOrder.description}</div>
-                          )}
-                          <div className="text-xs text-orange-600">
-                            Already invoiced
+                    <Card key={workOrder.id} className="opacity-50">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox checked={false} disabled className="mt-1" />
+                          <div className="flex-1 space-y-1">
+                            <div className="font-medium text-sm">{workOrder.work_order_number}</div>
+                            <div className="text-sm">{workOrder.title}</div>
+                            {workOrder.description && (
+                              <div className="text-xs text-muted-foreground line-clamp-2">{workOrder.description}</div>
+                            )}
+                            <Badge variant="outline" className="text-xs w-fit">
+                              Already invoiced
+                            </Badge>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
-
-                {selectedCount > 0 && (
-                  <div className="bg-accent p-4 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Selected work orders: {selectedCount}</span>
-                      <span className="text-lg font-bold">
-                        Total: ${runningTotal.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                )}
 
                 <FormMessage>{form.formState.errors.work_orders?.message}</FormMessage>
               </div>
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Additional notes or description"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Additional notes or comments about this invoice"
+                            className="min-h-[120px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <InvoiceTotalSummary
+                    selectedWorkOrders={selectedWorkOrdersSummary}
+                    totalAmount={runningTotal}
+                    suggestedTotal={suggestedTotal}
+                  />
+                </div>
+              </div>
 
               <Separator />
               

@@ -281,6 +281,14 @@ export function useSubcontractorWorkOrders() {
           invoice_work_orders (
             id,
             invoice_id
+          ),
+          work_order_reports (
+            id,
+            work_performed,
+            materials_used,
+            hours_worked,
+            invoice_amount,
+            status
           )
         `)
         .eq("assigned_to_type", "subcontractor")
