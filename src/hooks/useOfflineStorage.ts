@@ -11,11 +11,19 @@ export function useOfflineStorage() {
 
   useEffect(() => {
     initializeStorage();
+  }, []);
+
+  // Separate effect for setting up the interval only after DB is ready
+  useEffect(() => {
+    if (!isReady) return;
     
-    // Update stats periodically
+    // Initial stats update
+    updateStats();
+    
+    // Update stats periodically only when DB is ready
     const interval = setInterval(updateStats, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isReady]);
 
   const initializeStorage = async () => {
     try {
@@ -36,6 +44,8 @@ export function useOfflineStorage() {
   };
 
   const updateStats = async () => {
+    if (!isReady) return;
+    
     try {
       const stats = await indexedDBManager.getStorageStats();
       setStorageStats(stats);
@@ -69,6 +79,10 @@ export function useOfflineStorage() {
     photos: PhotoAttachment[],
     isManual = false
   ): Promise<string> => {
+    if (!isReady) {
+      throw new Error('Storage not ready');
+    }
+    
     try {
       const draftId = `draft_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const now = Date.now();
@@ -114,27 +128,40 @@ export function useOfflineStorage() {
       });
       throw error;
     }
-  }, [toast]);
+  }, [isReady, toast]);
 
   const getDrafts = useCallback(async (workOrderId: string): Promise<ReportDraft[]> => {
+    if (!isReady) return [];
+    
     try {
       return await indexedDBManager.getDraftsByWorkOrder(workOrderId);
     } catch (error) {
       console.error('Error getting drafts:', error);
       return [];
     }
-  }, []);
+  }, [isReady]);
 
   const loadDraft = useCallback(async (draftId: string): Promise<ReportDraft | null> => {
+    if (!isReady) return null;
+    
     try {
       return await indexedDBManager.getDraft(draftId);
     } catch (error) {
       console.error('Error loading draft:', error);
       return null;
     }
-  }, []);
+  }, [isReady]);
 
   const deleteDraft = useCallback(async (draftId: string): Promise<void> => {
+    if (!isReady) {
+      toast({
+        title: "Storage Not Ready",
+        description: "Please wait for storage to initialize",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       await indexedDBManager.deleteDraft(draftId);
       await updateStats();
@@ -150,7 +177,7 @@ export function useOfflineStorage() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [isReady, toast]);
 
   const queueSync = useCallback(async (
     type: SyncQueueItem['type'],
