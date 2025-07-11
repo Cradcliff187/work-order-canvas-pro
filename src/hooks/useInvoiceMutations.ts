@@ -15,6 +15,7 @@ interface RejectInvoiceData {
 interface MarkAsPaidData {
   invoiceId: string;
   paymentReference: string;
+  paymentDate: Date;
 }
 
 export const useInvoiceMutations = () => {
@@ -119,12 +120,12 @@ export const useInvoiceMutations = () => {
   });
 
   const markAsPaid = useMutation({
-    mutationFn: async ({ invoiceId, paymentReference }: MarkAsPaidData) => {
+    mutationFn: async ({ invoiceId, paymentReference, paymentDate }: MarkAsPaidData) => {
       const { data, error } = await supabase
         .from('invoices')
         .update({
           status: 'paid',
-          paid_at: new Date().toISOString(),
+          paid_at: paymentDate.toISOString(),
           payment_reference: paymentReference,
         })
         .eq('id', invoiceId)

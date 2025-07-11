@@ -11,6 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -46,6 +54,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
+  const [paymentDate, setPaymentDate] = useState<Date>(new Date());
 
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
 
@@ -83,11 +92,12 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     if (!paymentReference.trim()) return;
     
     markAsPaid.mutate(
-      { invoiceId: invoice.id, paymentReference },
+      { invoiceId: invoice.id, paymentReference, paymentDate },
       {
         onSuccess: () => {
           setPaymentDialogOpen(false);
           setPaymentReference('');
+          setPaymentDate(new Date());
           onClose();
         },
       }
@@ -365,16 +375,46 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               Enter the payment reference number to mark this invoice as paid.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="payment-reference">Payment Reference *</Label>
-            <Input
-              id="payment-reference"
-              placeholder="Check number, transaction ID, etc."
-              value={paymentReference}
-              onChange={(e) => setPaymentReference(e.target.value)}
-              className="mt-2"
-              required
-            />
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="payment-reference">Payment Reference *</Label>
+              <Input
+                id="payment-reference"
+                placeholder="Check number, transaction ID, etc."
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+                className="mt-2"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label>Payment Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-2",
+                      !paymentDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {paymentDate ? format(paymentDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={paymentDate}
+                    onSelect={(date) => date && setPaymentDate(date)}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
