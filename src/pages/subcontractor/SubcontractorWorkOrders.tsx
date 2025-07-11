@@ -206,6 +206,14 @@ export default function SubcontractorWorkOrders() {
                           </Button>
                         </Link>
                       )}
+                      {workOrder.status === 'completed' && (
+                        <Link to="/subcontractor/submit-invoice">
+                          <Button size="sm" variant="secondary" className="w-full sm:w-auto">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Submit Invoice
+                          </Button>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </CardContent>

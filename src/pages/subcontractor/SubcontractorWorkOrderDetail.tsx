@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
-import { ArrowLeft, FileText, MapPin, Phone, Mail, Clock, Calendar } from "lucide-react";
+import { ArrowLeft, FileText, MapPin, Phone, Mail, Clock, Calendar, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 export default function SubcontractorWorkOrderDetail() {
@@ -104,8 +104,16 @@ export default function SubcontractorWorkOrderDetail() {
           {canSubmitReport && (
             <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
               <Button>
-                <FileText className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2" />
                 Submit Report
+              </Button>
+            </Link>
+          )}
+          {workOrder.status === 'completed' && (
+            <Link to="/subcontractor/submit-invoice">
+              <Button variant="secondary">
+                <FileText className="h-4 w-4 mr-2" />
+                Submit Invoice
               </Button>
             </Link>
           )}
