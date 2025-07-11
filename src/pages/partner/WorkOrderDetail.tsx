@@ -236,6 +236,24 @@ const WorkOrderDetail = () => {
                   {workOrder.created_user?.first_name} {workOrder.created_user?.last_name}
                 </p>
               </div>
+
+              {(workOrder.partner_po_number || workOrder.partner_location_number) && (
+                <>
+                  <Separator />
+                  {workOrder.partner_po_number && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">PO Number</h4>
+                      <p className="font-medium">{workOrder.partner_po_number}</p>
+                    </div>
+                  )}
+                  {workOrder.partner_location_number && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Location Number</h4>
+                      <p className="font-medium">{workOrder.partner_location_number}</p>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
 
