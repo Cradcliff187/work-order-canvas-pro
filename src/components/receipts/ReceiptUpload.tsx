@@ -110,7 +110,7 @@ export function ReceiptUpload() {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4 lg:px-6 space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumb Navigation */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -142,7 +142,6 @@ export function ReceiptUpload() {
               <FileUpload
                 onFilesSelected={handleFileSelect}
                 maxFiles={1}
-                className="h-32"
               />
               {receiptFile && (
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
