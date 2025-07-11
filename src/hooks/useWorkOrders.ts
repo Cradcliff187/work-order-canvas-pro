@@ -184,9 +184,9 @@ export function useWorkOrderMutations() {
   };
 }
 
-export function useOrganizations() {
+export function useOrganizationsForWorkOrders() {
   return useQuery({
-    queryKey: ['organizations'],
+    queryKey: ['organizations-simple'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('organizations')

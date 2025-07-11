@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useOrganizations, useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
+import { useOrganizationsForWorkOrders, useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { useAuth } from '@/contexts/AuthContext';
 
 const createWorkOrderSchema = z.object({
@@ -32,7 +32,7 @@ interface CreateWorkOrderModalProps {
 
 export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalProps) {
   const { profile } = useAuth();
-  const { data: organizations } = useOrganizations();
+  const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const { createWorkOrder } = useWorkOrderMutations();
 

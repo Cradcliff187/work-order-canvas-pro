@@ -334,5 +334,5 @@ export function useOrganizationMutations() {
   };
 }
 
-// Re-export the existing organizations query for work orders
-export { useOrganizations as useOrganizationsForWorkOrders } from '@/hooks/useWorkOrders';
+// Export the work orders organizations query
+export { useOrganizationsForWorkOrders } from '@/hooks/useWorkOrders';

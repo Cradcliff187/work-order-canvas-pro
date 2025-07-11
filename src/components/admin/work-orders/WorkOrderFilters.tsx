@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Search, Filter, Calendar as CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { useOrganizations, useTrades } from '@/hooks/useWorkOrders';
+import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { cn } from '@/lib/utils';
 
 interface WorkOrderFiltersProps {
@@ -33,7 +33,7 @@ const statusOptions = [
 ];
 
 export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: WorkOrderFiltersProps) {
-  const { data: organizations } = useOrganizations();
+  const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const [dateFrom, setDateFrom] = useState<Date | undefined>(
     filters.date_from ? new Date(filters.date_from) : undefined
