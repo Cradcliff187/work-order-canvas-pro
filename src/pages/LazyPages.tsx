@@ -22,6 +22,7 @@ export const PartnerDashboard = lazy(() => import('@/pages/partner/PartnerDashbo
 export const SubmitWorkOrder = lazy(() => import('@/pages/partner/SubmitWorkOrder'));
 export const WorkOrderList = lazy(() => import('@/pages/partner/WorkOrderList'));
 export const WorkOrderDetail = lazy(() => import('@/pages/partner/WorkOrderDetail'));
+export const PartnerLocations = lazy(() => import('@/pages/partner/PartnerLocations'));
 export const PartnerProfile = lazy(() => import('@/pages/partner/PartnerProfile'));
 
 // Subcontractor Pages

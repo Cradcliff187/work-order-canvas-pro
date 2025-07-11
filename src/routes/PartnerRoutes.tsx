@@ -8,6 +8,7 @@ import {
   SubmitWorkOrder,
   WorkOrderList,
   WorkOrderDetail,
+  PartnerLocations,
   PartnerReports,
   PartnerReportDetail,
   PartnerProfile,
@@ -50,6 +51,16 @@ export const PartnerRoutes = () => (
         <PartnerLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <WorkOrderDetail />
+          </Suspense>
+        </PartnerLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/partner/locations" element={
+      <ProtectedRoute requiredUserType="partner">
+        <PartnerLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <PartnerLocations />
           </Suspense>
         </PartnerLayout>
       </ProtectedRoute>
