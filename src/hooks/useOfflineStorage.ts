@@ -163,11 +163,15 @@ export function useOfflineStorage() {
       try {
         if (attempt === 1) {
           setInitializationState('initializing');
+          console.log('Storage initialization attempt 1/3');
           await detectAndHandleExistingDatabases();
         } else {
           setInitializationState('retrying');
-          // Wait with exponential backoff
-          const delay = Math.min(1000 * Math.pow(2, attempt - 2), 4000);
+          console.log(`Storage initialization retry ${attempt}/${maxRetries}`);
+          
+          // Proper exponential backoff: 500ms, 1000ms, 2000ms
+          const delays = [0, 500, 1000, 2000];
+          const delay = delays[attempt - 1] || 2000;
           await new Promise(resolve => setTimeout(resolve, delay));
         }
 
@@ -189,6 +193,14 @@ export function useOfflineStorage() {
         setInitializationError(storageError);
         
         console.error(`Storage init attempt ${attempt} failed:`, error);
+        
+        // Show toast notification for retry failures (but not on final attempt)
+        if (attempt < maxRetries) {
+          toast({
+            title: `Storage Retry ${attempt}/${maxRetries}`,
+            description: `Initialization failed, retrying in ${[0, 500, 1000, 2000][attempt] || 2000}ms...`,
+          });
+        }
         
         if (attempt === maxRetries) {
           await handleStorageFallback(storageError);
