@@ -2,17 +2,18 @@
 
 ## Executive Summary
 
-WorkOrderPro uses a comprehensive **12-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across three user types: Admins, Partners, and Subcontractors. The schema supports work order lifecycle management, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
+WorkOrderPro uses a comprehensive **13-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, user organization relationships, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
 ## Database Architecture Overview
 
-### Core Tables (12)
+### Core Tables (13)
 1. **organizations** - Company/organization information
 2. **user_organizations** - Many-to-many user-organization relationships  
 3. **profiles** - Extended user profile information
 4. **trades** - Available trade skills (Plumbing, HVAC, etc.)
 5. **work_orders** - Main work order records
-6. **work_order_reports** - Subcontractor completion reports
+6. **work_order_assignments** - Multiple assignees per work order with roles
+7. **work_order_reports** - Subcontractor completion reports
 7. **work_order_attachments** - File attachments for work orders and reports
 8. **email_templates** - System email templates
 9. **email_logs** - Email delivery tracking
@@ -468,7 +469,41 @@ erDiagram
 | description | text | Yes | - | Setting description |
 | updated_at | timestamp | No | now() | Last update timestamp |
 
-### 12. audit_logs
+### 12. work_order_assignments
+**Purpose**: Multiple assignees per work order with role definitions.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| work_order_id | uuid | No | - | References work_orders.id (CASCADE DELETE) |
+| assigned_to | uuid | No | - | References profiles.id (CASCADE DELETE) |
+| assigned_organization_id | uuid | Yes | - | References organizations.id (SET NULL) |
+| assignment_type | text | No | - | Role: 'lead' or 'support' |
+| assigned_at | timestamp | No | now() | Assignment timestamp |
+| assigned_by | uuid | No | - | References profiles.id (CASCADE DELETE) |
+| notes | text | Yes | - | Assignment-specific notes |
+| created_at | timestamp | No | now() | Record creation timestamp |
+| updated_at | timestamp | No | now() | Last update timestamp |
+
+**Constraints**:
+- UNIQUE(work_order_id, assigned_to) - One assignment per person per work order
+- CHECK assignment_type IN ('lead', 'support')
+
+**Indexes**:
+- `idx_work_order_assignments_work_order` ON (work_order_id)
+- `idx_work_order_assignments_assigned_to` ON (assigned_to)
+- `idx_work_order_assignments_organization` ON (assigned_organization_id)
+- `idx_work_order_assignments_wo_type` ON (work_order_id, assignment_type)
+- `idx_work_order_assignments_assignee_type` ON (assigned_to, assignment_type)
+- `idx_work_order_assignments_assigned_at` ON (assigned_at)
+
+**Business Rules**:
+- **Lead Assignment**: Primary person responsible for work order completion
+- **Support Assignment**: Supporting team member assisting with work
+- **Multi-Organization**: Supports teams from different organizations
+- **Audit Trail**: Tracks who made assignments and when
+
+### 13. audit_logs
 **Purpose**: Complete audit trail for all system changes.
 
 | Column | Type | Nullable | Default | Description |

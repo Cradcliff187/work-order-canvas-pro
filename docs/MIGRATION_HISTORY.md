@@ -160,6 +160,19 @@ This document provides a complete chronological history of all database migratio
 - Added performance indexes for employee rate queries
 - **Result**: Complete employee rate tracking system enabling internal labor cost management
 
+### 2025-01-11: Multi-Assignee Work Order Support
+
+#### 20250711_add_work_order_assignments_table.sql
+**Purpose**: **MAJOR** - Enable multiple assignees per work order
+- Created `work_order_assignments` table supporting team-based work orders
+- Added support for 'lead' and 'support' assignment types
+- Implemented cross-organizational assignment tracking
+- Added comprehensive audit trail for assignment management
+- Created strategic performance indexes for query optimization
+- Enabled RLS for future security policy implementation
+- **Business Impact**: Supports mixed teams (employees + subcontractors)
+- **Result**: Foundation for advanced team-based work order management
+
 ### 2025-01-11: IndexedDB Storage Implementation
 
 #### IndexedDB v1 (Initial Implementation)
@@ -252,14 +265,15 @@ This document provides a complete chronological history of all database migratio
 
 The database is now in a **mature, production-ready state** with:
 
-✅ **Complete 12-table schema** aligned with business requirements  
+✅ **Complete 13-table schema** aligned with business requirements  
+✅ **Multi-assignee work order support** for team-based workflows
 ✅ **Clean RLS implementation** with no recursion issues  
 ✅ **Comprehensive audit logging** on all core tables  
 ✅ **Optimized performance** with strategic indexes  
 ✅ **Analytics capabilities** with materialized views  
 ✅ **Role-based access control** working correctly  
 ✅ **Email notification system** fully implemented  
-✅ **File attachment support** via Supabase Storage  
+✅ **File attachment support** via Supabase Storage
 
 ## Lessons Learned
 

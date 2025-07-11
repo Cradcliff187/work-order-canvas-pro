@@ -390,6 +390,88 @@ export type Database = {
           },
         ]
       }
+      work_order_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          assigned_organization_id: string | null
+          assigned_to: string
+          assignment_type: string
+          created_at: string
+          id: string
+          notes: string | null
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          assigned_organization_id?: string | null
+          assigned_to: string
+          assignment_type: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          assigned_organization_id?: string | null
+          assigned_to?: string
+          assignment_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_assigned_organization_id_fkey"
+            columns: ["assigned_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_attachments: {
         Row: {
           file_name: string
