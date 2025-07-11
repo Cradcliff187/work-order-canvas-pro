@@ -34,6 +34,7 @@ export const ReportHistory = lazy(() => import('@/pages/subcontractor/ReportHist
 export const ReportDetail = lazy(() => import('@/pages/subcontractor/ReportDetail'));
 export const SubcontractorProfile = lazy(() => import('@/pages/subcontractor/SubcontractorProfile'));
 export const SubmitInvoice = lazy(() => import('@/pages/subcontractor/SubmitInvoice'));
+export const SubcontractorInvoices = lazy(() => import('@/pages/subcontractor/SubcontractorInvoices'));
 
 // Other Pages
 export const Auth = lazy(() => import('@/pages/Auth'));

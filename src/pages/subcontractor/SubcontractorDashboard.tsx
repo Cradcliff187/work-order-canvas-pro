@@ -22,10 +22,19 @@ const SubcontractorDashboard = () => {
   const stats = dashboardStats.data;
   const invoices = invoicesData?.data || [];
   
-  // Get pending invoices (submitted, waiting for approval)
+  // Get invoice status counts
   const pendingInvoices = invoices.filter(invoice => invoice.status === 'submitted');
-  const approvedInvoices = invoices.filter(invoice => invoice.status === 'approved');
-  const paidInvoices = invoices.filter(invoice => invoice.status === 'paid');
+  const approvedAwaitingPayment = invoices.filter(invoice => invoice.status === 'approved' && !invoice.paid_at);
+  const paidInvoices = invoices.filter(invoice => invoice.paid_at);
+
+  // Calculate total outstanding amount (pending + approved awaiting payment)
+  const totalOutstanding = [...pendingInvoices, ...approvedAwaitingPayment]
+    .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+
+  // Get recent payments (last 5 paid invoices)
+  const recentPayments = paidInvoices
+    .sort((a, b) => new Date(b.paid_at!).getTime() - new Date(a.paid_at!).getTime())
+    .slice(0, 5);
 
   // Get recent work orders (last 5)
   const recentWorkOrders = workOrders.slice(0, 5);
@@ -134,18 +143,20 @@ const SubcontractorDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Pending Invoices</span>
-            </div>
-            <p className="text-2xl font-bold mt-2 text-warning">{pendingInvoices.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Awaiting approval
-            </p>
-          </CardContent>
-        </Card>
+        <Link to="/subcontractor/invoices">
+          <Card className="hover:bg-muted/50 transition-colors">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2">
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Pending Invoices</span>
+              </div>
+              <p className="text-2xl font-bold mt-2 text-warning">{pendingInvoices.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Awaiting approval
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         
         <Card>
           <CardContent className="p-6">
@@ -180,32 +191,82 @@ const SubcontractorDashboard = () => {
       {invoices.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Invoice Status</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Invoice Summary</CardTitle>
+              <Link to="/subcontractor/invoices">
+                <Button variant="outline" size="sm">
+                  View All Invoices
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="text-center p-4 bg-warning/10 rounded-lg">
-                <div className="text-2xl font-bold text-warning">{pendingInvoices.length}</div>
-                <div className="text-sm text-muted-foreground">Submitted</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  ${pendingInvoices.reduce((sum, inv) => sum + inv.total_amount, 0).toLocaleString()}
+            <div className="grid gap-4 sm:grid-cols-4 mb-6">
+              <Link to="/subcontractor/invoices?status=submitted">
+                <div className="text-center p-4 bg-warning/10 rounded-lg hover:bg-warning/20 transition-colors">
+                  <div className="text-2xl font-bold text-warning">{pendingInvoices.length}</div>
+                  <div className="text-sm text-muted-foreground">Pending</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    ${pendingInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0).toLocaleString()}
+                  </div>
                 </div>
-              </div>
-              <div className="text-center p-4 bg-success/10 rounded-lg">
-                <div className="text-2xl font-bold text-success">{approvedInvoices.length}</div>
-                <div className="text-sm text-muted-foreground">Approved</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  ${approvedInvoices.reduce((sum, inv) => sum + inv.total_amount, 0).toLocaleString()}
+              </Link>
+              <Link to="/subcontractor/invoices?status=approved&payment=unpaid">
+                <div className="text-center p-4 bg-success/10 rounded-lg hover:bg-success/20 transition-colors">
+                  <div className="text-2xl font-bold text-success">{approvedAwaitingPayment.length}</div>
+                  <div className="text-sm text-muted-foreground">Approved</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    ${approvedAwaitingPayment.reduce((sum, inv) => sum + (inv.total_amount || 0), 0).toLocaleString()}
+                  </div>
                 </div>
-              </div>
+              </Link>
               <div className="text-center p-4 bg-primary/10 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{paidInvoices.length}</div>
-                <div className="text-sm text-muted-foreground">Paid</div>
+                <div className="text-2xl font-bold text-primary">${totalOutstanding.toLocaleString()}</div>
+                <div className="text-sm text-muted-foreground">Outstanding</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  ${paidInvoices.reduce((sum, inv) => sum + inv.total_amount, 0).toLocaleString()}
+                  Total amount due
                 </div>
               </div>
+              <Link to="/subcontractor/invoices?status=paid">
+                <div className="text-center p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
+                  <div className="text-2xl font-bold">{paidInvoices.length}</div>
+                  <div className="text-sm text-muted-foreground">Paid</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    ${paidInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+              </Link>
             </div>
+
+            {/* Recent Payments */}
+            {recentPayments.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-3">Recent Payments</h4>
+                <div className="space-y-2">
+                  {recentPayments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="flex justify-between items-center p-3 border rounded-lg"
+                    >
+                      <div>
+                        <div className="font-medium">{payment.internal_invoice_number}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Paid: {format(new Date(payment.paid_at!), "MMM d, yyyy")}
+                        </div>
+                        {payment.payment_reference && (
+                          <div className="text-xs text-muted-foreground">
+                            Ref: {payment.payment_reference}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">${(payment.total_amount || 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

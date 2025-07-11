@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { ClipboardList, FileText, Home, LogOut, Menu, History, User } from "lucide-react";
+import { ClipboardList, FileText, Home, LogOut, Menu, History, User, Receipt } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,6 +24,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const navigation: Array<{name: string, href: string, icon: any, badge?: number}> = [
     { name: "Dashboard", href: "/subcontractor/dashboard", icon: Home },
     { name: "My Work Orders", href: "/subcontractor/work-orders", icon: ClipboardList },
+    { name: "Invoices", href: "/subcontractor/invoices", icon: Receipt },
     { 
       name: "Submit Invoice", 
       href: "/subcontractor/submit-invoice", 
