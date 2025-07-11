@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { useLocationHistory } from '@/hooks/useLocationHistory';
 
 const workOrderSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -25,6 +26,8 @@ const workOrderSchema = z.object({
   trade_id: z.string().min(1, 'Trade selection is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   organization_id: z.string().min(1, 'Organization is required'),
+  partner_po_number: z.string().optional(),
+  partner_location_number: z.string().optional(),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
@@ -43,6 +46,7 @@ const SubmitWorkOrder = () => {
   const createWorkOrder = useCreateWorkOrder();
   const { data: trades } = useTrades();
   const { data: organizations } = useOrganizations();
+  const { data: locationHistory } = useLocationHistory();
 
   const form = useForm<WorkOrderFormData>({
     resolver: zodResolver(workOrderSchema),
@@ -56,6 +60,8 @@ const SubmitWorkOrder = () => {
       trade_id: '',
       description: '',
       organization_id: '',
+      partner_po_number: '',
+      partner_location_number: '',
     },
   });
 
@@ -75,7 +81,7 @@ const SubmitWorkOrder = () => {
   const getCurrentStepFields = (): (keyof WorkOrderFormData)[] => {
     switch (currentStep) {
       case 1:
-        return ['title', 'store_location', 'street_address', 'city', 'state', 'zip_code'];
+        return ['title', 'store_location', 'street_address', 'city', 'state', 'zip_code', 'partner_po_number', 'partner_location_number'];
       case 2:
         return ['trade_id', 'description'];
       case 3:
@@ -97,6 +103,8 @@ const SubmitWorkOrder = () => {
         trade_id: string;
         description: string;
         organization_id: string;
+        partner_po_number?: string;
+        partner_location_number?: string;
       });
       setSubmittedWorkOrder(result);
       setCurrentStep(4); // Success step
@@ -132,6 +140,16 @@ const SubmitWorkOrder = () => {
                 <p className="text-muted-foreground text-sm">
                   {submittedWorkOrder.street_address}, {submittedWorkOrder.city}, {submittedWorkOrder.state} {submittedWorkOrder.zip_code}
                 </p>
+                {(submittedWorkOrder.partner_po_number || submittedWorkOrder.partner_location_number) && (
+                  <div className="mt-2 text-sm">
+                    {submittedWorkOrder.partner_po_number && (
+                      <p className="text-muted-foreground">PO: {submittedWorkOrder.partner_po_number}</p>
+                    )}
+                    {submittedWorkOrder.partner_location_number && (
+                      <p className="text-muted-foreground">Location #: {submittedWorkOrder.partner_location_number}</p>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div>
@@ -253,7 +271,7 @@ const SubmitWorkOrder = () => {
                   )}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="city"
@@ -291,6 +309,47 @@ const SubmitWorkOrder = () => {
                         <FormControl>
                           <Input placeholder="ZIP Code" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <FormField
+                    control={form.control}
+                    name="partner_po_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Partner PO Number (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., PO-2024-001234" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="partner_location_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location Number (Optional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., LOC-001, Store-123"
+                            list="location-history"
+                            {...field}
+                          />
+                        </FormControl>
+                        <datalist id="location-history">
+                          {locationHistory?.map((location, index) => (
+                            <option key={index} value={location.partner_location_number || ''}>
+                              {location.store_location} - {location.partner_location_number}
+                            </option>
+                          ))}
+                        </datalist>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -403,6 +462,15 @@ const SubmitWorkOrder = () => {
                     <div>
                       <span className="font-medium">Address:</span> {form.watch('street_address')}, {form.watch('city')}, {form.watch('state')} {form.watch('zip_code')}
                     </div>
+                    {(form.watch('partner_po_number') || form.watch('partner_location_number')) && (
+                      <div>
+                        <span className="font-medium">Partner References:</span>
+                        <div className="mt-1 text-muted-foreground">
+                          {form.watch('partner_po_number') && <p>PO: {form.watch('partner_po_number')}</p>}
+                          {form.watch('partner_location_number') && <p>Location #: {form.watch('partner_location_number')}</p>}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <span className="font-medium">Trade:</span> {trades?.find(t => t.id === form.watch('trade_id'))?.name}
                     </div>

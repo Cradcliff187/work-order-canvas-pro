@@ -175,6 +175,8 @@ export function useCreateWorkOrder() {
       trade_id: string;
       description: string;
       organization_id: string;
+      partner_po_number?: string;
+      partner_location_number?: string;
     }) => {
       if (!profile?.id) throw new Error('No user profile');
 
@@ -188,6 +190,8 @@ export function useCreateWorkOrder() {
         .from('work_orders')
         .insert({
           ...workOrder,
+          partner_po_number: workOrder.partner_po_number || null,
+          partner_location_number: workOrder.partner_location_number || null,
           work_order_number: workOrderNumber,
           created_by: profile.id,
           status: 'received',

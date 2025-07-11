@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useOrganizationsForWorkOrders, useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocationHistory } from '@/hooks/useLocationHistory';
 
 const createWorkOrderSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -21,6 +22,8 @@ const createWorkOrderSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   zip_code: z.string().optional(),
+  partner_po_number: z.string().optional(),
+  partner_location_number: z.string().optional(),
 });
 
 type CreateWorkOrderForm = z.infer<typeof createWorkOrderSchema>;
@@ -35,6 +38,7 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const { createWorkOrder } = useWorkOrderMutations();
+  const { data: locationHistory } = useLocationHistory();
 
   const form = useForm<CreateWorkOrderForm>({
     resolver: zodResolver(createWorkOrderSchema),
@@ -48,6 +52,8 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
       city: '',
       state: '',
       zip_code: '',
+      partner_po_number: '',
+      partner_location_number: '',
     },
   });
 
@@ -65,6 +71,8 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
         city: data.city,
         state: data.state,
         zip_code: data.zip_code,
+        partner_po_number: data.partner_po_number || null,
+        partner_location_number: data.partner_location_number || null,
         created_by: profile.id,
         status: 'received',
         date_submitted: new Date().toISOString(),
@@ -230,6 +238,48 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
                       <FormControl>
                         <Input placeholder="12345" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Partner References */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="partner_po_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Partner PO Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., PO-2024-001234" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="partner_location_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., LOC-001, Store-123"
+                          list="admin-location-history"
+                          {...field}
+                        />
+                      </FormControl>
+                      <datalist id="admin-location-history">
+                        {locationHistory?.map((location, index) => (
+                          <option key={index} value={location.partner_location_number || ''}>
+                            {location.store_location} - {location.partner_location_number}
+                          </option>
+                        ))}
+                      </datalist>
                       <FormMessage />
                     </FormItem>
                   )}
