@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Building2, Mail, Phone, MapPin } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Hash } from 'lucide-react';
 import { useOrganizationMutations, CreateOrganizationData } from '@/hooks/useOrganizations';
 
 const createOrganizationSchema = z.object({
@@ -17,6 +17,16 @@ const createOrganizationSchema = z.object({
   contact_phone: z.string().optional(),
   address: z.string().optional(),
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
+  initials: z.string()
+    .regex(/^[A-Z]{2,4}$/, 'Must be 2-4 uppercase letters')
+    .optional()
+    .refine((val, ctx) => {
+      const orgType = ctx.parent.organization_type;
+      if (orgType === 'partner' && !val) {
+        return false;
+      }
+      return true;
+    }, 'Initials are required for partner organizations'),
 });
 
 type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
@@ -38,6 +48,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
       contact_phone: '',
       address: '',
       organization_type: 'partner' as const,
+      initials: '',
     },
   });
 
@@ -49,6 +60,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
         contact_phone: data.contact_phone,
         address: data.address,
         organization_type: data.organization_type,
+        initials: data.initials,
       });
       form.reset();
       onOpenChange(false);
@@ -151,6 +163,33 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                   </FormControl>
                   <FormDescription>
                     Physical address or headquarters location
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="initials"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Hash className="h-4 w-4" />
+                    Initials {form.watch('organization_type') === 'partner' && <span className="text-destructive">*</span>}
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="ABC" 
+                      className="uppercase"
+                      maxLength={4}
+                      {...field} 
+                      onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    2-4 letter code for work order numbering (e.g., ABC)
+                    {form.watch('organization_type') === 'partner' && ' - Required for partners'}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

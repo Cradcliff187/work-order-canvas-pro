@@ -9,6 +9,7 @@ export interface CreateOrganizationData {
   contact_phone?: string;
   address?: string;
   organization_type: 'partner' | 'subcontractor' | 'internal';
+  initials?: string;
 }
 
 export interface UpdateOrganizationData {
@@ -17,6 +18,7 @@ export interface UpdateOrganizationData {
   contact_phone?: string;
   address?: string;
   organization_type?: 'partner' | 'subcontractor' | 'internal';
+  initials?: string;
   is_active?: boolean;
 }
 
@@ -49,6 +51,7 @@ export function useOrganizations() {
         contact_phone: org.contact_phone,
         address: org.address,
         organization_type: org.organization_type,
+        initials: org.initials,
         is_active: org.is_active,
         created_at: org.created_at,
         updated_at: org.updated_at,
@@ -118,6 +121,7 @@ export function useOrganizationMutations() {
           contact_phone: orgData.contact_phone,
           address: orgData.address,
           organization_type: orgData.organization_type,
+          initials: orgData.initials,
         })
         .select()
         .single();
@@ -154,6 +158,7 @@ export function useOrganizationMutations() {
           contact_phone: orgData.contact_phone,
           address: orgData.address,
           organization_type: orgData.organization_type,
+          initials: orgData.initials,
           is_active: orgData.is_active,
         })
         .eq('id', organizationId)

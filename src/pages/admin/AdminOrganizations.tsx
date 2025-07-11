@@ -21,6 +21,7 @@ export interface Organization {
   contact_phone?: string;
   address?: string;
   organization_type: 'partner' | 'subcontractor' | 'internal';
+  initials?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -71,6 +72,21 @@ const AdminOrganizations = () => {
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">{row.original.name}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'initials',
+      header: 'Initials',
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          {row.original.initials ? (
+            <Badge variant="outline" className="font-mono text-sm">
+              {row.original.initials}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
         </div>
       ),
     },
