@@ -4,12 +4,23 @@ import { memoryStorageManager } from '@/utils/memoryStorage';
 import { useToast } from '@/components/ui/use-toast';
 import type { ReportDraft, PhotoAttachment, StorageStats, SyncQueueItem, StorageManager } from '@/types/offline';
 
+type InitializationState = 'initializing' | 'retrying' | 'upgrading' | 'ready' | 'fallback' | 'failed';
+
+type StorageError = {
+  type: 'VersionError' | 'QuotaError' | 'CorruptionError' | 'SecurityError' | 'UnknownError';
+  message: string;
+  recoverable: boolean;
+};
+
 export function useOfflineStorage() {
   const [isReady, setIsReady] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
   const [storageManager, setStorageManager] = useState<StorageManager>(indexedDBManager);
+  const [initializationState, setInitializationState] = useState<InitializationState>('initializing');
+  const [initializationError, setInitializationError] = useState<StorageError | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,42 +39,158 @@ export function useOfflineStorage() {
     return () => clearInterval(interval);
   }, [isReady]);
 
-  const initializeStorage = async () => {
+  const classifyError = (error: any): StorageError => {
+    const message = error?.message || 'Unknown error occurred';
+    
+    if (message.includes('version') || message.includes('VersionError')) {
+      return { type: 'VersionError', message, recoverable: true };
+    }
+    if (message.includes('quota') || message.includes('storage')) {
+      return { type: 'QuotaError', message, recoverable: true };
+    }
+    if (message.includes('corrupt') || message.includes('invalid')) {
+      return { type: 'CorruptionError', message, recoverable: true };
+    }
+    if (message.includes('security') || message.includes('permission')) {
+      return { type: 'SecurityError', message, recoverable: false };
+    }
+    
+    return { type: 'UnknownError', message, recoverable: true };
+  };
+
+  const detectAndHandleExistingDatabases = async (): Promise<void> => {
     try {
-      await indexedDBManager.init();
-      setStorageManager(indexedDBManager);
-      setIsUsingFallback(false);
-      setIsReady(true);
-      await updateStats();
-      
-      // Run cleanup on startup
-      await indexedDBManager.cleanup();
-    } catch (error) {
-      console.error('IndexedDB initialization failed, falling back to memory storage:', error);
-      
-      // Fallback to memory storage
-      try {
-        await memoryStorageManager.init();
-        setStorageManager(memoryStorageManager);
-        setIsUsingFallback(true);
-        setIsReady(true);
-        await updateStats();
+      if ('databases' in indexedDB) {
+        const databases = await indexedDB.databases();
+        const workOrderDBs = databases.filter(db => 
+          db.name?.includes('WorkOrderPro') || db.name?.includes('workorder')
+        );
         
-        toast({
-          title: "Storage Fallback",
-          description: "Using temporary storage - data won't persist after page reload",
-          variant: "destructive",
-        });
-      } catch (fallbackError) {
-        console.error('Memory storage fallback also failed:', fallbackError);
-        toast({
-          title: "Storage Error",
-          description: "Failed to initialize any storage system",
-          variant: "destructive",
-        });
+        if (workOrderDBs.length > 1) {
+          console.log('Multiple WorkOrder databases detected, cleaning up...');
+          // Clean up duplicate databases
+          for (const db of workOrderDBs.slice(1)) {
+            if (db.name) {
+              await indexedDB.deleteDatabase(db.name);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to detect existing databases:', error);
+    }
+  };
+
+  const initializeStorageWithRetry = async (maxRetries = 3): Promise<void> => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      setRetryCount(attempt - 1);
+      
+      try {
+        if (attempt === 1) {
+          setInitializationState('initializing');
+          await detectAndHandleExistingDatabases();
+        } else {
+          setInitializationState('retrying');
+          // Wait with exponential backoff
+          const delay = Math.min(1000 * Math.pow(2, attempt - 2), 4000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        setInitializationState('upgrading');
+        await indexedDBManager.init();
+        
+        setStorageManager(indexedDBManager);
+        setIsUsingFallback(false);
+        setInitializationState('ready');
+        setIsReady(true);
+        setInitializationError(null);
+        
+        await updateStats();
+        await indexedDBManager.cleanup();
+        return;
+        
+      } catch (error) {
+        const storageError = classifyError(error);
+        setInitializationError(storageError);
+        
+        console.error(`Storage init attempt ${attempt} failed:`, error);
+        
+        if (attempt === maxRetries) {
+          await handleStorageFallback(storageError);
+          return;
+        }
       }
     }
   };
+
+  const handleStorageFallback = async (error: StorageError): Promise<void> => {
+    try {
+      setInitializationState('fallback');
+      await memoryStorageManager.init();
+      setStorageManager(memoryStorageManager);
+      setIsUsingFallback(true);
+      setIsReady(true);
+      await updateStats();
+      
+      // Only show intrusive message for non-recoverable errors
+      if (!error.recoverable) {
+        toast({
+          title: "Storage Issue",
+          description: "Using temporary storage until resolved",
+        });
+      }
+    } catch (fallbackError) {
+      console.error('Memory storage fallback also failed:', fallbackError);
+      setInitializationState('failed');
+      toast({
+        title: "Storage Error",
+        description: "Storage initialization failed completely",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const initializeStorage = async () => {
+    await initializeStorageWithRetry();
+  };
+
+  const retryInitialization = useCallback(async (): Promise<void> => {
+    setIsReady(false);
+    setInitializationError(null);
+    await initializeStorageWithRetry();
+  }, []);
+
+  const resetStorageWithConfirmation = useCallback(async (): Promise<void> => {
+    if (!confirm('This will clear all offline data. Are you sure?')) {
+      return;
+    }
+    
+    try {
+      setInitializationState('initializing');
+      setIsReady(false);
+      
+      // Delete the database completely
+      await indexedDB.deleteDatabase('WorkOrderProDB');
+      
+      // Clear any other storage
+      localStorage.removeItem('workorder-fallback-storage');
+      
+      // Reinitialize
+      await initializeStorageWithRetry();
+      
+      toast({
+        title: "Storage Reset",
+        description: "Storage has been cleared and reinitialized",
+      });
+    } catch (error) {
+      console.error('Failed to reset storage:', error);
+      toast({
+        title: "Reset Failed",
+        description: "Failed to reset storage",
+        variant: "destructive",
+      });
+    }
+  }, []);
 
   const updateStats = async () => {
     if (!isReady) return;
@@ -338,6 +465,9 @@ export function useOfflineStorage() {
     pendingCount,
     storageStats,
     isUsingFallback,
+    initializationState,
+    initializationError,
+    retryCount,
     saveDraft,
     getDrafts,
     loadDraft,
@@ -346,5 +476,7 @@ export function useOfflineStorage() {
     processPendingSyncs,
     exportData,
     clearCache,
+    retryInitialization,
+    resetStorageWithConfirmation,
   };
 }
