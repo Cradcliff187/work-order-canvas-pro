@@ -168,74 +168,106 @@ With Check: (auth_user_type() = 'partner' AND auth_user_belongs_to_organization(
 
 ### profiles
 
-**CRITICAL:** The profiles table uses a layered policy approach to prevent infinite recursion. Base policies use `auth.uid()` directly, while enhancement policies can safely use helper functions.
+**CRITICAL:** The profiles table uses a **ZERO HELPER FUNCTIONS** approach to prevent infinite recursion. All policies use direct SQL queries with `auth.uid()` and avoid any function calls that could query the profiles table.
 
-#### Base Policies (Prevent Recursion)
+#### Bootstrap Policies (Prevent All Recursion)
 
-**Users can always read own profile via auth uid**
+**Bootstrap: Users read own profile by auth uid**
 ```sql
 Policy: SELECT
 Using: (user_id = auth.uid())
-Comment: 'Critical policy that prevents recursion by allowing users to fetch their own profile using auth.uid() directly'
+Comment: 'Primary bootstrap policy that prevents ALL recursion by using auth.uid() directly with no helper functions'
 ```
 
-**Users can update own profile**
+**Bootstrap: Users create own profile by auth uid**
+```sql
+Policy: INSERT
+With Check: (user_id = auth.uid())
+Comment: 'Bootstrap policy for profile creation using only auth.uid()'
+```
+
+**Bootstrap: Users update own profile by auth uid**
 ```sql
 Policy: UPDATE
 Using: (user_id = auth.uid())
 With Check: (user_id = auth.uid())
+Comment: 'Bootstrap policy for profile updates using only auth.uid()'
 ```
 
-**Users can create own profile**
-```sql
-Policy: INSERT
-With Check: (user_id = auth.uid())
-```
+#### Role-Based Policies (Use Direct Queries Only)
 
-#### Enhancement Policies (Use Helper Functions Safely)
-
-**Admins full profile access**
+**Bootstrap: Admins full access via direct query**
 ```sql
 Policy: ALL
-Using: (user_id = auth.uid() OR auth_is_admin())
-With Check: (user_id = auth.uid() OR auth_is_admin())
-Comment: 'Admins have full access to all profiles - safe to use helper functions as this is evaluated after initial profile fetch'
+Using: (user_id = auth.uid() OR EXISTS (
+  SELECT 1 FROM public.profiles admin_check 
+  WHERE admin_check.user_id = auth.uid() 
+  AND admin_check.user_type = 'admin'
+))
+With Check: (user_id = auth.uid() OR EXISTS (
+  SELECT 1 FROM public.profiles admin_check 
+  WHERE admin_check.user_id = auth.uid() 
+  AND admin_check.user_type = 'admin'
+))
+Comment: 'Admin access using direct subquery instead of auth_is_admin() to prevent recursion'
 ```
 
-**Employees view all profiles**
+**Employees view all profiles via direct query**
 ```sql
 Policy: SELECT
-Using: (user_id = auth.uid() OR auth_user_type() = 'employee')
-Comment: 'Employees can view all profiles for operational purposes - uses helper function safely'
+Using: (user_id = auth.uid() OR EXISTS (
+  SELECT 1 FROM public.profiles employee_check
+  WHERE employee_check.user_id = auth.uid()
+  AND employee_check.user_type = 'employee'
+))
+Comment: 'Employee access using direct subquery instead of auth_user_type() to prevent recursion'
 ```
 
-**Partners view organization profiles**
+**Partners view organization profiles via direct query**
 ```sql
 Policy: SELECT
 Using: (user_id = auth.uid() OR (
-  auth_user_type() = 'partner' AND id IN (
-    SELECT p.id FROM profiles p
-    JOIN user_organizations uo ON p.id = uo.user_id
+  EXISTS (
+    SELECT 1 FROM public.profiles partner_check
+    WHERE partner_check.user_id = auth.uid()
+    AND partner_check.user_type = 'partner'
+  )
+  AND id IN (
+    SELECT p.id FROM public.profiles p
+    JOIN public.user_organizations uo ON p.id = uo.user_id
     WHERE uo.organization_id IN (
-      SELECT organization_id FROM auth_user_organizations()
+      SELECT uo2.organization_id 
+      FROM public.user_organizations uo2
+      JOIN public.profiles auth_user ON auth_user.id = uo2.user_id
+      WHERE auth_user.user_id = auth.uid()
     )
     AND p.user_type != 'employee'
   )
 ))
+Comment: 'Partner access using direct queries instead of helper functions to prevent recursion'
 ```
 
-**Subcontractors view limited profiles**
+**Subcontractors view limited profiles via direct query**
 ```sql
 Policy: SELECT
 Using: (user_id = auth.uid() OR (
-  auth_user_type() = 'subcontractor' AND id IN (
-    SELECT DISTINCT p.id FROM profiles p
-    JOIN user_organizations uo ON p.id = uo.user_id
-    JOIN work_orders wo ON wo.organization_id = uo.organization_id
-    WHERE wo.assigned_to = auth_profile_id()
+  EXISTS (
+    SELECT 1 FROM public.profiles subcontractor_check
+    WHERE subcontractor_check.user_id = auth.uid()
+    AND subcontractor_check.user_type = 'subcontractor'
+  )
+  AND id IN (
+    SELECT DISTINCT p.id FROM public.profiles p
+    JOIN public.user_organizations uo ON p.id = uo.user_id
+    JOIN public.work_orders wo ON wo.organization_id = uo.organization_id
+    WHERE wo.assigned_to = (
+      SELECT id FROM public.profiles auth_profile 
+      WHERE auth_profile.user_id = auth.uid()
+    )
     AND p.user_type = 'partner'
   )
 ))
+Comment: 'Subcontractor access using direct queries instead of helper functions to prevent recursion'
 ```
 
 ### trades

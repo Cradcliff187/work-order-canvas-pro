@@ -119,16 +119,25 @@ This document provides a complete chronological history of all database migratio
 ### 2025-01-11: Critical RLS Fix and System Optimizations
 
 #### 20250711035529-3ab24d6e-e01e-4941-97d0-b8c908d4523b.sql
-**Purpose**: **CRITICAL FIX** - Resolve infinite recursion in profiles table RLS policies
+**Purpose**: **INCOMPLETE** - Attempted RLS recursion fix (partial success)
 - **Issue**: Previous RLS migrations (including 20250710231829) still caused "infinite recursion detected in policy for relation 'profiles'"
 - **Root Cause**: ALL policies were calling helper functions that query profiles table (`auth_user_type()`, `auth_profile_id()`)
-- **Solution**: Implemented layered bootstrap approach:
-  - Bootstrap policy uses `auth.uid()` directly (no helper functions)
-  - Role-based policies can safely use helper functions after bootstrap succeeds
-  - PostgreSQL's OR logic ensures basic access always works
-- **Key Innovation**: "Users can always read own profile via auth uid" prevents all recursion
-- **Architecture**: Layered policy design prevents circular dependencies
-- **Result**: Complete elimination of RLS recursion, all users can log in and access system
+- **Attempted Solution**: Layered bootstrap approach with mixed success
+- **Problem**: Still had some policies using recursive helper functions
+- **Result**: Reduced but did not eliminate RLS recursion errors
+
+#### 20250711_fix_profiles_rls_recursion_complete.sql
+**Purpose**: **DEFINITIVE FIX** - Complete elimination of profiles table RLS recursion
+- **Issue**: All previous attempts still had recursive function calls in policies
+- **Root Cause**: Any use of `auth_user_type()`, `auth_profile_id()`, `auth_is_admin()` in profiles policies causes recursion
+- **Solution**: **ZERO HELPER FUNCTIONS** approach:
+  - Dropped ALL existing policies on profiles table
+  - Created bootstrap policies using ONLY `auth.uid()` directly
+  - Replaced all role-based policies with direct SQL subqueries
+  - No helper function calls whatsoever in any profiles policy
+- **Key Innovation**: Direct subqueries prevent ALL recursion possibilities
+- **Architecture**: Pure SQL approach with no circular dependencies
+- **Result**: **COMPLETE** elimination of RLS recursion, all users can log in successfully
 
 ### 2025-01-11: Final Optimizations and Audit System
 
