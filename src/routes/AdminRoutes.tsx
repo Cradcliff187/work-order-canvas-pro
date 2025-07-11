@@ -1,5 +1,7 @@
 import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
+import { LazyWrapper } from '@/components/LazyWrapper';
+import { ReceiptUpload } from '@/components/receipts/ReceiptUpload';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -19,6 +21,7 @@ import {
   AdminInvoices,
   EmployeeTimeReports,
   EmployeeTimeReport,
+  ReceiptHistory,
   SystemHealthCheck,
   DevTools,
 } from '@/pages/LazyPages';
@@ -160,6 +163,26 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <EmployeeTimeReport />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/receipts" element={
+      <ProtectedRoute requiredUserType="employee">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <ReceiptHistory />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/receipts/upload" element={
+      <ProtectedRoute requiredUserType="employee">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <ReceiptUpload />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>

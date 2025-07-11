@@ -23,6 +23,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
   { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
   { title: 'Time Reports', url: '/admin/time-reports', icon: Clock },
+  { title: 'Receipts', url: '/admin/receipts', icon: Receipt },
   { title: 'Invoices', url: '/admin/invoices', icon: Receipt },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
@@ -35,4 +36,4 @@ export const sidebarItems: SidebarItem[] = [
 ];
 
 export const adminOnlyItems = ['Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Dev Tools'];
-export const employeeAccessItems = ['Dashboard', 'Work Orders', 'Time Reports'];
+export const employeeAccessItems = ['Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];
