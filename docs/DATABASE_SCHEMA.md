@@ -381,7 +381,37 @@ erDiagram
 - `idx_work_orders_assigned_org` ON (assigned_organization_id)
 - `idx_work_orders_location_name` ON (location_name)
 
-### 6. work_order_reports
+### 6. work_order_assignments
+**Purpose**: Multiple assignees per work order with role-based assignment tracking.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| work_order_id | uuid | No | - | References work_orders.id |
+| assigned_to | uuid | No | - | References profiles.id (assignee) |
+| assigned_organization_id | uuid | Yes | - | References organizations.id (assignee's org) |
+| assignment_type | text | No | - | Assignment role: 'lead' or 'support' |
+| assigned_at | timestamp | No | now() | Assignment timestamp |
+| assigned_by | uuid | No | - | References profiles.id (assigner) |
+| notes | text | Yes | - | Assignment notes |
+| created_at | timestamp | No | now() | Creation timestamp |
+| updated_at | timestamp | No | now() | Last update timestamp |
+
+**Constraints**:
+- `work_order_assignments_work_order_id_assigned_to_key` UNIQUE (work_order_id, assigned_to)
+- `work_order_assignments_assignment_type_check` CHECK (assignment_type IN ('lead', 'support'))
+
+**Indexes**:
+- `idx_work_order_assignments_work_order` ON (work_order_id)
+- `idx_work_order_assignments_assigned_to` ON (assigned_to)
+- `idx_work_order_assignments_organization` ON (assigned_organization_id)
+- `idx_work_order_assignments_wo_type` ON (work_order_id, assignment_type)
+- `idx_work_order_assignments_assignee_type` ON (assigned_to, assignment_type)
+- `idx_work_order_assignments_assigned_at` ON (assigned_at)
+- `idx_work_order_assignments_assignee_type_combo` ON (assigned_to, assignment_type)
+- `idx_work_order_assignments_wo_assignee_combo` ON (work_order_id, assigned_to)
+
+### 7. work_order_reports
 **Purpose**: Subcontractor completion reports with review workflow.
 
 | Column | Type | Nullable | Default | Description |
@@ -407,7 +437,7 @@ erDiagram
 - `idx_work_order_reports_subcontractor` ON (subcontractor_user_id)
 - `idx_work_order_reports_status` ON (status)
 
-### 7. work_order_attachments
+### 8. work_order_attachments
 **Purpose**: File attachments for work orders and reports.
 
 | Column | Type | Nullable | Default | Description |

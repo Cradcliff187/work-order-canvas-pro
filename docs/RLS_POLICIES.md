@@ -507,6 +507,47 @@ Policy: INSERT
 With Check: (EXISTS (SELECT 1 FROM receipts r WHERE r.id = receipt_work_orders.receipt_id AND r.employee_user_id = auth_profile_id()))
 ```
 
+### work_order_assignments
+
+**Admins can manage all work order assignments**
+```sql
+Policy: ALL
+Using: auth_is_admin()
+With Check: auth_is_admin()
+```
+
+**Partners can view assignments for their organization work orders**
+```sql
+Policy: SELECT
+Using: (auth_user_type() = 'partner' AND work_order_id IN (
+  SELECT wo.id FROM work_orders wo 
+  WHERE auth_user_belongs_to_organization(wo.organization_id)
+))
+```
+
+**Subcontractors can view their own assignments**
+```sql
+Policy: SELECT
+Using: (auth_user_type() = 'subcontractor' AND assigned_to = auth_profile_id())
+```
+
+**Employees can view their own assignments**
+```sql
+Policy: SELECT
+Using: (auth_user_type() = 'employee' AND assigned_to = auth_profile_id())
+```
+
+**Access Patterns:**
+- **Admins**: Full CRUD access to all assignments for system management
+- **Partners**: Read-only access to assignments for their organization's work orders
+- **Subcontractors**: Read-only access to their own assignments
+- **Employees**: Read-only access to their own assignments
+
+**Security Notes:**
+- Assignment creation/modification is restricted to admins only
+- Users can only see assignments relevant to their role and organization
+- Assignment data is filtered based on work order ownership and direct assignment
+
 ### audit_logs
 
 **Admins can view all audit logs**

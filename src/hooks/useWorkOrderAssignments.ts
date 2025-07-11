@@ -157,9 +157,10 @@ export function useWorkOrderAssignmentMutations() {
       });
     },
     onError: (error: any) => {
+      console.error('Assignment creation failed:', error);
       toast({
         title: 'Assignment failed',
-        description: error.message,
+        description: error.message || 'Failed to create assignment',
         variant: 'destructive',
       });
     },
@@ -185,9 +186,10 @@ export function useWorkOrderAssignmentMutations() {
       });
     },
     onError: (error: any) => {
+      console.error('Assignment removal failed:', error);
       toast({
         title: 'Failed to remove assignment',
-        description: error.message,
+        description: error.message || 'Failed to remove assignment',
         variant: 'destructive',
       });
     },
@@ -229,9 +231,10 @@ export function useWorkOrderAssignmentMutations() {
       });
     },
     onError: (error: any) => {
+      console.error('Assignment update failed:', error);
       toast({
         title: 'Update failed',
-        description: error.message,
+        description: error.message || 'Failed to update assignment',
         variant: 'destructive',
       });
     },
@@ -270,9 +273,10 @@ export function useWorkOrderAssignmentMutations() {
       });
     },
     onError: (error: any) => {
+      console.error('Bulk assignment failed:', error);
       toast({
         title: 'Bulk assignment failed',
-        description: error.message,
+        description: error.message || 'Failed to create bulk assignments',
         variant: 'destructive',
       });
     },

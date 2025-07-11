@@ -171,6 +171,55 @@ $$;
 **Returns**: TRUE if user is assigned to the work order  
 **Usage**: Work order access control for subcontractors
 
+### 8. auth_user_can_view_assignment(assignment_id uuid)
+
+**Purpose**: Check if current user can view a specific work order assignment
+
+```sql
+CREATE OR REPLACE FUNCTION public.auth_user_can_view_assignment(assignment_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+AS $$
+BEGIN
+  -- Admins can view all assignments
+  IF auth_is_admin() THEN
+    RETURN true;
+  END IF;
+  
+  -- Check if user is assigned to this assignment
+  IF EXISTS (
+    SELECT 1 
+    FROM work_order_assignments woa
+    WHERE woa.id = assignment_id 
+    AND woa.assigned_to = auth_profile_id()
+  ) THEN
+    RETURN true;
+  END IF;
+  
+  -- Check if user is a partner of the organization that owns the work order
+  IF auth_user_type() = 'partner' AND EXISTS (
+    SELECT 1 
+    FROM work_order_assignments woa
+    JOIN work_orders wo ON wo.id = woa.work_order_id
+    WHERE woa.id = assignment_id 
+    AND auth_user_belongs_to_organization(wo.organization_id)
+  ) THEN
+    RETURN true;
+  END IF;
+  
+  RETURN false;
+END;
+$$;
+```
+
+**Parameters**: `assignment_id` - UUID of assignment to check  
+**Returns**: TRUE if user can view the assignment  
+**Usage**: Assignment access control and UI permission checks
+**Logic**: 
+- Admins can view all assignments
+- Users can view assignments they are directly assigned to
+- Partners can view assignments for their organization's work orders
+
 ## Trigger Functions
 
 ### audit_trigger_function()

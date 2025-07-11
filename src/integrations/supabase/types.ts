@@ -1239,6 +1239,10 @@ export type Database = {
         Args: { org_id: string }
         Returns: boolean
       }
+      auth_user_can_view_assignment: {
+        Args: { assignment_id: string }
+        Returns: boolean
+      }
       auth_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
