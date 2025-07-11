@@ -12,12 +12,14 @@ const STATIC_ASSETS = [
   '/icons/icon-maskable.png'
 ];
 
-// API endpoints to cache
-const API_ENDPOINTS = [
-  '/api/work-orders',
-  '/api/profiles',
-  '/api/organizations',
-  '/api/trades'
+// Supabase API endpoints to cache
+const API_PATTERNS = [
+  '/rest/v1/work_orders',
+  '/rest/v1/profiles',
+  '/rest/v1/organizations',
+  '/rest/v1/trades',
+  '/rest/v1/work_order_reports',
+  '/rest/v1/user_organizations'
 ];
 
 // Install event - cache static assets

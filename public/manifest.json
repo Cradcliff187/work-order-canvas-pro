@@ -33,14 +33,24 @@
   "dir": "ltr",
   "shortcuts": [
     {
+      "name": "Admin Dashboard",
+      "url": "/admin/dashboard",
+      "description": "Access admin dashboard and reports"
+    },
+    {
+      "name": "Submit Work Order",
+      "url": "/partner/submit-work-order",
+      "description": "Submit new work order"
+    },
+    {
       "name": "Submit Report",
       "url": "/subcontractor/work-orders",
-      "description": "Quick access to submit work reports"
+      "description": "Submit work completion report"
     },
     {
       "name": "View Work Orders",
-      "url": "/subcontractor/work-orders",
-      "description": "View assigned work orders"
+      "url": "/work-orders",
+      "description": "View all work orders"
     }
   ]
 }
