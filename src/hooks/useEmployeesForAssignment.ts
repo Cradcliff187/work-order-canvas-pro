@@ -7,6 +7,7 @@ export interface AssigneeData {
   last_name: string;
   type: 'employee' | 'subcontractor';
   organization: string;
+  organization_id?: string;
   workload: number;
   is_active: boolean;
   company_name?: string;
@@ -50,6 +51,7 @@ export function useEmployeesForAssignment() {
         last_name: emp.last_name,
         type: 'employee' as const,
         organization: 'Internal',
+        organization_id: undefined,
         workload: workloadMap[emp.id] || 0,
         is_active: emp.is_active,
         email: emp.email
@@ -66,14 +68,42 @@ export function useAllAssignees(tradeId?: string) {
     queryFn: async (): Promise<AssigneeData[]> => {
       if (!tradeId) return [];
       
+      // Get subcontractors with their organization relationships
       const { data: subs, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          user_organizations!inner(organization_id, organizations!inner(id, name, organization_type))
+        `)
         .eq('user_type', 'subcontractor')
         .eq('is_active', true)
+        .eq('user_organizations.organizations.organization_type', 'subcontractor')
         .order('first_name');
 
-      if (error) throw error;
+      if (error) {
+        // Fallback to basic query if join fails
+        const { data: fallbackSubs, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_type', 'subcontractor')
+          .eq('is_active', true)
+          .order('first_name');
+        
+        if (fallbackError) throw fallbackError;
+        
+        return fallbackSubs.map(sub => ({
+          id: sub.id,
+          first_name: sub.first_name,
+          last_name: sub.last_name,
+          type: 'subcontractor' as const,
+          organization: sub.company_name || 'External',
+          organization_id: undefined,
+          workload: 0,
+          is_active: sub.is_active,
+          company_name: sub.company_name || undefined,
+          email: sub.email
+        }));
+      }
 
       // Get workload for subcontractors
       const { data: workOrders, error: workOrderError } = await supabase
@@ -92,17 +122,23 @@ export function useAllAssignees(tradeId?: string) {
         return acc;
       }, {} as Record<string, number>);
 
-      return subs.map(sub => ({
-        id: sub.id,
-        first_name: sub.first_name,
-        last_name: sub.last_name,
-        type: 'subcontractor' as const,
-        organization: sub.company_name || 'External',
-        workload: workloadMap[sub.id] || 0,
-        is_active: sub.is_active,
-        company_name: sub.company_name || undefined,
-        email: sub.email
-      }));
+      return subs.map(sub => {
+        const userOrg = (sub as any).user_organizations?.[0];
+        const organization = userOrg?.organizations;
+        
+        return {
+          id: sub.id,
+          first_name: sub.first_name,
+          last_name: sub.last_name,
+          type: 'subcontractor' as const,
+          organization: organization?.name || sub.company_name || 'External',
+          organization_id: organization?.id || null,
+          workload: workloadMap[sub.id] || 0,
+          is_active: sub.is_active,
+          company_name: sub.company_name || undefined,
+          email: sub.email
+        };
+      });
     },
     enabled: !!tradeId,
   });

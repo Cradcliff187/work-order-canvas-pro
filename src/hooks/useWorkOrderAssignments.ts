@@ -267,6 +267,7 @@ export function useWorkOrderAssignmentMutations() {
       queryClient.invalidateQueries({ queryKey: ['work-order-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['user-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['organization-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       toast({
         title: 'Bulk assignment completed',
         description: `Successfully created ${data?.length} assignments`,
@@ -282,12 +283,42 @@ export function useWorkOrderAssignmentMutations() {
     },
   });
 
+  const bulkRemoveAssignments = useMutation({
+    mutationFn: async (workOrderIds: string[]) => {
+      const { error } = await supabase
+        .from('work_order_assignments')
+        .delete()
+        .in('work_order_id', workOrderIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-order-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['user-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      toast({
+        title: 'Assignments removed',
+        description: 'Successfully removed all assignments',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Bulk assignment removal failed:', error);
+      toast({
+        title: 'Failed to remove assignments',
+        description: error.message || 'Failed to remove assignments',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     addAssignment,
     removeAssignment,
     updateAssignment,
     bulkAddAssignments,
-    isLoading: addAssignment.isPending || removeAssignment.isPending || updateAssignment.isPending || bulkAddAssignments.isPending,
+    bulkRemoveAssignments,
+    isLoading: addAssignment.isPending || removeAssignment.isPending || updateAssignment.isPending || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending,
   };
 }
 

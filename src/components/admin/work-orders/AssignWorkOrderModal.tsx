@@ -12,6 +12,7 @@ import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { Database } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -31,7 +32,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
-  const { bulkAddAssignments } = useWorkOrderAssignmentMutations();
+  const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
   
   // Get the trade ID from the first work order (they should all be the same trade for bulk assignment)
   const tradeId = workOrders[0]?.trade_id;
@@ -69,13 +70,33 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   };
 
   const handleAssign = async () => {
-    if (selectedAssignees.length === 0) return;
+    if (selectedAssignees.length === 0) {
+      // If no assignees selected, remove all assignments
+      await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
+      
+      // Clear assigned_to in work_orders table
+      await supabase
+        .from('work_orders')
+        .update({
+          assigned_to: null,
+          assigned_to_type: null,
+          status: 'received' as const,
+          date_assigned: null,
+        })
+        .in('id', workOrders.map(wo => wo.id));
+      
+      onClose();
+      return;
+    }
 
     try {
       setValidationErrors([]);
 
-      // Prepare assignments for all work orders and selected assignees
-      const assignments = workOrders.flatMap((wo, woIndex) => 
+      // First remove all existing assignments for these work orders
+      await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
+
+      // Prepare new assignments for all work orders and selected assignees
+      const assignments = workOrders.flatMap(wo => 
         selectedAssignees.map((assigneeId, assigneeIndex) => {
           const assignee = allAssignees.find(a => a.id === assigneeId);
           const isSubcontractor = assignee?.type === 'subcontractor';
@@ -90,18 +111,40 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         })
       );
 
-      // Create all assignments
+      // Create all new assignments atomically
       await bulkAddAssignments.mutateAsync(assignments);
 
       // Update work_orders table with lead assignee for backward compatibility
       const leadAssignee = selectedAssignees[0];
       if (leadAssignee) {
-        await assignWorkOrders.mutateAsync({
-          workOrderIds: workOrders.map(wo => wo.id),
-          subcontractorId: leadAssignee,
-          notes,
-          sendEmail
-        });
+        const assignee = allAssignees.find(a => a.id === leadAssignee);
+        const assignedToType: 'internal' | 'subcontractor' = assignee?.type === 'employee' ? 'internal' : 'subcontractor';
+        
+        await supabase
+          .from('work_orders')
+          .update({
+            assigned_to: leadAssignee,
+            assigned_to_type: assignedToType,
+            status: 'assigned' as const,
+            date_assigned: new Date().toISOString(),
+          })
+          .in('id', workOrders.map(wo => wo.id));
+
+        // Send email notification if requested
+        if (sendEmail) {
+          try {
+            await supabase.functions.invoke('email-work-order-assigned', {
+              body: { 
+                workOrderIds: workOrders.map(wo => wo.id),
+                assignedUserId: leadAssignee,
+                notes 
+              }
+            });
+          } catch (emailError) {
+            console.error('Failed to send assignment email:', emailError);
+            // Don't throw here - assignment succeeded even if email failed
+          }
+        }
       }
 
       onClose();
@@ -112,8 +155,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   };
 
   const getSubcontractorOrganizationId = (assigneeId: string) => {
-    // For now, we'll return null since we need to implement proper organization mapping
-    // This would typically come from the subcontractor's profile or organization relationship
+    const assignee = allAssignees.find(a => a.id === assigneeId);
+    if (assignee?.type === 'subcontractor' && assignee.organization_id) {
+      return assignee.organization_id;
+    }
     return null;
   };
 
@@ -369,9 +414,11 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </Button>
             <Button 
               onClick={handleAssign}
-              disabled={selectedAssignees.length === 0 || isAssigning || bulkAddAssignments.isPending}
+              disabled={isAssigning || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
             >
-              {(isAssigning || bulkAddAssignments.isPending) ? 'Assigning...' : `Assign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}`}
+              {(isAssigning || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? 'Processing...' : 
+               selectedAssignees.length === 0 ? `Unassign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}` :
+               `Assign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>
