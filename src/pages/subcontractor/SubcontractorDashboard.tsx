@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,16 @@ const SubcontractorDashboard = () => {
   const stats = dashboardStats.data;
   const invoices = invoicesData?.data || [];
   const primaryOrganization = userOrganizations?.[0]; // Use first organization as primary
+  
+  // Debug logging to help identify the issue
+  React.useEffect(() => {
+    console.log('Subcontractor Dashboard Debug:', {
+      profile: profile?.id,
+      userOrganizations,
+      orgsLoading,
+      primaryOrganization
+    });
+  }, [profile, userOrganizations, orgsLoading, primaryOrganization]);
   
   // Get invoice status counts
   const pendingInvoices = invoices.filter(invoice => invoice.status === 'submitted');
@@ -98,7 +109,12 @@ const SubcontractorDashboard = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold">Company Dashboard</h1>
-            {primaryOrganization && (
+            {orgsLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+              </div>
+            ) : primaryOrganization ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Building2 className="h-4 w-4" />
                 <span className="text-sm font-medium">{primaryOrganization.name}</span>
@@ -107,6 +123,11 @@ const SubcontractorDashboard = () => {
                     {primaryOrganization.initials}
                   </Badge>
                 )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+                <span className="text-sm text-muted-foreground">No organization found</span>
               </div>
             )}
           </div>
