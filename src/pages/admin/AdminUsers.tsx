@@ -48,7 +48,7 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
-  const [resettingPasswordUserId, setResettingPasswordUserId] = useState<string | null>(null);
+  const [resettingPasswordFor, setResettingPasswordFor] = useState<string | null>(null);
   
   const [searchParams, setSearchParams] = useSearchParams();
   const orgFilter = searchParams.get('org');
@@ -93,7 +93,7 @@ const AdminUsers = () => {
   };
 
   const handleResetPassword = async (user: User) => {
-    setResettingPasswordUserId(user.id);
+    setResettingPasswordFor(user.id);
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
@@ -115,7 +115,7 @@ const AdminUsers = () => {
         variant: "destructive",
       });
     } finally {
-      setResettingPasswordUserId(null);
+      setResettingPasswordFor(null);
     }
   };
 
@@ -270,10 +270,10 @@ const AdminUsers = () => {
             onClick: () => handleEditUser(user)
           },
           {
-            label: resettingPasswordUserId === user.id ? "Sending..." : "Reset Password",
+            label: resettingPasswordFor === user.id ? "Sending..." : "Reset Password",
             icon: Mail,
             onClick: () => handleResetPassword(user),
-            show: resettingPasswordUserId !== user.id
+            disabled: resettingPasswordFor === user.id
           },
           {
             label: user.is_active ? 'Deactivate' : 'Activate',
