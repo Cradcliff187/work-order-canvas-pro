@@ -34,6 +34,7 @@ import {
   Filter,
   X
 } from 'lucide-react';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { useAdminReports } from '@/hooks/useAdminReports';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useSubcontractors } from '@/hooks/useSubcontractors';
@@ -173,37 +174,28 @@ export default function AdminReports() {
         const report = row.original;
         const isSubmitted = report.status === 'submitted';
         
-        return (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(`/admin/reports/${report.id}`)}
-            >
-              <Eye className="w-4 h-4" />
-            </Button>
-            {isSubmitted && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => reviewReport.mutate({ reportId: report.id, status: 'approved' })}
-                  disabled={reviewReport.isPending}
-                >
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => reviewReport.mutate({ reportId: report.id, status: 'rejected' })}
-                  disabled={reviewReport.isPending}
-                >
-                  <XCircle className="w-4 h-4 text-red-600" />
-                </Button>
-              </>
-            )}
-          </div>
-        );
+        const actions = [
+          {
+            label: 'View Details',
+            icon: Eye,
+            onClick: () => navigate(`/admin/reports/${report.id}`)
+          },
+          {
+            label: 'Approve',
+            icon: CheckCircle,
+            onClick: () => reviewReport.mutate({ reportId: report.id, status: 'approved' }),
+            show: isSubmitted
+          },
+          {
+            label: 'Reject',
+            icon: XCircle,
+            onClick: () => reviewReport.mutate({ reportId: report.id, status: 'rejected' }),
+            show: isSubmitted,
+            variant: 'destructive' as const
+          }
+        ];
+        
+        return <TableActionsDropdown actions={actions} align="end" />;
       },
     },
   ], [navigate, reviewReport]);
