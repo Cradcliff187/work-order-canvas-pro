@@ -9,7 +9,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isImpersonating } = useAuth();
+
+  console.log('ProtectedRoute - Profile:', profile);
+  console.log('ProtectedRoute - Required Type:', requiredUserType);
+  console.log('ProtectedRoute - Is Impersonating:', isImpersonating);
 
   if (loading) {
     return (
@@ -27,7 +31,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
   }
 
   if (requiredUserType && profile?.user_type !== requiredUserType) {
-    // Check if user has sufficient permissions
+    console.log('ProtectedRoute - User type mismatch. Profile type:', profile?.user_type, 'Required:', requiredUserType);
+    
+    // When impersonating, require exact user type match for better UX
+    if (isImpersonating) {
+      console.log('ProtectedRoute - ACCESS DENIED - Impersonating user must have exact user type match');
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+            <p className="text-muted-foreground">You don't have permission to access this page while impersonating.</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // For non-impersonated access, check hierarchy
     const userTypeHierarchy = {
       'admin': 4,
       'employee': 3,
@@ -37,8 +56,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
 
     const userLevel = userTypeHierarchy[profile?.user_type || 'subcontractor'];
     const requiredLevel = userTypeHierarchy[requiredUserType];
+    
+    console.log('ProtectedRoute - User level:', userLevel, 'Required level:', requiredLevel);
 
     if (userLevel < requiredLevel) {
+      console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="text-center">
@@ -47,6 +69,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
           </div>
         </div>
       );
+    } else {
+      console.log('ProtectedRoute - Access granted via hierarchy');
     }
   }
 

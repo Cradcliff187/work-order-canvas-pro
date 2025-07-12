@@ -4,7 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 const DashboardRouter: React.FC = () => {
-  const { profile, loading } = useAuth();
+  const { profile, loading, isImpersonating } = useAuth();
+
+  console.log('DashboardRouter - Profile:', profile);
+  console.log('DashboardRouter - Is Impersonating:', isImpersonating);
+  console.log('DashboardRouter - User Type:', profile?.user_type);
 
   if (loading) {
     return (
@@ -23,13 +27,14 @@ const DashboardRouter: React.FC = () => {
     case 'admin':
       return <Navigate to="/admin/dashboard" replace />;
     case 'partner':
+      console.log('DashboardRouter - Redirecting to partner dashboard');
       return <Navigate to="/partner/dashboard" replace />;
     case 'subcontractor':
       return <Navigate to="/subcontractor/dashboard" replace />;
     case 'employee':
       return <Navigate to="/admin/employee-dashboard" replace />;
     default:
-      // Fallback for unknown user types
+      console.log('DashboardRouter - Unknown user type, redirecting to auth');
       return <Navigate to="/auth" replace />;
   }
 };
