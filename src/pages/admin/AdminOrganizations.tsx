@@ -8,11 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useOrganizations } from '@/hooks/useOrganizations';
+import { useOrganizations, useOrganizationMutations } from '@/hooks/useOrganizations';
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
 import { EditOrganizationModal } from '@/components/admin/organizations/EditOrganizationModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 export interface Organization {
   id: string;
@@ -41,9 +42,27 @@ const AdminOrganizations = () => {
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [showOnlyActive, setShowOnlyActive] = useState(true);
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null);
   
   const { toast } = useToast();
   const { data: organizationsData, isLoading, refetch } = useOrganizations();
+  const { deleteOrganization } = useOrganizationMutations();
+
+  const handleDeleteOrganization = (org: Organization) => {
+    setDeletingOrganization(org);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingOrganization) return;
+    
+    try {
+      await deleteOrganization.mutateAsync(deletingOrganization.id);
+      refetch();
+      setDeletingOrganization(null);
+    } catch (error) {
+      console.error('Failed to delete organization:', error);
+    }
+  };
 
   const columns: ColumnDef<Organization>[] = useMemo(() => [
     {
@@ -198,7 +217,10 @@ const AdminOrganizations = () => {
                 Manage Users
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem 
+                className="text-destructive" 
+                onClick={() => handleDeleteOrganization(org)}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Organization
               </DropdownMenuItem>
@@ -549,6 +571,15 @@ const AdminOrganizations = () => {
             description: "The organization has been updated successfully.",
           });
         }}
+      />
+
+      <DeleteConfirmationDialog
+        open={!!deletingOrganization}
+        onOpenChange={(open) => !open && setDeletingOrganization(null)}
+        onConfirm={handleConfirmDelete}
+        itemName={deletingOrganization?.name || ''}
+        itemType="organization"
+        isLoading={deleteOrganization.isPending}
       />
     </div>
   );
