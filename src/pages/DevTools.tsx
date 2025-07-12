@@ -73,6 +73,7 @@ const DevTools = () => {
     analytics,
     performance,
     fetchAllMetrics,
+    fetchCompanyAnalytics,
     runSeedScript,
     clearTestData,
     quickLogin,
@@ -414,7 +415,20 @@ const DevTools = () => {
                   className="flex items-center gap-2"
                 >
                   <FileText className="h-4 w-4" />
-                  Refresh All Metrics
+                  Refresh Metrics
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    fetchCompanyAnalytics();
+                    toast({ title: "Analytics refreshed separately" });
+                  }}
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Refresh Analytics
                 </Button>
               </div>
             </CardContent>

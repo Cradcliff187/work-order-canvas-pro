@@ -147,115 +147,136 @@ export const useDevTools = () => {
 
   const fetchCompanyAnalytics = async () => {
     try {
-      // User Distribution
-      const { data: userTypes } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('is_active', true);
+      console.log('📊 Fetching company analytics...');
+      
+      // User Distribution with safe fallback
+      let userDistribution = { admin: 0, partner: 0, subcontractor: 0, employee: 0, total: 0 };
+      try {
+        const { data: userTypes, error: userError } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('is_active', true);
 
-      const userDistribution = userTypes?.reduce((acc, user) => {
-        acc[user.user_type] = (acc[user.user_type] || 0) + 1;
-        acc.total++;
-        return acc;
-      }, { admin: 0, partner: 0, subcontractor: 0, employee: 0, total: 0 }) || 
-      { admin: 0, partner: 0, subcontractor: 0, employee: 0, total: 0 };
+        if (userError) throw userError;
 
-      // Organization Breakdown
-      const { data: orgTypes } = await supabase
-        .from('organizations')
-        .select('organization_type')
-        .eq('is_active', true);
-
-      const organizationBreakdown = orgTypes?.reduce((acc, org) => {
-        acc[org.organization_type] = (acc[org.organization_type] || 0) + 1;
-        acc.total++;
-        return acc;
-      }, { partner: 0, subcontractor: 0, internal: 0, total: 0 }) || 
-      { partner: 0, subcontractor: 0, internal: 0, total: 0 };
-
-      // Work Order Stats
-      const { data: workOrderData } = await supabase
-        .from('work_orders')
-        .select(`
-          id,
-          status,
-          organization_id,
-          organizations!work_orders_organization_id_fkey (name, organization_type)
-        `);
-
-      const workOrderStats = {
-        totalOrders: workOrderData?.length || 0,
-        byStatus: workOrderData?.reduce((acc, wo) => {
-          acc[wo.status] = (acc[wo.status] || 0) + 1;
+        userDistribution = userTypes?.reduce((acc, user) => {
+          acc[user.user_type] = (acc[user.user_type] || 0) + 1;
+          acc.total++;
           return acc;
-        }, {} as Record<string, number>) || {},
-        byOrganization: Object.values(
-          workOrderData?.reduce((acc, wo) => {
-            const orgName = wo.organizations?.name || 'Unknown';
-            const orgType = wo.organizations?.organization_type || 'unknown';
-            const key = wo.organization_id;
-            if (!acc[key]) {
-              acc[key] = { name: orgName, count: 0, type: orgType };
-            }
-            acc[key].count++;
+        }, { admin: 0, partner: 0, subcontractor: 0, employee: 0, total: 0 }) || userDistribution;
+      } catch (error) {
+        console.warn('Failed to fetch user distribution:', error);
+      }
+
+      // Organization Breakdown with safe fallback
+      let organizationBreakdown = { partner: 0, subcontractor: 0, internal: 0, total: 0 };
+      try {
+        const { data: orgTypes, error: orgError } = await supabase
+          .from('organizations')
+          .select('organization_type')
+          .eq('is_active', true);
+
+        if (orgError) throw orgError;
+
+        organizationBreakdown = orgTypes?.reduce((acc, org) => {
+          acc[org.organization_type] = (acc[org.organization_type] || 0) + 1;
+          acc.total++;
+          return acc;
+        }, { partner: 0, subcontractor: 0, internal: 0, total: 0 }) || organizationBreakdown;
+      } catch (error) {
+        console.warn('Failed to fetch organization breakdown:', error);
+      }
+
+      // Work Order Stats with safe fallback
+      let workOrderStats = {
+        totalOrders: 0,
+        byStatus: {} as Record<string, number>,
+        byOrganization: [] as Array<{ name: string; count: number; type: string }>,
+        averagePerOrganization: 0
+      };
+      
+      try {
+        const { data: workOrderData, error: woError } = await supabase
+          .from('work_orders')
+          .select('id, status, organization_id');
+
+        if (woError) throw woError;
+
+        workOrderStats = {
+          totalOrders: workOrderData?.length || 0,
+          byStatus: workOrderData?.reduce((acc, wo) => {
+            acc[wo.status] = (acc[wo.status] || 0) + 1;
             return acc;
-          }, {} as Record<string, { name: string; count: number; type: string }>) || {}
-        ),
-        averagePerOrganization: organizationBreakdown.total > 0 
-          ? Math.round((workOrderData?.length || 0) / organizationBreakdown.total * 100) / 100 
-          : 0
+          }, {} as Record<string, number>) || {},
+          byOrganization: [],
+          averagePerOrganization: organizationBreakdown.total > 0 
+            ? Math.round((workOrderData?.length || 0) / organizationBreakdown.total * 100) / 100 
+            : 0
+        };
+      } catch (error) {
+        console.warn('Failed to fetch work order stats:', error);
+      }
+
+      // Assignment Patterns with safe fallback
+      let assignmentPatterns = {
+        individualAssignments: 0,
+        organizationAssignments: 0,
+        multipleAssignments: 0,
+        unassignedOrders: workOrderStats.totalOrders
       };
 
-      // Assignment Patterns
-      const { data: assignments } = await supabase
-        .from('work_order_assignments')
-        .select('id, assignment_type, work_order_id');
+      try {
+        const { data: assignments } = await supabase
+          .from('work_order_assignments')
+          .select('id, assignment_type, work_order_id');
 
-      const { data: individuallyAssigned } = await supabase
-        .from('work_orders')
-        .select('id')
-        .not('assigned_to', 'is', null);
+        const { data: individuallyAssigned } = await supabase
+          .from('work_orders')
+          .select('id')
+          .not('assigned_to', 'is', null);
 
-      const assignmentPatterns = {
-        individualAssignments: individuallyAssigned?.length || 0,
-        organizationAssignments: assignments?.length || 0,
-        multipleAssignments: assignments?.reduce((acc, assignment) => {
-          const duplicates = assignments.filter(a => a.work_order_id === assignment.work_order_id);
-          return duplicates.length > 1 ? acc + 1 : acc;
-        }, 0) || 0,
-        unassignedOrders: (workOrderData?.length || 0) - (individuallyAssigned?.length || 0) - (assignments?.length || 0)
+        assignmentPatterns = {
+          individualAssignments: individuallyAssigned?.length || 0,
+          organizationAssignments: assignments?.length || 0,
+          multipleAssignments: 0,
+          unassignedOrders: Math.max(0, workOrderStats.totalOrders - (individuallyAssigned?.length || 0) - (assignments?.length || 0))
+        };
+      } catch (error) {
+        console.warn('Failed to fetch assignment patterns:', error);
+      }
+
+      // Data Quality Metrics with safe fallback
+      let dataQuality = {
+        completionRate: 0,
+        assignmentCoverage: 0,
+        reportSubmissionRate: 0,
+        invoiceCompletionRate: 0
       };
 
-      // Data Quality Metrics
-      const { data: completedOrders } = await supabase
-        .from('work_orders')
-        .select('id')
-        .eq('status', 'completed');
+      try {
+        const [completedOrders, ordersWithReports, submittedInvoices] = await Promise.all([
+          supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
+          supabase.from('work_order_reports').select('work_order_id', { count: 'exact', head: true }).eq('status', 'approved'),
+          supabase.from('invoices').select('id', { count: 'exact', head: true }).neq('status', 'draft')
+        ]);
 
-      const { data: ordersWithReports } = await supabase
-        .from('work_order_reports')
-        .select('work_order_id')
-        .eq('status', 'approved');
-
-      const { data: submittedInvoices } = await supabase
-        .from('invoices')
-        .select('id')
-        .neq('status', 'draft');
-
-      const dataQuality = {
-        completionRate: workOrderStats.totalOrders > 0 
-          ? Math.round((completedOrders?.length || 0) / workOrderStats.totalOrders * 100) 
-          : 0,
-        assignmentCoverage: workOrderStats.totalOrders > 0 
-          ? Math.round(((assignmentPatterns.individualAssignments + assignmentPatterns.organizationAssignments) / workOrderStats.totalOrders) * 100) 
-          : 0,
-        reportSubmissionRate: workOrderStats.totalOrders > 0 
-          ? Math.round((ordersWithReports?.length || 0) / workOrderStats.totalOrders * 100) 
-          : 0,
-        invoiceCompletionRate: (counts?.invoices || 0) > 0 
-          ? Math.round((submittedInvoices?.length || 0) / (counts?.invoices || 1) * 100) 
-          : 0
-      };
+        dataQuality = {
+          completionRate: workOrderStats.totalOrders > 0 
+            ? Math.round((completedOrders.count || 0) / workOrderStats.totalOrders * 100) 
+            : 0,
+          assignmentCoverage: workOrderStats.totalOrders > 0 
+            ? Math.round(((assignmentPatterns.individualAssignments + assignmentPatterns.organizationAssignments) / workOrderStats.totalOrders) * 100) 
+            : 0,
+          reportSubmissionRate: workOrderStats.totalOrders > 0 
+            ? Math.round((ordersWithReports.count || 0) / workOrderStats.totalOrders * 100) 
+            : 0,
+          invoiceCompletionRate: (counts?.invoices || 0) > 0 
+            ? Math.round((submittedInvoices.count || 0) / (counts?.invoices || 1) * 100) 
+            : 0
+        };
+      } catch (error) {
+        console.warn('Failed to fetch data quality metrics:', error);
+      }
 
       setAnalytics({
         userDistribution,
@@ -265,11 +286,14 @@ export const useDevTools = () => {
         dataQuality
       });
 
+      console.log('✅ Company analytics fetched successfully');
+
     } catch (error) {
       console.error('Error fetching company analytics:', error);
+      setAnalytics(null);
       toast({
-        title: "Error",
-        description: "Failed to fetch company analytics",
+        title: "Analytics Error",
+        description: "Failed to fetch company analytics. Please try refreshing.",
         variant: "destructive",
       });
     }
@@ -331,17 +355,27 @@ export const useDevTools = () => {
   const runSeedScript = async () => {
     setLoading(true);
     try {
+      console.log('🌱 Starting database seeding...');
+      
       // Import and run the seed script functions
       const { seedDatabase } = await import('../scripts/seed-functions');
       await seedDatabase();
       
       toast({
         title: "Success",
-        description: "Database seeded successfully! Check console for details.",
+        description: "Database seeded successfully! Analytics will refresh separately.",
       });
       
-      // Refresh all metrics
-      setTimeout(() => fetchAllMetrics(), 1000); // Small delay to ensure data is committed
+      // Refresh counts only (lightweight operation)
+      setTimeout(async () => {
+        try {
+          await fetchCounts();
+          console.log('✅ Basic counts refreshed after seeding');
+        } catch (error) {
+          console.warn('Failed to refresh counts after seeding:', error);
+        }
+      }, 1000);
+      
     } catch (error: any) {
       console.error('Comprehensive seed error:', error);
       toast({
