@@ -27,6 +27,7 @@ import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { format } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 type EmailTemplate = Tables<'email_templates'>;
 
@@ -34,6 +35,7 @@ const AdminEmailTemplates: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [deletingTemplate, setDeletingTemplate] = useState<EmailTemplate | null>(null);
   
   const {
     templates,
@@ -85,8 +87,15 @@ const AdminEmailTemplates: React.FC = () => {
     }
   };
 
-  const handleDeleteTemplate = async (template: EmailTemplate) => {
-    await deleteTemplate.mutateAsync(template.id);
+  const handleConfirmDelete = async () => {
+    if (!deletingTemplate) return;
+    
+    try {
+      await deleteTemplate.mutateAsync(deletingTemplate.id);
+      setDeletingTemplate(null);
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+    }
   };
 
   const handleToggleActive = async (template: EmailTemplate) => {
@@ -233,10 +242,11 @@ const AdminEmailTemplates: React.FC = () => {
                               {
                                 label: 'Delete',
                                 icon: Trash2,
-                                onClick: () => handleDeleteTemplate(template),
+                                onClick: () => setDeletingTemplate(template),
                                 variant: 'destructive' as const
                               }
                             ]}
+                            itemName={template.template_name}
                             align="end"
                           />
                         </TableCell>
@@ -249,6 +259,15 @@ const AdminEmailTemplates: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <DeleteConfirmationDialog
+        open={!!deletingTemplate}
+        onOpenChange={(open) => !open && setDeletingTemplate(null)}
+        onConfirm={handleConfirmDelete}
+        itemName={deletingTemplate?.template_name || ''}
+        itemType="email template"
+        isLoading={deleteTemplate.isPending}
+      />
     </div>
   );
 };
