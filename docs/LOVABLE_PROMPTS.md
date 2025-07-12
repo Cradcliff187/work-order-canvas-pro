@@ -192,3 +192,264 @@ const columns = [
 - Use `variant: 'destructive'` for dangerous actions
 - Keep action labels concise but descriptive
 - Test keyboard navigation and screen reader accessibility
+
+## Delete Confirmation Dialog Component
+
+### Usage
+The `DeleteConfirmationDialog` component provides a standardized confirmation pattern for destructive actions across the application.
+
+```typescript
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+
+// In your component
+const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+const [deletingItem, setDeletingItem] = useState<Item | null>(null);
+const [isDeleting, setIsDeleting] = useState(false);
+
+const handleDelete = async () => {
+  if (!deletingItem) return;
+  
+  setIsDeleting(true);
+  try {
+    await deleteItem(deletingItem.id);
+    setDeleteDialogOpen(false);
+    setDeletingItem(null);
+    toast.success("Item deleted successfully");
+  } catch (error) {
+    toast.error("Failed to delete item");
+  } finally {
+    setIsDeleting(false);
+  }
+};
+
+<DeleteConfirmationDialog
+  open={deleteDialogOpen}
+  onOpenChange={setDeleteDialogOpen}
+  onConfirm={handleDelete}
+  itemName={deletingItem ? `${deletingItem.first_name} ${deletingItem.last_name}` : ''}
+  itemType="user"
+  isLoading={isDeleting}
+/>
+```
+
+### Props
+- `open`: Dialog open state (boolean)
+- `onOpenChange`: Function to control dialog open state
+- `onConfirm`: Function called when user confirms deletion
+- `itemName`: Name/identifier of the item being deleted
+- `itemType`: Type of item (e.g., "user", "organization", "report")
+- `isLoading`: Loading state for async deletion (optional, defaults to false)
+
+### Features
+- Consistent destructive action styling
+- Loading state support with disabled buttons
+- Clear confirmation messaging
+- Proper keyboard navigation and focus management
+- ARIA labels for accessibility
+
+### Integration with Table Actions
+```typescript
+// In your table actions
+const actions = [
+  { label: 'View Details', icon: Eye, onClick: () => onView(item) },
+  { label: 'Edit', icon: Edit, onClick: () => onEdit(item) },
+  { 
+    label: 'Delete', 
+    icon: Trash2, 
+    onClick: () => {
+      setDeletingItem(item);
+      setDeleteDialogOpen(true);
+    },
+    variant: 'destructive'
+  }
+];
+```
+
+## Empty Table State Component
+
+### Usage
+The `EmptyTableState` component provides consistent empty state messaging across all table implementations.
+
+```typescript
+import { EmptyTableState } from "@/components/ui/empty-table-state";
+import { Users, Plus } from "lucide-react";
+
+// In your table body when no data
+{data.length === 0 && (
+  <EmptyTableState
+    icon={Users}
+    title="No users found"
+    description="Get started by creating your first user account."
+    action={{
+      label: "Create User",
+      onClick: () => setCreateModalOpen(true),
+      icon: Plus
+    }}
+    colSpan={columns.length}
+  />
+)}
+```
+
+### Props
+- `icon`: Icon component to display (optional, defaults to FileX)
+- `title`: Main empty state message (required)
+- `description`: Additional context message (optional)
+- `action`: Action button configuration with `label`, `onClick`, and optional `icon`
+- `colSpan`: Number of table columns to span (required)
+
+### Common Patterns
+
+#### With Search/Filter Context
+```typescript
+<EmptyTableState
+  icon={Search}
+  title={searchTerm ? "No results found" : "No users found"}
+  description={searchTerm 
+    ? `No users match "${searchTerm}". Try adjusting your search.`
+    : "Get started by creating your first user account."
+  }
+  action={!searchTerm ? {
+    label: "Create User",
+    onClick: () => setCreateModalOpen(true),
+    icon: Plus
+  } : undefined}
+  colSpan={columns.length}
+/>
+```
+
+#### Without Action (Read-only)
+```typescript
+<EmptyTableState
+  icon={FileText}
+  title="No reports available"
+  description="Reports will appear here once submitted."
+  colSpan={columns.length}
+/>
+```
+
+### Standard Icons by Context
+- **Users**: `Users`
+- **Organizations**: `Building`
+- **Reports**: `FileText`
+- **Invoices**: `Receipt`
+- **Work Orders**: `Wrench`
+- **Search Results**: `Search`
+- **Generic**: `FileX` (default)
+
+## Accessibility Requirements
+
+### ARIA Labels
+All interactive elements must include proper ARIA labels:
+
+```typescript
+// Table checkboxes
+<Checkbox 
+  aria-label="Select all" 
+  checked={table.getIsAllPageRowsSelected()} 
+/>
+
+<Checkbox 
+  aria-label={`Select ${user.first_name} ${user.last_name}`}
+  checked={row.getIsSelected()} 
+/>
+
+// Navigation elements
+<nav aria-label="breadcrumb">
+  <ol className="breadcrumb">...</ol>
+</nav>
+
+// Action buttons
+<Button aria-label="Edit user profile">
+  <Edit className="h-4 w-4" />
+</Button>
+```
+
+### Keyboard Navigation
+- **Tab Order**: Logical tab sequence through interactive elements
+- **Enter/Space**: Activate buttons and toggles
+- **Escape**: Close modals, dropdowns, and overlays
+- **Arrow Keys**: Navigate through dropdown options
+
+```typescript
+// Dropdown with keyboard support
+<DropdownMenuContent onKeyDown={(e) => {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    setOpen(false);
+  }
+}}>
+```
+
+### Screen Reader Support
+- **Semantic HTML**: Use proper heading hierarchy (h1, h2, h3)
+- **Table Headers**: Associate data cells with headers
+- **Form Labels**: Explicit labels for all form inputs
+- **Status Updates**: Use `role="alert"` for important notifications
+
+```typescript
+// Table headers
+<TableHead>
+  <span className="sr-only">Select</span>
+  <Checkbox aria-label="Select all" />
+</TableHead>
+
+// Status alerts
+<div role="alert" aria-live="polite">
+  {toast.message}
+</div>
+
+// Form inputs
+<Label htmlFor="email">Email Address</Label>
+<Input id="email" type="email" aria-required="true" />
+```
+
+### Focus Management
+- **Modal Dialogs**: Trap focus within dialog
+- **Page Navigation**: Restore focus after route changes
+- **Dynamic Content**: Move focus to new content when appropriate
+
+```typescript
+// Focus trap in modals
+useEffect(() => {
+  if (open) {
+    const focusableElements = dialog.current?.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableElements?.length) {
+      (focusableElements[0] as HTMLElement).focus();
+    }
+  }
+}, [open]);
+```
+
+## Component Reference
+
+### Data Display Components
+- **TableActionsDropdown**: Standardized table row actions
+- **EmptyTableState**: Consistent empty state messaging
+- **DataTable**: Reusable table with sorting, filtering, pagination
+
+### User Feedback Components
+- **DeleteConfirmationDialog**: Confirmation for destructive actions
+- **Toast**: Notification system for user feedback
+- **LoadingSpinner**: Loading states and skeleton screens
+
+### Navigation Components
+- **Sidebar**: Admin navigation with role-based sections
+- **Breadcrumb**: Page hierarchy navigation
+- **Pagination**: Table and list pagination controls
+
+### Form Components
+- **Form**: React Hook Form integration with validation
+- **Input**: Text inputs with error states
+- **Select**: Dropdown selection with search
+- **Textarea**: Multi-line text input
+- **Checkbox**: Selection controls with proper labeling
+
+### Best Practices
+- Use semantic HTML elements for proper structure
+- Include ARIA labels for all interactive elements
+- Test with keyboard navigation only
+- Verify screen reader compatibility
+- Maintain consistent focus indicators
+- Provide clear error messages and validation feedback
