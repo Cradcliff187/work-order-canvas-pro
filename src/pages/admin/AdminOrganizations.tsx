@@ -49,6 +49,9 @@ const AdminOrganizations = () => {
   const [showOnlyActive, setShowOnlyActive] = useState(true);
   const [selectedType, setSelectedType] = useState<string>('all');
   const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteCount, setBulkDeleteCount] = useState(0);
+  const [organizationsToDelete, setOrganizationsToDelete] = useState<Organization[]>([]);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -315,18 +318,20 @@ const AdminOrganizations = () => {
     }
   };
 
-  const handleBulkDelete = async (organizations: Organization[]) => {
+  const handleBulkDelete = (organizations: Organization[]) => {
     if (organizations.length === 0) return;
+    setOrganizationsToDelete(organizations);
+    setBulkDeleteCount(organizations.length);
+    setBulkDeleteOpen(true);
+  };
 
-    const confirmMessage = `Are you sure you want to delete ${organizations.length} organization(s)? This action cannot be undone and will fail if any organization has active work orders.`;
-    
-    if (window.confirm(confirmMessage)) {
-      try {
-        await bulkDeleteOrganizations.mutateAsync(organizations.map(org => org.id));
-        handleClearSelection();
-      } catch (error) {
-        console.error('Failed to delete organizations:', error);
-      }
+  const handleConfirmBulkDelete = async () => {
+    try {
+      await bulkDeleteOrganizations.mutateAsync(organizationsToDelete.map(org => org.id));
+      handleClearSelection();
+      setBulkDeleteOpen(false);
+    } catch (error) {
+      console.error('Failed to delete organizations:', error);
     }
   };
 
@@ -670,6 +675,16 @@ const AdminOrganizations = () => {
         itemName={deletingOrganization?.name || ''}
         itemType="organization"
         isLoading={deleteOrganization.isPending}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        onConfirm={handleConfirmBulkDelete}
+        itemName={`${bulkDeleteCount} organizations`}
+        itemType="organizations"
+        isLoading={bulkDeleteOrganizations.isPending}
       />
     </div>
   );
