@@ -1323,6 +1323,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      auth_user_organization_assignments: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          work_order_id: string
+        }[]
+      }
       auth_user_organizations: {
         Args: Record<PropertyKey, never>
         Returns: {

@@ -47,6 +47,17 @@ None - This migration only enables existing functionality and adds new features
 
 ---
 
+## 2025-01-12: Organization-Based Work Order Assignments
+- **Purpose**: Enable organization-level access for subcontractor work order assignments
+- **Changes**:
+  - Added `auth_user_organization_assignments()` function for organization-based queries
+  - Added `auto_populate_assignment_organization()` trigger function
+  - Created trigger to auto-populate `assigned_organization_id` field
+  - Enhanced RLS policy for organization-based subcontractor access
+  - Added performance indexes for organization queries
+  - Migrated existing assignments to populate organization context
+- **Impact**: Subcontractors can now see all work orders assigned to their organization, enabling better team coordination and organization-level reporting
+
 ### 2025-01-10: Initial Schema Creation
 
 #### 20250710155755-ab5096d8-7aba-4a7c-a648-e02d0bc44140.sql

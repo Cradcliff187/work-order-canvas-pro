@@ -440,6 +440,13 @@ erDiagram
 - `idx_work_order_assignments_organization` ON (assigned_organization_id)
 - `idx_work_order_assignments_wo_type` ON (work_order_id, assignment_type)
 - `idx_work_order_assignments_assignee_type` ON (assigned_to, assignment_type)
+- `idx_work_order_assignments_org_type_combo` ON (assigned_organization_id, assignment_type)
+- `idx_work_order_assignments_org_wo_combo` ON (assigned_organization_id, work_order_id)
+
+**Triggers**:
+- `auto_populate_assignment_organization_trigger` - Auto-populates assigned_organization_id on INSERT
+
+**Additional Indexes**:
 - `idx_work_order_assignments_assigned_at` ON (assigned_at)
 - `idx_work_order_assignments_assignee_type_combo` ON (assigned_to, assignment_type)
 - `idx_work_order_assignments_wo_assignee_combo` ON (work_order_id, assigned_to)
@@ -1489,7 +1496,7 @@ $function$
 ### work_orders table
 - **"Admins can manage all work orders"** - Admin full access to all work orders
 - **"Partners can manage work orders in their organizations"** - Partners manage their org's work orders
-- **"Subcontractors can view assigned work orders"** - Subcontractors see only assigned work orders
+- **"Subcontractors can view assigned work orders"** - Subcontractors see work orders assigned to them or their organization
 
 ### work_order_reports table
 - **"Admins can manage all work order reports"** - Admin full access to all reports
