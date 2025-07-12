@@ -177,7 +177,32 @@ $$;
 **Returns**: TRUE if user is assigned to the work order  
 **Usage**: Work order access control for subcontractors
 
-### 8. auth_user_can_view_assignment(assignment_id uuid)
+### 8. auth_user_organization_assignments()
+
+**Purpose**: Get all work orders assigned to the current user's organizations (company access)
+
+```sql
+CREATE OR REPLACE FUNCTION public.auth_user_organization_assignments()
+RETURNS TABLE(work_order_id uuid)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT DISTINCT woa.work_order_id 
+  FROM work_order_assignments woa
+  WHERE woa.assigned_organization_id IN (
+    SELECT organization_id 
+    FROM public.auth_user_organizations()
+  );
+END;
+$$;
+```
+
+**Returns**: Table of work order UUIDs assigned to user's organizations  
+**Usage**: Organization-level work order access control enabling company-wide collaboration  
+**Business Impact**: Enables team-based work orders where any organization member can work on assigned jobs
+
+### 9. auth_user_can_view_assignment(assignment_id uuid)
 
 **Purpose**: Check if current user can view a specific work order assignment
 

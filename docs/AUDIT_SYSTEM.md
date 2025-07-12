@@ -2,7 +2,7 @@
 
 ## Overview
 
-WorkOrderPro implements a comprehensive audit logging system that automatically tracks all database changes across 11 of the 12 core tables. This provides complete traceability for compliance, debugging, and accountability purposes.
+WorkOrderPro implements a comprehensive audit logging system that automatically tracks all database changes across 11 of the 12 core tables with **organization-level audit tracking**. This provides complete traceability for compliance, debugging, and accountability purposes while supporting company-level access patterns.
 
 ## System Architecture
 
@@ -141,6 +141,64 @@ SELECT
 FROM audit_logs
 WHERE user_id = 'user-profile-id'
 ORDER BY created_at DESC;
+```
+
+### Organization-Level Audit Queries
+
+#### Track Organization Work Order Changes
+```sql
+SELECT 
+  al.table_name,
+  al.record_id,
+  al.action,
+  al.old_values->>'status' as old_status,
+  al.new_values->>'status' as new_status,
+  al.created_at,
+  p.first_name || ' ' || p.last_name as changed_by,
+  o.name as organization_name
+FROM audit_logs al
+LEFT JOIN profiles p ON p.id = al.user_id
+LEFT JOIN work_orders wo ON wo.id = al.record_id::uuid
+LEFT JOIN organizations o ON o.id = wo.organization_id
+WHERE al.table_name = 'work_orders'
+  AND wo.organization_id = 'your-organization-id'
+ORDER BY al.created_at DESC;
+```
+
+#### Monitor Company-Level Invoice Activity
+```sql
+SELECT 
+  al.table_name,
+  al.action,
+  al.old_values->>'status' as old_status,
+  al.new_values->>'status' as new_status,
+  al.new_values->>'total_amount' as amount,
+  al.created_at,
+  p.first_name || ' ' || p.last_name as changed_by
+FROM audit_logs al
+LEFT JOIN profiles p ON p.id = al.user_id
+LEFT JOIN invoices inv ON inv.id = al.record_id::uuid
+WHERE al.table_name = 'invoices'
+  AND inv.subcontractor_organization_id = 'your-organization-id'
+ORDER BY al.created_at DESC;
+```
+
+#### Organization Team Activity Summary
+```sql
+SELECT 
+  p.first_name || ' ' || p.last_name as team_member,
+  COUNT(*) as total_actions,
+  COUNT(CASE WHEN al.table_name = 'work_orders' THEN 1 END) as work_order_changes,
+  COUNT(CASE WHEN al.table_name = 'work_order_reports' THEN 1 END) as report_changes,
+  COUNT(CASE WHEN al.table_name = 'invoices' THEN 1 END) as invoice_changes,
+  MAX(al.created_at) as last_activity
+FROM audit_logs al
+JOIN profiles p ON p.id = al.user_id
+JOIN user_organizations uo ON uo.user_id = p.id
+WHERE uo.organization_id = 'your-organization-id'
+  AND al.created_at >= NOW() - INTERVAL '30 days'
+GROUP BY p.id, p.first_name, p.last_name
+ORDER BY total_actions DESC;
 ```
 
 ### Monitor Work Order Status Changes

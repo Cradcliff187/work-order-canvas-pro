@@ -22,11 +22,27 @@ export interface UpdateOrganizationData {
   is_active?: boolean;
 }
 
+/**
+ * Fetches all organizations with enhanced company-level access support
+ * 
+ * @returns Query result containing organizations with user counts and work order metrics
+ * 
+ * Company Access Features:
+ * - Supports partner, subcontractor, and internal organization types
+ * - Provides user count for team size management
+ * - Includes work order statistics for organization performance tracking
+ * - Enables company-level user assignment and collaboration
+ * 
+ * Organization Types:
+ * - partner: Property management companies that submit work orders
+ * - subcontractor: Trade companies that perform work (plumbing, HVAC, electrical)
+ * - internal: General contractor company managing workflows
+ */
 export function useOrganizations() {
   return useQuery({
     queryKey: ['organizations'],
     queryFn: async () => {
-      // Get organizations with user and work order counts
+      // Get organizations with user and work order counts for company access management
       const { data: organizations, error } = await supabase
         .from('organizations')
         .select(`

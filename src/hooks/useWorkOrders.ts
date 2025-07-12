@@ -38,6 +38,26 @@ interface SortingState {
   desc: boolean;
 }
 
+/**
+ * Fetches work orders with advanced filtering, pagination, and company-level access control
+ * 
+ * @param pagination - Page size and offset for results
+ * @param sorting - Column sorting configuration
+ * @param filters - Filter criteria for work orders
+ * @returns Query result with work orders, pagination info, and organization details
+ * 
+ * Company Access Features:
+ * - Organization-based access control via RLS policies
+ * - Partners see work orders they submitted
+ * - Subcontractors see work orders assigned to their organization
+ * - Admins see all work orders across organizations
+ * - Financial privacy maintained between companies
+ * 
+ * Access Patterns:
+ * - Individual assignments: Legacy model for specific user assignments
+ * - Organization assignments: Company-level assignments for team collaboration
+ * - Mixed model: Supports both assignment types simultaneously
+ */
 export function useWorkOrders(
   pagination: PaginationState,
   sorting: SortingState[],

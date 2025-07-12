@@ -56,6 +56,28 @@ export function useSubcontractorsByTrade(tradeId?: string) {
   });
 }
 
+/**
+ * Provides work order assignment functionality with company-level access support
+ * 
+ * @returns Mutation functions for work order assignment operations
+ * 
+ * Company Access Features:
+ * - Supports both individual user and organization-level assignments
+ * - Enables bulk assignment operations for multiple work orders
+ * - Automatically populates organization context for assignments
+ * - Maintains backward compatibility with individual assignments
+ * 
+ * Assignment Types:
+ * - Individual: Assign work order to specific subcontractor user
+ * - Organization: Assign work order to entire subcontractor organization
+ * - Team: Multiple assignments for collaborative work
+ * 
+ * Business Logic:
+ * - Auto-populates assigned_organization_id based on user's organization
+ * - Sends email notifications for new assignments
+ * - Updates work order status from 'received' to 'assigned'
+ * - Tracks assignment history for audit trails
+ */
 export function useWorkOrderAssignment() {
   const queryClient = useQueryClient();
   const { toast } = useToast();

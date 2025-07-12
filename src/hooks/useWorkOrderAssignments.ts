@@ -51,6 +51,23 @@ export interface UpdateAssignmentData {
 }
 
 // Query Functions
+/**
+ * Fetches work order assignments with company-level access support
+ * 
+ * @param workOrderId - ID of work order to fetch assignments for
+ * @returns Query result containing assignments with organization and user details
+ * 
+ * Company Access Features:
+ * - Supports both individual and organization-level assignments
+ * - Enables team-based work order collaboration
+ * - Assignment types: 'lead' (primary responsibility) and 'support' (assistance)
+ * - Organization assignments allow any team member to work on assigned orders
+ * 
+ * Assignment Models:
+ * - Individual: Work order assigned to specific user (backward compatibility)
+ * - Organization: Work order assigned to entire organization (company access)
+ * - Mixed: Work order can have both individual and organization assignments
+ */
 export function useWorkOrderAssignments(workOrderId?: string) {
   return useQuery({
     queryKey: ['work-order-assignments', workOrderId],

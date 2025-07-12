@@ -2,7 +2,26 @@
 
 ## Overview
 
-WorkOrderPro implements comprehensive Row Level Security (RLS) to ensure proper data isolation between different user types and organizations. The system uses 7 SECURITY DEFINER helper functions and a layered policy approach to avoid infinite recursion while providing efficient access control.
+WorkOrderPro implements comprehensive Row Level Security (RLS) with **company-level access control** to ensure proper data isolation between different user types and organizations. The system uses 8 SECURITY DEFINER helper functions and a layered policy approach to avoid infinite recursion while providing efficient multi-tenant access control.
+
+## Company Access Model
+
+WorkOrderPro supports both **individual access** (backward compatibility) and **company-level access** (new enhanced model) simultaneously:
+
+### Access Patterns
+
+| Access Type | Description | Use Cases | Example |
+|-------------|-------------|-----------|---------|
+| **Individual Access** | Work orders assigned to specific users | Legacy work orders, sensitive projects | John Smith receives plumbing assignment |
+| **Company Access** | Work orders assigned to entire organizations | Team collaboration, scalable operations | ABC Plumbing organization receives assignment |
+
+### Business Logic
+
+**Company Access Patterns**:
+- **Partner Organizations**: Can view/manage work orders they submitted
+- **Subcontractor Organizations**: Can view/work on work orders assigned to their company
+- **Internal Organization**: Full access to all work orders and system management
+- **Financial Privacy**: Each organization only sees their own financial data (invoices, rates)
 
 ## Infinite Recursion Prevention
 

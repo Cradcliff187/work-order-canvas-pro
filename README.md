@@ -4,7 +4,27 @@ A comprehensive construction work order management system built with React, Type
 
 ## Project Overview
 
-WorkOrderPro is a full-stack web application designed for managing construction work orders across multiple organizations. It provides role-based access control for admins, partners, and subcontractors, with complete audit logging, email notifications, and analytics capabilities.
+WorkOrderPro is a full-stack web application designed for managing construction work orders across multiple organizations with **company-level access control**. It enables partners to submit work orders, which are then routed to subcontractor organizations for completion, providing complete transparency while maintaining financial privacy between companies.
+
+## WorkOrderPro Business Model
+
+WorkOrderPro facilitates a three-party construction management workflow:
+
+**🏢 Partners (Property Management)** → **🔧 WorkOrderPro (General Contractor)** → **⚡ Subcontractors (Trade Companies)**
+
+### Organization Types
+
+- **🏢 Partner Organizations**: Property management companies that submit work orders for their locations
+- **⚡ Subcontractor Organizations**: Trade companies (plumbing, HVAC, electrical) that perform the work  
+- **🔧 Internal Organization**: The general contractor company (WorkOrderPro Internal) that manages the workflow
+
+### Company-Level Access Features
+
+- **Team-Based Work Orders**: Multiple team members can collaborate on the same work orders
+- **Organization-Level Assignments**: Work orders can be assigned to entire organizations, not just individuals
+- **Company Financial Privacy**: Each organization can only see their own financial data (invoices, costs)
+- **Cross-Company Transparency**: Work order details and reports are shared between relevant parties
+- **Scalable User Management**: Add unlimited users to organizations without individual access setup
 
 **Live URL**: https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12
 
@@ -29,13 +49,17 @@ WorkOrderPro uses a PostgreSQL database with 12 core tables, implementing:
 
 ### Key Features
 
-- **Role-Based Access**: Admin, Partner, and Subcontractor user types
+- **Company-Level Access Control**: Organization-based access with team collaboration
+- **Role-Based Access**: Admin, Employee, Partner, and Subcontractor user types
+- **Multi-Organization Architecture**: Partners, subcontractors, and internal organizations
 - **Work Order Lifecycle**: From submission to completion with status tracking
+- **Organization-Level Assignments**: Work orders assigned to entire companies
 - **Report Management**: Subcontractor reports with photo attachments
+- **Financial Privacy**: Company-level financial data isolation
 - **Email Notifications**: Automated notifications for all workflow stages
 - **Analytics Dashboard**: Performance metrics and geographic distribution
 - **Audit Trail**: Complete change history for compliance
-- **Multi-Organization**: Support for multiple construction companies
+- **Team Collaboration**: Multiple users per organization with shared access
 
 ## Technology Stack
 
