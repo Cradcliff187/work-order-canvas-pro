@@ -20,11 +20,7 @@ const Auth = () => {
   // Form states  
   const [signInData, setSignInData] = useState({ email: '', password: '' });
 
-  useEffect(() => {
-    if (user) {
-      navigate('/');
-    }
-  }, [user, navigate]);
+  // Removed conflicting redirect - AuthContext handles post-login navigation
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

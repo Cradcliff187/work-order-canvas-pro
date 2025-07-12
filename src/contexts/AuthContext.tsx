@@ -110,8 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             setProfile(profileData);
             
-            // Only redirect on actual sign-in events and if we're on the root page
-            if (event === 'SIGNED_IN' && profileData?.user_type && window.location.pathname === '/') {
+            // Redirect on sign-in events from auth page or root page
+            if (event === 'SIGNED_IN' && profileData?.user_type && 
+                (window.location.pathname === '/' || window.location.pathname === '/auth')) {
               const redirectPaths = {
                 'admin': '/admin/dashboard',
                 'employee': '/admin/employee-dashboard',
