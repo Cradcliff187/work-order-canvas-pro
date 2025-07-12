@@ -861,12 +861,15 @@ $$;
 3. Work order reports (references work_orders, users)
 4. Work order assignments (references work_orders, users, organizations)
 5. Employee reports (references work_orders, users)
-6. Receipt allocations and receipts (references users)
-7. Work orders (references users, organizations)
-8. Partner locations (references organizations)
-9. User organization relationships (references users, organizations)
-10. Organizations (test organizations)
-11. Profiles (test users - cascade deletes auth.users)
+6. Invoice work orders (references invoices, work_orders - CRITICAL: before work_orders)
+7. Invoice attachments (references invoices, users)
+8. Receipt allocations and receipts (references users)
+9. Invoices (references organizations, users - after invoice_work_orders and invoice_attachments)
+10. Work orders (references users, organizations - safe after invoice tables cleared)
+11. Partner locations (references organizations)
+12. User organization relationships (references users, organizations)
+13. Organizations (test organizations)
+14. Profiles (test users - cascade deletes auth.users)
 
 **Test Data Patterns:**
 - **Users**: Emails containing `@testcompany`, `@example.com`, `test`, or first name `Test`
