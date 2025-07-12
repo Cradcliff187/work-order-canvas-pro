@@ -18,6 +18,16 @@ interface TableCounts {
   employee_reports: number;
 }
 
+interface ClearTestDataResponse {
+  success: boolean;
+  message: string;
+  deleted_counts?: Record<string, number>;
+  error?: string;
+  test_user_count?: number;
+  test_org_count?: number;
+  test_work_order_count?: number;
+}
+
 const TEST_EMAILS = [
   'admin@workorderpro.com',
   'admin2@workorderpro.com',
@@ -150,149 +160,38 @@ export const useDevTools = () => {
   const clearTestData = async () => {
     setLoading(true);
     try {
-      console.log('Clearing test data...');
+      console.log('Starting test data cleanup using secure database function...');
       
-      // Get test user profiles
-      const { data: testProfiles } = await supabase
-        .from('profiles')
-        .select('id, user_id, email')
-        .in('email', TEST_EMAILS);
+      // Call the secure database function to clear test data
+      const { data, error } = await supabase.rpc('clear_test_data');
+      
+      if (error) {
+        console.error('Error clearing test data:', error);
+        throw error;
+      }
 
-      if (!testProfiles?.length) {
+      const result = data as unknown as ClearTestDataResponse;
+      if (result?.success) {
+        console.log('Test data cleanup completed successfully');
+        console.log('Deletion summary:', result.deleted_counts);
+        
+        const summary = Object.entries(result.deleted_counts || {})
+          .map(([table, count]) => `${table}: ${count}`)
+          .join(', ');
+        
         toast({
-          title: "Info",
-          description: "No test data found to clear",
+          title: "Success",
+          description: `Test data cleared successfully. Deleted: ${summary}`,
         });
-        setLoading(false);
-        return;
-      }
-
-      const testProfileIds = testProfiles.map(p => p.id);
-      console.log(`Found ${testProfiles.length} test profiles to clean`);
-
-      // Clear in correct cascading dependency order - deepest children first
-      
-      // 1. Delete deepest child records first (audit logs reference everything)
-      console.log('Deleting audit logs for test records...');
-      await supabase.from('audit_logs').delete().in('user_id', testProfileIds);
-      
-      // 2. Delete receipt-work order relationships
-      console.log('Deleting receipt work order allocations...');
-      const { data: testReceipts } = await supabase
-        .from('receipts')
-        .select('id')
-        .in('employee_user_id', testProfileIds);
-      
-      if (testReceipts?.length) {
-        const testReceiptIds = testReceipts.map(r => r.id);
-        await supabase.from('receipt_work_orders').delete().in('receipt_id', testReceiptIds);
+      } else {
+        console.error('Function returned error:', result?.error);
+        throw new Error(result?.message || 'Unknown error occurred');
       }
       
-      // 3. Delete employee reports and receipts
-      console.log('Deleting employee reports...');
-      await supabase.from('employee_reports').delete().in('employee_user_id', testProfileIds);
-      
-      console.log('Deleting employee receipts...');
-      await supabase.from('receipts').delete().in('employee_user_id', testProfileIds);
-      
-      // 4. Delete invoice work orders and invoice attachments
-      console.log('Deleting invoice work orders...');
-      const { data: testInvoices } = await supabase
-        .from('invoices')
-        .select('id')
-        .in('submitted_by', testProfileIds);
-      
-      if (testInvoices?.length) {
-        const testInvoiceIds = testInvoices.map(i => i.id);
-        await supabase.from('invoice_work_orders').delete().in('invoice_id', testInvoiceIds);
-        await supabase.from('invoice_attachments').delete().in('invoice_id', testInvoiceIds);
-      }
-      
-      // 5. Delete invoices
-      console.log('Deleting invoices...');
-      await supabase.from('invoices').delete().in('submitted_by', testProfileIds);
-      
-      // 6. Delete work order attachments and reports
-      console.log('Deleting work order attachments...');
-      await supabase.from('work_order_attachments').delete().in('uploaded_by_user_id', testProfileIds);
-      
-      console.log('Deleting work order reports...');
-      await supabase.from('work_order_reports').delete().in('subcontractor_user_id', testProfileIds);
-      
-      // 7. Delete work order assignments
-      console.log('Deleting work order assignments...');
-      await supabase.from('work_order_assignments').delete().in('assigned_to', testProfileIds);
-      await supabase.from('work_order_assignments').delete().in('assigned_by', testProfileIds);
-      
-      // 8. Delete work orders
-      console.log('Deleting work orders...');
-      await supabase.from('work_orders').delete().in('created_by', testProfileIds);
-      await supabase.from('work_orders').delete().in('assigned_to', testProfileIds);
-      
-      // 9. Delete partner locations (before organizations)
-      console.log('Deleting partner locations...');
-      const testOrgNames = [
-        'ABC Property Management', 
-        'XYZ Commercial Properties', 
-        'Premium Facilities Group',
-        'Pipes & More Plumbing',
-        'Sparks Electric',
-        'Cool Air HVAC',
-        'Wood Works Carpentry',
-        'Brush Strokes Painting',
-        'Fix-It Maintenance',
-        'Green Thumb Landscaping'
-      ];
-      
-      const { data: testOrgs } = await supabase
-        .from('organizations')
-        .select('id')
-        .in('name', testOrgNames);
-      
-      if (testOrgs?.length) {
-        const testOrgIds = testOrgs.map(o => o.id);
-        await supabase.from('partner_locations').delete().in('organization_id', testOrgIds);
-      }
-      
-      // 10. Delete user organization relationships
-      console.log('Deleting user organization relationships...');
-      await supabase.from('user_organizations').delete().in('user_id', testProfileIds);
-      
-      // 11. Delete test organizations
-      console.log('Deleting test organizations...');
-      await supabase.from('organizations').delete().in('name', testOrgNames);
-      
-      // 12. Delete email templates and logs
-      console.log('Deleting email templates...');
-      const templateNames = [
-        'work_order_received',
-        'work_order_assigned', 
-        'report_submitted',
-        'report_approved',
-        'work_order_completed'
-      ];
-      await supabase.from('email_templates').delete().in('template_name', templateNames);
-      
-      console.log('Deleting email logs...');
-      await supabase.from('email_logs').delete().in('recipient_email', TEST_EMAILS);
-      
-      // 13. Finally delete test profiles (last, as they're referenced by many tables)
-      console.log('Deleting test profiles...');
-      await supabase.from('profiles').delete().in('email', TEST_EMAILS);
-      
-      // Note: Cannot delete auth users in browser context (requires service role)
-      // This is a limitation of running in the browser vs server environment
-
-      console.log('✅ Test data cleanup completed successfully');
-      toast({
-        title: "Success", 
-        description: `Cleared test data for ${testProfiles.length} users. Note: Auth users remain due to browser limitations.`,
-      });
-      
-      // Refresh counts only
+      // Refresh counts
       await fetchCounts();
     } catch (error: any) {
-      console.error('Clear error:', error);
+      console.error('Failed to clear test data:', error);
       toast({
         title: "Error",
         description: `Failed to clear test data: ${error.message}`,

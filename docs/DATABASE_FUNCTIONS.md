@@ -15,8 +15,8 @@ Functions executed by database triggers for audit logging, user profile creation
 ### Email Notification Functions (4)
 SECURITY DEFINER functions that call edge functions for automated email notifications
 
-### Utility Functions (5)
-General-purpose functions for work order numbering, invoice numbering, and analytics view management
+### Utility Functions (6)
+General-purpose functions for work order numbering, invoice numbering, analytics view management, and test data cleanup
 
 ### Work Order Completion Functions (4)
 Automatic completion detection and manual override functions for work order lifecycle management
@@ -766,6 +766,137 @@ $$;
 
 **Usage**: Called periodically to update analytics data  
 **Performance**: Should be run during off-peak hours
+
+### clear_test_data()
+
+**Purpose**: Securely clear all test data with proper cascading deletion order and admin-only access
+
+```sql
+CREATE OR REPLACE FUNCTION public.clear_test_data()
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  result jsonb := '{}';
+  deleted_counts jsonb := '{}';
+  test_user_ids uuid[];
+  test_org_ids uuid[];
+  test_work_order_ids uuid[];
+BEGIN
+  -- Only allow admins to execute this function
+  IF NOT public.auth_is_admin() THEN
+    RAISE EXCEPTION 'Only administrators can clear test data';
+  END IF;
+
+  -- Get test user IDs (based on test email patterns)
+  SELECT array_agg(id) INTO test_user_ids
+  FROM public.profiles 
+  WHERE email LIKE '%@testcompany%' 
+     OR email LIKE '%@example.com' 
+     OR email LIKE '%test%'
+     OR first_name = 'Test';
+
+  -- Get test organization IDs (based on test name patterns)
+  SELECT array_agg(id) INTO test_org_ids
+  FROM public.organizations 
+  WHERE name IN (
+    'ABC Property Management', 'XYZ Commercial Properties', 
+    'Premium Facilities Group', 'Pipes & More Plumbing',
+    'Sparks Electric', 'Cool Air HVAC', 'Wood Works Carpentry',
+    'Brush Strokes Painting', 'Fix-It Maintenance', 
+    'Green Thumb Landscaping'
+  );
+
+  -- Delete in proper cascading order
+  -- [Deletion steps omitted for brevity - see function implementation]
+
+  -- Return summary
+  RETURN jsonb_build_object(
+    'success', true,
+    'message', 'Test data cleared successfully',
+    'deleted_counts', deleted_counts,
+    'test_user_count', array_length(test_user_ids, 1),
+    'test_org_count', array_length(test_org_ids, 1),
+    'test_work_order_count', array_length(test_work_order_ids, 1)
+  );
+
+EXCEPTION WHEN OTHERS THEN
+  -- Return error details
+  RETURN jsonb_build_object(
+    'success', false,
+    'error', SQLERRM,
+    'message', 'Failed to clear test data'
+  );
+END;
+$$;
+```
+
+**Returns**: Structured JSON response with deletion summary  
+**Response Format:**
+```json
+{
+  "success": true,
+  "message": "Test data cleared successfully",
+  "deleted_counts": {
+    "email_logs": 45,
+    "work_order_reports": 12,
+    "work_orders": 8,
+    "profiles": 5
+  },
+  "test_user_count": 5,
+  "test_org_count": 3,
+  "test_work_order_count": 8
+}
+```
+
+**Security Features:**
+- **Admin-only access**: Restricted to administrators using `auth_is_admin()`
+- **SECURITY DEFINER**: Runs with elevated privileges to bypass RLS restrictions
+- **Pattern-based filtering**: Only deletes data matching specific test patterns
+- **Cascading deletion**: Removes child records before parents to avoid foreign key conflicts
+
+**Deletion Order (Cascade-Safe):**
+1. Email logs (references work_orders)
+2. Work order attachments (references work_orders, users)
+3. Work order reports (references work_orders, users)
+4. Work order assignments (references work_orders, users, organizations)
+5. Employee reports (references work_orders, users)
+6. Receipt allocations and receipts (references users)
+7. Work orders (references users, organizations)
+8. Partner locations (references organizations)
+9. User organization relationships (references users, organizations)
+10. Organizations (test organizations)
+11. Profiles (test users - cascade deletes auth.users)
+
+**Test Data Patterns:**
+- **Users**: Emails containing `@testcompany`, `@example.com`, `test`, or first name `Test`
+- **Organizations**: Specific test organization names used in seeding
+- **Work Orders**: All work orders created by, assigned to, or belonging to test entities
+
+**Error Handling:**
+- Returns structured error response on failure
+- Logs technical error details for debugging
+- Graceful handling of missing test data (no-op)
+- Transaction rollback on any deletion failure
+
+**Usage Examples:**
+```sql
+-- Clear all test data (admin only)
+SELECT clear_test_data();
+
+-- In application code
+const { data } = await supabase.rpc('clear_test_data');
+if (data.success) {
+  console.log('Deleted:', data.deleted_counts);
+} else {
+  console.error('Error:', data.message);
+}
+```
+
+**Related Functions:**
+- Uses `auth_is_admin()` for access control
+- Complements seeding functions for complete test lifecycle management
+- Works with newly added DELETE RLS policies on `email_logs` and `profiles`
 
 ## Work Order Completion Functions
 

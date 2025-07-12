@@ -220,6 +220,13 @@ With Check: (user_id = auth.uid())
 Note: Simple direct comparison - no recursion possible
 ```
 
+**Admins can delete profiles**
+```sql
+Policy: DELETE
+Using: auth_is_admin()
+Note: Added for test data cleanup functionality. Safe because it uses the helper function after profile bootstrap.
+```
+
 **Advanced Permissions**
 
 Role-based access (admin, employee, partner, subcontractor) is handled in the application layer after the initial profile fetch succeeds. This prevents any possibility of RLS recursion while maintaining security through:
@@ -378,6 +385,12 @@ Using: (auth_user_type() = ANY(ARRAY['partner', 'subcontractor']) AND is_active 
 - Email delivery tracked in `email_logs` with status monitoring
 
 ### email_logs
+
+**Admins can delete email logs**
+```sql
+Policy: DELETE
+Using: auth_is_admin()
+```
 
 **Admins can view all email logs**
 ```sql

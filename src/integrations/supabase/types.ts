@@ -1360,6 +1360,10 @@ export type Database = {
         Args: { work_order_id: string }
         Returns: boolean
       }
+      clear_test_data: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       generate_internal_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
