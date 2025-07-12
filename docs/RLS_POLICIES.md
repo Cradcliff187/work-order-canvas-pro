@@ -421,6 +421,18 @@ Using: auth_is_admin()
 With Check: auth_is_admin()
 ```
 
+**Subcontractors can view their company invoices**
+```sql
+Policy: SELECT
+Using: (auth_user_type() = 'subcontractor' AND auth_user_belongs_to_organization(subcontractor_organization_id))
+```
+
+**Subcontractors can create draft invoices**
+```sql
+Policy: INSERT
+With Check: (auth_user_type() = 'subcontractor' AND status = 'draft' AND (subcontractor_organization_id IS NULL OR auth_user_belongs_to_organization(subcontractor_organization_id)))
+```
+
 **Subcontractors can update modifiable invoices from their organization**
 ```sql
 Policy: UPDATE
@@ -428,9 +440,17 @@ Using: (auth_user_type() = 'subcontractor' AND auth_user_belongs_to_organization
 With Check: (auth_user_type() = 'subcontractor' AND auth_user_belongs_to_organization(subcontractor_organization_id) AND status IN ('submitted', 'rejected') AND approved_by IS NULL AND approved_at IS NULL AND paid_at IS NULL AND payment_reference IS NULL)
 ```
 
-**Critical Security Features:**
+**Subcontractors can delete their company draft invoices**
+```sql
+Policy: DELETE
+Using: (auth_user_type() = 'subcontractor' AND status = 'draft' AND auth_user_belongs_to_organization(subcontractor_organization_id))
+```
+
+**Enhanced Security Features:**
+- **Company-Level Access**: All team members can view and manage company invoices
 - **Status Restrictions**: Subcontractors can only modify invoices with 'submitted' or 'rejected' status
 - **Field Protection**: Prevents modification of approval_by, approved_at, paid_at, payment_reference fields
+- **Financial Privacy**: No cross-company access between subcontractor organizations
 - **Validation Trigger**: `validate_invoice_status_change()` enforces status transition rules
 
 ### invoice_work_orders
