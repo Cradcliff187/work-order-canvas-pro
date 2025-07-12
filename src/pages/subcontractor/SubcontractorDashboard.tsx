@@ -4,23 +4,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useUserOrganizations } from "@/hooks/useUserOrganizations";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   ClipboardList, 
   FileText, 
   Calendar, 
   DollarSign, 
   AlertTriangle,
-  Receipt
+  Receipt,
+  Building2,
+  Users
 } from "lucide-react";
 import { format } from "date-fns";
 
 const SubcontractorDashboard = () => {
+  const { profile } = useAuth();
   const { assignedWorkOrders, dashboardStats } = useSubcontractorWorkOrders();
   const { data: invoicesData, isLoading: invoicesLoading } = useInvoices();
+  const { data: userOrganizations, isLoading: orgsLoading } = useUserOrganizations();
 
   const workOrders = assignedWorkOrders.data || [];
   const stats = dashboardStats.data;
   const invoices = invoicesData?.data || [];
+  const primaryOrganization = userOrganizations?.[0]; // Use first organization as primary
   
   // Get invoice status counts
   const pendingInvoices = invoices.filter(invoice => invoice.status === 'submitted');
@@ -86,14 +93,30 @@ const SubcontractorDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Link to="/subcontractor/work-orders">
-          <Button>
-            <ClipboardList className="h-4 w-4 mr-2" />
-            View All Work Orders
-          </Button>
-        </Link>
+      {/* Header with Organization Context */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold">Company Dashboard</h1>
+            {primaryOrganization && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+                <span className="text-sm font-medium">{primaryOrganization.name}</span>
+                {primaryOrganization.initials && (
+                  <Badge variant="outline" className="text-xs">
+                    {primaryOrganization.initials}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+          <Link to="/subcontractor/work-orders">
+            <Button>
+              <ClipboardList className="h-4 w-4 mr-2" />
+              View All Company Work Orders
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Urgent Items Alert */}
@@ -120,8 +143,8 @@ const SubcontractorDashboard = () => {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Active Assignments</span>
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Company Active Work Orders</span>
             </div>
             <p className="text-2xl font-bold mt-2">{stats?.activeAssignments || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -134,11 +157,11 @@ const SubcontractorDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Reports Pending</span>
+              <span className="text-sm font-medium">Company Reports Pending</span>
             </div>
             <p className="text-2xl font-bold mt-2">{stats?.pendingReports || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Need to submit reports
+              Team reports to submit
             </p>
           </CardContent>
         </Card>
@@ -162,11 +185,11 @@ const SubcontractorDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Completed This Month</span>
+              <span className="text-sm font-medium">Company Completed This Month</span>
             </div>
             <p className="text-2xl font-bold mt-2">{stats?.completedThisMonth || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Approved reports
+              Team approved reports
             </p>
           </CardContent>
         </Card>
@@ -175,13 +198,13 @@ const SubcontractorDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Earnings This Month</span>
+              <span className="text-sm font-medium">Company Earnings This Month</span>
             </div>
             <p className="text-2xl font-bold mt-2">
               ${(stats?.earningsThisMonth || 0).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              From approved reports
+              Total team earnings
             </p>
           </CardContent>
         </Card>
@@ -271,11 +294,11 @@ const SubcontractorDashboard = () => {
         </Card>
       )}
 
-      {/* Recent Work Orders */}
+      {/* Recent Company Work Orders */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Recent Assignments</CardTitle>
+            <CardTitle>Recent Company Work Orders</CardTitle>
             <Link to="/subcontractor/work-orders">
               <Button variant="outline" size="sm">
                 View All
@@ -286,61 +309,83 @@ const SubcontractorDashboard = () => {
         <CardContent>
           {recentWorkOrders.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No work orders assigned yet.
+              No company work orders available yet.
             </p>
           ) : (
             <div className="space-y-4">
-              {recentWorkOrders.map((workOrder) => (
-                <div
-                  key={workOrder.id}
-                  className="flex flex-col sm:flex-row justify-between items-start gap-4 p-4 border rounded-lg"
-                >
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium">
-                        {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`}
-                      </h4>
-                      <Badge className={getStatusColor(workOrder.status)}>
-                        {formatStatus(workOrder.status)}
-                      </Badge>
-                      {workOrder.status === "in_progress" && 
-                       !workOrder.work_order_reports?.some((report: any) => report.status !== "rejected") && (
-                        <Badge variant="destructive">Report Due</Badge>
+              {recentWorkOrders.map((workOrder) => {
+                const isAssignedToMe = workOrder.assigned_to === profile?.id;
+                const assigneeName = workOrder.assigned_user 
+                  ? `${workOrder.assigned_user.first_name} ${workOrder.assigned_user.last_name}`
+                  : 'Unassigned';
+                
+                return (
+                  <div
+                    key={workOrder.id}
+                    className={`flex flex-col sm:flex-row justify-between items-start gap-4 p-4 border rounded-lg ${
+                      isAssignedToMe ? 'bg-primary/5 border-primary/20' : 'hover:bg-muted/30'
+                    }`}
+                  >
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-medium">
+                          {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`}
+                        </h4>
+                        <Badge className={getStatusColor(workOrder.status)}>
+                          {formatStatus(workOrder.status)}
+                        </Badge>
+                        {isAssignedToMe && (
+                          <Badge variant="default" className="bg-primary/20 text-primary border-primary/30">
+                            Mine
+                          </Badge>
+                        )}
+                        {workOrder.status === "in_progress" && 
+                         !workOrder.work_order_reports?.some((report: any) => report.status !== "rejected") && (
+                          <Badge variant="destructive">Report Due</Badge>
+                        )}
+                      </div>
+                      
+                      <p className="font-medium text-foreground">{workOrder.title}</p>
+                      
+                      {/* Assignee Information */}
+                      <div className="flex items-center gap-2">
+                        <Users className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Assigned to: <span className={isAssignedToMe ? "font-medium text-primary" : ""}>{assigneeName}</span>
+                        </span>
+                      </div>
+                      
+                      {workOrder.store_location && (
+                        <p className="text-sm text-muted-foreground">
+                          📍 {workOrder.store_location}
+                        </p>
+                      )}
+                      
+                      {workOrder.due_date && (
+                        <p className="text-sm text-muted-foreground">
+                          Due: {format(new Date(workOrder.due_date), "MMM d, yyyy")}
+                        </p>
                       )}
                     </div>
                     
-                    <p className="font-medium text-foreground">{workOrder.title}</p>
-                    
-                    {workOrder.store_location && (
-                      <p className="text-sm text-muted-foreground">
-                        {workOrder.store_location}
-                      </p>
-                    )}
-                    
-                    {workOrder.due_date && (
-                      <p className="text-sm text-muted-foreground">
-                        Due: {format(new Date(workOrder.due_date), "MMM d, yyyy")}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Link to={`/subcontractor/work-orders/${workOrder.id}`}>
-                      <Button variant="outline" size="sm">
-                        View
-                      </Button>
-                    </Link>
-                    {(workOrder.status === "assigned" || workOrder.status === "in_progress") && (
-                      <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
-                        <Button size="sm">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Report
+                    <div className="flex gap-2">
+                      <Link to={`/subcontractor/work-orders/${workOrder.id}`}>
+                        <Button variant="outline" size="sm">
+                          View
                         </Button>
                       </Link>
-                    )}
+                      {isAssignedToMe && (workOrder.status === "assigned" || workOrder.status === "in_progress") && (
+                        <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
+                          <Button size="sm">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Submit Report
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
