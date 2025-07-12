@@ -20,12 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, MoreHorizontal, Edit, Trash2, MapPin, Building2 } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Building2 } from 'lucide-react';
 import { usePartnerLocations, usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { AddLocationModal } from '@/components/partner/AddLocationModal';
 import { EditLocationModal } from '@/components/partner/EditLocationModal';
@@ -126,26 +121,22 @@ const PartnerLocations: React.FC = () => {
         const location = row.original;
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(location)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleDelete(location)}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TableActionsDropdown
+            itemName={location.location_name}
+            actions={[
+              {
+                label: 'Edit',
+                icon: Edit,
+                onClick: () => handleEdit(location),
+              },
+              {
+                label: 'Delete',
+                icon: Trash2,
+                onClick: () => handleDelete(location),
+                variant: 'destructive',
+              },
+            ]}
+          />
         );
       },
     },

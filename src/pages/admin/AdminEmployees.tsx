@@ -4,13 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { AddEmployeeModal } from '@/components/admin/employees/AddEmployeeModal';
 import { EditEmployeeRatesModal } from '@/components/admin/employees/EditEmployeeRatesModal';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
 import { useEmployees, useEmployeeMutations, formatCurrency, Employee } from '@/hooks/useEmployees';
-import { Users, UserPlus, Search, MoreHorizontal, DollarSign, Edit, UserCheck, Power, TrendingUp } from 'lucide-react';
+import { Users, UserPlus, Search, DollarSign, Edit, UserCheck, Power, TrendingUp } from 'lucide-react';
 
 export default function AdminEmployees() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -220,33 +220,24 @@ export default function AdminEmployees() {
                           {employee.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => setEditRatesEmployee(employee)}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Rates
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleToggleStatus(employee.id, employee.is_active)}
-                              disabled={toggleEmployeeStatus.isPending}
-                            >
-                              <Power className="mr-2 h-4 w-4" />
-                              {employee.is_active ? 'Deactivate' : 'Activate'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                       <TableCell>
+                         <TableActionsDropdown
+                           itemName={`${employee.first_name} ${employee.last_name}`}
+                           actions={[
+                             {
+                               label: 'Edit Rates',
+                               icon: Edit,
+                               onClick: () => setEditRatesEmployee(employee),
+                             },
+                             {
+                               label: employee.is_active ? 'Deactivate' : 'Activate',
+                               icon: Power,
+                               onClick: () => handleToggleStatus(employee.id, employee.is_active),
+                               variant: employee.is_active ? 'destructive' : 'default',
+                             },
+                           ]}
+                         />
+                       </TableCell>
                     </TableRow>
                   ))
                 )}
