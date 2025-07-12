@@ -13,6 +13,7 @@ import { useUsers, useUserMutations } from '@/hooks/useUsers';
 import { UserFilters } from '@/components/admin/users/UserFilters';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { EditUserModal } from '@/components/admin/users/EditUserModal';
+import { ViewUserModal } from '@/components/admin/users/ViewUserModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
@@ -45,6 +46,7 @@ const AdminUsers = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [resettingPasswordUserId, setResettingPasswordUserId] = useState<string | null>(null);
   
@@ -260,7 +262,7 @@ const AdminUsers = () => {
           {
             label: 'View Details',
             icon: Eye,
-            onClick: () => {/* TODO: Implement view details */}
+            onClick: () => setViewingUser(user)
           },
           {
             label: 'Edit User',
@@ -578,6 +580,17 @@ const AdminUsers = () => {
             title: "User updated",
             description: "The user has been updated successfully.",
           });
+        }}
+      />
+
+      <ViewUserModal
+        open={!!viewingUser}
+        onOpenChange={(open) => !open && setViewingUser(null)}
+        user={viewingUser}
+        onEdit={() => {
+          setSelectedUser(viewingUser);
+          setShowEditModal(true);
+          setViewingUser(null);
         }}
       />
 
