@@ -58,7 +58,8 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
           work_order_assignments(
             assigned_to,
             assignment_type,
-            assignee_profile:profiles!assigned_to(first_name, last_name)
+            assignee_profile:profiles!assigned_to(first_name, last_name),
+            assigned_organization:organizations!assigned_organization_id(name, organization_type)
           )
         `, { count: 'exact' })
         .in('organization_id', organizationIds);

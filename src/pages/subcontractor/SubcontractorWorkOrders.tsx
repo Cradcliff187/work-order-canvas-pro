@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
-import { Search, FileText, Calendar, MapPin } from "lucide-react";
+import { Search, FileText, Calendar, MapPin, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileWorkOrderCard } from "@/components/MobileWorkOrderCard";
 import { MobilePullToRefresh } from "@/components/MobilePullToRefresh";
+import { OrganizationBadge } from "@/components/OrganizationBadge";
 import {
   Select,
   SelectContent,
@@ -189,6 +190,19 @@ export default function SubcontractorWorkOrders() {
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {workOrder.description}
                         </p>
+                      )}
+
+                      {/* Show submitting organization */}
+                      {workOrder.organizations && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">From:</span>
+                          <OrganizationBadge 
+                            organization={workOrder.organizations}
+                            size="sm"
+                            showIcon={false}
+                          />
+                        </div>
                       )}
                     </div>
 

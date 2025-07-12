@@ -30,9 +30,22 @@ import { Database } from '@/integrations/supabase/types';
 import { exportWorkOrders } from '@/lib/utils/export';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
-  organizations: { name: string } | null;
+  organizations: { name: string; organization_type?: string } | null;
   trades: { name: string } | null;
   assigned_user: { first_name: string; last_name: string } | null;
+  assignments?: Array<{
+    id: string;
+    assigned_to: string;
+    assignment_type: string;
+    assignee: {
+      first_name: string;
+      last_name: string;
+    };
+    assigned_organization?: {
+      name: string;
+      organization_type?: 'partner' | 'subcontractor' | 'internal';
+    } | null;
+  }>;
 };
 
 interface WorkOrderFilters {

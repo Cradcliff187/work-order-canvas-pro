@@ -30,7 +30,8 @@ export function useSubcontractorWorkOrders() {
           work_order_assignments (
             assigned_to,
             assignment_type,
-            assignee_profile:profiles!assigned_to (first_name, last_name)
+            assignee_profile:profiles!assigned_to (first_name, last_name),
+            assigned_organization:organizations!assigned_organization_id(name, organization_type)
           )
         `)
         .order("created_at", { ascending: false });

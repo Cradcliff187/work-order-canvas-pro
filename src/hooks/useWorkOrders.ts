@@ -59,7 +59,8 @@ export function useWorkOrders(
             id,
             assigned_to,
             assignment_type,
-            assignee:profiles!assigned_to(first_name, last_name)
+            assignee:profiles!assigned_to(first_name, last_name),
+            assigned_organization:organizations!assigned_organization_id(name, organization_type)
           )
         `, { count: 'exact' });
 

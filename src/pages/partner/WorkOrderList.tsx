@@ -205,6 +205,7 @@ const WorkOrderList = () => {
                         <AssigneeDisplay 
                           assignments={workOrder.work_order_assignments}
                           assignedUser={workOrder.assigned_user}
+                          showOrganization={true}
                         />
                       </TableCell>
                       <TableCell>

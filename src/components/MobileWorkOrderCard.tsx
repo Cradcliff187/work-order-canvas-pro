@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
+import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { formatLocationDisplay } from '@/lib/utils/addressUtils';
 
 interface WorkOrder {
@@ -42,7 +43,19 @@ interface WorkOrder {
       first_name: string;
       last_name: string;
     } | null;
+    assigned_organization?: {
+      name: string;
+      organization_type?: 'partner' | 'subcontractor' | 'internal';
+    } | null;
   }> | null;
+  organizations?: {
+    name: string;
+    organization_type?: 'partner' | 'subcontractor' | 'internal';
+  } | null;
+  assigned_organizations?: {
+    name: string;
+    organization_type?: 'partner' | 'subcontractor' | 'internal';
+  } | null;
 }
 
 interface MobileWorkOrderCardProps {
@@ -157,9 +170,23 @@ export function MobileWorkOrderCard({
             <AssigneeDisplay 
               assignments={workOrder.work_order_assignments}
               assignedUser={workOrder.assigned_user}
+              assignedOrganization={workOrder.assigned_organizations}
               showIcons={false}
+              showOrganization={true}
             />
           </div>
+
+          {/* Show submitting organization for subcontractors */}
+          {workOrder.organizations && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">From:</span>
+              <OrganizationBadge 
+                organization={workOrder.organizations}
+                size="sm"
+                showIcon={true}
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
