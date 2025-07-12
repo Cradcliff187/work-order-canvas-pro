@@ -14,6 +14,7 @@ import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 export interface User {
   id: string;
@@ -39,6 +40,7 @@ const AdminUsers = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   
   const { toast } = useToast();
   const { data: usersData, isLoading, refetch } = useUsers();
@@ -49,14 +51,19 @@ const AdminUsers = () => {
     setShowEditModal(true);
   };
 
-  const handleDeleteUser = async (user: User) => {
-    if (confirm(`Are you sure you want to delete ${user.first_name} ${user.last_name}?`)) {
-      try {
-        await deleteUser.mutateAsync(user.id);
-        refetch();
-      } catch (error) {
-        console.error('Failed to delete user:', error);
-      }
+  const handleDeleteUser = (user: User) => {
+    setDeletingUser(user);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+    
+    try {
+      await deleteUser.mutateAsync(deletingUser.id);
+      refetch();
+      setDeletingUser(null);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
     }
   };
 
@@ -463,6 +470,15 @@ const AdminUsers = () => {
             description: "The user has been updated successfully.",
           });
         }}
+      />
+
+      <DeleteConfirmationDialog
+        open={!!deletingUser}
+        onOpenChange={(open) => !open && setDeletingUser(null)}
+        onConfirm={handleConfirmDelete}
+        itemName={deletingUser ? `${deletingUser.first_name} ${deletingUser.last_name}` : ''}
+        itemType="user"
+        isLoading={deleteUser.isPending}
       />
     </div>
   );
