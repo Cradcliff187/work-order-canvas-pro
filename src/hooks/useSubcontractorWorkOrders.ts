@@ -8,7 +8,7 @@ export function useSubcontractorWorkOrders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get assigned work orders for the subcontractor
+  // Company-level access: RLS policies automatically filter to company work orders
   const assignedWorkOrders = useQuery({
     queryKey: ["subcontractor-work-orders", user?.id],
     queryFn: async () => {
@@ -33,7 +33,6 @@ export function useSubcontractorWorkOrders() {
             assignee_profile:profiles!assigned_to (first_name, last_name)
           )
         `)
-        .eq("assigned_to_type", "subcontractor")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -42,13 +41,13 @@ export function useSubcontractorWorkOrders() {
     enabled: !!user,
   });
 
-  // Get dashboard statistics
+  // Company-wide dashboard stats: RLS policies provide company-level access
   const dashboardStats = useQuery({
     queryKey: ["subcontractor-dashboard", user?.id],
     queryFn: async () => {
       if (!user) return null;
 
-      // Get all assigned work orders
+      // Get all company work orders (RLS automatically filters to company)
       const { data: workOrders, error: workOrdersError } = await supabase
         .from("work_orders")
         .select(`
@@ -59,12 +58,11 @@ export function useSubcontractorWorkOrders() {
             submitted_at,
             invoice_amount
           )
-        `)
-        .eq("assigned_to_type", "subcontractor");
+        `);
 
       if (workOrdersError) throw workOrdersError;
 
-      // Get current month's reports
+      // Get current month's reports (RLS automatically filters to company)
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
@@ -263,7 +261,7 @@ export function useSubcontractorWorkOrders() {
     },
   });
 
-  // Get completed work orders with invoice status for invoice submission
+  // Company-level completed work orders: RLS policies provide company access
   const completedWorkOrdersForInvoicing = useQuery({
     queryKey: ["completed-work-orders-for-invoicing", user?.id],
     queryFn: async () => {
@@ -291,7 +289,6 @@ export function useSubcontractorWorkOrders() {
             status
           )
         `)
-        .eq("assigned_to_type", "subcontractor")
         .eq("status", "completed")
         .order("completed_at", { ascending: false });
 
