@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
+import { useFocusManagement } from '@/hooks/useFocusManagement';
 
 const locationSchema = z.object({
   location_number: z.string().min(1, 'Location number is required'),
@@ -46,6 +47,7 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
   onOpenChange,
 }) => {
   const { createLocation } = usePartnerLocationMutations();
+  const modalRef = useFocusManagement({ isOpen: open });
 
   const form = useForm<LocationFormData>({
     resolver: zodResolver(locationSchema),
@@ -84,13 +86,14 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent ref={modalRef} className="max-w-md" role="dialog" aria-labelledby="add-location-title" tabIndex={-1}>
         <DialogHeader>
-          <DialogTitle>Add New Location</DialogTitle>
+          <DialogTitle id="add-location-title">Add New Location</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" aria-busy={createLocation.isPending}>
+            <fieldset className="grid grid-cols-2 gap-4" disabled={createLocation.isPending}>
+              <legend className="sr-only">Basic Location Information</legend>
               <FormField
                 control={form.control}
                 name="location_number"
@@ -115,9 +118,9 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-            </div>
+              )}
+            />
+            </fieldset>
 
             <FormField
               control={form.control}
@@ -133,7 +136,8 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <fieldset className="grid grid-cols-2 gap-4" disabled={createLocation.isPending}>
+              <legend className="sr-only">Location Address</legend>
               <FormField
                 control={form.control}
                 name="city"
@@ -160,7 +164,7 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
                   </FormItem>
                 )}
               />
-            </div>
+            </fieldset>
 
             <FormField
               control={form.control}
@@ -176,7 +180,8 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <fieldset className="grid grid-cols-2 gap-4" disabled={createLocation.isPending}>
+              <legend className="sr-only">Contact Information</legend>
               <FormField
                 control={form.control}
                 name="contact_name"
@@ -203,7 +208,7 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
                   </FormItem>
                 )}
               />
-            </div>
+            </fieldset>
 
             <FormField
               control={form.control}
@@ -244,7 +249,7 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createLocation.isPending}>
+              <Button type="submit" disabled={createLocation.isPending} aria-busy={createLocation.isPending}>
                 {createLocation.isPending ? 'Creating...' : 'Create Location'}
               </Button>
             </div>

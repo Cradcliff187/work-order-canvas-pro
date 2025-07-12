@@ -373,6 +373,11 @@ const AdminUsers = () => {
 
   return (
     <div className="space-y-6">
+      {/* Live region for status updates */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {isLoading ? 'Loading users...' : `Showing ${table.getFilteredRowModel().rows.length} users`}
+        {selectedRowCount > 0 && `, ${selectedRowCount} selected`}
+      </div>
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -398,8 +403,8 @@ const AdminUsers = () => {
             )}
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button onClick={() => setShowCreateModal(true)} aria-label="Add new user">
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Add User
         </Button>
       </div>
@@ -411,17 +416,18 @@ const AdminUsers = () => {
             <CardTitle>Users</CardTitle>
             <div className="flex items-center gap-2">
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
                   placeholder="Search users..."
                   value={globalFilter}
                   onChange={(e) => setGlobalFilter(e.target.value)}
                   className="pl-8 w-72"
+                  aria-label="Search users by name, email, or type"
                 />
               </div>
               <UserFilters table={table} />
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={handleExport} aria-label="Export users to CSV">
+                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                 Export
               </Button>
             </div>
@@ -429,7 +435,7 @@ const AdminUsers = () => {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
-            <Table>
+            <Table aria-busy={isLoading} aria-label="Users table">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -443,6 +449,13 @@ const AdminUsers = () => {
                               variant="ghost"
                               onClick={() => header.column.toggleSorting(header.column.getIsSorted() === "asc")}
                               className="-ml-3 h-8 data-[state=open]:bg-accent"
+                              aria-label={`Sort by ${header.column.columnDef.header} ${
+                                header.column.getIsSorted() === 'asc' ? 'descending' : 'ascending'
+                              }`}
+                              aria-sort={
+                                header.column.getIsSorted() === 'asc' ? 'ascending' :
+                                header.column.getIsSorted() === 'desc' ? 'descending' : 'none'
+                              }
                             >
                               {typeof header.column.columnDef.header === 'function'
                                 ? header.column.columnDef.header(header.getContext())
@@ -503,6 +516,7 @@ const AdminUsers = () => {
                   value={table.getState().pagination.pageSize}
                   onChange={(e) => table.setPageSize(Number(e.target.value))}
                   className="h-8 w-16 rounded border border-input bg-background px-2 text-sm"
+                  aria-label="Select page size"
                 >
                   {[10, 20, 30, 40, 50].map((pageSize) => (
                     <option key={pageSize} value={pageSize}>

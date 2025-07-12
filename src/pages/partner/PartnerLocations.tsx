@@ -178,7 +178,7 @@ const PartnerLocations: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex items-center justify-center h-96" aria-busy="true" aria-live="polite">
         <div className="text-muted-foreground">Loading locations...</div>
       </div>
     );
@@ -186,12 +186,16 @@ const PartnerLocations: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Live region for status updates */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {isLoading ? 'Loading locations...' : `Showing ${locations.length} locations`}
+      </div>
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Locations</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{locations.length}</div>
@@ -200,7 +204,7 @@ const PartnerLocations: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Locations</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <MapPin className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeLocations.length}</div>
@@ -218,10 +222,11 @@ const PartnerLocations: React.FC = () => {
               table.getColumn('location_name')?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
+            aria-label="Search locations by name"
           />
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button onClick={() => setShowAddModal(true)} aria-label="Add new location">
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Add Location
         </Button>
       </div>
@@ -229,7 +234,7 @@ const PartnerLocations: React.FC = () => {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table aria-busy={isLoading} aria-label="Partner locations table">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
@@ -243,6 +248,13 @@ const PartnerLocations: React.FC = () => {
                             variant="ghost"
                             onClick={header.column.getToggleSortingHandler()}
                             className="-ml-4 h-auto p-4"
+                            aria-label={`Sort by ${header.column.columnDef.header} ${
+                              header.column.getIsSorted() === 'asc' ? 'descending' : 'ascending'
+                            }`}
+                            aria-sort={
+                              header.column.getIsSorted() === 'asc' ? 'ascending' :
+                              header.column.getIsSorted() === 'desc' ? 'descending' : 'none'
+                            }
                           >
                             {typeof header.column.columnDef.header === 'string'
                               ? header.column.columnDef.header
@@ -300,21 +312,23 @@ const PartnerLocations: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent role="alertdialog" aria-labelledby="delete-title" aria-describedby="delete-description">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Location</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle id="delete-title">Delete Location</AlertDialogTitle>
+            <AlertDialogDescription id="delete-description">
               Are you sure you want to delete "{deletingLocation?.location_name}"? 
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteLocation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
+              disabled={deleteLocation.isPending}
+              aria-busy={deleteLocation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {deleteLocation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

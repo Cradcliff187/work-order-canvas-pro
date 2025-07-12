@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
+import { useFocusManagement } from '@/hooks/useFocusManagement';
 import type { Tables } from '@/integrations/supabase/types';
 
 const locationSchema = z.object({
@@ -50,6 +51,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
   location,
 }) => {
   const { updateLocation } = usePartnerLocationMutations();
+  const modalRef = useFocusManagement({ isOpen: open });
 
   const form = useForm<LocationFormData>({
     resolver: zodResolver(locationSchema),
@@ -96,13 +98,14 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent ref={modalRef} className="max-w-md" role="dialog" aria-labelledby="edit-location-title" tabIndex={-1}>
         <DialogHeader>
-          <DialogTitle>Edit Location</DialogTitle>
+          <DialogTitle id="edit-location-title">Edit Location</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" aria-busy={updateLocation.isPending}>
+            <fieldset className="grid grid-cols-2 gap-4" disabled={updateLocation.isPending}>
+              <legend className="sr-only">Basic Location Information</legend>
               <FormField
                 control={form.control}
                 name="location_number"
@@ -127,9 +130,9 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-            </div>
+              )}
+            />
+            </fieldset>
 
             <FormField
               control={form.control}
@@ -145,7 +148,8 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <fieldset className="grid grid-cols-2 gap-4" disabled={updateLocation.isPending}>
+              <legend className="sr-only">Location Address</legend>
               <FormField
                 control={form.control}
                 name="city"
@@ -172,7 +176,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                   </FormItem>
                 )}
               />
-            </div>
+            </fieldset>
 
             <FormField
               control={form.control}
@@ -188,7 +192,8 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <fieldset className="grid grid-cols-2 gap-4" disabled={updateLocation.isPending}>
+              <legend className="sr-only">Contact Information</legend>
               <FormField
                 control={form.control}
                 name="contact_name"
@@ -215,7 +220,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                   </FormItem>
                 )}
               />
-            </div>
+            </fieldset>
 
             <FormField
               control={form.control}
@@ -256,7 +261,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateLocation.isPending}>
+              <Button type="submit" disabled={updateLocation.isPending} aria-busy={updateLocation.isPending}>
                 {updateLocation.isPending ? 'Updating...' : 'Update Location'}
               </Button>
             </div>
