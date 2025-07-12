@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
 import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
 import {
@@ -29,7 +30,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 
 export default function AdminInvoices() {
   const [searchParams] = useSearchParams();
@@ -231,14 +232,12 @@ export default function AdminInvoices() {
                         </TableRow>
                       ))
                     ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-24 text-center"
-                        >
-                          No invoices found.
-                        </TableCell>
-                      </TableRow>
+                      <EmptyTableState
+                        icon={FileText}
+                        title="No invoices found"
+                        description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Invoices will appear here when subcontractors submit them"}
+                        colSpan={columns.length}
+                      />
                     )}
                   </TableBody>
                 </Table>

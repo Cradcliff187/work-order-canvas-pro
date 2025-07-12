@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { AddEmployeeModal } from '@/components/admin/employees/AddEmployeeModal';
 import { EditEmployeeRatesModal } from '@/components/admin/employees/EditEmployeeRatesModal';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { useEmployees, useEmployeeMutations, formatCurrency, Employee } from '@/hooks/useEmployees';
 import { Users, UserPlus, Search, MoreHorizontal, DollarSign, Edit, UserCheck, Power, TrendingUp } from 'lucide-react';
 
@@ -186,11 +187,17 @@ export default function AdminEmployees() {
               </TableHeader>
               <TableBody>
                 {filteredEmployees.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      {searchTerm ? 'No employees found matching your search.' : 'No employees found.'}
-                    </TableCell>
-                  </TableRow>
+                  <EmptyTableState
+                    icon={Users}
+                    title={searchTerm ? "No employees found matching your search" : "No employees found"}
+                    description={!searchTerm ? "Get started by adding your first employee" : "Try adjusting your search criteria"}
+                    action={{
+                      label: "Add Employee",
+                      onClick: () => setShowAddModal(true),
+                      icon: UserPlus
+                    }}
+                    colSpan={6}
+                  />
                 ) : (
                   filteredEmployees.map((employee) => (
                     <TableRow key={employee.id}>

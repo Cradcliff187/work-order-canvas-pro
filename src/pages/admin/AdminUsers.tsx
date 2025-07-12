@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
-import { Plus, Search, Filter, Download, MoreHorizontal, Edit, Trash2, Power, Eye, Mail, X } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, Edit, Trash2, Power, Eye, Mail, X, Users } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { exportUsers } from '@/lib/utils/export';
@@ -471,11 +472,17 @@ const AdminUsers = () => {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No users found.
-                    </TableCell>
-                  </TableRow>
+                  <EmptyTableState
+                    icon={Users}
+                    title={globalFilter || orgFilter ? "No users found matching your criteria" : "No users found"}
+                    description={!globalFilter && !orgFilter ? "Get started by creating your first user" : "Try adjusting your search criteria"}
+                    action={{
+                      label: "Create User",
+                      onClick: () => setShowCreateModal(true),
+                      icon: Plus
+                    }}
+                    colSpan={columns.length}
+                  />
                 )}
               </TableBody>
             </Table>

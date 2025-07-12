@@ -17,6 +17,7 @@ import { BulkActionsBar } from '@/components/admin/organizations/BulkActionsBar'
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { exportOrganizations } from '@/lib/utils/export';
 
 export interface Organization {
@@ -533,11 +534,17 @@ const AdminOrganizations = () => {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No organizations found.
-                    </TableCell>
-                  </TableRow>
+                  <EmptyTableState
+                    icon={Building2}
+                    title={globalFilter || selectedType !== 'all' || !showOnlyActive ? "No organizations found matching your criteria" : "No organizations found"}
+                    description={!globalFilter && selectedType === 'all' && showOnlyActive ? "Get started by creating your first organization" : "Try adjusting your search criteria or filters"}
+                    action={{
+                      label: "Create Organization",
+                      onClick: () => setShowCreateModal(true),
+                      icon: Plus
+                    }}
+                    colSpan={columns.length}
+                  />
                 )}
               </TableBody>
             </Table>

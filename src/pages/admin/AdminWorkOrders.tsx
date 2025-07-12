@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Download, RotateCcw } from 'lucide-react';
+import { Plus, Download, RotateCcw, ClipboardList } from 'lucide-react';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { useWorkOrders, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
@@ -237,9 +238,17 @@ export default function AdminWorkOrders() {
           {isLoading ? (
             renderTableSkeleton()
           ) : workOrdersData?.data.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground">
-              No work orders found matching your criteria.
-            </div>
+            <EmptyTableState
+              icon={ClipboardList}
+              title="No work orders found"
+              description={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Get started by creating your first work order"}
+              action={{
+                label: "Create Work Order",
+                onClick: () => setShowCreateModal(true),
+                icon: Plus
+              }}
+              colSpan={columns.length}
+            />
           ) : (
             <>
               <div className="rounded-md border">
@@ -278,14 +287,12 @@ export default function AdminWorkOrders() {
                         </TableRow>
                       ))
                     ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-24 text-center"
-                        >
-                          No results.
-                        </TableCell>
-                      </TableRow>
+                      <EmptyTableState
+                        icon={ClipboardList}
+                        title="No work orders found"
+                        description="Try adjusting your filters or search criteria"
+                        colSpan={columns.length}
+                      />
                     )}
                   </TableBody>
                 </Table>

@@ -34,6 +34,7 @@ import {
   Filter,
   X
 } from 'lucide-react';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { useAdminReports } from '@/hooks/useAdminReports';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
@@ -408,9 +409,12 @@ export default function AdminReports() {
           {isLoading ? (
             renderTableSkeleton()
           ) : reportsData?.data.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground">
-              No reports found matching your criteria.
-            </div>
+            <EmptyTableState
+              icon={FileText}
+              title="No reports found"
+              description={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
+              colSpan={columns.length}
+            />
           ) : (
             <>
               <div className="rounded-md border">
@@ -449,14 +453,12 @@ export default function AdminReports() {
                         </TableRow>
                       ))
                     ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-24 text-center"
-                        >
-                          No results.
-                        </TableCell>
-                      </TableRow>
+                      <EmptyTableState
+                        icon={FileText}
+                        title="No reports found"
+                        description="Try adjusting your filters or search criteria"
+                        colSpan={columns.length}
+                      />
                     )}
                   </TableBody>
                 </Table>
