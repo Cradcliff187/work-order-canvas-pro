@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useOrganizations, useOrganizationMutations } from '@/hooks/useOrganizations';
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
 import { EditOrganizationModal } from '@/components/admin/organizations/EditOrganizationModal';
+import { ViewOrganizationModal } from '@/components/admin/organizations/ViewOrganizationModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
@@ -40,6 +41,7 @@ const AdminOrganizations = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+  const [viewingOrganization, setViewingOrganization] = useState<Organization | null>(null);
   const [showOnlyActive, setShowOnlyActive] = useState(true);
   const [selectedType, setSelectedType] = useState<string>('all');
   const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null);
@@ -201,7 +203,7 @@ const AdminOrganizations = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewingOrganization(org)}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
@@ -570,6 +572,17 @@ const AdminOrganizations = () => {
             title: "Organization updated",
             description: "The organization has been updated successfully.",
           });
+        }}
+      />
+
+      <ViewOrganizationModal
+        open={!!viewingOrganization}
+        onOpenChange={(open) => !open && setViewingOrganization(null)}
+        organization={viewingOrganization}
+        onEdit={() => {
+          setSelectedOrganization(viewingOrganization);
+          setShowEditModal(true);
+          setViewingOrganization(null);
         }}
       />
 
