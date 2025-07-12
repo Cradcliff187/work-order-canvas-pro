@@ -7,12 +7,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info } from 'lucide-react';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter } from 'lucide-react';
 import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
+import { OrganizationBadge } from '@/components/OrganizationBadge';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -232,11 +233,22 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               <Info className="h-4 w-4" />
               <span className="font-medium">Status Change Preview</span>
             </div>
-            <div className="text-sm text-blue-700">
+            <div className="text-sm text-blue-700 space-y-2">
               {selectedAssignees.length > 0 ? (
-                <>Work orders will automatically change from <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> to <Badge className="mx-1 bg-yellow-100 text-yellow-800 text-xs">Assigned</Badge> when assignments are created.</>
+                <div>
+                  Work orders will automatically change from <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> to <Badge className="mx-1 bg-yellow-100 text-yellow-800 text-xs">Assigned</Badge> when assignments are created.
+                </div>
               ) : (
-                <>Work orders will be returned to <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status when all assignments are removed.</>
+                <div>
+                  Work orders will be returned to <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status when all assignments are removed.
+                </div>
+              )}
+              {selectedAssigneeData.length > 0 && (
+                <div className="text-xs">
+                  <strong>Organizations involved:</strong> {
+                    Array.from(new Set(selectedAssigneeData.map(a => a.organization))).join(', ')
+                  }
+                </div>
               )}
             </div>
           </div>
@@ -302,12 +314,19 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                 checked={selectedAssignees.includes(employee.id)}
                                 onCheckedChange={() => toggleAssignee(employee.id)}
                               />
-                              <div>
+                              <div className="flex-1">
                                 <div className="font-medium">
                                   {employee.first_name} {employee.last_name}
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {employee.organization}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <OrganizationBadge 
+                                    organization={{ 
+                                      name: employee.organization, 
+                                      organization_type: 'internal' 
+                                    }} 
+                                    size="sm"
+                                    showIcon={true}
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -345,12 +364,19 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                 checked={selectedAssignees.includes(subcontractor.id)}
                                 onCheckedChange={() => toggleAssignee(subcontractor.id)}
                               />
-                              <div>
+                              <div className="flex-1">
                                 <div className="font-medium">
                                   {subcontractor.first_name} {subcontractor.last_name}
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {subcontractor.organization}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <OrganizationBadge 
+                                    organization={{ 
+                                      name: subcontractor.organization, 
+                                      organization_type: 'subcontractor' 
+                                    }} 
+                                    size="sm"
+                                    showIcon={true}
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -381,14 +407,28 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             {selectedAssigneeData.length > 0 && (
               <Card>
                 <CardContent className="p-3">
-                  <div className="text-sm font-medium mb-2">
-                    Selected ({selectedAssigneeData.length}):
+                  <div className="text-sm font-medium mb-3">
+                    Selected Assignees ({selectedAssigneeData.length}):
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedAssigneeData.map((assignee) => (
-                      <Badge key={assignee.id} variant="secondary">
-                        {assignee.first_name} {assignee.last_name} ({assignee.type})
-                      </Badge>
+                  <div className="space-y-2">
+                    {selectedAssigneeData.map((assignee, index) => (
+                      <div key={assignee.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs">
+                            {index === 0 ? "Lead" : "Support"}
+                          </Badge>
+                          <span className="text-sm font-medium">
+                            {assignee.first_name} {assignee.last_name}
+                          </span>
+                        </div>
+                        <OrganizationBadge 
+                          organization={{ 
+                            name: assignee.organization, 
+                            organization_type: assignee.type === 'employee' ? 'internal' : 'subcontractor' 
+                          }} 
+                          size="sm"
+                        />
+                      </div>
                     ))}
                   </div>
                 </CardContent>
@@ -419,7 +459,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             />
             <Label htmlFor="sendEmail" className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Send email notification to subcontractor
+              Send email notification to assignees
+              {selectedAssigneeData.length > 0 && (
+                <span className="text-muted-foreground text-xs">
+                  ({selectedAssigneeData.length} recipient{selectedAssigneeData.length > 1 ? 's' : ''})
+                </span>
+              )}
             </Label>
           </div>
 
