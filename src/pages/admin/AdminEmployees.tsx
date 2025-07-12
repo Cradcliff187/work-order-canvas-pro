@@ -9,7 +9,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { AddEmployeeModal } from '@/components/admin/employees/AddEmployeeModal';
 import { EditEmployeeRatesModal } from '@/components/admin/employees/EditEmployeeRatesModal';
 import { useEmployees, useEmployeeMutations, formatCurrency, Employee } from '@/hooks/useEmployees';
-import { Users, UserPlus, Search, MoreHorizontal, DollarSign, Edit, UserCheck, UserX, TrendingUp } from 'lucide-react';
+import { Users, UserPlus, Search, MoreHorizontal, DollarSign, Edit, UserCheck, Power, TrendingUp } from 'lucide-react';
 
 export default function AdminEmployees() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -234,17 +234,8 @@ export default function AdminEmployees() {
                               onClick={() => handleToggleStatus(employee.id, employee.is_active)}
                               disabled={toggleEmployeeStatus.isPending}
                             >
-                              {employee.is_active ? (
-                                <>
-                                  <UserX className="mr-2 h-4 w-4" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <UserCheck className="mr-2 h-4 w-4" />
-                                  Activate
-                                </>
-                              )}
+                              <Power className="mr-2 h-4 w-4" />
+                              {employee.is_active ? 'Deactivate' : 'Activate'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

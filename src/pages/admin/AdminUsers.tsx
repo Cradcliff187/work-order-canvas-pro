@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
-import { Plus, Search, Filter, Download, MoreHorizontal, Edit, Trash2, RefreshCw, Eye, Mail, X } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, Edit, Trash2, Power, Eye, Mail, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -280,7 +280,7 @@ const AdminUsers = () => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <Power className="mr-2 h-4 w-4" />
                 {user.is_active ? 'Deactivate' : 'Activate'}
               </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)}>
