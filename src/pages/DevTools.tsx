@@ -2,40 +2,25 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { 
   Database, 
   Trash2, 
   Users, 
   LogIn, 
   Copy,
-  Building2,
   FileText,
   Settings,
   AlertTriangle,
   UserCheck,
   Search,
-  X,
-  BarChart3,
-  Shield,
-  Activity,
-  Clock,
-  TrendingUp,
-  CheckCircle,
-  XCircle,
-  Timer,
-  Zap,
-  Target,
-  PieChart
+  X
 } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table';
 import { useDevTools } from '@/hooks/useDevTools';
-import { useCompanyAccessVerification } from '@/hooks/useCompanyAccessVerification';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,21 +55,12 @@ const DevTools = () => {
   const {
     loading,
     counts,
-    analytics,
-    performance,
-    fetchAllMetrics,
-    fetchCompanyAnalytics,
+    fetchCounts,
     runSeedScript,
     clearTestData,
     quickLogin,
     testCredentials
   } = useDevTools();
-
-  const {
-    loading: verificationLoading,
-    results: verificationResults,
-    runVerification
-  } = useCompanyAccessVerification();
 
   // Check if we're in development
   const isDevelopment = import.meta.env.MODE === 'development';
@@ -92,10 +68,10 @@ const DevTools = () => {
 
   useEffect(() => {
     if (isDevelopment && isAdmin) {
-      fetchAllMetrics();
+      fetchCounts();
       fetchImpersonationUsers();
     }
-  }, [isDevelopment, isAdmin, fetchAllMetrics]);
+  }, [isDevelopment, isAdmin]);
 
   const fetchImpersonationUsers = async () => {
     const { data, error } = await supabase
@@ -327,22 +303,10 @@ const DevTools = () => {
       </div>
 
       <Tabs defaultValue="operations" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="operations" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Operations
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="verification" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Verification
-          </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Performance
           </TabsTrigger>
           <TabsTrigger value="credentials" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -410,25 +374,12 @@ const DevTools = () => {
 
                 <Button 
                   variant="outline" 
-                  onClick={fetchAllMetrics}
+                  onClick={fetchCounts}
                   disabled={loading}
                   className="flex items-center gap-2"
                 >
                   <FileText className="h-4 w-4" />
-                  Refresh Metrics
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    fetchCompanyAnalytics();
-                    toast({ title: "Analytics refreshed separately" });
-                  }}
-                  disabled={loading}
-                  className="flex items-center gap-2"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  Refresh Analytics
+                  Refresh Counts
                 </Button>
               </div>
             </CardContent>
@@ -459,7 +410,7 @@ const DevTools = () => {
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground">
-                  Click "Refresh All Metrics" to load statistics
+                  Click "Refresh Counts" to load statistics
                 </div>
               )}
             </CardContent>
@@ -513,7 +464,7 @@ const DevTools = () => {
                   </div>
                 </div>
 
-                <Separator />
+                <div className="border-t pt-4"></div>
 
                 {/* Partner Users */}
                 <div>
@@ -548,7 +499,7 @@ const DevTools = () => {
                   </div>
                 </div>
 
-                <Separator />
+                <div className="border-t pt-4"></div>
 
                 {/* Subcontractor Users */}
                 <div>
@@ -589,379 +540,6 @@ const DevTools = () => {
           </Card>
         </TabsContent>
 
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
-          {analytics ? (
-            <>
-              {/* User & Organization Distribution */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      User Distribution
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {Object.entries(analytics.userDistribution).map(([type, count]) => (
-                        <div key={type} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={type === 'total' ? 'default' : 'secondary'}>
-                              {type.charAt(0).toUpperCase() + type.slice(1)}
-                            </Badge>
-                          </div>
-                          <div className="font-mono text-lg">{count}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      Organization Breakdown
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {Object.entries(analytics.organizationBreakdown).map(([type, count]) => (
-                        <div key={type} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={type === 'total' ? 'default' : 'outline'}>
-                              {type.charAt(0).toUpperCase() + type.slice(1)}
-                            </Badge>
-                          </div>
-                          <div className="font-mono text-lg">{count}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Work Order Analytics */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Work Order Analytics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Status Distribution</h4>
-                      <div className="space-y-2">
-                        {Object.entries(analytics.workOrderStats.byStatus).map(([status, count]) => (
-                          <div key={status} className="flex items-center justify-between text-sm">
-                            <span className="capitalize">{status.replace(/_/g, ' ')}</span>
-                            <Badge variant="outline">{count}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Key Metrics</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Total Orders</span>
-                          <span className="font-mono">{analytics.workOrderStats.totalOrders}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Avg per Organization</span>
-                          <span className="font-mono">{analytics.workOrderStats.averagePerOrganization}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Top Organizations</h4>
-                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                        {analytics.workOrderStats.byOrganization
-                          .sort((a, b) => b.count - a.count)
-                          .slice(0, 5)
-                          .map((org, index) => (
-                          <div key={index} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Badge variant="outline" className="text-xs">
-                                {org.type}
-                              </Badge>
-                              <span className="truncate">{org.name}</span>
-                            </div>
-                            <span className="font-mono">{org.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Assignment Patterns & Data Quality */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Target className="h-5 w-5" />
-                      Assignment Patterns
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span>Individual Assignments</span>
-                        <Badge variant="secondary">{analytics.assignmentPatterns.individualAssignments}</Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Organization Assignments</span>
-                        <Badge variant="secondary">{analytics.assignmentPatterns.organizationAssignments}</Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Multiple Assignments</span>
-                        <Badge variant="outline">{analytics.assignmentPatterns.multipleAssignments}</Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Unassigned Orders</span>
-                        <Badge variant={analytics.assignmentPatterns.unassignedOrders > 0 ? "destructive" : "secondary"}>
-                          {analytics.assignmentPatterns.unassignedOrders}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <PieChart className="h-5 w-5" />
-                      Data Quality Metrics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Completion Rate</span>
-                          <span>{analytics.dataQuality.completionRate}%</span>
-                        </div>
-                        <Progress value={analytics.dataQuality.completionRate} className="h-2" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Assignment Coverage</span>
-                          <span>{analytics.dataQuality.assignmentCoverage}%</span>
-                        </div>
-                        <Progress value={analytics.dataQuality.assignmentCoverage} className="h-2" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Report Submission Rate</span>
-                          <span>{analytics.dataQuality.reportSubmissionRate}%</span>
-                        </div>
-                        <Progress value={analytics.dataQuality.reportSubmissionRate} className="h-2" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Invoice Completion Rate</span>
-                          <span>{analytics.dataQuality.invoiceCompletionRate}%</span>
-                        </div>
-                        <Progress value={analytics.dataQuality.invoiceCompletionRate} className="h-2" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </>
-          ) : (
-            <Card>
-              <CardContent className="flex items-center justify-center p-8">
-                <div className="text-center">
-                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Click "Refresh All Metrics" to load analytics data
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Verification Tab */}
-        <TabsContent value="verification" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Company Access Verification
-              </CardTitle>
-              <CardDescription>
-                Test and verify organization-based access controls across the application
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <Button
-                  onClick={runVerification}
-                  disabled={verificationLoading}
-                  className="flex items-center gap-2"
-                >
-                  <Shield className="h-4 w-4" />
-                  {verificationLoading ? 'Running Tests...' : 'Run Verification Tests'}
-                </Button>
-              </div>
-
-              {verificationResults && (
-                <div className="space-y-4 mt-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Test Results</h3>
-                    <Badge variant={verificationResults.summary.failed === 0 ? "default" : "destructive"}>
-                      {verificationResults.summary.failed === 0 ? "All Tests Passed" : "Tests Failed"}
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{verificationResults.summary.passed}</div>
-                      <div className="text-sm text-muted-foreground">Passed</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">{verificationResults.summary.failed}</div>
-                      <div className="text-sm text-muted-foreground">Failed</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">{verificationResults.summary.totalTests}</div>
-                      <div className="text-sm text-muted-foreground">Total</div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-semibold mb-2">Test Scenarios</h4>
-                    {verificationResults.scenarios.map((scenario, index) => (
-                      <Card key={index}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h5 className="font-medium">{scenario.name}</h5>
-                            <Badge variant={scenario.passed ? "default" : "destructive"}>
-                              {scenario.passed ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                              {scenario.passed ? "Passed" : "Failed"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">{scenario.description}</p>
-                          <p className="text-sm">{scenario.details}</p>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Execution time: {scenario.executionTime}ms
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    
-                    <h4 className="font-semibold mb-2 mt-6">Company Access Results</h4>
-                    {verificationResults.companyResults.map((company, index) => (
-                      <Card key={index}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h5 className="font-medium">{company.companyName}</h5>
-                            <Badge variant="outline">
-                              {company.userCount} users, {company.workOrderCount} orders
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div className="flex justify-between">
-                              <span>Work Order Access</span>
-                              <Badge variant={company.accessValidation.allUsersCanSeeCompanyWorkOrders ? "default" : "destructive"} className="text-xs">
-                                {company.accessValidation.allUsersCanSeeCompanyWorkOrders ? "Pass" : "Fail"}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Individual Assignments</span>
-                              <Badge variant={company.accessValidation.individualAssignmentsWork ? "default" : "destructive"} className="text-xs">
-                                {company.accessValidation.individualAssignmentsWork ? "Pass" : "Fail"}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Cross-Company Privacy</span>
-                              <Badge variant={company.accessValidation.crossCompanyPrivacy ? "default" : "destructive"} className="text-xs">
-                                {company.accessValidation.crossCompanyPrivacy ? "Pass" : "Fail"}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Statistics Access</span>
-                              <Badge variant={company.accessValidation.companyStatistics ? "default" : "destructive"} className="text-xs">
-                                {company.accessValidation.companyStatistics ? "Pass" : "Fail"}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Performance Tab */}
-        <TabsContent value="performance" className="space-y-6">
-          {performance ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.entries(performance).map(([operation, metrics]) => (
-                <Card key={operation}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="h-5 w-5" />
-                      {operation.replace(/([A-Z])/g, ' $1').trim()}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span>Average Time</span>
-                        <Badge variant={metrics.averageTime > 1000 ? "destructive" : "default"}>
-                          {metrics.averageTime < 1000 ? `${metrics.averageTime}ms` : `${(metrics.averageTime / 1000).toFixed(1)}s`}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Min Time</span>
-                        <span className="font-mono text-sm">
-                          {metrics.minTime < 1000 ? `${metrics.minTime}ms` : `${(metrics.minTime / 1000).toFixed(1)}s`}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Max Time</span>
-                        <span className="font-mono text-sm">
-                          {metrics.maxTime < 1000 ? `${metrics.maxTime}ms` : `${(metrics.maxTime / 1000).toFixed(1)}s`}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Operations</span>
-                        <span className="font-mono text-sm">{metrics.count}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex items-center justify-center p-8">
-                <div className="text-center">
-                  <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Click "Refresh All Metrics" to load performance data
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
 
         {/* Impersonation Tab */}
         <TabsContent value="impersonation" className="space-y-6">

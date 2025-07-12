@@ -18,54 +18,6 @@ interface TableCounts {
   employee_reports: number;
 }
 
-interface CompanyAnalytics {
-  userDistribution: {
-    admin: number;
-    partner: number;
-    subcontractor: number;
-    employee: number;
-    total: number;
-  };
-  organizationBreakdown: {
-    partner: number;
-    subcontractor: number;
-    internal: number;
-    total: number;
-  };
-  workOrderStats: {
-    totalOrders: number;
-    byStatus: Record<string, number>;
-    byOrganization: Array<{ name: string; count: number; type: string }>;
-    averagePerOrganization: number;
-  };
-  assignmentPatterns: {
-    individualAssignments: number;
-    organizationAssignments: number;
-    multipleAssignments: number;
-    unassignedOrders: number;
-  };
-  dataQuality: {
-    completionRate: number;
-    assignmentCoverage: number;
-    reportSubmissionRate: number;
-    invoiceCompletionRate: number;
-  };
-}
-
-interface PerformanceMetrics {
-  queryTimes: {
-    organizations: number;
-    workOrders: number;
-    reports: number;
-    assignments: number;
-  };
-  databaseHealth: {
-    totalConnections: number;
-    slowQueries: number;
-    indexEfficiency: number;
-  };
-}
-
 const TEST_EMAILS = [
   'admin@workorderpro.com',
   'admin2@workorderpro.com',
@@ -81,11 +33,24 @@ const TEST_EMAILS = [
   'landscaper@trade.com'
 ];
 
+const testCredentials = [
+  { email: 'admin@workorderpro.com', type: 'Admin' },
+  { email: 'admin2@workorderpro.com', type: 'Admin' },
+  { email: 'partner1@abc.com', type: 'Partner' },
+  { email: 'partner2@xyz.com', type: 'Partner' },
+  { email: 'partner3@premium.com', type: 'Partner' },
+  { email: 'plumber@trade.com', type: 'Subcontractor' },
+  { email: 'electrician@trade.com', type: 'Subcontractor' },
+  { email: 'hvac@trade.com', type: 'Subcontractor' },
+  { email: 'carpenter@trade.com', type: 'Subcontractor' },
+  { email: 'painter@trade.com', type: 'Subcontractor' },
+  { email: 'maintenance@trade.com', type: 'Employee' },
+  { email: 'landscaper@trade.com', type: 'Employee' }
+];
+
 export const useDevTools = () => {
   const [loading, setLoading] = useState(false);
   const [counts, setCounts] = useState<TableCounts | null>(null);
-  const [analytics, setAnalytics] = useState<CompanyAnalytics | null>(null);
-  const [performance, setPerformance] = useState<PerformanceMetrics | null>(null);
   const { toast } = useToast();
 
   const fetchCounts = async () => {
@@ -145,212 +110,6 @@ export const useDevTools = () => {
     }
   };
 
-  const fetchCompanyAnalytics = async () => {
-    try {
-      console.log('📊 Fetching company analytics...');
-      
-      // User Distribution with safe fallback
-      let userDistribution = { admin: 0, partner: 0, subcontractor: 0, employee: 0, total: 0 };
-      try {
-        const { data: userTypes, error: userError } = await supabase
-          .from('profiles')
-          .select('user_type')
-          .eq('is_active', true);
-
-        if (userError) throw userError;
-
-        userDistribution = userTypes?.reduce((acc, user) => {
-          acc[user.user_type] = (acc[user.user_type] || 0) + 1;
-          acc.total++;
-          return acc;
-        }, { admin: 0, partner: 0, subcontractor: 0, employee: 0, total: 0 }) || userDistribution;
-      } catch (error) {
-        console.warn('Failed to fetch user distribution:', error);
-      }
-
-      // Organization Breakdown with safe fallback
-      let organizationBreakdown = { partner: 0, subcontractor: 0, internal: 0, total: 0 };
-      try {
-        const { data: orgTypes, error: orgError } = await supabase
-          .from('organizations')
-          .select('organization_type')
-          .eq('is_active', true);
-
-        if (orgError) throw orgError;
-
-        organizationBreakdown = orgTypes?.reduce((acc, org) => {
-          acc[org.organization_type] = (acc[org.organization_type] || 0) + 1;
-          acc.total++;
-          return acc;
-        }, { partner: 0, subcontractor: 0, internal: 0, total: 0 }) || organizationBreakdown;
-      } catch (error) {
-        console.warn('Failed to fetch organization breakdown:', error);
-      }
-
-      // Work Order Stats with safe fallback
-      let workOrderStats = {
-        totalOrders: 0,
-        byStatus: {} as Record<string, number>,
-        byOrganization: [] as Array<{ name: string; count: number; type: string }>,
-        averagePerOrganization: 0
-      };
-      
-      try {
-        const { data: workOrderData, error: woError } = await supabase
-          .from('work_orders')
-          .select('id, status, organization_id');
-
-        if (woError) throw woError;
-
-        workOrderStats = {
-          totalOrders: workOrderData?.length || 0,
-          byStatus: workOrderData?.reduce((acc, wo) => {
-            acc[wo.status] = (acc[wo.status] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>) || {},
-          byOrganization: [],
-          averagePerOrganization: organizationBreakdown.total > 0 
-            ? Math.round((workOrderData?.length || 0) / organizationBreakdown.total * 100) / 100 
-            : 0
-        };
-      } catch (error) {
-        console.warn('Failed to fetch work order stats:', error);
-      }
-
-      // Assignment Patterns with safe fallback
-      let assignmentPatterns = {
-        individualAssignments: 0,
-        organizationAssignments: 0,
-        multipleAssignments: 0,
-        unassignedOrders: workOrderStats.totalOrders
-      };
-
-      try {
-        const { data: assignments } = await supabase
-          .from('work_order_assignments')
-          .select('id, assignment_type, work_order_id');
-
-        const { data: individuallyAssigned } = await supabase
-          .from('work_orders')
-          .select('id')
-          .not('assigned_to', 'is', null);
-
-        assignmentPatterns = {
-          individualAssignments: individuallyAssigned?.length || 0,
-          organizationAssignments: assignments?.length || 0,
-          multipleAssignments: 0,
-          unassignedOrders: Math.max(0, workOrderStats.totalOrders - (individuallyAssigned?.length || 0) - (assignments?.length || 0))
-        };
-      } catch (error) {
-        console.warn('Failed to fetch assignment patterns:', error);
-      }
-
-      // Data Quality Metrics with safe fallback
-      let dataQuality = {
-        completionRate: 0,
-        assignmentCoverage: 0,
-        reportSubmissionRate: 0,
-        invoiceCompletionRate: 0
-      };
-
-      try {
-        const [completedOrders, ordersWithReports, submittedInvoices] = await Promise.all([
-          supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
-          supabase.from('work_order_reports').select('work_order_id', { count: 'exact', head: true }).eq('status', 'approved'),
-          supabase.from('invoices').select('id', { count: 'exact', head: true }).neq('status', 'draft')
-        ]);
-
-        dataQuality = {
-          completionRate: workOrderStats.totalOrders > 0 
-            ? Math.round((completedOrders.count || 0) / workOrderStats.totalOrders * 100) 
-            : 0,
-          assignmentCoverage: workOrderStats.totalOrders > 0 
-            ? Math.round(((assignmentPatterns.individualAssignments + assignmentPatterns.organizationAssignments) / workOrderStats.totalOrders) * 100) 
-            : 0,
-          reportSubmissionRate: workOrderStats.totalOrders > 0 
-            ? Math.round((ordersWithReports.count || 0) / workOrderStats.totalOrders * 100) 
-            : 0,
-          invoiceCompletionRate: (counts?.invoices || 0) > 0 
-            ? Math.round((submittedInvoices.count || 0) / (counts?.invoices || 1) * 100) 
-            : 0
-        };
-      } catch (error) {
-        console.warn('Failed to fetch data quality metrics:', error);
-      }
-
-      setAnalytics({
-        userDistribution,
-        organizationBreakdown,
-        workOrderStats,
-        assignmentPatterns,
-        dataQuality
-      });
-
-      console.log('✅ Company analytics fetched successfully');
-
-    } catch (error) {
-      console.error('Error fetching company analytics:', error);
-      setAnalytics(null);
-      toast({
-        title: "Analytics Error",
-        description: "Failed to fetch company analytics. Please try refreshing.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchPerformanceMetrics = async () => {
-    try {
-      const startTime = Date.now();
-      
-      // Measure query performance
-      const orgStart = Date.now();
-      await supabase.from('organizations').select('id').limit(1);
-      const orgTime = Date.now() - orgStart;
-
-      const woStart = Date.now();
-      await supabase.from('work_orders').select('id').limit(1);
-      const woTime = Date.now() - woStart;
-
-      const reportStart = Date.now();
-      await supabase.from('work_order_reports').select('id').limit(1);
-      const reportTime = Date.now() - reportStart;
-
-      const assignStart = Date.now();
-      await supabase.from('work_order_assignments').select('id').limit(1);
-      const assignTime = Date.now() - assignStart;
-
-      setPerformance({
-        queryTimes: {
-          organizations: orgTime,
-          workOrders: woTime,
-          reports: reportTime,
-          assignments: assignTime
-        },
-        databaseHealth: {
-          totalConnections: 1, // This would be from a monitoring query
-          slowQueries: 0, // This would be from performance monitoring
-          indexEfficiency: 95 // This would be calculated from query analysis
-        }
-      });
-
-    } catch (error) {
-      console.error('Error fetching performance metrics:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch performance metrics",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchAllMetrics = async () => {
-    await Promise.all([
-      fetchCounts(),
-      fetchCompanyAnalytics(),
-      fetchPerformanceMetrics()
-    ]);
-  };
 
   const runSeedScript = async () => {
     setLoading(true);
@@ -460,8 +219,8 @@ export const useDevTools = () => {
         description: `Cleared test data for ${testProfiles.length} users. Note: Auth users remain due to browser limitations.`,
       });
       
-      // Refresh all metrics
-      await fetchAllMetrics();
+      // Refresh counts only
+      await fetchCounts();
     } catch (error: any) {
       console.error('Clear error:', error);
       toast({
@@ -499,15 +258,10 @@ export const useDevTools = () => {
   return {
     loading,
     counts,
-    analytics,
-    performance,
     fetchCounts,
-    fetchCompanyAnalytics,
-    fetchPerformanceMetrics,
-    fetchAllMetrics,
     runSeedScript,
     clearTestData,
     quickLogin,
-    testCredentials: TEST_EMAILS.map(email => ({ email, password: 'Test123!' }))
+    testCredentials
   };
 };
