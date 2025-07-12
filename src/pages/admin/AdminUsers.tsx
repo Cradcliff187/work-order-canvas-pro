@@ -15,6 +15,7 @@ import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface User {
   id: string;
@@ -41,6 +42,7 @@ const AdminUsers = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [resettingPasswordUserId, setResettingPasswordUserId] = useState<string | null>(null);
   
   const { toast } = useToast();
   const { data: usersData, isLoading, refetch } = useUsers();
@@ -73,6 +75,33 @@ const AdminUsers = () => {
       refetch();
     } catch (error) {
       console.error('Failed to toggle user status:', error);
+    }
+  };
+
+  const handleResetPassword = async (user: User) => {
+    setResettingPasswordUserId(user.id);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Password reset email sent",
+        description: `Password reset email sent to ${user.email}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error sending password reset",
+        description: error.message || "Failed to send password reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setResettingPasswordUserId(null);
     }
   };
 
@@ -201,9 +230,12 @@ const AdminUsers = () => {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit User
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleResetPassword(user)}
+                disabled={resettingPasswordUserId === user.id}
+              >
                 <Mail className="mr-2 h-4 w-4" />
-                Reset Password
+                {resettingPasswordUserId === user.id ? "Sending..." : "Reset Password"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
