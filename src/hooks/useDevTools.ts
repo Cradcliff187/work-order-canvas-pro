@@ -126,9 +126,9 @@ export const useDevTools = () => {
     try {
       console.log('🌱 Starting database seeding...');
       
-      // Import and run the seed script functions
-      const { seedDatabase } = await import('../scripts/seed-functions');
-      await seedDatabase();
+      // Import and run the comprehensive seed script
+      const { seedEnhancedDatabase } = await import('../scripts/enhanced-seed-functions');
+      await seedEnhancedDatabase();
       
       toast({
         title: "Success",

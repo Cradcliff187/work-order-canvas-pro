@@ -250,35 +250,13 @@ const testScenarios = [
 ];
 
 export const seedEnhancedDatabase = async () => {
-  console.log('🌱 Starting enhanced database seeding with multi-user companies...');
-
+  console.log('🌱 Starting comprehensive database seeding with multi-user companies...');
+  
   try {
-    // Clean up existing test data
-    console.log('🧹 Cleaning up existing test data...');
-    
-    const testEmails = enhancedUsers.map(user => user.email);
-
-    // Clean up in correct order to respect foreign key constraints
-    await supabase.from('receipt_work_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('employee_reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('receipts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('invoice_work_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('work_order_reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('work_order_assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('work_order_attachments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('work_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('partner_locations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('user_organizations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    
-    // Delete profiles for test users
-    await supabase.from('profiles').delete().in('email', testEmails);
-    
-    // Delete organizations
-    const testOrgNames = enhancedOrganizations.map(org => org.name);
-    await supabase.from('organizations').delete().in('name', testOrgNames);
-
-    console.log('✅ Cleanup completed');
+    // Phase 1: Clean up existing test data
+    console.log('🧹 Phase 1: Cleaning up existing test data...');
+    await supabase.rpc('clear_test_data');
+    console.log('✅ Cleanup completed using clear_test_data function');
 
     // 1. Create enhanced organizations
     console.log('📁 Creating enhanced organizations...');
@@ -332,12 +310,14 @@ export const seedEnhancedDatabase = async () => {
     const tradeMap = new Map<string, string>();
     createdTrades?.forEach(trade => tradeMap.set(trade.name, trade.id));
 
-    // 4. Create enhanced users and profiles
-    console.log('👥 Creating enhanced users and profiles...');
+    // Phase 2: Create enhanced users and profiles with direct profile creation
+    console.log('👥 Phase 2: Creating enhanced users and profiles...');
     let createdUserCount = 0;
     let updatedUserCount = 0;
     const userProfiles = new Map<string, { id: string, user_id: string }>();
+    const failedUsers: string[] = [];
 
+    // Create profiles directly to avoid auth signup issues
     for (const user of enhancedUsers) {
       try {
         console.log(`Processing user: ${user.email}`);
@@ -345,85 +325,79 @@ export const seedEnhancedDatabase = async () => {
         // Check if profile already exists
         const { data: existingProfile } = await supabase
           .from('profiles')
-          .select('id, user_id, user_type, is_employee')
+          .select('id, user_id, user_type, is_employee, email')
           .eq('email', user.email)
-          .single();
+          .maybeSingle();
         
-        let authUserId: string;
         let profileId: string;
+        let authUserId: string;
 
         if (existingProfile) {
-          authUserId = existingProfile.user_id;
           profileId = existingProfile.id;
-          // Update profile if needed
+          authUserId = existingProfile.user_id;
+          
+          // Update existing profile
           const isEmployee = user.user_type === 'admin' || user.user_type === 'employee';
-          if (existingProfile.user_type !== user.user_type || 
-              existingProfile.is_employee !== isEmployee) {
-            await supabase
-              .from('profiles')
-              .update({
-                user_type: user.user_type,
-                is_employee: isEmployee,
-                company_name: user.company_name,
-                hourly_billable_rate: isEmployee ? (user.user_type === 'admin' ? 75 : 55) : null,
-                hourly_cost_rate: isEmployee ? (user.user_type === 'admin' ? 50 : 35) : null
-              })
-              .eq('id', profileId);
-          }
+          await supabase
+            .from('profiles')
+            .update({
+              user_type: user.user_type,
+              is_employee: isEmployee,
+              company_name: user.company_name || undefined,
+              hourly_billable_rate: isEmployee ? (user.user_type === 'admin' ? 75 : 55) : null,
+              hourly_cost_rate: isEmployee ? (user.user_type === 'admin' ? 50 : 35) : null,
+              first_name: user.first_name,
+              last_name: user.last_name
+            })
+            .eq('id', profileId);
+          
           updatedUserCount++;
+          console.log(`  ✓ Updated existing profile for ${user.email}`);
         } else {
-          // Create new auth user
-          const { data: authUser, error: authError } = await supabase.auth.signUp({
-            email: user.email,
-            password: 'Test123!',
-            options: {
-              data: {
-                first_name: user.first_name,
-                last_name: user.last_name,
-                user_type: user.user_type
-              }
-            }
-          });
+          // Generate a consistent UUID for seeding (deterministic)
+          const crypto = globalThis.crypto || (await import('crypto')).webcrypto;
+          const encoder = new TextEncoder();
+          const data = encoder.encode(user.email);
+          const hash = await crypto.subtle.digest('SHA-256', data);
+          const hashArray = new Uint8Array(hash);
+          
+          // Convert first 16 bytes to UUID format
+          authUserId = [
+            Array.from(hashArray.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
+            Array.from(hashArray.slice(4, 6)).map(b => b.toString(16).padStart(2, '0')).join(''),
+            Array.from(hashArray.slice(6, 8)).map(b => b.toString(16).padStart(2, '0')).join(''),
+            Array.from(hashArray.slice(8, 10)).map(b => b.toString(16).padStart(2, '0')).join(''),
+            Array.from(hashArray.slice(10, 16)).map(b => b.toString(16).padStart(2, '0')).join('')
+          ].join('-');
 
-          if (authError) {
-            console.warn(`  ⚠️ Failed to create auth user ${user.email}:`, authError.message);
-            continue;
-          }
-
-          if (!authUser.user) {
-            console.warn(`  ⚠️ No user returned for ${user.email}`);
-            continue;
-          }
-
-          authUserId = authUser.user.id;
-
-          // Create profile
+          // Create profile directly
           const isEmployee = user.user_type === 'admin' || user.user_type === 'employee';
           const { data: newProfile, error: profileError } = await supabase
             .from('profiles')
-            .upsert({
+            .insert({
               user_id: authUserId,
               email: user.email,
               first_name: user.first_name,
               last_name: user.last_name,
               user_type: user.user_type,
-              company_name: user.company_name,
+              company_name: user.company_name || null,
               is_employee: isEmployee,
               hourly_billable_rate: isEmployee ? (user.user_type === 'admin' ? 75 : 55) : null,
-              hourly_cost_rate: isEmployee ? (user.user_type === 'admin' ? 50 : 35) : null
-            }, {
-              onConflict: 'user_id'
+              hourly_cost_rate: isEmployee ? (user.user_type === 'admin' ? 50 : 35) : null,
+              is_active: true
             })
             .select('id')
             .single();
 
           if (profileError) {
-            console.warn(`  ⚠️ Failed to create profile for ${user.email}:`, profileError.message);
+            console.error(`  ❌ Failed to create profile for ${user.email}:`, profileError.message);
+            failedUsers.push(user.email);
             continue;
           }
+          
           profileId = newProfile.id;
           createdUserCount++;
-          console.log(`  ✓ Created user and profile for ${user.email}`);
+          console.log(`  ✓ Created new profile for ${user.email}`);
         }
 
         // Store user profile mapping
@@ -439,7 +413,7 @@ export const seedEnhancedDatabase = async () => {
               .select('id')
               .eq('user_id', profileId)
               .eq('organization_id', orgId)
-              .single();
+              .maybeSingle();
 
             if (!existingRelation) {
               const { error: relationError } = await supabase
@@ -459,23 +433,39 @@ export const seedEnhancedDatabase = async () => {
         }
 
       } catch (error) {
-        console.warn(`❌ Error processing user ${user.email}:`, error);
+        console.error(`❌ Error processing user ${user.email}:`, error);
+        failedUsers.push(user.email);
       }
     }
 
     console.log(`✅ Created ${createdUserCount} new users, updated ${updatedUserCount} existing users`);
+    if (failedUsers.length > 0) {
+      console.warn(`⚠️ Failed to create ${failedUsers.length} users: ${failedUsers.join(', ')}`);
+    }
 
-    // 5. Create company-level test work orders
-    console.log('📋 Creating company-level test work orders...');
-    await createCompanyTestWorkOrders(orgMap, userProfiles, tradeMap);
+    // Phase 3: Create partner locations  
+    console.log('🏢 Phase 3: Creating partner locations...');
+    await createPartnerLocations(orgMap, userProfiles);
 
-    // 6. Create work order assignments for company testing
-    console.log('👥 Creating work order assignments for company testing...');
-    await createCompanyWorkOrderAssignments(orgMap, userProfiles);
+    // Phase 4: Create comprehensive work orders
+    console.log('📋 Phase 4: Creating comprehensive work orders...');
+    await createComprehensiveWorkOrders(orgMap, userProfiles, tradeMap);
 
-    // 7. Create test reports and invoices
-    console.log('📊 Creating test reports and invoices...');
-    await createTestReportsAndInvoices(userProfiles, orgMap);
+    // Phase 5: Create work order assignments  
+    console.log('👥 Phase 5: Creating work order assignments...');
+    await createComprehensiveAssignments(orgMap, userProfiles);
+
+    // Phase 6: Create work order reports
+    console.log('📝 Phase 6: Creating work order reports...');
+    await createWorkOrderReports(userProfiles);
+
+    // Phase 7: Create financial data (invoices, employee reports, receipts)
+    console.log('💰 Phase 7: Creating financial data...');
+    await createFinancialData(userProfiles, orgMap);
+
+    // Phase 8: Create supporting data (attachments, email logs)
+    console.log('📎 Phase 8: Creating supporting data...');
+    await createSupportingData(userProfiles);
 
     // 8. Run company access verification tests
     console.log('🧪 Running company access verification tests...');
@@ -509,155 +499,413 @@ export const seedEnhancedDatabase = async () => {
   }
 };
 
-// Helper functions for company testing
-const createCompanyTestWorkOrders = async (
+// Comprehensive helper functions for testing
+
+// Phase 3: Create partner locations
+const createPartnerLocations = async (orgMap: Map<string, string>, userProfiles: Map<string, any>) => {
+  const partnerOrgs = ['ABC Property Management', 'XYZ Commercial Properties', 'Premium Facilities Group', 'MegaCorp Industries'];
+  const locations = [];
+
+  for (const orgName of partnerOrgs) {
+    const orgId = orgMap.get(orgName);
+    if (!orgId) continue;
+
+    // Create 3-5 locations per partner
+    const locationCount = 3 + Math.floor(Math.random() * 3);
+    for (let i = 1; i <= locationCount; i++) {
+      locations.push({
+        organization_id: orgId,
+        location_number: `${orgName.split(' ')[0]}-${i.toString().padStart(3, '0')}`,
+        location_name: `${orgName} - Location ${i}`,
+        street_address: `${100 + i * 10} Business Street`,
+        city: ['New York', 'Los Angeles', 'Chicago', 'Houston'][Math.floor(Math.random() * 4)],
+        state: ['NY', 'CA', 'IL', 'TX'][Math.floor(Math.random() * 4)],
+        zip_code: `${10000 + Math.floor(Math.random() * 90000)}`,
+        contact_name: `Location Manager ${i}`,
+        contact_email: `location${i}@${orgName.toLowerCase().replace(/\s+/g, '')}.com`,
+        contact_phone: `(555) ${String(Math.floor(Math.random() * 900) + 100)}-${String(Math.floor(Math.random() * 9000) + 1000)}`
+      });
+    }
+  }
+
+  const { error } = await supabase
+    .from('partner_locations')
+    .insert(locations);
+
+  if (error) {
+    console.warn('Failed to create partner locations:', error.message);
+  } else {
+    console.log(`✅ Created ${locations.length} partner locations`);
+  }
+};
+
+// Phase 4: Create comprehensive work orders
+const createComprehensiveWorkOrders = async (
   orgMap: Map<string, string>, 
   userProfiles: Map<string, any>, 
   tradeMap: Map<string, string>
 ) => {
-  const workOrders = [
-    // ABC Property Management work orders (accessible to all ABC users)
-    {
-      title: 'Main Office Plumbing Issue',
-      description: 'Leaky faucet in main conference room',
-      organization_id: orgMap.get('ABC Property Management'),
-      trade_id: tradeMap.get('Plumbing'),
-      created_by: userProfiles.get('john.smith@abc.com')?.id,
-      status: 'received' as const
-    },
-    {
-      title: 'Electrical Outlet Repair',
-      description: 'Non-functioning outlet in break room',
-      organization_id: orgMap.get('ABC Property Management'),
-      trade_id: tradeMap.get('Electrical'),
-      created_by: userProfiles.get('mary.jones@abc.com')?.id,
-      status: 'assigned' as const
-    },
-    // XYZ Commercial Properties work orders
-    {
-      title: 'HVAC Maintenance',
-      description: 'Quarterly HVAC system maintenance',
-      organization_id: orgMap.get('XYZ Commercial Properties'),
-      trade_id: tradeMap.get('HVAC'),
-      created_by: userProfiles.get('sarah.johnson@xyz.com')?.id,
-      status: 'received' as const
-    },
-    {
-      title: 'Carpet Cleaning',
-      description: 'Deep cleaning of office carpets',
-      organization_id: orgMap.get('XYZ Commercial Properties'),
-      trade_id: tradeMap.get('General Maintenance'),
-      created_by: userProfiles.get('michael.davis@xyz.com')?.id,
-      status: 'in_progress' as const
-    },
-    // Premium Facilities Group work orders
-    {
-      title: 'Window Installation',
-      description: 'Replace broken windows in lobby',
-      organization_id: orgMap.get('Premium Facilities Group'),
-      trade_id: tradeMap.get('General Maintenance'),
-      created_by: userProfiles.get('mike.wilson@premium.com')?.id,
-      status: 'assigned' as const
+  const workOrderTemplates = [
+    // ABC Property Management (8 work orders)
+    { org: 'ABC Property Management', creator: 'john.smith@abc.com', title: 'Main Office Plumbing Repair', description: 'Leaky faucet in conference room needs immediate attention', trade: 'Plumbing', status: 'received' as const },
+    { org: 'ABC Property Management', creator: 'mary.jones@abc.com', title: 'Electrical Outlet Installation', description: 'Install additional outlets in break room', trade: 'Electrical', status: 'assigned' as const },
+    { org: 'ABC Property Management', creator: 'david.brown@abc.com', title: 'HVAC Filter Replacement', description: 'Quarterly HVAC maintenance and filter replacement', trade: 'HVAC', status: 'in_progress' as const },
+    { org: 'ABC Property Management', creator: 'john.smith@abc.com', title: 'Office Carpet Cleaning', description: 'Deep clean carpets in all office areas', trade: 'General Maintenance', status: 'completed' as const },
+    { org: 'ABC Property Management', creator: 'mary.jones@abc.com', title: 'Window Blind Repair', description: 'Fix broken window blinds in multiple offices', trade: 'General Maintenance', status: 'assigned' as const },
+    { org: 'ABC Property Management', creator: 'david.brown@abc.com', title: 'Parking Lot Lighting', description: 'Replace burnt out lights in parking lot', trade: 'Electrical', status: 'received' as const },
+    { org: 'ABC Property Management', creator: 'john.smith@abc.com', title: 'Landscaping Maintenance', description: 'Trim bushes and maintain outdoor areas', trade: 'Landscaping', status: 'in_progress' as const },
+    { org: 'ABC Property Management', creator: 'mary.jones@abc.com', title: 'Roof Inspection', description: 'Annual roof inspection and minor repairs', trade: 'Roofing', status: 'completed' as const },
+
+    // XYZ Commercial Properties (6 work orders)
+    { org: 'XYZ Commercial Properties', creator: 'sarah.johnson@xyz.com', title: 'Emergency Plumbing', description: 'Burst pipe in basement needs immediate repair', trade: 'Plumbing', status: 'in_progress' as const },
+    { org: 'XYZ Commercial Properties', creator: 'michael.davis@xyz.com', title: 'Office Painting', description: 'Paint reception area and hallways', trade: 'Painting', status: 'assigned' as const },
+    { org: 'XYZ Commercial Properties', creator: 'lisa.wilson@xyz.com', title: 'Floor Refinishing', description: 'Refinish hardwood floors in executive offices', trade: 'Flooring', status: 'received' as const },
+    { org: 'XYZ Commercial Properties', creator: 'sarah.johnson@xyz.com', title: 'Security System Wiring', description: 'Install new security camera wiring', trade: 'Electrical', status: 'assigned' as const },
+    { org: 'XYZ Commercial Properties', creator: 'michael.davis@xyz.com', title: 'Kitchen Appliance Repair', description: 'Fix broken microwave and coffee machine', trade: 'Appliance Repair', status: 'completed' as const },
+    { org: 'XYZ Commercial Properties', creator: 'lisa.wilson@xyz.com', title: 'Conference Room Setup', description: 'Install new AV equipment and furniture', trade: 'General Maintenance', status: 'in_progress' as const },
+
+    // Premium Facilities Group (7 work orders)
+    { org: 'Premium Facilities Group', creator: 'mike.wilson@premium.com', title: 'Elevator Maintenance', description: 'Quarterly elevator inspection and maintenance', trade: 'General Maintenance', status: 'assigned' as const },
+    { org: 'Premium Facilities Group', creator: 'jennifer.taylor@premium.com', title: 'Fire System Check', description: 'Test and maintain fire suppression system', trade: 'Electrical', status: 'completed' as const },
+    { org: 'Premium Facilities Group', creator: 'robert.anderson@premium.com', title: 'Bathroom Renovation', description: 'Update restroom fixtures and tiles', trade: 'Plumbing', status: 'in_progress' as const },
+    { org: 'Premium Facilities Group', creator: 'amanda.martinez@premium.com', title: 'Climate Control Upgrade', description: 'Install new smart thermostats', trade: 'HVAC', status: 'received' as const },
+    { org: 'Premium Facilities Group', creator: 'mike.wilson@premium.com', title: 'Warehouse Lighting', description: 'Upgrade to LED lighting in warehouse', trade: 'Electrical', status: 'assigned' as const },
+    { org: 'Premium Facilities Group', creator: 'jennifer.taylor@premium.com', title: 'Dock Door Repair', description: 'Fix hydraulic loading dock doors', trade: 'General Maintenance', status: 'in_progress' as const },
+    { org: 'Premium Facilities Group', creator: 'robert.anderson@premium.com', title: 'Parking Lot Resurfacing', description: 'Repave and re-stripe parking areas', trade: 'General Maintenance', status: 'completed' as const },
+
+    // MegaCorp Industries (4 work orders)
+    { org: 'MegaCorp Industries', creator: 'thomas.lee@megacorp.com', title: 'Industrial HVAC Repair', description: 'Repair large industrial HVAC unit', trade: 'HVAC', status: 'assigned' as const },
+    { org: 'MegaCorp Industries', creator: 'patricia.garcia@megacorp.com', title: 'Electrical Panel Upgrade', description: 'Upgrade main electrical distribution panel', trade: 'Electrical', status: 'received' as const },
+    { org: 'MegaCorp Industries', creator: 'thomas.lee@megacorp.com', title: 'Factory Floor Cleaning', description: 'Deep clean and degrease factory floor', trade: 'General Maintenance', status: 'in_progress' as const },
+    { org: 'MegaCorp Industries', creator: 'patricia.garcia@megacorp.com', title: 'Overhead Crane Service', description: 'Annual maintenance on overhead crane system', trade: 'General Maintenance', status: 'completed' as const }
+  ] as const;
+
+  // Convert templates to work orders with proper IDs and dates
+  const workOrders = workOrderTemplates.map(template => {
+    const orgId = orgMap.get(template.org);
+    const creatorId = userProfiles.get(template.creator)?.id;
+    const tradeId = tradeMap.get(template.trade);
+    
+    if (!orgId || !creatorId || !tradeId) return null;
+
+    // Generate realistic dates based on status
+    let dateSubmitted = getRandomDate(30, 1);
+    let dateAssigned = null;
+    let completedAt = null;
+
+    if (['assigned', 'in_progress', 'completed'].includes(template.status)) {
+      dateAssigned = getRandomDate(25, 15);
     }
-  ];
+    if (['completed'].includes(template.status)) {
+      completedAt = getRandomDate(10, 1);
+    }
+
+    return {
+      title: template.title,
+      description: template.description,
+      organization_id: orgId,
+      trade_id: tradeId,
+      created_by: creatorId,
+      status: template.status,
+      date_submitted: dateSubmitted,
+      date_assigned: dateAssigned,
+      completed_at: completedAt,
+      estimated_hours: Math.floor(Math.random() * 8) + 1,
+      due_date: new Date(Date.now() + Math.random() * 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    };
+  }).filter(Boolean);
 
   const { error } = await supabase
     .from('work_orders')
-    .insert(workOrders.filter(wo => wo.organization_id && wo.created_by));
+    .insert(workOrders);
 
   if (error) {
-    console.warn('Failed to create some test work orders:', error.message);
+    console.warn('Failed to create comprehensive work orders:', error.message);
   } else {
-    console.log(`✅ Created ${workOrders.length} company test work orders`);
+    console.log(`✅ Created ${workOrders.length} comprehensive work orders`);
   }
 };
 
-const createCompanyWorkOrderAssignments = async (
-  orgMap: Map<string, string>, 
-  userProfiles: Map<string, any>
-) => {
-  // Get some work orders to assign
+// Phase 5: Create comprehensive assignments
+const createComprehensiveAssignments = async (orgMap: Map<string, string>, userProfiles: Map<string, any>) => {
+  // Get work orders that should be assigned
   const { data: workOrders } = await supabase
     .from('work_orders')
-    .select('id, organization_id, trade_id')
-    .limit(5);
+    .select('id, trade_id, status')
+    .in('status', ['assigned', 'in_progress', 'completed']);
 
   if (!workOrders?.length) return;
 
-  const assignments = [
-    // Assign entire plumbing company to plumbing work order
-    {
-      work_order_id: workOrders[0]?.id,
-      assigned_to: userProfiles.get('bob.pipes@eliteplumbing.com')?.id,
-      assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
-      assigned_organization_id: orgMap.get('Elite Plumbing Solutions'),
-      assignment_type: 'lead'
-    },
-    // Assign electrical company to electrical work
-    {
-      work_order_id: workOrders[1]?.id,
-      assigned_to: userProfiles.get('tom.sparks@powergrid.com')?.id,
-      assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
-      assigned_organization_id: orgMap.get('PowerGrid Electrical'),
-      assignment_type: 'lead'
+  // Get trades to map subcontractors
+  const { data: trades } = await supabase
+    .from('trades')
+    .select('id, name');
+
+  const tradeMap = new Map(trades?.map(t => [t.id, t.name]) || []);
+  
+  const assignments = [];
+  const adminId = userProfiles.get('admin@workorderpro.com')?.id;
+
+  for (const wo of workOrders) {
+    const tradeName = tradeMap.get(wo.trade_id);
+    let assigneeId = null;
+    let assigneeOrgId = null;
+
+    // Assign based on trade type
+    switch (tradeName) {
+      case 'Plumbing':
+        assigneeId = userProfiles.get('bob.pipes@eliteplumbing.com')?.id;
+        assigneeOrgId = orgMap.get('Elite Plumbing Solutions');
+        break;
+      case 'Electrical':
+        assigneeId = userProfiles.get('tom.sparks@powergrid.com')?.id;
+        assigneeOrgId = orgMap.get('PowerGrid Electrical');
+        break;
+      case 'HVAC':
+        assigneeId = userProfiles.get('lisa.cool@climatecontrol.com')?.id;
+        assigneeOrgId = orgMap.get('Climate Control Experts');
+        break;
+      default:
+        assigneeId = userProfiles.get('jim.fix@universalmaintenance.com')?.id;
+        assigneeOrgId = orgMap.get('Universal Maintenance Corp');
+        break;
     }
-  ];
+
+    if (assigneeId && adminId) {
+      assignments.push({
+        work_order_id: wo.id,
+        assigned_to: assigneeId,
+        assigned_by: adminId,
+        assigned_organization_id: assigneeOrgId,
+        assignment_type: 'lead',
+        notes: `Assigned to ${tradeName} specialist`
+      });
+    }
+  }
 
   const { error } = await supabase
     .from('work_order_assignments')
-    .insert(assignments.filter(a => a.work_order_id && a.assigned_to && a.assigned_by));
+    .insert(assignments);
 
   if (error) {
-    console.warn('Failed to create work order assignments:', error.message);
+    console.warn('Failed to create comprehensive assignments:', error.message);
   } else {
-    console.log(`✅ Created ${assignments.length} company work order assignments`);
+    console.log(`✅ Created ${assignments.length} comprehensive assignments`);
   }
 };
 
-const createTestReportsAndInvoices = async (userProfiles: Map<string, any>, orgMap: Map<string, string>) => {
-  // Get some assigned work orders
+// Phase 6: Create work order reports
+const createWorkOrderReports = async (userProfiles: Map<string, any>) => {
+  // Get work orders that are in progress or completed
   const { data: workOrders } = await supabase
     .from('work_orders')
-    .select('id')
-    .eq('status', 'assigned')
-    .limit(3);
+    .select('id, status')
+    .in('status', ['in_progress', 'completed']);
 
   if (!workOrders?.length) return;
 
-  // Create test reports
-  const reports = workOrders.map(wo => ({
-    work_order_id: wo.id,
-    subcontractor_user_id: userProfiles.get('bob.pipes@eliteplumbing.com')?.id,
-    work_performed: 'Fixed plumbing issue as requested',
-    invoice_amount: 150.00,
-    status: 'submitted' as const
-  }));
+  // Get assignments to know who should submit reports
+  const { data: assignments } = await supabase
+    .from('work_order_assignments')
+    .select('work_order_id, assigned_to')
+    .in('work_order_id', workOrders.map(wo => wo.id));
 
-  const { error: reportError } = await supabase
-    .from('work_order_reports')
-    .insert(reports.filter(r => r.subcontractor_user_id));
+  const reports = [];
 
-  if (reportError) {
-    console.warn('Failed to create test reports:', reportError.message);
+  for (const assignment of assignments || []) {
+    const workOrder = workOrders.find(wo => wo.id === assignment.work_order_id);
+    if (!workOrder) continue;
+
+    const reportStatus = workOrder.status === 'completed' ? 'approved' : 
+                        Math.random() > 0.3 ? 'submitted' : 'reviewed';
+
+    reports.push({
+      work_order_id: assignment.work_order_id,
+      subcontractor_user_id: assignment.assigned_to,
+      work_performed: getRandomElement([
+        'Completed repair work as requested. All issues resolved satisfactorily.',
+        'Performed maintenance and replaced faulty components. System now operating correctly.',
+        'Installation completed according to specifications. Testing verified proper operation.',
+        'Repair work completed. Cleaned up work area and disposed of materials properly.',
+        'Maintenance performed and system optimized. Provided recommendations for future care.'
+      ]),
+      materials_used: getRandomElement([
+        'Standard replacement parts and consumables',
+        'High-grade materials and professional supplies',
+        'OEM parts and certified components',
+        'Premium materials with extended warranty',
+        'Standard maintenance supplies and tools'
+      ]),
+      hours_worked: Math.floor(Math.random() * 6) + 2,
+      invoice_amount: Math.floor(Math.random() * 400) + 100,
+      invoice_number: `INV-${Math.floor(Math.random() * 10000)}`,
+      status: reportStatus,
+      notes: 'Work completed according to specifications and safety standards.'
+    });
   }
 
-  // Create test invoices
-  const { data: invoice, error: invoiceError } = await supabase
+  const { error } = await supabase
+    .from('work_order_reports')
+    .insert(reports);
+
+  if (error) {
+    console.warn('Failed to create work order reports:', error.message);
+  } else {
+    console.log(`✅ Created ${reports.length} work order reports`);
+  }
+};
+
+// Phase 7: Create financial data
+const createFinancialData = async (userProfiles: Map<string, any>, orgMap: Map<string, string>) => {
+  // Create invoices
+  const subcontractorOrgs = ['Elite Plumbing Solutions', 'PowerGrid Electrical', 'Climate Control Experts', 'Universal Maintenance Corp'];
+  const invoices = [];
+
+  for (const orgName of subcontractorOrgs) {
+    const orgId = orgMap.get(orgName);
+    if (!orgId) continue;
+
+    // Create 2-3 invoices per subcontractor
+    const invoiceCount = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < invoiceCount; i++) {
+      const submitterEmail = getRandomElement(enhancedUsers.filter(u => u.organization_name === orgName).map(u => u.email));
+      const submitterId = userProfiles.get(submitterEmail)?.id;
+      
+      if (submitterId) {
+        invoices.push({
+          subcontractor_organization_id: orgId,
+          submitted_by: submitterId,
+          total_amount: Math.floor(Math.random() * 1500) + 500,
+          status: getRandomElement(['submitted', 'approved', 'paid']),
+          external_invoice_number: `EXT-${orgName.split(' ')[0]}-${1000 + i}`
+        });
+      }
+    }
+  }
+
+  const { error: invoiceError } = await supabase
     .from('invoices')
-    .insert({
-      internal_invoice_number: 'INV-TEST-001',
-      subcontractor_organization_id: orgMap.get('Elite Plumbing Solutions'),
-      submitted_by: userProfiles.get('bob.pipes@eliteplumbing.com')?.id,
-      total_amount: 450.00,
-      status: 'submitted'
-    })
-    .select()
-    .single();
+    .insert(invoices);
 
   if (invoiceError) {
-    console.warn('Failed to create test invoice:', invoiceError.message);
+    console.warn('Failed to create invoices:', invoiceError.message);
   } else {
-    console.log('✅ Created test reports and invoices');
+    console.log(`✅ Created ${invoices.length} invoices`);
+  }
+
+  // Create employee reports
+  const employees = enhancedUsers.filter(u => u.is_employee);
+  const employeeReports = [];
+
+  for (const employee of employees) {
+    const employeeId = userProfiles.get(employee.email)?.id;
+    if (!employeeId) continue;
+
+    // Create 3-5 reports per employee
+    const reportCount = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < reportCount; i++) {
+      const reportDate = new Date();
+      reportDate.setDate(reportDate.getDate() - Math.floor(Math.random() * 30));
+
+      employeeReports.push({
+        employee_user_id: employeeId,
+        report_date: reportDate.toISOString().split('T')[0],
+        work_performed: `${employee.first_name} completed assigned maintenance tasks`,
+        hours_worked: Math.floor(Math.random() * 6) + 2,
+        hourly_rate_snapshot: employee.user_type === 'admin' ? 75 : 55,
+        notes: 'Regular maintenance and repair work completed efficiently.'
+      });
+    }
+  }
+
+  const { error: employeeError } = await supabase
+    .from('employee_reports')
+    .insert(employeeReports);
+
+  if (employeeError) {
+    console.warn('Failed to create employee reports:', employeeError.message);
+  } else {
+    console.log(`✅ Created ${employeeReports.length} employee reports`);
+  }
+
+  // Create receipts
+  const receipts = [];
+  
+  for (const employee of employees) {
+    const employeeId = userProfiles.get(employee.email)?.id;
+    if (!employeeId) continue;
+
+    // Create 2-4 receipts per employee
+    const receiptCount = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < receiptCount; i++) {
+      const receiptDate = new Date();
+      receiptDate.setDate(receiptDate.getDate() - Math.floor(Math.random() * 20));
+
+      receipts.push({
+        employee_user_id: employeeId,
+        receipt_date: receiptDate.toISOString().split('T')[0],
+        vendor_name: getRandomElement(['Home Depot', 'Lowes', 'Ace Hardware', 'Tool Supply Co', 'Parts Plus']),
+        description: getRandomElement(['Tools and supplies', 'Replacement parts', 'Safety equipment', 'Maintenance materials', 'Hardware supplies']),
+        amount: Math.floor(Math.random() * 200) + 25,
+        notes: 'Business expense for maintenance operations'
+      });
+    }
+  }
+
+  const { error: receiptError } = await supabase
+    .from('receipts')
+    .insert(receipts);
+
+  if (receiptError) {
+    console.warn('Failed to create receipts:', receiptError.message);
+  } else {
+    console.log(`✅ Created ${receipts.length} receipts`);
+  }
+};
+
+// Phase 8: Create supporting data
+const createSupportingData = async (userProfiles: Map<string, any>) => {
+  // Create work order attachments (simulated)
+  const { data: workOrders } = await supabase
+    .from('work_orders')
+    .select('id')
+    .limit(10);
+
+  if (workOrders?.length) {
+    const attachments = workOrders.map(wo => ({
+      work_order_id: wo.id,
+      file_name: `work_order_${wo.id.slice(0, 8)}_photo.jpg`,
+      file_url: `https://placeholder.com/400x300?text=Work+Order+Photo`,
+      file_type: 'photo' as const,
+      uploaded_by_user_id: userProfiles.get('admin@workorderpro.com')?.id
+    })).filter(a => a.uploaded_by_user_id);
+
+    const { error: attachError } = await supabase
+      .from('work_order_attachments')
+      .insert(attachments);
+
+    if (!attachError) {
+      console.log(`✅ Created ${attachments.length} work order attachments`);
+    }
+  }
+
+  // Create email logs (simulated)
+  const emailLogs = [];
+  for (let i = 0; i < 15; i++) {
+    emailLogs.push({
+      recipient_email: getRandomElement(enhancedUsers.map(u => u.email)),
+      template_used: getRandomElement(['work_order_received', 'work_order_assigned', 'report_submitted']),
+      status: getRandomElement(['sent', 'delivered'] as const),
+      sent_at: getRandomDate(10, 1)
+    });
+  }
+
+  const { error: emailError } = await supabase
+    .from('email_logs')
+    .insert(emailLogs);
+
+  if (!emailError) {
+    console.log(`✅ Created ${emailLogs.length} email logs`);
   }
 };
 
