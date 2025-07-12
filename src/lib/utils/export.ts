@@ -193,3 +193,25 @@ export function exportSubcontractorPerformance(subcontractors: any[], filename?:
   const exportFilename = filename || generateFilename('subcontractor_performance');
   exportToCSV(subcontractors, columns, exportFilename);
 }
+
+/**
+ * Export organizations with comprehensive data
+ */
+export function exportOrganizations(organizations: any[], filename?: string): void {
+  const columns: ExportColumn[] = [
+    { key: 'name', label: 'Organization Name', type: 'string' },
+    { key: 'initials', label: 'Initials', type: 'string' },
+    { key: 'organization_type', label: 'Type', type: 'string' },
+    { key: 'contact_email', label: 'Contact Email', type: 'string' },
+    { key: 'contact_phone', label: 'Contact Phone', type: 'string' },
+    { key: 'address', label: 'Address', type: 'string' },
+    { key: 'users_count', label: 'Users Count', type: 'number' },
+    { key: 'work_orders_count', label: 'Total Work Orders', type: 'number' },
+    { key: 'active_work_orders_count', label: 'Active Work Orders', type: 'number' },
+    { key: 'is_active', label: 'Status', type: 'boolean' },
+    { key: 'created_at', label: 'Created Date', type: 'date' },
+  ];
+
+  const exportFilename = filename || generateFilename('organizations');
+  exportToCSV(organizations, columns, exportFilename);
+}

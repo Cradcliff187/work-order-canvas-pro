@@ -13,9 +13,11 @@ import { useOrganizations, useOrganizationMutations } from '@/hooks/useOrganizat
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
 import { EditOrganizationModal } from '@/components/admin/organizations/EditOrganizationModal';
 import { ViewOrganizationModal } from '@/components/admin/organizations/ViewOrganizationModal';
+import { BulkActionsBar } from '@/components/admin/organizations/BulkActionsBar';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { exportOrganizations } from '@/lib/utils/export';
 
 export interface Organization {
   id: string;
@@ -50,7 +52,7 @@ const AdminOrganizations = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: organizationsData, isLoading, refetch } = useOrganizations();
-  const { deleteOrganization } = useOrganizationMutations();
+  const { deleteOrganization, bulkDeleteOrganizations, bulkToggleOrganizationStatus } = useOrganizationMutations();
 
   const handleDeleteOrganization = (org: Organization) => {
     setDeletingOrganization(org);
@@ -235,7 +237,7 @@ const AdminOrganizations = () => {
       enableSorting: false,
       enableHiding: false,
     },
-  ], []);
+  ], [navigate]);
 
   const filteredData = useMemo(() => {
     if (!organizationsData?.organizations) return [];
@@ -272,6 +274,61 @@ const AdminOrganizations = () => {
       globalFilter,
     },
   });
+
+  // Bulk action handlers
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedIds = selectedRows.map(row => row.original.id);
+  const selectedOrganizations = selectedRows.map(row => row.original);
+
+  const handleClearSelection = () => {
+    setRowSelection({});
+  };
+
+  const handleBulkExport = (ids: string[]) => {
+    const organizationsToExport = filteredData.filter(org => ids.includes(org.id));
+    exportOrganizations(organizationsToExport);
+    toast({
+      title: "Export completed",
+      description: `Exported ${organizationsToExport.length} organization(s) to CSV.`,
+    });
+  };
+
+  const handleBulkDeactivate = async (organizations: Organization[]) => {
+    const activeOrgs = organizations.filter(org => org.is_active);
+    if (activeOrgs.length === 0) {
+      toast({
+        title: "No organizations to deactivate",
+        description: "All selected organizations are already inactive.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await bulkToggleOrganizationStatus.mutateAsync({
+        organizationIds: activeOrgs.map(org => org.id),
+        isActive: false
+      });
+      handleClearSelection();
+    } catch (error) {
+      console.error('Failed to deactivate organizations:', error);
+    }
+  };
+
+  const handleBulkDelete = async (organizations: Organization[]) => {
+    if (organizations.length === 0) return;
+
+    const confirmMessage = `Are you sure you want to delete ${organizations.length} organization(s)? This action cannot be undone and will fail if any organization has active work orders.`;
+    
+    if (window.confirm(confirmMessage)) {
+      try {
+        await bulkDeleteOrganizations.mutateAsync(organizations.map(org => org.id));
+        handleClearSelection();
+      } catch (error) {
+        console.error('Failed to delete organizations:', error);
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -552,6 +609,18 @@ const AdminOrganizations = () => {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedRows.length}
+        selectedIds={selectedIds}
+        selectedOrganizations={selectedOrganizations}
+        onClearSelection={handleClearSelection}
+        onExport={handleBulkExport}
+        onBulkDeactivate={handleBulkDeactivate}
+        onBulkDelete={handleBulkDelete}
+      />
+
+      {/* Modals */}
       <CreateOrganizationModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}

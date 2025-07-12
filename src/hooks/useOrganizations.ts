@@ -334,6 +334,86 @@ export function useOrganizationMutations() {
     },
   });
 
+  const bulkDeleteOrganizations = useMutation({
+    mutationFn: async (organizationIds: string[]) => {
+      // Check for active work orders across all organizations
+      const { data: workOrders, error: woError } = await supabase
+        .from('work_orders')
+        .select('id, organization_id')
+        .in('organization_id', organizationIds)
+        .in('status', ['received', 'assigned', 'in_progress']);
+
+      if (woError) {
+        throw new Error(`Failed to check work orders: ${woError.message}`);
+      }
+
+      if (workOrders && workOrders.length > 0) {
+        throw new Error(`Cannot delete organizations with active work orders (${workOrders.length} active work orders found)`);
+      }
+
+      // Delete user relationships first
+      await supabase
+        .from('user_organizations')
+        .delete()
+        .in('organization_id', organizationIds);
+
+      // Delete the organizations
+      const { error } = await supabase
+        .from('organizations')
+        .delete()
+        .in('id', organizationIds);
+
+      if (error) {
+        throw new Error(`Failed to delete organizations: ${error.message}`);
+      }
+
+      return organizationIds;
+    },
+    onSuccess: (deletedIds) => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      toast({
+        title: "Organizations deleted",
+        description: `Successfully deleted ${deletedIds.length} organization(s).`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting organizations",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkToggleOrganizationStatus = useMutation({
+    mutationFn: async ({ organizationIds, isActive }: { organizationIds: string[]; isActive: boolean }) => {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ is_active: isActive })
+        .in('id', organizationIds);
+
+      if (error) {
+        throw new Error(`Failed to update organization status: ${error.message}`);
+      }
+
+      return { organizationIds, isActive };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      toast({
+        title: "Organization status updated",
+        description: `Successfully ${data.isActive ? 'activated' : 'deactivated'} ${data.organizationIds.length} organization(s).`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating organization status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     createOrganization,
     updateOrganization,
@@ -341,6 +421,8 @@ export function useOrganizationMutations() {
     toggleOrganizationStatus,
     addUserToOrganization,
     removeUserFromOrganization,
+    bulkDeleteOrganizations,
+    bulkToggleOrganizationStatus,
   };
 }
 
