@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-WorkOrderPro uses a comprehensive **20-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering, user organization relationships, partner location management, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
+WorkOrderPro uses a comprehensive **20-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering and draft support, user organization relationships, partner location management with structured addressing, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
 ## Database Architecture Overview
 
@@ -32,25 +32,30 @@ WorkOrderPro uses a comprehensive **20-table** PostgreSQL database with Row Leve
 - **mv_work_order_analytics** - Performance analytics for work orders
 - **mv_subcontractor_performance** - Subcontractor performance metrics
 
-### Storage Buckets (1)
+### Storage Buckets (3)
 - **work-order-photos** - Public bucket for work order photo attachments
+- **work-order-attachments** - Public bucket for work order attachments and invoice documents
+- **avatars** - Public bucket for user profile avatars (5MB limit, image types only)
 
 ### Custom Enums (7)
 - `user_type`: 'admin', 'partner', 'subcontractor', 'employee'
 - `organization_type`: 'partner', 'subcontractor', 'internal'
-- `work_order_status`: 'received', 'assigned', 'in_progress', 'completed', 'cancelled'
+- `work_order_status`: 'received', 'assigned', 'in_progress', 'completed', 'cancelled', 'estimate_needed'
 - `assignment_type`: 'internal', 'subcontractor'
 - `report_status`: 'submitted', 'reviewed', 'approved', 'rejected'  
 - `email_status`: 'sent', 'delivered', 'failed', 'bounced'
 - `file_type`: 'photo', 'invoice', 'document'
 
-### Custom Functions (24)
-- Auth helper functions for RLS and security (8)
-- Trigger functions for automation (3)
-- Email notification functions (4)
-- Utility functions (5)
-- Work order completion functions (4)
+### Custom Functions (40+)
+- Auth helper functions for RLS and security (12)
+- Work order management and numbering (8)
+- Trigger functions for automation (6)
+- Email notification functions (5)
+- Invoice management functions (4)
+- Utility functions (3)
 - Analytics and reporting functions (3)
+- Status transition and completion logic (4)
+- Audit and security functions (3)
 
 ## Entity Relationship Diagram
 
@@ -59,6 +64,8 @@ erDiagram
     organizations ||--o{ user_organizations : "has"
     organizations ||--o{ work_orders : "submits"
     organizations ||--o{ email_settings : "configures"
+    organizations ||--o{ partner_locations : "has"
+    organizations ||--o{ invoices : "submits"
     
     profiles ||--o{ user_organizations : "belongs_to"
     profiles ||--o{ work_orders : "creates"
@@ -74,7 +81,18 @@ erDiagram
     
     work_orders ||--o{ work_order_reports : "has"
     work_orders ||--o{ work_order_attachments : "has"
+    work_orders ||--o{ work_order_assignments : "has"
     work_orders ||--o{ email_logs : "triggers"
+    work_orders ||--o{ invoice_work_orders : "billed_in"
+    work_orders ||--o{ employee_reports : "tracked_in"
+    work_orders ||--o{ receipt_work_orders : "expense_allocated"
+    
+    work_order_reports ||--o{ work_order_attachments : "has"
+    
+    invoices ||--o{ invoice_attachments : "has"
+    invoices ||--o{ invoice_work_orders : "contains"
+    
+    receipts ||--o{ receipt_work_orders : "allocated_to"
     
     work_order_reports ||--o{ work_order_attachments : "has"
     
@@ -717,10 +735,10 @@ erDiagram
 | internal_invoice_number | text | No | - | Auto-generated internal reference (INV-YYYY-00001) |
 | external_invoice_number | text | Yes | - | Subcontractor's invoice number (optional) |
 | subcontractor_organization_id | uuid | No | - | References organizations.id |
-| submitted_by | uuid | Yes | - | References profiles.id (user who submitted) |
-| submitted_at | timestamp | Yes | - | Submission timestamp |
-| status | text | No | 'submitted' | Current status (submitted/approved/rejected/paid) |
-| total_amount | decimal(12,2) | Yes | - | Total invoice amount |
+| submitted_by | uuid | Yes | - | References profiles.id (user who submitted, nullable for drafts) |
+| submitted_at | timestamp | Yes | - | Submission timestamp (nullable for drafts) |
+| status | text | No | 'submitted' | Current status (draft/submitted/approved/rejected/paid) |
+| total_amount | decimal(12,2) | Yes | - | Total invoice amount (nullable for drafts) |
 | approved_by | uuid | Yes | - | References profiles.id (admin who approved) |
 | approved_at | timestamp | Yes | - | Approval timestamp |
 | approval_notes | text | Yes | - | Admin approval or rejection notes |
@@ -795,6 +813,7 @@ erDiagram
 - `invoices_internal_invoice_number_unique` UNIQUE (internal_invoice_number)
 - CHECK (total_amount >= 0)
 - CHECK (status IN ('draft', 'submitted', 'approved', 'rejected', 'paid'))
+- Validation trigger ensures required fields present for submitted invoices
 
 **Indexes**:
 - `idx_invoices_organization` ON (subcontractor_organization_id)
@@ -808,9 +827,11 @@ erDiagram
 - `idx_invoices_status_dates` ON (status, submitted_at, paid_at)
 
 **Business Rules**:
-- **Internal numbering**: Auto-generated format INV-YYYY-00001 with annual sequence
+- **Internal numbering**: Auto-generated format INV-YYYY-00001 with annual sequence (only for submitted invoices)
 - **External numbering**: Optional subcontractor's own invoice number
 - **Status workflow**: draft → submitted → approved/rejected → paid
+- **Draft support**: Allows NULL values for required fields during draft stage
+- **Validation**: Trigger ensures all required fields present before submission
 - **Amount validation**: Must be positive monetary amount
 - **Payment tracking**: Reference and timestamp required when paid
 
@@ -1213,23 +1234,232 @@ END;
 $function$
 ```
 
-#### 13. handle_new_user()
-**Purpose**: Automatically create profile when user signs up.
+#### 13. handle_new_user_robust()
+**Purpose**: Automatically create profile when user signs up with error handling.
 ```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+CREATE OR REPLACE FUNCTION public.handle_new_user_robust()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $function$
 BEGIN
-  INSERT INTO public.profiles (user_id, email, first_name, last_name)
+  INSERT INTO public.profiles (user_id, email, first_name, last_name, user_type)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'first_name', 'User'),
-    COALESCE(NEW.raw_user_meta_data->>'last_name', '')
-  );
+    COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
+    COALESCE((NEW.raw_user_meta_data->>'user_type')::public.user_type, 'subcontractor'::public.user_type)
+  )
+  ON CONFLICT (user_id) DO NOTHING;
   RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'Failed to create profile for user %: %', NEW.id, SQLERRM;
+  RETURN NEW;
+END;
+$function$
+```
+
+### Work Order Numbering Functions
+
+#### 14. generate_work_order_number_v2(org_id, location_number)
+**Purpose**: Smart work order numbering with organization initials and location support.
+```sql
+CREATE OR REPLACE FUNCTION public.generate_work_order_number_v2(org_id uuid, location_number text DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+  org_initials text;
+  sequence_num integer;
+  work_order_num text;
+  fallback_num text;
+  org_name text;
+BEGIN
+  -- Get organization details and lock row for sequence update
+  SELECT initials, name INTO org_initials, org_name
+  FROM public.organizations 
+  WHERE id = org_id AND is_active = true
+  FOR UPDATE;
+  
+  -- Update sequence atomically
+  UPDATE public.organizations 
+  SET next_sequence_number = next_sequence_number + 1
+  WHERE id = org_id
+  RETURNING next_sequence_number - 1 INTO sequence_num;
+  
+  -- Generate fallback number
+  fallback_num := public.generate_work_order_number();
+  
+  -- Build smart number or return fallback with warning
+  IF org_initials IS NULL OR org_initials = '' THEN
+    RETURN jsonb_build_object(
+      'work_order_number', fallback_num,
+      'is_fallback', true,
+      'warning', 'Organization needs initials for smart numbering'
+    );
+  END IF;
+  
+  -- Build final number
+  IF location_number IS NOT NULL AND location_number != '' THEN
+    work_order_num := org_initials || '-' || location_number || '-' || LPAD(sequence_num::text, 3, '0');
+  ELSE
+    work_order_num := org_initials || '-' || LPAD(sequence_num::text, 4, '0');
+  END IF;
+  
+  RETURN jsonb_build_object(
+    'work_order_number', work_order_num,
+    'is_fallback', false
+  );
+END;
+$function$
+```
+
+#### 15. generate_work_order_number_simple(org_id, location_number)
+**Purpose**: Simple wrapper for work order numbering v2.
+```sql
+CREATE OR REPLACE FUNCTION public.generate_work_order_number_simple(org_id uuid, location_number text DEFAULT NULL)
+RETURNS text
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+  result jsonb;
+BEGIN
+  result := public.generate_work_order_number_v2(org_id, location_number);
+  RETURN result->>'work_order_number';
+END;
+$function$
+```
+
+### Invoice Management Functions
+
+#### 16. generate_internal_invoice_number()
+**Purpose**: Generate internal invoice numbers with annual sequence.
+```sql
+CREATE OR REPLACE FUNCTION public.generate_internal_invoice_number()
+RETURNS text
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+  current_year TEXT;
+  sequence_num INTEGER;
+  invoice_num TEXT;
+BEGIN
+  current_year := EXTRACT(YEAR FROM now())::TEXT;
+  
+  SELECT COALESCE(MAX(
+    CASE 
+      WHEN internal_invoice_number ~ ('^INV-' || current_year || '-[0-9]+$')
+      THEN CAST(SUBSTRING(internal_invoice_number FROM LENGTH('INV-' || current_year || '-') + 1) AS INTEGER)
+      ELSE 0
+    END
+  ), 0) + 1
+  INTO sequence_num
+  FROM public.invoices;
+  
+  invoice_num := 'INV-' || current_year || '-' || LPAD(sequence_num::TEXT, 5, '0');
+  RETURN invoice_num;
+END;
+$function$
+```
+
+#### 17. validate_invoice_fields()
+**Purpose**: Validation trigger for invoice submissions.
+```sql
+CREATE OR REPLACE FUNCTION public.validate_invoice_fields()
+RETURNS TRIGGER AS $function$
+BEGIN
+  IF NEW.status = 'submitted' THEN
+    IF NEW.submitted_at IS NULL OR 
+       NEW.submitted_by IS NULL OR 
+       NEW.subcontractor_organization_id IS NULL OR 
+       NEW.total_amount IS NULL THEN
+      RAISE EXCEPTION 'Required fields missing for submitted invoice';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$
+```
+
+### Enhanced Completion Functions
+
+#### 18. check_assignment_completion_status_enhanced(work_order_id)
+**Purpose**: Enhanced completion logic with auto-completion blocking support.
+```sql
+CREATE OR REPLACE FUNCTION public.check_assignment_completion_status_enhanced(work_order_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+DECLARE
+  current_status work_order_status;
+  work_order_rec RECORD;
+BEGIN
+  SELECT status, auto_completion_blocked, assigned_to 
+  INTO work_order_rec
+  FROM work_orders 
+  WHERE id = work_order_id;
+  
+  -- Exit if not in_progress or manually blocked
+  IF work_order_rec.status != 'in_progress' OR work_order_rec.auto_completion_blocked = true THEN
+    RETURN FALSE;
+  END IF;
+  
+  -- Check completion logic for lead assignments or legacy assigned_to
+  -- [Simplified for documentation - see actual function for full logic]
+  
+  RETURN FALSE;
+END;
+$function$
+```
+
+#### 19. set_manual_completion_block(work_order_id, blocked)
+**Purpose**: Admin control for auto-completion blocking.
+```sql
+CREATE OR REPLACE FUNCTION public.set_manual_completion_block(work_order_id uuid, blocked boolean DEFAULT true)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+BEGIN
+  IF NOT public.auth_is_admin() THEN
+    RAISE EXCEPTION 'Only administrators can modify completion settings';
+  END IF;
+  
+  UPDATE work_orders 
+  SET auto_completion_blocked = blocked,
+      completion_method = CASE WHEN blocked THEN 'manual_override' ELSE completion_method END
+  WHERE id = work_order_id;
+END;
+$function$
+```
+
+### Audit Functions
+
+#### 20. audit_trigger_function()
+**Purpose**: Generic audit logging trigger for all table changes.
+```sql
+CREATE OR REPLACE FUNCTION public.audit_trigger_function()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.audit_logs (table_name, record_id, action, new_values, user_id)
+    VALUES (TG_TABLE_NAME, NEW.id, 'INSERT', to_jsonb(NEW), public.auth_user_id());
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO public.audit_logs (table_name, record_id, action, old_values, new_values, user_id)
+    VALUES (TG_TABLE_NAME, NEW.id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), public.auth_user_id());
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO public.audit_logs (table_name, record_id, action, old_values, user_id)
+    VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', to_jsonb(OLD), public.auth_user_id());
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
 END;
 $function$
 ```
@@ -1735,4 +1965,86 @@ graph TB
 
 ---
 
-*This documentation provides a complete reference for both the Supabase database schema and IndexedDB offline storage. For implementation details and migration history, see the migration files in `supabase/migrations/` and `src/utils/indexedDB/`.*
+## Database Migration Timeline
+
+### July 10, 2025
+- **20250710155755**: Initial schema setup with organizations, user_organizations, profiles, trades, work_orders, work_order_reports, work_order_attachments
+- **20250710160818**: Added work order numbering function  
+- **20250710161304**: Added user helper functions for RLS
+- **20250710161407**: Updated helper functions
+- **20250710161623**: Added RLS policies for all tables
+- **20250710161656**: Updated RLS policies
+- **20250710162019**: Restructured helper functions as SECURITY DEFINER
+- **20250710164648**: Added email templates and logs tables
+- **20250710165118**: Enhanced user type security functions
+- **20250710165735**: Added email settings and system settings tables
+- **20250710170456**: Added audit logs table with triggers
+- **20250710173317**: Created work-order-photos storage bucket with policies
+- **20250710180204**: Added analytics functions and materialized views
+- **20250710181921**: Enhanced analytics with completion time and geographic data
+- **20250710213726**: Robust user profile creation with error handling
+- **20250710214512**: Created work-order-attachments storage bucket
+- **20250710230712**: Added comprehensive audit trigger system
+- **20250710231449**: Enhanced admin policies
+- **20250710231829**: Comprehensive RLS policy restructure with optimized helper functions
+- **20250710233253**: Added avatars storage bucket with size/type restrictions
+
+### July 11, 2025
+- **20250711000000**: Fixed RLS infinite recursion with SECURITY DEFINER functions
+- **20250711000002**: Added audit triggers to all tables
+- **20250711000005**: Added performance indexes across all tables
+- **20250711003626**: Added work_order_assignments table for multi-assignee support
+- **20250711003644**: Added assignment triggers and completion logic
+- **20250711023753**: Added employee reports and receipts tables for time tracking
+- **20250711024148**: Added receipt work order allocation junction table
+- **20250711025252**: Enhanced work order assignments with role-based assignments
+- **20250711030635**: Added invoices table with dual numbering system
+- **20250711031041**: Added invoice work orders junction table for multi-work-order billing
+- **20250711031452**: Added partner reference fields and organization assignment to work orders
+- **20250711032635**: Added invoice attachments table for document uploads
+- **20250711033241**: Enhanced completion logic with auto-completion blocking
+- **20250711034638**: Added notification triggers for email automation
+- **20250711035529**: Enhanced work order status transitions with audit logging
+- **20250711041210**: Added employee profiles with hourly rates for cost tracking
+- **20250711041247**: Added structured address fields to work orders
+- **20250711042133**: Enhanced assignment completion with blocking support
+- **20250711042438**: Added completion method tracking
+- **20250711043635**: Enhanced employee reports with cost calculations
+- **20250711044837**: Added invoice status change validation
+- **20250711051644**: Enhanced work order numbering with organization initials
+- **20250711052730**: Added completion email triggers
+- **20250711054041**: Enhanced profile management with employee flags
+- **20250711121815**: Added partner locations table
+- **20250711121846**: Enhanced partner locations with contact information
+- **20250711123418**: Added invoice work order allocation system
+- **20250711131149**: Enhanced invoice management with draft support
+- **20250711140142**: Added work order assignment validation
+- **20250711142955**: Added 'estimate_needed' status to work_order_status enum
+- **20250711150648**: Enhanced completion triggers with assignment support
+- **20250711160038**: Added employee time tracking enhancements
+- **20250711162403**: Updated invoices table for draft invoice support with nullable fields
+- **20250711172637**: Enhanced invoice attachments with file type validation
+- **20250711172847**: Added comprehensive invoice RLS policies
+- **20250711175108**: Enhanced storage policies for invoice attachments
+- **20250711192433**: Added receipt management system for employee expenses
+- **20250711193338**: Enhanced storage policies for invoice financial privacy
+- **20250711193851**: Added employee expense receipt tracking
+- **20250711220728**: Enabled RLS on invoices, invoice_work_orders, and partner_locations tables
+- **20250711224307**: Enhanced partner locations with RLS policies
+- **20250711233513**: Final invoice system enhancements with complete workflow
+
+### Summary of Major Features Added
+- **Multi-assignee work orders** with lead/support roles
+- **Invoice management** with dual numbering and draft support
+- **Employee time tracking** with hourly rates and cost calculations
+- **Receipt management** for employee expense tracking
+- **Partner location management** for multi-site organizations
+- **Enhanced work order numbering** with organization initials
+- **Comprehensive audit system** with automatic logging
+- **Advanced completion logic** with admin override controls
+- **Email notification system** with storage and delivery tracking
+- **Storage buckets** for avatars, attachments, and photos with proper access control
+
+---
+
+*This documentation provides a complete reference for both the Supabase database schema and IndexedDB offline storage. For implementation details and migration history, see the migration files in `supabase/migrations/` and `src/utils/indexedDB/`. Last updated: July 12, 2025.*
