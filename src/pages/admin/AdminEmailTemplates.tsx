@@ -34,6 +34,7 @@ type EmailTemplate = Tables<'email_templates'>;
 const AdminEmailTemplates: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<EmailTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<EmailTemplate | null>(null);
   
@@ -51,13 +52,21 @@ const AdminEmailTemplates: React.FC = () => {
     template.subject.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
+  const handleView = (template: EmailTemplate) => {
+    setViewingTemplate(template);
+    setEditingTemplate(null);
+    setIsCreating(false);
+  };
+
   const handleEdit = (template: EmailTemplate) => {
     setEditingTemplate(template);
+    setViewingTemplate(null);
     setIsCreating(false);
   };
 
   const handleCreate = () => {
     setEditingTemplate(null);
+    setViewingTemplate(null);
     setIsCreating(true);
   };
 
@@ -72,12 +81,21 @@ const AdminEmailTemplates: React.FC = () => {
     }
     
     setEditingTemplate(null);
+    setViewingTemplate(null);
     setIsCreating(false);
   };
 
   const handleCancel = () => {
     setEditingTemplate(null);
+    setViewingTemplate(null);
     setIsCreating(false);
+  };
+
+  const handleEditFromView = () => {
+    if (viewingTemplate) {
+      setEditingTemplate(viewingTemplate);
+      setViewingTemplate(null);
+    }
   };
 
   const handleDelete = async () => {
@@ -105,13 +123,18 @@ const AdminEmailTemplates: React.FC = () => {
     });
   };
 
-  if (isCreating || editingTemplate) {
+  if (isCreating || editingTemplate || viewingTemplate) {
+    const currentTemplate = editingTemplate || viewingTemplate;
+    const mode = isCreating ? 'create' : viewingTemplate ? 'view' : 'edit';
+    
     return (
       <div className="p-6">
         <EmailTemplateEditor
-          template={editingTemplate || undefined}
+          template={currentTemplate || undefined}
+          mode={mode}
           onSave={handleSave}
           onCancel={handleCancel}
+          onEdit={handleEditFromView}
           onDelete={editingTemplate ? handleDelete : undefined}
           isLoading={
             createTemplate.isPending || 
@@ -227,7 +250,7 @@ const AdminEmailTemplates: React.FC = () => {
                               {
                                 label: 'View Details',
                                 icon: Eye,
-                                onClick: () => {/* placeholder for future view functionality */}
+                                onClick: () => handleView(template)
                               },
                               {
                                 label: 'Edit',

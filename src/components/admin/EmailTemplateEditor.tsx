@@ -17,7 +17,8 @@ import {
   Save, 
   X, 
   Trash2, 
-  Eye 
+  Eye,
+  Edit
 } from 'lucide-react';
 import { VariableInserter } from './VariableInserter';
 import { EmailPreview } from './EmailPreview';
@@ -28,16 +29,20 @@ type EmailTemplate = Tables<'email_templates'>;
 
 interface EmailTemplateEditorProps {
   template?: EmailTemplate;
+  mode?: 'view' | 'edit' | 'create';
   onSave: (data: Partial<EmailTemplate>) => void;
   onCancel: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
   isLoading?: boolean;
 }
 
 export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   template,
+  mode = template ? 'edit' : 'create',
   onSave,
   onCancel,
+  onEdit,
   onDelete,
   isLoading = false,
 }) => {
@@ -45,19 +50,24 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   const [subject, setSubject] = useState(template?.subject || '');
   const [htmlContent, setHtmlContent] = useState(template?.html_content || '');
   const [isActive, setIsActive] = useState(template?.is_active ?? true);
-  const [activeTab, setActiveTab] = useState('editor');
+  const [activeTab, setActiveTab] = useState(mode === 'view' ? 'preview' : 'editor');
+  
+  const isViewMode = mode === 'view';
   
   const { stripHtml } = useTemplatePreview();
 
   const editor = useEditor({
     extensions: [StarterKit],
     content: htmlContent,
+    editable: !isViewMode,
     onUpdate: ({ editor }) => {
-      setHtmlContent(editor.getHTML());
+      if (!isViewMode) {
+        setHtmlContent(editor.getHTML());
+      }
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4',
+        class: `prose prose-sm max-w-none focus:outline-none min-h-[300px] p-4 ${isViewMode ? 'bg-muted/50' : ''}`,
       },
     },
   });
@@ -103,7 +113,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
       <Card>
         <CardHeader>
           <CardTitle>
-            {template ? 'Edit Email Template' : 'Create Email Template'}
+            {isViewMode ? 'View Email Template' : template ? 'Edit Email Template' : 'Create Email Template'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -115,7 +125,8 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="e.g., work_order_assigned"
-                disabled={!!template} // Don't allow editing name for existing templates
+                disabled={isViewMode || !!template} // Don't allow editing name for existing templates or in view mode
+                readOnly={isViewMode}
               />
             </div>
             
@@ -124,6 +135,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                 id="is-active"
                 checked={isActive}
                 onCheckedChange={setIsActive}
+                disabled={isViewMode}
               />
               <Label htmlFor="is-active">Active</Label>
             </div>
@@ -132,13 +144,15 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="subject">Subject Line</Label>
-              <VariableInserter onInsertVariable={handleSubjectVariableInsert} />
+              {!isViewMode && <VariableInserter onInsertVariable={handleSubjectVariableInsert} />}
             </div>
             <Input
               id="subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Work Order Assignment: {{work_order_number}}"
+              disabled={isViewMode}
+              readOnly={isViewMode}
             />
           </div>
         </CardContent>
@@ -155,42 +169,44 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
             <CardHeader>
               <div className="flex items-center justify-between">
                 <Label>Email Content</Label>
-                <div className="flex items-center space-x-2">
-                  <VariableInserter onInsertVariable={handleVariableInsert} />
-                  <Separator orientation="vertical" className="h-6" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={editor.isActive('bold') ? 'bg-accent' : ''}
-                  >
-                    <Bold className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={editor.isActive('italic') ? 'bg-accent' : ''}
-                  >
-                    <Italic className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={editor.isActive('bulletList') ? 'bg-accent' : ''}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={editor.isActive('orderedList') ? 'bg-accent' : ''}
-                  >
-                    <ListOrdered className="h-4 w-4" />
-                  </Button>
-                </div>
+                {!isViewMode && (
+                  <div className="flex items-center space-x-2">
+                    <VariableInserter onInsertVariable={handleVariableInsert} />
+                    <Separator orientation="vertical" className="h-6" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleBold().run()}
+                      className={editor.isActive('bold') ? 'bg-accent' : ''}
+                    >
+                      <Bold className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleItalic().run()}
+                      className={editor.isActive('italic') ? 'bg-accent' : ''}
+                    >
+                      <Italic className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleBulletList().run()}
+                      className={editor.isActive('bulletList') ? 'bg-accent' : ''}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                      className={editor.isActive('orderedList') ? 'bg-accent' : ''}
+                    >
+                      <ListOrdered className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -212,7 +228,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          {onDelete && template && (
+          {onDelete && template && !isViewMode && (
             <Button
               variant="destructive"
               onClick={onDelete}
@@ -227,15 +243,24 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
         <div className="flex items-center space-x-2">
           <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             <X className="h-4 w-4 mr-2" />
-            Cancel
+            {isViewMode ? 'Back' : 'Cancel'}
           </Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={!isFormValid || isLoading}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isLoading ? 'Saving...' : 'Save Template'}
-          </Button>
+          {isViewMode ? (
+            onEdit && (
+              <Button onClick={onEdit} disabled={isLoading}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Template
+              </Button>
+            )
+          ) : (
+            <Button 
+              onClick={handleSave} 
+              disabled={!isFormValid || isLoading}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isLoading ? 'Saving...' : 'Save Template'}
+            </Button>
+          )}
         </div>
       </div>
     </div>
