@@ -6,9 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2 } from 'lucide-react';
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
-import { useOrganizations } from '@/hooks/useOrganizations';
+import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 const statusColors = {
@@ -24,38 +23,30 @@ const PartnerDashboard = () => {
   const { profile } = useAuth();
   const { data: stats, isLoading: statsLoading } = usePartnerWorkOrderStats();
   const { data: recentWorkOrders, isLoading: workOrdersLoading } = usePartnerWorkOrders();
-  const { data: organizations } = useOrganizations();
+  const { data: userOrganizations, isLoading: orgLoading } = useUserOrganizations();
 
   // Get last 10 work orders for recent activity
   const recentOrders = recentWorkOrders?.data?.slice(0, 10) || [];
   
+  // Get primary organization
+  const primaryOrganization = userOrganizations?.[0];
+  
   // Check if user's organizations have initials set up for smart numbering
-  const userOrganizations = React.useMemo(async () => {
-    if (!profile?.id) return [];
-    
-    const { data: userOrgs } = await supabase
-      .from('user_organizations')
-      .select(`
-        organization:organizations(id, name, initials)
-      `)
-      .eq('user_id', profile.id);
-    
-    return userOrgs?.map(uo => uo.organization).filter(org => 
-      org?.initials && org.initials.trim() !== ''
-    ) || [];
-  }, [profile?.id]);
-  
-  const [hasInitialsConfigured, setHasInitialsConfigured] = React.useState(true);
-  
-  React.useEffect(() => {
-    userOrganizations.then(orgs => setHasInitialsConfigured(orgs.length > 0));
-  }, [userOrganizations]);
+  const hasInitialsConfigured = primaryOrganization?.initials && primaryOrganization.initials.trim() !== '';
 
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Partner Dashboard</h1>
+          {primaryOrganization && (
+            <div className="flex items-center gap-2 mb-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">
+                Organization: {primaryOrganization.name}
+              </span>
+            </div>
+          )}
           <p className="text-muted-foreground">Manage your organization's work orders and track progress</p>
         </div>
         <Button onClick={() => navigate('/partner/work-orders/new')}>
