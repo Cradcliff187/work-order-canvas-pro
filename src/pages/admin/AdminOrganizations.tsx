@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
-import { Plus, Search, Download, MoreHorizontal, Edit, Trash2, Building2, Users, FileText, Eye, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Download, Edit, Trash2, Building2, Users, FileText, Eye, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useOrganizations, useOrganizationMutations } from '@/hooks/useOrganizations';
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
@@ -198,41 +198,40 @@ const AdminOrganizations = () => {
       header: "Actions",
       cell: ({ row }) => {
         const org = row.original;
+        
+        const actions = [
+          {
+            label: 'View Details',
+            icon: Eye,
+            onClick: () => setViewingOrganization(org)
+          },
+          {
+            label: 'Edit Organization',
+            icon: Edit,
+            onClick: () => {
+              setSelectedOrganization(org);
+              setShowEditModal(true);
+            }
+          },
+          {
+            label: 'Manage Users',
+            icon: Users,
+            onClick: () => navigate(`/admin/users?org=${org.id}`)
+          },
+          {
+            label: 'Delete Organization',
+            icon: Trash2,
+            onClick: () => handleDeleteOrganization(org),
+            variant: 'destructive' as const
+          }
+        ];
+
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setViewingOrganization(org)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                setSelectedOrganization(org);
-                setShowEditModal(true);
-              }}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Organization
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/admin/users?org=${org.id}`)}>
-                <Users className="mr-2 h-4 w-4" />
-                Manage Users
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-destructive" 
-                onClick={() => handleDeleteOrganization(org)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Organization
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TableActionsDropdown 
+            actions={actions} 
+            itemName={org.name}
+            align="end"
+          />
         );
       },
       enableSorting: false,

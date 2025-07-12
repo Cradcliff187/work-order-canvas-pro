@@ -196,7 +196,8 @@ export default function AdminReports() {
           }
         ];
         
-        return <TableActionsDropdown actions={actions} align="end" />;
+        const reportName = `${report.work_orders?.work_order_number || 'Report'} - ${report.work_orders?.title || 'Work Order'}`;
+        return <TableActionsDropdown actions={actions} itemName={reportName} align="end" />;
       },
     },
   ], [navigate, reviewReport]);

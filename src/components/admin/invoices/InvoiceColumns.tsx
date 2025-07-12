@@ -2,14 +2,8 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, CheckCircle, XCircle, DollarSign, Paperclip } from 'lucide-react';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { Eye, CheckCircle, XCircle, DollarSign, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 
@@ -173,40 +167,41 @@ export const createInvoiceColumns = ({
       const canReject = invoice.status === 'submitted';
       const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
 
+      const invoiceName = `${invoice.internal_invoice_number}`;
+      
+      const actions = [
+        {
+          label: 'View Details',
+          icon: Eye,
+          onClick: () => onViewInvoice(invoice)
+        },
+        {
+          label: 'Approve',
+          icon: CheckCircle,
+          onClick: () => onApproveInvoice(invoice),
+          show: canApprove
+        },
+        {
+          label: 'Reject',
+          icon: XCircle,
+          onClick: () => onRejectInvoice(invoice),
+          show: canReject,
+          variant: 'destructive' as const
+        },
+        {
+          label: 'Mark as Paid',
+          icon: DollarSign,
+          onClick: () => onMarkAsPaid(invoice),
+          show: canMarkPaid
+        }
+      ];
+
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onViewInvoice(invoice)}>
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            {(canApprove || canReject || canMarkPaid) && <DropdownMenuSeparator />}
-            {canApprove && (
-              <DropdownMenuItem onClick={() => onApproveInvoice(invoice)}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Approve
-              </DropdownMenuItem>
-            )}
-            {canReject && (
-              <DropdownMenuItem onClick={() => onRejectInvoice(invoice)}>
-                <XCircle className="mr-2 h-4 w-4" />
-                Reject
-              </DropdownMenuItem>
-            )}
-            {canMarkPaid && (
-              <DropdownMenuItem onClick={() => onMarkAsPaid(invoice)}>
-                <DollarSign className="mr-2 h-4 w-4" />
-                Mark as Paid
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TableActionsDropdown 
+          actions={actions} 
+          itemName={invoiceName}
+          align="end"
+        />
       );
     },
   },

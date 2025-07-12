@@ -2,8 +2,8 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Trash2, UserPlus, MapPin, Copy } from 'lucide-react';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { Eye, Edit, Trash2, UserPlus, MapPin, Copy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Database } from '@/integrations/supabase/types';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
@@ -225,39 +225,39 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
     header: 'Actions',
     cell: ({ row }) => {
       const workOrder = row.original;
+      const workOrderName = `${workOrder.work_order_number || 'Work Order'} - ${workOrder.title}`;
+      
+      const actions = [
+        {
+          label: 'View Details',
+          icon: Eye,
+          onClick: () => onView(workOrder)
+        },
+        {
+          label: 'Assign',
+          icon: UserPlus,
+          onClick: () => onAssign(workOrder),
+          show: workOrder.status === 'received' || workOrder.status === 'assigned'
+        },
+        {
+          label: 'Edit',
+          icon: Edit,
+          onClick: () => onEdit(workOrder)
+        },
+        {
+          label: 'Delete',
+          icon: Trash2,
+          onClick: () => onDelete(workOrder),
+          variant: 'destructive' as const
+        }
+      ];
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onView(workOrder)}>
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            {(workOrder.status === 'received' || workOrder.status === 'assigned') && (
-              <DropdownMenuItem onClick={() => onAssign(workOrder)}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Assign
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={() => onEdit(workOrder)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => onDelete(workOrder)}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TableActionsDropdown 
+          actions={actions} 
+          itemName={workOrderName}
+          align="end"
+        />
       );
     },
     enableSorting: false,

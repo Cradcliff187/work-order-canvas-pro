@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
-import { Plus, Search, Filter, Download, MoreHorizontal, Edit, Trash2, Power, Eye, Mail, X, Users } from 'lucide-react';
+import { Plus, Search, Filter, Download, Edit, Trash2, Power, Eye, Mail, X, Users } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useUsers, useUserMutations } from '@/hooks/useUsers';
 import { UserFilters } from '@/components/admin/users/UserFilters';
@@ -254,42 +254,44 @@ const AdminUsers = () => {
       header: "Actions",
       cell: ({ row }) => {
         const user = row.original;
+        const userName = `${user.first_name} ${user.last_name}`;
+        
+        const actions = [
+          {
+            label: 'View Details',
+            icon: Eye,
+            onClick: () => {/* TODO: Implement view details */}
+          },
+          {
+            label: 'Edit User',
+            icon: Edit,
+            onClick: () => handleEditUser(user)
+          },
+          {
+            label: resettingPasswordUserId === user.id ? "Sending..." : "Reset Password",
+            icon: Mail,
+            onClick: () => handleResetPassword(user),
+            show: resettingPasswordUserId !== user.id
+          },
+          {
+            label: user.is_active ? 'Deactivate' : 'Activate',
+            icon: Power,
+            onClick: () => handleToggleStatus(user)
+          },
+          {
+            label: 'Delete User',
+            icon: Trash2,
+            onClick: () => handleDeleteUser(user),
+            variant: 'destructive' as const
+          }
+        ];
+
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit User
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleResetPassword(user)}
-                disabled={resettingPasswordUserId === user.id}
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                {resettingPasswordUserId === user.id ? "Sending..." : "Reset Password"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                <Power className="mr-2 h-4 w-4" />
-                {user.is_active ? 'Deactivate' : 'Activate'}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete User
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TableActionsDropdown 
+            actions={actions} 
+            itemName={userName}
+            align="end"
+          />
         );
       },
       enableSorting: false,
