@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
-import { Plus, Search, Filter, Download, MoreHorizontal, Edit, Trash2, RefreshCw, Eye, Mail } from 'lucide-react';
+import { Plus, Search, Filter, Download, MoreHorizontal, Edit, Trash2, RefreshCw, Eye, Mail, X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
 export interface User {
   id: string;
@@ -44,9 +46,17 @@ const AdminUsers = () => {
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [resettingPasswordUserId, setResettingPasswordUserId] = useState<string | null>(null);
   
+  const [searchParams, setSearchParams] = useSearchParams();
+  const orgFilter = searchParams.get('org');
+  
   const { toast } = useToast();
   const { data: usersData, isLoading, refetch } = useUsers();
   const { deleteUser, toggleUserStatus } = useUserMutations();
+  const { data: organizationsData } = useOrganizations();
+  
+  // Find the filtered organization name
+  const filteredOrganization = orgFilter ? 
+    organizationsData?.organizations?.find(org => org.id === orgFilter) : null;
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
@@ -255,8 +265,17 @@ const AdminUsers = () => {
     },
   ], []);
 
+  // Filter users by organization if filter is present
+  const filteredUsers = useMemo(() => {
+    if (!orgFilter || !usersData?.users) return usersData?.users || [];
+    
+    return usersData.users.filter(user => 
+      user.organizations?.some(org => org.id === orgFilter)
+    );
+  }, [usersData?.users, orgFilter]);
+
   const table = useReactTable({
-    data: usersData?.users || [],
+    data: filteredUsers,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -320,9 +339,27 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            User Management
+            {filteredOrganization && ` - ${filteredOrganization.name}`}
+          </h1>
           <p className="text-muted-foreground">
-            {usersData?.totalCount ? `${usersData.totalCount} total users` : 'Manage system users and their permissions'}
+            {orgFilter && filteredOrganization ? (
+              <span className="flex items-center gap-2">
+                Showing users for {filteredOrganization.name}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSearchParams({})}
+                  className="h-6 px-2 text-xs"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear filter
+                </Button>
+              </span>
+            ) : (
+              usersData?.totalCount ? `${usersData.totalCount} total users` : 'Manage system users and their permissions'
+            )}
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>

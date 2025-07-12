@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
 import { Plus, Search, Download, MoreHorizontal, Edit, Trash2, Building2, Users, FileText, Eye, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +47,7 @@ const AdminOrganizations = () => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null);
   
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { data: organizationsData, isLoading, refetch } = useOrganizations();
   const { deleteOrganization } = useOrganizationMutations();
@@ -214,7 +216,7 @@ const AdminOrganizations = () => {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Organization
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/admin/users?org=${org.id}`)}>
                 <Users className="mr-2 h-4 w-4" />
                 Manage Users
               </DropdownMenuItem>
