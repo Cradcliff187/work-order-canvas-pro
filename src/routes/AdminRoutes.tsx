@@ -25,7 +25,7 @@ import {
   ReceiptHistory,
   SystemHealthCheck,
   DevTools,
-  EnhancedDevTools,
+  
 } from '@/pages/LazyPages';
 
 export const AdminRoutes = () => (
@@ -230,14 +230,5 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/dev-tools-enhanced" element={
-      <ProtectedRoute requiredUserType="admin">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <EnhancedDevTools />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
   </>
 );
