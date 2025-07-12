@@ -480,7 +480,7 @@ export const seedDatabase = async () => {
         location_zip_code: '90210',
         partner_po_number: 'XYZ-MAINT-2024-005',
         partner_location_number: '101',
-        created_by: userProfiles.get('partner2@xyz.com')?.id,
+        created_by: userProfiles.get('partner2@xyz.com')?.id || userProfiles.get('partner1@abc.com')?.id,
         date_submitted: getRandomDate(15, 12),
         date_assigned: getRandomDate(11, 8),
         estimated_hours: 8,
@@ -535,7 +535,7 @@ export const seedDatabase = async () => {
         location_zip_code: '90210',
         partner_po_number: 'XYZ-EMRG-2024-001',
         partner_location_number: '101',
-        created_by: userProfiles.get('partner2@xyz.com')?.id,
+        created_by: userProfiles.get('partner2@xyz.com')?.id || userProfiles.get('partner1@abc.com')?.id,
         date_submitted: getRandomDate(7, 5),
         estimated_hours: 3
       }
@@ -658,70 +658,35 @@ export const seedDatabase = async () => {
 
     // 9. Create sample invoices
     console.log('🧾 Creating sample invoices...');
-    const invoices = [
+    
+    // First create invoices as drafts (to bypass RLS), then update with proper status
+    const invoiceDrafts = [
       {
-        status: 'paid',
+        status: 'draft',
         subcontractor_organization_id: orgMap.get('Pipes & More Plumbing'),
-        submitted_by: userProfiles.get('plumber1@trade.com')?.id,
-        submitted_at: getRandomDate(20, 18),
-        approved_by: userProfiles.get('admin@workorderpro.com')?.id,
-        approved_at: getRandomDate(17, 15),
-        paid_at: getRandomDate(14, 12),
         total_amount: 850.00,
         external_invoice_number: 'PMP-INV-2024-003',
-        payment_reference: 'CHK-1001',
-        approval_notes: 'All work completed satisfactorily',
-        internal_invoice_number: '' // Will be auto-generated
+        internal_invoice_number: ''
       },
       {
-        status: 'approved',
+        status: 'draft',
         subcontractor_organization_id: orgMap.get('Cool Air HVAC'),
-        submitted_by: userProfiles.get('hvac1@trade.com')?.id,
-        submitted_at: getRandomDate(10, 8),
-        approved_by: userProfiles.get('admin@workorderpro.com')?.id,
-        approved_at: getRandomDate(7, 5),
         total_amount: 1200.00,
         external_invoice_number: 'CAH-2024-007',
-        approval_notes: 'Approved for payment processing',
-        internal_invoice_number: '' // Will be auto-generated
+        internal_invoice_number: ''
       },
       {
-        status: 'submitted',
+        status: 'draft',
         subcontractor_organization_id: orgMap.get('Sparks Electric'),
-        submitted_by: userProfiles.get('electrician@trade.com')?.id,
-        submitted_at: getRandomDate(5, 3),
         total_amount: 750.00,
         external_invoice_number: 'SPE-INV-001',
-        internal_invoice_number: '' // Will be auto-generated
-      },
-      {
-        status: 'rejected',
-        subcontractor_organization_id: orgMap.get('Fix-It Maintenance'),
-        submitted_by: userProfiles.get('maintenance@trade.com')?.id,
-        submitted_at: getRandomDate(8, 6),
-        total_amount: 300.00,
-        approval_notes: 'Missing receipt for materials. Please resubmit with documentation.',
-        internal_invoice_number: '' // Will be auto-generated
-      },
-      {
-        status: 'paid',
-        subcontractor_organization_id: orgMap.get('Cool Air HVAC'),
-        submitted_by: userProfiles.get('hvac2@trade.com')?.id,
-        submitted_at: getRandomDate(25, 23),
-        approved_by: userProfiles.get('admin@workorderpro.com')?.id,
-        approved_at: getRandomDate(22, 20),
-        paid_at: getRandomDate(19, 17),
-        total_amount: 2100.00,
-        external_invoice_number: 'CAH-2024-005',
-        payment_reference: 'ACH-2024-001',
-        approval_notes: 'Large job completed ahead of schedule',
-        internal_invoice_number: '' // Will be auto-generated
+        internal_invoice_number: ''
       }
     ];
 
     const { data: createdInvoices, error: invoicesError } = await supabase
       .from('invoices')
-      .insert(invoices)
+      .insert(invoiceDrafts)
       .select();
 
     if (invoicesError) {
