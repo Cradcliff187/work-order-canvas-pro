@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { exportUsers } from '@/lib/utils/export';
 
 export interface User {
   id: string;
@@ -112,6 +113,36 @@ const AdminUsers = () => {
       });
     } finally {
       setResettingPasswordUserId(null);
+    }
+  };
+
+  const handleExport = () => {
+    try {
+      const selectedRows = table.getFilteredSelectedRowModel().rows;
+      const dataToExport = selectedRows.length > 0 
+        ? selectedRows.map(row => row.original)
+        : filteredUsers;
+
+      if (!dataToExport || dataToExport.length === 0) {
+        toast({ 
+          title: 'No data to export', 
+          description: 'No users available to export.',
+          variant: 'destructive' 
+        });
+        return;
+      }
+      
+      exportUsers(dataToExport);
+      toast({ 
+        title: 'Export completed',
+        description: `Successfully exported ${dataToExport.length} user(s) to CSV.`
+      });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Failed to export users. Please try again.',
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -384,7 +415,7 @@ const AdminUsers = () => {
                 />
               </div>
               <UserFilters table={table} />
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>

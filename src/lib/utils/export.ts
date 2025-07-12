@@ -215,3 +215,23 @@ export function exportOrganizations(organizations: any[], filename?: string): vo
   const exportFilename = filename || generateFilename('organizations');
   exportToCSV(organizations, columns, exportFilename);
 }
+
+/**
+ * Export users with comprehensive data
+ */
+export function exportUsers(users: any[], filename?: string): void {
+  const columns: ExportColumn[] = [
+    { key: 'first_name', label: 'First Name', type: 'string' },
+    { key: 'last_name', label: 'Last Name', type: 'string' },
+    { key: 'email', label: 'Email', type: 'string' },
+    { key: 'user_type', label: 'User Type', type: 'string' },
+    { key: 'is_active', label: 'Status', type: 'boolean' },
+    { key: 'last_sign_in_at', label: 'Last Login', type: 'date' },
+    { key: 'phone', label: 'Phone', type: 'string' },
+    { key: 'company_name', label: 'Company', type: 'string' },
+    { key: 'created_at', label: 'Created Date', type: 'date' },
+  ];
+
+  const exportFilename = filename || generateFilename('users_export');
+  exportToCSV(users, columns, exportFilename);
+}
