@@ -268,7 +268,13 @@ With Check: (auth_user_type() = 'partner' AND auth_user_belongs_to_organization(
 **Subcontractors can view assigned work orders**
 ```sql
 Policy: SELECT
-Using: (auth_user_type() = 'subcontractor' AND auth_user_assigned_to_work_order(id))
+Using: (auth_user_type() = 'subcontractor' AND (
+  -- Individual assignments (backward compatibility)
+  auth_user_assigned_to_work_order(id)
+  OR
+  -- Company assignments (new feature)  
+  id IN (SELECT work_order_id FROM public.auth_user_organization_assignments())
+))
 ```
 
 ### work_order_reports
@@ -292,8 +298,20 @@ Using: (auth_user_type() = 'partner' AND work_order_id IN (
 **Subcontractors can manage their own reports**
 ```sql
 Policy: ALL
-Using: (auth_user_type() = 'subcontractor' AND subcontractor_user_id = auth_profile_id())
-With Check: (auth_user_type() = 'subcontractor' AND subcontractor_user_id = auth_profile_id())
+Using: (auth_user_type() = 'subcontractor' AND (
+  -- Individual reports (backward compatibility)
+  subcontractor_user_id = auth_profile_id()
+  OR
+  -- Company work order reports (new feature)
+  work_order_id IN (SELECT work_order_id FROM public.auth_user_organization_assignments())
+))
+With Check: (auth_user_type() = 'subcontractor' AND (
+  -- Individual reports (backward compatibility)
+  subcontractor_user_id = auth_profile_id()
+  OR
+  -- Company work order reports (new feature)
+  work_order_id IN (SELECT work_order_id FROM public.auth_user_organization_assignments())
+))
 ```
 
 ### work_order_attachments
@@ -320,9 +338,20 @@ Using: (auth_user_type() = 'partner' AND (
 ```sql
 Policy: ALL
 Using: (auth_user_type() = 'subcontractor' AND (
-  uploaded_by_user_id = auth_profile_id() 
-  OR work_order_id IN (SELECT wo.id FROM work_orders wo WHERE auth_user_assigned_to_work_order(wo.id))
-  OR work_order_report_id IN (SELECT wor.id FROM work_order_reports wor WHERE wor.subcontractor_user_id = auth_profile_id())
+  -- Individual attachments (backward compatibility)
+  uploaded_by_user_id = auth_profile_id()
+  OR
+  -- Individual work order assignments (backward compatibility)
+  work_order_id IN (SELECT wo.id FROM work_orders wo WHERE auth_user_assigned_to_work_order(wo.id))
+  OR
+  -- Individual report attachments (backward compatibility)
+  work_order_report_id IN (SELECT wor.id FROM work_order_reports wor WHERE wor.subcontractor_user_id = auth_profile_id())
+  OR
+  -- Company work order attachments (new feature)
+  work_order_id IN (SELECT work_order_id FROM public.auth_user_organization_assignments())
+  OR
+  -- Company work order report attachments (new feature)
+  work_order_report_id IN (SELECT wor.id FROM work_order_reports wor WHERE wor.work_order_id IN (SELECT work_order_id FROM public.auth_user_organization_assignments()))
 ))
 With Check: (auth_user_type() = 'subcontractor' AND uploaded_by_user_id = auth_profile_id())
 ```
