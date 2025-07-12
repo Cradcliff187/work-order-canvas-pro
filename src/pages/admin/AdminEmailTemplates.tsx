@@ -17,12 +17,16 @@ import {
   Search, 
   Edit, 
   Mail,
-  Calendar
+  Calendar,
+  Eye,
+  Power,
+  Trash2
 } from 'lucide-react';
 import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { format } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 
 type EmailTemplate = Tables<'email_templates'>;
 
@@ -79,6 +83,10 @@ const AdminEmailTemplates: React.FC = () => {
       await deleteTemplate.mutateAsync(editingTemplate.id);
       setEditingTemplate(null);
     }
+  };
+
+  const handleDeleteTemplate = async (template: EmailTemplate) => {
+    await deleteTemplate.mutateAsync(template.id);
   };
 
   const handleToggleActive = async (template: EmailTemplate) => {
@@ -205,14 +213,32 @@ const AdminEmailTemplates: React.FC = () => {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(template)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </Button>
+                          <TableActionsDropdown
+                            actions={[
+                              {
+                                label: 'View Details',
+                                icon: Eye,
+                                onClick: () => {/* placeholder for future view functionality */}
+                              },
+                              {
+                                label: 'Edit',
+                                icon: Edit,
+                                onClick: () => handleEdit(template)
+                              },
+                              {
+                                label: 'Toggle Active',
+                                icon: Power,
+                                onClick: () => handleToggleActive(template)
+                              },
+                              {
+                                label: 'Delete',
+                                icon: Trash2,
+                                onClick: () => handleDeleteTemplate(template),
+                                variant: 'destructive' as const
+                              }
+                            ]}
+                            align="end"
+                          />
                         </TableCell>
                       </TableRow>
                     ))
