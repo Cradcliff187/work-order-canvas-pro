@@ -133,7 +133,7 @@ serve(async (req: Request) => {
     // Send the email
     console.log('Sending email via Resend...');
     const emailPayload = {
-      from: 'WorkOrderPro <notifications@workorderpro.com>',
+      from: 'WorkOrderPro <onboarding@resend.dev>',
       to: [email],
       subject: subject,
       html: htmlContent,
