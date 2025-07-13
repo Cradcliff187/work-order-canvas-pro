@@ -247,8 +247,8 @@ const fetchTradeVolumes = async (): Promise<TradeVolume[]> => {
   }, {} as Record<string, number>);
 
   return Object.entries(tradeCounts)
-    .map(([trade, count], index) => ({ 
-      id: `trade-${index}`, 
+    .map(([trade, count]) => ({ 
+      id: `trade-${trade.toLowerCase().replace(/\s+/g, '-')}`, 
       trade, 
       count 
     }))
