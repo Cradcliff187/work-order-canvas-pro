@@ -13,12 +13,23 @@ interface NavItem {
   badge?: number;
 }
 
-export function MobileBottomNav() {
+interface SidebarItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface MobileBottomNavProps {
+  navigation?: SidebarItem[];
+}
+
+export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { pendingCount } = useOfflineStorage();
 
-  const navItems: NavItem[] = [
+  // Default navigation for subcontractor (backwards compatibility)
+  const defaultNavItems: NavItem[] = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -51,6 +62,16 @@ export function MobileBottomNav() {
       path: '/profile'
     }
   ];
+
+  // Convert navigation prop to NavItem format
+  const navItems: NavItem[] = navigation 
+    ? navigation.map(item => ({
+        id: item.title.toLowerCase().replace(/\s+/g, '-'),
+        label: item.title,
+        icon: item.icon,
+        path: item.url,
+      }))
+    : defaultNavItems;
 
   const handleNavClick = (item: NavItem) => {
     // Add haptic feedback

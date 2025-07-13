@@ -2,6 +2,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Sidebar,
   SidebarContent,
@@ -164,6 +166,7 @@ interface PartnerLayoutProps {
 const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
   const { profile } = useAuth();
   const { data: userOrganizations } = useUserOrganizations();
+  const isMobile = useIsMobile();
   const primaryOrganization = userOrganizations?.[0];
 
   return (
@@ -205,6 +208,9 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
           </main>
         </div>
       </div>
+      {isMobile && (
+        <MobileBottomNav navigation={sidebarItems} />
+      )}
     </SidebarProvider>
   );
 };
