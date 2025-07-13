@@ -1379,70 +1379,189 @@ export const seedDatabase = async () => {
       }
     }
 
-    // 10. Create employee receipts
-    console.log('🧾 Creating employee receipts...');
-    const receipts = [
+    // 10. Create comprehensive employee receipts with allocations
+    console.log('🧾 Creating comprehensive employee receipts...');
+    
+    // 6 comprehensive receipts: 2 materials, 2 equipment rental, 2 fuel/mileage
+    const comprehensiveReceipts = [
+      // Materials Receipts (2)
       {
-        employee_user_id: userProfiles.get('admin@workorderpro.com')?.id,
+        employee_user_id: userProfiles.get('senior@workorderpro.com')?.id, // David Wilson
         vendor_name: 'Home Depot',
-        amount: 45.67,
-        receipt_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        description: 'Emergency plumbing supplies',
-        notes: 'For urgent repair at ABC Downtown Mall'
+        amount: 125.50,
+        receipt_date: getRandomDate(2, 14), // Within past 2 weeks
+        description: 'Building materials for plumbing project',
+        notes: 'PVC pipes, fittings, and sealants for main line repair'
       },
       {
-        employee_user_id: userProfiles.get('employee@workorderpro.com')?.id,
-        vendor_name: 'Office Depot',
-        amount: 23.99,
-        receipt_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        description: 'Office supplies for field work',
-        notes: 'Work order documentation supplies'
+        employee_user_id: userProfiles.get('midlevel@workorderpro.com')?.id, // Jennifer Brown  
+        vendor_name: 'Lowes',
+        amount: 89.75,
+        receipt_date: getRandomDate(1, 14),
+        description: 'Electrical supplies for multiple work orders',
+        notes: 'Wire nuts, electrical tape, outlet covers - split across projects'
+      },
+      
+      // Equipment Rental Receipts (2)
+      {
+        employee_user_id: userProfiles.get('junior@workorderpro.com')?.id, // Alex Johnson
+        vendor_name: 'United Rentals',
+        amount: 275.00,
+        receipt_date: getRandomDate(3, 12),
+        description: 'Power tools rental for HVAC project',
+        notes: 'Impact wrench and torque tools for ductwork installation'
       },
       {
-        employee_user_id: userProfiles.get('admin@workorderpro.com')?.id,
-        vendor_name: 'Gas Station',
-        amount: 35.00,
-        receipt_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        description: 'Fuel for site visit',
-        notes: 'Travel to Premium Corporate Tower'
+        employee_user_id: userProfiles.get('admin@workorderpro.com')?.id, // Sarah Johnson (Admin)
+        vendor_name: 'Equipment Express',
+        amount: 450.00,
+        receipt_date: getRandomDate(5, 10),
+        description: 'Specialized equipment rental',
+        notes: 'Pipe inspection camera and locating equipment - multi-project use'
+      },
+      
+      // Fuel/Mileage Receipts (2)
+      {
+        employee_user_id: userProfiles.get('employee@workorderpro.com')?.id, // Emily Davis
+        vendor_name: 'Shell Gas Station',
+        amount: 67.80,
+        receipt_date: getRandomDate(1, 7),
+        description: 'Fuel for multiple site visits',
+        notes: 'Travel between ABC Downtown Office and XYZ Tech Center locations'
+      },
+      {
+        employee_user_id: userProfiles.get('senior@workorderpro.com')?.id, // David Wilson
+        vendor_name: 'BP Station',
+        amount: 52.25,
+        receipt_date: getRandomDate(4, 11),
+        description: 'Fuel for emergency job sites',
+        notes: 'Emergency response travel to Premium Corporate Tower'
       }
     ];
 
     const { data: createdReceipts, error: receiptsError } = await supabase
       .from('receipts')
-      .insert(receipts)
+      .insert(comprehensiveReceipts)
       .select();
 
     if (receiptsError) {
       console.warn('Receipts creation error:', receiptsError);
     } else {
-      console.log(`✅ Created ${createdReceipts?.length || 0} employee receipts`);
-
-      // Create receipt work order allocations
+      // Create comprehensive receipt work order allocations
       if (createdReceipts && createdWorkOrders && createdReceipts.length > 0) {
-        const receiptAllocations = [
+        console.log('🔗 Creating receipt work order allocations...');
+        
+        const comprehensiveReceiptAllocations = [
+          // Single allocations (3)
           {
-            receipt_id: createdReceipts[0].id,
-            work_order_id: createdWorkOrders[0].id,
-            allocated_amount: 45.67,
-            allocation_notes: 'Full amount allocated to plumbing repair'
+            receipt_id: createdReceipts[0].id, // Home Depot materials
+            work_order_id: createdWorkOrders[0].id, // Plumbing repair
+            allocated_amount: 125.50,
+            allocation_notes: 'Full amount for plumbing materials - main line repair'
           },
           {
-            receipt_id: createdReceipts[2].id,
-            work_order_id: createdWorkOrders[2].id,
-            allocated_amount: 35.00,
-            allocation_notes: 'Travel expenses for electrical work'
+            receipt_id: createdReceipts[2].id, // United Rentals tools
+            work_order_id: createdWorkOrders[7].id, // Complex HVAC project
+            allocated_amount: 275.00,
+            allocation_notes: 'Power tools rental for HVAC ductwork installation'
+          },
+          {
+            receipt_id: createdReceipts[5].id, // BP fuel (single)
+            work_order_id: createdWorkOrders[8].id, // Electrical upgrade
+            allocated_amount: 52.25,
+            allocation_notes: 'Emergency response travel fuel'
+          },
+          
+          // Split allocations (3 receipts with multiple work orders)
+          
+          // Lowes electrical supplies - split across 2 work orders
+          {
+            receipt_id: createdReceipts[1].id,
+            work_order_id: createdWorkOrders[1].id, // Electrical panel upgrade
+            allocated_amount: 55.25,
+            allocation_notes: 'Electrical supplies for panel upgrade - wire nuts and outlets'
+          },
+          {
+            receipt_id: createdReceipts[1].id,
+            work_order_id: createdWorkOrders[8].id, // Electrical infrastructure
+            allocated_amount: 34.50,
+            allocation_notes: 'Electrical tape and covers for infrastructure work'
+          },
+          
+          // Equipment Express rental - split across 3 work orders
+          {
+            receipt_id: createdReceipts[3].id,
+            work_order_id: createdWorkOrders[0].id, // Plumbing repair
+            allocated_amount: 180.00,
+            allocation_notes: 'Pipe inspection camera for main line diagnostics'
+          },
+          {
+            receipt_id: createdReceipts[3].id,
+            work_order_id: createdWorkOrders[9].id, // Major plumbing overhaul
+            allocated_amount: 200.00,
+            allocation_notes: 'Pipe locating equipment for overhaul project'
+          },
+          {
+            receipt_id: createdReceipts[3].id,
+            work_order_id: createdWorkOrders[4].id, // Plumbing installation
+            allocated_amount: 70.00,
+            allocation_notes: 'Equipment rental for new installation verification'
+          },
+          
+          // Shell fuel - split across 2 work orders
+          {
+            receipt_id: createdReceipts[4].id,
+            work_order_id: createdWorkOrders[5].id, // Internal maintenance
+            allocated_amount: 35.80,
+            allocation_notes: 'Travel fuel for ABC Downtown Office visits'
+          },
+          {
+            receipt_id: createdReceipts[4].id,
+            work_order_id: createdWorkOrders[7].id, // Complex HVAC project
+            allocated_amount: 32.00,
+            allocation_notes: 'Travel fuel for XYZ Tech Center site visits'
           }
         ];
 
         const { error: allocationsError } = await supabase
           .from('receipt_work_orders')
-          .insert(receiptAllocations);
+          .insert(comprehensiveReceiptAllocations);
 
         if (allocationsError) {
           console.warn('Receipt allocations creation error:', allocationsError);
         } else {
-          console.log(`✅ Created ${receiptAllocations.length} receipt work order allocations`);
+          // Enhanced console logging with detailed breakdown
+          const totalReceiptAmount = createdReceipts.reduce((sum, receipt) => sum + receipt.amount, 0);
+          const receiptsByCategory = {
+            materials: createdReceipts.slice(0, 2),
+            equipment: createdReceipts.slice(2, 4), 
+            fuel: createdReceipts.slice(4, 6)
+          };
+          
+          const singleAllocations = comprehensiveReceiptAllocations.filter(alloc => 
+            comprehensiveReceiptAllocations.filter(a => a.receipt_id === alloc.receipt_id).length === 1
+          ).length;
+          
+          const splitAllocations = new Set(
+            comprehensiveReceiptAllocations.filter(alloc => 
+              comprehensiveReceiptAllocations.filter(a => a.receipt_id === alloc.receipt_id).length > 1
+            ).map(alloc => alloc.receipt_id)
+          ).size;
+          
+          console.log('✅ Comprehensive Receipt Summary:');
+          console.log(`   📊 Total Receipts: ${createdReceipts.length}`);
+          console.log(`   💰 Total Amount: $${totalReceiptAmount.toLocaleString()}`);
+          console.log(`   📈 Average Receipt: $${(totalReceiptAmount / createdReceipts.length).toFixed(2)}`);
+          console.log('   📂 By Category:');
+          console.log(`   • Materials (Home Depot, Lowes): ${receiptsByCategory.materials.length} receipts, $${receiptsByCategory.materials.reduce((sum, r) => sum + r.amount, 0)}`);
+          console.log(`   • Equipment Rental: ${receiptsByCategory.equipment.length} receipts, $${receiptsByCategory.equipment.reduce((sum, r) => sum + r.amount, 0)}`);
+          console.log(`   • Fuel/Mileage: ${receiptsByCategory.fuel.length} receipts, $${receiptsByCategory.fuel.reduce((sum, r) => sum + r.amount, 0)}`);
+          console.log('   🔗 Allocation Breakdown:');
+          console.log(`   • Single Work Order: ${singleAllocations} allocations`);
+          console.log(`   • Split Across Multiple: ${splitAllocations} receipts`);
+          console.log(`   📋 Total Allocation Entries: ${comprehensiveReceiptAllocations.length}`);
+          console.log('   📅 Date Range: Past 2 weeks');
+          console.log('   👥 All 5 employees represented');
         }
       }
     }
