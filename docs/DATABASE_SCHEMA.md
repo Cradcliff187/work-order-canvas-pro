@@ -57,7 +57,9 @@ WorkOrderPro uses a comprehensive **20-table** PostgreSQL database with Row Leve
 - Status transition and completion logic (4)
 - Audit and security functions (3)
 
-## Entity Relationship Diagram
+## Architecture Diagrams
+
+### Entity Relationship Diagram
 
 ```mermaid
 erDiagram
@@ -264,6 +266,55 @@ erDiagram
         jsonb new_values
         timestamp created_at
     }
+```
+
+### Edge Function Seeding Architecture
+
+```mermaid
+graph TD
+    A[Admin Request] --> B{Auth Validation}
+    B -->|Invalid| C[Unauthorized Response]
+    B -->|Valid| D[Service Role Access]
+    
+    D --> E[Create Organizations]
+    E --> F[Create Auth Users]
+    F --> G[Create Profiles]
+    G --> H[Link User Organizations]
+    H --> I[Set Employee Rates]
+    I --> J[Create Partner Locations]
+    J --> K[Create Trade Categories]
+    K --> L[Generate Test Work Orders]
+    L --> M[Response Summary]
+    
+    M --> N[Success/Error Report]
+    
+    style A fill:#e1f5fe
+    style D fill:#e8f5e8
+    style N fill:#fff3e0
+```
+
+### Database Security Model
+
+```mermaid
+graph LR
+    A[Client Request] --> B{Authentication}
+    B -->|Unauthenticated| C[Public Data Only]
+    B -->|Authenticated| D[RLS Policy Check]
+    
+    D --> E{User Type Check}
+    E -->|Admin| F[Full Access]
+    E -->|Employee| G[All Profiles + Assigned Work]
+    E -->|Partner| H[Organization Data Only]
+    E -->|Subcontractor| I[Assigned Work Only]
+    
+    F --> J[Database Access]
+    G --> J
+    H --> J
+    I --> J
+    
+    style B fill:#ffecb3
+    style E fill:#e3f2fd
+    style J fill:#e8f5e8
 ```
 
 ## Seed Data Structure

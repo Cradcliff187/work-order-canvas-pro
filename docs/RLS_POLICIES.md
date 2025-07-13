@@ -33,6 +33,115 @@ WorkOrderPro supports both **individual access** (backward compatibility) and **
 
 This ensures users can always fetch their own profile data, which then allows helper functions to work without recursion.
 
+## Comprehensive Troubleshooting Guide
+
+### RLS Policy Violations
+
+#### "new row violates row-level security policy"
+
+**Common Causes:**
+- Attempting user creation through browser/client code
+- Missing `user_id` field in INSERT statements
+- Incorrect user type assignments
+- Missing organization relationships
+
+**Solutions:**
+```sql
+-- For user creation: Use Edge Functions with service role
+-- For data insertion: Ensure user_id is set correctly
+INSERT INTO profiles (user_id, email, first_name, last_name)
+VALUES (auth.uid(), 'user@example.com', 'John', 'Doe');
+
+-- For organization access: Verify user_organizations relationship
+INSERT INTO user_organizations (user_id, organization_id)
+VALUES (auth_profile_id(), 'your-org-id');
+```
+
+#### "infinite recursion detected in policy"
+
+**Root Cause:** Helper functions querying profiles table from within profile policies
+
+**Solution:** Use direct `auth.uid()` comparisons in profile policies:
+```sql
+-- ❌ WRONG: This causes recursion
+CREATE POLICY "Users can read profiles" ON profiles
+FOR SELECT USING (
+  (SELECT user_type FROM profiles WHERE user_id = auth.uid()) = 'admin'
+);
+
+-- ✅ CORRECT: Direct comparison prevents recursion
+CREATE POLICY "Users can read profiles" ON profiles
+FOR SELECT USING (user_id = auth.uid());
+```
+
+#### Permission denied for table/schema
+
+**Diagnosis:**
+```sql
+-- Check current user permissions
+SELECT auth.uid(), auth.role();
+
+-- Test RLS helper functions
+SELECT public.auth_user_type();
+SELECT public.auth_is_admin();
+SELECT * FROM public.auth_user_organizations();
+```
+
+**Solutions:**
+- Verify user is authenticated: `auth.uid()` should return a UUID
+- Check user type assignment in profiles table
+- Verify organization relationships in user_organizations table
+- Ensure RLS policies are enabled: `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND rowsecurity = true;`
+
+### Auth Permission Issues
+
+#### User creation failures
+
+**Profile/auth mismatches:**
+```sql
+-- Check for orphaned auth users
+SELECT au.id, au.email, p.id as profile_id
+FROM auth.users au
+LEFT JOIN public.profiles p ON p.user_id = au.id
+WHERE p.id IS NULL;
+
+-- Clean up orphaned users (admin only)
+DELETE FROM auth.users 
+WHERE id IN (
+  SELECT au.id FROM auth.users au
+  LEFT JOIN public.profiles p ON p.user_id = au.id
+  WHERE p.id IS NULL
+);
+```
+
+#### Organization access denied
+
+**User_organizations relationships:**
+```sql
+-- Verify user-organization relationships
+SELECT uo.*, o.name, p.email
+FROM user_organizations uo
+JOIN organizations o ON o.id = uo.organization_id
+JOIN profiles p ON p.id = uo.user_id
+WHERE p.user_id = auth.uid();
+
+-- Create missing relationships
+INSERT INTO user_organizations (user_id, organization_id)
+VALUES (auth_profile_id(), 'your-organization-id');
+```
+
+#### Invalid user type enum values
+
+**Enum validation:**
+```sql
+-- Check valid user_type values
+SELECT enumlabel FROM pg_enum WHERE enumtypid = 'user_type'::regtype;
+
+-- Update invalid user types
+UPDATE profiles SET user_type = 'subcontractor'
+WHERE user_type NOT IN ('admin', 'partner', 'subcontractor', 'employee');
+```
+
 ## User Types and Access Matrix
 
 | User Type | Access Level | Description |
@@ -132,6 +241,77 @@ await supabaseAdmin.from('user_organizations').insert({
 - **Missing Service Key**: Ensure `SUPABASE_SERVICE_ROLE_KEY` is configured
 - **Insufficient Permissions**: Service role should have full database access
 - **RLS Bypass**: Service role automatically bypasses all RLS policies
+
+### Edge Function Troubleshooting
+
+**Common Edge Function Issues:**
+
+#### FunctionsHttpError: Edge Function returned a non-2xx status code
+```bash
+# Diagnosis steps:
+1. Check Edge Function logs: supabase functions logs seed-database --limit 50
+2. Verify admin key configuration in function secrets
+3. Test with curl to isolate client vs server issues
+
+# Example test:
+curl -X POST 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database' \
+  -H 'Content-Type: application/json' \
+  -d '{"admin_key": "your-admin-key"}'
+```
+
+#### FunctionsFetchError: Network connectivity issues
+```bash
+# Solutions:
+1. Check internet connectivity
+2. Verify Supabase project URL
+3. Check CORS configuration in Edge Function
+4. Verify function deployment status
+```
+
+#### Edge Function timeout errors
+```bash
+# Large dataset optimization:
+1. Implement batch processing in Edge Functions
+2. Use pagination for large result sets
+3. Optimize database queries with proper indexes
+4. Consider breaking large operations into smaller chunks
+```
+
+#### Memory errors in Edge Functions
+```bash
+# Resource optimization:
+1. Reduce memory footprint in function code
+2. Use streaming for large data operations
+3. Implement garbage collection optimization
+4. Monitor function memory usage via Supabase dashboard
+```
+
+### Admin Access Patterns
+
+**Edge Function Admin Validation:**
+
+Edge Functions use multiple admin authentication methods for flexibility:
+
+```typescript
+// 1. API Key validation (primary method)
+const adminKey = requestData.admin_key;
+const expectedKey = Deno.env.get('ADMIN_SEEDING_KEY');
+
+// 2. Bearer token validation (alternative)
+const authHeader = request.headers.get('Authorization');
+const bearerToken = Deno.env.get('ADMIN_BEARER_TOKEN');
+
+// 3. Development bypass (dev environment only)
+const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
+```
+
+**Service Role vs Client Access:**
+
+| Access Type | Use Case | RLS Bypass | Permissions |
+|-------------|----------|------------|-------------|
+| **Service Role** | Edge Functions, admin operations | ✅ Yes | Full database access |
+| **Anon Key** | Client applications | ❌ No | RLS policy restricted |
+| **Authenticated User** | Logged-in users | ❌ No | User-specific policies |
 
 ## Helper Functions
 

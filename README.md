@@ -39,14 +39,25 @@ WorkOrderPro uses a PostgreSQL database with 12 core tables, implementing:
 - **File attachment support** via Supabase Storage
 - **Analytics capabilities** with materialized views for reporting
 
-### Database Documentation
+### Documentation
 
-- [📊 Database Schema](./docs/DATABASE_SCHEMA.md) - Complete table structure and relationships
-- [🔐 RLS Policies](./docs/RLS_POLICIES.md) - Row Level Security implementation
-- [📝 Audit System](./docs/AUDIT_SYSTEM.md) - Change tracking and compliance
-- [⚙️ Database Functions](./docs/DATABASE_FUNCTIONS.md) - PostgreSQL functions and helpers
-- [📅 Migration History](./docs/MIGRATION_HISTORY.md) - Complete migration timeline
-- [🌱 Database Seeding](./docs/SEEDING.md) - Edge Function-based seeding guide
+**📊 Database & Architecture**
+- [Database Schema](./docs/DATABASE_SCHEMA.md) - Complete table structure and relationships
+- [RLS Policies](./docs/RLS_POLICIES.md) - Row Level Security implementation
+- [Audit System](./docs/AUDIT_SYSTEM.md) - Change tracking and compliance
+- [Database Functions](./docs/DATABASE_FUNCTIONS.md) - PostgreSQL functions and helpers
+- [Migration History](./docs/MIGRATION_HISTORY.md) - Complete migration timeline
+
+**🚀 Development & Deployment**
+- [Development Guide](./docs/DEVELOPMENT.md) - Local development setup and testing
+- [Deployment Guide](./docs/DEPLOYMENT.md) - Production deployment procedures
+- [Database Seeding](./docs/SEEDING.md) - Edge Function-based seeding guide
+- [Test Checklist](./docs/TEST_CHECKLIST.md) - Comprehensive testing procedures
+
+**🔧 Troubleshooting & Maintenance**
+- [Troubleshooting Guide](./docs/RLS_POLICIES.md#comprehensive-troubleshooting-guide) - Common issues and solutions
+- [Company Access Guide](./docs/COMPANY_ACCESS_GUIDE.md) - Multi-tenant access patterns
+- [Offline Storage Guide](./docs/OFFLINE_STORAGE_GUIDE.md) - PWA offline capabilities
 
 ### Key Features
 

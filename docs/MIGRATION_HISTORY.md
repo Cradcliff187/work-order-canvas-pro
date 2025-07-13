@@ -750,9 +750,51 @@ The database is now in a **mature, production-ready state** with:
 4. **Maintain audit coverage** when adding new tables
 5. **Use helper functions** for any complex RLS logic
 
+### Edge Function Migration (January 2025)
+
+**Migration**: Transition from browser-based to Edge Function-based database seeding
+
+**Context**: 
+- Browser-based seeding faced RLS policy violations during user creation
+- Service role access required for secure user account creation
+- Enhanced security model needed for production deployment
+
+**Changes**:
+- **Removed**: `src/scripts/seed-functions.ts` and `src/scripts/enhanced-seed-functions.ts`
+- **Added**: `supabase/functions/seed-database/` Edge Function
+- **Added**: `supabase/functions/clear-test-data/` Edge Function
+- **Updated**: Dev Tools panel to use Edge Function calls
+- **Enhanced**: Admin authentication with multiple validation methods
+
+**Security Improvements**:
+- Service role access ensures proper user creation without RLS violations
+- Multiple admin authentication methods (API key, Bearer token, dev mode)
+- Atomic transactions with comprehensive error handling
+- Individual error isolation prevents cascade failures
+
+**Benefits**:
+- Eliminates "new row violates row-level security policy" errors
+- Server-side execution ensures consistent data initialization
+- Enhanced error reporting and debugging capabilities
+- Production-ready security model
+
+**Documentation Updates**:
+- Complete `docs/SEEDING.md` guide for Edge Function usage
+- Updated `README.md` with new seeding approach
+- Added troubleshooting guide for common Edge Function issues
+- Created comprehensive development and deployment guides
+
+## Summary
+
+This migration history provides a complete audit trail of all database schema changes, from initial setup through the comprehensive construction work order management system with Edge Function-based operations. Each migration includes detailed context, implementation details, and verification steps to ensure database integrity, security, and proper functionality. The latest Edge Function migration represents a significant architectural improvement, providing production-ready security and eliminating common development issues with browser-based database operations.
+
 ## Related Documentation
 
-- [Database Schema](./DATABASE_SCHEMA.md) - Current table structure
-- [RLS Policies](./RLS_POLICIES.md) - Current policy implementation
+- [Database Schema](./DATABASE_SCHEMA.md) - Current table structure and architecture diagrams
+- [RLS Policies](./RLS_POLICIES.md) - Current policy implementation with troubleshooting
 - [Audit System](./AUDIT_SYSTEM.md) - Audit logging details
 - [Database Functions](./DATABASE_FUNCTIONS.md) - Helper function documentation
+- [Development Guide](./DEVELOPMENT.md) - Local development and testing procedures
+- [Deployment Guide](./DEPLOYMENT.md) - Production deployment and maintenance
+- [Seeding Guide](./SEEDING.md) - Edge Function-based database seeding
+- [Test Checklist](./TEST_CHECKLIST.md) - Comprehensive testing procedures
