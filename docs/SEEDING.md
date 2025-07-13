@@ -253,89 +253,12 @@ VALUES
   -- Add more work orders here
 ```
 
-## Error Handling
+## Additional Resources
 
-### Common Issues and Solutions
-
-#### Authentication Errors
-```
-Error: Only administrators can seed test data
-```
-**Solution**: Ensure you're logged in as an admin user before running seeding functions
-
-#### Database Errors
-```
-Error: Foreign key constraint violation
-```
-**Solution**: The functions handle foreign key relationships automatically. If issues persist, run `clear_test_data()` first
-
-#### RLS Errors
-```
-Error: new row violates row-level security policy
-```
-**Solution**: The SECURITY DEFINER functions bypass RLS automatically. This error indicates the function isn't being used correctly.
-
-### Error Recovery
-
-1. **Partial Seeding Failures**: Functions use transactions - partial failures are automatically rolled back
-2. **Data Conflicts**: Run `clear_test_data()` first, then re-seed
-3. **Permission Issues**: Verify admin user authentication
-
-## Security Model
-
-### SECURITY DEFINER Functions
-
-Both seeding functions use `SECURITY DEFINER` which means:
-- Functions execute with the privileges of their owner (admin)
-- Bypass Row Level Security policies
-- Can perform operations regular users cannot
-- Provide secure, controlled access to administrative operations
-
-### Admin-Only Access
-
-```sql
--- Only allow admins to execute seeding functions
-IF NOT public.auth_is_admin() THEN
-  RAISE EXCEPTION 'Only administrators can seed test data';
-END IF;
-```
-
-### Safe Data Identification
-
-The `clear_test_data()` function safely identifies test data using:
-- Email patterns: `%@testcompany%`, `%@example.com`, `%test%`
-- Organization names: Known test organization names
-- User names: First name = 'Test'
-
-## Troubleshooting Guide
-
-### Debug Mode
-
-Monitor seeding progress in browser console:
-
-```
-🌱 Starting database seeding using secure function...
-🎉 Database seeding completed successfully!
-📋 Summary: Created organizations: 8, trades: 10, work_orders: 16
-```
-
-### Function Logs
-
-View function execution in Supabase Dashboard:
-1. Go to **SQL Editor**
-2. Run: `SELECT * FROM audit_logs WHERE table_name = 'profiles' ORDER BY created_at DESC;`
-3. Check for seeding-related audit entries
-
-### Performance Monitoring
-
-Track seeding performance:
-
-```typescript
-const startTime = Date.now();
-const { data, error } = await supabase.rpc('seed_test_data');
-const executionTime = Date.now() - startTime;
-console.log(`Seeding completed in ${executionTime}ms`);
-```
+For comprehensive troubleshooting guides, error handling, and security considerations, see:
+- **[Development Guide](./DEVELOPMENT_GUIDE.md)** - Complete development workflow and troubleshooting
+- **[Database Functions](./DATABASE_FUNCTIONS.md)** - Database function reference
+- **[RLS Policies](./RLS_POLICIES.md)** - Row Level Security documentation
 
 ## Implementation History
 

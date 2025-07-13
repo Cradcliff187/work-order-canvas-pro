@@ -181,138 +181,9 @@ console.log('Test users created:', response.users);
 4. **Pipes & More Plumbing**: 2-person plumbing team
 5. **Sparks Electric**: Single electrician contractor
 
-## Common Development Issues
+## Additional Resources
 
-### Database Function Errors
-
-**Issue**: `Only administrators can seed test data`
-```typescript
-// Solution: Ensure you're logged in as an admin user
-const { data: { user } } = await supabase.auth.getUser();
-console.log('Current user:', user);
-
-// Check user type in profiles table
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('user_type')
-  .eq('user_id', user?.id)
-  .single();
-
-console.log('User type:', profile?.user_type);
-```
-
-**Issue**: `Foreign key constraint violation`
-```sql
--- Solution: The functions handle dependencies automatically
--- If issues persist, check audit logs for details
-SELECT * FROM audit_logs 
-WHERE table_name IN ('organizations', 'profiles', 'work_orders')
-ORDER BY created_at DESC
-LIMIT 10;
-```
-
-### Database Connection Issues
-
-**Issue**: `No API key provided` or connection errors
-```typescript
-// Solution: Verify Supabase client configuration
-import { supabase } from "@/integrations/supabase/client";
-
-// Check connection
-const { data, error } = await supabase.from('profiles').select('count');
-if (error) console.error('Database connection issue:', error);
-```
-
-**Issue**: `RLS Policy Violation` during testing
-```typescript
-// Solution: Use admin user for testing operations that require elevated permissions
-// Or ensure proper user-organization relationships exist
-
-// Test user belongs to organization
-const { data } = await supabase.rpc('auth_user_belongs_to_organization', {
-  org_id: 'organization-uuid'
-});
-```
-
-### RLS Policy Testing
-
-**Test Individual Access:**
-```sql
--- Verify user can access their own profile
-SELECT * FROM profiles WHERE user_id = auth.uid();
-
--- Test organization membership
-SELECT * FROM auth_user_organizations();
-```
-
-**Test Company Access:**
-```sql
--- Verify organization-level work order access
-SELECT wo.* FROM work_orders wo 
-WHERE auth_user_belongs_to_organization(wo.organization_id);
-
--- Test assignment-based access
-SELECT * FROM auth_user_organization_assignments();
-```
-
-## Development Workflow Best Practices
-
-### Database Changes
-
-1. **Always use migrations** for schema changes
-2. **Test with seeded data** to ensure compatibility
-3. **Update RLS policies** when adding new tables
-4. **Document changes** in `MIGRATION_HISTORY.md`
-
-### Code Organization
-
-```
-src/
-├── components/          # Reusable UI components
-├── pages/              # Page-level components
-├── hooks/              # Custom React hooks
-├── lib/                # Utility functions
-├── integrations/       # Supabase integration
-└── types/              # TypeScript type definitions
-```
-
-### Testing Strategy
-
-1. **Unit Testing**: Test individual components and hooks
-2. **Integration Testing**: Test database operations with RLS
-3. **User Journey Testing**: Test complete workflows
-4. **Permission Testing**: Verify role-based access control
-
-### Performance Considerations
-
-**Database Optimization:**
-- Use indexes on frequently queried columns
-- Optimize RLS policies to avoid N+1 queries
-- Monitor query performance in Supabase Dashboard
-
-**Frontend Optimization:**
-- Implement lazy loading for large data sets
-- Use React Query for efficient data fetching
-- Optimize bundle size with code splitting
-
-### Security Best Practices
-
-**Authentication:**
-- Never expose service role keys in frontend code
-- Use Edge Functions for privileged operations
-- Implement proper session management
-
-**Data Access:**
-- Test RLS policies thoroughly
-- Use principle of least privilege
-- Audit user permissions regularly
-
-**API Security:**
-- Validate all inputs on server side
-- Use proper CORS configuration
-- Monitor for unusual access patterns
-
-## Common Commands
+### Common Commands
 
 ```bash
 # Development
@@ -330,5 +201,12 @@ supabase db dump --data-only        # Export data
 supabase db push                     # Push schema changes
 supabase gen types typescript       # Generate TypeScript types
 ```
+
+### Further Reading
+
+For comprehensive development workflows, testing strategies, and troubleshooting guides, see:
+- **[Development Guide](./DEVELOPMENT_GUIDE.md)** - Complete development workflow and best practices
+- **[Database Functions](./DATABASE_FUNCTIONS.md)** - Database function reference
+- **[RLS Policies](./RLS_POLICIES.md)** - Row Level Security documentation
 
 This development guide provides all the essential information for productive local development using database functions for secure, reliable data management.
