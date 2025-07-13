@@ -42,6 +42,8 @@ export function useOrganizations() {
   return useQuery({
     queryKey: ['organizations'],
     queryFn: async () => {
+      console.log('🔍 useOrganizations: Starting query...');
+      
       // Get organizations with user and work order counts for company access management
       const { data: organizations, error } = await supabase
         .from('organizations')
@@ -55,7 +57,16 @@ export function useOrganizations() {
         `)
         .order('created_at', { ascending: false });
 
+      console.log('📡 useOrganizations: Raw Supabase response:', {
+        data: organizations,
+        error,
+        dataLength: organizations?.length,
+        errorMessage: error?.message,
+        errorCode: error?.code
+      });
+
       if (error) {
+        console.error('❌ useOrganizations: Query failed:', error);
         throw new Error(`Failed to fetch organizations: ${error.message}`);
       }
 
@@ -78,10 +89,19 @@ export function useOrganizations() {
         ).length || 0,
       })) || [];
 
-      return {
+      console.log('🔄 useOrganizations: Transformed data:', {
+        transformedOrgs,
+        orgCount: transformedOrgs.length,
+        sampleOrg: transformedOrgs[0]
+      });
+
+      const result = {
         organizations: transformedOrgs,
         totalCount: transformedOrgs.length,
       };
+
+      console.log('✅ useOrganizations: Final result:', result);
+      return result;
     },
   });
 }

@@ -58,6 +58,16 @@ const AdminOrganizations = () => {
   const { data: organizationsData, isLoading, refetch } = useOrganizations();
   const { deleteOrganization, bulkDeleteOrganizations, bulkToggleOrganizationStatus } = useOrganizationMutations();
 
+  // Debug logging for AdminOrganizations component
+  React.useEffect(() => {
+    console.log('🏢 AdminOrganizations: Component state update:', {
+      isLoading,
+      organizationsData,
+      dataLength: organizationsData?.organizations?.length,
+      totalCount: organizationsData?.totalCount
+    });
+  }, [isLoading, organizationsData]);
+
   const handleDeleteOrganization = (org: Organization) => {
     setDeletingOrganization(org);
   };
@@ -243,16 +253,34 @@ const AdminOrganizations = () => {
   ], [navigate]);
 
   const filteredData = useMemo(() => {
-    if (!organizationsData?.organizations) return [];
+    console.log('🔽 AdminOrganizations: Filtering data:', {
+      rawData: organizationsData?.organizations,
+      showOnlyActive,
+      selectedType,
+      rawDataLength: organizationsData?.organizations?.length
+    });
+
+    if (!organizationsData?.organizations) {
+      console.log('⚠️ AdminOrganizations: No organizations data available');
+      return [];
+    }
+    
     let filtered = organizationsData.organizations;
     
     if (showOnlyActive) {
       filtered = filtered.filter(org => org.is_active);
+      console.log('🟢 AdminOrganizations: After active filter:', filtered.length);
     }
     
     if (selectedType !== 'all') {
       filtered = filtered.filter(org => org.organization_type === selectedType);
+      console.log('🏷️ AdminOrganizations: After type filter:', filtered.length);
     }
+    
+    console.log('✅ AdminOrganizations: Final filtered data:', {
+      filteredLength: filtered.length,
+      sampleItems: filtered.slice(0, 3)
+    });
     
     return filtered;
   }, [organizationsData?.organizations, showOnlyActive, selectedType]);
@@ -373,6 +401,11 @@ const AdminOrganizations = () => {
     subcontractors: organizationsData?.organizations?.filter(o => o.organization_type === 'subcontractor').length || 0,
     internal: organizationsData?.organizations?.filter(o => o.organization_type === 'internal').length || 0,
   };
+
+  console.log('📊 AdminOrganizations: Stats calculation:', {
+    stats,
+    rawOrgData: organizationsData?.organizations?.slice(0, 2)
+  });
 
   return (
     <div className="space-y-6">
