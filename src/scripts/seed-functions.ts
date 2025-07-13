@@ -75,6 +75,10 @@ const users = [
   // Admin users (employees) - exactly 2
   { email: 'admin@workorderpro.com', first_name: 'Admin', last_name: 'User', user_type: 'admin' as const, organization_name: 'WorkOrderPro Internal', is_employee: true },
   { email: 'employee@workorderpro.com', first_name: 'Emily', last_name: 'Employee', user_type: 'employee' as const, organization_name: 'WorkOrderPro Internal', is_employee: true },
+  // Regular employees - exactly 3
+  { email: 'senior@workorderpro.com', first_name: 'David', last_name: 'Senior', user_type: 'employee' as const, organization_name: 'WorkOrderPro Internal', is_employee: true, hourly_cost_rate: 75, hourly_billable_rate: 150 },
+  { email: 'midlevel@workorderpro.com', first_name: 'Jennifer', last_name: 'Mid', user_type: 'employee' as const, organization_name: 'WorkOrderPro Internal', is_employee: true, hourly_cost_rate: 50, hourly_billable_rate: 100 },
+  { email: 'junior@workorderpro.com', first_name: 'Alex', last_name: 'Junior', user_type: 'employee' as const, organization_name: 'WorkOrderPro Internal', is_employee: true, hourly_cost_rate: 35, hourly_billable_rate: 70 },
   // Partner users - exactly 3 (1 per partner)
   { email: 'partner1@abc.com', first_name: 'John', last_name: 'Smith', user_type: 'partner' as const, company_name: 'ABC Property Management', organization_name: 'ABC Property Management' },
   { email: 'partner2@xyz.com', first_name: 'Sarah', last_name: 'Johnson', user_type: 'partner' as const, company_name: 'XYZ Commercial Properties', organization_name: 'XYZ Commercial Properties' },
@@ -158,6 +162,7 @@ export const seedDatabase = async () => {
     
     const testEmails = [
       'admin@workorderpro.com', 'employee@workorderpro.com',
+      'senior@workorderpro.com', 'midlevel@workorderpro.com', 'junior@workorderpro.com',
       'partner1@abc.com', 'partner2@xyz.com', 'partner3@premium.com',
       'plumber1@trade.com', 'plumber2@trade.com', 'electrician@trade.com',
       'hvac1@trade.com', 'hvac2@trade.com', 'maintenance@trade.com'
@@ -274,8 +279,8 @@ export const seedDatabase = async () => {
                 user_type: user.user_type,
                 is_employee: isEmployee,
                 company_name: user.company_name,
-                hourly_billable_rate: isEmployee ? (user.user_type === 'admin' ? 75 : 55) : null,
-                hourly_cost_rate: isEmployee ? (user.user_type === 'admin' ? 50 : 35) : null
+                hourly_billable_rate: isEmployee ? (user.hourly_billable_rate || (user.user_type === 'admin' ? 75 : 55)) : null,
+                hourly_cost_rate: isEmployee ? (user.hourly_cost_rate || (user.user_type === 'admin' ? 50 : 35)) : null
               })
               .eq('id', profileId);
             console.log(`  ↻ Updated profile for ${user.email}`);
@@ -319,8 +324,8 @@ export const seedDatabase = async () => {
               user_type: user.user_type,
               company_name: user.company_name,
               is_employee: isEmployee,
-              hourly_billable_rate: isEmployee ? (user.user_type === 'admin' ? 75 : 55) : null,
-              hourly_cost_rate: isEmployee ? (user.user_type === 'admin' ? 50 : 35) : null
+              hourly_billable_rate: isEmployee ? (user.hourly_billable_rate || (user.user_type === 'admin' ? 75 : 55)) : null,
+              hourly_cost_rate: isEmployee ? (user.hourly_cost_rate || (user.user_type === 'admin' ? 50 : 35)) : null
             }, {
               onConflict: 'user_id'
             })
@@ -883,7 +888,9 @@ export const seedDatabase = async () => {
       console.log(`\n${type.toUpperCase()} USERS:`);
       profiles.forEach(profile => {
         const role = profile.is_employee ? '(Employee)' : '';
-        console.log(`  • ${profile.email} - ${profile.first_name} ${profile.last_name} ${role}`);
+        const rateInfo = profile.is_employee && type === 'employee' ? 
+          ` - Cost: $${profile.hourly_cost_rate || 'N/A'}/hr, Billable: $${profile.hourly_billable_rate || 'N/A'}/hr` : '';
+        console.log(`  • ${profile.email} - ${profile.first_name} ${profile.last_name} ${role}${rateInfo}`);
       });
     });
 
