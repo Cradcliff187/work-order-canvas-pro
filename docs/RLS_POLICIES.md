@@ -42,6 +42,97 @@ This ensures users can always fetch their own profile data, which then allows he
 | **partner** | Organization-scoped access | Access limited to their organization's data (excluding employees) |
 | **subcontractor** | Assignment-based access | Access limited to work orders assigned to them |
 
+## User Creation and Authentication Flow
+
+### Service Role User Creation (Edge Functions)
+
+**Why Edge Functions for User Creation?**
+
+Creating users through browser-based code faces critical RLS policy violations:
+
+```
+❌ Browser Issue: "new row violates row-level security policy"
+✅ Edge Function Solution: Service role bypasses RLS for user creation
+```
+
+**Secure User Creation Process:**
+
+1. **Admin Authentication**: Multiple validation methods
+   - API key in request body (`admin_key`)
+   - Bearer token in Authorization header
+   - Development mode bypass (dev environment only)
+
+2. **Service Role Operations**: Using `SUPABASE_SERVICE_ROLE_KEY`
+   - Create `auth.users` entry with `admin.createUser()`
+   - Create matching `profiles` record
+   - Establish `user_organizations` relationships
+   - Set employee rates and permissions
+
+3. **Individual Error Handling**: Continue processing on failures
+   - Log detailed error information
+   - Track orphaned auth users for cleanup
+   - Provide comprehensive success/failure summary
+
+**Edge Function Auth Flow:**
+```typescript
+// 1. Admin validation (multiple methods)
+if (!validateAdminAccess(requestData, authHeader)) {
+  return unauthorized();
+}
+
+// 2. Service role user creation
+const { data: authUser } = await supabaseAdmin.auth.admin.createUser({
+  email: user.email,
+  password: DEFAULT_TEST_PASSWORD,
+  email_confirm: true,
+  user_metadata: { first_name, last_name, user_type }
+});
+
+// 3. Profile creation with service role
+await supabaseAdmin.from('profiles').insert({
+  user_id: authUser.user.id,
+  // ... all user metadata
+});
+
+// 4. Organization relationships
+await supabaseAdmin.from('user_organizations').insert({
+  user_id: profileData.id,
+  organization_id: organizationId
+});
+```
+
+### Troubleshooting User Creation Issues
+
+**Common Error: "new row violates row-level security policy"**
+- **Cause**: Attempting user creation through browser/client code
+- **Solution**: Use Edge Function with service role key
+- **Details**: RLS policies prevent client-side user creation for security
+
+**Common Error: "infinite recursion detected in policy"**
+- **Cause**: Helper functions querying profiles table in profile policies
+- **Solution**: Use direct `auth.uid()` comparisons in profile policies
+- **Prevention**: Never query profiles table from within profile RLS policies
+
+**Common Error: User creation succeeds but login fails**
+- **Cause**: Missing profile record or incorrect user_type
+- **Solution**: Ensure profile creation follows auth user creation
+- **Debug**: Check `profiles` table for matching `user_id`
+
+**Common Error: User can't access organization data**
+- **Cause**: Missing `user_organizations` relationship
+- **Solution**: Create relationship during user setup
+- **Verify**: Check `user_organizations` table for user-org mappings
+
+**Security Validation Failures:**
+- **Invalid API Key**: Check `ADMIN_SEEDING_KEY` environment variable
+- **Invalid Bearer Token**: Check `ADMIN_BEARER_TOKEN` environment variable  
+- **Development Bypass**: Set `ENVIRONMENT=development` for dev mode
+
+**Service Role Issues:**
+- **Missing Service Key**: Ensure `SUPABASE_SERVICE_ROLE_KEY` is configured
+- **Insufficient Permissions**: Service role should have full database access
+- **RLS Bypass**: Service role automatically bypasses all RLS policies
+
 ## Helper Functions
 
 These SECURITY DEFINER helper functions are used in enhancement policies. **Critical:** Base policies should use `auth.uid()` directly to prevent recursion.

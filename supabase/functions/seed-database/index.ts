@@ -23,14 +23,40 @@
  * Authentication & Security:
  * ==========================
  * 
- * - Function requires admin authentication (checked via request validation)
- * - Uses Supabase service role key for database operations
- * - Public function (no JWT verification) but admin-gated
- * - Comprehensive audit logging for all operations
+ * **Multi-Layer Admin Authentication**:
+ * - API key validation (`admin_key` in request body)
+ * - Bearer token validation (Authorization header)
+ * - Development mode bypass (ENVIRONMENT=development)
+ * - Service role key protection (never exposed in logs)
+ * 
+ * **User Creation Security Flow**:
+ * 1. Admin authentication validation (3 methods)
+ * 2. Service role client initialization (bypasses RLS)
+ * 3. Auth user creation with admin.createUser()
+ * 4. Profile creation with comprehensive metadata
+ * 5. User-organization relationship establishment
+ * 6. Employee rate configuration (cost/billable rates)
+ * 7. Individual error handling (continue on failures)
+ * 8. Comprehensive audit logging and progress reporting
+ * 
+ * **Critical Security Features**:
+ * - Individual user failure isolation (orphaned auth user tracking)
+ * - Organization relationship validation and mapping
+ * - Employee-specific data handling (rates, permissions)
+ * - Comprehensive error categorization and reporting
+ * - Test credential generation and summary
+ * 
+ * **Service Role Operations**:
+ * - Bypasses all RLS policies for administrative operations
+ * - Creates auth.users entries with proper metadata
+ * - Establishes user_organizations relationships
+ * - Sets employee-specific flags and hourly rates
+ * - Handles complex multi-tenant organization mapping
  * 
  * Usage:
  * ======
  * 
+ * Method 1: API Key Authentication
  * POST /functions/v1/seed-database
  * {
  *   "admin_key": "your-admin-verification-key",
@@ -39,6 +65,20 @@
  *     "include_test_data": true
  *   }
  * }
+ * 
+ * Method 2: Bearer Token Authentication
+ * POST /functions/v1/seed-database
+ * Authorization: Bearer your-admin-bearer-token
+ * {
+ *   "options": {
+ *     "clear_existing": true
+ *   }
+ * }
+ * 
+ * Method 3: Development Mode (Environment Variables)
+ * ENVIRONMENT=development
+ * POST /functions/v1/seed-database
+ * {}
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
@@ -79,13 +119,55 @@ interface SeedingRequest {
 /**
  * Validate admin access for seeding operations
  * 
- * In production, implement proper admin authentication.
- * For development, we use a simple key-based approach.
+ * CRITICAL SECURITY: This function must validate that the caller
+ * has administrative privileges before allowing database seeding.
+ * 
+ * Multiple validation methods are supported:
+ * 1. Admin API key in request body
+ * 2. Authorization header with admin bearer token
+ * 3. Development mode bypass (only in dev environment)
+ * 
+ * @param request - The seeding request containing authentication data
+ * @param authHeader - Authorization header from request
+ * @returns true if admin access is validated, false otherwise
  */
-function validateAdminAccess(request: SeedingRequest): boolean {
-  // For development - accept any admin_key or no key
-  // In production, implement proper authentication
-  return true;
+function validateAdminAccess(request: SeedingRequest, authHeader?: string): boolean {
+  try {
+    // Method 1: Check for admin API key in request body
+    if (request.admin_key) {
+      const expectedKey = Deno.env.get('ADMIN_SEEDING_KEY');
+      if (expectedKey && request.admin_key === expectedKey) {
+        console.log('✅ Admin access validated via API key');
+        return true;
+      }
+      console.warn('⚠️ Invalid admin API key provided');
+    }
+    
+    // Method 2: Check for Authorization header
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const expectedToken = Deno.env.get('ADMIN_BEARER_TOKEN');
+      if (expectedToken && token === expectedToken) {
+        console.log('✅ Admin access validated via bearer token');
+        return true;
+      }
+      console.warn('⚠️ Invalid bearer token provided');
+    }
+    
+    // Method 3: Development mode bypass
+    const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
+    if (isDevelopment) {
+      console.log('⚠️ Admin access granted in development mode');
+      return true;
+    }
+    
+    console.error('❌ Admin access denied - no valid authentication provided');
+    return false;
+    
+  } catch (error) {
+    console.error('❌ Error validating admin access:', error);
+    return false;
+  }
 }
 
 /**
@@ -168,21 +250,72 @@ async function seedEmailTemplates(): Promise<number> {
 }
 
 /**
+ * User creation result interface for enhanced error tracking
+ */
+interface UserCreationResult {
+  email: string;
+  success: boolean;
+  authUserId?: string;
+  profileId?: string;
+  organizationLinks?: number;
+  error?: string;
+  stage?: 'auth' | 'profile' | 'organization';
+}
+
+/**
  * Create test users with authentication accounts
  * 
- * This creates both auth.users entries and profile records
- * with proper organization relationships.
+ * This function creates complete user accounts with:
+ * 1. Auth users in auth.users table (service role bypass)
+ * 2. Profile records with all user metadata
+ * 3. User-organization relationships
+ * 4. Employee-specific rate settings
+ * 
+ * Security Features:
+ * - Uses service role to bypass RLS policies
+ * - Individual error handling per user (continues on failures)
+ * - Comprehensive audit logging for each step
+ * - User-organization relationship mapping
+ * 
+ * @returns Promise<number> - Number of successfully created users
  */
 async function seedUsers(): Promise<number> {
-  console.log('👥 Creating test users...');
+  console.log('👥 Creating test users with auth accounts and organization relationships...');
   
   let createdCount = 0;
+  const userResults: UserCreationResult[] = [];
+  const organizationMap = new Map<string, string>();
   
+  // Step 1: Get organization IDs for mapping
+  console.log('🔍 Fetching organization mappings...');
+  const { data: orgData, error: orgError } = await supabaseAdmin
+    .from('organizations')
+    .select('id, name, organization_type');
+    
+  if (orgError) {
+    console.error('❌ Failed to fetch organizations for mapping:', orgError);
+    throw new Error(`Cannot create users without organization mapping: ${orgError.message}`);
+  }
+  
+  // Build organization name-to-ID mapping
+  orgData?.forEach(org => {
+    organizationMap.set(org.name, org.id);
+  });
+  
+  console.log(`📋 Found ${organizationMap.size} organizations for user mapping`);
+  
+  // Step 2: Create users with comprehensive error handling
   for (const user of users) {
+    const result: UserCreationResult = {
+      email: user.email,
+      success: false
+    };
+    
     try {
-      console.log(`Creating user: ${user.email}`);
+      console.log(`\n🔨 Creating user: ${user.email} (${user.user_type})`);
       
-      // Create auth user
+      // Step 2a: Create auth user with service role
+      console.log(`  📧 Creating auth user for ${user.email}...`);
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: user.email,
         password: DEFAULT_TEST_PASSWORD,
@@ -195,12 +328,19 @@ async function seedUsers(): Promise<number> {
       });
       
       if (authError) {
-        console.error(`❌ Failed to create auth user ${user.email}:`, authError);
+        result.error = `Auth creation failed: ${authError.message}`;
+        result.stage = 'auth';
+        console.error(`  ❌ Auth user creation failed for ${user.email}:`, authError.message);
+        userResults.push(result);
         continue;
       }
       
-      // Create profile
-      const { error: profileError } = await supabaseAdmin
+      result.authUserId = authUser.user.id;
+      console.log(`  ✅ Auth user created: ${authUser.user.id}`);
+      
+      // Step 2b: Create profile record
+      console.log(`  👤 Creating profile for ${user.email}...`);
+      const { data: profileData, error: profileError } = await supabaseAdmin
         .from('profiles')
         .insert({
           user_id: authUser.user.id,
@@ -212,23 +352,142 @@ async function seedUsers(): Promise<number> {
           phone: user.phone,
           is_employee: user.is_employee || false,
           hourly_cost_rate: user.hourly_cost_rate,
-          hourly_billable_rate: user.hourly_billable_rate
-        });
+          hourly_billable_rate: user.hourly_billable_rate,
+          is_active: true
+        })
+        .select('id')
+        .single();
       
       if (profileError) {
-        console.error(`❌ Failed to create profile for ${user.email}:`, profileError);
+        result.error = `Profile creation failed: ${profileError.message}`;
+        result.stage = 'profile';
+        console.error(`  ❌ Profile creation failed for ${user.email}:`, profileError.message);
+        
+        // Log orphaned auth user for manual cleanup
+        console.warn(`  ⚠️ ORPHANED AUTH USER: ${authUser.user.id} for ${user.email} - manual cleanup may be required`);
+        userResults.push(result);
         continue;
       }
       
+      result.profileId = profileData.id;
+      console.log(`  ✅ Profile created: ${profileData.id}`);
+      
+      // Step 2c: Create user-organization relationships
+      console.log(`  🏢 Linking user to organizations...`);
+      let organizationLinksCreated = 0;
+      
+      // Determine organization relationships based on user type and company
+      const organizationLinks: string[] = [];
+      
+      if (user.user_type === 'admin' || user.user_type === 'employee') {
+        // Link to WorkOrderPro (internal organization)
+        const internalOrgId = organizationMap.get('WorkOrderPro');
+        if (internalOrgId) {
+          organizationLinks.push(internalOrgId);
+        }
+      } else if (user.user_type === 'partner') {
+        // Link to partner organization based on company_name
+        if (user.company_name) {
+          const partnerOrgId = organizationMap.get(user.company_name);
+          if (partnerOrgId) {
+            organizationLinks.push(partnerOrgId);
+          }
+        }
+      } else if (user.user_type === 'subcontractor') {
+        // Link to subcontractor organization based on company_name
+        if (user.company_name) {
+          const subcontractorOrgId = organizationMap.get(user.company_name);
+          if (subcontractorOrgId) {
+            organizationLinks.push(subcontractorOrgId);
+          }
+        }
+      }
+      
+      // Create organization relationships
+      for (const orgId of organizationLinks) {
+        try {
+          const { error: orgLinkError } = await supabaseAdmin
+            .from('user_organizations')
+            .insert({
+              user_id: profileData.id,
+              organization_id: orgId
+            });
+            
+          if (orgLinkError) {
+            console.warn(`    ⚠️ Failed to link user ${user.email} to organization ${orgId}:`, orgLinkError.message);
+          } else {
+            organizationLinksCreated++;
+            console.log(`    ✅ Linked to organization: ${orgId}`);
+          }
+        } catch (linkError) {
+          console.warn(`    ⚠️ Error linking user ${user.email} to organization ${orgId}:`, linkError);
+        }
+      }
+      
+      result.organizationLinks = organizationLinksCreated;
+      
+      // Step 2d: Log employee-specific details
+      if (user.is_employee && (user.hourly_cost_rate || user.hourly_billable_rate)) {
+        console.log(`  💰 Employee rates - Cost: $${user.hourly_cost_rate}/hr, Billable: $${user.hourly_billable_rate}/hr`);
+      }
+      
+      // Success!
+      result.success = true;
       createdCount++;
-      console.log(`✅ Created user: ${user.email}`);
+      console.log(`  🎉 User ${user.email} created successfully with ${organizationLinksCreated} organization links`);
       
     } catch (error) {
-      console.error(`❌ Error creating user ${user.email}:`, error);
+      result.error = `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      result.stage = 'unknown';
+      console.error(`  ❌ Unexpected error creating user ${user.email}:`, error);
     }
+    
+    userResults.push(result);
   }
   
-  console.log(`✅ Created ${createdCount} users total`);
+  // Step 3: Generate comprehensive summary
+  console.log('\n📊 User Creation Summary:');
+  console.log(`✅ Successfully created: ${createdCount}/${users.length} users`);
+  
+  const errorsByStage = userResults
+    .filter(r => !r.success)
+    .reduce((acc, r) => {
+      const stage = r.stage || 'unknown';
+      acc[stage] = (acc[stage] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  
+  if (Object.keys(errorsByStage).length > 0) {
+    console.log('❌ Errors by stage:', errorsByStage);
+  }
+  
+  const totalOrgLinks = userResults
+    .filter(r => r.success)
+    .reduce((sum, r) => sum + (r.organizationLinks || 0), 0);
+  
+  console.log(`🔗 Total organization relationships created: ${totalOrgLinks}`);
+  
+  // Step 4: List test credentials for easy access
+  const successfulUsers = userResults.filter(r => r.success);
+  if (successfulUsers.length > 0) {
+    console.log('\n🔑 Test Login Credentials:');
+    console.log(`📧 Password for all test users: ${DEFAULT_TEST_PASSWORD}`);
+    console.log('👥 Test Users by Type:');
+    
+    const usersByType = successfulUsers.reduce((acc, r) => {
+      const user = users.find(u => u.email === r.email);
+      if (user) {
+        if (!acc[user.user_type]) acc[user.user_type] = [];
+        acc[user.user_type].push(user.email);
+      }
+      return acc;
+    }, {} as Record<string, string[]>);
+    
+    Object.entries(usersByType).forEach(([type, emails]) => {
+      console.log(`  ${type}: ${emails.join(', ')}`);
+    });
+  }
+  
   return createdCount;
 }
 
@@ -394,9 +653,13 @@ serve(async (req) => {
       // Empty body is acceptable
     }
     
-    // Validate admin access
-    if (!validateAdminAccess(requestData)) {
-      return createCorsErrorResponse('Unauthorized', 401, 'ADMIN_ACCESS_REQUIRED');
+    // Extract authorization header for admin validation
+    const authHeader = req.headers.get('Authorization');
+    
+    // Validate admin access with comprehensive security check
+    if (!validateAdminAccess(requestData, authHeader || undefined)) {
+      console.warn('🚨 Unauthorized seeding attempt blocked');
+      return createCorsErrorResponse('Unauthorized: Admin access required for database seeding', 401, 'ADMIN_ACCESS_REQUIRED');
     }
     
     console.log('🔑 Admin access validated, starting seeding process...');
