@@ -7,7 +7,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
+const resendApiKey = Deno.env.get('RESEND_API_KEY');
+if (!resendApiKey) {
+  console.error('RESEND_API_KEY is not configured');
+}
+const resend = new Resend(resendApiKey as string);
 
 serve(async (req: Request) => {
   // Handle CORS preflight requests
@@ -16,6 +20,10 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Validate required environment variables
+    if (!resendApiKey) {
+      throw new Error('RESEND_API_KEY is not configured in Supabase secrets');
+    }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -98,6 +106,28 @@ serve(async (req: Request) => {
 
   } catch (error: any) {
     console.error('Error in email-welcome function:', error);
+    
+    // Log failed email attempt to database
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      const requestBody = await req.clone().json().catch(() => ({}));
+      const email = requestBody.email || 'unknown';
+      
+      await supabase
+        .from('email_logs')
+        .insert({
+          recipient_email: email,
+          template_used: 'welcome_email',
+          status: 'failed',
+          error_message: error.message || 'Unknown error in email-welcome function',
+          work_order_id: null
+        });
+    } catch (logError) {
+      console.error('Failed to log email error to database:', logError);
+    }
     
     return new Response(
       JSON.stringify({ 

@@ -125,11 +125,12 @@ serve(async (req) => {
 
     // Send welcome email if requested
     if (userData.send_welcome_email) {
+      console.log('Sending welcome email to:', userData.email);
       try {
         const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/email-welcome`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -142,14 +143,48 @@ serve(async (req) => {
           }),
         });
 
+        const emailResult = await emailResponse.text();
+        
         if (emailResponse.ok) {
-          console.log('Welcome email sent successfully');
+          console.log('Welcome email sent successfully:', emailResult);
         } else {
-          console.error('Welcome email failed:', await emailResponse.text());
+          console.error('Welcome email failed with status:', emailResponse.status);
+          console.error('Welcome email error response:', emailResult);
+          
+          // Log failed email attempt to database
+          try {
+            await supabaseAdmin
+              .from('email_logs')
+              .insert({
+                recipient_email: userData.email,
+                template_used: 'welcome_email',
+                status: 'failed',
+                error_message: `HTTP ${emailResponse.status}: ${emailResult}`,
+                work_order_id: null
+              });
+          } catch (logError) {
+            console.error('Failed to log email error:', logError);
+          }
         }
       } catch (emailError) {
-        console.error('Welcome email error:', emailError);
-        // Continue anyway
+        console.error('Welcome email network error:', emailError);
+        
+        // Log failed email attempt to database
+        try {
+          await supabaseAdmin
+            .from('email_logs')
+            .insert({
+              recipient_email: userData.email,
+              template_used: 'welcome_email',
+              status: 'failed',
+              error_message: `Network error: ${emailError.message}`,
+              work_order_id: null
+            });
+        } catch (logError) {
+          console.error('Failed to log email error:', logError);
+        }
+        
+        // Continue anyway - don't fail user creation due to email issues
       }
     }
 
