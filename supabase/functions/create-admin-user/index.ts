@@ -60,18 +60,24 @@ serve(async (req) => {
 
     console.log('Auth user created:', authUser.user.id);
 
-    // Wait for profile creation and verify
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for profile creation and verify with retry logic
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const { data: newProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('user_id', authUser.user.id)
-      .single();
+    let retries = 0;
+    let newProfile = null;
+    while (retries < 3 && !newProfile) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authUser.user.id)
+        .single();
+      newProfile = data;
+      retries++;
+    }
 
-    if (profileError || !newProfile) {
-      console.error('Profile creation failed:', profileError);
-      // Rollback: delete the auth user
+    if (!newProfile) {
+      console.error('Profile creation failed after retries');
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
       throw new Error('Profile creation failed');
     }
