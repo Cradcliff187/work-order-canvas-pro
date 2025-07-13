@@ -6,39 +6,17 @@ WorkOrderPro uses PostgreSQL functions to implement authentication helpers, audi
 
 ## Function Categories
 
-### Auth Helper Functions (8)
+### Auth Helper Functions (9)
 SECURITY DEFINER functions that provide safe access to user context for RLS policies
 
-### Trigger Functions (3)  
-Functions executed by database triggers for audit logging, user profile creation, and work order numbering
+### Trigger Functions (5)  
+Functions executed by database triggers for audit logging, user profile creation, work order numbering, and status transitions
 
 ### Email Notification Functions (4)
 SECURITY DEFINER functions that call edge functions for automated email notifications
 
 ### Database Seeding Functions (2)
 SECURITY DEFINER functions for secure test data management and development workflow
-
-#### seed_test_data()
-**Purpose**: Populate database with comprehensive test data for development and testing
-- **Security**: SECURITY DEFINER with admin-only access validation
-- **Usage**: `await supabase.rpc('seed_test_data')`
-- **Returns**: Enhanced JSON response with constraint compliance details
-- **Updated**: July 13, 2025 - Fixed constraint violations and enhanced business data
-
-#### clear_test_data()  
-**Purpose**: Safely remove test data while preserving production data
-- **Security**: SECURITY DEFINER with admin-only access validation  
-- **Usage**: `await supabase.rpc('clear_test_data')`
-- **Returns**: Success status with detailed deletion counts and safety verification
-
-### User Creation Functions (1)
-Edge function for creating authenticated test users
-
-#### create-test-users Edge Function
-**Purpose**: Create real authenticated users for comprehensive testing
-- **Security**: Admin authentication required via multiple validation methods
-- **Usage**: Via DevTools UI or direct edge function call
-- **Returns**: Detailed user creation results with authentication credentials
 
 ### Utility Functions (6)
 General-purpose functions for work order numbering, invoice numbering, analytics view management, and data cleanup
@@ -51,226 +29,65 @@ Business intelligence functions for reporting and performance metrics
 
 ## Auth Helper Functions
 
-These functions use `SECURITY DEFINER` to avoid infinite recursion in RLS policies by providing a safe way to access user context.
+These functions avoid infinite recursion in RLS policies by providing secure access to user context through SECURITY DEFINER.
 
-### 1. auth_user_id()
-
-**Purpose**: Safely retrieve the current authenticated user's UUID
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_user_id()
-RETURNS uuid
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN auth.uid();
-EXCEPTION WHEN OTHERS THEN
-  RETURN NULL;
-END;
-$$;
-```
-
+### auth_user_id()
+**Purpose**: Safely retrieve the current authenticated user's UUID  
 **Returns**: UUID of current user or NULL if not authenticated  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Primary function for getting user context in RLS policies
 
-### 2. auth_profile_id()
-
-**Purpose**: Get the profile ID (internal) for the current user
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_profile_id()
-RETURNS uuid
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN (
-    SELECT id FROM public.profiles 
-    WHERE user_id = auth.uid() LIMIT 1
-  );
-EXCEPTION WHEN OTHERS THEN
-  RETURN NULL;
-END;
-$$;
-```
-
+### auth_profile_id()
+**Purpose**: Get the internal profile ID for the current user  
 **Returns**: UUID of user's profile record or NULL  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Links Supabase Auth users to internal profile system
 
-### 3. auth_user_type()
-
-**Purpose**: Determine the user type (role) of the current user
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_user_type()
-RETURNS user_type
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN (
-    SELECT user_type FROM public.profiles 
-    WHERE user_id = auth.uid() LIMIT 1
-  );
-EXCEPTION WHEN OTHERS THEN
-  RETURN 'subcontractor'::public.user_type;
-END;
-$$;
-```
-
-**Returns**: 'admin', 'partner', or 'subcontractor' (defaults to 'subcontractor')  
+### auth_user_type()
+**Purpose**: Determine the user type (role) of the current user  
+**Returns**: 'admin', 'partner', 'subcontractor', or 'employee' (defaults to 'subcontractor')  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Core function for role-based access control
 
-### 4. auth_is_admin()
-
-**Purpose**: Quick check if current user is an admin
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_is_admin()
-RETURNS boolean
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN public.auth_user_type() = 'admin';
-END;
-$$;
-```
-
+### auth_is_admin()
+**Purpose**: Quick check if current user is an admin  
 **Returns**: TRUE if user is admin, FALSE otherwise  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Simplified admin access checks in RLS policies
 
-### 5. auth_user_organizations()
-
-**Purpose**: Get all organizations the current user belongs to
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_user_organizations()
-RETURNS TABLE(organization_id uuid)
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT uo.organization_id 
-  FROM public.user_organizations uo
-  WHERE uo.user_id = public.auth_profile_id();
-END;
-$$;
-```
-
+### auth_user_organizations()
+**Purpose**: Get all organizations the current user belongs to  
 **Returns**: Table of organization UUIDs  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Multi-tenant access control for partners
 
-### 6. auth_user_belongs_to_organization(org_id uuid)
-
-**Purpose**: Check if current user belongs to a specific organization
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_user_belongs_to_organization(org_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.auth_user_organizations() 
-    WHERE organization_id = org_id
-  );
-END;
-$$;
-```
-
+### auth_user_belongs_to_organization(org_id uuid)
+**Purpose**: Check if current user belongs to a specific organization  
 **Parameters**: `org_id` - UUID of organization to check  
 **Returns**: TRUE if user belongs to organization  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Organization-scoped data access for partners
 
-### 7. auth_user_assigned_to_work_order(wo_id uuid)
-
-**Purpose**: Check if current user is assigned to a specific work order
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_user_assigned_to_work_order(wo_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.work_orders wo
-    WHERE wo.id = wo_id AND wo.assigned_to = public.auth_profile_id()
-  );
-END;
-$$;
-```
-
+### auth_user_assigned_to_work_order(wo_id uuid)
+**Purpose**: Check if current user is assigned to a specific work order  
 **Parameters**: `wo_id` - UUID of work order to check  
 **Returns**: TRUE if user is assigned to the work order  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Work order access control for subcontractors
 
-### 8. auth_user_organization_assignments()
-
-**Purpose**: Get all work orders assigned to the current user's organizations (company access)
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_user_organization_assignments()
-RETURNS TABLE(work_order_id uuid)
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT DISTINCT woa.work_order_id 
-  FROM work_order_assignments woa
-  WHERE woa.assigned_organization_id IN (
-    SELECT organization_id 
-    FROM public.auth_user_organizations()
-  );
-END;
-$$;
-```
-
+### auth_user_organization_assignments()
+**Purpose**: Get all work orders assigned to the current user's organizations  
 **Returns**: Table of work order UUIDs assigned to user's organizations  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Organization-level work order access control enabling company-wide collaboration  
 **Business Impact**: Enables team-based work orders where any organization member can work on assigned jobs
 
-### 9. auth_user_can_view_assignment(assignment_id uuid)
-
-**Purpose**: Check if current user can view a specific work order assignment
-
-```sql
-CREATE OR REPLACE FUNCTION public.auth_user_can_view_assignment(assignment_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  -- Admins can view all assignments
-  IF auth_is_admin() THEN
-    RETURN true;
-  END IF;
-  
-  -- Check if user is assigned to this assignment
-  IF EXISTS (
-    SELECT 1 
-    FROM work_order_assignments woa
-    WHERE woa.id = assignment_id 
-    AND woa.assigned_to = auth_profile_id()
-  ) THEN
-    RETURN true;
-  END IF;
-  
-  -- Check if user is a partner of the organization that owns the work order
-  IF auth_user_type() = 'partner' AND EXISTS (
-    SELECT 1 
-    FROM work_order_assignments woa
-    JOIN work_orders wo ON wo.id = woa.work_order_id
-    WHERE woa.id = assignment_id 
-    AND auth_user_belongs_to_organization(wo.organization_id)
-  ) THEN
-    RETURN true;
-  END IF;
-  
-  RETURN false;
-END;
-$$;
-```
-
+### auth_user_can_view_assignment(assignment_id uuid)
+**Purpose**: Check if current user can view a specific work order assignment  
 **Parameters**: `assignment_id` - UUID of assignment to check  
 **Returns**: TRUE if user can view the assignment  
-**Usage**: Assignment access control and UI permission checks
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
+**Usage**: Assignment access control and UI permission checks  
 **Logic**: 
 - Admins can view all assignments
 - Users can view assignments they are directly assigned to
@@ -278,226 +95,199 @@ $$;
 
 ## Email Notification Functions
 
-WorkOrderPro includes an integrated email notification system that automatically sends emails when key events occur. These functions use the `pg_net` extension to call Supabase Edge Functions, which handle the actual email delivery through Resend.
+These functions use `pg_net` to call Supabase Edge Functions for automated email delivery through Resend.
 
 ### notify_work_order_created()
-
-**Purpose**: Automatically send email notification when new work orders are created
-
-```sql
-CREATE OR REPLACE FUNCTION public.notify_work_order_created()
-RETURNS TRIGGER AS $$
-BEGIN
-  BEGIN
-    PERFORM net.http_post(
-      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-order-created',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json'
-      ),
-      body := jsonb_build_object('work_order_id', NEW.id)
-    );
-  EXCEPTION WHEN OTHERS THEN
-    -- Log error but don't fail the main operation
-    RAISE WARNING 'Failed to send work order created email for %: %', NEW.id, SQLERRM;
-  END;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
+**Purpose**: Send email notification when new work orders are created  
 **Trigger**: `trigger_work_order_created_email` on `work_orders` table (AFTER INSERT)  
+**Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
 **Edge Function**: `email-work-order-created`  
 **Recipients**: System administrators and relevant stakeholders  
-**Security**: Uses SECURITY DEFINER to access `pg_net` extension  
+**Usage**: Automatic notification when partners submit new work orders
 
 ### notify_report_submitted()
-
-**Purpose**: Send email notification when subcontractors submit work order reports
-
-```sql
-CREATE OR REPLACE FUNCTION public.notify_report_submitted()
-RETURNS TRIGGER AS $$
-BEGIN
-  BEGIN
-    PERFORM net.http_post(
-      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-report-submitted',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json'
-      ),
-      body := jsonb_build_object('work_order_report_id', NEW.id)
-    );
-  EXCEPTION WHEN OTHERS THEN
-    -- Log error but don't fail the main operation
-    RAISE WARNING 'Failed to send report submitted email for %: %', NEW.id, SQLERRM;
-  END;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
+**Purpose**: Send email notification when subcontractors submit work order reports  
 **Trigger**: `trigger_report_submitted_email` on `work_order_reports` table (AFTER INSERT)  
+**Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
 **Edge Function**: `email-report-submitted`  
 **Recipients**: Administrators and report reviewers  
-**Security**: Error-resilient design prevents email failures from blocking report submission  
+**Usage**: Immediate notification when work completion reports are submitted
 
 ### notify_report_reviewed()
-
-**Purpose**: Send email notification when work order reports are reviewed (approved/rejected)
-
-```sql
-CREATE OR REPLACE FUNCTION public.notify_report_reviewed()
-RETURNS TRIGGER AS $$
-BEGIN
-  BEGIN
-    PERFORM net.http_post(
-      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-report-reviewed',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json'
-      ),
-      body := jsonb_build_object(
-        'work_order_report_id', NEW.id,
-        'status', NEW.status,
-        'review_notes', NEW.review_notes
-      )
-    );
-  EXCEPTION WHEN OTHERS THEN
-    -- Log error but don't fail the main operation
-    RAISE WARNING 'Failed to send report reviewed email for %: %', NEW.id, SQLERRM;
-  END;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
+**Purpose**: Send email notification when work order reports are reviewed  
 **Trigger**: `trigger_report_reviewed_email` on `work_order_reports` table (AFTER UPDATE OF status)  
-**Condition**: Fires when status changes to 'approved' or 'rejected'  
+**Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
 **Edge Function**: `email-report-reviewed`  
 **Recipients**: Subcontractor who submitted the report  
-**Content**: Includes review status and admin review notes  
+**Usage**: Notify subcontractors of report approval or rejection with admin notes
 
 ### notify_user_welcome()
-
-**Purpose**: Send welcome email when new user profiles are created
-
-```sql
-CREATE OR REPLACE FUNCTION public.notify_user_welcome()
-RETURNS TRIGGER AS $$
-BEGIN
-  BEGIN
-    PERFORM net.http_post(
-      url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-welcome',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json'
-      ),
-      body := jsonb_build_object(
-        'user_id', NEW.id,
-        'email', NEW.email,
-        'first_name', NEW.first_name,
-        'last_name', NEW.last_name,
-        'user_type', NEW.user_type
-      )
-    );
-  EXCEPTION WHEN OTHERS THEN
-    -- Log error but don't fail the main operation
-    RAISE WARNING 'Failed to send welcome email for user %: %', NEW.id, SQLERRM;
-  END;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
+**Purpose**: Send welcome email when new user profiles are created  
 **Trigger**: `trigger_user_welcome_email` on `profiles` table (AFTER INSERT)  
+**Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
 **Edge Function**: `email-welcome`  
 **Recipients**: Newly created user  
-**Content**: Welcome message with account setup instructions  
-**Template**: Uses `welcome_email` template from `email_templates` table  
+**Usage**: Onboard new users with welcome message and account setup instructions
 
-**Email System Architecture:**
-- **Asynchronous Processing**: Email sending happens asynchronously to avoid blocking main operations
-- **Error Resilience**: Email failures are logged as warnings but don't prevent database operations
-- **Template System**: Uses `email_templates` table for customizable email content
-- **Delivery Tracking**: All emails are logged in `email_logs` table with delivery status
-- **External Integration**: Leverages Resend service for reliable email delivery
+## Database Seeding Functions
 
-## Database Function Enhancements (July 2025)
+### seed_test_data()
+**Purpose**: Populate database with comprehensive test data for development and testing  
+**Migration**: `20250710181921-900e8014-cac5-4d3f-982c-d62087a92d90.sql`  
+**Security**: Admin-only access with safety checks  
+**Usage**: `await supabase.rpc('seed_test_data')`  
+**Returns**: JSON response with detailed creation counts and testing scenarios  
+**Business Impact**: Enables rapid development and testing with realistic data scenarios
 
-### Enhanced seed_test_data() Function
+### clear_test_data()
+**Purpose**: Safely remove test data while preserving production data  
+**Migration**: `20250710181921-900e8014-cac5-4d3f-982c-d62087a92d90.sql`  
+**Security**: Admin-only access with multiple safety checks  
+**Usage**: `await supabase.rpc('clear_test_data')`  
+**Returns**: Success status with detailed deletion counts and safety verification  
+**Business Impact**: Clean slate for testing without affecting real data
 
-**Updated**: July 13, 2025  
-**Purpose**: Create comprehensive test data with constraint compliance  
-**Changes**: 
-- **Constraint Compliance**: Fixed `work_order_attachments_check` constraint violations
-- **Enhanced Business Data**: More realistic work order scenarios with varied statuses
-- **Admin-Only Security**: Uses authenticated admin profile for all data relationships
-- **Comprehensive Response**: Detailed JSON response with testing scenario breakdowns
+## Trigger Functions
 
-**Current Response Format**:
-```json
-{
-  "success": true,
-  "message": "Enhanced business test data seeded successfully (constraint-compliant)",
-  "idempotent": true,
-  "details": {
-    "organizations_created": 8,
-    "partner_locations_created": 5,
-    "work_orders_created": 12,
-    "work_order_assignments_created": 8,
-    "work_order_reports_created": 6,
-    "employee_reports_created": 2,
-    "receipts_created": 2,
-    "invoices_created": 3,
-    "invoice_work_orders_created": 3,
-    "work_order_attachments_created": 10,
-    "admin_profile_used": "uuid-of-admin-profile",
-    "approach": "comprehensive_testing_constraint_compliant"
-  },
-  "testing_scenarios": {
-    "work_order_statuses": {
-      "received": 4,
-      "assigned": 0,
-      "in_progress": 3,
-      "completed": 3,
-      "cancelled": 2
-    },
-    "invoice_statuses": {
-      "draft": 1,
-      "submitted": 1,
-      "approved": 1
-    },
-    "attachment_types": {
-      "work_order_attachments": 3,
-      "report_attachments": 7,
-      "total": 10
-    }
-  },
-  "constraint_fixes": {
-    "work_order_attachments_check": "Fixed - attachments now properly link to either work_order_id OR work_order_report_id, never both"
-  }
-}
-```
+### handle_new_user_robust()
+**Purpose**: Automatically create user profiles when new users sign up  
+**Trigger**: `trigger_create_profile_on_signup` on `auth.users` table (AFTER INSERT)  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
+**Usage**: Seamless user onboarding with proper profile creation  
+**Error Handling**: Race condition safe with conflict resolution
 
-### create-test-users Edge Function
+### audit_trigger_function()
+**Purpose**: Comprehensive audit logging for all database changes  
+**Migration**: `20250711000002_add_audit_triggers.sql`  
+**Usage**: Automatic tracking of all INSERT, UPDATE, DELETE operations  
+**Security**: Tracks user, timestamp, and data changes for compliance
 
+### auto_populate_assignment_organization()
+**Purpose**: Automatically set organization ID when assigning work orders  
+**Trigger**: On `work_order_assignments` table (BEFORE INSERT)  
+**Migration**: `20250711031041-b59d9270-6e16-4c67-86dc-92bb0ae89118.sql`  
+**Usage**: Streamlines assignment workflow by auto-populating organization data
+
+### auto_update_assignment_status()
+**Purpose**: Transition work order status when assignments are created  
+**Trigger**: On `work_order_assignments` table (AFTER INSERT)  
+**Migration**: `20250711031041-b59d9270-6e16-4c67-86dc-92bb0ae89118.sql`  
+**Usage**: Automatic status progression from 'received' to 'assigned'
+
+### auto_update_report_status_enhanced()
+**Purpose**: Enhanced status transitions based on report submissions  
+**Trigger**: On `work_order_reports` table (AFTER INSERT/UPDATE)  
+**Migration**: `20250711054041-e37d03d0-58b8-4a58-89af-a7060fdf1238.sql`  
+**Usage**: Intelligent work order completion detection with assignment model support
+
+## Utility Functions
+
+### generate_work_order_number_v2(org_id uuid, location_number text)
+**Purpose**: Generate partner-specific work order numbers with organization initials  
+**Parameters**: Organization ID and optional location number  
+**Returns**: JSON with work order number and metadata  
+**Migration**: `20250711032635-88945574-99a3-4df1-b080-20b8d4f51598.sql`  
+**Usage**: Automatic work order numbering during creation  
+**Format**: `ORG-LOC-001` (e.g., `ABC-001-001`)
+
+### generate_internal_invoice_number()
+**Purpose**: Generate sequential internal invoice numbers  
+**Returns**: String with year and sequence (e.g., `2025-0001`)  
+**Migration**: `20250711042133-79b08133-7513-490e-913e-9b4adbc6db45.sql`  
+**Usage**: Automatic invoice numbering for tracking and organization
+
+### transition_work_order_status(work_order_id, new_status, reason, user_id)
+**Purpose**: Safely transition work order status with audit logging  
+**Parameters**: Work order ID, new status, optional reason and user ID  
+**Returns**: Boolean success indicator  
+**Migration**: `20250711031041-b59d9270-6e16-4c67-86dc-92bb0ae89118.sql`  
+**Usage**: Centralized status management with proper validation and logging
+
+### refresh_analytics_views()
+**Purpose**: Refresh materialized views for analytics dashboards  
+**Migration**: `20250710181921-900e8014-cac5-4d3f-982c-d62087a92d90.sql`  
+**Usage**: Periodic refresh of performance metrics and reporting data  
+**Business Impact**: Ensures analytics dashboards show current data
+
+### get_user_type_secure(user_uuid)
+**Purpose**: Securely get user type with UUID parameter  
+**Parameters**: User UUID (optional, defaults to current user)  
+**Returns**: User type enum  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
+**Usage**: Safe user type checking for administrative functions
+
+### is_admin()
+**Purpose**: Legacy admin check function (deprecated)  
+**Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
+**Usage**: Use `auth_is_admin()` instead for consistency
+
+## Work Order Completion Functions
+
+### check_assignment_completion_status_enhanced(work_order_id)
+**Purpose**: Enhanced completion status check with assignment model support  
+**Parameters**: Work order ID  
+**Returns**: Boolean indicating if work order should be marked complete  
+**Migration**: `20250711054041-e37d03d0-58b8-4a58-89af-a7060fdf1238.sql`  
+**Usage**: Automatic completion detection supporting both legacy and new assignment models  
+**Logic**: Checks for approved reports from all lead assignees
+
+### set_manual_completion_block(work_order_id, blocked)
+**Purpose**: Allow administrators to manually block or unblock automatic completion  
+**Parameters**: Work order ID and blocked status (default true)  
+**Migration**: `20250711054041-e37d03d0-58b8-4a58-89af-a7060fdf1238.sql`  
+**Usage**: Administrative override for work orders requiring manual review  
+**Business Impact**: Prevents premature completion for complex work orders
+
+### trigger_completion_email(work_order_id)
+**Purpose**: Send completion email notification using edge function integration  
+**Parameters**: Work order ID  
+**Migration**: `20250711054041-e37d03d0-58b8-4a58-89af-a7060fdf1238.sql`  
+**Usage**: Automatic notification when work orders are completed  
+**Integration**: Calls `email-work-order-completed` edge function
+
+## Analytics Functions
+
+### calculate_completion_time_by_trade(start_date, end_date)
+**Purpose**: Calculate average completion times grouped by trade  
+**Parameters**: Date range (defaults to last 30 days)  
+**Returns**: Table with trade name, average hours, and order counts  
+**Migration**: `20250711054041-e37d03d0-58b8-4a58-89af-a7060fdf1238.sql`  
+**Usage**: Performance analytics for trade-specific metrics  
+**Business Impact**: Identifies efficient trades and optimization opportunities
+
+### calculate_first_time_fix_rate(start_date, end_date)
+**Purpose**: Calculate percentage of work orders completed on first visit  
+**Parameters**: Date range (defaults to last 30 days)  
+**Returns**: Numeric percentage (0-100)  
+**Migration**: `20250711054041-e37d03d0-58b8-4a58-89af-a7060fdf1238.sql`  
+**Usage**: Quality metrics for service delivery  
+**Business Impact**: Measures efficiency and customer satisfaction
+
+### get_geographic_distribution(start_date, end_date)
+**Purpose**: Analyze work order distribution by location  
+**Parameters**: Date range (defaults to last 30 days)  
+**Returns**: Table with state, city, work order count, and average completion hours  
+**Migration**: `20250711054041-e37d03d0-58b8-4a58-89af-a7060fdf1238.sql`  
+**Usage**: Geographic analysis for resource allocation  
+**Business Impact**: Informs regional staffing and service area decisions
+
+## Edge Functions
+
+### create-test-users
 **Purpose**: Create authenticated test users for comprehensive role-based testing  
-**Security**: Multiple admin authentication methods  
-**Integration**: Seamless DevTools integration for easy user creation
+**Location**: `supabase/functions/create-test-auth-users/index.ts`  
+**Security**: Multiple admin authentication methods (service role, bearer token, dev mode)  
+**Usage**: DevTools integration or direct API calls  
+**Features**: Creates 5 test users across all roles with proper organization linking  
+**Returns**: Detailed user creation results with authentication credentials
 
-**Function Features**:
-- **Service Role Authentication**: Uses `SUPABASE_SERVICE_ROLE_KEY` for user creation
-- **Multiple Validation Methods**: API key, Bearer token, or development mode
-- **Organization Integration**: Automatically links users to appropriate organizations
-- **Comprehensive User Creation**: Creates 5 test users across all roles and organizations
-- **Error Resilience**: Continues processing on individual failures
+## System Architecture
 
-**Response Format**:
-```json
-{
-  "success": true,
-  "message": "Successfully created 5 test users",
+**Email Integration**: Automated email notifications using Resend service through Edge Functions  
+**Security Model**: SECURITY DEFINER functions prevent RLS recursion while maintaining access control  
+**Audit System**: Comprehensive change tracking with user attribution and timestamp logging  
+**Analytics**: Real-time business intelligence with materialized views for performance  
+**Testing Framework**: Complete test data lifecycle with safety checks and realistic scenarios
   "users": [
     {
       "email": "partner1@abc.com",
