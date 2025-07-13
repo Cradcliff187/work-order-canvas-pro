@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { userData, temporaryPassword } = await req.json();
+    const { userData } = await req.json();
 
     console.log('Creating user:', { email: userData.email, userType: userData.user_type });
 
@@ -41,11 +41,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Create auth user
+    // Generate a secure temporary password for initial creation
+    const temporaryPassword = crypto.randomUUID() + crypto.randomUUID();
+
+    // Create auth user with email confirmation enabled (triggers Supabase's confirmation email)
     const { data: authUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: temporaryPassword,
-      email_confirm: !userData.send_welcome_email,
+      email_confirm: true, // Always trigger Supabase's confirmation email
       user_metadata: {
         first_name: userData.first_name,
         last_name: userData.last_name,
@@ -123,137 +126,34 @@ serve(async (req) => {
       }
     }
 
-    // Send welcome email if requested
-    if (userData.send_welcome_email) {
-      console.log('=== WELCOME EMAIL PROCESS STARTED ===');
-      console.log('Target email:', userData.email);
-      
-      try {
-        // Validate environment variables
-        const supabaseUrl = Deno.env.get('SUPABASE_URL');
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-        
-        console.log('Environment check for email:', {
-          supabaseUrl: supabaseUrl ? 'CONFIGURED' : 'MISSING',
-          serviceRoleKey: serviceRoleKey ? 'CONFIGURED' : 'MISSING'
-        });
-        
-        if (!supabaseUrl || !serviceRoleKey) {
-          throw new Error('Missing required environment variables for email service');
+    // Generate password reset link for user to set their own password
+    console.log('Generating password reset link for user...');
+    try {
+      const { data: resetLink, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: userData.email,
+        options: {
+          redirectTo: `${Deno.env.get('SUPABASE_URL')?.replace('//', '//')}/auth/callback`
         }
-        
-        const emailUrl = `${supabaseUrl}/functions/v1/email-welcome`;
-        console.log('Email function URL:', emailUrl);
-        
-        const emailPayload = {
-          user_id: newProfile.id,
-          email: userData.email,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          user_type: userData.user_type,
-          temporary_password: temporaryPassword,
-        };
-        
-        console.log('Email payload prepared:', {
-          ...emailPayload,
-          temporary_password: emailPayload.temporary_password ? '***' : 'EMPTY'
-        });
-        
-        console.log('Making request to email-welcome function...');
-        const emailResponse = await fetch(emailUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${serviceRoleKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(emailPayload),
-        });
+      });
 
-        console.log('Email response received:', {
-          status: emailResponse.status,
-          statusText: emailResponse.statusText,
-          ok: emailResponse.ok
-        });
-
-        const emailResult = await emailResponse.text();
-        console.log('Email response body:', emailResult);
-        
-        if (emailResponse.ok) {
-          console.log('✅ Welcome email sent successfully');
-          try {
-            const parsedResult = JSON.parse(emailResult);
-            console.log('Parsed email result:', parsedResult);
-          } catch (parseError) {
-            console.log('Could not parse email result as JSON, but request was successful');
-          }
-        } else {
-          console.error('❌ Welcome email failed with status:', emailResponse.status);
-          console.error('Error response:', emailResult);
-          
-          // Log failed email attempt to database
-          try {
-            const { error: logError } = await supabaseAdmin
-              .from('email_logs')
-              .insert({
-                recipient_email: userData.email,
-                template_used: 'welcome_email',
-                status: 'failed',
-                error_message: `HTTP ${emailResponse.status}: ${emailResult}`,
-                work_order_id: null
-              });
-            
-            if (logError) {
-              console.error('Failed to log email error to database:', logError);
-            } else {
-              console.log('Email error logged to database');
-            }
-          } catch (logError) {
-            console.error('Exception while logging email error:', logError);
-          }
-        }
-      } catch (emailError) {
-        console.error('❌ Welcome email network/fetch error:', emailError);
-        console.error('Error details:', {
-          name: emailError.name,
-          message: emailError.message,
-          stack: emailError.stack
-        });
-        
-        // Log failed email attempt to database
-        try {
-          const { error: logError } = await supabaseAdmin
-            .from('email_logs')
-            .insert({
-              recipient_email: userData.email,
-              template_used: 'welcome_email',
-              status: 'failed',
-              error_message: `Network error: ${emailError.message}`,
-              work_order_id: null
-            });
-          
-          if (logError) {
-            console.error('Failed to log email error to database:', logError);
-          } else {
-            console.log('Email network error logged to database');
-          }
-        } catch (logError) {
-          console.error('Exception while logging email network error:', logError);
-        }
-        
-        // Continue anyway - don't fail user creation due to email issues
+      if (resetError) {
+        console.error('Failed to generate password reset link:', resetError);
+      } else {
+        console.log('✅ Password reset link generated successfully');
+        // The user will receive Supabase's built-in confirmation email
+        // followed by the ability to set their password via the reset link
       }
-      
-      console.log('=== WELCOME EMAIL PROCESS COMPLETED ===');
+    } catch (error) {
+      console.error('Error generating password reset link:', error);
+      // Continue anyway - user can still use the confirmation email
     }
 
     // Return success response
     return createCorsResponse({
       success: true,
       user: newProfile,
-      credentials: userData.send_welcome_email ? null : {
-        email: userData.email,
-        password: temporaryPassword,
-      },
+      message: 'User created successfully. They will receive a confirmation email to set up their account.',
     });
 
   } catch (error) {

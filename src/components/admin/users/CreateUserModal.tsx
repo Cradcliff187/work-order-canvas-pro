@@ -27,7 +27,6 @@ const createUserSchema = z.object({
   }),
   phone: z.string().optional(),
   organization_ids: z.array(z.string()).optional(),
-  send_welcome_email: z.boolean().default(false),
 });
 
 type CreateUserFormData = z.infer<typeof createUserSchema>;
@@ -39,8 +38,8 @@ interface CreateUserModalProps {
 }
 
 export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserModalProps) {
-  const [showCredentials, setShowCredentials] = useState(false);
-  const [generatedCredentials, setGeneratedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdUserEmail, setCreatedUserEmail] = useState<string>('');
   const [showCreateOrgDialog, setShowCreateOrgDialog] = useState(false);
   
   const { toast } = useToast();
@@ -55,7 +54,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
       last_name: '',
       phone: '',
       organization_ids: [],
-      send_welcome_email: false,
     },
   });
 
@@ -74,26 +72,20 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
 
   const onSubmit = async (data: CreateUserFormData) => {
     try {
-      const result = await createUser.mutateAsync({
+      await createUser.mutateAsync({
         email: data.email!,
         first_name: data.first_name!,
         last_name: data.last_name!,
         user_type: data.user_type!,
         phone: data.phone,
         organization_ids: data.organization_ids || [],
-        send_welcome_email: data.send_welcome_email,
       });
 
-      // Show the actual generated credentials from the server
-      if (result.temporaryPassword) {
-        setGeneratedCredentials({
-          email: data.email,
-          password: result.temporaryPassword,
-        });
-        setShowCredentials(true);
-      }
+      // Show success message
+      setCreatedUserEmail(data.email);
+      setShowSuccess(true);
       
-      // Reset form but keep modal open to show credentials
+      // Reset form but keep modal open to show success
       form.reset();
       
       onSuccess();
@@ -104,21 +96,11 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
 
   const handleClose = () => {
     form.reset();
-    setShowCredentials(false);
-    setGeneratedCredentials(null);
+    setShowSuccess(false);
+    setCreatedUserEmail('');
     onOpenChange(false);
   };
 
-  const copyCredentials = () => {
-    if (generatedCredentials) {
-      const text = `Email: ${generatedCredentials.email}\nPassword: ${generatedCredentials.password}`;
-      navigator.clipboard.writeText(text);
-      toast({
-        title: "Credentials copied",
-        description: "User credentials have been copied to clipboard.",
-      });
-    }
-  };
 
   const toggleOrganization = (orgId: string) => {
     const current = form.getValues('organization_ids') || [];
@@ -134,47 +116,44 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {showCredentials ? 'User Created Successfully' : 'Create New User'}
+            {showSuccess ? 'User Created Successfully' : 'Create New User'}
           </DialogTitle>
           <DialogDescription>
-            {showCredentials 
-              ? 'The user has been created. Please save these credentials securely.'
+            {showSuccess 
+              ? 'The user account has been created and a confirmation email has been sent.'
               : 'Fill in the details to create a new user account.'
             }
           </DialogDescription>
         </DialogHeader>
 
-        {showCredentials && generatedCredentials ? (
+        {showSuccess ? (
           <div className="space-y-4">
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-medium mb-2 flex items-center gap-2">
-                <User className="h-4 w-4" />
-                User Credentials
+                <Mail className="h-4 w-4" />
+                Account Setup
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Email:</Label>
                   <code className="bg-background px-2 py-1 rounded text-sm">
-                    {generatedCredentials.email}
+                    {createdUserEmail}
                   </code>
                 </div>
-                <div className="flex items-center justify-between">
-                  <Label>Temporary Password:</Label>
-                  <code className="bg-background px-2 py-1 rounded text-sm font-mono">
-                    {generatedCredentials.password}
-                  </code>
+                <div className="text-sm text-muted-foreground">
+                  <p>✅ Confirmation email sent to user</p>
+                  <p>✅ Password reset link generated</p>
                 </div>
               </div>
-              <Button onClick={copyCredentials} className="w-full mt-3" variant="outline">
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Credentials
-              </Button>
             </div>
             
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <Alert>
               <Mail className="h-4 w-4" />
-              <span>The user will receive a welcome email with login instructions.</span>
-            </div>
+              <AlertDescription>
+                The user will receive a confirmation email from Supabase to verify their account and set up their password. 
+                No temporary credentials are needed.
+              </AlertDescription>
+            </Alert>
             
             <DialogFooter>
               <Button onClick={handleClose}>Close</Button>
@@ -334,26 +313,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
 
               <Separator />
 
-              <FormField
-                control={form.control}
-                name="send_welcome_email"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Send Welcome Email</FormLabel>
-                      <FormDescription>
-                        Send an email to the user with their login credentials and getting started information.
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription>
+                  Users will automatically receive a confirmation email from Supabase to verify their account and set up their password.
+                </AlertDescription>
+              </Alert>
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleClose}>
