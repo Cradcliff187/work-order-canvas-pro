@@ -268,29 +268,27 @@ erDiagram
     }
 ```
 
-### Edge Function Seeding Architecture
+### Database Function Seeding Architecture
 
 ```mermaid
 graph TD
     A[Admin Request] --> B{Auth Validation}
     B -->|Invalid| C[Unauthorized Response]
-    B -->|Valid| D[Service Role Access]
+    B -->|Valid| D[SECURITY DEFINER Function]
     
     D --> E[Create Organizations]
-    E --> F[Create Auth Users]
-    F --> G[Create Profiles]
-    G --> H[Link User Organizations]
-    H --> I[Set Employee Rates]
-    I --> J[Create Partner Locations]
-    J --> K[Create Trade Categories]
-    K --> L[Generate Test Work Orders]
-    L --> M[Response Summary]
+    E --> F[Create Profiles - Admin Only]
+    F --> G[Link User Organizations]
+    G --> H[Create Partner Locations]
+    H --> I[Create Trade Categories]
+    I --> J[Generate Test Work Orders]
+    J --> K[Response Summary]
     
-    M --> N[Success/Error Report]
+    K --> L[Success/Error Report]
     
     style A fill:#e1f5fe
     style D fill:#e8f5e8
-    style N fill:#fff3e0
+    style L fill:#fff3e0
 ```
 
 ### Database Security Model

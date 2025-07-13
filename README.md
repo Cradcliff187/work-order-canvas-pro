@@ -40,35 +40,33 @@ WorkOrderPro uses a PostgreSQL database with 12 core tables, implementing:
 - **Analytics capabilities** with materialized views for reporting
 - **Edge Functions** for secure server-side operations and database management
 
-## Edge Functions
+## Database Functions
 
-The application uses Supabase Edge Functions for secure server-side operations:
+The application uses Supabase database functions for secure server-side operations:
 
 ### Available Functions
-- **Database Management**: `seed-database`, `clear-test-data`
-- **Email Notifications**: `email-work-order-created`, `email-work-order-assigned`, `email-work-order-completed`, `email-report-submitted`, `email-report-reviewed`, `email-welcome`
-- **Invoice Processing**: `invoice-submitted`, `invoice-status-changed`
-- **Webhooks**: `resend-webhook`
+- **Database Management**: `seed_test_data()`, `clear_test_data()`
+- **Email Notifications**: Various email trigger functions
+- **Work Order Management**: Status transitions, numbering, completion detection
+- **Invoice Processing**: Numbering, validation, audit tracking
+- **Analytics**: Performance metrics and reporting functions
 
-### Quick Deployment
-```bash
-# Deploy all functions
-supabase functions deploy
+### Quick Usage
+```typescript
+// Seed database with test data
+const { data, error } = await supabase.rpc('seed_test_data');
 
-# Deploy specific function
-supabase functions deploy seed-database
+// Clear test data
+const { data, error } = await supabase.rpc('clear_test_data');
 
-# View logs
-supabase functions logs seed-database --tail
-
-# Set environment variables
-supabase secrets set RESEND_API_KEY=your_key_here
+// Check user permissions
+const { data, error } = await supabase.rpc('auth_is_admin');
 ```
 
 ### Documentation
-- **[Edge Functions Deployment Guide](supabase/functions/DEPLOY.md)** - Complete deployment instructions
-- **[Edge Functions Development Guide](supabase/functions/README.md)** - Development and testing guide
-- **[Main Deployment Guide](docs/DEPLOYMENT.md)** - Full application deployment
+- **[Database Functions Guide](docs/DATABASE_FUNCTIONS.md)** - Complete function documentation
+- **[Database Seeding Guide](docs/SEEDING.md)** - Seeding procedures and best practices
+- **[Development Guide](docs/DEVELOPMENT.md)** - Local development setup
 
 ### Documentation
 
@@ -82,7 +80,7 @@ supabase secrets set RESEND_API_KEY=your_key_here
 **🚀 Development & Deployment**
 - [Development Guide](./docs/DEVELOPMENT.md) - Local development setup and testing
 - [Deployment Guide](./docs/DEPLOYMENT.md) - Production deployment procedures
-- [Database Seeding](./docs/SEEDING.md) - Edge Function-based seeding guide
+- [Database Seeding](./docs/SEEDING.md) - Database function-based seeding guide
 - [Test Checklist](./docs/TEST_CHECKLIST.md) - Comprehensive testing procedures
 
 **🔧 Troubleshooting & Maintenance**
@@ -113,7 +111,7 @@ supabase secrets set RESEND_API_KEY=your_key_here
 - **Routing**: React Router v6
 - **Email Service**: Resend API integration
 - **File Storage**: Supabase Storage with public buckets
-- **Database Seeding**: Edge Function-based seeding for secure, server-side data initialization
+- **Database Seeding**: Database function-based seeding for secure, server-side data initialization
 
 ## How can I edit this code?
 

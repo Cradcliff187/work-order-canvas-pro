@@ -174,95 +174,33 @@ export const useDevTools = () => {
     }
   };
 
-  /**
-   * MIGRATION FROM DATABASE RPC TO EDGE FUNCTION
-   * 
-   * Old Approach (Direct RPC):
-   * - Called supabase.rpc('clear_test_data') directly
-   * - Limited error handling and safety features
-   * 
-   * New Approach (Edge Function):
-   * - Enhanced safety with dry-run mode
-   * - Better authentication and error handling
-   * - Atomic transactions with rollback capability
-   * - Real-time progress tracking
-   */
   const clearTestData = async () => {
     setLoading(true);
     try {
-      console.log('🧹 Starting test data cleanup via Edge Function...');
+      console.log('🧹 Starting test data cleanup using secure database function...');
       
-      // Step 1: Dry run first (safety feature)
-      console.log('🧪 Running dry-run to preview deletions...');
-      const { data: dryRunData, error: dryRunError } = await supabase.functions.invoke('clear-test-data', {
-        body: {
-          admin_key: 'dev-admin-key',
-          dry_run: true,
-          include_summary: true
-        }
-      });
-      
-      if (dryRunError) {
-        console.error('❌ Dry-run failed:', dryRunError);
-        throw new Error(`Dry-run failed: ${dryRunError.message}`);
-      }
-      
-      // Display dry-run results
-      console.log('📋 Would delete:', dryRunData?.deleted_counts);
-      console.log('📊 Summary:', dryRunData?.test_data_summary);
-      
-      // Step 2: Actual deletion with explicit confirmation
-      console.log('🗑️ Proceeding with actual deletion...');
-      const { data, error } = await supabase.functions.invoke('clear-test-data', {
-        body: {
-          admin_key: 'dev-admin-key',
-          dry_run: false,
-          confirm_deletion: true,
-          include_summary: true
-        }
-      });
+      // Call the secure database function that bypasses RLS
+      const { data, error } = await supabase.rpc('clear_test_data');
       
       if (error) {
-        console.error('❌ Clear test data failed:', error);
-        
-        // Enhanced error handling for different error types
-        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
-          toast({
-            title: "Authentication Error",
-            description: "Admin privileges required. Please check your credentials.",
-            variant: "destructive",
-          });
-        } else if (error.message?.includes('FunctionsHttpError')) {
-          toast({
-            title: "Network Error",
-            description: "Could not connect to cleanup service. Please try again.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Service Error",
-            description: "Cleanup service encountered an error. Check console for details.",
-            variant: "destructive",
-          });
-        }
-        throw new Error(`Cleanup failed: ${error.message}`);
+        throw new Error(error.message);
       }
+
+      const result = data as unknown as ClearTestDataResponse;
+      if (!result?.success) {
+        throw new Error(result?.error || 'Cleanup failed');
+      }
+
+      console.log('✅ Test data cleanup completed successfully!', result);
       
-      if (data?.success) {
-        console.log('✅ Test data cleanup completed successfully');
-        console.log('📋 Deletion summary:', data.deleted_counts);
-        
-        const summary = Object.entries(data.deleted_counts || {})
-          .map(([table, count]) => `${table}: ${count}`)
-          .join(', ');
-        
-        toast({
-          title: "Success",
-          description: `Test data cleared successfully. Deleted: ${summary}`,
-        });
-      } else {
-        throw new Error(data?.error || 'Unknown cleanup error');
-      }
+      const summary = Object.entries(result.deleted_counts || {})
+        .map(([table, count]) => `${table}: ${count}`)
+        .join(', ');
+      
+      toast({
+        title: "Success",
+        description: `Test data cleared successfully. Deleted: ${summary}`,
+      });
       
       // Refresh counts after successful cleanup
       await fetchCounts();

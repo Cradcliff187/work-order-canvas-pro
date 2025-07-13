@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers local development setup, testing procedures, and common development workflows for WorkOrderPro. The application uses Edge Function-based database seeding for secure, server-side data initialization.
+This guide covers local development setup, testing procedures, and common development workflows for WorkOrderPro. The application uses database function-based seeding for secure, server-side data initialization.
 
 ## Local Development Setup
 
@@ -39,32 +39,7 @@ The project connects to a live Supabase instance with these settings:
 - **URL**: `https://inudoymofztrvxhrlrek.supabase.co`
 - **Configuration**: Managed in `supabase/config.toml`
 
-## Edge Function Development
-
-### Local Edge Function Testing
-
-```bash
-# Start Supabase locally (optional for Edge Function development)
-supabase start
-
-# Serve Edge Functions locally with debugging
-supabase functions serve --debug seed-database
-
-# Test Edge Function
-curl -X POST 'http://localhost:54321/functions/v1/seed-database' \
-  -H 'Content-Type: application/json' \
-  -d '{"admin_key": "test-admin-key"}'
-```
-
-### Edge Function Logs
-
-```bash
-# View logs for specific function
-supabase functions logs seed-database
-
-# Stream real-time logs
-supabase functions logs --follow
-```
+## Database Function Development
 
 ### Database Seeding Workflow
 
@@ -72,22 +47,29 @@ supabase functions logs --follow
 
 1. Navigate to `/dev-tools` in your browser
 2. Use the **Database Seeding** section:
-   - **Seed Database**: Populate with test data
-   - **Clear Test Data**: Remove all test data
-   - **Dry Run**: Preview deletion without changes
+   - **Seed Database**: Populate with test data using `seed_test_data()` function
+   - **Clear Test Data**: Remove all test data using `clear_test_data()` function
 
 #### Programmatic Seeding
 
 ```typescript
 // Seed database with test data
-const seedResponse = await supabase.functions.invoke('seed-database', {
-  body: { admin_key: 'your-admin-key' }
-});
+const { data, error } = await supabase.rpc('seed_test_data');
+
+if (error) {
+  console.error('Seeding failed:', error);
+} else {
+  console.log('Seeding successful:', data.details);
+}
 
 // Clear test data
-const clearResponse = await supabase.functions.invoke('clear-test-data', {
-  body: { admin_key: 'your-admin-key', dry_run: false }
-});
+const { data, error } = await supabase.rpc('clear_test_data');
+
+if (error) {
+  console.error('Clear failed:', error);
+} else {
+  console.log('Clear successful:', data.deleted_counts);
+}
 ```
 
 ## Development Tools
@@ -109,7 +91,7 @@ Access at `/dev-tools` for comprehensive development utilities:
 **System Diagnostics:**
 - Authentication status monitoring
 - Database connection verification
-- Edge Function health checks
+- Database function health checks
 
 ### Hot Reloading and Debugging
 
@@ -120,8 +102,8 @@ Access at `/dev-tools` for comprehensive development utilities:
 
 **Database Debugging:**
 - Use Supabase Dashboard SQL Editor
-- Enable Edge Function debug mode: `supabase functions serve --debug`
-- Monitor real-time logs: `supabase functions logs --follow`
+- Monitor database function logs in audit_logs table
+- Check function execution with: `SELECT * FROM audit_logs WHERE action = 'STATUS_CHANGE' ORDER BY created_at DESC;`
 
 ## Testing Guide
 
@@ -163,28 +145,32 @@ const testCredentials = {
 
 ## Common Development Issues
 
-### Edge Function Deployment Errors
+### Database Function Errors
 
-**Issue**: `FunctionsHttpError: Edge Function returned a non-2xx status code`
-```bash
-# Solution 1: Check function logs
-supabase functions logs seed-database --limit 50
+**Issue**: `Only administrators can seed test data`
+```typescript
+// Solution: Ensure you're logged in as an admin user
+const { data: { user } } = await supabase.auth.getUser();
+console.log('Current user:', user);
 
-# Solution 2: Verify admin key configuration
-# Check that your admin key matches the expected value
+// Check user type in profiles table
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('user_type')
+  .eq('user_id', user?.id)
+  .single();
 
-# Solution 3: Test with curl
-curl -X POST 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database' \
-  -H 'Content-Type: application/json' \
-  -d '{"admin_key": "your-admin-key"}'
+console.log('User type:', profile?.user_type);
 ```
 
-**Issue**: `UnauthorizedError: Admin key validation failed`
-```bash
-# Solution: Configure proper admin key
-# 1. Check supabase secrets: supabase secrets list
-# 2. Set admin key: supabase secrets set ADMIN_SEEDING_KEY=your-key
-# 3. Redeploy functions: supabase functions deploy
+**Issue**: `Foreign key constraint violation`
+```sql
+-- Solution: The functions handle dependencies automatically
+-- If issues persist, check audit logs for details
+SELECT * FROM audit_logs 
+WHERE table_name IN ('organizations', 'profiles', 'work_orders')
+ORDER BY created_at DESC
+LIMIT 10;
 ```
 
 ### Database Connection Issues
@@ -299,7 +285,6 @@ npm run type-check                   # TypeScript checking
 # Supabase
 supabase start                       # Start local Supabase
 supabase db reset                    # Reset local database
-supabase functions deploy            # Deploy all Edge Functions
 supabase secrets list               # List configured secrets
 
 # Database
@@ -308,4 +293,4 @@ supabase db push                     # Push schema changes
 supabase gen types typescript       # Generate TypeScript types
 ```
 
-This development guide provides all the essential information for productive local development while maintaining the security and integrity of the WorkOrderPro system.
+This development guide provides all the essential information for productive local development using database functions for secure, reliable data management.

@@ -242,74 +242,78 @@ await supabaseAdmin.from('user_organizations').insert({
 - **Insufficient Permissions**: Service role should have full database access
 - **RLS Bypass**: Service role automatically bypasses all RLS policies
 
-### Edge Function Troubleshooting
+### Database Function Troubleshooting
 
-**Common Edge Function Issues:**
+**Common Database Function Issues:**
 
-#### FunctionsHttpError: Edge Function returned a non-2xx status code
-```bash
-# Diagnosis steps:
-1. Check Edge Function logs: supabase functions logs seed-database --limit 50
-2. Verify admin key configuration in function secrets
-3. Test with curl to isolate client vs server issues
+#### "Only administrators can seed test data"
+```sql
+-- Diagnosis steps:
+1. Check current user authentication status
+SELECT auth.uid(), auth.email();
 
-# Example test:
-curl -X POST 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database' \
-  -H 'Content-Type: application/json' \
-  -d '{"admin_key": "your-admin-key"}'
+2. Verify user type in profiles table
+SELECT user_type FROM profiles WHERE user_id = auth.uid();
+
+3. Ensure user is properly authenticated as admin
+-- User must be logged in and have user_type = 'admin'
 ```
 
-#### FunctionsFetchError: Network connectivity issues
-```bash
-# Solutions:
-1. Check internet connectivity
-2. Verify Supabase project URL
-3. Check CORS configuration in Edge Function
-4. Verify function deployment status
+#### Foreign key constraint violations during seeding
+```sql
+-- Solutions:
+1. Functions handle foreign key relationships automatically
+2. If issues persist, check audit logs for details
+SELECT * FROM audit_logs WHERE table_name IN ('organizations', 'profiles') ORDER BY created_at DESC LIMIT 10;
+
+3. Verify function execution completed successfully
+-- Check for any partial execution or transaction rollbacks
 ```
 
-#### Edge Function timeout errors
-```bash
-# Large dataset optimization:
-1. Implement batch processing in Edge Functions
-2. Use pagination for large result sets
-3. Optimize database queries with proper indexes
-4. Consider breaking large operations into smaller chunks
+#### RLS policy violations in database functions
+```sql
+-- Database functions use SECURITY DEFINER to bypass RLS
+-- If violations occur, check function execution context:
+1. Verify function is marked as SECURITY DEFINER
+2. Check function owner has proper privileges
+3. Ensure function calls use proper authentication
 ```
 
-#### Memory errors in Edge Functions
-```bash
-# Resource optimization:
-1. Reduce memory footprint in function code
-2. Use streaming for large data operations
-3. Implement garbage collection optimization
-4. Monitor function memory usage via Supabase dashboard
+#### Performance issues with large datasets
+```sql
+-- Optimization strategies:
+1. Functions use efficient bulk operations
+2. Monitor execution time in audit logs
+3. Check for any index usage in query plans
+EXPLAIN ANALYZE SELECT * FROM organizations;
 ```
 
 ### Admin Access Patterns
 
-**Edge Function Admin Validation:**
+**Database Function Admin Validation:**
 
-Edge Functions use multiple admin authentication methods for flexibility:
+Database functions validate admin access using existing authentication:
 
 ```typescript
-// 1. API Key validation (primary method)
-const adminKey = requestData.admin_key;
-const expectedKey = Deno.env.get('ADMIN_SEEDING_KEY');
+// Admin validation in database functions
+IF NOT public.auth_is_admin() THEN
+  RAISE EXCEPTION 'Only administrators can seed test data';
+END IF;
 
-// 2. Bearer token validation (alternative)
-const authHeader = request.headers.get('Authorization');
-const bearerToken = Deno.env.get('ADMIN_BEARER_TOKEN');
-
-// 3. Development bypass (dev environment only)
-const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
+// Admin check uses SECURITY DEFINER function:
+CREATE OR REPLACE FUNCTION public.auth_is_admin()
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER
+AS $$ 
+BEGIN
+  RETURN public.auth_user_type() = 'admin';
+END; $$;
 ```
 
-**Service Role vs Client Access:**
+**Database Function vs Client Access:**
 
 | Access Type | Use Case | RLS Bypass | Permissions |
 |-------------|----------|------------|-------------|
-| **Service Role** | Edge Functions, admin operations | ✅ Yes | Full database access |
+| **SECURITY DEFINER Function** | Database seeding, admin operations | ✅ Yes | Full database access |
 | **Anon Key** | Client applications | ❌ No | RLS policy restricted |
 | **Authenticated User** | Logged-in users | ❌ No | User-specific policies |
 

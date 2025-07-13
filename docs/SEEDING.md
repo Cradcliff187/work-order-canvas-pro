@@ -2,39 +2,39 @@
 
 ## Overview
 
-WorkOrderPro uses **Edge Function-based seeding** for secure, server-side database initialization. This approach replaces the old browser-based seeding system with a more robust, scalable solution.
+WorkOrderPro uses **database function-based seeding** for secure, server-side database initialization. This approach provides robust data seeding with proper authentication and RLS bypass capabilities through PostgreSQL SECURITY DEFINER functions.
 
-## Why Edge Functions for Seeding?
+## Why Database Functions for Seeding?
 
 ### Security Benefits
-- **Service Role Privileges**: Edge Functions run with elevated database permissions
+- **Service Role Privileges**: Functions run with elevated database permissions
 - **RLS Bypass**: Can perform administrative operations that bypass Row Level Security
 - **Server-Side Execution**: No browser security limitations or client-side vulnerabilities
-- **Authentication Control**: Secure admin key validation before any operations
+- **Authentication Control**: Secure admin validation before any operations
 
 ### Performance Advantages
 - **Atomic Transactions**: Complete rollback on any failure
 - **Bulk Operations**: Efficient batch processing for large datasets
 - **No Browser Limits**: Can handle large datasets without memory constraints
-- **Parallel Processing**: Concurrent operations for faster seeding
+- **Direct Database Access**: Eliminates network overhead for data operations
 
 ### Reliability Features
 - **Comprehensive Error Handling**: Detailed error reporting and debugging
-- **Dry-Run Mode**: Preview operations before execution
-- **Progress Tracking**: Real-time feedback on seeding progress
+- **SECURITY DEFINER**: Functions execute with proper privileges
 - **Audit Trail**: Complete logging of all seeding operations
+- **Idempotent Operations**: Safe to run multiple times
 
 ## Architecture Overview
 
 ```mermaid
 graph TD
     A[Dev Tools UI] --> B[useDevTools Hook]
-    B --> C[Edge Functions]
+    B --> C[Database Functions]
     C --> D[Supabase Database]
     
-    subgraph "Edge Functions"
-        E[seed-database]
-        F[clear-test-data]
+    subgraph "Database Functions"
+        E[seed_test_data()]
+        F[clear_test_data()]
     end
     
     subgraph "Database Operations"
@@ -44,8 +44,8 @@ graph TD
         J[Reports & Attachments]
     end
     
-    C --> E
-    C --> F
+    B --> E
+    B --> F
     E --> G
     E --> H
     E --> I
@@ -56,84 +56,76 @@ graph TD
     F --> J
 ```
 
-## Available Edge Functions
+## Available Database Functions
 
-### 1. `seed-database`
-**Purpose**: Populate database with comprehensive test data
+### 1. `seed_test_data()`
 
-**Endpoint**: `/functions/v1/seed-database`
+**Purpose**: Populate database with comprehensive test data using SECURITY DEFINER privileges
 
-**Request Format**:
+**Function Signature**:
+```sql
+CREATE OR REPLACE FUNCTION public.seed_test_data()
+RETURNS json
+LANGUAGE plpgsql SECURITY DEFINER
+```
+
+**Usage**:
+```typescript
+const { data, error } = await supabase.rpc('seed_test_data');
+```
+
+**Response Format**:
 ```json
 {
-  "admin_key": "dev-admin-key",
-  "options": {
-    "clear_existing": true,
-    "include_test_data": true,
-    "organization_count": 5,
-    "user_count": 20,
-    "work_order_count": 50
+  "success": true,
+  "message": "Test data seeded successfully (admin user only)",
+  "details": {
+    "organizations": 8,
+    "trades": 10,
+    "email_templates": 5,
+    "profiles": 1,
+    "user_organizations": 1,
+    "partner_locations": 10,
+    "work_orders": 16
   }
 }
 ```
 
-**Response Format**:
-```json
-{
-  "success": true,
-  "progress": {
-    "step": "Creating work orders",
-    "completed": 45,
-    "total": 50
-  },
-  "summary": {
-    "total_records": 150,
-    "organizations": 5,
-    "users": 20,
-    "work_orders": 50,
-    "reports": 25,
-    "attachments": 75
-  },
-  "execution_time_ms": 2341
-}
+### 2. `clear_test_data()`
+
+**Purpose**: Safely remove test data with comprehensive cleanup
+
+**Function Signature**:
+```sql
+CREATE OR REPLACE FUNCTION public.clear_test_data()
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
 ```
 
-### 2. `clear-test-data`
-**Purpose**: Safely remove test data with dry-run support
-
-**Endpoint**: `/functions/v1/clear-test-data`
-
-**Request Format**:
-```json
-{
-  "admin_key": "dev-admin-key",
-  "dry_run": false,
-  "confirm_deletion": true,
-  "include_summary": true
-}
+**Usage**:
+```typescript
+const { data, error } = await supabase.rpc('clear_test_data');
 ```
 
 **Response Format**:
 ```json
 {
   "success": true,
+  "message": "Test data cleared successfully",
   "deleted_counts": {
-    "work_orders": 50,
-    "work_order_reports": 25,
-    "profiles": 20,
-    "organizations": 5,
-    "email_logs": 100
+    "work_orders": 16,
+    "work_order_reports": 0,
+    "profiles": 0,
+    "organizations": 7,
+    "email_logs": 0
   },
-  "test_data_summary": {
-    "identified_test_users": 20,
-    "identified_test_orgs": 5,
-    "identified_test_work_orders": 50
-  },
-  "execution_time_ms": 1234
+  "test_user_count": 0,
+  "test_org_count": 7,
+  "test_work_order_count": 16
 }
 ```
 
-## How to Use Edge Function Seeding
+## How to Use Database Function Seeding
 
 ### Local Development
 
@@ -149,34 +141,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Seed the database
 const seedDatabase = async () => {
-  const { data, error } = await supabase.functions.invoke('seed-database', {
-    body: {
-      admin_key: 'dev-admin-key',
-      options: {
-        clear_existing: true,
-        include_test_data: true
-      }
-    }
-  });
+  const { data, error } = await supabase.rpc('seed_test_data');
   
   if (error) {
     console.error('Seeding failed:', error);
     return;
   }
   
-  console.log('Seeding completed:', data.summary);
+  console.log('Seeding completed:', data.details);
 };
 
-// Clear test data with dry-run
-const clearTestData = async (dryRun = true) => {
-  const { data, error } = await supabase.functions.invoke('clear-test-data', {
-    body: {
-      admin_key: 'dev-admin-key',
-      dry_run: dryRun,
-      confirm_deletion: !dryRun,
-      include_summary: true
-    }
-  });
+// Clear test data
+const clearTestData = async () => {
+  const { data, error } = await supabase.rpc('clear_test_data');
   
   if (error) {
     console.error('Clear operation failed:', error);
@@ -190,55 +167,38 @@ const clearTestData = async (dryRun = true) => {
 ## Modifying Seed Data
 
 ### Organizations
-Edit the organizations array in `supabase/functions/seed-database/index.ts`:
+Edit the organizations section in the `seed_test_data()` function:
 
-```typescript
-const organizations = [
-  {
-    name: 'Your Company Name',
-    contact_email: 'contact@yourcompany.com',
-    contact_phone: '(555) 123-4567',
-    organization_type: 'partner', // 'partner', 'subcontractor', 'internal'
-    initials: 'YCN' // Used for work order numbering
-  }
-];
+```sql
+-- Insert Organizations
+INSERT INTO organizations (id, name, contact_email, organization_type, initials, is_active) VALUES
+  (org_internal_id, 'WorkOrderPro Internal', 'admin@workorderpro.com', 'internal', 'WOP', true),
+  (org_abc_id, 'ABC Property Management', 'contact@abc-property.com', 'partner', 'ABC', true),
+  -- Add more organizations here
 ```
 
 ### Users
-Modify the users array to add different user types:
+The current implementation creates only the admin profile to avoid RLS violations:
 
-```typescript
-const users = [
-  {
-    email: 'admin@company.com',
-    first_name: 'Admin',
-    last_name: 'User',
-    user_type: 'admin', // 'admin', 'employee', 'partner', 'subcontractor'
-    organization_name: 'Your Company Name',
-    is_employee: true // For admin/employee types
-  }
-];
+```sql
+-- Update/Insert ONLY Admin Profile
+INSERT INTO profiles (id, user_id, email, first_name, last_name, user_type, is_active, is_employee) 
+VALUES (admin_user_id, v_user_id, 'admin@workorderpro.com', 'System', 'Administrator', 'admin', true, true)
+ON CONFLICT (user_id) 
+DO UPDATE SET 
+  email = EXCLUDED.email,
+  first_name = EXCLUDED.first_name,
+  -- ... update fields
 ```
 
 ### Work Orders
 Customize work order generation parameters:
 
-```typescript
-const workOrderConfig = {
-  count: 50,
-  statusDistribution: {
-    received: 0.2,
-    assigned: 0.3,
-    in_progress: 0.3,
-    completed: 0.2
-  },
-  tradeDistribution: {
-    'Plumbing': 0.3,
-    'Electrical': 0.2,
-    'HVAC': 0.2,
-    'General Maintenance': 0.3
-  }
-};
+```sql
+INSERT INTO work_orders (id, work_order_number, title, description, organization_id, trade_id, status, created_by)
+VALUES
+  (wo1_id, 'ABC-001-001', 'Leaky Faucet Repair', 'Kitchen faucet dripping constantly', org_abc_id, trade_plumbing_id, 'received', admin_user_id),
+  -- Add more work orders here
 ```
 
 ## Error Handling
@@ -247,90 +207,72 @@ const workOrderConfig = {
 
 #### Authentication Errors
 ```
-Error: Unauthorized access
+Error: Only administrators can seed test data
 ```
-**Solution**: Verify admin key is correct in dev environment
-
-#### Network Errors
-```
-Error: FunctionsHttpError
-```
-**Solution**: Check internet connection and Supabase service status
-
-#### Function Errors
-```
-Error: FunctionsFetchError
-```
-**Solution**: Review Edge Function logs in Supabase dashboard
+**Solution**: Ensure you're logged in as an admin user before running seeding functions
 
 #### Database Errors
 ```
 Error: Foreign key constraint violation
 ```
-**Solution**: Ensure clear_existing=true or run clear-test-data first
+**Solution**: The functions handle foreign key relationships automatically. If issues persist, run `clear_test_data()` first
+
+#### RLS Errors
+```
+Error: new row violates row-level security policy
+```
+**Solution**: The SECURITY DEFINER functions bypass RLS automatically. This error indicates the function isn't being used correctly.
 
 ### Error Recovery
 
-1. **Partial Seeding Failures**: Edge Functions use transactions - partial failures are automatically rolled back
-2. **Network Interruptions**: Re-run the seeding operation - it's idempotent
-3. **Data Conflicts**: Use clear-test-data first, then re-seed
-4. **Permission Issues**: Verify admin key and Supabase project access
+1. **Partial Seeding Failures**: Functions use transactions - partial failures are automatically rolled back
+2. **Data Conflicts**: Run `clear_test_data()` first, then re-seed
+3. **Permission Issues**: Verify admin user authentication
 
-## Deployment Instructions
+## Security Model
 
-### Edge Function Deployment
+### SECURITY DEFINER Functions
 
-Edge Functions are automatically deployed when you push changes to the repository. No manual deployment needed.
+Both seeding functions use `SECURITY DEFINER` which means:
+- Functions execute with the privileges of their owner (admin)
+- Bypass Row Level Security policies
+- Can perform operations regular users cannot
+- Provide secure, controlled access to administrative operations
 
-### Environment Variables
+### Admin-Only Access
 
-Set these in your Supabase project:
-- `SUPABASE_URL`: Your project URL
-- `SUPABASE_ANON_KEY`: Public anon key
-- `SUPABASE_SERVICE_ROLE_KEY`: Service role key (for Edge Functions)
+```sql
+-- Only allow admins to execute seeding functions
+IF NOT public.auth_is_admin() THEN
+  RAISE EXCEPTION 'Only administrators can seed test data';
+END IF;
+```
 
-### Production Considerations
+### Safe Data Identification
 
-1. **Security**: Change admin keys for production environments
-2. **Rate Limiting**: Implement rate limiting for seeding endpoints
-3. **Monitoring**: Set up alerts for Edge Function failures
-4. **Backup**: Always backup production data before seeding operations
+The `clear_test_data()` function safely identifies test data using:
+- Email patterns: `%@testcompany%`, `%@example.com`, `%test%`
+- Organization names: Known test organization names
+- User names: First name = 'Test'
 
 ## Troubleshooting Guide
 
 ### Debug Mode
 
-Enable detailed logging in Edge Functions:
-
-```typescript
-const DEBUG = true; // Set to true for verbose logging
-
-if (DEBUG) {
-  console.log('Seeding step:', currentStep);
-  console.log('Current progress:', progress);
-}
-```
-
-### Console Output
-
 Monitor seeding progress in browser console:
 
 ```
-🌱 Starting database seeding via Edge Function...
-📊 Seeding Progress: Creating organizations (5/5)
-📊 Seeding Progress: Creating users (20/20) 
-📊 Seeding Progress: Creating work orders (50/50)
-✅ Database seeded successfully via Edge Function
-📋 Summary: Created 150 total records
+🌱 Starting database seeding using secure function...
+🎉 Database seeding completed successfully!
+📋 Summary: Created organizations: 8, trades: 10, work_orders: 16
 ```
 
-### Edge Function Logs
+### Function Logs
 
-Access detailed logs in Supabase Dashboard:
-1. Go to **Functions** section
-2. Select the function (`seed-database` or `clear-test-data`)
-3. Click **Logs** tab
-4. Review execution details and error messages
+View function execution in Supabase Dashboard:
+1. Go to **SQL Editor**
+2. Run: `SELECT * FROM audit_logs WHERE table_name = 'profiles' ORDER BY created_at DESC;`
+3. Check for seeding-related audit entries
 
 ### Performance Monitoring
 
@@ -338,242 +280,58 @@ Track seeding performance:
 
 ```typescript
 const startTime = Date.now();
-// ... seeding operations
+const { data, error } = await supabase.rpc('seed_test_data');
 const executionTime = Date.now() - startTime;
 console.log(`Seeding completed in ${executionTime}ms`);
 ```
 
-## Migration from Browser Seeding
+## Migration from Edge Functions
 
 ### What Changed
 
 **OLD APPROACH (Deprecated)**:
 ```typescript
-// ❌ Browser-based seeding (removed)
-import { seedDatabase } from '../scripts/enhanced-seed-functions';
-await seedDatabase();
-```
-
-**NEW APPROACH (Current)**:
-```typescript
-// ✅ Edge Function seeding
+// ❌ Edge Function seeding (removed)
 const { data, error } = await supabase.functions.invoke('seed-database', {
   body: { admin_key: 'dev-admin-key' }
 });
 ```
 
+**NEW APPROACH (Current)**:
+```typescript
+// ✅ Database function seeding
+const { data, error } = await supabase.rpc('seed_test_data');
+```
+
 ### Migration Benefits
 
-1. **Security**: Server-side execution with proper authentication
-2. **Reliability**: Atomic transactions with rollback support
-3. **Performance**: No browser limitations or memory constraints
-4. **Maintenance**: Centralized seeding logic on server
-5. **Audit**: Complete logging and monitoring capabilities
+1. **Security**: Server-side execution with proper SECURITY DEFINER privileges
+2. **Reliability**: Direct database access with atomic transactions
+3. **Performance**: No network overhead for database operations
+4. **Maintenance**: Centralized seeding logic in the database
+5. **Simplicity**: No Edge Function deployment or management required
 
 ### Breaking Changes
 
-- **Removed Files**: `src/scripts/seed-functions.ts`, `src/scripts/enhanced-seed-functions.ts`
-- **API Changes**: seeding now requires Edge Function calls
-- **Authentication**: Admin key required for seeding operations
-- **Error Handling**: New error response format from Edge Functions
-
-## Deployment Verification
-
-### Check Function Status
-
-List all deployed Edge Functions:
-```bash
-# List all deployed functions
-supabase functions list
-
-# Expected output:
-┌─────────────────────────────┬─────────┬──────────────────────────┐
-│           NAME              │ STATUS  │        CREATED AT        │
-├─────────────────────────────┼─────────┼──────────────────────────┤
-│ seed-database               │ ACTIVE  │ 2024-01-15T10:30:00Z     │
-│ clear-test-data             │ ACTIVE  │ 2024-01-15T10:30:00Z     │
-│ email-work-order-created    │ ACTIVE  │ 2024-01-15T10:30:00Z     │
-└─────────────────────────────┴─────────┴──────────────────────────┘
-```
-
-Inspect specific function details:
-```bash
-# Check function configuration and status
-supabase functions inspect seed-database
-
-# Expected output:
-Function: seed-database
-Status: ACTIVE
-Region: us-east-1
-Runtime: deno
-Memory: 512MB
-JWT Verification: Enabled
-CORS: Enabled
-```
-
-View recent function invocations:
-```bash
-# View recent logs with limit
-supabase functions logs seed-database --limit 10
-
-# Stream logs in real-time
-supabase functions logs seed-database --follow
-
-# Expected log entries:
-2024-01-15T10:30:00Z INFO Function invoked with admin key validation
-2024-01-15T10:30:01Z INFO 🌱 Starting database seeding via Edge Function...
-2024-01-15T10:30:02Z INFO ✅ Created 5 organizations
-2024-01-15T10:30:03Z INFO ✅ Created 20 users
-```
-
-### Health Check Examples
-
-Test function connectivity:
-```bash
-# Test seed-database function
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ANON_KEY" \
-  -d '{
-    "admin_key": "dev-admin-key",
-    "options": {
-      "clear_existing": false,
-      "include_test_data": false
-    }
-  }'
-
-# Test clear-test-data function  
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/clear-test-data \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ANON_KEY" \
-  -d '{
-    "admin_key": "dev-admin-key",
-    "dry_run": true
-  }'
-```
-
-Verify environment variables:
-```bash
-# List configured secrets
-supabase secrets list
-
-# Expected secrets:
-SUPABASE_URL
-SUPABASE_ANON_KEY  
-SUPABASE_SERVICE_ROLE_KEY
-RESEND_API_KEY
-```
-
-### Common Deployment Issues
-
-#### Function Not Found Error
-```
-Error: FunctionsFetchError: Failed to fetch function
-```
-**Solutions**:
-1. Verify function is deployed: `supabase functions list`
-2. Check function name spelling in requests
-3. Ensure project ID is correct in URLs
-4. Re-deploy if function missing: `supabase functions deploy`
-
-#### Environment Variable Missing
-```
-Error: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
-```
-**Solutions**:
-1. Check secrets are set: `supabase secrets list`
-2. Set missing secret: `supabase secrets set VARIABLE_NAME=value`
-3. Verify secret names match function requirements
-4. Re-deploy function after setting secrets
-
-#### Authentication Issues
-```
-Error: JWT verification failed
-```
-**Solutions**:
-1. Verify Authorization header includes Bearer token
-2. Check anon key is valid and not expired
-3. Ensure function JWT verification settings are correct
-4. Use service role key for admin functions if needed
-
-#### Network Connectivity
-```
-Error: Network request failed
-```
-**Solutions**:
-1. Check internet connection
-2. Verify Supabase project is active
-3. Test with curl to isolate client issues
-4. Check firewall/proxy settings
-
-#### Function Timeout
-```
-Error: Function execution timeout
-```
-**Solutions**:
-1. Reduce batch sizes in seeding operations
-2. Optimize database queries
-3. Consider breaking large operations into smaller chunks
-4. Monitor function logs for performance bottlenecks
-
-### Database Connection Validation
-
-Test database connectivity from functions:
-```sql
--- Quick connectivity test
-SELECT current_timestamp, version();
-
--- Verify RLS policies are working
-SELECT auth.uid(), auth.role();
-
--- Check table access
-SELECT COUNT(*) FROM profiles;
-SELECT COUNT(*) FROM organizations;
-```
-
-### Integration Testing
-
-Email service integration test:
-```typescript
-// Test email functions are properly configured
-const testEmailIntegration = async () => {
-  const { data, error } = await supabase.functions.invoke('email-welcome', {
-    body: {
-      user_id: 'test-user-id',
-      email: 'test@example.com',
-      first_name: 'Test',
-      last_name: 'User',
-      user_type: 'admin'
-    }
-  });
-  
-  if (error) {
-    console.error('Email integration test failed:', error);
-  } else {
-    console.log('Email integration test passed:', data);
-  }
-};
-```
+- **Removed Edge Functions**: `seed-database`, `clear-test-data` functions no longer exist
+- **API Changes**: Now uses `supabase.rpc()` instead of `supabase.functions.invoke()`
+- **Authentication**: Uses existing user authentication instead of admin keys
+- **Error Handling**: Simplified error response format from database functions
 
 ## Best Practices
 
 ### Development Workflow
 
-1. **Always Use Dry-Run**: Test clear operations before executing
-2. **Monitor Progress**: Watch console output during seeding
-3. **Verify Results**: Check data integrity after seeding
-4. **Clean Environment**: Clear test data regularly to avoid conflicts
+1. **Start Fresh**: Always clear test data before seeding
+2. **Verify Results**: Check table counts after seeding
+3. **Test Permissions**: Verify RLS policies work correctly with test data
+4. **Clean Up**: Clear test data when switching between development tasks
 
-### Data Management
+### Production Considerations
 
-1. **Consistent Naming**: Use clear, consistent test data patterns
-2. **Realistic Data**: Create data that mirrors production scenarios
-3. **Proper Relationships**: Ensure foreign key integrity
-4. **Balanced Distribution**: Realistic ratios of different data types
+1. **Security**: Never run seeding functions in production
+2. **Backup**: Always backup production data before any database operations
+3. **Monitoring**: Set up alerts for unexpected data changes
+4. **Access Control**: Limit admin access to seeding functions
 
-### Security Guidelines
-
-1. **Secure Admin Keys**: Never commit production admin keys
-2. **Environment-Specific**: Use different keys for dev/staging/prod
-3. **Access Control**: Restrict seeding access to authorized personnel
-4. **Audit Logging**: Monitor all seeding operations in production
+This database function approach provides a secure, reliable, and maintainable solution for test data management in WorkOrderPro.

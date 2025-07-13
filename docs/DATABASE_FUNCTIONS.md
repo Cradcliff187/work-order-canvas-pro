@@ -15,8 +15,11 @@ Functions executed by database triggers for audit logging, user profile creation
 ### Email Notification Functions (4)
 SECURITY DEFINER functions that call edge functions for automated email notifications
 
+### Database Seeding Functions (2)
+SECURITY DEFINER functions for secure test data management and development workflow
+
 ### Utility Functions (6)
-General-purpose functions for work order numbering, invoice numbering, analytics view management, and test data cleanup
+General-purpose functions for work order numbering, invoice numbering, analytics view management, and data cleanup
 
 ### Work Order Completion Functions (4)
 Automatic completion detection and manual override functions for work order lifecycle management
@@ -496,6 +499,158 @@ $$;
 - Handles race conditions with ON CONFLICT
 - Defaults user_type to 'subcontractor'
 - Error-resilient (doesn't block user signup)
+
+## Database Seeding Functions
+
+WorkOrderPro includes secure database seeding functions that use SECURITY DEFINER privileges to bypass RLS policies and provide comprehensive test data management for development workflows.
+
+### seed_test_data()
+
+**Purpose**: Securely populate database with comprehensive test data for development and testing
+
+```sql
+CREATE OR REPLACE FUNCTION public.seed_test_data()
+RETURNS json
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_result json;
+  v_user_id uuid;
+  existing_admin_profile_id uuid;
+  -- ... additional variables
+BEGIN
+  -- Get current user ID
+  v_user_id := auth.uid();
+  
+  -- Verify user is admin
+  IF NOT EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE user_id = v_user_id 
+    AND user_type = 'admin'
+  ) THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', 'Unauthorized: Admin access required'
+    );
+  END IF;
+
+  -- Create comprehensive test data
+  -- ... implementation details
+END;
+$$;
+```
+
+**Security Model**:
+- **SECURITY DEFINER**: Executes with owner privileges, bypassing RLS
+- **Admin Validation**: Requires authenticated admin user
+- **Atomic Operations**: Complete transaction rollback on any failure
+- **Audit Trail**: All operations logged in audit_logs table
+
+**Usage**:
+```typescript
+const { data, error } = await supabase.rpc('seed_test_data');
+
+if (error) {
+  console.error('Seeding failed:', error);
+} else {
+  console.log('Seeding successful:', data.details);
+}
+```
+
+**Return Value**:
+```json
+{
+  "success": true,
+  "message": "Test data seeded successfully (admin user only)",
+  "details": {
+    "organizations": 8,
+    "trades": 10,
+    "email_templates": 5,
+    "profiles": 1,
+    "user_organizations": 1,
+    "partner_locations": 10,
+    "work_orders": 16
+  }
+}
+```
+
+### clear_test_data()
+
+**Purpose**: Safely remove test data with comprehensive cleanup and foreign key safety
+
+```sql
+CREATE OR REPLACE FUNCTION public.clear_test_data()
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  result jsonb := '{}';
+  deleted_counts jsonb := '{}';
+  test_user_ids uuid[];
+  test_org_ids uuid[];
+  test_work_order_ids uuid[];
+BEGIN
+  -- Only allow admins to execute this function
+  IF NOT public.auth_is_admin() THEN
+    RAISE EXCEPTION 'Only administrators can clear test data';
+  END IF;
+
+  -- Safely identify test data using patterns
+  -- ... comprehensive cleanup implementation
+END;
+$$;
+```
+
+**Safety Features**:
+- **Pattern-Based Identification**: Uses email patterns and known test names
+- **Foreign Key Safety**: Deletes in proper order to avoid violations
+- **Admin-Only Access**: Restricted to authenticated admin users
+- **Comprehensive Cleanup**: Removes all related data across tables
+
+**Test Data Patterns**:
+- Emails: `%@testcompany%`, `%@example.com`, `%test%`
+- Organizations: Known test organization names
+- Users: First name = 'Test'
+
+**Usage**:
+```typescript
+const { data, error } = await supabase.rpc('clear_test_data');
+
+if (error) {
+  console.error('Cleanup failed:', error);
+} else {
+  console.log('Cleanup successful:', data.deleted_counts);
+}
+```
+
+**Return Value**:
+```json
+{
+  "success": true,
+  "message": "Test data cleared successfully",
+  "deleted_counts": {
+    "email_logs": 0,
+    "work_order_attachments": 0,
+    "work_order_reports": 0,
+    "work_order_assignments": 0,
+    "employee_reports": 0,
+    "work_orders": 16,
+    "partner_locations": 10,
+    "user_organizations": 1,
+    "organizations": 7,
+    "profiles": 0
+  },
+  "test_user_count": 0,
+  "test_org_count": 7,
+  "test_work_order_count": 16
+}
+```
+
+**Business Impact**: 
+- **Development Efficiency**: Quick database reset for testing
+- **Data Integrity**: Safe cleanup without breaking foreign key constraints
+- **Team Collaboration**: Consistent test data across development environments
 
 ## Utility Functions
 
