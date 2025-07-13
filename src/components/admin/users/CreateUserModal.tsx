@@ -17,6 +17,7 @@ import { useUserMutations, CreateUserData } from '@/hooks/useUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useToast } from '@/hooks/use-toast';
 import { QuickOrganizationForm } from './QuickOrganizationForm';
+import { filterOrganizationsByUserType } from '@/lib/utils/userOrgMapping';
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -252,12 +253,14 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                     Select the organizations this user should be associated with.
                   </FormDescription>
                   
-                  {organizationsData?.organizations && organizationsData.organizations.length > 0 ? (
-                    <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
-                      <div className="space-y-2">
-                        {organizationsData.organizations
-                          .filter(org => org.is_active)
-                          .map((org) => (
+                   {(() => {
+                     const allOrgs = organizationsData?.organizations || [];
+                     const filteredOrgs = filterOrganizationsByUserType(allOrgs, watchedUserType);
+                     
+                     return filteredOrgs.length > 0 ? (
+                       <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                         <div className="space-y-2">
+                           {filteredOrgs.map((org) => (
                             <div key={org.id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`org-${org.id}`}
@@ -286,15 +289,16 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                            Create New Organization
                          </Button>
                        </div>
-                     </div>
-                   ) : (
-                     <Alert>
-                       <AlertCircle className="h-4 w-4" />
-                       <AlertDescription>
-                         No organizations available. Create one to continue.
-                       </AlertDescription>
-                     </Alert>
-                   )}
+                         </div>
+                       ) : (
+                         <Alert>
+                           <AlertCircle className="h-4 w-4" />
+                           <AlertDescription>
+                             No {watchedUserType === 'partner' ? 'partner' : watchedUserType === 'subcontractor' ? 'subcontractor' : 'internal'} organizations available. Create one to continue.
+                           </AlertDescription>
+                         </Alert>
+                       );
+                     })()}
 
                   {watchedOrganizations.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
