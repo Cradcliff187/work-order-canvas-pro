@@ -283,6 +283,38 @@ const AdminEmailTemplates: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Database Verification Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Eye className="h-5 w-5 mr-2" />
+            Database Verification
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Active email templates in database: {templates?.filter(t => t.is_active).length || 0} of {templates?.length || 0} total
+            </p>
+            {templates && templates.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {templates.map((template) => (
+                  <div key={template.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-mono text-sm font-medium">{template.template_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{template.subject}</p>
+                    </div>
+                    <Badge variant={template.is_active ? 'default' : 'secondary'} className="ml-2">
+                      {template.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <DeleteConfirmationDialog
         open={!!deletingTemplate}
         onOpenChange={(open) => !open && setDeletingTemplate(null)}

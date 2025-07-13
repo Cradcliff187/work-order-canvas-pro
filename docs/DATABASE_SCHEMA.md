@@ -1751,6 +1751,7 @@ $function$
 3. **report_submitted** - Notification when subcontractor submits completion report
 4. **report_reviewed** - Notification when admin reviews/approves report
 5. **work_order_completed** - Notification when work order is marked complete
+6. **welcome_email** - Welcome email for new user account creation
 
 
 ## Performance Considerations

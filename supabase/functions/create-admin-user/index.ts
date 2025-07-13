@@ -63,10 +63,14 @@ serve(async (req) => {
     // Wait for profile creation and verify with retry logic
     await new Promise(resolve => setTimeout(resolve, 1500));
 
+    console.log('Starting profile verification process for user:', authUser.user.id);
+
     let retries = 0;
     let newProfile = null;
     while (retries < 3 && !newProfile) {
       await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log(`Profile verification attempt ${retries + 1}/3 for user:`, authUser.user.id);
+      
       const { data } = await supabaseAdmin
         .from('profiles')
         .select('*')
@@ -81,6 +85,8 @@ serve(async (req) => {
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
       throw new Error('Profile creation failed');
     }
+
+    console.log('Profile verification successful:', { profileId: newProfile.id, retries });
 
     console.log('Profile created:', newProfile.id);
 
