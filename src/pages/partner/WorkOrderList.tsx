@@ -14,6 +14,9 @@ import { format } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { OrganizationBadge } from '@/components/OrganizationBadge';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 
 const statusColors = {
   received: 'bg-blue-100 text-blue-800',
@@ -37,8 +40,11 @@ const WorkOrderList = () => {
 
   const { data: workOrdersData, isLoading, refetch } = usePartnerWorkOrders(filters);
   const { data: trades } = useTrades();
+  const { profile } = useAuth();
+  const { data: userOrganizations } = useUserOrganizations();
 
   const workOrders = workOrdersData?.data || [];
+  const primaryOrganization = userOrganizations?.[0];
 
   const handleRefresh = async () => {
     await refetch();
@@ -165,10 +171,19 @@ const WorkOrderList = () => {
                     {workOrders.map((workOrder) => (
                       <TableRow key={workOrder.id}>
                         <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
                             <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground">
                               {workOrder.work_order_number || 'Pending'}
                             </Badge>
+                            {primaryOrganization && (
+                              <OrganizationBadge 
+                                organization={{
+                                  name: primaryOrganization.name,
+                                  organization_type: 'partner'
+                                }}
+                                size="sm"
+                              />
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
