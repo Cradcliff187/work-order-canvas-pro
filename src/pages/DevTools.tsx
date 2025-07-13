@@ -69,6 +69,7 @@ const DevTools = () => {
     setupSqlData,
     createAuthUsers,
     fixUserOrganizations,
+    verifyTestEnvironment,
     quickLogin,
     forceRefreshUsers,
   } = useDevTools();
@@ -335,15 +336,15 @@ const DevTools = () => {
         </TabsList>
         
         <TabsContent value="setup" className="space-y-6">
-          {/* BULLETPROOF SETUP - NEW APPROACH */}
+          {/* STREAMLINED SETUP */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                Bulletproof Test Environment Setup
+                Test Environment Setup
               </CardTitle>
               <CardDescription>
-                Reliable two-step setup process: SQL database setup + auth user creation
+                Create a complete test environment with one click
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -352,145 +353,118 @@ const DevTools = () => {
                   <div>Organizations: {counts.organizations}</div>
                   <div>Work Orders: {counts.work_orders}</div>
                   <div>Users: {counts.profiles}</div>
-                  <div>Reports: {counts.work_order_reports}</div>
+                  <div>User-Org Links: {counts.user_organizations}</div>
                 </div>
               )}
               
-              {/* Step 1: SQL Database Setup */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">1</div>
-                  <h4 className="font-medium">Database Setup (SQL)</h4>
-                </div>
-                <p className="text-sm text-muted-foreground ml-8">
-                  Creates organizations, trades, locations, work orders, and profile entries using reliable SQL operations
-                </p>
-                <div className="ml-8">
+              {/* ONE-CLICK SETUP */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <Button
                     onClick={setupSqlData}
                     disabled={sqlLoading}
-                    size="default"
-                    className="w-full"
+                    size="lg"
+                    className="h-12 text-base"
                   >
-                    {sqlLoading ? <LoadingSpinner /> : null}
-                    Run SQL Database Setup
+                    {sqlLoading ? <LoadingSpinner /> : <Database className="h-5 w-5 mr-2" />}
+                    Setup Test Environment
                   </Button>
                   
-                  {sqlResult && (
-                    <Alert className={sqlResult.success ? "border-green-500 mt-3" : "border-red-500 mt-3"}>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>{sqlResult.success ? "SQL Setup Success!" : "SQL Setup Failed"}</AlertTitle>
-                      <AlertDescription>
-                        {sqlResult.message}
-                        {sqlResult.success && sqlResult.data && (
-                          <div className="mt-2 text-sm">
-                            Created: {sqlResult.data.organizations_created} orgs, {sqlResult.data.users_created} profiles, {sqlResult.data.work_orders_created} work orders
-                          </div>
-                        )}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 2: Auth User Creation */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-medium">2</div>
-                  <h4 className="font-medium">Auth Users Creation</h4>
-                </div>
-                <p className="text-sm text-muted-foreground ml-8">
-                  Creates authentication users that can actually log in (partner1@workorderpro.test, sub1@workorderpro.test, employee1@workorderpro.test)
-                </p>
-                <div className="ml-8">
                   <Button
                     onClick={createAuthUsers}
                     disabled={authLoading}
-                    size="default"
-                    className="w-full"
+                    variant="outline"
+                    size="lg"
+                    className="h-12 text-base"
                   >
-                    {authLoading ? <LoadingSpinner /> : null}
+                    {authLoading ? <LoadingSpinner /> : <Users className="h-5 w-5 mr-2" />}
                     Create Auth Users
                   </Button>
-                  
-                  {authResult && (
-                    <Alert className={authResult.success ? "border-green-500 mt-3" : "border-red-500 mt-3"}>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>{authResult.success ? "Auth Users Success!" : "Auth Creation Failed"}</AlertTitle>
-                      <AlertDescription>
-                        {authResult.message}
-                        {authResult.success && authResult.data && (
-                          <div className="mt-2 text-sm">
-                            Created/Updated: {authResult.data.success_count} auth users
-                          </div>
-                        )}
-                      </AlertDescription>
-                    </Alert>
-                  )}
                 </div>
-              </div>
-
-              {/* Legacy Single-Click Setup (Backup) */}
-              <div className="border-t pt-4 space-y-3">
-                <h4 className="font-medium text-sm">Legacy Setup (Backup)</h4>
-                <Button
-                  onClick={setupCompleteEnvironment}
-                  disabled={setupLoading}
-                  variant="outline"
-                  className="w-full"
-                >
-                  {setupLoading ? <LoadingSpinner /> : null}
-                  Try Legacy Single-Click Setup
-                </Button>
                 
-                {setupResult && (
-                  <Alert className={setupResult.success ? "border-green-500" : "border-red-500"}>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>{setupResult.success ? "Legacy Success!" : "Legacy Failed"}</AlertTitle>
-                    <AlertDescription>
-                      {setupResult.message}
-                      {setupResult.success && setupResult.data && (
-                        <div className="mt-2 text-sm">
-                          Created: {setupResult.data.users} users, {setupResult.data.organizations} organizations, {setupResult.data.workOrders} work orders
-                        </div>
-                      )}
-                    </AlertDescription>
-                  </Alert>
+                {(sqlResult || authResult) && (
+                  <div className="space-y-2">
+                    {sqlResult && (
+                      <Alert className={sqlResult.success ? "border-green-500" : "border-red-500"}>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>{sqlResult.success ? "Setup Complete!" : "Setup Failed"}</AlertTitle>
+                        <AlertDescription>{sqlResult.message}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    {authResult && (
+                      <Alert className={authResult.success ? "border-green-500" : "border-red-500"}>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>{authResult.success ? "Auth Users Created!" : "Auth Failed"}</AlertTitle>
+                        <AlertDescription>{authResult.message}</AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
                 )}
               </div>
               
-              {/* Manual Operations */}
-              <div className="border-t pt-4 space-y-2">
-                <h4 className="font-medium text-sm">Manual Operations</h4>
+              {/* UTILITY ACTIONS */}
+              <div className="border-t pt-4 space-y-3">
+                <h4 className="font-medium text-sm">Utility Actions</h4>
                 <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    onClick={verifyTestEnvironment}
+                    disabled={loading}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    {loading ? <LoadingSpinner /> : <Search className="h-4 w-4 mr-1" />}
+                    Verify Setup
+                  </Button>
                   <Button
                     onClick={fixUserOrganizations}
                     disabled={loading}
                     variant="secondary"
                     size="sm"
                   >
-                    {loading ? <LoadingSpinner /> : null}
-                    Fix Current Issues
+                    {loading ? <LoadingSpinner /> : <Settings className="h-4 w-4 mr-1" />}
+                    Fix Issues
                   </Button>
-                  <Button
-                    onClick={clearTestData}
-                    disabled={loading}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    {loading ? <LoadingSpinner /> : null}
-                    Clear All Data
-                  </Button>
-                  <Button
-                    onClick={fetchCounts}
-                    disabled={loading}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {loading ? <LoadingSpinner /> : null}
-                    Refresh Counts
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        disabled={loading}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Clear All
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Clear All Test Data?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete all test data from the database. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={clearTestData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete All Data
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
+              </div>
+              
+              {/* REFRESH DATA */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={fetchCounts}
+                  disabled={loading}
+                  variant="outline"
+                  size="sm"
+                >
+                  {loading ? <LoadingSpinner /> : null}
+                  Refresh Counts
+                </Button>
               </div>
             </CardContent>
           </Card>

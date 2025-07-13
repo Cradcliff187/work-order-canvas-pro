@@ -1452,6 +1452,10 @@ export type Database = {
         Args: { org_id: string }
         Returns: boolean
       }
+      verify_test_environment_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
     }
     Enums: {
       assignment_type: "internal" | "subcontractor"

@@ -348,7 +348,7 @@ export const useDevTools = () => {
       
       console.log('🗃️ Running SQL data setup...');
       
-      const { data, error } = await supabase.rpc('setup_bulletproof_test_data');
+      const { data, error } = await supabase.rpc('complete_test_environment_setup');
       
       if (error) {
         throw new Error(error.message);
@@ -358,8 +358,8 @@ export const useDevTools = () => {
       
       if ((data as any)?.success) {
         toast({
-          title: "SQL Setup Complete!",
-          description: `Created organizations, users, and work orders successfully`,
+          title: "Setup Complete!",
+          description: `Successfully created test environment`,
           variant: "default",
         });
         
@@ -367,7 +367,7 @@ export const useDevTools = () => {
         await fetchCounts();
       } else {
         toast({
-          title: "SQL Setup Failed", 
+          title: "Setup Failed", 
           description: (data as any)?.error || 'Unknown error occurred',
           variant: "destructive",
         });
@@ -383,7 +383,7 @@ export const useDevTools = () => {
       };
       setSqlResult(errorResult);
       toast({
-        title: "SQL Setup Failed",
+        title: "Setup Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -493,6 +493,44 @@ export const useDevTools = () => {
     }
   };
 
+  const verifyTestEnvironment = async () => {
+    try {
+      setLoading(true);
+      
+      console.log('🔍 Verifying test environment status...');
+      
+      const { data, error } = await supabase.rpc('verify_test_environment_status');
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if ((data as any)?.success) {
+        const status = (data as any).environment_status;
+        toast({
+          title: "Environment Verified",
+          description: `${status.test_users_count} users, ${status.test_organizations_count} orgs, ${status.user_organization_relationships} relationships`,
+          variant: status.ready_for_testing ? "default" : "destructive",
+        });
+      }
+      
+      return data;
+    } catch (error: any) {
+      console.error('Verify environment error:', error);
+      toast({
+        title: "Verification Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return {
+        success: false,
+        error: error.message
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     setupLoading,
@@ -509,6 +547,7 @@ export const useDevTools = () => {
     setupSqlData,
     createAuthUsers,
     fixUserOrganizations,
+    verifyTestEnvironment,
     quickLogin,
     forceRefreshUsers,
   };
