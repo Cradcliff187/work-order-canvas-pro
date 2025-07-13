@@ -1419,6 +1419,10 @@ export type Database = {
         Args: { work_order_id: string; blocked?: boolean }
         Returns: undefined
       }
+      setup_bulletproof_test_data: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       transition_work_order_status: {
         Args: {
           work_order_id: string

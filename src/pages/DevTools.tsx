@@ -57,11 +57,17 @@ const DevTools = () => {
     loading,
     setupLoading,
     refreshLoading,
+    authLoading,
+    sqlLoading,
     counts,
     setupResult,
+    authResult,
+    sqlResult,
     fetchCounts,
     clearTestData,
     setupCompleteEnvironment,
+    setupSqlData,
+    createAuthUsers,
     quickLogin,
     forceRefreshUsers,
   } = useDevTools();
@@ -328,16 +334,20 @@ const DevTools = () => {
         </TabsList>
         
         <TabsContent value="setup" className="space-y-6">
+          {/* BULLETPROOF SETUP - NEW APPROACH */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Complete Test Environment</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Bulletproof Test Environment Setup
+              </CardTitle>
               <CardDescription>
-                One-click setup of complete test environment with users, organizations, and sample data
+                Reliable two-step setup process: SQL database setup + auth user creation
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               {counts && (
-                <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
+                <div className="text-sm text-muted-foreground grid grid-cols-4 gap-2 p-3 bg-muted rounded-lg">
                   <div>Organizations: {counts.organizations}</div>
                   <div>Work Orders: {counts.work_orders}</div>
                   <div>Users: {counts.profiles}</div>
@@ -345,21 +355,97 @@ const DevTools = () => {
                 </div>
               )}
               
+              {/* Step 1: SQL Database Setup */}
               <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">1</div>
+                  <h4 className="font-medium">Database Setup (SQL)</h4>
+                </div>
+                <p className="text-sm text-muted-foreground ml-8">
+                  Creates organizations, trades, locations, work orders, and profile entries using reliable SQL operations
+                </p>
+                <div className="ml-8">
+                  <Button
+                    onClick={setupSqlData}
+                    disabled={sqlLoading}
+                    size="default"
+                    className="w-full"
+                  >
+                    {sqlLoading ? <LoadingSpinner /> : null}
+                    Run SQL Database Setup
+                  </Button>
+                  
+                  {sqlResult && (
+                    <Alert className={sqlResult.success ? "border-green-500 mt-3" : "border-red-500 mt-3"}>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>{sqlResult.success ? "SQL Setup Success!" : "SQL Setup Failed"}</AlertTitle>
+                      <AlertDescription>
+                        {sqlResult.message}
+                        {sqlResult.success && sqlResult.data && (
+                          <div className="mt-2 text-sm">
+                            Created: {sqlResult.data.organizations_created} orgs, {sqlResult.data.users_created} profiles, {sqlResult.data.work_orders_created} work orders
+                          </div>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 2: Auth User Creation */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-medium">2</div>
+                  <h4 className="font-medium">Auth Users Creation</h4>
+                </div>
+                <p className="text-sm text-muted-foreground ml-8">
+                  Creates authentication users that can actually log in (partner1@workorderpro.test, sub1@workorderpro.test, employee1@workorderpro.test)
+                </p>
+                <div className="ml-8">
+                  <Button
+                    onClick={createAuthUsers}
+                    disabled={authLoading}
+                    size="default"
+                    className="w-full"
+                  >
+                    {authLoading ? <LoadingSpinner /> : null}
+                    Create Auth Users
+                  </Button>
+                  
+                  {authResult && (
+                    <Alert className={authResult.success ? "border-green-500 mt-3" : "border-red-500 mt-3"}>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>{authResult.success ? "Auth Users Success!" : "Auth Creation Failed"}</AlertTitle>
+                      <AlertDescription>
+                        {authResult.message}
+                        {authResult.success && authResult.data && (
+                          <div className="mt-2 text-sm">
+                            Created/Updated: {authResult.data.success_count} auth users
+                          </div>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </div>
+
+              {/* Legacy Single-Click Setup (Backup) */}
+              <div className="border-t pt-4 space-y-3">
+                <h4 className="font-medium text-sm">Legacy Setup (Backup)</h4>
                 <Button
                   onClick={setupCompleteEnvironment}
                   disabled={setupLoading}
-                  size="lg"
+                  variant="outline"
                   className="w-full"
                 >
                   {setupLoading ? <LoadingSpinner /> : null}
-                  Setup Complete Test Environment
+                  Try Legacy Single-Click Setup
                 </Button>
                 
                 {setupResult && (
                   <Alert className={setupResult.success ? "border-green-500" : "border-red-500"}>
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>{setupResult.success ? "Success!" : "Setup Failed"}</AlertTitle>
+                    <AlertTitle>{setupResult.success ? "Legacy Success!" : "Legacy Failed"}</AlertTitle>
                     <AlertDescription>
                       {setupResult.message}
                       {setupResult.success && setupResult.data && (
@@ -372,6 +458,7 @@ const DevTools = () => {
                 )}
               </div>
               
+              {/* Manual Operations */}
               <div className="border-t pt-4 space-y-2">
                 <h4 className="font-medium text-sm">Manual Operations</h4>
                 <div className="grid grid-cols-2 gap-2">
@@ -401,17 +488,23 @@ const DevTools = () => {
 
         <TabsContent value="impersonation" className="space-y-6">
           <div className="space-y-4">
-            {setupResult?.success && setupResult.data?.userCredentials && (
+            {/* Test User Credentials - Combined from both legacy and new setup */}
+            {((setupResult?.success && setupResult.data?.userCredentials) || (authResult?.success && authResult.data?.credentials)) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Test User Credentials</CardTitle>
                   <CardDescription>
-                    Login credentials for test users created by the environment setup
+                    Login credentials for test users. All passwords are: TestPass123!
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {setupResult.data.userCredentials.map((cred) => (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {/* Show credentials from auth result if available, otherwise legacy */}
+                    {(authResult?.data?.credentials || setupResult?.data?.userCredentials || [
+                      { email: 'partner1@workorderpro.test', password: 'TestPass123!', type: 'partner' },
+                      { email: 'sub1@workorderpro.test', password: 'TestPass123!', type: 'subcontractor' },
+                      { email: 'employee1@workorderpro.test', password: 'TestPass123!', type: 'employee' }
+                    ]).map((cred: any) => (
                       <div key={cred.email} className="p-4 border rounded-lg space-y-2">
                         <div className="font-medium">{cred.type} User</div>
                         <div className="text-sm text-muted-foreground">
@@ -451,12 +544,12 @@ const DevTools = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {!setupResult?.success ? (
+                {!(setupResult?.success || sqlResult?.success || authResult?.success) ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Setup Test Environment First</AlertTitle>
                     <AlertDescription>
-                      Use the "Setup Complete Test Environment" button to create test users with proper credentials.
+                      Use the "Bulletproof Test Environment Setup" in the Setup tab to create test users with proper credentials.
                       <div className="mt-2">
                         <Button 
                           onClick={fetchImpersonationUsers}
