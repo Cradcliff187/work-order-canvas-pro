@@ -26,7 +26,6 @@ const createUserSchema = z.object({
     required_error: 'User type is required',
   }),
   phone: z.string().optional(),
-  company_name: z.string().optional(),
   organization_ids: z.array(z.string()).optional(),
   send_welcome_email: z.boolean().default(false),
 });
@@ -55,7 +54,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
       first_name: '',
       last_name: '',
       phone: '',
-      company_name: '',
       organization_ids: [],
       send_welcome_email: false,
     },
@@ -82,7 +80,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
         last_name: data.last_name!,
         user_type: data.user_type!,
         phone: data.phone,
-        company_name: data.company_name,
         organization_ids: data.organization_ids || [],
         send_welcome_email: data.send_welcome_email,
       });
@@ -268,21 +265,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                 />
               </div>
 
-              {(watchedUserType === 'partner' || watchedUserType === 'subcontractor' || watchedUserType === 'employee') && (
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Acme Corporation" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
               {watchedUserType && watchedUserType !== 'admin' && (
                 <div className="space-y-3">
