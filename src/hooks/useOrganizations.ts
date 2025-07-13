@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Organization } from '@/pages/admin/AdminOrganizations';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface CreateOrganizationData {
   name: string;
@@ -39,10 +40,18 @@ export interface UpdateOrganizationData {
  * - internal: General contractor company managing workflows
  */
 export function useOrganizations() {
+  const { session, user } = useAuth();
+  
   return useQuery({
     queryKey: ['organizations'],
     queryFn: async () => {
       console.log('🔍 useOrganizations: Starting query...');
+      console.log('🔐 useOrganizations: Auth state:', {
+        hasSession: !!session,
+        hasUser: !!user,
+        userId: user?.id,
+        sessionToken: session?.access_token?.substring(0, 20) + '...'
+      });
       
       // Get organizations with user and work order counts for company access management
       const { data: organizations, error } = await supabase
@@ -103,6 +112,7 @@ export function useOrganizations() {
       console.log('✅ useOrganizations: Final result:', result);
       return result;
     },
+    enabled: !!session && !!user, // Only run query when user is authenticated
   });
 }
 
