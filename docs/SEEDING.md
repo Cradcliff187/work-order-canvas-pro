@@ -377,6 +377,184 @@ const { data, error } = await supabase.functions.invoke('seed-database', {
 - **Authentication**: Admin key required for seeding operations
 - **Error Handling**: New error response format from Edge Functions
 
+## Deployment Verification
+
+### Check Function Status
+
+List all deployed Edge Functions:
+```bash
+# List all deployed functions
+supabase functions list
+
+# Expected output:
+┌─────────────────────────────┬─────────┬──────────────────────────┐
+│           NAME              │ STATUS  │        CREATED AT        │
+├─────────────────────────────┼─────────┼──────────────────────────┤
+│ seed-database               │ ACTIVE  │ 2024-01-15T10:30:00Z     │
+│ clear-test-data             │ ACTIVE  │ 2024-01-15T10:30:00Z     │
+│ email-work-order-created    │ ACTIVE  │ 2024-01-15T10:30:00Z     │
+└─────────────────────────────┴─────────┴──────────────────────────┘
+```
+
+Inspect specific function details:
+```bash
+# Check function configuration and status
+supabase functions inspect seed-database
+
+# Expected output:
+Function: seed-database
+Status: ACTIVE
+Region: us-east-1
+Runtime: deno
+Memory: 512MB
+JWT Verification: Enabled
+CORS: Enabled
+```
+
+View recent function invocations:
+```bash
+# View recent logs with limit
+supabase functions logs seed-database --limit 10
+
+# Stream logs in real-time
+supabase functions logs seed-database --follow
+
+# Expected log entries:
+2024-01-15T10:30:00Z INFO Function invoked with admin key validation
+2024-01-15T10:30:01Z INFO 🌱 Starting database seeding via Edge Function...
+2024-01-15T10:30:02Z INFO ✅ Created 5 organizations
+2024-01-15T10:30:03Z INFO ✅ Created 20 users
+```
+
+### Health Check Examples
+
+Test function connectivity:
+```bash
+# Test seed-database function
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ANON_KEY" \
+  -d '{
+    "admin_key": "dev-admin-key",
+    "options": {
+      "clear_existing": false,
+      "include_test_data": false
+    }
+  }'
+
+# Test clear-test-data function  
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/clear-test-data \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ANON_KEY" \
+  -d '{
+    "admin_key": "dev-admin-key",
+    "dry_run": true
+  }'
+```
+
+Verify environment variables:
+```bash
+# List configured secrets
+supabase secrets list
+
+# Expected secrets:
+SUPABASE_URL
+SUPABASE_ANON_KEY  
+SUPABASE_SERVICE_ROLE_KEY
+RESEND_API_KEY
+```
+
+### Common Deployment Issues
+
+#### Function Not Found Error
+```
+Error: FunctionsFetchError: Failed to fetch function
+```
+**Solutions**:
+1. Verify function is deployed: `supabase functions list`
+2. Check function name spelling in requests
+3. Ensure project ID is correct in URLs
+4. Re-deploy if function missing: `supabase functions deploy`
+
+#### Environment Variable Missing
+```
+Error: Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY
+```
+**Solutions**:
+1. Check secrets are set: `supabase secrets list`
+2. Set missing secret: `supabase secrets set VARIABLE_NAME=value`
+3. Verify secret names match function requirements
+4. Re-deploy function after setting secrets
+
+#### Authentication Issues
+```
+Error: JWT verification failed
+```
+**Solutions**:
+1. Verify Authorization header includes Bearer token
+2. Check anon key is valid and not expired
+3. Ensure function JWT verification settings are correct
+4. Use service role key for admin functions if needed
+
+#### Network Connectivity
+```
+Error: Network request failed
+```
+**Solutions**:
+1. Check internet connection
+2. Verify Supabase project is active
+3. Test with curl to isolate client issues
+4. Check firewall/proxy settings
+
+#### Function Timeout
+```
+Error: Function execution timeout
+```
+**Solutions**:
+1. Reduce batch sizes in seeding operations
+2. Optimize database queries
+3. Consider breaking large operations into smaller chunks
+4. Monitor function logs for performance bottlenecks
+
+### Database Connection Validation
+
+Test database connectivity from functions:
+```sql
+-- Quick connectivity test
+SELECT current_timestamp, version();
+
+-- Verify RLS policies are working
+SELECT auth.uid(), auth.role();
+
+-- Check table access
+SELECT COUNT(*) FROM profiles;
+SELECT COUNT(*) FROM organizations;
+```
+
+### Integration Testing
+
+Email service integration test:
+```typescript
+// Test email functions are properly configured
+const testEmailIntegration = async () => {
+  const { data, error } = await supabase.functions.invoke('email-welcome', {
+    body: {
+      user_id: 'test-user-id',
+      email: 'test@example.com',
+      first_name: 'Test',
+      last_name: 'User',
+      user_type: 'admin'
+    }
+  });
+  
+  if (error) {
+    console.error('Email integration test failed:', error);
+  } else {
+    console.log('Email integration test passed:', data);
+  }
+};
+```
+
 ## Best Practices
 
 ### Development Workflow
