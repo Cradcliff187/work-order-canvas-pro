@@ -1224,25 +1224,92 @@ export const seedDatabase = async () => {
     // 11. Create employee reports
     console.log('📊 Creating employee reports...');
     const employeeReports = [
+      // Senior Employee (David) - 3 reports with overtime
       {
-        employee_user_id: userProfiles.get('admin@workorderpro.com')?.id,
-        work_order_id: createdWorkOrders?.[0]?.id,
-        report_date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        hours_worked: 2.0,
+        employee_user_id: userProfiles.get('senior@workorderpro.com')?.id,
+        work_order_id: createdWorkOrders?.[5]?.id, // Internal maintenance
+        report_date: getRandomDate(2, 14),
+        hours_worked: 10.5, // Overtime
         hourly_rate_snapshot: 75.00,
-        
-        work_performed: 'Supervised plumbing repair and quality inspection',
-        notes: 'Ensured work met quality standards and customer satisfaction'
+        total_labor_cost: 10.5 * 75.00,
+        work_performed: 'Emergency HVAC system repair and diagnostic troubleshooting',
+        notes: 'Worked extended hours due to critical system failure. Identified root cause and implemented permanent fix.'
       },
       {
+        employee_user_id: userProfiles.get('senior@workorderpro.com')?.id,
+        work_order_id: createdWorkOrders?.[7]?.id, // Complex HVAC project
+        report_date: getRandomDate(3, 10),
+        hours_worked: 6.0,
+        hourly_rate_snapshot: 75.00,
+        total_labor_cost: 6.0 * 75.00,
+        work_performed: 'Project coordination and quality assurance for multi-zone HVAC installation',
+        notes: 'Supervised subcontractor work and ensured compliance with building codes.'
+      },
+      {
+        employee_user_id: userProfiles.get('senior@workorderpro.com')?.id,
+        work_order_id: createdWorkOrders?.[8]?.id, // Electrical upgrade
+        report_date: getRandomDate(5, 12),
+        hours_worked: 8.0,
+        hourly_rate_snapshot: 75.00,
+        total_labor_cost: 8.0 * 75.00,
+        work_performed: 'Electrical panel upgrade coordination and safety inspection',
+        notes: 'Managed electrical contractor and performed final safety verification tests.'
+      },
+      
+      // Mid-level Employee (Jennifer) - 2 reports
+      {
+        employee_user_id: userProfiles.get('midlevel@workorderpro.com')?.id,
+        work_order_id: createdWorkOrders?.[6]?.id, // Facility inspection
+        report_date: getRandomDate(1, 8),
+        hours_worked: 4.5,
+        hourly_rate_snapshot: 50.00,
+        total_labor_cost: 4.5 * 50.00,
+        work_performed: 'Comprehensive facility inspection and maintenance planning',
+        notes: 'Identified several preventive maintenance opportunities and updated facility records.'
+      },
+      {
+        employee_user_id: userProfiles.get('midlevel@workorderpro.com')?.id,
+        work_order_id: createdWorkOrders?.[9]?.id, // Major plumbing overhaul
+        report_date: getRandomDate(6, 13),
+        hours_worked: 7.0,
+        hourly_rate_snapshot: 50.00,
+        total_labor_cost: 7.0 * 50.00,
+        work_performed: 'Plumbing system assessment and project planning coordination',
+        notes: 'Worked with plumbing contractor to develop phased replacement strategy.'
+      },
+      
+      // Junior Employee (Alex) - 2 reports
+      {
+        employee_user_id: userProfiles.get('junior@workorderpro.com')?.id,
+        work_order_id: createdWorkOrders?.[7]?.id, // Emergency response
+        report_date: getRandomDate(4, 9),
+        hours_worked: 3.0,
+        hourly_rate_snapshot: 35.00,
+        total_labor_cost: 3.0 * 35.00,
+        work_performed: 'Emergency response support and documentation',
+        notes: 'Assisted senior employee with emergency protocols and maintained incident log.'
+      },
+      {
+        employee_user_id: userProfiles.get('junior@workorderpro.com')?.id,
+        work_order_id: createdWorkOrders?.[1]?.id, // HVAC maintenance
+        report_date: getRandomDate(7, 11),
+        hours_worked: 5.5,
+        hourly_rate_snapshot: 35.00,
+        total_labor_cost: 5.5 * 35.00,
+        work_performed: 'HVAC filter replacement and system maintenance learning',
+        notes: 'Learned proper filter replacement procedures and updated maintenance schedules.'
+      },
+      
+      // Emily Employee - 1 report
+      {
         employee_user_id: userProfiles.get('employee@workorderpro.com')?.id,
-        work_order_id: createdWorkOrders?.[1]?.id,
-        report_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        hours_worked: 3.5,
+        work_order_id: createdWorkOrders?.[0]?.id, // Plumbing repair
+        report_date: getRandomDate(2, 6),
+        hours_worked: 2.5,
         hourly_rate_snapshot: 55.00,
-        
-        work_performed: 'Coordinated HVAC filter replacement project',
-        notes: 'Managed multiple technicians and ensured safety protocols'
+        total_labor_cost: 2.5 * 55.00,
+        work_performed: 'Project coordination and client communication',
+        notes: 'Coordinated with subcontractor and provided project updates to client.'
       }
     ];
 
@@ -1254,7 +1321,36 @@ export const seedDatabase = async () => {
       if (empReportsError) {
         console.warn('Employee reports creation error:', empReportsError);
       } else {
+        // Calculate totals for logging
+        const totalHours = employeeReports.reduce((sum, report) => sum + report.hours_worked, 0);
+        const totalCost = employeeReports.reduce((sum, report) => sum + (report.total_labor_cost || 0), 0);
+        const overtimeReports = employeeReports.filter(report => report.hours_worked > 8).length;
+        
         console.log(`✅ Created ${employeeReports.length} employee reports`);
+        console.log(`   💰 Total Hours Tracked: ${totalHours} hours`);
+        console.log(`   💵 Total Labor Cost: $${totalCost.toLocaleString()}`);
+        console.log(`   ⏰ Overtime Reports: ${overtimeReports}`);
+        console.log(`   📅 Date Range: Past 2 weeks`);
+        
+        // Employee breakdown
+        const employeeBreakdown = employeeReports.reduce((breakdown, report) => {
+          const email = Object.entries(userProfiles.entries()).find(([_, profile]) => 
+            profile?.id === report.employee_user_id
+          )?.[0] || 'Unknown';
+          
+          if (!breakdown[email]) {
+            breakdown[email] = { reports: 0, hours: 0, cost: 0, rate: report.hourly_rate_snapshot };
+          }
+          breakdown[email].reports++;
+          breakdown[email].hours += report.hours_worked;
+          breakdown[email].cost += report.total_labor_cost || 0;
+          return breakdown;
+        }, {});
+        
+        console.log('   👥 Employee Breakdown:');
+        Object.entries(employeeBreakdown).forEach(([email, data]: [string, any]) => {
+          console.log(`      ${email}: ${data.reports} reports, ${data.hours}h @ $${data.rate}/hr = $${data.cost.toLocaleString()}`);
+        });
       }
     }
 
