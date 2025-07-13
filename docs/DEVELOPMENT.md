@@ -79,19 +79,46 @@ if (error) {
 Access at `/dev-tools` for comprehensive development utilities:
 
 **Database Operations:**
-- Database seeding with test organizations and users
-- Test data cleanup with foreign key safety
-- Dry run options for safe preview
+- **Database Seeding**: Comprehensive test data creation with constraint compliance
+- **Test Data Cleanup**: Foreign key safe cleanup with admin protection
+- **Real-time Results**: Detailed success/failure reporting with count summaries
 
 **User Management:**
-- Test user credentials display
-- Organization membership verification
-- User type and permission testing
+- **Create Test Users**: Real authenticated users via edge function (5 users across all roles)
+- **User Credentials Display**: Login information for testing different perspectives  
+- **Organization Integration**: Automatic user-organization relationship creation
+- **Role-Based Testing**: Admin, partner, subcontractor, and employee user types
 
 **System Diagnostics:**
-- Authentication status monitoring
-- Database connection verification
-- Database function health checks
+- **Authentication Status**: Current user type and permission verification
+- **Database Connection**: Live connection and function health monitoring
+- **Constraint Validation**: Real-time constraint compliance checking
+- **Performance Metrics**: Operation timing and success rate tracking
+
+### Complete Testing Workflow
+
+**Step 1: Database Seeding**
+```typescript
+// Creates comprehensive business data with proper constraints
+const { data } = await supabase.rpc('seed_test_data');
+console.log('Created:', data.details.organizations_created, 'organizations');
+```
+
+**Step 2: User Creation**  
+```typescript
+// Creates 5 real authenticated users across all roles
+const response = await fetch('/api/create-test-users', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ admin_key: 'your-admin-key' })
+});
+```
+
+**Step 3: Role-Based Testing**
+- Login with different user credentials
+- Test organization-level access control
+- Verify role-specific permissions and UI
+- Test team collaboration workflows
 
 ### Hot Reloading and Debugging
 
@@ -109,29 +136,40 @@ Access at `/dev-tools` for comprehensive development utilities:
 
 ### Test Data Patterns
 
-**Test Organizations (8 total):**
+**Test Organizations (8 total from seeding):**
 - 1 Internal organization (WorkOrderPro Internal)
-- 3 Partner organizations (ABC, XYZ, Premium)
+- 3 Partner organizations (ABC, XYZ, Premium)  
 - 4 Subcontractor organizations (Pipes & More, Sparks Electric, etc.)
 
-**Test Users (14 total):**
-- 2 Admin users: `admin@workorderpro.com`, `employee@workorderpro.com`
-- 3 Internal employees with different rates ($35-$75/hr)
-- 3 Partner users representing different organizations
-- 6 Subcontractor users across various trades
+**Test Users (5 total from edge function):**
+- **partner1@abc.com** - ABC Property Management partner user
+- **partner2@xyz.com** - XYZ Commercial Properties partner user  
+- **sub1@pipes.com** - Pipes & More Plumbing subcontractor
+- **sub2@sparks.com** - Sparks Electric subcontractor
+- **employee1@workorderpro.com** - Internal employee with rates
 
-**Default Test Password:** `Test123!`
+**Default Test Password:** `Test123!` (for all created users)
+
+**Note**: Admin users are not created by the edge function. Use your existing admin account for administrative testing.
 
 ### User Credential Management
 
 ```typescript
-// Test user login credentials
+// Test user login credentials (created by create-test-users edge function)
 const testCredentials = {
-  admin: { email: 'admin@workorderpro.com', password: 'Test123!' },
-  partner: { email: 'partner1@abc.com', password: 'Test123!' },
-  subcontractor: { email: 'plumber1@trade.com', password: 'Test123!' },
-  employee: { email: 'senior@workorderpro.com', password: 'Test123!' }
+  // Use your existing admin account - edge function doesn't create admin users
+  admin: { email: 'your-admin@email.com', password: 'your-password' },
+  
+  // Created by edge function:
+  partner1: { email: 'partner1@abc.com', password: 'Test123!' },
+  partner2: { email: 'partner2@xyz.com', password: 'Test123!' },
+  subcontractor1: { email: 'sub1@pipes.com', password: 'Test123!' },
+  subcontractor2: { email: 'sub2@sparks.com', password: 'Test123!' },
+  employee: { email: 'employee1@workorderpro.com', password: 'Test123!' }
 };
+
+// Access via DevTools after user creation
+console.log('Test users created:', response.users);
 ```
 
 ### Organization Setup Testing

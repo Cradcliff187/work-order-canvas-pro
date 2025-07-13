@@ -22,13 +22,23 @@ SECURITY DEFINER functions for secure test data management and development workf
 **Purpose**: Populate database with comprehensive test data for development and testing
 - **Security**: SECURITY DEFINER with admin-only access validation
 - **Usage**: `await supabase.rpc('seed_test_data')`
-- **Returns**: Success status with detailed creation counts
+- **Returns**: Enhanced JSON response with constraint compliance details
+- **Updated**: July 13, 2025 - Fixed constraint violations and enhanced business data
 
 #### clear_test_data()  
 **Purpose**: Safely remove test data while preserving production data
-- **Security**: SECURITY DEFINER with admin-only access validation
+- **Security**: SECURITY DEFINER with admin-only access validation  
 - **Usage**: `await supabase.rpc('clear_test_data')`
-- **Returns**: Success status with detailed deletion counts
+- **Returns**: Success status with detailed deletion counts and safety verification
+
+### User Creation Functions (1)
+Edge function for creating authenticated test users
+
+#### create-test-users Edge Function
+**Purpose**: Create real authenticated users for comprehensive testing
+- **Security**: Admin authentication required via multiple validation methods
+- **Usage**: Via DevTools UI or direct edge function call
+- **Returns**: Detailed user creation results with authentication credentials
 
 ### Utility Functions (6)
 General-purpose functions for work order numbering, invoice numbering, analytics view management, and data cleanup
@@ -412,6 +422,122 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 - **Template System**: Uses `email_templates` table for customizable email content
 - **Delivery Tracking**: All emails are logged in `email_logs` table with delivery status
 - **External Integration**: Leverages Resend service for reliable email delivery
+
+## Database Function Enhancements (July 2025)
+
+### Enhanced seed_test_data() Function
+
+**Updated**: July 13, 2025  
+**Purpose**: Create comprehensive test data with constraint compliance  
+**Changes**: 
+- **Constraint Compliance**: Fixed `work_order_attachments_check` constraint violations
+- **Enhanced Business Data**: More realistic work order scenarios with varied statuses
+- **Admin-Only Security**: Uses authenticated admin profile for all data relationships
+- **Comprehensive Response**: Detailed JSON response with testing scenario breakdowns
+
+**Current Response Format**:
+```json
+{
+  "success": true,
+  "message": "Enhanced business test data seeded successfully (constraint-compliant)",
+  "idempotent": true,
+  "details": {
+    "organizations_created": 8,
+    "partner_locations_created": 5,
+    "work_orders_created": 12,
+    "work_order_assignments_created": 8,
+    "work_order_reports_created": 6,
+    "employee_reports_created": 2,
+    "receipts_created": 2,
+    "invoices_created": 3,
+    "invoice_work_orders_created": 3,
+    "work_order_attachments_created": 10,
+    "admin_profile_used": "uuid-of-admin-profile",
+    "approach": "comprehensive_testing_constraint_compliant"
+  },
+  "testing_scenarios": {
+    "work_order_statuses": {
+      "received": 4,
+      "assigned": 0,
+      "in_progress": 3,
+      "completed": 3,
+      "cancelled": 2
+    },
+    "invoice_statuses": {
+      "draft": 1,
+      "submitted": 1,
+      "approved": 1
+    },
+    "attachment_types": {
+      "work_order_attachments": 3,
+      "report_attachments": 7,
+      "total": 10
+    }
+  },
+  "constraint_fixes": {
+    "work_order_attachments_check": "Fixed - attachments now properly link to either work_order_id OR work_order_report_id, never both"
+  }
+}
+```
+
+### create-test-users Edge Function
+
+**Purpose**: Create authenticated test users for comprehensive role-based testing  
+**Security**: Multiple admin authentication methods  
+**Integration**: Seamless DevTools integration for easy user creation
+
+**Function Features**:
+- **Service Role Authentication**: Uses `SUPABASE_SERVICE_ROLE_KEY` for user creation
+- **Multiple Validation Methods**: API key, Bearer token, or development mode
+- **Organization Integration**: Automatically links users to appropriate organizations
+- **Comprehensive User Creation**: Creates 5 test users across all roles and organizations
+- **Error Resilience**: Continues processing on individual failures
+
+**Response Format**:
+```json
+{
+  "success": true,
+  "message": "Successfully created 5 test users",
+  "users": [
+    {
+      "email": "partner1@abc.com",
+      "password": "Test123!",
+      "user_type": "partner",
+      "organization": "ABC Property Management",
+      "created": true
+    }
+  ],
+  "summary": {
+    "total_attempted": 5,
+    "total_created": 5,
+    "total_failed": 0
+  }
+}
+```
+
+### Troubleshooting Constraint Violations
+
+**work_order_attachments_check Constraint**:
+The constraint ensures attachments link to either a work order OR a report, but never both:
+
+```sql
+-- ✅ CORRECT: Link to work order only
+INSERT INTO work_order_attachments (work_order_id, work_order_report_id, ...)
+VALUES ('work-order-uuid', NULL, ...);
+
+-- ✅ CORRECT: Link to report only  
+INSERT INTO work_order_attachments (work_order_id, work_order_report_id, ...)
+VALUES (NULL, 'report-uuid', ...);
+
+-- ❌ WRONG: Link to both (violates constraint)
+INSERT INTO work_order_attachments (work_order_id, work_order_report_id, ...)
+VALUES ('work-order-uuid', 'report-uuid', ...);
+```
+
+**Common Seeding Errors**:
+- **Constraint Violations**: Use the enhanced function that handles constraints properly
+- **Admin Authentication**: Ensure you're logged in as an admin before seeding
+- **RLS Violations**: Use SECURITY DEFINER functions, not client-side operations
 
 ## Trigger Functions
 

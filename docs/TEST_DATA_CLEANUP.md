@@ -79,8 +79,19 @@ The function returns a JSON object with the following structure:
     "email_logs": 15,
     "work_order_attachments": 8,
     "work_order_reports": 12,
+    "work_order_assignments": 10,
+    "employee_reports": 5,
+    "invoice_work_orders": 3,
+    "invoice_attachments": 2,
+    "receipt_work_orders": 4,
+    "receipts": 4,
+    "invoices": 3,
     "work_orders": 25,
+    "partner_locations": 8,
+    "user_organizations": 15,
     "organizations": 10,
+    "email_templates": 2,
+    "trades": 3,
     "profiles": 20
   },
   "preserved_admin": {
@@ -161,15 +172,31 @@ The function returns a JSON object with the following structure:
    - Clean test data regularly during development
    - Don't let test data accumulate excessively
 
-## Integration with CI/CD
+## Integration with Development Workflow
 
-The cleanup function can be integrated into automated testing pipelines:
+The cleanup function integrates with the complete development workflow:
 
+**Complete Reset Workflow**:
+```typescript
+// 1. Clear existing test data
+await supabase.rpc('clear_test_data');
+
+// 2. Seed fresh database
+await supabase.rpc('seed_test_data');
+
+// 3. Create fresh test users
+await supabase.functions.invoke('create-test-users', {
+  body: { admin_key: 'admin-key' }
+});
+```
+
+**CI/CD Integration**:
 ```bash
 # Example CI/CD usage
-curl -X POST "https://your-app.com/api/dev-tools/clear-test-data" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json"
+curl -X POST "https://your-supabase-project.supabase.co/rest/v1/rpc/clear_test_data" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=representation"
 ```
 
 ## Database Function Details

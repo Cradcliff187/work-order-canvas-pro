@@ -74,30 +74,33 @@ LANGUAGE plpgsql SECURITY DEFINER
 const { data, error } = await supabase.rpc('seed_test_data');
 ```
 
-**Enhanced Seeding Approach**:
-- Uses **admin-only seeding** to avoid user_id conflicts
-- Creates comprehensive business data with varied statuses and historical dates
-- No fake user creation to prevent RLS violations
-- Focus on realistic business scenarios for thorough testing
+**Enhanced Seeding Approach (Updated July 2025)**:
+- **Admin-Only Security**: Uses authenticated admin profile for all data relationships
+- **Constraint Compliant**: Fixed work_order_attachments_check constraint violations
+- **Comprehensive Business Data**: 12 work orders with varied statuses and historical dates
+- **No User Creation**: Database function only creates business data, not user accounts
+- **Idempotent Operations**: Safe to run multiple times with ON CONFLICT handling
+- **Enhanced Error Handling**: Comprehensive constraint violation prevention
 
-**Response Format**:
+**Current Response Format (July 2025)**:
 ```json
 {
   "success": true,
-  "message": "Enhanced business test data seeded successfully (comprehensive testing)",
+  "message": "Enhanced business test data seeded successfully (constraint-compliant)",
+  "idempotent": true,
   "details": {
-    "organizations": 8,
-    "partner_locations": 5,
-    "work_orders": 12,
-    "work_order_assignments": 8,
-    "work_order_reports": 6,
-    "employee_reports": 2,
-    "receipts": 2,
-    "invoices": 3,
-    "invoice_work_orders": 3,
-    "work_order_attachments": 10,
+    "organizations_created": 8,
+    "partner_locations_created": 5,
+    "work_orders_created": 12,
+    "work_order_assignments_created": 8,
+    "work_order_reports_created": 6,
+    "employee_reports_created": 2,
+    "receipts_created": 2,
+    "invoices_created": 3,
+    "invoice_work_orders_created": 3,
+    "work_order_attachments_created": 10,
     "admin_profile_used": "uuid-of-admin-profile",
-    "approach": "comprehensive_testing"
+    "approach": "comprehensive_testing_constraint_compliant"
   },
   "testing_scenarios": {
     "work_order_statuses": {
@@ -112,11 +115,19 @@ const { data, error } = await supabase.rpc('seed_test_data');
       "submitted": 1,
       "approved": 1
     },
+    "attachment_types": {
+      "work_order_attachments": 3,
+      "report_attachments": 7,
+      "total": 10
+    },
     "date_distribution": "Past 30 days with realistic intervals",
-    "assignment_coverage": "Both organization and individual assignments",
-    "attachment_variety": "Photos, documents, and invoices across multiple work orders"
+    "assignment_coverage": "Both organization and individual assignments"
   },
-  "testing_note": "Comprehensive test data includes varied statuses, historical dates, assignments, invoices, and attachments for thorough system testing."
+  "constraint_fixes": {
+    "work_order_attachments_check": "Fixed - attachments now properly link to either work_order_id OR work_order_report_id, never both",
+    "error_handling": "Added comprehensive error handling for constraint violations"
+  },
+  "note": "Function is idempotent and constraint-compliant. All check constraints properly handled."
 }
 ```
 
@@ -154,14 +165,26 @@ const { data, error } = await supabase.rpc('clear_test_data');
 }
 ```
 
-## How to Use Database Function Seeding
+## Complete Development Workflow
 
-### Local Development
+### Step 1: Database Seeding
 
 1. **Access Dev Tools**: Navigate to `/dev-tools` in your application
 2. **Seed Database**: Click "Seed Database" to populate with test data
-3. **Clear Data**: Click "Clear Test Data" to remove test data
-4. **Monitor Progress**: Watch console output for real-time feedback
+3. **Monitor Progress**: Watch detailed results with constraint compliance confirmation
+
+### Step 2: User Creation (NEW)
+
+1. **Create Test Users**: Click "Create Test Users" in DevTools
+2. **Real Authentication**: Creates 5 actual authenticated users across all roles
+3. **Organization Integration**: Users are automatically linked to appropriate organizations
+4. **Test Credentials**: Use password `Test123!` for all created users
+
+### Step 3: Role-Based Testing
+
+1. **Login with Different Users**: Test with real authentication credentials
+2. **Verify Permissions**: Test organization-level access and role restrictions
+3. **Team Collaboration**: Test multi-user workflows and assignments
 
 ### Programmatic Usage
 
@@ -316,28 +339,36 @@ console.log(`Seeding completed in ${executionTime}ms`);
 
 ## Implementation History
 
-### Current Approach: Database Functions
+### Current Approach: Database Functions + Edge Functions (July 2025)
 
 **CURRENT PRODUCTION APPROACH**:
 ```typescript
-// ✅ Database function seeding (current)
+// ✅ Database function seeding (business data)
 const { data, error } = await supabase.rpc('seed_test_data');
+
+// ✅ Edge function user creation (real users)
+const response = await supabase.functions.invoke('create-test-users', {
+  body: { admin_key: 'your-admin-key' }
+});
 ```
 
 ### Implementation Benefits
 
-1. **Security**: Server-side execution with proper SECURITY DEFINER privileges
-2. **Reliability**: Direct database access with atomic transactions
+1. **Security**: Server-side execution with SECURITY DEFINER privileges + admin validation
+2. **Reliability**: Direct database access with atomic transactions and constraint compliance
 3. **Performance**: No network overhead for database operations
-4. **Maintenance**: Centralized seeding logic in the database
-5. **Simplicity**: No external function deployment or management required
+4. **Real Authentication**: Creates actual authenticated users for comprehensive testing
+5. **Comprehensive Testing**: Complete workflow from data seeding to user authentication
+6. **Constraint Compliance**: Fixed attachment constraints and enhanced error handling
 
 ### Technical Implementation
 
-- **Database Functions**: `seed_test_data()`, `clear_test_data()` with SECURITY DEFINER privileges
-- **API Usage**: Uses `supabase.rpc()` for direct database function calls
-- **Authentication**: Uses existing user authentication with admin validation
-- **Error Handling**: Comprehensive error response format from database functions
+- **Database Functions**: `seed_test_data()`, `clear_test_data()` with SECURITY DEFINER privileges  
+- **Edge Functions**: `create-test-users` with service role authentication and multi-method validation
+- **API Usage**: Uses `supabase.rpc()` for database functions and `supabase.functions.invoke()` for user creation
+- **Authentication**: Admin validation for all operations with multiple security layers
+- **Constraint Compliance**: Enhanced error handling with work_order_attachments_check constraint fixes
+- **DevTools Integration**: Seamless UI experience for both database seeding and user creation
 
 ## Best Practices
 

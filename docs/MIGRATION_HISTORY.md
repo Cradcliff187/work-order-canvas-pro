@@ -347,16 +347,52 @@ None - This migration only enables existing functionality and adds new features
 - **Issue Resolved**: Eliminated "DOMException: Index not found" errors
 - **Result**: Production-ready offline storage with cross-browser compatibility
 
-### 2025-07-13: Database Seeding Migration to Database Functions (COMPLETED)
+### 2025-07-13: Constraint Compliance and User Creation Enhancement (COMPLETED)
 
-#### RLS-Compliant Database Function Seeding
-**Date Applied**: 2025-07-13  
-**Migration ID**: 20250713055230-4857d1ab-5e70-4f3b-a267-40cfa3c8cc36  
-**Purpose**: **COMPLETED** - Fixed seeding system to use SECURITY DEFINER database functions
-
-#### Enhanced Database Function Seeding Implementation
+#### work_order_attachments Constraint Violation Fix
 **Date Applied**: 2025-07-13  
 **Migration ID**: 20250713070306-383fd0bf-0ecc-43b0-853f-df38d57b773b  
+**Purpose**: **CRITICAL FIX** - Resolved "work_order_attachments_check" constraint violations in seeding
+
+**Issue Resolved**: 
+- **Error**: Constraint violation when attachments linked to both work_order_id AND work_order_report_id
+- **Root Cause**: Invalid data relationships in seed_test_data function
+- **Fix**: Properly separated attachments - work orders OR reports, never both
+
+**Technical Changes**:
+- Updated attachment insert logic to respect either/or constraint
+- Added comprehensive error handling for constraint violations  
+- Enhanced response format with constraint compliance confirmation
+- Implemented proper work order vs report attachment separation
+
+#### create-test-users Edge Function Implementation
+**Date Applied**: 2025-07-13  
+**Migration ID**: Edge Function Deployment  
+**Purpose**: **MAJOR ENHANCEMENT** - Real user creation for comprehensive testing
+
+**Features Added**:
+- **Service Role User Creation**: Creates actual authenticated users via Supabase Admin API
+- **Multi-Role Testing**: 5 test users across admin, partner, subcontractor, and employee roles
+- **Organization Integration**: Automatic linking to appropriate organizations
+- **DevTools Integration**: Seamless UI for user creation and management
+- **Security Validation**: Multiple admin authentication methods (API key, Bearer token, dev mode)
+
+**Business Impact**:
+- **Complete Testing Workflow**: Database seeding → user creation → role-based testing
+- **Real Authentication**: Test with actual login credentials across all user types
+- **Team Collaboration**: Test organization-level access with real user relationships
+- **Development Efficiency**: One-click setup for comprehensive testing scenarios
+
+#### Enhanced Database Function Response Format
+**Date Applied**: 2025-07-13  
+**Migration ID**: Database Function Enhancement  
+**Purpose**: Improved developer experience with detailed response data
+
+**Response Enhancements**:
+- **Constraint Compliance Section**: Confirms fixes for attachment constraints
+- **Testing Scenarios Breakdown**: Detailed status distribution for comprehensive testing
+- **Error Handling**: Comprehensive error tracking and constraint violation prevention
+- **Idempotent Operations**: Safe to run multiple times with ON CONFLICT handling
 **Purpose**: **COMPLETED** - Enhanced seeding system with comprehensive test scenarios and improved testing coverage
 
 #### Comprehensive Test Data Enhancement

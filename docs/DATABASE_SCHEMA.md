@@ -344,9 +344,12 @@ The WorkOrderPro database includes comprehensive seed data for testing and devel
 **Admin Profile Used**: The current authenticated admin user becomes the creator/assignee for all test data.
 
 **Testing Different User Types**: To test different user perspectives:
-- Create real user accounts through the admin interface
-- Use role impersonation features (when available)
-- Create separate test admin accounts for different scenarios
+- Use the `create-test-users` edge function via DevTools
+- Create real user accounts through the admin interface  
+- Test with actual authentication credentials for different roles
+- Use the DevTools impersonation features for quick role switching
+
+**Real User Creation**: The system provides a `create-test-users` edge function that creates actual authenticated users for comprehensive testing across different roles and organizations.
 
 #### Partner Locations (5 total)
 
@@ -395,11 +398,12 @@ The WorkOrderPro database includes comprehensive seed data for testing and devel
 - **Submitted Invoice**: $240.00 (pending approval)  
 - **Approved Invoice**: $1,200.00 (ready for payment)
 
-**Work Order Attachments (10 total):**
-- Before/after photos for completed work
-- Maintenance checklists and inspection certificates
-- Sample invoice attachments
+**Work Order Attachments (10 total - Constraint Compliant):**
+- Before/after photos for completed work (linked to reports)
+- Maintenance checklists and inspection certificates (linked to work orders)
+- Sample invoice attachments (linked to reports)
 - Various file types and sizes for comprehensive testing
+- **Constraint Compliance**: Properly separates attachments between work orders and reports, never both
 
 **Employee Reports & Receipts:**
 - Employee time tracking with hourly rates
