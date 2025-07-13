@@ -193,10 +193,10 @@ major_version = 15
 verify_jwt = true  # Default for all functions
 
 [functions.seed-database]
-verify_jwt = false  # Public access for testing
+verify_jwt = true  # Admin authentication required
 
 [functions.clear-test-data]  
-verify_jwt = false  # Public access for testing
+verify_jwt = true  # Admin authentication required
 ```
 
 ### Performance Considerations
