@@ -347,6 +347,72 @@ None - This migration only enables existing functionality and adds new features
 - **Issue Resolved**: Eliminated "DOMException: Index not found" errors
 - **Result**: Production-ready offline storage with cross-browser compatibility
 
+### 2025-01-13: Database Seeding Migration to Edge Functions
+
+#### Migration from Browser-Based to Server-Side Seeding
+**Date Applied**: 2025-01-13  
+**Purpose**: **MAJOR ARCHITECTURE CHANGE** - Replace browser-based seeding with secure Edge Function implementation
+
+**Migration Details**:
+- **Removed Files**: 
+  - `src/scripts/seed-functions.ts` (1,911 lines of browser seeding code)
+  - `src/scripts/enhanced-seed-functions.ts` (961 lines of enhanced browser seeding)
+- **Updated Implementation**: Modified `useDevTools` hook to use Edge Functions instead of direct imports
+- **Created Documentation**: Comprehensive `docs/SEEDING.md` guide for new seeding approach
+
+**Architecture Changes**:
+- **OLD**: Browser-based seeding with RLS policy restrictions and memory limitations
+- **NEW**: Server-side Edge Function seeding with service role privileges and atomic transactions
+
+**Security Improvements**:
+- ✅ **Service Role Execution**: Edge Functions bypass RLS policies for administrative operations
+- ✅ **Authentication Control**: Admin key validation before any seeding operations  
+- ✅ **Server-Side Security**: No client-side exposure of seeding logic or credentials
+- ✅ **Audit Trail**: Complete logging of all seeding operations via Edge Functions
+
+**Performance Enhancements**:
+- ✅ **Atomic Transactions**: Complete rollback on any failure ensures data integrity
+- ✅ **Bulk Operations**: Efficient batch processing without browser memory constraints
+- ✅ **Progress Tracking**: Real-time feedback via Edge Function responses
+- ✅ **Dry-Run Support**: Preview deletion operations before execution
+
+**New Edge Function Capabilities**:
+1. **`seed-database`**: Comprehensive test data population with progress tracking
+2. **`clear-test-data`**: Safe test data removal with dry-run mode and detailed reporting
+
+**API Changes**:
+```typescript
+// ❌ OLD: Browser-based (removed)
+const { seedEnhancedDatabase } = await import('../scripts/enhanced-seed-functions');
+await seedEnhancedDatabase();
+
+// ✅ NEW: Edge Function-based
+const { data, error } = await supabase.functions.invoke('seed-database', {
+  body: { admin_key: 'dev-admin-key' }
+});
+```
+
+**Documentation Updates**:
+- Created comprehensive `docs/SEEDING.md` with architecture diagrams
+- Updated `README.md` to reflect new seeding approach
+- Added troubleshooting guide and best practices
+- Included migration guide for developers
+
+**Backward Compatibility**:
+- ✅ Dev Tools UI remains unchanged - same buttons and user experience
+- ✅ Console output patterns maintained for developer familiarity
+- ✅ Error handling enhanced with better categorization and recovery guidance
+
+**Benefits Achieved**:
+- **Security**: Server-side execution eliminates client-side vulnerabilities
+- **Reliability**: Atomic operations with automatic rollback on failures
+- **Performance**: No browser limitations for large dataset seeding
+- **Maintainability**: Centralized seeding logic with proper version control
+- **Scalability**: Edge Functions handle concurrent operations efficiently
+- **Monitoring**: Complete audit trail and real-time progress tracking
+
+**Result**: **PRODUCTION-READY SEEDING SYSTEM** - Secure, scalable, and maintainable database seeding infrastructure
+
 ## Migration Categories
 
 ### Schema Evolution

@@ -46,6 +46,7 @@ WorkOrderPro uses a PostgreSQL database with 12 core tables, implementing:
 - [📝 Audit System](./docs/AUDIT_SYSTEM.md) - Change tracking and compliance
 - [⚙️ Database Functions](./docs/DATABASE_FUNCTIONS.md) - PostgreSQL functions and helpers
 - [📅 Migration History](./docs/MIGRATION_HISTORY.md) - Complete migration timeline
+- [🌱 Database Seeding](./docs/SEEDING.md) - Edge Function-based seeding guide
 
 ### Key Features
 
@@ -70,6 +71,7 @@ WorkOrderPro uses a PostgreSQL database with 12 core tables, implementing:
 - **Routing**: React Router v6
 - **Email Service**: Resend API integration
 - **File Storage**: Supabase Storage with public buckets
+- **Database Seeding**: Edge Function-based seeding for secure, server-side data initialization
 
 ## How can I edit this code?
 
