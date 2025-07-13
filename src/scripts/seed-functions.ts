@@ -1716,19 +1716,36 @@ export const seedDatabase = async () => {
       .select('work_order_number, title, status')
       .order('created_at');
 
-    // Enhanced console output
+    // Get additional data for enhanced reporting
+    const { data: workOrdersByStatus } = await supabase
+      .from('work_orders')
+      .select('work_order_number, status, title')
+      .order('status, work_order_number');
+
+    const { data: finalPartnerLocations } = await supabase
+      .from('partner_locations')
+      .select('location_name, location_number, organization_id')
+      .order('location_number');
+
+    const { data: finalReceipts } = await supabase
+      .from('receipts')
+      .select('vendor_name, amount, receipt_date')
+      .order('amount desc');
+
+    const { data: finalEmployeeReports } = await supabase
+      .from('employee_reports')
+      .select('hours_worked, total_labor_cost')
+      .order('report_date desc');
+
+    // Enhanced console output with comprehensive testing information
     console.log('\n' + '='.repeat(80));
     console.log('🎉 COMPREHENSIVE DATABASE SEEDING COMPLETED SUCCESSFULLY!');
     console.log('='.repeat(80));
 
-    console.log('\n📋 DATABASE SUMMARY:');
-    console.log(`• Organizations: ${createdOrgs?.length || 0} (1 internal, 3 partners, 4 subcontractors)`);
-    console.log(`• Users: ${finalProfiles?.length || 0} total`);
-    console.log(`• Work Orders: ${finalWorkOrders?.length || 0} with various statuses`);
-    console.log(`• Invoices: ${finalInvoices?.length || 0} with mixed payment statuses`);
-    console.log(`• Reports & Receipts: Created with realistic test data`);
-
-    console.log('\n🔑 TEST CREDENTIALS (Password: Test123!):');
+    // ================= TEST CREDENTIALS SECTION =================
+    console.log('\n🔑 TEST CREDENTIALS');
+    console.log('='.repeat(50));
+    console.log('🔐 Universal Password: Test123!');
     console.log('─'.repeat(50));
     
     const usersByType = finalProfiles?.reduce((acc, profile) => {
@@ -1738,36 +1755,153 @@ export const seedDatabase = async () => {
     }, {} as Record<string, any[]>) || {};
 
     Object.entries(usersByType).forEach(([type, profiles]) => {
-      console.log(`\n${type.toUpperCase()} USERS:`);
+      console.log(`\n👤 ${type.toUpperCase()} USERS (${profiles.length}):`);
       profiles.forEach(profile => {
-        const role = profile.is_employee ? '(Employee)' : '';
-        const rateInfo = profile.is_employee && type === 'employee' ? 
-          ` - Cost: $${profile.hourly_cost_rate || 'N/A'}/hr, Billable: $${profile.hourly_billable_rate || 'N/A'}/hr` : '';
-        console.log(`  • ${profile.email} - ${profile.first_name} ${profile.last_name} ${role}${rateInfo}`);
+        const employeeStatus = profile.is_employee ? ' 👷 Employee' : '';
+        const adminIcon = type === 'admin' ? '🔐 ' : '';
+        const partnerIcon = type === 'partner' ? '🏢 ' : '';
+        const subcontractorIcon = type === 'subcontractor' ? '🔨 ' : '';
+        const icon = adminIcon || partnerIcon || subcontractorIcon;
+        console.log(`  • ${icon}${profile.email}`);
+        console.log(`    └─ ${profile.first_name} ${profile.last_name}${employeeStatus}`);
       });
     });
 
-    console.log('\n💰 SAMPLE INVOICE DATA:');
-    console.log('─'.repeat(50));
-    finalInvoices?.forEach(invoice => {
-      const paymentInfo = invoice.payment_reference ? ` | Payment: ${invoice.payment_reference}` : '';
-      const externalNum = invoice.external_invoice_number ? ` | External: ${invoice.external_invoice_number}` : '';
-      console.log(`  • ${invoice.internal_invoice_number} | Status: ${invoice.status} | $${invoice.total_amount}${externalNum}${paymentInfo}`);
+    // ================= WORK ORDER EXAMPLES SECTION =================
+    console.log('\n📋 WORK ORDER EXAMPLES');
+    console.log('='.repeat(50));
+    
+    const ordersByStatus = workOrdersByStatus?.reduce((acc, wo) => {
+      if (!acc[wo.status]) acc[wo.status] = [];
+      acc[wo.status].push(wo);
+      return acc;
+    }, {} as Record<string, any[]>) || {};
+
+    Object.entries(ordersByStatus).forEach(([status, orders]) => {
+      const statusIcon = {
+        'received': '📥',
+        'assigned': '👤',
+        'in_progress': '⚡',
+        'completed': '✅',
+        'cancelled': '❌'
+      }[status] || '📋';
+      
+      console.log(`\n${statusIcon} ${status.toUpperCase()} ORDERS (${orders.length}):`);
+      orders.slice(0, 3).forEach(wo => {
+        console.log(`  • ${wo.work_order_number} - ${wo.title}`);
+      });
+      if (orders.length > 3) {
+        console.log(`  ... and ${orders.length - 3} more`);
+      }
     });
 
-    console.log('\n📋 SAMPLE WORK ORDER DATA:');
-    console.log('─'.repeat(50));
-    finalWorkOrders?.forEach(wo => {
-      console.log(`  • ${wo.work_order_number} | ${wo.title} | Status: ${wo.status}`);
+    console.log('\n🏢 PARTNER LOCATIONS:');
+    console.log('─'.repeat(30));
+    finalPartnerLocations?.forEach(loc => {
+      console.log(`  • Location ${loc.location_number}: ${loc.location_name}`);
     });
 
-    console.log('\n🏢 ORGANIZATION MAPPING:');
-    console.log('─'.repeat(50));
-    organizations.forEach(org => {
-      console.log(`  • ${org.name} (${org.initials}) - Type: ${org.organization_type}`);
+    // ================= FINANCIAL SUMMARY SECTION =================
+    console.log('\n💰 FINANCIAL SUMMARY');
+    console.log('='.repeat(50));
+    
+    const invoicesByStatus = finalInvoices?.reduce((acc, inv) => {
+      if (!acc[inv.status]) acc[inv.status] = [];
+      acc[inv.status].push(inv);
+      return acc;
+    }, {} as Record<string, any[]>) || {};
+
+    console.log('\n📄 INVOICE BREAKDOWN:');
+    Object.entries(invoicesByStatus).forEach(([status, invs]) => {
+      const total = invs.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+      const statusIcon = {
+        'draft': '📝',
+        'submitted': '📤',
+        'approved': '✅',
+        'paid': '💰',
+        'rejected': '❌'
+      }[status] || '📄';
+      
+      console.log(`  ${statusIcon} ${status.toUpperCase()}: ${invs.length} invoices ($${total.toFixed(2)} total)`);
     });
 
-    console.log('\n✨ Ready for testing! All major workflows have sample data.');
+    console.log('\n🧾 SAMPLE INVOICE NUMBERS:');
+    finalInvoices?.slice(0, 5).forEach(invoice => {
+      const external = invoice.external_invoice_number ? ` | Ext: ${invoice.external_invoice_number}` : '';
+      const payment = invoice.payment_reference ? ` | Ref: ${invoice.payment_reference}` : '';
+      console.log(`  • Internal: ${invoice.internal_invoice_number} | $${invoice.total_amount}${external}${payment}`);
+    });
+
+    const totalHours = finalEmployeeReports?.reduce((sum, report) => sum + (report.hours_worked || 0), 0) || 0;
+    const totalLaborCost = finalEmployeeReports?.reduce((sum, report) => sum + (report.total_labor_cost || 0), 0) || 0;
+    const totalReceipts = finalReceipts?.reduce((sum, receipt) => sum + (receipt.amount || 0), 0) || 0;
+
+    console.log('\n⏰ EMPLOYEE TIME & EXPENSES:');
+    console.log(`  • Total Hours Worked: ${totalHours.toFixed(1)} hours`);
+    console.log(`  • Total Labor Cost: $${totalLaborCost.toFixed(2)}`);
+    console.log(`  • Total Receipt Expenses: $${totalReceipts.toFixed(2)}`);
+    console.log(`  • Receipt Count: ${finalReceipts?.length || 0} receipts`);
+
+    // ================= ORGANIZATIONAL DATA SECTION =================
+    console.log('\n🏢 ORGANIZATIONAL DATA');
+    console.log('='.repeat(50));
+    
+    const orgsByType = organizations.reduce((acc, org) => {
+      if (!acc[org.organization_type]) acc[org.organization_type] = [];
+      acc[org.organization_type].push(org);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    Object.entries(orgsByType).forEach(([type, orgs]) => {
+      const typeIcon = {
+        'internal': '🏠',
+        'partner': '🤝',
+        'subcontractor': '🔨'
+      }[type] || '🏢';
+      
+      console.log(`\n${typeIcon} ${type.toUpperCase()} ORGANIZATIONS (${orgs.length}):`);
+      orgs.forEach(org => {
+        const initials = org.initials ? ` [${org.initials}]` : ' [NO INITIALS]';
+        console.log(`  • ${org.name}${initials}`);
+      });
+    });
+
+    console.log('\n🛠️ TRADE CATEGORIES:');
+    console.log('─'.repeat(30));
+    trades.forEach(trade => {
+      console.log(`  • ${trade.name} - ${trade.description}`);
+    });
+
+    // ================= QUICK TESTING NOTES SECTION =================
+    console.log('\n🚀 QUICK TESTING NOTES');
+    console.log('='.repeat(50));
+    
+    console.log('\n📍 TESTING ROUTES BY USER TYPE:');
+    console.log('  • Admin: /admin/dashboard, /admin/work-orders, /admin/invoices');
+    console.log('  • Partner: /partner/dashboard, /partner/work-orders');
+    console.log('  • Subcontractor: /subcontractor/dashboard, /subcontractor/invoices');
+    console.log('  • Employee: /admin/employee-dashboard, /admin/receipts');
+
+    console.log('\n🔍 KEY TESTING WORKFLOWS:');
+    console.log('  • Work Order Creation → Assignment → Progress → Completion');
+    console.log('  • Invoice Submission → Review → Approval → Payment');
+    console.log('  • Employee Time Reporting → Receipt Management');
+    console.log('  • Multi-organization user switching and permissions');
+
+    console.log('\n📊 DATA DISTRIBUTION:');
+    console.log(`  • Organizations: ${organizations.length} total (Internal: 1, Partners: 3, Subcontractors: 4)`);
+    console.log(`  • Users: ${finalProfiles?.length || 0} total across all types`);
+    console.log(`  • Work Orders: ${finalWorkOrders?.length || 0} with complete workflow statuses`);
+    console.log(`  • Invoices: ${finalInvoices?.length || 0} with payment tracking`);
+    console.log(`  • Reports & Receipts: Realistic data with proper allocations`);
+
+    console.log('\n🎯 SEARCH & FILTER TESTING:');
+    console.log('  • Search Terms: "plumbing", "electrical", "emergency", "repair"');
+    console.log('  • Status Filters: received, assigned, in_progress, completed');
+    console.log('  • Date Ranges: Past 30 days of realistic activity');
+    console.log('  • Amount Filters: $50-$50,000 range for comprehensive testing');
+
+    console.log('\n✨ Database is fully seeded and ready for comprehensive testing!');
     console.log('='.repeat(80) + '\n');
 
   } catch (error) {
