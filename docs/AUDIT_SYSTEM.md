@@ -1,207 +1,69 @@
 # WorkOrderPro Audit System Documentation
 
-## Overview
+## Business Overview
 
-WorkOrderPro implements a comprehensive audit logging system that automatically tracks all database changes across 11 of the 12 core tables with **organization-level audit tracking**. This provides complete traceability for compliance, debugging, and accountability purposes while supporting company-level access patterns.
+WorkOrderPro implements a comprehensive audit logging system that automatically tracks all database changes for compliance, debugging, and accountability purposes. The system provides complete traceability of who made what changes when, with organization-level access control.
 
-## System Architecture
+## What Gets Audited
 
-### Audit Coverage
+### Monitored Tables
 
-The audit system monitors the following 11 tables:
-1. organizations
-2. user_organizations
-3. profiles
-4. trades
-5. work_orders
-6. work_order_reports
-7. work_order_attachments
-8. email_templates
-9. email_logs
-10. email_settings
-11. system_settings
+The audit system automatically tracks changes to 11 core business tables:
 
-**Note:** The `audit_logs` table itself is not audited to prevent infinite recursion.
+1. **organizations** - Company and partner information
+2. **user_organizations** - User-to-organization relationships
+3. **profiles** - User profile information
+4. **trades** - Service categories and specializations
+5. **work_orders** - Job requests and assignments
+6. **work_order_reports** - Completion reports from contractors
+7. **work_order_attachments** - Photos and documents
+8. **email_templates** - System notification templates
+9. **email_logs** - Email delivery tracking
+10. **email_settings** - Email configuration
+11. **system_settings** - Application configuration
 
-### Audit Triggers
+**Note:** The `audit_logs` table itself is not audited to prevent infinite loops.
 
-Each monitored table has an audit trigger that fires on INSERT, UPDATE, and DELETE operations:
+### What Actions Trigger Audit Logs
 
-```sql
-CREATE TRIGGER audit_[table_name]
-  AFTER INSERT OR UPDATE OR DELETE ON [table_name]
-  FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
-```
+| Action | When It Occurs | What Gets Logged | Example Use Case |
+|--------|----------------|------------------|------------------|
+| **INSERT** | New record created | Complete new record data | New work order submitted |
+| **UPDATE** | Existing record modified | Before and after values | Work order status changed |
+| **DELETE** | Record removed | Complete deleted record data | Organization deactivated |
+| **STATUS_CHANGE** | Special work order transitions | Status change with reason | Manual completion override |
 
-## audit_logs Table Structure
+## Audit Data Structure
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| table_name | text | Name of the table that was modified |
-| record_id | uuid | ID of the modified record |
-| action | text | Type of operation: 'INSERT', 'UPDATE', 'DELETE' |
-| old_values | jsonb | Previous values (NULL for INSERT) |
-| new_values | jsonb | New values (NULL for DELETE) |
-| user_id | uuid | ID of user who made the change (if available) |
-| created_at | timestamptz | Timestamp of the change |
+The `audit_logs` table captures comprehensive change information:
 
-## The audit_trigger_function()
+| Field | Purpose | Example |
+|-------|---------|---------|
+| **table_name** | Which table was changed | "work_orders" |
+| **record_id** | Which specific record | Work order UUID |
+| **action** | Type of change | "UPDATE" |
+| **old_values** | Data before change | `{"status": "assigned"}` |
+| **new_values** | Data after change | `{"status": "completed"}` |
+| **user_id** | Who made the change | User profile UUID |
+| **created_at** | When change occurred | 2025-01-13 14:30:00 |
 
-This PostgreSQL function handles all audit logging:
+## Key Business Queries
 
-```sql
-CREATE OR REPLACE FUNCTION public.audit_trigger_function()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Handle INSERT operations
-  IF TG_OP = 'INSERT' THEN
-    INSERT INTO public.audit_logs (
-      table_name, record_id, action, new_values, user_id
-    ) VALUES (
-      TG_TABLE_NAME, NEW.id, 'INSERT', to_jsonb(NEW), public.auth_user_id()
-    );
-    RETURN NEW;
-  END IF;
-
-  -- Handle UPDATE operations
-  IF TG_OP = 'UPDATE' THEN
-    INSERT INTO public.audit_logs (
-      table_name, record_id, action, old_values, new_values, user_id
-    ) VALUES (
-      TG_TABLE_NAME, NEW.id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), public.auth_user_id()
-    );
-    RETURN NEW;
-  END IF;
-
-  -- Handle DELETE operations
-  IF TG_OP = 'DELETE' THEN
-    INSERT INTO public.audit_logs (
-      table_name, record_id, action, old_values, user_id
-    ) VALUES (
-      TG_TABLE_NAME, OLD.id, 'DELETE', to_jsonb(OLD), public.auth_user_id()
-    );
-    RETURN OLD;
-  END IF;
-
-  RETURN NULL;
-EXCEPTION WHEN OTHERS THEN
-  -- Log error but don't fail the main operation
-  RAISE WARNING 'Audit trigger failed for table %: %', TG_TABLE_NAME, SQLERRM;
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-### Key Features
-
-- **Automatic Operation**: No manual intervention required
-- **Error Resilience**: Audit failures don't block main operations
-- **User Tracking**: Links changes to authenticated users when possible
-- **Complete Data Capture**: Stores full before/after state as JSON
-- **Timestamp Precision**: Records exact change time
-
-## Common Audit Queries
-
-### View Recent Changes
+### Recent Activity Summary
 ```sql
 SELECT 
   table_name,
   action,
-  created_at,
+  COUNT(*) as change_count,
   p.first_name || ' ' || p.last_name as user_name
 FROM audit_logs al
 LEFT JOIN profiles p ON p.id = al.user_id
-ORDER BY created_at DESC
-LIMIT 50;
+WHERE al.created_at >= NOW() - INTERVAL '7 days'
+GROUP BY table_name, action, p.first_name, p.last_name
+ORDER BY change_count DESC;
 ```
 
-### Track Changes to Specific Record
-```sql
-SELECT 
-  action,
-  old_values,
-  new_values,
-  created_at,
-  p.first_name || ' ' || p.last_name as user_name
-FROM audit_logs al
-LEFT JOIN profiles p ON p.id = al.user_id
-WHERE table_name = 'work_orders' 
-  AND record_id = 'your-work-order-id'
-ORDER BY created_at DESC;
-```
-
-### Find Changes by User
-```sql
-SELECT 
-  table_name,
-  record_id,
-  action,
-  created_at
-FROM audit_logs
-WHERE user_id = 'user-profile-id'
-ORDER BY created_at DESC;
-```
-
-### Organization-Level Audit Queries
-
-#### Track Organization Work Order Changes
-```sql
-SELECT 
-  al.table_name,
-  al.record_id,
-  al.action,
-  al.old_values->>'status' as old_status,
-  al.new_values->>'status' as new_status,
-  al.created_at,
-  p.first_name || ' ' || p.last_name as changed_by,
-  o.name as organization_name
-FROM audit_logs al
-LEFT JOIN profiles p ON p.id = al.user_id
-LEFT JOIN work_orders wo ON wo.id = al.record_id::uuid
-LEFT JOIN organizations o ON o.id = wo.organization_id
-WHERE al.table_name = 'work_orders'
-  AND wo.organization_id = 'your-organization-id'
-ORDER BY al.created_at DESC;
-```
-
-#### Monitor Company-Level Invoice Activity
-```sql
-SELECT 
-  al.table_name,
-  al.action,
-  al.old_values->>'status' as old_status,
-  al.new_values->>'status' as new_status,
-  al.new_values->>'total_amount' as amount,
-  al.created_at,
-  p.first_name || ' ' || p.last_name as changed_by
-FROM audit_logs al
-LEFT JOIN profiles p ON p.id = al.user_id
-LEFT JOIN invoices inv ON inv.id = al.record_id::uuid
-WHERE al.table_name = 'invoices'
-  AND inv.subcontractor_organization_id = 'your-organization-id'
-ORDER BY al.created_at DESC;
-```
-
-#### Organization Team Activity Summary
-```sql
-SELECT 
-  p.first_name || ' ' || p.last_name as team_member,
-  COUNT(*) as total_actions,
-  COUNT(CASE WHEN al.table_name = 'work_orders' THEN 1 END) as work_order_changes,
-  COUNT(CASE WHEN al.table_name = 'work_order_reports' THEN 1 END) as report_changes,
-  COUNT(CASE WHEN al.table_name = 'invoices' THEN 1 END) as invoice_changes,
-  MAX(al.created_at) as last_activity
-FROM audit_logs al
-JOIN profiles p ON p.id = al.user_id
-JOIN user_organizations uo ON uo.user_id = p.id
-WHERE uo.organization_id = 'your-organization-id'
-  AND al.created_at >= NOW() - INTERVAL '30 days'
-GROUP BY p.id, p.first_name, p.last_name
-ORDER BY total_actions DESC;
-```
-
-### Monitor Work Order Status Changes
+### Work Order Status Changes
 ```sql
 SELECT 
   record_id,
@@ -212,113 +74,50 @@ SELECT
 FROM audit_logs al
 LEFT JOIN profiles p ON p.id = al.user_id
 WHERE table_name = 'work_orders'
-  AND action = 'UPDATE'
   AND old_values->>'status' != new_values->>'status'
 ORDER BY created_at DESC;
 ```
 
-### Compliance Report - All Changes in Date Range
+### Organization Activity Report
+```sql
+SELECT 
+  al.action,
+  COUNT(*) as total_changes,
+  p.first_name || ' ' || p.last_name as team_member
+FROM audit_logs al
+JOIN profiles p ON p.id = al.user_id
+JOIN user_organizations uo ON uo.user_id = p.id
+WHERE uo.organization_id = 'your-organization-id'
+  AND al.created_at >= NOW() - INTERVAL '30 days'
+GROUP BY al.action, p.first_name, p.last_name
+ORDER BY total_changes DESC;
+```
+
+### Compliance Report
 ```sql
 SELECT 
   table_name,
   COUNT(*) as total_changes,
-  COUNT(CASE WHEN action = 'INSERT' THEN 1 END) as inserts,
-  COUNT(CASE WHEN action = 'UPDATE' THEN 1 END) as updates,
-  COUNT(CASE WHEN action = 'DELETE' THEN 1 END) as deletes
+  COUNT(CASE WHEN action = 'INSERT' THEN 1 END) as created,
+  COUNT(CASE WHEN action = 'UPDATE' THEN 1 END) as modified,
+  COUNT(CASE WHEN action = 'DELETE' THEN 1 END) as deleted
 FROM audit_logs
 WHERE created_at BETWEEN '2025-01-01' AND '2025-01-31'
 GROUP BY table_name
 ORDER BY total_changes DESC;
 ```
 
-### Detect Potential Data Issues
-```sql
--- Find records that were deleted and recreated quickly
-SELECT 
-  table_name,
-  record_id,
-  COUNT(*) as change_count,
-  MIN(created_at) as first_change,
-  MAX(created_at) as last_change
-FROM audit_logs
-WHERE created_at > NOW() - INTERVAL '1 day'
-GROUP BY table_name, record_id
-HAVING COUNT(*) > 5
-ORDER BY change_count DESC;
-```
+## Implementation Details
 
-## Best Practices
+### Database Implementation
+The audit system is implemented through database triggers and functions. For technical implementation details, see these migration files:
 
-### Querying Audit Data
+- **Main audit system**: `supabase/migrations/20250711000002_add_audit_triggers.sql`
+- **Status change support**: `supabase/migrations/20250713072539_bf55897b-5bcb-4696-aab8-640976405be9.sql`
+- **Error handling updates**: `supabase/migrations/20250713072809_0e4f1b78-435b-4a93-8814-6e0e1d5109bd.sql`
 
-1. **Use Indexes**: The audit_logs table has indexes on `table_name`, `record_id`, `user_id`, and `created_at`
-2. **Limit Date Ranges**: Always include date filters for performance
-3. **Join Carefully**: Use LEFT JOIN when linking to user profiles (user_id can be NULL)
-
-### Data Retention
-
-1. **Monitor Size**: Audit logs grow quickly in active systems
-2. **Archive Old Data**: Consider archiving logs older than regulatory requirements
-3. **Partition by Date**: For high-volume systems, consider table partitioning
-
-### Performance Considerations
-
-1. **Minimal Overhead**: Audit triggers are optimized for speed
-2. **Asynchronous Options**: For extreme performance needs, consider async audit logging
-3. **Index Strategy**: Current indexes cover most common queries
-
-### Security
-
-1. **RLS Protection**: Only admins can view audit logs
-2. **User Privacy**: Consider data sensitivity when storing full JSON values
-3. **Compliance**: Ensure audit retention meets regulatory requirements
-
-## Troubleshooting
-
-### Common Issues
-
-**Problem**: Audit trigger failing
-```sql
--- Check PostgreSQL logs for specific error messages
--- Triggers are designed to continue main operation even if audit fails
-```
-
-**Problem**: Missing user_id in audit logs
-```sql
--- This is normal for:
--- 1. System-generated changes (migrations, functions)
--- 2. Unauthenticated operations
--- 3. Background processes
-```
-
-**Problem**: Large audit_logs table
-```sql
--- Check table size
-SELECT pg_size_pretty(pg_total_relation_size('audit_logs'));
-
--- Consider archiving old records
-DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '2 years';
-```
-
-### Monitoring Queries
-
-```sql
--- Check audit system health
-SELECT 
-  table_name,
-  COUNT(*) as audit_count,
-  MAX(created_at) as last_audit
-FROM audit_logs
-WHERE created_at > NOW() - INTERVAL '1 day'
-GROUP BY table_name
-ORDER BY table_name;
-```
-
-## Integration with Application
-
+### Application Integration
 The audit system operates transparently at the database level. Application code doesn't need to explicitly create audit records - they're created automatically by the trigger system.
-
-### Accessing Audit Data
 
 ```typescript
 // Example: Get audit trail for a work order
@@ -333,8 +132,22 @@ const { data: auditTrail } = await supabase
   .order('created_at', { ascending: false });
 ```
 
+## Access & Security
+
+### Who Can View Audit Data
+- **Admins**: Full access to all audit logs across all organizations
+- **Partners**: Can view audit logs for their organization's work orders
+- **Subcontractors**: Cannot access audit logs directly
+- **Employees**: Cannot access audit logs directly
+
+### Data Privacy & Compliance
+- Audit logs store complete record data as JSON for full traceability
+- Consider data sensitivity when implementing custom audit queries
+- Implement data retention policies to meet regulatory requirements
+- Only administrators should have direct audit log access
+
 ## Related Documentation
 
-- [RLS Policies](./RLS_POLICIES.md) - Who can access audit data
+- [RLS Policies](./RLS_POLICIES.md) - Row-level security for audit data access
 - [Database Functions](./DATABASE_FUNCTIONS.md) - Helper functions used by audit system
 - [Database Schema](./DATABASE_SCHEMA.md) - Complete schema overview
