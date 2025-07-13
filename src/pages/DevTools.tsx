@@ -56,12 +56,14 @@ const DevTools = () => {
   const {
     loading,
     setupLoading,
+    refreshLoading,
     counts,
     setupResult,
     fetchCounts,
     clearTestData,
     setupCompleteEnvironment,
     quickLogin,
+    forceRefreshUsers,
   } = useDevTools();
 
   // Check if we're in development

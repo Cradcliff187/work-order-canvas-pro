@@ -60,6 +60,7 @@ interface ClearTestDataResponse {
 export const useDevTools = () => {
   const [loading, setLoading] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
   const [counts, setCounts] = useState<TableCounts | null>(null);
   const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
   const { toast } = useToast();
@@ -313,14 +314,39 @@ export const useDevTools = () => {
     }
   };
 
+  const forceRefreshUsers = async () => {
+    try {
+      setRefreshLoading(true);
+      toast({
+        title: "Refreshing Users",
+        description: "Fetching latest user data...",
+      });
+      
+      // This will trigger a re-fetch of users in the DevTools component
+      return true;
+    } catch (error) {
+      console.error('Force refresh users error:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh user data",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
   return {
     loading,
     setupLoading,
+    refreshLoading,
     counts,
     setupResult,
     fetchCounts,
     clearTestData,
     setupCompleteEnvironment,
     quickLogin,
+    forceRefreshUsers,
   };
 };

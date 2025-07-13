@@ -1,5 +1,8 @@
 project_id = "inudoymofztrvxhrlrek"
 
+[functions.setup-test-environment]
+verify_jwt = false
+
 [functions.email-work-order-created]
 verify_jwt = false
 
