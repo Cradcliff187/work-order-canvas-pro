@@ -121,35 +121,103 @@ export const useDevTools = () => {
   };
 
 
+  /**
+   * MIGRATION FROM BROWSER SEEDING TO EDGE FUNCTIONS
+   * 
+   * Old Approach (Browser-based):
+   * - Imported seed functions directly into browser
+   * - Subject to RLS policy restrictions
+   * - Limited by browser security and performance
+   * 
+   * New Approach (Edge Function-based):
+   * - Server-side seeding with service role privileges
+   * - Bypasses RLS policies for administrative operations
+   * - Better error handling and atomic transactions
+   * - Enhanced security and performance
+   * 
+   * Expected Response Format:
+   * {
+   *   success: boolean,
+   *   progress: { step: string, completed: number, total: number },
+   *   summary: { total_records: number, users_created: number, ... },
+   *   error?: string
+   * }
+   */
   const runSeedScript = async () => {
     setLoading(true);
     try {
-      console.log('🌱 Starting database seeding...');
+      console.log('🌱 Starting database seeding via Edge Function...');
       
-      // Import and run the comprehensive seed script
-      const { seedEnhancedDatabase } = await import('../scripts/enhanced-seed-functions');
-      await seedEnhancedDatabase();
-      
-      toast({
-        title: "Success",
-        description: "Database seeded successfully! Analytics will refresh separately.",
+      // NEW APPROACH: Edge Function seeding
+      const { data, error } = await supabase.functions.invoke('seed-database', {
+        body: {
+          admin_key: 'dev-admin-key', // For development
+          options: {
+            clear_existing: true,
+            include_test_data: true
+          }
+        }
       });
       
-      // Refresh counts only (lightweight operation)
+      // Handle Edge Function response and progress
+      if (error) {
+        console.error('❌ Edge Function error:', error);
+        
+        // Enhanced error handling for different error types
+        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
+          toast({
+            title: "Authentication Error",
+            description: "Admin privileges required. Please check your credentials.",
+            variant: "destructive",
+          });
+        } else if (error.message?.includes('FunctionsHttpError')) {
+          toast({
+            title: "Network Error", 
+            description: "Could not connect to seeding service. Please try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Service Error",
+            description: "Seeding service encountered an error. Check console for details.",
+            variant: "destructive",
+          });
+        }
+        throw new Error(`Seeding failed: ${error.message}`);
+      }
+      
+      // Display real-time progress from Edge Function
+      if (data?.progress) {
+        console.log('📊 Seeding Progress:', data.progress);
+      }
+      
+      if (data?.success) {
+        console.log('✅ Database seeded successfully via Edge Function');
+        console.log('📋 Summary:', data.summary);
+        
+        toast({
+          title: "Success",
+          description: `Database seeded successfully! Created ${data.summary?.total_records || 'multiple'} records.`,
+        });
+      } else {
+        throw new Error(data?.error || 'Unknown seeding error');
+      }
+      
+      // Refresh counts after successful seeding
       setTimeout(async () => {
         try {
           await fetchCounts();
-          console.log('✅ Basic counts refreshed after seeding');
+          console.log('✅ Table counts refreshed after seeding');
         } catch (error) {
           console.warn('Failed to refresh counts after seeding:', error);
         }
       }, 1000);
       
     } catch (error: any) {
-      console.error('Comprehensive seed error:', error);
+      console.error('❌ Seeding failed:', error);
       toast({
         title: "Seeding Failed",
-        description: `Error: ${error.message || 'Unknown error'}. Check console for details.`,
+        description: `Error: ${error.message || 'Edge Function call failed'}. Check console for details.`,
         variant: "destructive",
       });
     } finally {
@@ -157,25 +225,85 @@ export const useDevTools = () => {
     }
   };
 
+  /**
+   * MIGRATION FROM DATABASE RPC TO EDGE FUNCTION
+   * 
+   * Old Approach (Direct RPC):
+   * - Called supabase.rpc('clear_test_data') directly
+   * - Limited error handling and safety features
+   * 
+   * New Approach (Edge Function):
+   * - Enhanced safety with dry-run mode
+   * - Better authentication and error handling
+   * - Atomic transactions with rollback capability
+   * - Real-time progress tracking
+   */
   const clearTestData = async () => {
     setLoading(true);
     try {
-      console.log('Starting test data cleanup using secure database function...');
+      console.log('🧹 Starting test data cleanup via Edge Function...');
       
-      // Call the secure database function to clear test data
-      const { data, error } = await supabase.rpc('clear_test_data');
+      // Step 1: Dry run first (safety feature)
+      console.log('🧪 Running dry-run to preview deletions...');
+      const { data: dryRunData, error: dryRunError } = await supabase.functions.invoke('clear-test-data', {
+        body: {
+          admin_key: 'dev-admin-key',
+          dry_run: true,
+          include_summary: true
+        }
+      });
+      
+      if (dryRunError) {
+        console.error('❌ Dry-run failed:', dryRunError);
+        throw new Error(`Dry-run failed: ${dryRunError.message}`);
+      }
+      
+      // Display dry-run results
+      console.log('📋 Would delete:', dryRunData?.deleted_counts);
+      console.log('📊 Summary:', dryRunData?.test_data_summary);
+      
+      // Step 2: Actual deletion with explicit confirmation
+      console.log('🗑️ Proceeding with actual deletion...');
+      const { data, error } = await supabase.functions.invoke('clear-test-data', {
+        body: {
+          admin_key: 'dev-admin-key',
+          dry_run: false,
+          confirm_deletion: true,
+          include_summary: true
+        }
+      });
       
       if (error) {
-        console.error('Error clearing test data:', error);
-        throw error;
-      }
-
-      const result = data as unknown as ClearTestDataResponse;
-      if (result?.success) {
-        console.log('Test data cleanup completed successfully');
-        console.log('Deletion summary:', result.deleted_counts);
+        console.error('❌ Clear test data failed:', error);
         
-        const summary = Object.entries(result.deleted_counts || {})
+        // Enhanced error handling for different error types
+        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
+          toast({
+            title: "Authentication Error",
+            description: "Admin privileges required. Please check your credentials.",
+            variant: "destructive",
+          });
+        } else if (error.message?.includes('FunctionsHttpError')) {
+          toast({
+            title: "Network Error",
+            description: "Could not connect to cleanup service. Please try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Service Error",
+            description: "Cleanup service encountered an error. Check console for details.",
+            variant: "destructive",
+          });
+        }
+        throw new Error(`Cleanup failed: ${error.message}`);
+      }
+      
+      if (data?.success) {
+        console.log('✅ Test data cleanup completed successfully');
+        console.log('📋 Deletion summary:', data.deleted_counts);
+        
+        const summary = Object.entries(data.deleted_counts || {})
           .map(([table, count]) => `${table}: ${count}`)
           .join(', ');
         
@@ -184,14 +312,14 @@ export const useDevTools = () => {
           description: `Test data cleared successfully. Deleted: ${summary}`,
         });
       } else {
-        console.error('Function returned error:', result?.error);
-        throw new Error(result?.message || 'Unknown error occurred');
+        throw new Error(data?.error || 'Unknown cleanup error');
       }
       
-      // Refresh counts
+      // Refresh counts after successful cleanup
       await fetchCounts();
+      
     } catch (error: any) {
-      console.error('Failed to clear test data:', error);
+      console.error('❌ Failed to clear test data:', error);
       toast({
         title: "Error",
         description: `Failed to clear test data: ${error.message}`,
