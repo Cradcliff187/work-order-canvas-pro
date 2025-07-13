@@ -55,16 +55,26 @@ SUPABASE_SERVICE_ROLE_KEY=your_local_service_role_key
 ```
 
 ### 3. Test Functions Locally
-```bash
-# Test seed database function
-curl -X POST http://localhost:54321/functions/v1/seed-database \
-  -H "Content-Type: application/json" \
-  -d '{"dryRun": true}'
 
-# Test email functions
-curl -X POST http://localhost:54321/functions/v1/email-work-order-created \
-  -H "Content-Type: application/json" \
-  -d '{"work_order_id": "test-id"}'
+**Test Email Notification:**
+```bash
+curl -i --location --request POST 'http://localhost:54321/functions/v1/email-work-order-created' \
+  --header 'Authorization: Bearer YOUR_ANON_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{"work_order_id": "test-work-order-uuid"}'
+```
+
+**Test Webhook Processing:**
+```bash
+curl -i --location --request POST 'http://localhost:54321/functions/v1/resend-webhook' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "type": "email.delivered",
+    "data": {
+      "email_id": "test-email-id",
+      "message_id": "test-message-id"
+    }
+  }'
 ```
 
 ## Production Deployment
@@ -89,9 +99,9 @@ supabase functions deploy
 #### Deploy Specific Function
 ```bash
 # Deploy individual functions
-supabase functions deploy seed-database
 supabase functions deploy email-work-order-created
-supabase functions deploy clear-test-data
+supabase functions deploy email-work-order-assigned
+supabase functions deploy resend-webhook
 ```
 
 ### 3. Verify Deployment
@@ -103,27 +113,45 @@ supabase status
 supabase functions list
 
 # Test deployed function
-curl -X POST https://your-project.supabase.co/functions/v1/seed-database \
-  -H "Authorization: Bearer your-anon-key" \
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-order-created \
+  -H "Authorization: Bearer YOUR_ANON_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"dryRun": true}'
+  -d '{"work_order_id": "real-work-order-uuid"}'
 ```
 
 ## Function Configuration
 
-### JWT Verification Settings
-Functions are configured in `supabase/config.toml`:
-
+### Configure in supabase/config.toml
 ```toml
-# Email functions (public access)
+project_id = "inudoymofztrvxhrlrek"
+
+# Email notification functions
 [functions.email-work-order-created]
 verify_jwt = false
 
 [functions.email-work-order-assigned]
 verify_jwt = false
 
-# Database functions (protected - default verify_jwt = true)
-# seed-database and clear-test-data require authentication
+[functions.email-work-order-completed]
+verify_jwt = false
+
+[functions.email-report-submitted]
+verify_jwt = false
+
+[functions.email-report-reviewed]
+verify_jwt = false
+
+[functions.email-welcome]
+verify_jwt = false
+
+[functions.invoice-submitted]
+verify_jwt = false
+
+[functions.invoice-status-changed]
+verify_jwt = false
+
+[functions.resend-webhook]
+verify_jwt = false
 ```
 
 ### CORS Configuration
@@ -140,22 +168,23 @@ const corsHeaders = {
 ### View Function Logs
 ```bash
 # View logs for specific function
-supabase functions logs seed-database
+supabase functions logs email-work-order-created
 
 # Stream logs in real-time
-supabase functions logs seed-database --tail
+supabase functions logs --follow
 
-# View logs for all functions
-supabase functions logs --tail
+# Filter logs by level
+supabase functions logs email-work-order-created --level error
 ```
 
 ### Check Function Health
 ```bash
-# Get function status
-supabase status
+# Test function endpoint
+curl -i 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-order-created' \
+  --header 'Authorization: Bearer YOUR_ANON_KEY'
 
-# Check database connectivity
-supabase db ping
+# Check function status in Supabase Dashboard
+# https://supabase.com/dashboard/project/inudoymofztrvxhrlrek/functions
 ```
 
 ## Troubleshooting
@@ -276,19 +305,19 @@ supabase start
 
 ## Available Functions
 
-| Function | Purpose | Authentication |
-|----------|---------|----------------|
-| `seed-database` | Populate database with test data | Required |
-| `clear-test-data` | Remove test data from database | Required |
-| `email-work-order-created` | Send work order creation notifications | Public |
-| `email-work-order-assigned` | Send assignment notifications | Public |
-| `email-work-order-completed` | Send completion notifications | Public |
-| `email-report-submitted` | Send report submission notifications | Public |
-| `email-report-reviewed` | Send report review notifications | Public |
-| `email-welcome` | Send welcome emails to new users | Public |
-| `invoice-submitted` | Handle invoice submission events | Public |
-| `invoice-status-changed` | Handle invoice status updates | Public |
-| `resend-webhook` | Handle Resend email service webhooks | Public |
+| Function Name | Purpose | Public | Dependencies |
+|---------------|---------|--------|--------------|
+| email-work-order-created | New work order notifications | Yes | Resend API |
+| email-work-order-assigned | Assignment notifications | Yes | Resend API |
+| email-work-order-completed | Completion notifications | Yes | Resend API |
+| email-report-submitted | Report submission alerts | Yes | Resend API |
+| email-report-reviewed | Report review notifications | Yes | Resend API |
+| email-welcome | Welcome email for new users | Yes | Resend API |
+| invoice-submitted | Invoice submission notifications | Yes | Resend API |
+| invoice-status-changed | Invoice status updates | Yes | Resend API |
+| resend-webhook | Email delivery webhooks | Yes | None |
+
+All functions are configured as public (no JWT verification) to support database trigger integration.
 
 ## Additional Resources
 

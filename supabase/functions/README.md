@@ -15,8 +15,6 @@ This directory contains Supabase Edge Functions that provide server-side capabil
 - **invoice-submitted**: Processes invoice submission notifications
 - **resend-webhook**: Handles Resend email delivery webhooks
 
-### Database Functions
-- **seed-database**: Secure database seeding with RLS bypass capabilities
 
 ## Architecture
 
@@ -34,26 +32,25 @@ This directory contains Supabase Edge Functions that provide server-side capabil
 - Success/error response helpers
 - Domain-specific security configurations
 
-**seed-data.ts**: Centralized test data definitions
-- Organizations (Partners, Subcontractors, Internal)
-- User profiles for all user types
-- Trade categories and email templates
-- Helper functions for data access
+**seed-data.ts**: Centralized test data definitions for:
+- Organizations and user profiles
+- Trade categories and work order templates  
+- Helper functions for data generation
+- Default configuration values
 
 ## Security Model
 
 ### Authentication
 - **Email Functions**: Use Supabase JWT authentication
-- **Database Functions**: Service role access with admin validation
 - **Webhooks**: Signature verification for external services
 
 ### Row-Level Security (RLS)
 - Edge functions bypass RLS using service role key
-- Essential for administrative operations (user creation, seeding)
+- Essential for email operations and external integrations
 - Maintains data security through function-level access control
 
 ### Access Control
-- Admin functions require explicit authorization
+- Email functions require proper authentication
 - User context validation for sensitive operations
 - Comprehensive audit logging
 
@@ -91,28 +88,31 @@ RESEND_API_KEY=your_resend_key
 
 ### Testing Functions
 
-**Test Database Seeding:**
+**Test email notification function:**
 ```bash
-curl -X POST http://localhost:54321/functions/v1/seed-database \
-  -H "Content-Type: application/json" \
-  -d '{"admin_key": "test", "options": {"clear_existing": true}}'
+curl -i --location --request POST 'http://localhost:54321/functions/v1/email-work-order-created' \
+  --header 'Authorization: Bearer YOUR_ANON_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{"work_order_id": "test-work-order-id"}'
 ```
 
-**Test Email Function:**
+**Test webhook processing:**
 ```bash
-curl -X POST http://localhost:54321/functions/v1/email-work-order-created \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"work_order_id": "test-id"}'
+curl -i --location --request POST 'http://localhost:54321/functions/v1/resend-webhook' \
+  --header 'Content-Type: application/json' \
+  --data '{"type": "email.delivered", "data": {"email_id": "test-id"}}'
 ```
 
-### Debugging
+### Viewing Logs
 ```bash
-# View function logs
-supabase functions logs seed-database
+# View logs for specific function
+supabase functions logs email-work-order-created
 
-# Real-time log streaming
+# Stream logs in real-time
 supabase functions logs --follow
+
+# View logs with filters
+supabase functions logs email-work-order-created --level info
 ```
 
 ## Deployment
@@ -129,10 +129,10 @@ Functions are automatically deployed when:
 supabase functions deploy
 
 # Deploy specific function
-supabase functions deploy seed-database
+supabase functions deploy email-work-order-created
 
 # Deploy with environment variables
-supabase secrets set RESEND_API_KEY=your_key
+supabase secrets set RESEND_API_KEY=your_key_here
 supabase functions deploy
 ```
 
