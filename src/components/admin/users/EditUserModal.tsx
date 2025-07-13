@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,11 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Building2 } from 'lucide-react';
+import { Building2, Plus, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserMutations, UpdateUserData } from '@/hooks/useUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@/pages/admin/AdminUsers';
+import { QuickOrganizationForm } from './QuickOrganizationForm';
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -38,8 +40,10 @@ interface EditUserModalProps {
 }
 
 export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserModalProps) {
+  const [showCreateOrgDialog, setShowCreateOrgDialog] = useState(false);
+  
   const { toast } = useToast();
-  const { data: organizationsData } = useOrganizations();
+  const { data: organizationsData, refetch } = useOrganizations();
   const { updateUser } = useUserMutations();
   
   const form = useForm<EditUserFormData>({
@@ -263,11 +267,26 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
                           </div>
                         ))}
                     </div>
+                    <div className="border-t pt-2 mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCreateOrgDialog(true)}
+                        className="w-full"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create New Organization
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground border rounded-lg p-3">
-                    No active organizations available.
-                  </div>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      No organizations available. Create one to continue.
+                    </AlertDescription>
+                  </Alert>
                 )}
 
                 {watchedOrganizations.length > 0 && (
@@ -295,6 +314,21 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
             </DialogFooter>
           </form>
         </Form>
+        
+        <QuickOrganizationForm 
+          open={showCreateOrgDialog}
+          onOpenChange={setShowCreateOrgDialog}
+          userType={watchedUserType}
+          onSuccess={(orgId) => {
+            const currentOrgs = form.getValues('organization_ids') || [];
+            form.setValue('organization_ids', [...currentOrgs, orgId]);
+            refetch();
+            toast({
+              title: "Organization created",
+              description: "The new organization has been created and selected.",
+            });
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

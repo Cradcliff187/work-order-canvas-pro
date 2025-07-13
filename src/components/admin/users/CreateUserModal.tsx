@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserMutations, CreateUserData } from '@/hooks/useUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useToast } from '@/hooks/use-toast';
+import { QuickOrganizationForm } from './QuickOrganizationForm';
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -44,7 +45,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
   const [showCreateOrgDialog, setShowCreateOrgDialog] = useState(false);
   
   const { toast } = useToast();
-  const { data: organizationsData } = useOrganizations();
+  const { data: organizationsData, refetch } = useOrganizations();
   const { createUser } = useUserMutations();
   
   const form = useForm<CreateUserFormData>({
@@ -383,6 +384,21 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
             </form>
           </Form>
         )}
+        
+        <QuickOrganizationForm 
+          open={showCreateOrgDialog}
+          onOpenChange={setShowCreateOrgDialog}
+          userType={watchedUserType}
+          onSuccess={(orgId) => {
+            const currentOrgs = form.getValues('organization_ids') || [];
+            form.setValue('organization_ids', [...currentOrgs, orgId]);
+            refetch();
+            toast({
+              title: "Organization created",
+              description: "The new organization has been created and selected.",
+            });
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
