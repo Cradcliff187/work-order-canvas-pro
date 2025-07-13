@@ -4,6 +4,31 @@
 
 WorkOrderPro uses a comprehensive **20-table** PostgreSQL database with Row Level Security (RLS) to manage construction work orders across four user types: Admins, Employees, Partners, and Subcontractors. The schema supports multi-assignee work order management, invoice management with dual numbering and draft support, user organization relationships, partner location management with structured addressing, reporting, email notifications, comprehensive audit logging, and advanced analytics through materialized views.
 
+## Quick Reference Summary
+
+| Table Name | Purpose | Key Relationships |
+|------------|---------|------------------|
+| **organizations** | Company information (partners, subcontractors, internal) | → work_orders, user_organizations, partner_locations |
+| **user_organizations** | Many-to-many user-organization relationships | profiles ↔ organizations |
+| **profiles** | Extended user profile information beyond Supabase Auth | → user_organizations, work_orders, reports |
+| **trades** | Available trade categories (Plumbing, HVAC, etc.) | → work_orders |
+| **work_orders** | Main work order records with complete lifecycle | organizations, trades, profiles → reports, assignments |
+| **work_order_assignments** | Multiple assignees per work order with roles | work_orders → profiles, organizations |
+| **work_order_reports** | Subcontractor completion reports with review workflow | work_orders → profiles (subcontractor, reviewer) |
+| **work_order_attachments** | File attachments for work orders and reports | work_orders, work_order_reports → profiles |
+| **partner_locations** | Multi-site location management for partner organizations | organizations → work_orders |
+| **invoices** | Subcontractor invoice management with dual numbering | organizations → invoice_work_orders, attachments |
+| **invoice_attachments** | Invoice document uploads (PDFs, images) | invoices → profiles |
+| **invoice_work_orders** | Junction table linking invoices to work orders | invoices ↔ work_orders, work_order_reports |
+| **employee_reports** | Employee time tracking with automatic cost calculation | work_orders → profiles (employees) |
+| **receipts** | Employee expense receipt management | profiles → receipt_work_orders |
+| **receipt_work_orders** | Junction table for receipt allocation to work orders | receipts ↔ work_orders |
+| **email_templates** | System email templates for notifications | → email_logs |
+| **email_logs** | Email delivery tracking and status | work_orders, email_templates |
+| **email_settings** | Email configuration per organization | organizations → profiles |
+| **system_settings** | Global system configuration | → profiles |
+| **audit_logs** | Complete audit trail for all changes | → profiles (all tables tracked) |
+
 ## Database Architecture Overview
 
 ### Core Tables (20)
