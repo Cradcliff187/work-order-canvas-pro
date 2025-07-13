@@ -1,5 +1,11 @@
 project_id = "inudoymofztrvxhrlrek"
 
+[functions.seed-database]
+verify_jwt = true
+
+[functions.clear-test-data]
+verify_jwt = true
+
 [functions.email-work-order-created]
 verify_jwt = false
 
