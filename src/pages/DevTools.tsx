@@ -78,6 +78,9 @@ const DevTools = () => {
   }, [isDevelopment, isAdmin]);
 
   const fetchImpersonationUsers = async () => {
+    console.log('🔄 Fetching users for impersonation...');
+    
+    // Look specifically for test users with @workorderpro.test domain
     const { data, error } = await supabase
       .from('profiles')
       .select(`
@@ -94,25 +97,44 @@ const DevTools = () => {
 
     if (error) {
       console.error('Error fetching users for impersonation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch users for impersonation",
+        variant: "destructive",
+      });
       return;
     }
 
+    console.log(`📊 Found ${data.length} active users`);
+    
+    // Filter and prioritize test users
+    const testUsers = data.filter(u => u.email.includes('@workorderpro.test'));
+    const otherUsers = data.filter(u => !u.email.includes('@workorderpro.test'));
+    
+    console.log(`🧪 Test users found: ${testUsers.length}, Other users: ${otherUsers.length}`);
+
     const usersWithOrganizations = await Promise.all(
-      data.map(async (user) => {
+      [...testUsers, ...otherUsers].map(async (user) => {
         let organizationName = 'No Organization';
         
-        if (user.user_type === 'partner') {
-          const { data: orgData } = await supabase
-            .from('user_organizations')
-            .select('organizations(name)')
-            .eq('user_id', user.id)
-            .limit(1);
-          
-          if (orgData && orgData.length > 0 && orgData[0].organizations) {
-            organizationName = (orgData[0].organizations as any).name;
+        try {
+          if (user.user_type === 'partner') {
+            const { data: orgData } = await supabase
+              .from('user_organizations')
+              .select('organizations(name)')
+              .eq('user_id', user.id)
+              .limit(1);
+            
+            if (orgData && orgData.length > 0 && orgData[0].organizations) {
+              organizationName = (orgData[0].organizations as any).name;
+            }
+          } else if (user.user_type === 'subcontractor' && user.company_name) {
+            organizationName = user.company_name;
+          } else if (user.user_type === 'employee') {
+            organizationName = 'Internal';
           }
-        } else if (user.user_type === 'subcontractor' && user.company_name) {
-          organizationName = user.company_name;
+        } catch (error) {
+          console.error(`Error fetching organization for ${user.email}:`, error);
         }
 
         return {
@@ -122,6 +144,7 @@ const DevTools = () => {
       })
     );
 
+    console.log(`✅ Processed ${usersWithOrganizations.length} users for impersonation`);
     setImpersonationUsers(usersWithOrganizations);
   };
 
@@ -434,14 +457,49 @@ const DevTools = () => {
                     <AlertTitle>Setup Test Environment First</AlertTitle>
                     <AlertDescription>
                       Use the "Setup Complete Test Environment" button to create test users with proper credentials.
+                      <div className="mt-2">
+                        <Button 
+                          onClick={fetchImpersonationUsers}
+                          size="sm"
+                          variant="outline"
+                          disabled={loading}
+                        >
+                          {loading ? <LoadingSpinner /> : null}
+                          Refresh User List
+                        </Button>
+                      </div>
                     </AlertDescription>
                   </Alert>
                 ) : impersonationUsers.length === 0 ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>No Test Users Found</AlertTitle>
+                    <AlertTitle>No Users Found</AlertTitle>
                     <AlertDescription>
-                      Test users were created but may not be visible yet. Try refreshing the page or running the setup again.
+                      No users found for impersonation. This could mean:
+                      <ul className="list-disc list-inside mt-2 text-sm">
+                        <li>Test environment setup hasn't been run yet</li>
+                        <li>Setup failed to create test users</li>
+                        <li>Users exist but aren't loading properly</li>
+                      </ul>
+                      <div className="mt-3 space-x-2">
+                        <Button 
+                          onClick={fetchImpersonationUsers}
+                          size="sm"
+                          variant="outline"
+                          disabled={loading}
+                        >
+                          {loading ? <LoadingSpinner /> : null}
+                          Retry User Fetch
+                        </Button>
+                        <Button 
+                          onClick={setupCompleteEnvironment}
+                          size="sm"
+                          disabled={setupLoading}
+                        >
+                          {setupLoading ? <LoadingSpinner /> : null}
+                          Setup Environment
+                        </Button>
+                      </div>
                     </AlertDescription>
                   </Alert>
                 ) : (

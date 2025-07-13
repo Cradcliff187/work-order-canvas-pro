@@ -138,123 +138,159 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Ensured ${tradesData.length} trades exist`)
 
-    // Step 4: Create test users with auth accounts (ROCK-SOLID VERSION)
-    console.log('👥 Creating test users...')
+    // Step 4: Create test users with BULLETPROOF authentication (ROCK-SOLID VERSION)
+    console.log('👥 Creating test users with bulletproof error handling...')
     const createdProfiles = []
     const userCreationResults = []
+    const MAX_RETRIES = 3
+
+    // Check all existing users ONCE for efficiency
+    const { data: allExistingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const existingUserEmails = new Set(allExistingUsers.users.map(u => u.email))
+    
+    const { data: allExistingProfiles } = await supabaseAdmin
+      .from('profiles')
+      .select('user_id, email, id, user_type, first_name, last_name')
+    const existingProfilesByEmail = new Map(allExistingProfiles?.map(p => [p.email, p]) || [])
 
     for (let i = 0; i < testUsers.length; i++) {
       const user = testUsers[i]
-      console.log(`[${i + 1}/${testUsers.length}] Creating user: ${user.email}`)
+      console.log(`[${i + 1}/${testUsers.length}] 🔄 Processing user: ${user.email}`)
       
-      try {
-        // Check if user already exists first
-        const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
-        const userExists = existingUser.users.some(u => u.email === user.email)
-        
-        let authData
-        if (userExists) {
-          console.log(`⚠️ User ${user.email} already exists, skipping auth creation`)
-          authData = { user: existingUser.users.find(u => u.email === user.email) }
-        } else {
-          // Create auth user
-          const authResult = await supabaseAdmin.auth.admin.createUser({
-            email: user.email,
-            password: user.password,
-            email_confirm: true,
-            user_metadata: {
-              first_name: user.firstName,
-              last_name: user.lastName,
-              user_type: user.userType,
-              company_name: user.companyName
-            }
-          })
-
-          if (authResult.error) {
-            console.error(`❌ Auth creation failed for ${user.email}:`, authResult.error)
-            userCreationResults.push({ 
-              email: user.email, 
-              success: false, 
-              step: 'auth', 
-              error: authResult.error.message 
+      let retryCount = 0
+      let success = false
+      
+      while (retryCount < MAX_RETRIES && !success) {
+        try {
+          let authUser = null
+          let profileData = null
+          
+          // Check if auth user exists
+          if (existingUserEmails.has(user.email)) {
+            console.log(`📋 Auth user ${user.email} already exists`)
+            authUser = allExistingUsers.users.find(u => u.email === user.email)
+          } else {
+            console.log(`🆕 Creating new auth user: ${user.email}`)
+            
+            // Create auth user with detailed metadata
+            const authResult = await supabaseAdmin.auth.admin.createUser({
+              email: user.email,
+              password: user.password,
+              email_confirm: true,
+              user_metadata: {
+                first_name: user.firstName,
+                last_name: user.lastName,
+                user_type: user.userType,
+                company_name: user.companyName || null
+              }
             })
-            continue
-          }
-          authData = authResult.data
-        }
 
-        if (!authData.user) {
-          console.error(`❌ No auth user data for ${user.email}`)
+            if (authResult.error) {
+              throw new Error(`Auth creation failed: ${authResult.error.message}`)
+            }
+            
+            if (!authResult.data?.user) {
+              throw new Error('Auth user created but no user data returned')
+            }
+            
+            authUser = authResult.data.user
+            console.log(`✅ Auth user created: ${user.email} (ID: ${authUser.id})`)
+          }
+
+          // Check if profile exists
+          const existingProfile = existingProfilesByEmail.get(user.email)
+          if (existingProfile) {
+            console.log(`📋 Profile for ${user.email} already exists`)
+            profileData = existingProfile
+          } else {
+            console.log(`🆕 Creating new profile: ${user.email}`)
+            
+            // Verify auth user ID before creating profile
+            if (!authUser?.id) {
+              throw new Error('Cannot create profile: No auth user ID available')
+            }
+            
+            // Create profile with proper error handling
+            const profileResult = await supabaseAdmin
+              .from('profiles')
+              .insert({
+                user_id: authUser.id,
+                email: user.email,
+                first_name: user.firstName,
+                last_name: user.lastName,
+                user_type: user.userType,
+                company_name: user.companyName || null,
+                is_employee: user.userType === 'employee',
+                is_active: true
+              })
+              .select('*')
+              .single()
+
+            if (profileResult.error) {
+              throw new Error(`Profile creation failed: ${profileResult.error.message}`)
+            }
+            
+            if (!profileResult.data) {
+              throw new Error('Profile created but no data returned')
+            }
+            
+            profileData = profileResult.data
+            console.log(`✅ Profile created: ${user.email} (ID: ${profileData.id})`)
+          }
+
+          // Verify we have both auth user and profile
+          if (!authUser || !profileData) {
+            throw new Error('Missing auth user or profile data after creation')
+          }
+
+          // Double-check profile can be retrieved
+          const { data: verifyProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('*')
+            .eq('id', profileData.id)
+            .single()
+            
+          if (!verifyProfile) {
+            throw new Error('Profile verification failed - profile not found in database')
+          }
+
+          createdProfiles.push(profileData)
           userCreationResults.push({ 
             email: user.email, 
-            success: false, 
-            step: 'auth', 
-            error: 'No user data returned' 
+            success: true, 
+            step: 'complete', 
+            profile_id: profileData.id,
+            auth_user_id: authUser.id,
+            retry_count: retryCount
           })
-          continue
-        }
+          
+          console.log(`✅ [${i + 1}/${testUsers.length}] SUCCESSFULLY created complete user: ${user.email}`)
+          success = true
 
-        // Check if profile already exists
-        const { data: existingProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('user_id', authData.user.id)
-          .maybeSingle()
-
-        let profileData
-        if (existingProfile) {
-          console.log(`⚠️ Profile for ${user.email} already exists, using existing`)
-          profileData = existingProfile
-        } else {
-          // Create profile
-          const profileResult = await supabaseAdmin
-            .from('profiles')
-            .insert({
-              user_id: authData.user.id,
-              email: user.email,
-              first_name: user.firstName,
-              last_name: user.lastName,
-              user_type: user.userType,
-              company_name: user.companyName,
-              is_employee: user.userType === 'employee'
-            })
-            .select()
-            .single()
-
-          if (profileResult.error) {
-            console.error(`❌ Profile creation failed for ${user.email}:`, profileResult.error)
+        } catch (error) {
+          retryCount++
+          const isLastAttempt = retryCount >= MAX_RETRIES
+          
+          console.error(`❌ Attempt ${retryCount}/${MAX_RETRIES} failed for ${user.email}:`, error.message)
+          
+          if (isLastAttempt) {
             userCreationResults.push({ 
               email: user.email, 
               success: false, 
-              step: 'profile', 
-              error: profileResult.error.message 
+              step: 'failed_after_retries', 
+              error: error.message,
+              retry_count: retryCount
             })
-            continue
+            console.error(`💀 FINAL FAILURE for ${user.email} after ${MAX_RETRIES} attempts`)
+          } else {
+            console.log(`🔄 Retrying ${user.email} in 1 second... (attempt ${retryCount + 1}/${MAX_RETRIES})`)
+            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second before retry
           }
-          profileData = profileResult.data
         }
-
-        createdProfiles.push(profileData)
-        userCreationResults.push({ 
-          email: user.email, 
-          success: true, 
-          step: 'complete', 
-          profile_id: profileData.id 
-        })
-        console.log(`✅ [${i + 1}/${testUsers.length}] Created user: ${user.email}`)
-
-      } catch (error) {
-        console.error(`❌ Unexpected error creating user ${user.email}:`, error)
-        userCreationResults.push({ 
-          email: user.email, 
-          success: false, 
-          step: 'unexpected', 
-          error: error.message 
-        })
       }
     }
 
-    // Report user creation results
+    // Report user creation results with DETAILED analysis
     const successfulUsers = userCreationResults.filter(r => r.success).length
     const failedUsers = userCreationResults.filter(r => !r.success)
     
@@ -263,9 +299,22 @@ Deno.serve(async (req) => {
       console.log('❌ Failed user creations:', failedUsers)
     }
 
-    if (createdProfiles.length === 0) {
-      throw new Error('No users were created successfully. Cannot continue setup.')
+    // Critical validation - ensure we have ALL required user types
+    const requiredUserTypes = ['admin', 'partner', 'subcontractor', 'employee']
+    const createdUserTypes = new Set(createdProfiles.map(p => p.user_type))
+    const missingUserTypes = requiredUserTypes.filter(type => !createdUserTypes.has(type))
+    
+    if (missingUserTypes.length > 0) {
+      const errorMsg = `CRITICAL: Missing required user types: ${missingUserTypes.join(', ')}. Cannot proceed with incomplete user set.`
+      console.error('💀', errorMsg)
+      throw new Error(errorMsg)
     }
+
+    if (createdProfiles.length === 0) {
+      throw new Error('FATAL: No users were created successfully. Cannot continue setup.')
+    }
+    
+    console.log(`✅ ALL REQUIRED USER TYPES CREATED: ${Array.from(createdUserTypes).join(', ')}`)
 
     // Step 5: Create user-organization relationships
     console.log('🔗 Creating user-organization relationships...')
@@ -472,12 +521,57 @@ Deno.serve(async (req) => {
       console.log('✅ Created sample work order report')
     }
 
-    // Final verification and detailed reporting
-    console.log('🔍 Verifying test environment...')
+    // FINAL VERIFICATION - BULLETPROOF environment validation
+    console.log('🔍 Performing comprehensive test environment verification...')
+    
+    // Re-verify all users exist and can authenticate
+    const verificationResults = []
+    for (const user of testUsers) {
+      try {
+        // Check auth user exists
+        const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers()
+        const authUserExists = authUsers.users.some(u => u.email === user.email)
+        
+        // Check profile exists
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('email', user.email)
+          .single()
+        
+        verificationResults.push({
+          email: user.email,
+          type: user.userType,
+          authExists: authUserExists,
+          profileExists: !!profile,
+          profileId: profile?.id,
+          verified: authUserExists && !!profile
+        })
+      } catch (error) {
+        verificationResults.push({
+          email: user.email,
+          type: user.userType,
+          authExists: false,
+          profileExists: false,
+          profileId: null,
+          verified: false,
+          error: error.message
+        })
+      }
+    }
+    
+    const verifiedUsers = verificationResults.filter(r => r.verified).length
+    const unverifiedUsers = verificationResults.filter(r => !r.verified)
+    
+    console.log(`🔍 Verification complete: ${verifiedUsers}/${testUsers.length} users verified`)
+    if (unverifiedUsers.length > 0) {
+      console.log('❌ Unverified users:', unverifiedUsers)
+    }
     
     const verification = {
       users: createdProfiles.length,
       userCreationResults,
+      verificationResults,
       organizations: orgsData.length,
       workOrders: workOrdersData.length,
       assignments: assignments.length,
@@ -488,12 +582,14 @@ Deno.serve(async (req) => {
       })),
       testUsersExpected: testUsers.length,
       testUsersCreated: successfulUsers,
-      success: successfulUsers === testUsers.length
+      testUsersVerified: verifiedUsers,
+      success: verifiedUsers === testUsers.length,
+      isComplete: verifiedUsers === testUsers.length && verifiedUsers === 4
     }
 
-    const message = successfulUsers === testUsers.length 
-      ? '🎉 Complete test environment setup successful - ALL USERS CREATED!'
-      : `⚠️ Partial success: ${successfulUsers}/${testUsers.length} users created`
+    const message = verification.isComplete
+      ? '🎉 COMPLETE TEST ENVIRONMENT SETUP SUCCESSFUL - ALL 4 USERS VERIFIED!'
+      : `⚠️ Setup incomplete: ${verifiedUsers}/${testUsers.length} users verified`
 
     console.log(message)
     
