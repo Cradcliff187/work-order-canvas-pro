@@ -203,6 +203,28 @@ export const useDevTools = () => {
     try {
       console.log('🌱 Starting comprehensive database seeding...');
       
+      // CHECK AUTHENTICATION FIRST
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Authentication required: Please log in to seed the database');
+      }
+      
+      console.log('Current user:', user);
+      console.log('User ID:', user.id);
+      
+      // Verify user is admin
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (profileError || !profile || profile.user_type !== 'admin') {
+        throw new Error('Admin privileges required: Only admin users can seed the database');
+      }
+      
+      console.log('✅ Authenticated as admin, proceeding with seeding...');
+      
       // Create ID mapping objects for foreign key relationships
       const orgMap = new Map<string, string>();
       const tradeMap = new Map<string, string>();
@@ -316,26 +338,34 @@ export const useDevTools = () => {
         { email: 'sub2@sparks.com', first_name: 'Sparky', last_name: 'Sam', user_type: 'subcontractor' as const, company: 'Sparks Electric' }
       ];
 
-      for (const user of users) {
-        const userId = crypto.randomUUID();
+      for (const userData of users) {
+        // Use the authenticated user's ID for the first admin profile to satisfy RLS
+        const isCurrentUserProfile = userData.email === 'admin@workorderpro.com';
+        const userId = isCurrentUserProfile ? user.id : crypto.randomUUID();
         const profileId = crypto.randomUUID();
-        userMap.set(user.email, profileId);
+        userMap.set(userData.email, profileId);
         
         const profileData = {
           id: profileId,
           user_id: userId,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          user_type: user.user_type,
-          company_name: user.company,
-          is_employee: user.is_employee || false,
-          hourly_cost_rate: user.hourly_cost_rate || null,
-          hourly_billable_rate: user.hourly_billable_rate || null
+          email: userData.email,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          user_type: userData.user_type,
+          company_name: userData.company,
+          is_employee: userData.is_employee || false,
+          hourly_cost_rate: userData.hourly_cost_rate || null,
+          hourly_billable_rate: userData.hourly_billable_rate || null
         };
         
+        console.log(`Creating profile for ${userData.email} with user_id: ${userId}`);
         const { error } = await supabase.from('profiles').insert(profileData);
-        if (error) console.error(`Profile insert error (${user.email}):`, error);
+        if (error) {
+          console.error(`Profile insert error (${userData.email}):`, error);
+          console.error('Profile data attempted:', profileData);
+        } else {
+          console.log(`✅ Profile created successfully for ${userData.email}`);
+        }
       }
 
       // 5. CREATE USER-ORGANIZATION RELATIONSHIPS
