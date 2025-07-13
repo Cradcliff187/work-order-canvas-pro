@@ -46,8 +46,9 @@
 
 ## Component Development Standards
 
-For comprehensive component patterns, accessibility requirements, and Lovable-specific development tips, see:
-- **[Development Guide](./DEVELOPMENT_GUIDE.md)** - Complete development workflow and component patterns
+For comprehensive UI/UX guidelines, component patterns, and design standards, see:
+- **[UI Design System](./UI_DESIGN_SYSTEM.md)** - Complete design system and component standards
+- **[Development Guide](./DEVELOPMENT_GUIDE.md)** - Development workflow and testing patterns
 - **[Database Functions](./DATABASE_FUNCTIONS.md)** - Database function reference
 - **[RLS Policies](./RLS_POLICIES.md)** - Row Level Security documentation
 

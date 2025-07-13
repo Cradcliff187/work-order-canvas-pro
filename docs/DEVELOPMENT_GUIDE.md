@@ -4,6 +4,8 @@
 
 This comprehensive guide provides everything developers need for productive WorkOrderPro development, covering setup, incremental workflows, testing strategies, common pitfalls, and Lovable-specific best practices.
 
+> **UI/UX Guidelines**: For complete design system, component standards, and accessibility requirements, see [UI Design System](./UI_DESIGN_SYSTEM.md).
+
 ## Quick Start & Setup
 
 ### Prerequisites
