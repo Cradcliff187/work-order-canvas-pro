@@ -2,10 +2,11 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { 
   Database, 
   Trash2, 
@@ -15,9 +16,10 @@ import {
   AlertTriangle,
   UserCheck,
   Search,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react';
-import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, flexRender, SortingState, ColumnFiltersState } from '@tanstack/react-table';
 import { useDevTools } from '@/hooks/useDevTools';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -46,18 +48,22 @@ interface ImpersonationUser {
 const DevTools = () => {
   const { profile, setImpersonation, clearImpersonation, isImpersonating, impersonatedProfile } = useAuth();
   const [impersonationUsers, setImpersonationUsers] = useState<ImpersonationUser[]>([]);
-  const [searchFilter, setSearchFilter] = useState('');
+  const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [testUsersResult, setTestUsersResult] = useState<any>(null);
   const { toast } = useToast();
+  
   const {
     loading,
+    setupLoading,
     counts,
+    setupResult,
     fetchCounts,
     runSeedScript,
     clearTestData,
-    createTestUsers
+    createTestUsers,
+    setupCompleteEnvironment,
+    quickLogin,
   } = useDevTools();
 
   // Check if we're in development
@@ -211,7 +217,7 @@ const DevTools = () => {
     },
   ], [profile?.id]);
 
-  const impersonationTable = useReactTable({
+  const table = useReactTable({
     data: impersonationUsers,
     columns: impersonationColumns,
     onSortingChange: setSorting,
@@ -219,14 +225,13 @@ const DevTools = () => {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onGlobalFilterChange: setSearchFilter,
+    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
       columnFilters,
-      globalFilter: searchFilter,
+      globalFilter,
     },
   });
-
 
   if (!isDevelopment) {
     return (
@@ -293,302 +298,209 @@ const DevTools = () => {
         <Badge variant="secondary">DEV MODE</Badge>
       </div>
 
-      <Tabs defaultValue="operations" className="space-y-4">
+      <Tabs defaultValue="setup" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="operations" className="flex items-center gap-2">
-            <Database className="h-4 w-4" />
-            Operations
-          </TabsTrigger>
-          <TabsTrigger value="impersonation" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            Impersonation
-          </TabsTrigger>
+          <TabsTrigger value="setup">Environment Setup</TabsTrigger>
+          <TabsTrigger value="impersonation">Test Users</TabsTrigger>
         </TabsList>
-
-        {/* Database Operations Tab */}
-        <TabsContent value="operations" className="space-y-6">
+        
+        <TabsContent value="setup" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                Database Operations
-              </CardTitle>
+              <CardTitle className="text-lg">Complete Test Environment</CardTitle>
               <CardDescription>
-                Seed business data (organizations, work orders) using your admin account. All test data will be created under your current admin profile.
+                One-click setup of complete test environment with users, organizations, and sample data
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Testing Approach:</strong> All seeded data uses your admin account. Test different user perspectives using impersonation or create real users as needed.
-                </p>
-              </div>
-              <div className="flex gap-4">
-                <Button 
-                  onClick={runSeedScript} 
-                  disabled={loading}
-                  className="flex items-center gap-2"
+              {counts && (
+                <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
+                  <div>Organizations: {counts.organizations}</div>
+                  <div>Work Orders: {counts.work_orders}</div>
+                  <div>Users: {counts.profiles}</div>
+                  <div>Reports: {counts.work_order_reports}</div>
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                <Button
+                  onClick={setupCompleteEnvironment}
+                  disabled={setupLoading}
+                  size="lg"
+                  className="w-full"
                 >
-                  <Database className="h-4 w-4" />
-                  {loading ? 'Seeding...' : 'Seed Business Data'}
-                </Button>
-
-                <Button 
-                  onClick={async () => {
-                    try {
-                      const result = await createTestUsers();
-                      setTestUsersResult(result);
-                    } catch (error) {
-                      // Error already handled in hook
-                    }
-                  }}
-                  disabled={loading || !counts?.organizations}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Users className="h-4 w-4" />
-                  {loading ? 'Creating...' : 'Create Test Users'}
+                  {setupLoading ? <LoadingSpinner /> : null}
+                  Setup Complete Test Environment
                 </Button>
                 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="destructive"
-                      disabled={loading}
-                      className="flex items-center gap-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Clear Test Data
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Clear Test Data?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete all seeded test data including users, organizations, 
-                        work orders, and reports. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={clearTestData}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Clear Data
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <Button 
-                  variant="outline" 
+                {setupResult && (
+                  <Alert className={setupResult.success ? "border-green-500" : "border-red-500"}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{setupResult.success ? "Success!" : "Setup Failed"}</AlertTitle>
+                    <AlertDescription>
+                      {setupResult.message}
+                      {setupResult.success && setupResult.data && (
+                        <div className="mt-2 text-sm">
+                          Created: {setupResult.data.users} users, {setupResult.data.organizations} organizations, {setupResult.data.workOrders} work orders
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              
+              <div className="border-t pt-4 space-y-2">
+                <h4 className="font-medium text-sm">Manual Operations</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={runSeedScript}
+                    disabled={loading}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {loading ? <LoadingSpinner /> : null}
+                    Seed Data Only
+                  </Button>
+                  <Button
+                    onClick={clearTestData}
+                    disabled={loading}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    {loading ? <LoadingSpinner /> : null}
+                    Clear All Data
+                  </Button>
+                </div>
+                <Button
                   onClick={fetchCounts}
                   disabled={loading}
-                  className="flex items-center gap-2"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
                 >
-                  <FileText className="h-4 w-4" />
+                  {loading ? <LoadingSpinner /> : null}
                   Refresh Counts
                 </Button>
               </div>
-              
-              {!counts?.organizations && (
-                <Alert className="mt-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    No organizations found. Please seed business data first to create test users.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Test Users Results */}
-          {testUsersResult && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Test Users Created
-                </CardTitle>
-                <CardDescription>
-                  Login credentials for testing different user types
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg mb-4">
-                  <p className="text-sm text-green-800 dark:text-green-200">
-                    <strong>Default Password:</strong> {testUsersResult.summary?.password}
-                  </p>
-                </div>
-                
-                <div className="space-y-3">
-                  {testUsersResult.results?.map((result: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{result.email}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {result.user_type} • {result.organization}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {result.success ? (
-                          <Badge variant="default" className="bg-green-500">
-                            Created
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive">
-                            {result.error}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-4 text-center">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setTestUsersResult(null)}
-                  >
-                    Dismiss
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Enhanced Database Statistics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Database Statistics
-              </CardTitle>
-              <CardDescription>
-                Comprehensive record counts and table information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {counts ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {Object.entries(counts).map(([table, count]) => (
-                    <div key={table} className="text-center p-4 bg-muted/20 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{count}</div>
-                      <div className="text-sm text-muted-foreground capitalize">
-                        {table.replace(/_/g, ' ')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  Click "Refresh Counts" to load statistics
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Impersonation Tab */}
         <TabsContent value="impersonation" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5" />
-                User Impersonation
-              </CardTitle>
-              <CardDescription>
-                Test the application as different user types without logging out
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search users..."
-                    value={searchFilter}
-                    onChange={(e) => setSearchFilter(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={fetchImpersonationUsers}
-                >
-                  Refresh
-                </Button>
-              </div>
-
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    {impersonationTable.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="px-4">
-                            {header.isPlaceholder
-                              ? null
-                              : (typeof header.column.columnDef.header === 'function'
-                                  ? header.column.columnDef.header(header.getContext())
-                                  : header.column.columnDef.header)}
-                          </TableHead>
-                        ))}
-                      </TableRow>
+          <div className="space-y-4">
+            {setupResult?.success && setupResult.data?.userCredentials && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Test User Credentials</CardTitle>
+                  <CardDescription>
+                    Login credentials for test users created by the environment setup
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {setupResult.data.userCredentials.map((cred) => (
+                      <div key={cred.email} className="p-4 border rounded-lg space-y-2">
+                        <div className="font-medium">{cred.type} User</div>
+                        <div className="text-sm text-muted-foreground">
+                          <div>Email: {cred.email}</div>
+                          <div>Password: {cred.password}</div>
+                        </div>
+                        <Button
+                          onClick={() => quickLogin(cred.email)}
+                          disabled={loading}
+                          size="sm"
+                          className="w-full"
+                        >
+                          {loading ? <LoadingSpinner /> : null}
+                          Quick Login
+                        </Button>
+                      </div>
                     ))}
-                  </TableHeader>
-                  <TableBody>
-                    {impersonationTable.getRowModel().rows?.length ? (
-                      impersonationTable.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id} className="cursor-pointer hover:bg-muted/50">
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className="px-4">
-                              {typeof cell.column.columnDef.cell === 'function'
-                                ? cell.column.columnDef.cell(cell.getContext())
-                                : cell.getValue() as React.ReactNode}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={impersonationColumns.length} className="h-24 text-center">
-                          No users found.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-              <div className="flex items-center justify-between px-2 py-2">
-                <div className="text-sm text-muted-foreground">
-                  {impersonationTable.getFilteredRowModel().rows.length} user(s) available for impersonation
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => impersonationTable.previousPage()}
-                    disabled={!impersonationTable.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => impersonationTable.nextPage()}
-                    disabled={!impersonationTable.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Search users by name, email, or type..."
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">User Impersonation</CardTitle>
+                <CardDescription>
+                  Login as different user types to test role-based functionality
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!setupResult?.success ? (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Setup Test Environment First</AlertTitle>
+                    <AlertDescription>
+                      Use the "Setup Complete Test Environment" button to create test users with proper credentials.
+                    </AlertDescription>
+                  </Alert>
+                ) : impersonationUsers.length === 0 ? (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>No Test Users Found</AlertTitle>
+                    <AlertDescription>
+                      Test users were created but may not be visible yet. Try refreshing the page or running the setup again.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                          <TableRow key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                              <TableHead key={header.id}>
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext()
+                                    )}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {table.getRowModel().rows?.length ? (
+                          table.getRowModel().rows.map((row) => (
+                            <TableRow
+                              key={row.id}
+                              data-state={row.getIsSelected() && "selected"}
+                            >
+                              {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id}>
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={impersonationColumns.length} className="h-24 text-center">
+                              No users found.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -30,6 +30,23 @@ interface TableCounts {
   system_settings: number;
 }
 
+interface SetupResult {
+  success: boolean;
+  message: string;
+  data?: {
+    users: number;
+    organizations: number;
+    workOrders: number;
+    assignments: number;
+    userCredentials: Array<{
+      email: string;
+      password: string;
+      type: string;
+    }>;
+  };
+  error?: string;
+}
+
 interface ClearTestDataResponse {
   success: boolean;
   message: string;
@@ -40,35 +57,11 @@ interface ClearTestDataResponse {
   test_work_order_count?: number;
 }
 
-const TEST_EMAILS = [
-  'admin@workorderpro.com',
-  'partner1@abc.com',
-  'partner2@xyz.com',
-  'partner3@premium.com',
-  'plumber@pipesmore.com',
-  'electrician@sparks.com',
-  'hvac@coolair.com',
-  'carpenter@woodworks.com',
-  'maintenance@workorderpro.com',
-  'supervisor@workorderpro.com'
-];
-
-const testCredentials = [
-  { email: 'admin@workorderpro.com', type: 'Admin' },
-  { email: 'partner1@abc.com', type: 'Partner' },
-  { email: 'partner2@xyz.com', type: 'Partner' },
-  { email: 'partner3@premium.com', type: 'Partner' },
-  { email: 'plumber@pipesmore.com', type: 'Subcontractor' },
-  { email: 'electrician@sparks.com', type: 'Subcontractor' },
-  { email: 'hvac@coolair.com', type: 'Subcontractor' },
-  { email: 'carpenter@woodworks.com', type: 'Subcontractor' },
-  { email: 'maintenance@workorderpro.com', type: 'Employee' },
-  { email: 'supervisor@workorderpro.com', type: 'Employee' }
-];
-
 export const useDevTools = () => {
   const [loading, setLoading] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
   const [counts, setCounts] = useState<TableCounts | null>(null);
+  const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
   const { toast } = useToast();
 
   const fetchCounts = async () => {
@@ -163,8 +156,6 @@ export const useDevTools = () => {
       });
     }
   };
-
-
 
   const runSeedScript = async (): Promise<void> => {
     setLoading(true);
@@ -261,28 +252,6 @@ export const useDevTools = () => {
     }
   };
 
-  const quickLogin = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password: 'Test123!'
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Logged in as ${email}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Failed to login: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
   const createTestUsers = async () => {
     setLoading(true);
     try {
@@ -337,14 +306,127 @@ export const useDevTools = () => {
     }
   };
 
+  const setupCompleteEnvironment = async () => {
+    try {
+      setSetupLoading(true);
+      setSetupResult(null);
+      
+      const { data, error } = await supabase.functions.invoke('setup-test-environment', {
+        body: {}
+      });
+
+      if (error) {
+        console.error('Setup environment error:', error);
+        const errorResult = {
+          success: false,
+          message: 'Failed to setup test environment',
+          error: error.message
+        };
+        setSetupResult(errorResult);
+        toast({
+          title: "Setup Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.success) {
+        setSetupResult(data);
+        toast({
+          title: "Environment Setup Complete!",
+          description: `Created ${data.data?.users || 0} users, ${data.data?.organizations || 0} organizations, and ${data.data?.workOrders || 0} work orders`,
+          variant: "default",
+        });
+        
+        // Refresh counts
+        await fetchCounts();
+      } else {
+        const errorResult = {
+          success: false,
+          message: data?.error || 'Unknown error occurred',
+          error: data?.error
+        };
+        setSetupResult(errorResult);
+        toast({
+          title: "Setup Failed", 
+          description: data?.error || 'Unknown error occurred',
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Setup environment error:', error);
+      const errorResult = {
+        success: false,
+        message: 'An unexpected error occurred',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+      setSetupResult(errorResult);
+      toast({
+        title: "Setup Failed",
+        description: "An unexpected error occurred during setup",
+        variant: "destructive",
+      });
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
+  const quickLogin = async (email: string) => {
+    try {
+      setLoading(true);
+      
+      // Sign out first to ensure clean state
+      await supabase.auth.signOut();
+      
+      // Sign in with the test user credentials
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: 'TestPass123!' // This matches the Edge Function password
+      });
+
+      if (error) {
+        console.error('Quick login error:', error);
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.user) {
+        toast({
+          title: "Quick Login Successful",
+          description: `Logged in as ${email}`,
+          variant: "default",
+        });
+        
+        // Reload the page to refresh the app state
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Quick login error:', error);
+      toast({
+        title: "Login Failed",
+        description: "An unexpected error occurred during login",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
+    setupLoading,
     counts,
+    setupResult,
     fetchCounts,
     runSeedScript,
     clearTestData,
     createTestUsers,
+    setupCompleteEnvironment,
     quickLogin,
-    testCredentials
   };
 };
