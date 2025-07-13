@@ -542,22 +542,23 @@ export const seedDatabase = async () => {
       });
     }
 
-    // 6. Create work orders with various statuses
+    // 6. Create diverse work orders with various statuses and assignment patterns
     console.log('📋 Creating work orders...');
     const workOrders = [
+      // Single Subcontractor Assignments (5)
       {
-        title: 'Plumbing Leak Repair',
+        title: 'Plumbing Leak Repair - Downtown Office',
         description: 'Main lobby restroom has a persistent leak behind the toilet',
         organization_id: orgMap.get('ABC Property Management'),
         trade_id: tradeMap.get('Plumbing'),
         status: 'completed' as const,
-        location_name: 'ABC Downtown Mall',
-        location_street_address: '100 Mall Drive',
+        location_name: 'ABC Downtown Office',
+        location_street_address: '504 Business Plaza',
         location_city: 'New York',
         location_state: 'NY',
         location_zip_code: '10001',
         partner_po_number: 'ABC-2024-001',
-        partner_location_number: '001',
+        partner_location_number: '504',
         created_by: userProfiles.get('partner1@abc.com')?.id,
         date_submitted: getRandomDate(30, 25),
         date_assigned: getRandomDate(24, 20),
@@ -567,8 +568,138 @@ export const seedDatabase = async () => {
         estimated_completion_date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       },
       {
-        title: 'HVAC Filter Replacement',
-        description: 'Quarterly HVAC filter replacement for all units on floors 5-8',
+        title: 'Electrical Panel Upgrade',
+        description: 'Replace outdated electrical panel in server room',
+        organization_id: orgMap.get('XYZ Commercial Properties'),
+        trade_id: tradeMap.get('Electrical'),
+        status: 'in_progress' as const,
+        location_name: 'XYZ Tech Center',
+        location_street_address: '500 Innovation Blvd',
+        location_city: 'Los Angeles',
+        location_state: 'CA',
+        location_zip_code: '90210',
+        partner_po_number: 'XYZ-ELEC-2024-001',
+        partner_location_number: '101',
+        created_by: userProfiles.get('partner2@xyz.com')?.id || userProfiles.get('partner1@abc.com')?.id,
+        date_submitted: getRandomDate(20, 18),
+        date_assigned: getRandomDate(17, 15),
+        estimated_hours: 8,
+        estimated_completion_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      },
+      {
+        title: 'HVAC System Maintenance',
+        description: 'Quarterly HVAC maintenance and filter replacement',
+        organization_id: orgMap.get('Premium Facilities Group'),
+        trade_id: tradeMap.get('HVAC'),
+        status: 'assigned' as const,
+        location_name: 'Premium Corporate Tower',
+        location_street_address: '1000 Corporate Way',
+        location_city: 'Chicago',
+        location_state: 'IL',
+        location_zip_code: '60601',
+        partner_po_number: 'PFG-HVAC-001',
+        partner_location_number: 'PFG-001',
+        created_by: userProfiles.get('partner3@premium.com')?.id,
+        date_submitted: getRandomDate(12, 10),
+        date_assigned: getRandomDate(9, 7),
+        estimated_hours: 6,
+        estimated_completion_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      },
+      {
+        title: 'General Maintenance - Warehouse Doors',
+        description: 'Repair and lubricate all warehouse loading dock doors',
+        organization_id: orgMap.get('ABC Property Management'),
+        trade_id: tradeMap.get('General Maintenance'),
+        status: 'received' as const,
+        location_name: 'ABC Warehouse',
+        location_street_address: '605 Storage Drive',
+        location_city: 'New York',
+        location_state: 'NY',
+        location_zip_code: '10002',
+        partner_po_number: 'ABC-2024-003',
+        partner_location_number: '605',
+        created_by: userProfiles.get('partner1@abc.com')?.id,
+        date_submitted: getRandomDate(8, 6),
+        estimated_hours: 4
+      },
+      {
+        title: 'Plumbing Installation - Retail Center',
+        description: 'Install new restroom facilities in retail center expansion',
+        organization_id: orgMap.get('ABC Property Management'),
+        trade_id: tradeMap.get('Plumbing'),
+        status: 'assigned' as const,
+        location_name: 'ABC Retail Center',
+        location_street_address: '708 Shopping Boulevard',
+        location_city: 'New York',
+        location_state: 'NY',
+        location_zip_code: '10003',
+        partner_po_number: 'ABC-2024-004',
+        partner_location_number: '708',
+        created_by: userProfiles.get('partner1@abc.com')?.id,
+        date_submitted: getRandomDate(5, 3),
+        date_assigned: getRandomDate(2, 1),
+        estimated_hours: 12
+      },
+      
+      // Employee Assignments (3)
+      {
+        title: 'Internal Maintenance - Distribution Hub',
+        description: 'Routine maintenance and inspection of distribution hub facilities',
+        organization_id: orgMap.get('ABC Property Management'),
+        trade_id: tradeMap.get('General Maintenance'),
+        status: 'in_progress' as const,
+        location_name: 'ABC Distribution Hub',
+        location_street_address: '912 Logistics Way',
+        location_city: 'New York',
+        location_state: 'NY',
+        location_zip_code: '10004',
+        partner_po_number: 'ABC-2024-005',
+        partner_location_number: '912',
+        created_by: userProfiles.get('partner1@abc.com')?.id,
+        date_submitted: getRandomDate(14, 12),
+        date_assigned: getRandomDate(11, 9),
+        estimated_hours: 6
+      },
+      {
+        title: 'Facility Safety Inspection',
+        description: 'Comprehensive safety inspection of building systems',
+        organization_id: orgMap.get('XYZ Commercial Properties'),
+        trade_id: tradeMap.get('General Maintenance'),
+        status: 'assigned' as const,
+        location_name: 'XYZ Innovation Center',
+        location_street_address: '200 Future Drive',
+        location_city: 'Los Angeles',
+        location_state: 'CA',
+        location_zip_code: '90211',
+        partner_po_number: 'XYZ-SAFE-2024-001',
+        partner_location_number: '201',
+        created_by: userProfiles.get('partner2@xyz.com')?.id || userProfiles.get('partner1@abc.com')?.id,
+        date_submitted: getRandomDate(6, 4),
+        date_assigned: getRandomDate(3, 2),
+        estimated_hours: 8
+      },
+      {
+        title: 'Emergency Response System Check',
+        description: 'Test and verify all emergency response systems',
+        organization_id: orgMap.get('Premium Facilities Group'),
+        trade_id: tradeMap.get('Electrical'),
+        status: 'received' as const,
+        location_name: 'Premium Executive Center',
+        location_street_address: '300 Business Park',
+        location_city: 'Chicago',
+        location_state: 'IL',
+        location_zip_code: '60602',
+        partner_po_number: 'PFG-EMRG-001',
+        partner_location_number: 'PFG-002',
+        created_by: userProfiles.get('partner3@premium.com')?.id,
+        date_submitted: getRandomDate(4, 2),
+        estimated_hours: 4
+      },
+
+      // Mixed Employee + Subcontractor (3)
+      {
+        title: 'Complex HVAC Project - Multi-Floor',
+        description: 'Major HVAC system upgrade across multiple floors requiring coordination',
         organization_id: orgMap.get('XYZ Commercial Properties'),
         trade_id: tradeMap.get('HVAC'),
         status: 'in_progress' as const,
@@ -577,17 +708,16 @@ export const seedDatabase = async () => {
         location_city: 'Los Angeles',
         location_state: 'CA',
         location_zip_code: '90210',
-        partner_po_number: 'XYZ-MAINT-2024-005',
+        partner_po_number: 'XYZ-HVAC-2024-002',
         partner_location_number: '101',
         created_by: userProfiles.get('partner2@xyz.com')?.id || userProfiles.get('partner1@abc.com')?.id,
-        date_submitted: getRandomDate(15, 12),
-        date_assigned: getRandomDate(11, 8),
-        estimated_hours: 8,
-        estimated_completion_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        date_submitted: getRandomDate(18, 16),
+        date_assigned: getRandomDate(15, 13),
+        estimated_hours: 24
       },
       {
-        title: 'Electrical Outlet Installation',
-        description: 'Install 6 new electrical outlets in conference room A',
+        title: 'Electrical Infrastructure Upgrade',
+        description: 'Complete electrical system modernization with backup power',
         organization_id: orgMap.get('Premium Facilities Group'),
         trade_id: tradeMap.get('Electrical'),
         status: 'assigned' as const,
@@ -596,47 +726,89 @@ export const seedDatabase = async () => {
         location_city: 'Chicago',
         location_state: 'IL',
         location_zip_code: '60601',
-        partner_po_number: 'PFG-ELEC-001',
+        partner_po_number: 'PFG-ELEC-002',
         partner_location_number: 'PFG-001',
         created_by: userProfiles.get('partner3@premium.com')?.id,
-        date_submitted: getRandomDate(8, 6),
-        date_assigned: getRandomDate(5, 3),
-        estimated_hours: 6,
-        estimated_completion_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        date_submitted: getRandomDate(10, 8),
+        date_assigned: getRandomDate(7, 5),
+        estimated_hours: 32
       },
       {
-        title: 'General Maintenance - Door Repair',
-        description: 'Main entrance door handle is loose and needs repair',
+        title: 'Major Plumbing Overhaul',
+        description: 'Complete plumbing system replacement in older building section',
         organization_id: orgMap.get('ABC Property Management'),
-        trade_id: tradeMap.get('General Maintenance'),
-        status: 'received' as const,
-        location_name: 'ABC Office Plaza',
-        location_street_address: '200 Business Center',
+        trade_id: tradeMap.get('Plumbing'),
+        status: 'in_progress' as const,
+        location_name: 'ABC Downtown Office',
+        location_street_address: '504 Business Plaza',
         location_city: 'New York',
         location_state: 'NY',
-        location_zip_code: '10002',
-        partner_po_number: 'ABC-2024-002',
-        partner_location_number: '002',
+        location_zip_code: '10001',
+        partner_po_number: 'ABC-2024-006',
+        partner_location_number: '504',
         created_by: userProfiles.get('partner1@abc.com')?.id,
-        date_submitted: getRandomDate(3, 1),
-        estimated_hours: 2
+        date_submitted: getRandomDate(22, 20),
+        date_assigned: getRandomDate(19, 17),
+        estimated_hours: 40
+      },
+
+      // Estimate Needed Status (2)
+      {
+        title: 'Roofing Assessment - Downtown Office',
+        description: 'Comprehensive roofing inspection and repair estimate needed',
+        organization_id: orgMap.get('ABC Property Management'),
+        trade_id: tradeMap.get('General Maintenance'),
+        status: 'estimate_needed' as const,
+        location_name: 'ABC Downtown Office',
+        location_street_address: '504 Business Plaza',
+        location_city: 'New York',
+        location_state: 'NY',
+        location_zip_code: '10001',
+        partner_po_number: 'ABC-2024-007',
+        partner_location_number: '504',
+        created_by: userProfiles.get('partner1@abc.com')?.id,
+        date_submitted: getRandomDate(7, 5),
+        estimated_hours: 16
       },
       {
-        title: 'Emergency Plumbing - Burst Pipe',
-        description: 'Emergency repair needed for burst pipe in basement',
+        title: 'Flooring Replacement Project',
+        description: 'Complete flooring assessment and replacement estimate for office areas',
+        organization_id: orgMap.get('Premium Facilities Group'),
+        trade_id: tradeMap.get('General Maintenance'),
+        status: 'estimate_needed' as const,
+        location_name: 'Premium Innovation Hub',
+        location_street_address: '400 Technology Drive',
+        location_city: 'Chicago',
+        location_state: 'IL',
+        location_zip_code: '60603',
+        partner_po_number: 'PFG-FLOOR-001',
+        partner_location_number: 'PFG-003',
+        created_by: userProfiles.get('partner3@premium.com')?.id,
+        date_submitted: getRandomDate(9, 7),
+        estimated_hours: 20
+      },
+
+      // Completed with Reports (2) - Additional completed work orders
+      {
+        title: 'Electrical Repair - Completed',
+        description: 'Repair of faulty electrical circuits in office building',
         organization_id: orgMap.get('XYZ Commercial Properties'),
-        trade_id: tradeMap.get('Plumbing'),
-        status: 'cancelled' as const,
+        trade_id: tradeMap.get('Electrical'),
+        status: 'completed' as const,
         location_name: 'XYZ Tech Center',
         location_street_address: '500 Innovation Blvd',
         location_city: 'Los Angeles',
         location_state: 'CA',
         location_zip_code: '90210',
-        partner_po_number: 'XYZ-EMRG-2024-001',
+        partner_po_number: 'XYZ-ELEC-2024-003',
         partner_location_number: '101',
         created_by: userProfiles.get('partner2@xyz.com')?.id || userProfiles.get('partner1@abc.com')?.id,
-        date_submitted: getRandomDate(7, 5),
-        estimated_hours: 3
+        date_submitted: getRandomDate(25, 23),
+        date_assigned: getRandomDate(22, 20),
+        completed_at: getRandomDate(19, 17),
+        estimated_hours: 6,
+        actual_hours: 5.5,
+        estimated_completion_date: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       }
     ];
 
@@ -648,7 +820,29 @@ export const seedDatabase = async () => {
     if (workOrdersError) {
       console.warn('Work orders creation error:', workOrdersError);
     } else {
-      console.log(`✅ Created ${createdWorkOrders?.length || 0} work orders`);
+      // Enhanced console logging with breakdown
+      const statusCounts = createdWorkOrders?.reduce((acc, wo) => {
+        acc[wo.status] = (acc[wo.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const orgCounts = createdWorkOrders?.reduce((acc, wo) => {
+        const orgName = Object.keys(orgMap).find(name => orgMap.get(name) === wo.organization_id) || 'Unknown';
+        acc[orgName] = (acc[orgName] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const abcLocationCounts = createdWorkOrders?.filter(wo => 
+        Object.keys(orgMap).find(name => orgMap.get(name) === wo.organization_id) === 'ABC Property Management'
+      ).reduce((acc, wo) => {
+        acc[wo.partner_location_number || 'No Location'] = (acc[wo.partner_location_number || 'No Location'] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      console.log(`✅ Created ${createdWorkOrders?.length || 0} work orders:`);
+      console.log('  📊 By Status:', statusCounts);
+      console.log('  🏢 By Organization:', orgCounts);
+      console.log('  📍 ABC Location Usage:', abcLocationCounts);
     }
 
     // 7. Create work order assignments
@@ -656,7 +850,11 @@ export const seedDatabase = async () => {
       console.log('👥 Creating work order assignments...');
       
       // Validate that we have all required user profiles
-      const requiredUsers = ['plumber1@trade.com', 'hvac1@trade.com', 'hvac2@trade.com', 'electrician@trade.com', 'admin@workorderpro.com'];
+      const requiredUsers = [
+        'plumber1@trade.com', 'plumber2@trade.com', 'hvac1@trade.com', 'hvac2@trade.com', 
+        'electrician@trade.com', 'maintenance@trade.com', 'admin@workorderpro.com',
+        'senior@workorderpro.com', 'midlevel@workorderpro.com', 'junior@workorderpro.com', 'employee@workorderpro.com'
+      ];
       const missingUsers = requiredUsers.filter(email => !userProfiles.get(email)?.id);
       
       if (missingUsers.length > 0) {
@@ -664,16 +862,25 @@ export const seedDatabase = async () => {
       }
       
       const assignments = [
+        // Single Subcontractor Assignments (5)
         {
-          work_order_id: createdWorkOrders[0].id, // Plumbing repair
+          work_order_id: createdWorkOrders[0].id, // Plumbing repair - completed
           assigned_to: userProfiles.get('plumber1@trade.com')?.id,
           assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
           assignment_type: 'lead',
           assigned_organization_id: orgMap.get('Pipes & More Plumbing'),
-          notes: 'Lead plumber for main repair'
+          notes: 'Lead plumber for downtown office repair'
         },
         {
-          work_order_id: createdWorkOrders[1].id, // HVAC filters
+          work_order_id: createdWorkOrders[1].id, // Electrical panel upgrade
+          assigned_to: userProfiles.get('electrician@trade.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'lead',
+          assigned_organization_id: orgMap.get('Sparks Electric'),
+          notes: 'Lead electrician for panel upgrade'
+        },
+        {
+          work_order_id: createdWorkOrders[2].id, // HVAC maintenance
           assigned_to: userProfiles.get('hvac1@trade.com')?.id,
           assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
           assignment_type: 'lead',
@@ -681,25 +888,101 @@ export const seedDatabase = async () => {
           notes: 'Primary HVAC technician'
         },
         {
-          work_order_id: createdWorkOrders[1].id, // HVAC filters - multiple assignees
-          assigned_to: userProfiles.get('hvac2@trade.com')?.id,
+          work_order_id: createdWorkOrders[3].id, // General maintenance - warehouse
+          assigned_to: userProfiles.get('maintenance@trade.com')?.id,
           assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
-          assignment_type: 'support',
-          assigned_organization_id: orgMap.get('Cool Air HVAC'),
-          notes: 'Support technician for large job'
+          assignment_type: 'lead',
+          assigned_organization_id: orgMap.get('Fix-It Maintenance'),
+          notes: 'Warehouse door specialist'
         },
         {
-          work_order_id: createdWorkOrders[2].id, // Electrical outlets
+          work_order_id: createdWorkOrders[4].id, // Plumbing installation
+          assigned_to: userProfiles.get('plumber2@trade.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'lead',
+          assigned_organization_id: orgMap.get('Pipes & More Plumbing'),
+          notes: 'Installation specialist'
+        },
+
+        // Employee Assignments (3)
+        {
+          work_order_id: createdWorkOrders[5].id, // Internal maintenance - distribution hub
+          assigned_to: userProfiles.get('senior@workorderpro.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'lead',
+          assigned_organization_id: null, // Internal assignment
+          notes: 'Senior employee for internal maintenance'
+        },
+        {
+          work_order_id: createdWorkOrders[6].id, // Facility safety inspection
+          assigned_to: userProfiles.get('midlevel@workorderpro.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'lead',
+          assigned_organization_id: null, // Internal assignment
+          notes: 'Safety inspection specialist'
+        },
+        {
+          work_order_id: createdWorkOrders[7].id, // Emergency response system check
+          assigned_to: userProfiles.get('junior@workorderpro.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'lead',
+          assigned_organization_id: null, // Internal assignment
+          notes: 'Emergency systems technician'
+        },
+
+        // Mixed Employee + Subcontractor Assignments (3)
+        {
+          work_order_id: createdWorkOrders[8].id, // Complex HVAC project - subcontractor lead
+          assigned_to: userProfiles.get('hvac2@trade.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'lead',
+          assigned_organization_id: orgMap.get('Cool Air HVAC'),
+          notes: 'Lead HVAC contractor for complex project'
+        },
+        {
+          work_order_id: createdWorkOrders[8].id, // Complex HVAC project - employee support
+          assigned_to: userProfiles.get('employee@workorderpro.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'support',
+          assigned_organization_id: null,
+          notes: 'Internal coordination and support'
+        },
+        {
+          work_order_id: createdWorkOrders[9].id, // Electrical infrastructure - subcontractor lead
           assigned_to: userProfiles.get('electrician@trade.com')?.id,
           assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
           assignment_type: 'lead',
-          assigned_organization_id: orgMap.get('Sparks Electric')
+          assigned_organization_id: orgMap.get('Sparks Electric'),
+          notes: 'Lead electrician for infrastructure upgrade'
+        },
+        {
+          work_order_id: createdWorkOrders[9].id, // Electrical infrastructure - employee support
+          assigned_to: userProfiles.get('senior@workorderpro.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'support',
+          assigned_organization_id: null,
+          notes: 'Senior oversight and coordination'
+        },
+        {
+          work_order_id: createdWorkOrders[10].id, // Major plumbing overhaul - subcontractor lead
+          assigned_to: userProfiles.get('plumber1@trade.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'lead',
+          assigned_organization_id: orgMap.get('Pipes & More Plumbing'),
+          notes: 'Lead plumber for major overhaul'
+        },
+        {
+          work_order_id: createdWorkOrders[10].id, // Major plumbing overhaul - employee support
+          assigned_to: userProfiles.get('midlevel@workorderpro.com')?.id,
+          assigned_by: userProfiles.get('admin@workorderpro.com')?.id,
+          assignment_type: 'support',
+          assigned_organization_id: null,
+          notes: 'Project coordination and quality control'
         }
       ].filter(assignment => 
         assignment.assigned_to && 
         assignment.assigned_by && 
-        assignment.work_order_id && 
-        assignment.assigned_organization_id
+        assignment.work_order_id
       );
 
       const { error: assignmentsError } = await supabase
@@ -709,7 +992,23 @@ export const seedDatabase = async () => {
       if (assignmentsError) {
         console.warn('Work order assignments creation error:', assignmentsError);
       } else {
-        console.log(`✅ Created ${assignments.length} work order assignments`);
+        // Count assignment patterns
+        const singleAssignments = createdWorkOrders?.filter(wo => 
+          assignments.filter(a => a.work_order_id === wo.id).length === 1
+        ).length || 0;
+        
+        const multiAssignments = createdWorkOrders?.filter(wo => 
+          assignments.filter(a => a.work_order_id === wo.id).length > 1
+        ).length || 0;
+
+        const employeeAssignments = assignments.filter(a => a.assigned_organization_id === null).length;
+        const subcontractorAssignments = assignments.filter(a => a.assigned_organization_id !== null).length;
+
+        console.log(`✅ Created ${assignments.length} work order assignments:`);
+        console.log(`  • Single assignee work orders: ${singleAssignments}`);
+        console.log(`  • Multi assignee work orders: ${multiAssignments}`);
+        console.log(`  • Employee assignments: ${employeeAssignments}`);
+        console.log(`  • Subcontractor assignments: ${subcontractorAssignments}`);
       }
     }
 
@@ -720,8 +1019,8 @@ export const seedDatabase = async () => {
         {
           work_order_id: createdWorkOrders[0].id, // Completed plumbing job
           subcontractor_user_id: userProfiles.get('plumber1@trade.com')?.id,
-          work_performed: 'Replaced wax ring and toilet bolts. Fixed leak behind toilet in main lobby restroom.',
-          materials_used: 'Wax ring, toilet bolts, plumber\'s putty',
+          work_performed: 'Replaced wax ring and toilet bolts. Fixed leak behind toilet in main lobby restroom. Tested all connections and verified proper drainage.',
+          materials_used: 'Wax ring, toilet bolts, plumber\'s putty, supply line',
           hours_worked: 3.5,
           invoice_amount: 275.00,
           invoice_number: 'PMP-2024-001',
@@ -732,15 +1031,29 @@ export const seedDatabase = async () => {
           review_notes: 'Work completed satisfactorily. Customer confirmed leak is fixed.'
         },
         {
-          work_order_id: createdWorkOrders[1].id, // In-progress HVAC job
-          subcontractor_user_id: userProfiles.get('hvac1@trade.com')?.id,
-          work_performed: 'Replaced filters on floors 5-6. Still working on floors 7-8.',
-          materials_used: 'HVAC filters (various sizes)',
-          hours_worked: 4.0,
-          invoice_amount: 180.00,
+          work_order_id: createdWorkOrders[14].id, // Completed electrical job
+          subcontractor_user_id: userProfiles.get('electrician@trade.com')?.id,
+          work_performed: 'Diagnosed and repaired faulty electrical circuits. Replaced damaged wiring and tested all connections. Updated circuit labeling.',
+          materials_used: 'Electrical wire (12 AWG), wire nuts, circuit breakers, electrical tape',
+          hours_worked: 5.5,
+          invoice_amount: 425.00,
+          invoice_number: 'SPE-2024-002',
+          status: 'approved' as const,
+          submitted_at: getRandomDate(18, 16),
+          reviewed_at: getRandomDate(15, 14),
+          reviewed_by_user_id: userProfiles.get('admin@workorderpro.com')?.id,
+          review_notes: 'Excellent work. All electrical systems functioning properly.'
+        },
+        {
+          work_order_id: createdWorkOrders[1].id, // In-progress electrical panel upgrade
+          subcontractor_user_id: userProfiles.get('electrician@trade.com')?.id,
+          work_performed: 'Removed old electrical panel and began installation of new 200-amp panel. Phase 1 complete.',
+          materials_used: 'New electrical panel, breakers, conduit',
+          hours_worked: 6.0,
+          invoice_amount: 850.00,
           status: 'submitted' as const,
           submitted_at: getRandomDate(2, 1),
-          notes: 'Partial completion report. Will submit final report when job is complete.'
+          notes: 'Phase 1 of 2 complete. Will continue with final connections next week.'
         }
       ];
 
@@ -751,7 +1064,12 @@ export const seedDatabase = async () => {
       if (reportsError) {
         console.warn('Work order reports creation error:', reportsError);
       } else {
-        console.log(`✅ Created ${reports.length} work order reports`);
+        const approvedReports = reports.filter(r => r.status === 'approved').length;
+        const submittedReports = reports.filter(r => r.status === 'submitted').length;
+        
+        console.log(`✅ Created ${reports.length} work order reports:`);
+        console.log(`  • Approved reports: ${approvedReports}`);
+        console.log(`  • Submitted reports: ${submittedReports}`);
       }
     }
 
