@@ -121,37 +121,95 @@ export const useDevTools = () => {
   };
 
 
+  // Client-side seed data for fallback when Edge Function is unavailable
+  const clientSeedData = {
+    organizations: [
+      { name: 'WorkOrderPro Internal', contact_email: 'admin@workorderpro.com', organization_type: 'internal' as const, initials: 'WOP' },
+      { name: 'ABC Property Management', contact_email: 'contact@abc-property.com', organization_type: 'partner' as const, initials: 'ABC' },
+      { name: 'XYZ Commercial Properties', contact_email: 'info@xyz-commercial.com', organization_type: 'partner' as const, initials: 'XYZ' },
+      { name: 'Pipes & More Plumbing', contact_email: 'service@pipesmore.com', organization_type: 'subcontractor' as const, initials: 'PMP' },
+      { name: 'Sparks Electric', contact_email: 'contact@sparkselectric.com', organization_type: 'subcontractor' as const, initials: 'SPE' }
+    ],
+    trades: [
+      { name: 'Plumbing', description: 'Water systems, pipes, fixtures' },
+      { name: 'Electrical', description: 'Electrical systems and wiring' },
+      { name: 'HVAC', description: 'Heating, ventilation, air conditioning' },
+      { name: 'Carpentry', description: 'Wood construction and repair' },
+      { name: 'General Maintenance', description: 'General facility maintenance' }
+    ],
+    emailTemplates: [
+      {
+        template_name: 'work_order_created',
+        subject: 'New Work Order: {{work_order_number}}',
+        html_content: '<p>A new work order has been created: {{work_order_number}}</p>',
+        text_content: 'A new work order has been created: {{work_order_number}}'
+      },
+      {
+        template_name: 'work_order_assigned',
+        subject: 'Work Order Assigned: {{work_order_number}}',
+        html_content: '<p>Work order {{work_order_number}} has been assigned to you.</p>',
+        text_content: 'Work order {{work_order_number}} has been assigned to you.'
+      }
+    ]
+  };
+
+  const runClientSideSeeding = async (): Promise<void> => {
+    console.log('🔄 Running client-side seeding (Edge Function fallback mode)...');
+    
+    try {
+      // Step 1: Insert organizations
+      const { data: orgs, error: orgError } = await supabase
+        .from('organizations')
+        .insert(clientSeedData.organizations)
+        .select();
+      
+      if (orgError) throw orgError;
+      console.log('✅ Organizations seeded:', orgs?.length);
+
+      // Step 2: Insert trades
+      const { data: trades, error: tradeError } = await supabase
+        .from('trades')
+        .insert(clientSeedData.trades)
+        .select();
+      
+      if (tradeError) throw tradeError;
+      console.log('✅ Trades seeded:', trades?.length);
+
+      // Step 3: Insert email templates
+      const { data: templates, error: templateError } = await supabase
+        .from('email_templates')
+        .insert(clientSeedData.emailTemplates)
+        .select();
+      
+      if (templateError) throw templateError;
+      console.log('✅ Email templates seeded:', templates?.length);
+
+      console.log('🎉 Client-side seeding completed successfully!');
+      
+      toast({
+        title: "Database Seeded (Fallback Mode)",
+        description: "Test data has been successfully added using client-side seeding",
+        variant: "default",
+      });
+
+    } catch (error) {
+      console.error('❌ Client-side seeding error:', error);
+      throw error;
+    }
+  };
+
   /**
-   * MIGRATION FROM BROWSER SEEDING TO EDGE FUNCTIONS
-   * 
-   * Old Approach (Browser-based):
-   * - Imported seed functions directly into browser
-   * - Subject to RLS policy restrictions
-   * - Limited by browser security and performance
-   * 
-   * New Approach (Edge Function-based):
-   * - Server-side seeding with service role privileges
-   * - Bypasses RLS policies for administrative operations
-   * - Better error handling and atomic transactions
-   * - Enhanced security and performance
-   * 
-   * Expected Response Format:
-   * {
-   *   success: boolean,
-   *   progress: { step: string, completed: number, total: number },
-   *   summary: { total_records: number, users_created: number, ... },
-   *   error?: string
-   * }
+   * Enhanced seeding with automatic fallback to client-side when Edge Function fails
    */
   const runSeedScript = async () => {
     setLoading(true);
     try {
-      console.log('🌱 Starting database seeding via Edge Function...');
+      console.log('🚀 Attempting Edge Function seeding...');
       
-      // NEW APPROACH: Edge Function seeding
+      // Primary method: Edge Function seeding
       const { data, error } = await supabase.functions.invoke('seed-database', {
         body: {
-          admin_key: 'dev-admin-key', // For development
+          admin_key: 'dev-admin-key',
           options: {
             clear_existing: true,
             include_test_data: true
@@ -159,21 +217,27 @@ export const useDevTools = () => {
         }
       });
       
-      // Handle Edge Function response and progress
       if (error) {
-        console.error('❌ Edge Function error:', error);
-        
-        // Enhanced error handling for different error types
-        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
+        // Check for CORS or network errors that indicate Edge Function unavailability
+        const errorMessage = error.message?.toLowerCase() || '';
+        const isCorsOrNetworkError = errorMessage.includes('cors') || 
+                                   errorMessage.includes('failed to fetch') ||
+                                   errorMessage.includes('network') ||
+                                   errorMessage.includes('connection') ||
+                                   errorMessage.includes('functionshttperror');
+
+        if (isCorsOrNetworkError) {
+          console.warn('⚠️ Edge Function unavailable, falling back to client-side seeding...');
+          await runClientSideSeeding();
+          await fetchCounts();
+          return;
+        }
+
+        // Handle other Edge Function errors
+        if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
           toast({
             title: "Authentication Error",
             description: "Admin privileges required. Please check your credentials.",
-            variant: "destructive",
-          });
-        } else if (error.message?.includes('FunctionsHttpError')) {
-          toast({
-            title: "Network Error", 
-            description: "Could not connect to seeding service. Please try again.",
             variant: "destructive",
           });
         } else {
@@ -186,11 +250,6 @@ export const useDevTools = () => {
         throw new Error(`Seeding failed: ${error.message}`);
       }
       
-      // Display real-time progress from Edge Function
-      if (data?.progress) {
-        console.log('📊 Seeding Progress:', data.progress);
-      }
-      
       if (data?.success) {
         console.log('✅ Database seeded successfully via Edge Function');
         console.log('📋 Summary:', data.summary);
@@ -199,27 +258,43 @@ export const useDevTools = () => {
           title: "Success",
           description: `Database seeded successfully! Created ${data.summary?.total_records || 'multiple'} records.`,
         });
+        
+        await fetchCounts();
       } else {
         throw new Error(data?.error || 'Unknown seeding error');
       }
       
-      // Refresh counts after successful seeding
-      setTimeout(async () => {
-        try {
-          await fetchCounts();
-          console.log('✅ Table counts refreshed after seeding');
-        } catch (error) {
-          console.warn('Failed to refresh counts after seeding:', error);
-        }
-      }, 1000);
-      
     } catch (error: any) {
       console.error('❌ Seeding failed:', error);
-      toast({
-        title: "Seeding Failed",
-        description: `Error: ${error.message || 'Edge Function call failed'}. Check console for details.`,
-        variant: "destructive",
-      });
+      
+      // Check if this is a network/CORS error for fallback
+      const errorMessage = error?.message?.toLowerCase() || '';
+      const isCorsOrNetworkError = errorMessage.includes('cors') || 
+                                 errorMessage.includes('failed to fetch') ||
+                                 errorMessage.includes('network') ||
+                                 errorMessage.includes('connection');
+
+      if (isCorsOrNetworkError) {
+        console.warn('⚠️ Edge Function unavailable, falling back to client-side seeding...');
+        try {
+          await runClientSideSeeding();
+          await fetchCounts();
+          return;
+        } catch (fallbackError) {
+          console.error('❌ Client-side seeding also failed:', fallbackError);
+          toast({
+            title: "Seeding Error",
+            description: "Both Edge Function and client-side seeding failed",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Seeding Failed",
+          description: `Error: ${error.message || 'Edge Function call failed'}. Check console for details.`,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
