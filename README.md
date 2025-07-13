@@ -38,6 +38,37 @@ WorkOrderPro uses a PostgreSQL database with 12 core tables, implementing:
 - **Email notification system** with templates and delivery tracking
 - **File attachment support** via Supabase Storage
 - **Analytics capabilities** with materialized views for reporting
+- **Edge Functions** for secure server-side operations and database management
+
+## Edge Functions
+
+The application uses Supabase Edge Functions for secure server-side operations:
+
+### Available Functions
+- **Database Management**: `seed-database`, `clear-test-data`
+- **Email Notifications**: `email-work-order-created`, `email-work-order-assigned`, `email-work-order-completed`, `email-report-submitted`, `email-report-reviewed`, `email-welcome`
+- **Invoice Processing**: `invoice-submitted`, `invoice-status-changed`
+- **Webhooks**: `resend-webhook`
+
+### Quick Deployment
+```bash
+# Deploy all functions
+supabase functions deploy
+
+# Deploy specific function
+supabase functions deploy seed-database
+
+# View logs
+supabase functions logs seed-database --tail
+
+# Set environment variables
+supabase secrets set RESEND_API_KEY=your_key_here
+```
+
+### Documentation
+- **[Edge Functions Deployment Guide](supabase/functions/DEPLOY.md)** - Complete deployment instructions
+- **[Edge Functions Development Guide](supabase/functions/README.md)** - Development and testing guide
+- **[Main Deployment Guide](docs/DEPLOYMENT.md)** - Full application deployment
 
 ### Documentation
 
