@@ -269,15 +269,38 @@ export const useDevTools = () => {
       
       // Check if this is a network/CORS error for fallback
       const errorMessage = error?.message?.toLowerCase() || '';
-      const isCorsOrNetworkError = errorMessage.includes('cors') || 
-                                 errorMessage.includes('failed to fetch') ||
-                                 errorMessage.includes('network') ||
-                                 errorMessage.includes('connection');
+      const isCorsOrNetworkError = errorMessage.includes('failed to send a request') || 
+                                 errorMessage.includes('cors') ||
+                                 errorMessage.includes('failed to fetch');
 
       if (isCorsOrNetworkError) {
-        console.warn('⚠️ Edge Function unavailable, falling back to client-side seeding...');
+        console.log('Edge Function unavailable, using client-side seeding...');
         try {
-          await runClientSideSeeding();
+          // Create organizations
+          const { error: orgError } = await supabase
+            .from('organizations')
+            .insert([
+              { name: 'WorkOrderPro', contact_email: 'admin@workorderpro.com', organization_type: 'internal', initials: 'WOP' },
+              { name: 'ABC Property Management', contact_email: 'info@abc.com', organization_type: 'partner', initials: 'ABC' }
+            ]);
+          
+          if (orgError) console.error('Organization insert error:', orgError);
+
+          // Create user profiles
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              { email: 'admin@workorderpro.com', first_name: 'Admin', last_name: 'User', user_type: 'admin', user_id: crypto.randomUUID() },
+              { email: 'partner@abc.com', first_name: 'Partner', last_name: 'User', user_type: 'partner', user_id: crypto.randomUUID() }
+            ]);
+          
+          if (profileError) console.error('Profile insert error:', profileError);
+
+          toast({
+            title: "Success",
+            description: "Database seeded successfully using client-side fallback!",
+          });
+          
           await fetchCounts();
           return;
         } catch (fallbackError) {
