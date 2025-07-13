@@ -247,7 +247,11 @@ const fetchTradeVolumes = async (): Promise<TradeVolume[]> => {
   }, {} as Record<string, number>);
 
   return Object.entries(tradeCounts)
-    .map(([trade, count]) => ({ trade, count }))
+    .map(([trade, count], index) => ({ 
+      id: `trade-${index}`, 
+      trade, 
+      count 
+    }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5); // Top 5 trades
 };

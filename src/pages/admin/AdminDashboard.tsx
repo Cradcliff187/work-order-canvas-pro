@@ -333,7 +333,7 @@ const AdminDashboard = () => {
                 <BarChart width={300} height={192} data={tradeVolumes} layout="horizontal">
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="trade" width={80} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" key="trade-count-bar" />
                   <ChartTooltip content={<ChartTooltipContent />} />
                 </BarChart>
               </ChartContainer>
