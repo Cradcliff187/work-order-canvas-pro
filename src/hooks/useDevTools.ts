@@ -30,32 +30,28 @@ interface ClearTestDataResponse {
 
 const TEST_EMAILS = [
   'admin@workorderpro.com',
-  'admin2@workorderpro.com',
   'partner1@abc.com',
   'partner2@xyz.com',
   'partner3@premium.com',
-  'plumber@trade.com',
-  'electrician@trade.com',
-  'hvac@trade.com',
-  'carpenter@trade.com',
-  'painter@trade.com',
-  'maintenance@trade.com',
-  'landscaper@trade.com'
+  'plumber@pipesmore.com',
+  'electrician@sparks.com',
+  'hvac@coolair.com',
+  'carpenter@woodworks.com',
+  'maintenance@workorderpro.com',
+  'supervisor@workorderpro.com'
 ];
 
 const testCredentials = [
   { email: 'admin@workorderpro.com', type: 'Admin' },
-  { email: 'admin2@workorderpro.com', type: 'Admin' },
   { email: 'partner1@abc.com', type: 'Partner' },
   { email: 'partner2@xyz.com', type: 'Partner' },
   { email: 'partner3@premium.com', type: 'Partner' },
-  { email: 'plumber@trade.com', type: 'Subcontractor' },
-  { email: 'electrician@trade.com', type: 'Subcontractor' },
-  { email: 'hvac@trade.com', type: 'Subcontractor' },
-  { email: 'carpenter@trade.com', type: 'Subcontractor' },
-  { email: 'painter@trade.com', type: 'Subcontractor' },
-  { email: 'maintenance@trade.com', type: 'Employee' },
-  { email: 'landscaper@trade.com', type: 'Employee' }
+  { email: 'plumber@pipesmore.com', type: 'Subcontractor' },
+  { email: 'electrician@sparks.com', type: 'Subcontractor' },
+  { email: 'hvac@coolair.com', type: 'Subcontractor' },
+  { email: 'carpenter@woodworks.com', type: 'Subcontractor' },
+  { email: 'maintenance@workorderpro.com', type: 'Employee' },
+  { email: 'supervisor@workorderpro.com', type: 'Employee' }
 ];
 
 export const useDevTools = () => {
