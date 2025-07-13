@@ -1411,6 +1411,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      seed_test_data: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       set_manual_completion_block: {
         Args: { work_order_id: string; blocked?: boolean }
         Returns: undefined
