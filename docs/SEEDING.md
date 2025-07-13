@@ -74,20 +74,27 @@ LANGUAGE plpgsql SECURITY DEFINER
 const { data, error } = await supabase.rpc('seed_test_data');
 ```
 
+**New Seeding Approach**:
+- Uses **admin-only seeding** to avoid user_id conflicts
+- Creates business data (organizations, work orders) using existing admin profile
+- No fake user creation to prevent RLS violations
+- Focus on business data for comprehensive testing
+
 **Response Format**:
 ```json
 {
   "success": true,
-  "message": "Test data seeded successfully (admin user only)",
+  "message": "Business test data seeded successfully (admin-only approach)",
   "details": {
     "organizations": 8,
-    "trades": 10,
-    "email_templates": 5,
-    "profiles": 1,
-    "user_organizations": 1,
-    "partner_locations": 10,
-    "work_orders": 16
-  }
+    "partner_locations": 5,
+    "work_orders": 4,
+    "employee_reports": 2,
+    "receipts": 2,
+    "admin_profile_used": "uuid-of-admin-profile",
+    "approach": "single_admin_user"
+  },
+  "testing_note": "All test data uses your admin account. Test different user perspectives through impersonation or by creating real users."
 }
 ```
 

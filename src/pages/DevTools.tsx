@@ -10,8 +10,6 @@ import {
   Database, 
   Trash2, 
   Users, 
-  LogIn, 
-  Copy,
   FileText,
   Settings,
   AlertTriangle,
@@ -57,9 +55,7 @@ const DevTools = () => {
     counts,
     fetchCounts,
     runSeedScript,
-    clearTestData,
-    quickLogin,
-    testCredentials
+    clearTestData
   } = useDevTools();
 
   // Check if we're in development
@@ -229,13 +225,6 @@ const DevTools = () => {
     },
   });
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied",
-      description: "Copied to clipboard",
-    });
-  };
 
   if (!isDevelopment) {
     return (
@@ -303,14 +292,10 @@ const DevTools = () => {
       </div>
 
       <Tabs defaultValue="operations" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="operations" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Operations
-          </TabsTrigger>
-          <TabsTrigger value="credentials" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Credentials
           </TabsTrigger>
           <TabsTrigger value="impersonation" className="flex items-center gap-2">
             <UserCheck className="h-4 w-4" />
@@ -327,10 +312,15 @@ const DevTools = () => {
                 Database Operations
               </CardTitle>
               <CardDescription>
-                Manage test data and database seeding operations
+                Seed business data (organizations, work orders) using your admin account. All test data will be created under your current admin profile.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Testing Approach:</strong> All seeded data uses your admin account. Test different user perspectives using impersonation or create real users as needed.
+                </p>
+              </div>
               <div className="flex gap-4">
                 <Button 
                   onClick={runSeedScript} 
@@ -338,7 +328,7 @@ const DevTools = () => {
                   className="flex items-center gap-2"
                 >
                   <Database className="h-4 w-4" />
-                  {loading ? 'Seeding...' : 'Seed Database'}
+                  {loading ? 'Seeding...' : 'Seed Business Data'}
                 </Button>
                 
                 <AlertDialog>
@@ -416,130 +406,6 @@ const DevTools = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Credentials Tab */}
-        <TabsContent value="credentials" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Test User Credentials
-              </CardTitle>
-              <CardDescription>
-                Quick access to test user accounts (password: Test123!)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {/* Admin Users */}
-                <div>
-                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <Badge variant="secondary">Admin</Badge>
-                  </h4>
-                  <div className="grid gap-2">
-                    {testCredentials.filter(cred => cred.email.includes('admin')).map((cred) => (
-                      <div key={cred.email} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <div className="font-mono text-sm">{cred.email}</div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(cred.email)}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => quickLogin(cred.email)}
-                            className="flex items-center gap-1"
-                          >
-                            <LogIn className="h-3 w-3" />
-                            Login
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t pt-4"></div>
-
-                {/* Partner Users */}
-                <div>
-                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <Badge variant="secondary">Partner</Badge>
-                  </h4>
-                  <div className="grid gap-2">
-                    {testCredentials.filter(cred => cred.email.includes('partner')).map((cred) => (
-                      <div key={cred.email} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <div className="font-mono text-sm">{cred.email}</div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(cred.email)}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => quickLogin(cred.email)}
-                            className="flex items-center gap-1"
-                          >
-                            <LogIn className="h-3 w-3" />
-                            Login
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t pt-4"></div>
-
-                {/* Subcontractor Users */}
-                <div>
-                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <Badge variant="secondary">Subcontractor</Badge>
-                  </h4>
-                  <div className="grid gap-2">
-                    {testCredentials.filter(cred => 
-                      !cred.email.includes('admin') && !cred.email.includes('partner')
-                    ).map((cred) => (
-                      <div key={cred.email} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <div className="font-mono text-sm">{cred.email}</div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(cred.email)}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => quickLogin(cred.email)}
-                            className="flex items-center gap-1"
-                          >
-                            <LogIn className="h-3 w-3" />
-                            Login
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
 
         {/* Impersonation Tab */}
         <TabsContent value="impersonation" className="space-y-6">
