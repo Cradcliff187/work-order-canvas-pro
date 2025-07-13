@@ -266,6 +266,134 @@ erDiagram
     }
 ```
 
+## Seed Data Structure
+
+### Test Data Overview
+
+The WorkOrderPro database includes comprehensive seed data for testing and development purposes. This data represents realistic business scenarios and covers all user types and workflows.
+
+#### Test Organizations (8 total)
+
+**Internal Organization (1):**
+- **WorkOrderPro Internal** - The main contractor company housing admin users and employees
+
+**Partner Organizations (3):**
+- **ABC Property Management** - Multi-location property manager with 4 locations
+- **XYZ Commercial Properties** - Commercial property specialist with 3 locations
+- **Premium Facilities Group** - High-end facilities manager with 3 locations
+
+**Subcontractor Organizations (4):**
+- **Pipes & More Plumbing** - Plumbing specialists (2 technicians)
+- **Sparks Electric** - Licensed electrical contractor (1 electrician)
+- **Cool Air HVAC** - HVAC specialists (2 technicians)
+- **Fix-It Maintenance** - General maintenance contractor (1 technician)
+
+#### Test Users (14 total)
+
+**Admin Users (2):**
+- `admin@workorderpro.com` - Primary system administrator
+- `employee@workorderpro.com` - Employee administration
+
+**Internal Employees (3):**
+- `senior@workorderpro.com` - Senior technician ($75/hr cost, $150/hr billable)
+- `midlevel@workorderpro.com` - Mid-level technician ($50/hr cost, $100/hr billable)
+- `junior@workorderpro.com` - Junior technician ($35/hr cost, $70/hr billable)
+
+**Partner Users (3):**
+- `partner1@abc.com` - ABC Property Management representative
+- `partner2@xyz.com` - XYZ Commercial Properties representative
+- `partner3@premium.com` - Premium Facilities Group representative
+
+**Subcontractor Users (6):**
+- `plumber1@trade.com` - Senior plumber (Pipes & More)
+- `plumber2@trade.com` - Junior plumber (Pipes & More)
+- `electrician@trade.com` - Licensed electrician (Sparks Electric)
+- `hvac1@trade.com` - Senior HVAC technician (Cool Air)
+- `hvac2@trade.com` - HVAC support technician (Cool Air)
+- `maintenance@trade.com` - General maintenance technician (Fix-It)
+
+All test users use the password: **Test123!**
+
+#### Partner Locations (10 total)
+
+**ABC Property Management (4 locations):**
+- Downtown Office (504) - Primary business location
+- Uptown Retail (502) - Customer-facing retail space
+- Westside Apartments (503) - Residential complex
+- Southend Mall (501) - *Inactive location for testing*
+
+**XYZ Commercial Properties (3 locations):**
+- Tech Center (TC-101) - Technology-focused commercial space
+- Business Park (BP-201) - Multi-tenant business park
+- Corporate Plaza (CP-301) - Executive office space
+
+**Premium Facilities Group (3 locations):**
+- Executive Tower (ET-001) - High-end office building
+- Luxury Condos (LC-002) - Luxury residential property
+- Premium Office Complex (OC-003) - Premium office space
+
+#### Trade Categories (10 total)
+
+1. **Plumbing** - Pipes & More Plumbing specialists
+2. **Electrical** - Sparks Electric specialists
+3. **HVAC** - Cool Air HVAC specialists
+4. **Carpentry** - Internal employees or contractors
+5. **Painting** - Internal employees or contractors
+6. **General Maintenance** - Fix-It Maintenance or internal
+7. **Landscaping** - External contractors
+8. **Roofing** - Specialized contractors
+9. **Flooring** - Specialized contractors
+10. **Appliance Repair** - Specialized contractors
+
+#### User Journey Test Scenarios
+
+**Partner Journey:**
+- Multi-location work order submission
+- Location-specific work order numbering (ABC-504-001, XYZ-TC101-001, etc.)
+- Work order status tracking and notifications
+- Completion notifications and feedback
+
+**Subcontractor Journey:**
+- Work order assignment notifications
+- Multi-technician assignments (lead/support roles)
+- Work report submission with photos and invoicing
+- Report review and feedback processes
+
+**Employee Journey:**
+- Internal work assignments with time tracking
+- Multi-tier hourly rate structure testing
+- Expense receipt management and allocation
+- Lead and support role assignments
+
+**Admin Journey:**
+- Work order assignment and management
+- Multi-assignee work order scenarios
+- Report review and approval workflows
+- Invoice processing and approval
+- System administration and analytics
+
+#### Financial Test Scenarios
+
+**Employee Rate Structure:**
+- Senior: $75/hr cost, $150/hr billable (2x markup)
+- Mid-level: $50/hr cost, $100/hr billable (2x markup)
+- Junior: $35/hr cost, $70/hr billable (2x markup)
+
+**Invoice Testing:**
+- Draft invoices (editable by subcontractors)
+- Submitted invoices (pending review)
+- Approved invoices (ready for payment)
+- Paid invoices (completed transactions)
+- Rejected invoices (requiring resubmission)
+
+**Multi-work-order Invoicing:**
+- Single work order invoices
+- Multi work order invoices
+- Partial work order billing
+- Split billing scenarios across multiple work orders
+
+This comprehensive seed data ensures thorough testing of all business workflows, user permissions, financial processes, and system integrations.
+
 ## Table Definitions
 
 ### 1. organizations
