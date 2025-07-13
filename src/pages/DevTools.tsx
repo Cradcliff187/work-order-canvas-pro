@@ -57,19 +57,11 @@ const DevTools = () => {
     loading,
     setupLoading,
     refreshLoading,
-    authLoading,
-    sqlLoading,
     counts,
     setupResult,
-    authResult,
-    sqlResult,
     fetchCounts,
     clearTestData,
     setupCompleteEnvironment,
-    setupSqlData,
-    createAuthUsers,
-    fixUserOrganizations,
-    verifyTestEnvironment,
     quickLogin,
     forceRefreshUsers,
   } = useDevTools();
@@ -336,7 +328,6 @@ const DevTools = () => {
         </TabsList>
         
         <TabsContent value="setup" className="space-y-6">
-          {/* STREAMLINED SETUP */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -344,117 +335,75 @@ const DevTools = () => {
                 Test Environment Setup
               </CardTitle>
               <CardDescription>
-                Create a complete test environment with one click
+                Create a complete test environment with auth users, organizations, and work orders
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Current Data Display */}
               {counts && (
-                <div className="text-sm text-muted-foreground grid grid-cols-4 gap-2 p-3 bg-muted rounded-lg">
-                  <div>Organizations: {counts.organizations}</div>
-                  <div>Work Orders: {counts.work_orders}</div>
-                  <div>Users: {counts.profiles}</div>
-                  <div>User-Org Links: {counts.user_organizations}</div>
+                <div className="text-sm text-muted-foreground grid grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
+                  <div>Organizations: <span className="font-medium text-foreground">{counts.organizations}</span></div>
+                  <div>Work Orders: <span className="font-medium text-foreground">{counts.work_orders}</span></div>
+                  <div>Users: <span className="font-medium text-foreground">{counts.profiles}</span></div>
+                  <div>User-Org Links: <span className="font-medium text-foreground">{counts.user_organizations}</span></div>
                 </div>
               )}
               
-              {/* ONE-CLICK SETUP */}
+              {/* Single Setup Action */}
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    onClick={setupSqlData}
-                    disabled={sqlLoading}
-                    size="lg"
-                    className="h-12 text-base"
-                  >
-                    {sqlLoading ? <LoadingSpinner /> : <Database className="h-5 w-5 mr-2" />}
-                    Setup Test Environment
-                  </Button>
-                  
-                  <Button
-                    onClick={createAuthUsers}
-                    disabled={authLoading}
-                    variant="outline"
-                    size="lg"
-                    className="h-12 text-base"
-                  >
-                    {authLoading ? <LoadingSpinner /> : <Users className="h-5 w-5 mr-2" />}
-                    Create Auth Users
-                  </Button>
-                </div>
+                <Button
+                  onClick={setupCompleteEnvironment}
+                  disabled={setupLoading}
+                  size="lg"
+                  className="w-full h-12 text-base bg-[#0485EA] hover:bg-[#0485EA]/90"
+                >
+                  {setupLoading ? <LoadingSpinner /> : <Database className="h-5 w-5 mr-2" />}
+                  Setup Test Environment
+                </Button>
                 
-                {(sqlResult || authResult) && (
-                  <div className="space-y-2">
-                    {sqlResult && (
-                      <Alert className={sqlResult.success ? "border-green-500" : "border-red-500"}>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{sqlResult.success ? "Setup Complete!" : "Setup Failed"}</AlertTitle>
-                        <AlertDescription>{sqlResult.message}</AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    {authResult && (
-                      <Alert className={authResult.success ? "border-green-500" : "border-red-500"}>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{authResult.success ? "Auth Users Created!" : "Auth Failed"}</AlertTitle>
-                        <AlertDescription>{authResult.message}</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
+                {setupResult && (
+                  <Alert className={setupResult.success ? "border-green-500" : "border-red-500"}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{setupResult.message}</AlertDescription>
+                  </Alert>
                 )}
               </div>
               
-              {/* UTILITY ACTIONS */}
-              <div className="border-t pt-4 space-y-3">
-                <h4 className="font-medium text-sm">Utility Actions</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    onClick={verifyTestEnvironment}
-                    disabled={loading}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    {loading ? <LoadingSpinner /> : <Search className="h-4 w-4 mr-1" />}
-                    Verify Setup
-                  </Button>
-                  <Button
-                    onClick={fixUserOrganizations}
-                    disabled={loading}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    {loading ? <LoadingSpinner /> : <Settings className="h-4 w-4 mr-1" />}
-                    Fix Issues
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        disabled={loading}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Clear All
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Clear All Test Data?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete all test data from the database. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={clearTestData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Delete All Data
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+              {/* Clear All Data Action */}
+              <div className="border-t pt-4 flex justify-between items-center">
+                <div className="space-y-1">
+                  <h4 className="font-medium text-sm">Reset Environment</h4>
+                  <p className="text-xs text-muted-foreground">Clear all test data to start fresh</p>
                 </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      disabled={loading}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Clear All
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear All Test Data?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete all test data from the database. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={clearTestData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Delete All Data
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
               
-              {/* REFRESH DATA */}
+              {/* Refresh Data */}
               <div className="flex justify-center">
                 <Button
                   onClick={fetchCounts}
@@ -472,8 +421,8 @@ const DevTools = () => {
 
         <TabsContent value="impersonation" className="space-y-6">
           <div className="space-y-4">
-            {/* Test User Credentials - Combined from both legacy and new setup */}
-            {((setupResult?.success && setupResult.data?.userCredentials) || (authResult?.success && authResult.data?.credentials)) && (
+            {/* Test User Credentials */}
+            {setupResult?.success && setupResult.data?.userCredentials && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Test User Credentials</CardTitle>
@@ -483,12 +432,7 @@ const DevTools = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-3">
-                    {/* Show credentials from auth result if available, otherwise legacy */}
-                    {(authResult?.data?.credentials || setupResult?.data?.userCredentials || [
-                      { email: 'partner1@workorderpro.test', password: 'TestPass123!', type: 'partner' },
-                      { email: 'sub1@workorderpro.test', password: 'TestPass123!', type: 'subcontractor' },
-                      { email: 'employee1@workorderpro.test', password: 'TestPass123!', type: 'employee' }
-                    ]).map((cred: any) => (
+                    {setupResult.data.userCredentials.map((cred: any) => (
                       <div key={cred.email} className="p-4 border rounded-lg space-y-2">
                         <div className="font-medium">{cred.type} User</div>
                         <div className="text-sm text-muted-foreground">
@@ -528,7 +472,7 @@ const DevTools = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {!(setupResult?.success || sqlResult?.success || authResult?.success) ? (
+                {!setupResult?.success ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Setup Test Environment First</AlertTitle>

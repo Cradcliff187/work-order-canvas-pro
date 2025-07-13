@@ -61,12 +61,8 @@ export const useDevTools = () => {
   const [loading, setLoading] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [sqlLoading, setSqlLoading] = useState(false);
   const [counts, setCounts] = useState<TableCounts | null>(null);
   const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
-  const [authResult, setAuthResult] = useState<any>(null);
-  const [sqlResult, setSqlResult] = useState<any>(null);
   const { toast } = useToast();
 
   const fetchCounts = async () => {
@@ -341,213 +337,15 @@ export const useDevTools = () => {
     }
   };
 
-  const setupSqlData = async () => {
-    try {
-      setSqlLoading(true);
-      setSqlResult(null);
-      
-      console.log('🗃️ Running SQL data setup...');
-      
-      const { data, error } = await supabase.rpc('complete_test_environment_setup');
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      setSqlResult(data);
-      
-      if ((data as any)?.success) {
-        toast({
-          title: "Setup Complete!",
-          description: `Successfully created test environment`,
-          variant: "default",
-        });
-        
-        // Refresh counts
-        await fetchCounts();
-      } else {
-        toast({
-          title: "Setup Failed", 
-          description: (data as any)?.error || 'Unknown error occurred',
-          variant: "destructive",
-        });
-      }
-      
-      return data;
-    } catch (error: any) {
-      console.error('SQL setup error:', error);
-      const errorResult = {
-        success: false,
-        message: 'SQL setup failed',
-        error: error.message
-      };
-      setSqlResult(errorResult);
-      toast({
-        title: "Setup Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      return errorResult;
-    } finally {
-      setSqlLoading(false);
-    }
-  };
-
-  const createAuthUsers = async () => {
-    try {
-      setAuthLoading(true);
-      setAuthResult(null);
-      
-      console.log('🔐 Creating auth users...');
-      
-      const { data, error } = await supabase.functions.invoke('create-test-auth-users', {
-        body: {}
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      setAuthResult(data);
-      
-      if (data?.success) {
-        toast({
-          title: "Auth Users Created!",
-          description: `Successfully created ${data.data?.success_count || 0} auth users`,
-          variant: "default",
-        });
-        
-        // Refresh counts after successful auth creation
-        await fetchCounts();
-      } else {
-        toast({
-          title: "Auth Creation Failed", 
-          description: data?.error || 'Unknown error occurred',
-          variant: "destructive",
-        });
-      }
-      
-      return data;
-    } catch (error: any) {
-      console.error('Auth creation error:', error);
-      const errorResult = {
-        success: false,
-        message: 'Auth user creation failed',
-        error: error.message
-      };
-      setAuthResult(errorResult);
-      toast({
-        title: "Auth Creation Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      return errorResult;
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const fixUserOrganizations = async () => {
-    try {
-      setLoading(true);
-      
-      console.log('🔧 Fixing user-organization relationships...');
-      
-      const { data, error } = await supabase.rpc('fix_existing_test_user_organizations');
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if ((data as any)?.success) {
-        toast({
-          title: "User Organizations Fixed!",
-          description: `Fixed ${(data as any).user_organizations_fixed} user-organization relationships`,
-          variant: "default",
-        });
-        
-        // Refresh counts
-        await fetchCounts();
-      } else {
-        toast({
-          title: "Fix Failed", 
-          description: (data as any)?.error || 'Unknown error occurred',
-          variant: "destructive",
-        });
-      }
-      
-      return data;
-    } catch (error: any) {
-      console.error('Fix user organizations error:', error);
-      toast({
-        title: "Fix Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      return {
-        success: false,
-        error: error.message
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyTestEnvironment = async () => {
-    try {
-      setLoading(true);
-      
-      console.log('🔍 Verifying test environment status...');
-      
-      const { data, error } = await supabase.rpc('verify_test_environment_status');
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if ((data as any)?.success) {
-        const status = (data as any).environment_status;
-        toast({
-          title: "Environment Verified",
-          description: `${status.test_users_count} users, ${status.test_organizations_count} orgs, ${status.user_organization_relationships} relationships`,
-          variant: status.ready_for_testing ? "default" : "destructive",
-        });
-      }
-      
-      return data;
-    } catch (error: any) {
-      console.error('Verify environment error:', error);
-      toast({
-        title: "Verification Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      return {
-        success: false,
-        error: error.message
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return {
     loading,
     setupLoading,
     refreshLoading,
-    authLoading,
-    sqlLoading,
     counts,
     setupResult,
-    authResult,
-    sqlResult,
     fetchCounts,
     clearTestData,
     setupCompleteEnvironment,
-    setupSqlData,
-    createAuthUsers,
-    fixUserOrganizations,
-    verifyTestEnvironment,
     quickLogin,
     forceRefreshUsers,
   };
