@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import {
   Sidebar,
   SidebarContent,
@@ -161,6 +162,9 @@ interface PartnerLayoutProps {
 }
 
 const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
+  const { data: userOrganizations } = useUserOrganizations();
+  const primaryOrganization = userOrganizations?.[0];
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -168,9 +172,19 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
         
         <div className="flex-1 flex flex-col">
           <header className="h-14 flex items-center justify-between border-b border-border bg-background px-4">
-            <SidebarTrigger className="lg:hidden">
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="lg:hidden">
+                <Menu className="h-5 w-5" />
+              </SidebarTrigger>
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-semibold">Partner Portal</span>
+                {primaryOrganization && (
+                  <span className="text-sm font-medium text-primary">
+                    {primaryOrganization.name}
+                  </span>
+                )}
+              </div>
+            </div>
           </header>
 
           <main className="flex-1 overflow-auto">
