@@ -211,41 +211,43 @@ async function seedOrganizations(): Promise<number> {
 
 /**
  * Create trades in database
+ * Note: Trades are reference data that may already exist, so we use upsert
  */
 async function seedTrades(): Promise<number> {
-  console.log('🔧 Creating trades...');
+  console.log('🔧 Creating/updating trades...');
   
   const { data, error } = await supabaseAdmin
     .from('trades')
-    .insert(trades)
+    .upsert(trades, { onConflict: 'name' })
     .select();
   
   if (error) {
-    console.error('❌ Failed to create trades:', error);
-    throw new Error(`Failed to create trades: ${error.message}`);
+    console.error('❌ Failed to create/update trades:', error);
+    throw new Error(`Failed to create/update trades: ${error.message}`);
   }
   
-  console.log(`✅ Created ${data?.length || 0} trades`);
+  console.log(`✅ Created/updated ${data?.length || 0} trades`);
   return data?.length || 0;
 }
 
 /**
  * Create email templates in database
+ * Note: Email templates are reference data that may already exist, so we use upsert
  */
 async function seedEmailTemplates(): Promise<number> {
-  console.log('📧 Creating email templates...');
+  console.log('📧 Creating/updating email templates...');
   
   const { data, error } = await supabaseAdmin
     .from('email_templates')
-    .insert(emailTemplates)
+    .upsert(emailTemplates, { onConflict: 'template_name' })
     .select();
   
   if (error) {
-    console.error('❌ Failed to create email templates:', error);
-    throw new Error(`Failed to create email templates: ${error.message}`);
+    console.error('❌ Failed to create/update email templates:', error);
+    throw new Error(`Failed to create/update email templates: ${error.message}`);
   }
   
-  console.log(`✅ Created ${data?.length || 0} email templates`);
+  console.log(`✅ Created/updated ${data?.length || 0} email templates`);
   return data?.length || 0;
 }
 
