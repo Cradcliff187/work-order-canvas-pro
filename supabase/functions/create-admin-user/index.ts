@@ -114,22 +114,26 @@ serve(async (req) => {
     // Send welcome email if requested
     if (userData.send_welcome_email) {
       try {
-        const { error: emailError } = await supabaseAdmin.functions.invoke('email-welcome', {
-          body: {
-            user: {
-              email: userData.email,
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-            },
+        const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/email-welcome`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: newProfile.id,
+            email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            user_type: userData.user_type,
             temporary_password: temporaryPassword,
-          }
+          }),
         });
 
-        if (emailError) {
-          console.error('Welcome email failed:', emailError);
-          // Continue anyway, user creation succeeded
+        if (emailResponse.ok) {
+          console.log('Welcome email sent successfully');
         } else {
-          console.log('Welcome email sent');
+          console.error('Welcome email failed:', await emailResponse.text());
         }
       } catch (emailError) {
         console.error('Welcome email error:', emailError);
