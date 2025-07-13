@@ -113,88 +113,30 @@ export function useUserMutations() {
   const createUser = useMutation({
     mutationFn: async (userData: CreateUserData) => {
       // Generate a secure temporary password
-      const tempPassword = generateSecurePassword();
+      const temporaryPassword = generateSecurePassword();
       
-      // Create the user via Supabase Auth Admin API
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: tempPassword,
-        email_confirm: true, // Auto-confirm email for admin-created users
-        user_metadata: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          user_type: userData.user_type,
-          phone: userData.phone,
-          company_name: userData.company_name,
+      // Call the Edge Function to create the user
+      const { data, error } = await supabase.functions.invoke('create-admin-user', {
+        body: {
+          userData,
+          temporaryPassword,
         }
       });
 
-      if (authError) {
-        throw new Error(`Failed to create user account: ${authError.message}`);
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to create user');
       }
 
-      if (!authUser.user) {
-        throw new Error('User creation failed - no user returned');
+      if (!data.success) {
+        console.error('User creation failed:', data.error);
+        throw new Error(data.error || 'Failed to create user');
       }
 
-      // The profile will be created automatically by the database trigger
-      // Wait a moment for the trigger to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Fetch the created profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', authUser.user.id)
-        .single();
-
-      if (profileError) {
-        // If profile creation failed, clean up the auth user
-        await supabase.auth.admin.deleteUser(authUser.user.id);
-        throw new Error(`Failed to create user profile: ${profileError.message}`);
-      }
-
-      // Create organization relationships if provided
-      if (userData.organization_ids && userData.organization_ids.length > 0) {
-        const orgRelationships = userData.organization_ids.map(orgId => ({
-          user_id: profile.id,
-          organization_id: orgId,
-        }));
-
-        const { error: orgError } = await supabase
-          .from('user_organizations')
-          .insert(orgRelationships);
-
-        if (orgError) {
-          // Rollback: delete the auth user and profile
-          await supabase.auth.admin.deleteUser(authUser.user.id);
-          throw new Error(`Failed to assign organizations: ${orgError.message}`);
-        }
-      }
-
-      // Send welcome email if requested
-      if (userData.send_welcome_email) {
-        try {
-          await supabase.functions.invoke('email-welcome', {
-            body: {
-              user_id: authUser.user.id,
-              email: userData.email,
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-              user_type: userData.user_type,
-              temporary_password: tempPassword
-            }
-          });
-        } catch (emailError) {
-          console.error('Failed to send welcome email:', emailError);
-          // Don't fail the user creation if email fails
-        }
-      }
-
-      return { 
-        profile, 
-        authUser: authUser.user,
-        temporaryPassword: tempPassword 
+      return {
+        profile: data.user,
+        authUser: null, // Not needed from Edge Function
+        temporaryPassword: data.credentials?.password || temporaryPassword,
       };
     },
     onSuccess: () => {
