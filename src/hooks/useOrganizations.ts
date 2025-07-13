@@ -59,7 +59,7 @@ export function useOrganizations() {
         .select(`
           *,
           user_organizations(count),
-          work_orders(
+          work_orders!work_orders_organization_id_fkey(
             id,
             status
           )
