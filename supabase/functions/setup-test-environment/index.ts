@@ -12,14 +12,14 @@ interface TestUser {
 
 const testUsers: TestUser[] = [
   {
-    email: 'test-admin@workorderpro.dev',
+    email: 'test-admin@workorderpro.test',
     password: 'TestPass123!',
     firstName: 'Test',
     lastName: 'Admin',
     userType: 'admin'
   },
   {
-    email: 'test-partner@workorderpro.dev', 
+    email: 'test-partner@workorderpro.test', 
     password: 'TestPass123!',
     firstName: 'Test',
     lastName: 'Partner',
@@ -27,7 +27,7 @@ const testUsers: TestUser[] = [
     companyName: 'Test Property Management'
   },
   {
-    email: 'test-subcontractor@workorderpro.dev',
+    email: 'test-subcontractor@workorderpro.test',
     password: 'TestPass123!',
     firstName: 'Test', 
     lastName: 'Subcontractor',
@@ -35,7 +35,7 @@ const testUsers: TestUser[] = [
     companyName: 'Test Plumbing Services'
   },
   {
-    email: 'test-employee@workorderpro.dev',
+    email: 'test-employee@workorderpro.test',
     password: 'TestPass123!',
     firstName: 'Test',
     lastName: 'Employee', 
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     const organizations = [
       {
         name: 'Test Property Management',
-        contact_email: 'contact@testproperty.dev',
+        contact_email: 'contact@testproperty.test',
         contact_phone: '555-0100',
         organization_type: 'partner',
         initials: 'TPM',
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       },
       {
         name: 'Test Plumbing Services', 
-        contact_email: 'info@testplumbing.dev',
+        contact_email: 'info@testplumbing.test',
         contact_phone: '555-0200',
         organization_type: 'subcontractor',
         initials: 'TPS',
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       },
       {
         name: 'Internal Test Organization',
-        contact_email: 'internal@workorderpro.dev',
+        contact_email: 'internal@workorderpro.test',
         contact_phone: '555-0300', 
         organization_type: 'internal',
         initials: 'ITO',
@@ -138,53 +138,133 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Ensured ${tradesData.length} trades exist`)
 
-    // Step 4: Create test users with auth accounts
+    // Step 4: Create test users with auth accounts (ROCK-SOLID VERSION)
     console.log('👥 Creating test users...')
     const createdProfiles = []
+    const userCreationResults = []
 
-    for (const user of testUsers) {
-      console.log(`Creating user: ${user.email}`)
+    for (let i = 0; i < testUsers.length; i++) {
+      const user = testUsers[i]
+      console.log(`[${i + 1}/${testUsers.length}] Creating user: ${user.email}`)
       
-      // Create auth user
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: user.email,
-        password: user.password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: user.firstName,
-          last_name: user.lastName,
-          user_type: user.userType,
-          company_name: user.companyName
+      try {
+        // Check if user already exists first
+        const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
+        const userExists = existingUser.users.some(u => u.email === user.email)
+        
+        let authData
+        if (userExists) {
+          console.log(`⚠️ User ${user.email} already exists, skipping auth creation`)
+          authData = { user: existingUser.users.find(u => u.email === user.email) }
+        } else {
+          // Create auth user
+          const authResult = await supabaseAdmin.auth.admin.createUser({
+            email: user.email,
+            password: user.password,
+            email_confirm: true,
+            user_metadata: {
+              first_name: user.firstName,
+              last_name: user.lastName,
+              user_type: user.userType,
+              company_name: user.companyName
+            }
+          })
+
+          if (authResult.error) {
+            console.error(`❌ Auth creation failed for ${user.email}:`, authResult.error)
+            userCreationResults.push({ 
+              email: user.email, 
+              success: false, 
+              step: 'auth', 
+              error: authResult.error.message 
+            })
+            continue
+          }
+          authData = authResult.data
         }
-      })
 
-      if (authError) {
-        console.error(`❌ Failed to create auth user ${user.email}:`, authError)
-        throw new Error(`Auth user creation failed for ${user.email}: ${authError.message}`)
-      }
+        if (!authData.user) {
+          console.error(`❌ No auth user data for ${user.email}`)
+          userCreationResults.push({ 
+            email: user.email, 
+            success: false, 
+            step: 'auth', 
+            error: 'No user data returned' 
+          })
+          continue
+        }
 
-      // Create profile
-      const { data: profileData, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          email: user.email,
-          first_name: user.firstName,
-          last_name: user.lastName,
-          user_type: user.userType,
-          company_name: user.companyName,
-          is_employee: user.userType === 'employee'
+        // Check if profile already exists
+        const { data: existingProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('user_id', authData.user.id)
+          .maybeSingle()
+
+        let profileData
+        if (existingProfile) {
+          console.log(`⚠️ Profile for ${user.email} already exists, using existing`)
+          profileData = existingProfile
+        } else {
+          // Create profile
+          const profileResult = await supabaseAdmin
+            .from('profiles')
+            .insert({
+              user_id: authData.user.id,
+              email: user.email,
+              first_name: user.firstName,
+              last_name: user.lastName,
+              user_type: user.userType,
+              company_name: user.companyName,
+              is_employee: user.userType === 'employee'
+            })
+            .select()
+            .single()
+
+          if (profileResult.error) {
+            console.error(`❌ Profile creation failed for ${user.email}:`, profileResult.error)
+            userCreationResults.push({ 
+              email: user.email, 
+              success: false, 
+              step: 'profile', 
+              error: profileResult.error.message 
+            })
+            continue
+          }
+          profileData = profileResult.data
+        }
+
+        createdProfiles.push(profileData)
+        userCreationResults.push({ 
+          email: user.email, 
+          success: true, 
+          step: 'complete', 
+          profile_id: profileData.id 
         })
-        .select()
-        .single()
+        console.log(`✅ [${i + 1}/${testUsers.length}] Created user: ${user.email}`)
 
-      if (profileError) {
-        console.error(`❌ Failed to create profile for ${user.email}:`, profileError)
-        throw new Error(`Profile creation failed for ${user.email}: ${profileError.message}`)
+      } catch (error) {
+        console.error(`❌ Unexpected error creating user ${user.email}:`, error)
+        userCreationResults.push({ 
+          email: user.email, 
+          success: false, 
+          step: 'unexpected', 
+          error: error.message 
+        })
       }
+    }
 
-      createdProfiles.push(profileData)
-      console.log(`✅ Created user: ${user.email}`)
+    // Report user creation results
+    const successfulUsers = userCreationResults.filter(r => r.success).length
+    const failedUsers = userCreationResults.filter(r => !r.success)
+    
+    console.log(`👥 User creation summary: ${successfulUsers}/${testUsers.length} successful`)
+    if (failedUsers.length > 0) {
+      console.log('❌ Failed user creations:', failedUsers)
+    }
+
+    if (createdProfiles.length === 0) {
+      throw new Error('No users were created successfully. Cannot continue setup.')
     }
 
     // Step 5: Create user-organization relationships
@@ -242,7 +322,7 @@ Deno.serve(async (req) => {
         state: 'TX',
         zip_code: '78701',
         contact_name: 'Test Manager',
-        contact_email: 'manager@testproperty.dev'
+        contact_email: 'manager@testproperty.test'
       },
       {
         organization_id: partnerOrg.id,
@@ -253,7 +333,7 @@ Deno.serve(async (req) => {
         state: 'TX',
         zip_code: '78702',
         contact_name: 'Test Supervisor',
-        contact_email: 'supervisor@testproperty.dev'
+        contact_email: 'supervisor@testproperty.test'
       }
     ]
 
@@ -392,10 +472,12 @@ Deno.serve(async (req) => {
       console.log('✅ Created sample work order report')
     }
 
-    // Final verification
+    // Final verification and detailed reporting
     console.log('🔍 Verifying test environment...')
+    
     const verification = {
       users: createdProfiles.length,
+      userCreationResults,
       organizations: orgsData.length,
       workOrders: workOrdersData.length,
       assignments: assignments.length,
@@ -403,15 +485,22 @@ Deno.serve(async (req) => {
         email: u.email,
         password: u.password,
         type: u.userType
-      }))
+      })),
+      testUsersExpected: testUsers.length,
+      testUsersCreated: successfulUsers,
+      success: successfulUsers === testUsers.length
     }
 
-    console.log('🎉 Test environment setup completed successfully!')
+    const message = successfulUsers === testUsers.length 
+      ? '🎉 Complete test environment setup successful - ALL USERS CREATED!'
+      : `⚠️ Partial success: ${successfulUsers}/${testUsers.length} users created`
+
+    console.log(message)
     
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Complete test environment setup successful',
+        message,
         data: verification
       }),
       {
