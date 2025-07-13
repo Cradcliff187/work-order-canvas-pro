@@ -385,34 +385,61 @@ export const seedDatabase = async () => {
     // 5. Create partner locations
     console.log('🏢 Creating partner locations...');
     const partnerLocations = [
+      // ABC Property Management - 4 locations
       {
         organization_id: orgMap.get('ABC Property Management'),
-        location_number: '001',
-        location_name: 'ABC Downtown Mall',
-        street_address: '100 Mall Drive',
+        location_number: '504',
+        location_name: 'Downtown Office',
+        street_address: '504 Main Street',
         city: 'New York',
         state: 'NY',
         zip_code: '10001',
-        contact_name: 'Mall Manager',
+        contact_name: 'Office Manager',
         contact_email: 'downtown@abc.com',
-        contact_phone: '(555) 111-0001'
+        contact_phone: '(555) 111-0504'
       },
       {
         organization_id: orgMap.get('ABC Property Management'),
-        location_number: '002',
-        location_name: 'ABC Office Plaza',
-        street_address: '200 Business Center',
-        city: 'New York',
+        location_number: '605',
+        location_name: 'Warehouse',
+        street_address: '605 Industrial Way',
+        city: 'Brooklyn',
         state: 'NY',
-        zip_code: '10002',
-        contact_name: 'Plaza Manager',
-        contact_email: 'plaza@abc.com',
-        contact_phone: '(555) 111-0002'
+        zip_code: '11201',
+        contact_name: 'Warehouse Supervisor',
+        contact_email: 'warehouse@abc.com',
+        contact_phone: '(555) 111-0605'
       },
+      {
+        organization_id: orgMap.get('ABC Property Management'),
+        location_number: '708',
+        location_name: 'Retail Center',
+        street_address: '708 Shopping Blvd',
+        city: 'Queens',
+        state: 'NY',
+        zip_code: '11355',
+        contact_name: 'Retail Manager',
+        contact_email: 'retail@abc.com',
+        contact_phone: '(555) 111-0708',
+        is_active: false // Inactive for testing
+      },
+      {
+        organization_id: orgMap.get('ABC Property Management'),
+        location_number: '912',
+        location_name: 'Distribution Hub',
+        street_address: '912 Logistics Drive',
+        city: 'Staten Island',
+        state: 'NY',
+        zip_code: '10314',
+        contact_name: 'Distribution Manager',
+        contact_email: 'distribution@abc.com',
+        contact_phone: '(555) 111-0912'
+      },
+      // XYZ Commercial Properties - 3 locations
       {
         organization_id: orgMap.get('XYZ Commercial Properties'),
         location_number: '101',
-        location_name: 'XYZ Tech Center',
+        location_name: 'Tech Center',
         street_address: '500 Innovation Blvd',
         city: 'Los Angeles',
         state: 'CA',
@@ -422,9 +449,35 @@ export const seedDatabase = async () => {
         contact_phone: '(555) 222-0101'
       },
       {
+        organization_id: orgMap.get('XYZ Commercial Properties'),
+        location_number: '201',
+        location_name: 'Business Park',
+        street_address: '201 Commerce Ave',
+        city: 'San Diego',
+        state: 'CA',
+        zip_code: '92101',
+        contact_name: 'Park Manager',
+        contact_email: 'business@xyz.com',
+        contact_phone: '(555) 222-0201'
+      },
+      {
+        organization_id: orgMap.get('XYZ Commercial Properties'),
+        location_number: '301',
+        location_name: 'Medical Complex',
+        street_address: '301 Health Plaza',
+        city: 'San Francisco',
+        state: 'CA',
+        zip_code: '94102',
+        contact_name: 'Medical Admin',
+        contact_email: 'medical@xyz.com',
+        contact_phone: '(555) 222-0301',
+        is_active: false // Inactive for testing
+      },
+      // Premium Facilities Group - 3 locations
+      {
         organization_id: orgMap.get('Premium Facilities Group'),
         location_number: 'PFG-001',
-        location_name: 'Premium Corporate Tower',
+        location_name: 'Corporate Tower',
         street_address: '1000 Corporate Way',
         city: 'Chicago',
         state: 'IL',
@@ -432,6 +485,31 @@ export const seedDatabase = async () => {
         contact_name: 'Tower Manager',
         contact_email: 'corporate@premium.com',
         contact_phone: '(555) 333-0001'
+      },
+      {
+        organization_id: orgMap.get('Premium Facilities Group'),
+        location_number: 'PFG-002',
+        location_name: 'Manufacturing Plant',
+        street_address: '2000 Industry Road',
+        city: 'Detroit',
+        state: 'MI',
+        zip_code: '48201',
+        contact_name: 'Plant Manager',
+        contact_email: 'plant@premium.com',
+        contact_phone: '(555) 333-0002'
+      },
+      {
+        organization_id: orgMap.get('Premium Facilities Group'),
+        location_number: 'PFG-003',
+        location_name: 'Research Facility',
+        street_address: '3000 Science Parkway',
+        city: 'Boston',
+        state: 'MA',
+        zip_code: '02101',
+        contact_name: 'Research Director',
+        contact_email: 'research@premium.com',
+        contact_phone: '(555) 333-0003',
+        is_active: false // Inactive for testing
       }
     ];
 
@@ -445,7 +523,23 @@ export const seedDatabase = async () => {
     if (locationsError) {
       console.warn('Partner locations creation error:', locationsError);
     } else {
-      console.log(`✅ Created/updated ${partnerLocations.length} partner locations`);
+      // Count locations by organization
+      const locationsByOrg = partnerLocations.reduce((acc, loc) => {
+        const orgName = Object.entries(orgMap).find(([_, id]) => id === loc.organization_id)?.[0] || 'Unknown';
+        if (!acc[orgName]) acc[orgName] = { total: 0, active: 0, inactive: 0 };
+        acc[orgName].total++;
+        if (loc.is_active === false) {
+          acc[orgName].inactive++;
+        } else {
+          acc[orgName].active++;
+        }
+        return acc;
+      }, {} as Record<string, { total: number, active: number, inactive: number }>);
+
+      console.log(`✅ Created/updated ${partnerLocations.length} partner locations:`);
+      Object.entries(locationsByOrg).forEach(([orgName, counts]) => {
+        console.log(`  • ${orgName}: ${counts.total} locations (${counts.active} active, ${counts.inactive} inactive)`);
+      });
     }
 
     // 6. Create work orders with various statuses
