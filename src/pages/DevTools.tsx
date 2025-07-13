@@ -49,13 +49,15 @@ const DevTools = () => {
   const [searchFilter, setSearchFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [testUsersResult, setTestUsersResult] = useState<any>(null);
   const { toast } = useToast();
   const {
     loading,
     counts,
     fetchCounts,
     runSeedScript,
-    clearTestData
+    clearTestData,
+    createTestUsers
   } = useDevTools();
 
   // Check if we're in development
@@ -330,6 +332,23 @@ const DevTools = () => {
                   <Database className="h-4 w-4" />
                   {loading ? 'Seeding...' : 'Seed Business Data'}
                 </Button>
+
+                <Button 
+                  onClick={async () => {
+                    try {
+                      const result = await createTestUsers();
+                      setTestUsersResult(result);
+                    } catch (error) {
+                      // Error already handled in hook
+                    }
+                  }}
+                  disabled={loading || !counts?.organizations}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  {loading ? 'Creating...' : 'Create Test Users'}
+                </Button>
                 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -372,8 +391,73 @@ const DevTools = () => {
                   Refresh Counts
                 </Button>
               </div>
+              
+              {!counts?.organizations && (
+                <Alert className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    No organizations found. Please seed business data first to create test users.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
+
+          {/* Test Users Results */}
+          {testUsersResult && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Test Users Created
+                </CardTitle>
+                <CardDescription>
+                  Login credentials for testing different user types
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg mb-4">
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    <strong>Default Password:</strong> {testUsersResult.summary?.password}
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  {testUsersResult.results?.map((result: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{result.email}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {result.user_type} • {result.organization}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {result.success ? (
+                          <Badge variant="default" className="bg-green-500">
+                            Created
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            {result.error}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setTestUsersResult(null)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Enhanced Database Statistics */}
           <Card>

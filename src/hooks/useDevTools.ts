@@ -283,12 +283,58 @@ export const useDevTools = () => {
     }
   };
 
+  const createTestUsers = async () => {
+    setLoading(true);
+    try {
+      console.log('👥 Creating test users...');
+      
+      const { data, error } = await supabase.functions.invoke('create-test-users', {
+        method: 'POST'
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to create test users');
+      }
+
+      console.log('✅ Test users created successfully!', data);
+      
+      const { results, summary } = data;
+      const createdUsers = results.filter((r: any) => r.success);
+      const failedUsers = results.filter((r: any) => !r.success);
+
+      toast({
+        title: "Test Users Created!",
+        description: `${summary.created} users created successfully. Password: ${summary.password}`,
+      });
+
+      // Refresh counts to show updated data
+      await fetchCounts();
+
+      return data;
+    } catch (error) {
+      console.error('❌ Failed to create test users:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create test users",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     counts,
     fetchCounts,
     runSeedScript,
     clearTestData,
+    createTestUsers,
     quickLogin,
     testCredentials
   };
