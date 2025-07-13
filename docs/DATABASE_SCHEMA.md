@@ -319,7 +319,7 @@ graph LR
 
 ### Test Data Overview
 
-The WorkOrderPro database includes comprehensive seed data for testing and development purposes. This data represents realistic business scenarios and covers all user types and workflows.
+The WorkOrderPro database includes comprehensive seed data for testing and development purposes. This data represents realistic business scenarios with varied statuses, historical dates, and complete business workflows across all user types.
 
 #### Test Organizations (8 total)
 
@@ -327,121 +327,122 @@ The WorkOrderPro database includes comprehensive seed data for testing and devel
 - **WorkOrderPro Internal** - The main contractor company housing admin users and employees
 
 **Partner Organizations (3):**
-- **ABC Property Management** - Multi-location property manager with 4 locations
-- **XYZ Commercial Properties** - Commercial property specialist with 3 locations
-- **Premium Facilities Group** - High-end facilities manager with 3 locations
+- **ABC Property Management** - Multi-location property manager
+- **XYZ Commercial Properties** - Commercial property specialist  
+- **Premium Facilities Group** - High-end facilities manager
 
 **Subcontractor Organizations (4):**
-- **Pipes & More Plumbing** - Plumbing specialists (2 technicians)
-- **Sparks Electric** - Licensed electrical contractor (1 electrician)
-- **Cool Air HVAC** - HVAC specialists (2 technicians)
-- **Fix-It Maintenance** - General maintenance contractor (1 technician)
+- **Pipes & More Plumbing** - Plumbing specialists
+- **Sparks Electric** - Licensed electrical contractor
+- **Cool Air HVAC** - HVAC specialists
+- **Wood Works Carpentry** - Carpentry and woodwork
 
-#### Test Users (14 total)
+#### Admin-Only Seeding Approach
 
-**Admin Users (2):**
-- `admin@workorderpro.com` - Primary system administrator
-- `employee@workorderpro.com` - Employee administration
+**Note**: The current seeding system uses an **admin-only approach** to avoid RLS violations and authentication conflicts. All test data is created using the existing admin profile, ensuring security and reliability.
 
-**Internal Employees (3):**
-- `senior@workorderpro.com` - Senior technician ($75/hr cost, $150/hr billable)
-- `midlevel@workorderpro.com` - Mid-level technician ($50/hr cost, $100/hr billable)
-- `junior@workorderpro.com` - Junior technician ($35/hr cost, $70/hr billable)
+**Admin Profile Used**: The current authenticated admin user becomes the creator/assignee for all test data.
 
-**Partner Users (3):**
-- `partner1@abc.com` - ABC Property Management representative
-- `partner2@xyz.com` - XYZ Commercial Properties representative
-- `partner3@premium.com` - Premium Facilities Group representative
+**Testing Different User Types**: To test different user perspectives:
+- Create real user accounts through the admin interface
+- Use role impersonation features (when available)
+- Create separate test admin accounts for different scenarios
 
-**Subcontractor Users (6):**
-- `plumber1@trade.com` - Senior plumber (Pipes & More)
-- `plumber2@trade.com` - Junior plumber (Pipes & More)
-- `electrician@trade.com` - Licensed electrician (Sparks Electric)
-- `hvac1@trade.com` - Senior HVAC technician (Cool Air)
-- `hvac2@trade.com` - HVAC support technician (Cool Air)
-- `maintenance@trade.com` - General maintenance technician (Fix-It)
+#### Partner Locations (5 total)
 
-All test users use the password: **Test123!**
+**ABC Property Management (2 locations):**
+- ABC Downtown Office (001) - Primary business location
+- ABC Westside Plaza (002) - Secondary business location
 
-#### Partner Locations (10 total)
+**XYZ Commercial Properties (2 locations):**
+- XYZ Corporate Tower (101) - Technology-focused commercial space
+- XYZ Tech Campus (102) - Multi-tenant business park
 
-**ABC Property Management (4 locations):**
-- Downtown Office (504) - Primary business location
-- Uptown Retail (502) - Customer-facing retail space
-- Westside Apartments (503) - Residential complex
-- Southend Mall (501) - *Inactive location for testing*
+**Premium Facilities Group (1 location):**
+- Premium Luxury Mall (201) - High-end retail and office complex
 
-**XYZ Commercial Properties (3 locations):**
-- Tech Center (TC-101) - Technology-focused commercial space
-- Business Park (BP-201) - Multi-tenant business park
-- Corporate Plaza (CP-301) - Executive office space
-
-**Premium Facilities Group (3 locations):**
-- Executive Tower (ET-001) - High-end office building
-- Luxury Condos (LC-002) - Luxury residential property
-- Premium Office Complex (OC-003) - Premium office space
-
-#### Trade Categories (10 total)
+#### Trade Categories (5 total)
 
 1. **Plumbing** - Pipes & More Plumbing specialists
-2. **Electrical** - Sparks Electric specialists
+2. **Electrical** - Sparks Electric specialists  
 3. **HVAC** - Cool Air HVAC specialists
-4. **Carpentry** - Internal employees or contractors
-5. **Painting** - Internal employees or contractors
-6. **General Maintenance** - Fix-It Maintenance or internal
-7. **Landscaping** - External contractors
-8. **Roofing** - Specialized contractors
-9. **Flooring** - Specialized contractors
-10. **Appliance Repair** - Specialized contractors
+4. **General Maintenance** - Internal employees and contractors
+5. **Carpentry** - Wood Works Carpentry specialists
 
-#### User Journey Test Scenarios
+*Note: Additional trades are created automatically if they don't exist in the database*
 
-**Partner Journey:**
-- Multi-location work order submission
-- Location-specific work order numbering (ABC-504-001, XYZ-TC101-001, etc.)
-- Work order status tracking and notifications
-- Completion notifications and feedback
+#### Comprehensive Test Data Structure
 
-**Subcontractor Journey:**
-- Work order assignment notifications
-- Multi-technician assignments (lead/support roles)
-- Work report submission with photos and invoicing
-- Report review and feedback processes
+**Work Orders (12 total with varied statuses):**
+- **Received (4)**: New work orders awaiting assignment
+- **In-Progress (3)**: Active work orders with ongoing reports
+- **Completed (3)**: Finished work orders with approved reports
+- **Cancelled (2)**: Work orders cancelled for various reasons
 
-**Employee Journey:**
-- Internal work assignments with time tracking
-- Multi-tier hourly rate structure testing
-- Expense receipt management and allocation
-- Lead and support role assignments
+**Work Order Assignments (8 total):**
+- Lead assignments to subcontractor organizations
+- Mix of organization-level and individual assignments
+- Historical assignment dates spanning 24 days
 
-**Admin Journey:**
-- Work order assignment and management
+**Work Order Reports (6 total):**
+- **Approved Reports (3)**: Completed work with detailed documentation
+- **Submitted Reports (3)**: Pending review with materials and hours
+- Invoice amounts ranging from $180 to $1,200
+- Historical submission timeline for realistic testing
+
+**Invoices (3 total with different statuses):**
+- **Draft Invoice**: $450.00 (editable state)
+- **Submitted Invoice**: $240.00 (pending approval)  
+- **Approved Invoice**: $1,200.00 (ready for payment)
+
+**Work Order Attachments (10 total):**
+- Before/after photos for completed work
+- Maintenance checklists and inspection certificates
+- Sample invoice attachments
+- Various file types and sizes for comprehensive testing
+
+**Employee Reports & Receipts:**
+- Employee time tracking with hourly rates
+- Expense receipt management with work order allocation
+- Historical dates for timeline testing
+
+**Historical Data Distribution:**
+- All data spread across past 30 days
+- Realistic timeline progression from submission to completion
+- Various submission, assignment, and completion dates
+
+#### Testing Coverage Areas
+
+**Business Workflow Testing:**
+- Complete work order lifecycle from submission to completion
+- Assignment workflows with organization-level access
+- Report submission and review processes
+- Invoice management from draft to approval
+
+**User Permission Testing:**
+- Admin access to all data and operations
+- Organization-based access control
+- Role-specific data visibility
+- Financial data privacy between organizations
+
+**Status Transition Testing:**
+- Work order status progression (received → assigned → in progress → completed)
+- Report status workflow (submitted → reviewed → approved)
+- Invoice status management (draft → submitted → approved)
+
+**Historical Data Testing:**
+- Time-based analytics and reporting
+- Performance metrics calculation
+- Date range filtering and queries
+- Timeline progression validation
+
+**Team Collaboration Testing:**
 - Multi-assignee work order scenarios
-- Report review and approval workflows
-- Invoice processing and approval
-- System administration and analytics
+- Organization-level assignments
+- Cross-team communication workflows
+- Lead and support role coordination
 
-#### Financial Test Scenarios
-
-**Employee Rate Structure:**
-- Senior: $75/hr cost, $150/hr billable (2x markup)
-- Mid-level: $50/hr cost, $100/hr billable (2x markup)
-- Junior: $35/hr cost, $70/hr billable (2x markup)
-
-**Invoice Testing:**
-- Draft invoices (editable by subcontractors)
-- Submitted invoices (pending review)
-- Approved invoices (ready for payment)
-- Paid invoices (completed transactions)
-- Rejected invoices (requiring resubmission)
-
-**Multi-work-order Invoicing:**
-- Single work order invoices
-- Multi work order invoices
-- Partial work order billing
-- Split billing scenarios across multiple work orders
-
-This comprehensive seed data ensures thorough testing of all business workflows, user permissions, financial processes, and system integrations.
+This comprehensive seed data ensures thorough testing of all business workflows, user permissions, financial processes, system integrations, and team collaboration features while maintaining security through admin-only data creation.
 
 ## Table Definitions
 

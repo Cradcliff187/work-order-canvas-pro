@@ -74,27 +74,49 @@ LANGUAGE plpgsql SECURITY DEFINER
 const { data, error } = await supabase.rpc('seed_test_data');
 ```
 
-**New Seeding Approach**:
+**Enhanced Seeding Approach**:
 - Uses **admin-only seeding** to avoid user_id conflicts
-- Creates business data (organizations, work orders) using existing admin profile
+- Creates comprehensive business data with varied statuses and historical dates
 - No fake user creation to prevent RLS violations
-- Focus on business data for comprehensive testing
+- Focus on realistic business scenarios for thorough testing
 
 **Response Format**:
 ```json
 {
   "success": true,
-  "message": "Business test data seeded successfully (admin-only approach)",
+  "message": "Enhanced business test data seeded successfully (comprehensive testing)",
   "details": {
     "organizations": 8,
     "partner_locations": 5,
-    "work_orders": 4,
+    "work_orders": 12,
+    "work_order_assignments": 8,
+    "work_order_reports": 6,
     "employee_reports": 2,
     "receipts": 2,
+    "invoices": 3,
+    "invoice_work_orders": 3,
+    "work_order_attachments": 10,
     "admin_profile_used": "uuid-of-admin-profile",
-    "approach": "single_admin_user"
+    "approach": "comprehensive_testing"
   },
-  "testing_note": "All test data uses your admin account. Test different user perspectives through impersonation or by creating real users."
+  "testing_scenarios": {
+    "work_order_statuses": {
+      "received": 4,
+      "assigned": 0,
+      "in_progress": 3,
+      "completed": 3,
+      "cancelled": 2
+    },
+    "invoice_statuses": {
+      "draft": 1,
+      "submitted": 1,
+      "approved": 1
+    },
+    "date_distribution": "Past 30 days with realistic intervals",
+    "assignment_coverage": "Both organization and individual assignments",
+    "attachment_variety": "Photos, documents, and invoices across multiple work orders"
+  },
+  "testing_note": "Comprehensive test data includes varied statuses, historical dates, assignments, invoices, and attachments for thorough system testing."
 }
 ```
 
