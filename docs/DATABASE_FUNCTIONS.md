@@ -18,6 +18,18 @@ SECURITY DEFINER functions that call edge functions for automated email notifica
 ### Database Seeding Functions (2)
 SECURITY DEFINER functions for secure test data management and development workflow
 
+#### seed_test_data()
+**Purpose**: Populate database with comprehensive test data for development and testing
+- **Security**: SECURITY DEFINER with admin-only access validation
+- **Usage**: `await supabase.rpc('seed_test_data')`
+- **Returns**: Success status with detailed creation counts
+
+#### clear_test_data()  
+**Purpose**: Safely remove test data while preserving production data
+- **Security**: SECURITY DEFINER with admin-only access validation
+- **Usage**: `await supabase.rpc('clear_test_data')`
+- **Returns**: Success status with detailed deletion counts
+
 ### Utility Functions (6)
 General-purpose functions for work order numbering, invoice numbering, analytics view management, and data cleanup
 

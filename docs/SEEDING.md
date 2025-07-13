@@ -285,38 +285,30 @@ const executionTime = Date.now() - startTime;
 console.log(`Seeding completed in ${executionTime}ms`);
 ```
 
-## Migration from Edge Functions
+## Implementation History
 
-### What Changed
+### Current Approach: Database Functions
 
-**OLD APPROACH (Deprecated)**:
+**CURRENT PRODUCTION APPROACH**:
 ```typescript
-// ❌ Edge Function seeding (removed)
-const { data, error } = await supabase.functions.invoke('seed-database', {
-  body: { admin_key: 'dev-admin-key' }
-});
-```
-
-**NEW APPROACH (Current)**:
-```typescript
-// ✅ Database function seeding
+// ✅ Database function seeding (current)
 const { data, error } = await supabase.rpc('seed_test_data');
 ```
 
-### Migration Benefits
+### Implementation Benefits
 
 1. **Security**: Server-side execution with proper SECURITY DEFINER privileges
 2. **Reliability**: Direct database access with atomic transactions
 3. **Performance**: No network overhead for database operations
 4. **Maintenance**: Centralized seeding logic in the database
-5. **Simplicity**: No Edge Function deployment or management required
+5. **Simplicity**: No external function deployment or management required
 
-### Breaking Changes
+### Technical Implementation
 
-- **Removed Edge Functions**: `seed-database`, `clear-test-data` functions no longer exist
-- **API Changes**: Now uses `supabase.rpc()` instead of `supabase.functions.invoke()`
-- **Authentication**: Uses existing user authentication instead of admin keys
-- **Error Handling**: Simplified error response format from database functions
+- **Database Functions**: `seed_test_data()`, `clear_test_data()` with SECURITY DEFINER privileges
+- **API Usage**: Uses `supabase.rpc()` for direct database function calls
+- **Authentication**: Uses existing user authentication with admin validation
+- **Error Handling**: Comprehensive error response format from database functions
 
 ## Best Practices
 

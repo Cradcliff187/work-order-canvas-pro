@@ -354,37 +354,37 @@ None - This migration only enables existing functionality and adds new features
 **Migration ID**: 20250713055230-4857d1ab-5e70-4f3b-a267-40cfa3c8cc36  
 **Purpose**: **COMPLETED** - Fixed seeding system to use SECURITY DEFINER database functions
 
-#### Migration from Edge Functions to Database Functions
+#### Database Function Seeding Implementation
 **Date Applied**: 2025-07-13  
 **Migration ID**: 20250713055230-4857d1ab-5e70-4f3b-a267-40cfa3c8cc36  
-**Purpose**: **MAJOR ARCHITECTURE CHANGE** - Replace Edge Function seeding with secure database function implementation
+**Purpose**: **MAJOR ARCHITECTURE CHANGE** - Implement secure database function-based seeding system
 
 **Migration Details**:
-- **Updated Functions**: 
+- **Created Functions**: 
   - Enhanced `seed_test_data()` SECURITY DEFINER function for RLS-compliant seeding
   - Enhanced `clear_test_data()` SECURITY DEFINER function for comprehensive cleanup
-- **Updated Implementation**: Modified `useDevTools` hook to use Edge Functions instead of direct imports
-- **Created Documentation**: Comprehensive `docs/SEEDING.md` guide for new seeding approach
+- **Updated Implementation**: Modified `useDevTools` hook to use database function calls
+- **Created Documentation**: Comprehensive `docs/SEEDING.md` guide for database function approach
 
-**Architecture Changes**:
-- **OLD**: Browser-based seeding with RLS policy restrictions and memory limitations
-- **NEW**: Server-side Edge Function seeding with service role privileges and atomic transactions
+**Architecture Implementation**:
+- **Approach**: Server-side database function seeding with SECURITY DEFINER privileges
+- **Benefits**: Direct database access with atomic transactions and RLS bypass
 
 **Security Improvements**:
-- ✅ **Service Role Execution**: Edge Functions bypass RLS policies for administrative operations
-- ✅ **Authentication Control**: Admin key validation before any seeding operations  
+- ✅ **SECURITY DEFINER Execution**: Database functions bypass RLS policies for administrative operations
+- ✅ **Authentication Control**: Admin user validation before any seeding operations  
 - ✅ **Server-Side Security**: No client-side exposure of seeding logic or credentials
-- ✅ **Audit Trail**: Complete logging of all seeding operations via Edge Functions
+- ✅ **Audit Trail**: Complete logging of all seeding operations via audit system
 
 **Performance Enhancements**:
 - ✅ **Atomic Transactions**: Complete rollback on any failure ensures data integrity
 - ✅ **Bulk Operations**: Efficient batch processing without browser memory constraints
-- ✅ **Progress Tracking**: Real-time feedback via Edge Function responses
-- ✅ **Dry-Run Support**: Preview deletion operations before execution
+- ✅ **Direct Database Access**: No network overhead for seeding operations
+- ✅ **Comprehensive Cleanup**: Safe test data removal with production data preservation
 
-**New Edge Function Capabilities**:
-1. **`seed-database`**: Comprehensive test data population with progress tracking
-2. **`clear-test-data`**: Safe test data removal with dry-run mode and detailed reporting
+**Database Function Capabilities**:
+1. **`seed_test_data()`**: Comprehensive test data population with detailed reporting
+2. **`clear_test_data()`**: Safe test data removal with deletion tracking
 
 **API Changes**:
 ```typescript
@@ -392,10 +392,9 @@ None - This migration only enables existing functionality and adds new features
 const { seedEnhancedDatabase } = await import('../scripts/enhanced-seed-functions');
 await seedEnhancedDatabase();
 
-// ✅ NEW: Edge Function-based
-const { data, error } = await supabase.functions.invoke('seed-database', {
-  body: { admin_key: 'dev-admin-key' }
-});
+// ✅ NEW: Database Function-based (current)
+const { data, error } = await supabase.rpc('seed_test_data');
+const { data, error } = await supabase.rpc('clear_test_data');
 ```
 
 **Documentation Updates**:
