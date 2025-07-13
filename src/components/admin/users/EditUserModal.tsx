@@ -25,7 +25,7 @@ const editUserSchema = z.object({
     required_error: 'User type is required',
   }),
   phone: z.string().optional(),
-  company_name: z.string().optional(),
+  
   is_active: z.boolean(),
   organization_ids: z.array(z.string()).optional(),
 });
@@ -52,7 +52,7 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
       first_name: '',
       last_name: '',
       phone: '',
-      company_name: '',
+      
       is_active: true,
       organization_ids: [],
     },
@@ -68,7 +68,7 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
         last_name: user.last_name,
         user_type: user.user_type,
         phone: user.phone || '',
-        company_name: user.company_name || '',
+        
         is_active: user.is_active,
         organization_ids: user.organizations?.map(org => org.id) || [],
       });
@@ -86,7 +86,7 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
           last_name: data.last_name,
           user_type: data.user_type,
           phone: data.phone,
-          company_name: data.company_name,
+          
           is_active: data.is_active,
           organization_ids: data.organization_ids,
         },
@@ -201,21 +201,6 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
               />
             </div>
 
-            {(watchedUserType === 'partner' || watchedUserType === 'subcontractor' || watchedUserType === 'employee') && (
-              <FormField
-                control={form.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company Name (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Acme Corporation" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
             <FormField
               control={form.control}
