@@ -31,6 +31,8 @@ interface AuthContextType {
   setImpersonation: (profile: Profile | null) => void;
   clearImpersonation: () => void;
   isImpersonating: boolean;
+  forgotPassword: (email: string) => Promise<{ error: any }>;
+  resetPassword: (password: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -230,6 +232,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(profileData);
   };
 
+  const forgotPassword = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl
+    });
+    
+    return { error };
+  };
+
+  const resetPassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: password
+    });
+    
+    return { error };
+  };
+
   const value = {
     user,
     session,
@@ -244,6 +264,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setImpersonation,
     clearImpersonation,
     isImpersonating: !!impersonatedProfile,
+    forgotPassword,
+    resetPassword,
   };
 
   return (

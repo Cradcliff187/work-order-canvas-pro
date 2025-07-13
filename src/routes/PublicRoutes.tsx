@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Auth } from '@/pages/LazyPages';
 import DashboardRouter from '@/components/DashboardRouter';
+import ResetPassword from '@/pages/ResetPassword';
 
 export const PublicRoutes = () => (
   <>
@@ -14,6 +15,9 @@ export const PublicRoutes = () => (
         <Auth />
       </Suspense>
     } />
+    
+    {/* Password reset route */}
+    <Route path="/reset-password" element={<ResetPassword />} />
     
     {/* Main dashboard route - redirects to appropriate user dashboard */}
     <Route path="/" element={
