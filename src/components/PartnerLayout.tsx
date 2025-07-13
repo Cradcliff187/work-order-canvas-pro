@@ -162,6 +162,7 @@ interface PartnerLayoutProps {
 }
 
 const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
+  const { profile } = useAuth();
   const { data: userOrganizations } = useUserOrganizations();
   const primaryOrganization = userOrganizations?.[0];
 
@@ -182,6 +183,18 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
                   <span className="text-sm font-medium text-primary">
                     {primaryOrganization.name}
                   </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-muted-foreground">
+                {profile && (
+                  <div className="flex flex-col">
+                    <span>{profile.first_name} {profile.last_name}</span>
+                    {primaryOrganization?.name && (
+                      <span className="text-xs">{primaryOrganization.name}</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
