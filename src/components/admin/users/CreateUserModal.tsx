@@ -11,7 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Copy, Eye, EyeOff, Mail, User, Phone, Building2 } from 'lucide-react';
+import { Copy, Eye, EyeOff, Mail, User, Phone, Building2, Plus, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserMutations, CreateUserData } from '@/hooks/useUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +41,7 @@ interface CreateUserModalProps {
 export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserModalProps) {
   const [showCredentials, setShowCredentials] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [showCreateOrgDialog, setShowCreateOrgDialog] = useState(false);
   
   const { toast } = useToast();
   const { data: organizationsData } = useOrganizations();
@@ -309,13 +311,28 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                               </label>
                             </div>
                           ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground border rounded-lg p-3">
-                      No active organizations available. Create an organization first.
-                    </div>
-                  )}
+                       </div>
+                       <div className="border-t pt-2 mt-2">
+                         <Button
+                           type="button"
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setShowCreateOrgDialog(true)}
+                           className="w-full"
+                         >
+                           <Plus className="w-4 h-4 mr-2" />
+                           Create New Organization
+                         </Button>
+                       </div>
+                     </div>
+                   ) : (
+                     <Alert>
+                       <AlertCircle className="h-4 w-4" />
+                       <AlertDescription>
+                         No organizations available. Create one to continue.
+                       </AlertDescription>
+                     </Alert>
+                   )}
 
                   {watchedOrganizations.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
