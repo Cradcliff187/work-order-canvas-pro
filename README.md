@@ -1,182 +1,53 @@
 # WorkOrderPro
 
-A comprehensive construction work order management system built with React, TypeScript, and Supabase.
+A comprehensive construction work order management system that facilitates workflows between Partners (Property Management), WorkOrderPro (General Contractor), and Subcontractors (Trade Companies). Features company-level access control, multi-organization architecture, and complete financial privacy between organizations.
 
-## Project Overview
+## Tech Stack
 
-WorkOrderPro is a full-stack web application designed for managing construction work orders across multiple organizations with **company-level access control**. It enables partners to submit work orders, which are then routed to subcontractor organizations for completion, providing complete transparency while maintaining financial privacy between companies.
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI**: Tailwind CSS + shadcn/ui components  
+- **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
+- **State**: TanStack Query + React Router
+- **Email**: Resend API integration
 
-## WorkOrderPro Business Model
+## 🚀 Live Application
 
-WorkOrderPro facilitates a three-party construction management workflow:
+**Production URL**: https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12
 
-**🏢 Partners (Property Management)** → **🔧 WorkOrderPro (General Contractor)** → **⚡ Subcontractors (Trade Companies)**
+## Quick Start
 
-### Organization Types
-
-- **🏢 Partner Organizations**: Property management companies that submit work orders for their locations
-- **⚡ Subcontractor Organizations**: Trade companies (plumbing, HVAC, electrical) that perform the work  
-- **🔧 Internal Organization**: The general contractor company (WorkOrderPro Internal) that manages the workflow
-
-### Company-Level Access Features
-
-- **Team-Based Work Orders**: Multiple team members can collaborate on the same work orders
-- **Organization-Level Assignments**: Work orders can be assigned to entire organizations, not just individuals
-- **Company Financial Privacy**: Each organization can only see their own financial data (invoices, costs)
-- **Cross-Company Transparency**: Work order details and reports are shared between relevant parties
-- **Scalable User Management**: Add unlimited users to organizations without individual access setup
-
-**Live URL**: https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12
-
-## Database Architecture
-
-WorkOrderPro uses a PostgreSQL database with 12 core tables, implementing:
-
-- **Complete audit logging** tracking all changes across 11 tables
-- **Row Level Security (RLS)** with role-based access control
-- **Multi-tenant architecture** supporting multiple organizations
-- **Email notification system** with templates and delivery tracking
-- **File attachment support** via Supabase Storage
-- **Analytics capabilities** with materialized views for reporting
-- **Edge Functions** for secure server-side operations and database management
-
-## Database Functions
-
-The application uses Supabase database functions for secure server-side operations:
-
-### Available Functions
-- **Database Management**: `seed_test_data()`, `clear_test_data()`
-- **Email Notifications**: Various email trigger functions
-- **Work Order Management**: Status transitions, numbering, completion detection
-- **Invoice Processing**: Numbering, validation, audit tracking
-- **Analytics**: Performance metrics and reporting functions
-
-### Quick Usage
-```typescript
-// Seed database with test data
-const { data, error } = await supabase.rpc('seed_test_data');
-
-// Clear test data
-const { data, error } = await supabase.rpc('clear_test_data');
-
-// Check user permissions
-const { data, error } = await supabase.rpc('auth_is_admin');
-```
-
-### Documentation
-- **[Database Functions Guide](docs/DATABASE_FUNCTIONS.md)** - Complete function documentation
-- **[Database Seeding Guide](docs/SEEDING.md)** - Seeding procedures and best practices
-- **[Development Guide](docs/DEVELOPMENT.md)** - Local development setup
-
-### Documentation
-
-**📊 Database & Architecture**
-- [Database Schema](./docs/DATABASE_SCHEMA.md) - Complete table structure and relationships
-- [RLS Policies](./docs/RLS_POLICIES.md) - Row Level Security implementation
-- [Audit System](./docs/AUDIT_SYSTEM.md) - Change tracking and compliance
-- [Database Functions](./docs/DATABASE_FUNCTIONS.md) - PostgreSQL functions and helpers
-- [Migration History](./docs/MIGRATION_HISTORY.md) - Complete migration timeline
-
-**🚀 Development & Deployment**
-- [Development Guide](./docs/DEVELOPMENT.md) - Local development setup and testing
-- [Deployment Guide](./docs/DEPLOYMENT.md) - Production deployment procedures
-- [Database Seeding](./docs/SEEDING.md) - Database function-based seeding guide
-- [Test Checklist](./docs/TEST_CHECKLIST.md) - Comprehensive testing procedures
-
-**🔧 Troubleshooting & Maintenance**
-- [Troubleshooting Guide](./docs/RLS_POLICIES.md#comprehensive-troubleshooting-guide) - Common issues and solutions
-- [Company Access Guide](./docs/COMPANY_ACCESS_GUIDE.md) - Multi-tenant access patterns
-- [Offline Storage Guide](./docs/OFFLINE_STORAGE_GUIDE.md) - PWA offline capabilities
-
-### Key Features
-
-- **Company-Level Access Control**: Organization-based access with team collaboration
-- **Role-Based Access**: Admin, Employee, Partner, and Subcontractor user types
-- **Multi-Organization Architecture**: Partners, subcontractors, and internal organizations
-- **Work Order Lifecycle**: From submission to completion with status tracking
-- **Organization-Level Assignments**: Work orders assigned to entire companies
-- **Report Management**: Subcontractor reports with photo attachments
-- **Financial Privacy**: Company-level financial data isolation
-- **Email Notifications**: Automated notifications for all workflow stages
-- **Analytics Dashboard**: Performance metrics and geographic distribution
-- **Audit Trail**: Complete change history for compliance
-- **Team Collaboration**: Multiple users per organization with shared access
-
-## Technology Stack
-
-- **Frontend**: React 18, TypeScript, Vite
-- **UI Framework**: Tailwind CSS, shadcn/ui components
-- **Backend**: Supabase (PostgreSQL, Authentication, Storage, Edge Functions)
-- **State Management**: TanStack Query (React Query)
-- **Routing**: React Router v6
-- **Email Service**: Resend API integration
-- **File Storage**: Supabase Storage with public buckets
-- **Database Seeding**: Database function-based seeding for secure, server-side data initialization
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# Clone and install
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 📚 Documentation
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+**Getting Started**
+- [Development Guide](./docs/DEVELOPMENT.md) - Setup, testing, and workflows
+- [UI Design System](./docs/UI_DESIGN_SYSTEM.md) - Component and styling guidelines
 
-**Use GitHub Codespaces**
+**Architecture**  
+- [Database Schema](./docs/DATABASE_SCHEMA.md) - Tables and relationships
+- [RLS Policies](./docs/RLS_POLICIES.md) - Security implementation
+- [Database Functions](./docs/DATABASE_FUNCTIONS.md) - Server-side operations
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Deployment**
+- [Deployment Guide](./docs/DEPLOYMENT.md) - Production procedures
+- [Database Seeding](./docs/SEEDING.md) - Test data management
 
-## What technologies are used for this project?
+**Troubleshooting**
+- [Company Access Guide](./docs/COMPANY_ACCESS_GUIDE.md) - Multi-tenant patterns
+- [Offline Storage Guide](./docs/OFFLINE_STORAGE_GUIDE.md) - PWA capabilities
 
-This project is built with:
+## Development
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Use [Lovable](https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12) for AI-powered editing or work locally with your preferred IDE. See [Development Guide](./docs/DEVELOPMENT.md) for detailed setup instructions.
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+**Deploy**: Open Lovable → Share → Publish
+**Custom Domain**: Project → Settings → Domains → Connect Domain
