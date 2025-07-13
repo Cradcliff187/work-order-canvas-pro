@@ -59,9 +59,7 @@ const DevTools = () => {
     counts,
     setupResult,
     fetchCounts,
-    runSeedScript,
     clearTestData,
-    createTestUsers,
     setupCompleteEnvironment,
     quickLogin,
   } = useDevTools();
@@ -353,15 +351,6 @@ const DevTools = () => {
                 <h4 className="font-medium text-sm">Manual Operations</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
-                    onClick={runSeedScript}
-                    disabled={loading}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {loading ? <LoadingSpinner /> : null}
-                    Seed Data Only
-                  </Button>
-                  <Button
                     onClick={clearTestData}
                     disabled={loading}
                     variant="destructive"
@@ -370,17 +359,16 @@ const DevTools = () => {
                     {loading ? <LoadingSpinner /> : null}
                     Clear All Data
                   </Button>
+                  <Button
+                    onClick={fetchCounts}
+                    disabled={loading}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {loading ? <LoadingSpinner /> : null}
+                    Refresh Counts
+                  </Button>
                 </div>
-                <Button
-                  onClick={fetchCounts}
-                  disabled={loading}
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                >
-                  {loading ? <LoadingSpinner /> : null}
-                  Refresh Counts
-                </Button>
               </div>
             </CardContent>
           </Card>

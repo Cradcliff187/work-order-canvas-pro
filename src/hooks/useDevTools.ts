@@ -157,57 +157,6 @@ export const useDevTools = () => {
     }
   };
 
-  const runSeedScript = async (): Promise<void> => {
-    setLoading(true);
-    
-    try {
-      // Check authentication first
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Authentication required');
-      }
-
-      console.log('🌱 Starting database seeding using secure function...');
-      toast({
-        title: "Seeding Started",
-        description: "Creating comprehensive test data...",
-        variant: "default",
-      });
-
-      // Call the secure database function that bypasses RLS
-      const { data, error } = await supabase.rpc('seed_test_data');
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      const result = data as { success: boolean; error?: string; details?: any };
-      if (!result?.success) {
-        throw new Error(result?.error || 'Seeding failed');
-      }
-
-      console.log('🎉 Database seeding completed successfully!', result);
-      
-      // Refresh counts to show updated data
-      await fetchCounts();
-
-      toast({
-        title: "Database Seeded Successfully!",
-        description: `All test data created successfully!`,
-        variant: "default",
-      });
-
-    } catch (error) {
-      console.error('❌ Seeding error:', error);
-      toast({
-        title: "Seeding Failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const clearTestData = async () => {
     setLoading(true);
@@ -252,59 +201,6 @@ export const useDevTools = () => {
     }
   };
 
-  const createTestUsers = async () => {
-    setLoading(true);
-    try {
-      console.log('👥 Creating test users...');
-      
-      // Get current session for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session');
-      }
-      
-      const { data, error } = await supabase.functions.invoke('create-test-users', {
-        body: {},
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (!data?.success) {
-        throw new Error(data?.error || 'Failed to create test users');
-      }
-
-      console.log('✅ Test users created successfully!', data);
-      
-      const { results, summary } = data;
-      const createdUsers = results.filter((r: any) => r.success);
-      const failedUsers = results.filter((r: any) => !r.success);
-
-      toast({
-        title: "Test Users Created!",
-        description: `${summary.created} users created successfully. Password: ${summary.password}`,
-      });
-
-      // Refresh counts to show updated data
-      await fetchCounts();
-
-      return data;
-    } catch (error) {
-      console.error('❌ Failed to create test users:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create test users",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const setupCompleteEnvironment = async () => {
     try {
@@ -423,9 +319,7 @@ export const useDevTools = () => {
     counts,
     setupResult,
     fetchCounts,
-    runSeedScript,
     clearTestData,
-    createTestUsers,
     setupCompleteEnvironment,
     quickLogin,
   };
