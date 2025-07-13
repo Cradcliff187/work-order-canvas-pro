@@ -125,35 +125,74 @@ serve(async (req) => {
 
     // Send welcome email if requested
     if (userData.send_welcome_email) {
-      console.log('Sending welcome email to:', userData.email);
+      console.log('=== WELCOME EMAIL PROCESS STARTED ===');
+      console.log('Target email:', userData.email);
+      
       try {
-        const emailResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/email-welcome`, {
+        // Validate environment variables
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        
+        console.log('Environment check for email:', {
+          supabaseUrl: supabaseUrl ? 'CONFIGURED' : 'MISSING',
+          serviceRoleKey: serviceRoleKey ? 'CONFIGURED' : 'MISSING'
+        });
+        
+        if (!supabaseUrl || !serviceRoleKey) {
+          throw new Error('Missing required environment variables for email service');
+        }
+        
+        const emailUrl = `${supabaseUrl}/functions/v1/email-welcome`;
+        console.log('Email function URL:', emailUrl);
+        
+        const emailPayload = {
+          user_id: newProfile.id,
+          email: userData.email,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          user_type: userData.user_type,
+          temporary_password: temporaryPassword,
+        };
+        
+        console.log('Email payload prepared:', {
+          ...emailPayload,
+          temporary_password: emailPayload.temporary_password ? '***' : 'EMPTY'
+        });
+        
+        console.log('Making request to email-welcome function...');
+        const emailResponse = await fetch(emailUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Authorization': `Bearer ${serviceRoleKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            user_id: newProfile.id,
-            email: userData.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            user_type: userData.user_type,
-            temporary_password: temporaryPassword,
-          }),
+          body: JSON.stringify(emailPayload),
+        });
+
+        console.log('Email response received:', {
+          status: emailResponse.status,
+          statusText: emailResponse.statusText,
+          ok: emailResponse.ok
         });
 
         const emailResult = await emailResponse.text();
+        console.log('Email response body:', emailResult);
         
         if (emailResponse.ok) {
-          console.log('Welcome email sent successfully:', emailResult);
+          console.log('✅ Welcome email sent successfully');
+          try {
+            const parsedResult = JSON.parse(emailResult);
+            console.log('Parsed email result:', parsedResult);
+          } catch (parseError) {
+            console.log('Could not parse email result as JSON, but request was successful');
+          }
         } else {
-          console.error('Welcome email failed with status:', emailResponse.status);
-          console.error('Welcome email error response:', emailResult);
+          console.error('❌ Welcome email failed with status:', emailResponse.status);
+          console.error('Error response:', emailResult);
           
           // Log failed email attempt to database
           try {
-            await supabaseAdmin
+            const { error: logError } = await supabaseAdmin
               .from('email_logs')
               .insert({
                 recipient_email: userData.email,
@@ -162,16 +201,27 @@ serve(async (req) => {
                 error_message: `HTTP ${emailResponse.status}: ${emailResult}`,
                 work_order_id: null
               });
+            
+            if (logError) {
+              console.error('Failed to log email error to database:', logError);
+            } else {
+              console.log('Email error logged to database');
+            }
           } catch (logError) {
-            console.error('Failed to log email error:', logError);
+            console.error('Exception while logging email error:', logError);
           }
         }
       } catch (emailError) {
-        console.error('Welcome email network error:', emailError);
+        console.error('❌ Welcome email network/fetch error:', emailError);
+        console.error('Error details:', {
+          name: emailError.name,
+          message: emailError.message,
+          stack: emailError.stack
+        });
         
         // Log failed email attempt to database
         try {
-          await supabaseAdmin
+          const { error: logError } = await supabaseAdmin
             .from('email_logs')
             .insert({
               recipient_email: userData.email,
@@ -180,12 +230,20 @@ serve(async (req) => {
               error_message: `Network error: ${emailError.message}`,
               work_order_id: null
             });
+          
+          if (logError) {
+            console.error('Failed to log email error to database:', logError);
+          } else {
+            console.log('Email network error logged to database');
+          }
         } catch (logError) {
-          console.error('Failed to log email error:', logError);
+          console.error('Exception while logging email network error:', logError);
         }
         
         // Continue anyway - don't fail user creation due to email issues
       }
+      
+      console.log('=== WELCOME EMAIL PROCESS COMPLETED ===');
     }
 
     // Return success response
