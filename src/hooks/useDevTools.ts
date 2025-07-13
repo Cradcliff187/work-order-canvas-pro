@@ -198,126 +198,388 @@ export const useDevTools = () => {
     }
   };
 
-  /**
-   * Enhanced seeding with automatic fallback to client-side when Edge Function fails
-   */
-  const runSeedScript = async () => {
+  const runSeedScript = async (): Promise<void> => {
     setLoading(true);
     try {
-      console.log('🚀 Attempting Edge Function seeding...');
+      console.log('🌱 Starting comprehensive database seeding...');
       
-      // Primary method: Edge Function seeding
-      const { data, error } = await supabase.functions.invoke('seed-database', {
-        body: {
-          admin_key: 'dev-admin-key',
-          options: {
-            clear_existing: true,
-            include_test_data: true
+      // Create ID mapping objects for foreign key relationships
+      const orgMap = new Map<string, string>();
+      const tradeMap = new Map<string, string>();
+      const userMap = new Map<string, string>();
+
+      // 1. CREATE ORGANIZATIONS
+      console.log('Creating organizations...');
+      const organizations = [
+        { name: 'WorkOrderPro', contact_email: 'admin@workorderpro.com', organization_type: 'internal' as const, initials: 'WOP' },
+        { name: 'ABC Property Management', contact_email: 'info@abc.com', organization_type: 'partner' as const, initials: 'ABC' },
+        { name: 'XYZ Commercial Properties', contact_email: 'contact@xyz.com', organization_type: 'partner' as const, initials: 'XYZ' },
+        { name: 'Premium Facilities Group', contact_email: 'info@premium.com', organization_type: 'partner' as const, initials: 'PFG' },
+        { name: 'Pipes & More Plumbing', contact_email: 'service@pipes.com', organization_type: 'subcontractor' as const, initials: 'PMP' },
+        { name: 'Sparks Electric', contact_email: 'contact@sparks.com', organization_type: 'subcontractor' as const, initials: 'SE' },
+        { name: 'Cool Air HVAC', contact_email: 'info@coolair.com', organization_type: 'subcontractor' as const, initials: 'CA' },
+        { name: 'Fix-It Maintenance', contact_email: 'help@fixit.com', organization_type: 'subcontractor' as const, initials: 'FIM' }
+      ];
+
+      for (const org of organizations) {
+        const orgId = crypto.randomUUID();
+        orgMap.set(org.name, orgId);
+        const { error } = await supabase.from('organizations').insert({ ...org, id: orgId });
+        if (error) console.error(`Organization insert error (${org.name}):`, error);
+      }
+
+      // 2. CREATE TRADES
+      console.log('Creating trades...');
+      const trades = [
+        { name: 'Plumbing', description: 'Water systems, pipes, fixtures' },
+        { name: 'HVAC', description: 'Heating, ventilation, air conditioning' },
+        { name: 'Electrical', description: 'Electrical systems and repairs' },
+        { name: 'General Maintenance', description: 'Basic maintenance and repairs' },
+        { name: 'Carpentry', description: 'Wood work and installations' },
+        { name: 'Painting', description: 'Interior and exterior painting' },
+        { name: 'Appliance Repair', description: 'Kitchen and laundry appliances' },
+        { name: 'Landscaping', description: 'Grounds and outdoor maintenance' },
+        { name: 'Cleaning', description: 'Janitorial and deep cleaning' },
+        { name: 'Security Systems', description: 'Access control and surveillance' }
+      ];
+
+      for (const trade of trades) {
+        const tradeId = crypto.randomUUID();
+        tradeMap.set(trade.name, tradeId);
+        const { error } = await supabase.from('trades').insert({ ...trade, id: tradeId });
+        if (error) console.error(`Trade insert error (${trade.name}):`, error);
+      }
+
+      // 3. CREATE EMAIL TEMPLATES
+      console.log('Creating email templates...');
+      const emailTemplates = [
+        {
+          template_name: 'work_order_received',
+          subject: 'New Work Order Received',
+          html_content: '<p>A new work order has been received and is pending assignment.</p>',
+          text_content: 'A new work order has been received and is pending assignment.'
+        },
+        {
+          template_name: 'work_order_assigned',
+          subject: 'Work Order Assignment',
+          html_content: '<p>You have been assigned a new work order.</p>',
+          text_content: 'You have been assigned a new work order.'
+        },
+        {
+          template_name: 'work_order_completed',
+          subject: 'Work Order Completed',
+          html_content: '<p>Your work order has been completed.</p>',
+          text_content: 'Your work order has been completed.'
+        },
+        {
+          template_name: 'report_submitted',
+          subject: 'Work Report Submitted',
+          html_content: '<p>A work report has been submitted for review.</p>',
+          text_content: 'A work report has been submitted for review.'
+        },
+        {
+          template_name: 'report_reviewed',
+          subject: 'Work Report Reviewed',
+          html_content: '<p>Your work report has been reviewed.</p>',
+          text_content: 'Your work report has been reviewed.'
+        }
+      ];
+
+      for (const template of emailTemplates) {
+        const { error } = await supabase.from('email_templates').insert(template);
+        if (error) console.error(`Email template insert error (${template.template_name}):`, error);
+      }
+
+      // 4. CREATE USER PROFILES
+      console.log('Creating user profiles...');
+      const users = [
+        // Admins
+        { email: 'admin@workorderpro.com', first_name: 'Admin', last_name: 'User', user_type: 'admin' as const, company: 'WorkOrderPro' },
+        { email: 'sarah.admin@workorderpro.com', first_name: 'Sarah', last_name: 'Johnson', user_type: 'admin' as const, company: 'WorkOrderPro' },
+        
+        // Employees
+        { email: 'employee1@workorderpro.com', first_name: 'Mike', last_name: 'Chen', user_type: 'employee' as const, is_employee: true, hourly_cost_rate: 25, hourly_billable_rate: 45, company: 'WorkOrderPro' },
+        { email: 'employee2@workorderpro.com', first_name: 'Lisa', last_name: 'Rodriguez', user_type: 'employee' as const, is_employee: true, hourly_cost_rate: 30, hourly_billable_rate: 50, company: 'WorkOrderPro' },
+        { email: 'employee3@workorderpro.com', first_name: 'David', last_name: 'Thompson', user_type: 'employee' as const, is_employee: true, hourly_cost_rate: 28, hourly_billable_rate: 48, company: 'WorkOrderPro' },
+        
+        // Partners
+        { email: 'manager@abc.com', first_name: 'John', last_name: 'Smith', user_type: 'partner' as const, company: 'ABC Property Management' },
+        { email: 'facilities@xyz.com', first_name: 'Emily', last_name: 'Davis', user_type: 'partner' as const, company: 'XYZ Commercial Properties' },
+        { email: 'ops@premium.com', first_name: 'Robert', last_name: 'Wilson', user_type: 'partner' as const, company: 'Premium Facilities Group' },
+        
+        // Subcontractors
+        { email: 'joe@pipes.com', first_name: 'Joe', last_name: 'Plumber', user_type: 'subcontractor' as const, company: 'Pipes & More Plumbing' },
+        { email: 'spark@sparks.com', first_name: 'Electric', last_name: 'Eddie', user_type: 'subcontractor' as const, company: 'Sparks Electric' },
+        { email: 'cool@coolair.com', first_name: 'AC', last_name: 'Andy', user_type: 'subcontractor' as const, company: 'Cool Air HVAC' },
+        { email: 'fix@fixit.com', first_name: 'Handy', last_name: 'Harry', user_type: 'subcontractor' as const, company: 'Fix-It Maintenance' },
+        { email: 'sub2@pipes.com', first_name: 'Pete', last_name: 'Pipefitter', user_type: 'subcontractor' as const, company: 'Pipes & More Plumbing' },
+        { email: 'sub2@sparks.com', first_name: 'Sparky', last_name: 'Sam', user_type: 'subcontractor' as const, company: 'Sparks Electric' }
+      ];
+
+      for (const user of users) {
+        const userId = crypto.randomUUID();
+        const profileId = crypto.randomUUID();
+        userMap.set(user.email, profileId);
+        
+        const profileData = {
+          id: profileId,
+          user_id: userId,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          user_type: user.user_type,
+          company_name: user.company,
+          is_employee: user.is_employee || false,
+          hourly_cost_rate: user.hourly_cost_rate || null,
+          hourly_billable_rate: user.hourly_billable_rate || null
+        };
+        
+        const { error } = await supabase.from('profiles').insert(profileData);
+        if (error) console.error(`Profile insert error (${user.email}):`, error);
+      }
+
+      // 5. CREATE USER-ORGANIZATION RELATIONSHIPS
+      console.log('Creating user-organization relationships...');
+      const userOrgRelationships = [
+        // WorkOrderPro employees
+        { userEmail: 'admin@workorderpro.com', orgName: 'WorkOrderPro' },
+        { userEmail: 'sarah.admin@workorderpro.com', orgName: 'WorkOrderPro' },
+        { userEmail: 'employee1@workorderpro.com', orgName: 'WorkOrderPro' },
+        { userEmail: 'employee2@workorderpro.com', orgName: 'WorkOrderPro' },
+        { userEmail: 'employee3@workorderpro.com', orgName: 'WorkOrderPro' },
+        
+        // Partners
+        { userEmail: 'manager@abc.com', orgName: 'ABC Property Management' },
+        { userEmail: 'facilities@xyz.com', orgName: 'XYZ Commercial Properties' },
+        { userEmail: 'ops@premium.com', orgName: 'Premium Facilities Group' },
+        
+        // Subcontractors
+        { userEmail: 'joe@pipes.com', orgName: 'Pipes & More Plumbing' },
+        { userEmail: 'sub2@pipes.com', orgName: 'Pipes & More Plumbing' },
+        { userEmail: 'spark@sparks.com', orgName: 'Sparks Electric' },
+        { userEmail: 'sub2@sparks.com', orgName: 'Sparks Electric' },
+        { userEmail: 'cool@coolair.com', orgName: 'Cool Air HVAC' },
+        { userEmail: 'fix@fixit.com', orgName: 'Fix-It Maintenance' }
+      ];
+
+      for (const rel of userOrgRelationships) {
+        const userId = userMap.get(rel.userEmail);
+        const orgId = orgMap.get(rel.orgName);
+        if (userId && orgId) {
+          const { error } = await supabase.from('user_organizations').insert({
+            user_id: userId,
+            organization_id: orgId
+          });
+          if (error) console.error(`User-org relationship error (${rel.userEmail}):`, error);
+        }
+      }
+
+      // 6. CREATE PARTNER LOCATIONS
+      console.log('Creating partner locations...');
+      const partnerLocations = [
+        { org: 'ABC Property Management', location_name: 'Downtown Office', location_number: '001', city: 'New York', state: 'NY' },
+        { org: 'ABC Property Management', location_name: 'Midtown Branch', location_number: '002', city: 'New York', state: 'NY' },
+        { org: 'ABC Property Management', location_name: 'Brooklyn Office', location_number: '003', city: 'Brooklyn', state: 'NY' },
+        { org: 'XYZ Commercial Properties', location_name: 'Main Office', location_number: 'M01', city: 'Los Angeles', state: 'CA' },
+        { org: 'XYZ Commercial Properties', location_name: 'West Side', location_number: 'W01', city: 'Los Angeles', state: 'CA' },
+        { org: 'XYZ Commercial Properties', location_name: 'Beach Office', location_number: 'B01', city: 'Santa Monica', state: 'CA' },
+        { org: 'Premium Facilities Group', location_name: 'Corporate HQ', location_number: 'HQ', city: 'Chicago', state: 'IL' },
+        { org: 'Premium Facilities Group', location_name: 'North Campus', location_number: 'NC', city: 'Chicago', state: 'IL' },
+        { org: 'Premium Facilities Group', location_name: 'South Plant', location_number: 'SP', city: 'Chicago', state: 'IL' },
+        { org: 'Premium Facilities Group', location_name: 'Warehouse District', location_number: 'WD', city: 'Chicago', state: 'IL' }
+      ];
+
+      for (const location of partnerLocations) {
+        const orgId = orgMap.get(location.org);
+        if (orgId) {
+          const { error } = await supabase.from('partner_locations').insert({
+            organization_id: orgId,
+            location_name: location.location_name,
+            location_number: location.location_number,
+            city: location.city,
+            state: location.state
+          });
+          if (error) console.error(`Partner location insert error (${location.location_name}):`, error);
+        }
+      }
+
+      // 7. CREATE WORK ORDERS
+      console.log('Creating work orders...');
+      const workOrders = [
+        { title: 'Leaking Faucet Repair', org: 'ABC Property Management', trade: 'Plumbing', assignee: 'joe@pipes.com', status: 'completed' as const },
+        { title: 'HVAC System Maintenance', org: 'XYZ Commercial Properties', trade: 'HVAC', assignee: 'cool@coolair.com', status: 'in_progress' as const },
+        { title: 'Electrical Outlet Installation', org: 'Premium Facilities Group', trade: 'Electrical', assignee: 'spark@sparks.com', status: 'assigned' as const },
+        { title: 'Office Deep Cleaning', org: 'ABC Property Management', trade: 'Cleaning', assignee: 'fix@fixit.com', status: 'received' as const },
+        { title: 'Carpet Installation', org: 'XYZ Commercial Properties', trade: 'General Maintenance', assignee: null, status: 'received' as const },
+        { title: 'Bathroom Plumbing Upgrade', org: 'Premium Facilities Group', trade: 'Plumbing', assignee: 'sub2@pipes.com', status: 'completed' as const },
+        { title: 'Security Camera Installation', org: 'ABC Property Management', trade: 'Security Systems', assignee: 'sub2@sparks.com', status: 'in_progress' as const },
+        { title: 'Landscape Maintenance', org: 'XYZ Commercial Properties', trade: 'Landscaping', assignee: 'fix@fixit.com', status: 'assigned' as const },
+        { title: 'Kitchen Appliance Repair', org: 'Premium Facilities Group', trade: 'Appliance Repair', assignee: 'joe@pipes.com', status: 'completed' as const },
+        { title: 'Conference Room Painting', org: 'ABC Property Management', trade: 'Painting', assignee: 'fix@fixit.com', status: 'in_progress' as const },
+        { title: 'Carpentry Work - Shelving', org: 'XYZ Commercial Properties', trade: 'Carpentry', assignee: 'sub2@pipes.com', status: 'assigned' as const },
+        { title: 'General Building Maintenance', org: 'Premium Facilities Group', trade: 'General Maintenance', assignee: 'cool@coolair.com', status: 'received' as const },
+        { title: 'Emergency Electrical Repair', org: 'ABC Property Management', trade: 'Electrical', assignee: 'spark@sparks.com', status: 'completed' as const },
+        { title: 'Parking Lot Maintenance', org: 'XYZ Commercial Properties', trade: 'General Maintenance', assignee: 'fix@fixit.com', status: 'in_progress' as const },
+        { title: 'Roof Inspection and Repair', org: 'Premium Facilities Group', trade: 'General Maintenance', assignee: 'sub2@sparks.com', status: 'assigned' as const },
+        { title: 'Window Cleaning Service', org: 'ABC Property Management', trade: 'Cleaning', assignee: 'cool@coolair.com', status: 'completed' as const }
+      ];
+
+      const workOrderIds: string[] = [];
+      for (const wo of workOrders) {
+        const workOrderId = crypto.randomUUID();
+        workOrderIds.push(workOrderId);
+        
+        const orgId = orgMap.get(wo.org);
+        const tradeId = tradeMap.get(wo.trade);
+        const assigneeId = wo.assignee ? userMap.get(wo.assignee) : null;
+        const creatorId = userMap.get('admin@workorderpro.com');
+
+        if (orgId && tradeId && creatorId) {
+          const { error } = await supabase.from('work_orders').insert({
+            id: workOrderId,
+            title: wo.title,
+            organization_id: orgId,
+            trade_id: tradeId,
+            assigned_to: assigneeId,
+            status: wo.status,
+            created_by: creatorId,
+            description: `${wo.title} for ${wo.org}`,
+            location_name: `Location for ${wo.title}`,
+            city: wo.org === 'ABC Property Management' ? 'New York' : wo.org === 'XYZ Commercial Properties' ? 'Los Angeles' : 'Chicago',
+            state: wo.org === 'ABC Property Management' ? 'NY' : wo.org === 'XYZ Commercial Properties' ? 'CA' : 'IL'
+          });
+          if (error) console.error(`Work order insert error (${wo.title}):`, error);
+        }
+      }
+
+      // 8. CREATE WORK ORDER ASSIGNMENTS
+      console.log('Creating work order assignments...');
+      for (let i = 0; i < Math.min(8, workOrderIds.length); i++) {
+        const workOrderId = workOrderIds[i];
+        const assigneeEmail = workOrders[i].assignee;
+        if (assigneeEmail) {
+          const assigneeId = userMap.get(assigneeEmail);
+          const assignerId = userMap.get('admin@workorderpro.com');
+          
+          if (assigneeId && assignerId) {
+            const { error } = await supabase.from('work_order_assignments').insert({
+              work_order_id: workOrderId,
+              assigned_to: assigneeId,
+              assigned_by: assignerId,
+              assignment_type: 'lead'
+            });
+            if (error) console.error(`Assignment insert error:`, error);
           }
         }
+      }
+
+      // 9. CREATE WORK ORDER REPORTS
+      console.log('Creating work order reports...');
+      const completedOrders = workOrders.filter(wo => wo.status === 'completed');
+      for (let i = 0; i < completedOrders.length && i < workOrderIds.length; i++) {
+        const wo = completedOrders[i];
+        if (wo.assignee) {
+          const assigneeId = userMap.get(wo.assignee);
+          const workOrderId = workOrderIds[workOrders.indexOf(wo)];
+          
+          if (assigneeId && workOrderId) {
+            const { error } = await supabase.from('work_order_reports').insert({
+              work_order_id: workOrderId,
+              subcontractor_user_id: assigneeId,
+              work_performed: `Completed ${wo.title}`,
+              invoice_amount: 150 + Math.floor(Math.random() * 300),
+              status: 'approved' as const,
+              hours_worked: 2 + Math.floor(Math.random() * 6),
+              materials_used: 'Standard materials and supplies'
+            });
+            if (error) console.error(`Report insert error:`, error);
+          }
+        }
+      }
+
+      // 10. CREATE INVOICES AND INVOICE WORK ORDERS
+      console.log('Creating invoices...');
+      const subcontractorOrgs = ['Pipes & More Plumbing', 'Sparks Electric', 'Cool Air HVAC'];
+      for (const orgName of subcontractorOrgs) {
+        const orgId = orgMap.get(orgName);
+        const submitterId = userMap.get(orgName === 'Pipes & More Plumbing' ? 'joe@pipes.com' : 
+                                        orgName === 'Sparks Electric' ? 'spark@sparks.com' : 'cool@coolair.com');
+        
+        if (orgId && submitterId) {
+          const invoiceId = crypto.randomUUID();
+          const totalAmount = 500 + Math.floor(Math.random() * 1000);
+          
+          // Create invoice
+          const { error: invoiceError } = await supabase.from('invoices').insert({
+            subcontractor_organization_id: orgId,
+            submitted_by: submitterId,
+            total_amount: totalAmount,
+            status: 'submitted',
+            external_invoice_number: `EXT-${Math.floor(Math.random() * 10000)}`,
+            internal_invoice_number: `INV-2025-${String(Math.floor(Math.random() * 10000)).padStart(5, '0')}`
+          });
+          if (invoiceError) console.error(`Invoice insert error:`, invoiceError);
+
+          // Create invoice work orders (link to completed work orders from this org)
+          const relatedWorkOrders = workOrderIds.slice(0, 2); // Link first 2 work orders
+          for (const workOrderId of relatedWorkOrders) {
+            const { error: iwoError } = await supabase.from('invoice_work_orders').insert({
+              invoice_id: invoiceId,
+              work_order_id: workOrderId,
+              amount: totalAmount / relatedWorkOrders.length,
+              description: `Work completed for work order`
+            });
+            if (iwoError) console.error(`Invoice work order insert error:`, iwoError);
+          }
+        }
+      }
+
+      // 11. CREATE EMPLOYEE REPORTS AND RECEIPTS
+      console.log('Creating employee reports and receipts...');
+      const employees = ['employee1@workorderpro.com', 'employee2@workorderpro.com', 'employee3@workorderpro.com'];
+      for (const employeeEmail of employees) {
+        const employeeId = userMap.get(employeeEmail);
+        if (employeeId) {
+          // Create employee report
+          const randomWorkOrderId = workOrderIds[Math.floor(Math.random() * workOrderIds.length)];
+          const { error: reportError } = await supabase.from('employee_reports').insert({
+            employee_user_id: employeeId,
+            work_order_id: randomWorkOrderId,
+            report_date: new Date().toISOString().split('T')[0],
+            hours_worked: 6 + Math.floor(Math.random() * 3),
+            hourly_rate_snapshot: 25 + Math.floor(Math.random() * 10),
+            work_performed: `Internal work performed by ${employeeEmail}`,
+            notes: 'Regular maintenance work completed'
+          });
+          if (reportError) console.error(`Employee report insert error:`, reportError);
+
+          // Create receipt
+          const { error: receiptError } = await supabase.from('receipts').insert({
+            employee_user_id: employeeId,
+            receipt_date: new Date().toISOString().split('T')[0],
+            vendor_name: `Hardware Store ${Math.floor(Math.random() * 3) + 1}`,
+            amount: 25 + Math.floor(Math.random() * 100),
+            description: 'Materials and supplies'
+          });
+          if (receiptError) console.error(`Receipt insert error:`, receiptError);
+        }
+      }
+
+      console.log('✅ Comprehensive database seeding completed!');
+      
+      toast({
+        title: "Success",
+        description: "Complete test dataset created successfully! Check the System Health page for details.",
       });
       
-      if (error) {
-        // Check for CORS or network errors that indicate Edge Function unavailability
-        const errorMessage = error.message?.toLowerCase() || '';
-        const isCorsOrNetworkError = errorMessage.includes('cors') || 
-                                   errorMessage.includes('failed to fetch') ||
-                                   errorMessage.includes('network') ||
-                                   errorMessage.includes('connection') ||
-                                   errorMessage.includes('functionshttperror');
-
-        if (isCorsOrNetworkError) {
-          console.warn('⚠️ Edge Function unavailable, falling back to client-side seeding...');
-          await runClientSideSeeding();
-          await fetchCounts();
-          return;
-        }
-
-        // Handle other Edge Function errors
-        if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
-          toast({
-            title: "Authentication Error",
-            description: "Admin privileges required. Please check your credentials.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Service Error",
-            description: "Seeding service encountered an error. Check console for details.",
-            variant: "destructive",
-          });
-        }
-        throw new Error(`Seeding failed: ${error.message}`);
-      }
-      
-      if (data?.success) {
-        console.log('✅ Database seeded successfully via Edge Function');
-        console.log('📋 Summary:', data.summary);
-        
-        toast({
-          title: "Success",
-          description: `Database seeded successfully! Created ${data.summary?.total_records || 'multiple'} records.`,
-        });
-        
-        await fetchCounts();
-      } else {
-        throw new Error(data?.error || 'Unknown seeding error');
-      }
-      
+      await fetchCounts();
     } catch (error: any) {
-      console.error('❌ Seeding failed:', error);
-      
-      // Check if this is a network/CORS error for fallback
-      const errorMessage = error?.message?.toLowerCase() || '';
-      const isCorsOrNetworkError = errorMessage.includes('failed to send a request') || 
-                                 errorMessage.includes('cors') ||
-                                 errorMessage.includes('failed to fetch');
-
-      if (isCorsOrNetworkError) {
-        console.log('Edge Function unavailable, using client-side seeding...');
-        try {
-          // Create organizations
-          const { error: orgError } = await supabase
-            .from('organizations')
-            .insert([
-              { name: 'WorkOrderPro', contact_email: 'admin@workorderpro.com', organization_type: 'internal', initials: 'WOP' },
-              { name: 'ABC Property Management', contact_email: 'info@abc.com', organization_type: 'partner', initials: 'ABC' }
-            ]);
-          
-          if (orgError) console.error('Organization insert error:', orgError);
-
-          // Create user profiles
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([
-              { email: 'admin@workorderpro.com', first_name: 'Admin', last_name: 'User', user_type: 'admin', user_id: crypto.randomUUID() },
-              { email: 'partner@abc.com', first_name: 'Partner', last_name: 'User', user_type: 'partner', user_id: crypto.randomUUID() }
-            ]);
-          
-          if (profileError) console.error('Profile insert error:', profileError);
-
-          toast({
-            title: "Success",
-            description: "Database seeded successfully using client-side fallback!",
-          });
-          
-          await fetchCounts();
-          return;
-        } catch (fallbackError) {
-          console.error('❌ Client-side seeding also failed:', fallbackError);
-          toast({
-            title: "Seeding Error",
-            description: "Both Edge Function and client-side seeding failed",
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: "Seeding Failed",
-          description: `Error: ${error.message || 'Edge Function call failed'}. Check console for details.`,
-          variant: "destructive",
-        });
-      }
+      console.error('Seeding error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to seed database",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
