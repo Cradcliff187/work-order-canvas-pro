@@ -68,6 +68,7 @@ const DevTools = () => {
     setupCompleteEnvironment,
     setupSqlData,
     createAuthUsers,
+    fixUserOrganizations,
     quickLogin,
     forceRefreshUsers,
   } = useDevTools();
@@ -461,7 +462,16 @@ const DevTools = () => {
               {/* Manual Operations */}
               <div className="border-t pt-4 space-y-2">
                 <h4 className="font-medium text-sm">Manual Operations</h4>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    onClick={fixUserOrganizations}
+                    disabled={loading}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    {loading ? <LoadingSpinner /> : null}
+                    Fix Current Issues
+                  </Button>
                   <Button
                     onClick={clearTestData}
                     disabled={loading}

@@ -165,6 +165,21 @@ serve(async (req) => {
       }
     }
 
+    // After creating auth users, immediately fix user-organization relationships
+    console.log('🔧 Fixing user-organization relationships...')
+    
+    try {
+      const { data: fixResult, error: fixError } = await supabaseAdmin.rpc('fix_existing_test_user_organizations')
+      
+      if (fixError) {
+        console.error('❌ Error fixing user organizations:', fixError)
+      } else {
+        console.log('✅ User-organization relationships fixed:', fixResult)
+      }
+    } catch (fixErr) {
+      console.error('❌ Failed to fix user organizations:', fixErr)
+    }
+
     console.log(`📊 Auth user creation completed: ${successCount} success, ${errorCount} errors`)
 
     const response = {

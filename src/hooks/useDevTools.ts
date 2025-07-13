@@ -416,6 +416,9 @@ export const useDevTools = () => {
           description: `Successfully created ${data.data?.success_count || 0} auth users`,
           variant: "default",
         });
+        
+        // Refresh counts after successful auth creation
+        await fetchCounts();
       } else {
         toast({
           title: "Auth Creation Failed", 
@@ -444,6 +447,52 @@ export const useDevTools = () => {
     }
   };
 
+  const fixUserOrganizations = async () => {
+    try {
+      setLoading(true);
+      
+      console.log('🔧 Fixing user-organization relationships...');
+      
+      const { data, error } = await supabase.rpc('fix_existing_test_user_organizations');
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if ((data as any)?.success) {
+        toast({
+          title: "User Organizations Fixed!",
+          description: `Fixed ${(data as any).user_organizations_fixed} user-organization relationships`,
+          variant: "default",
+        });
+        
+        // Refresh counts
+        await fetchCounts();
+      } else {
+        toast({
+          title: "Fix Failed", 
+          description: (data as any)?.error || 'Unknown error occurred',
+          variant: "destructive",
+        });
+      }
+      
+      return data;
+    } catch (error: any) {
+      console.error('Fix user organizations error:', error);
+      toast({
+        title: "Fix Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return {
+        success: false,
+        error: error.message
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     setupLoading,
@@ -459,6 +508,7 @@ export const useDevTools = () => {
     setupCompleteEnvironment,
     setupSqlData,
     createAuthUsers,
+    fixUserOrganizations,
     quickLogin,
     forceRefreshUsers,
   };

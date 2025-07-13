@@ -1364,6 +1364,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      complete_test_environment_setup: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      fix_existing_test_user_organizations: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       generate_internal_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1420,7 +1428,7 @@ export type Database = {
         Returns: undefined
       }
       setup_bulletproof_test_data: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { admin_user_id?: string }
         Returns: Json
       }
       transition_work_order_status: {
