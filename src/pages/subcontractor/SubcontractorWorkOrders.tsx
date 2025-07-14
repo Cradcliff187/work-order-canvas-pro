@@ -159,6 +159,11 @@ export default function SubcontractorWorkOrders() {
                         {hasUnsubmittedReport(workOrder) && (
                           <Badge variant="destructive">Report Due</Badge>
                         )}
+                        {workOrder.work_order_assignments?.[0]?.assignment_type && (
+                          <Badge variant="outline" className="ml-2">
+                            {workOrder.work_order_assignments[0].assignment_type}
+                          </Badge>
+                        )}
                       </div>
 
                       <h4 className="font-medium text-foreground">{workOrder.title}</h4>
