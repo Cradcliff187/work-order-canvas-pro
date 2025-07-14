@@ -38,12 +38,16 @@ const PartnerDashboard = () => {
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold mb-2">
-            {primaryOrganization?.name || 'Partner'} Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your {primaryOrganization?.name ? 'organization\'s' : ''} work orders and track progress
-          </p>
+          <h1 className="text-3xl font-bold mb-2">Partner Dashboard</h1>
+          {primaryOrganization && (
+            <div className="flex items-center gap-2 mb-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">
+                Organization: {primaryOrganization.name}
+              </span>
+            </div>
+          )}
+          <p className="text-muted-foreground">Manage your organization's work orders and track progress</p>
         </div>
         <Button onClick={() => navigate('/partner/work-orders/new')}>
           <Plus className="h-4 w-4 mr-2" />
@@ -88,9 +92,7 @@ const PartnerDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {primaryOrganization?.name || 'Partner'} Active Work Orders
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Active Work Orders</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>

@@ -13,10 +13,6 @@ import { useTrades } from '@/hooks/useWorkOrders';
 import { format } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
-import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
-import { OrganizationBadge } from '@/components/OrganizationBadge';
-import { useAuth } from '@/contexts/AuthContext';
-import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 
 const statusColors = {
   received: 'bg-blue-100 text-blue-800',
@@ -38,233 +34,215 @@ const WorkOrderList = () => {
     trade_id: tradeFilter && tradeFilter !== 'all' ? tradeFilter : undefined,
   };
 
-  const { data: workOrdersData, isLoading, refetch } = usePartnerWorkOrders(filters);
+  const { data: workOrdersData, isLoading } = usePartnerWorkOrders(filters);
   const { data: trades } = useTrades();
-  const { profile } = useAuth();
-  const { data: userOrganizations } = useUserOrganizations();
 
   const workOrders = workOrdersData?.data || [];
-  const primaryOrganization = userOrganizations?.[0];
-
-  const handleRefresh = async () => {
-    await refetch();
-  };
 
   return (
-    <MobilePullToRefresh onRefresh={handleRefresh}>
-      <div className="container mx-auto px-6 py-8">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Work Orders</h1>
-            <p className="text-muted-foreground">
-              View and track all your organization's work orders
-            </p>
-          </div>
-          <Button onClick={() => navigate('/partner/work-orders/new')}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Work Order
-          </Button>
+    <div className="container mx-auto px-6 py-8">
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Work Orders</h1>
+          <p className="text-muted-foreground">
+            View and track all your organization's work orders
+          </p>
         </div>
+        <Button onClick={() => navigate('/partner/work-orders/new')}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Work Order
+        </Button>
+      </div>
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search work orders..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="received">Received</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={tradeFilter} onValueChange={setTradeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by trade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Trades</SelectItem>
-                  {trades?.map((trade) => (
-                    <SelectItem key={trade.id} value={trade.id}>
-                      {trade.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search work orders..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
             </div>
 
-            {(search || (statusFilter && statusFilter !== 'all') || (tradeFilter && tradeFilter !== 'all')) && (
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearch('');
-                    setStatusFilter('all');
-                    setTradeFilter('all');
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="received">Received</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
 
-        {/* Work Orders Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Work Orders</CardTitle>
-            <CardDescription>
-              {workOrders.length} work order{workOrders.length !== 1 ? 's' : ''} found
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">Loading work orders...</div>
-            ) : workOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No work orders found</p>
-                <Button onClick={() => navigate('/partner/work-orders/new')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Submit Your First Work Order
-                </Button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Work Order #</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Trade</TableHead>
-                      <TableHead>Assigned To</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead>Est. Completion</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {workOrders.map((workOrder) => (
-                      <TableRow key={workOrder.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex flex-col gap-1">
-                            <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground">
-                              {workOrder.work_order_number || 'Pending'}
-                            </Badge>
-                            {primaryOrganization && (
-                              <OrganizationBadge 
-                                organization={{
-                                  name: primaryOrganization.name,
-                                  organization_type: 'partner'
-                                }}
-                                size="sm"
-                              />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate">
-                                      {formatLocationDisplay(workOrder)}
-                                    </div>
-                                  </div>
-                                  {generateMapUrl(workOrder) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(generateMapUrl(workOrder)!, '_blank');
-                                      }}
-                                    >
-                                      <MapPin className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="whitespace-pre-line text-sm max-w-64">
-                                  {formatLocationTooltip(workOrder)}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          {workOrder.trades?.name || 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <AssigneeDisplay 
-                            assignments={workOrder.work_order_assignments}
-                            assignedUser={workOrder.assigned_user}
-                            showOrganization={true}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="secondary" 
-                            className={statusColors[workOrder.status as keyof typeof statusColors]}
-                          >
-                            {workOrder.status.replace('_', ' ')}
+            <Select value={tradeFilter} onValueChange={setTradeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by trade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Trades</SelectItem>
+                {trades?.map((trade) => (
+                  <SelectItem key={trade.id} value={trade.id}>
+                    {trade.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(search || (statusFilter && statusFilter !== 'all') || (tradeFilter && tradeFilter !== 'all')) && (
+            <div className="mt-4 flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('all');
+                  setTradeFilter('all');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Work Orders Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Work Orders</CardTitle>
+          <CardDescription>
+            {workOrders.length} work order{workOrders.length !== 1 ? 's' : ''} found
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-8">Loading work orders...</div>
+          ) : workOrders.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No work orders found</p>
+              <Button onClick={() => navigate('/partner/work-orders/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Submit Your First Work Order
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Work Order #</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Trade</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Est. Completion</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {workOrders.map((workOrder) => (
+                    <TableRow key={workOrder.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground">
+                            {workOrder.work_order_number || 'Pending'}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell>
-                          {workOrder.estimated_completion_date 
-                            ? format(new Date(workOrder.estimated_completion_date), 'MMM d, yyyy')
-                            : 'TBD'
-                          }
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </MobilePullToRefresh>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium truncate">
+                                    {formatLocationDisplay(workOrder)}
+                                  </div>
+                                </div>
+                                {generateMapUrl(workOrder) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(generateMapUrl(workOrder)!, '_blank');
+                                    }}
+                                  >
+                                    <MapPin className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="whitespace-pre-line text-sm max-w-64">
+                                {formatLocationTooltip(workOrder)}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell>
+                        {workOrder.trades?.name || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <AssigneeDisplay 
+                          assignments={workOrder.work_order_assignments}
+                          assignedUser={workOrder.assigned_user}
+                          showOrganization={true}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="secondary" 
+                          className={statusColors[workOrder.status as keyof typeof statusColors]}
+                        >
+                          {workOrder.status.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        {workOrder.estimated_completion_date 
+                          ? format(new Date(workOrder.estimated_completion_date), 'MMM d, yyyy')
+                          : 'TBD'
+                        }
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

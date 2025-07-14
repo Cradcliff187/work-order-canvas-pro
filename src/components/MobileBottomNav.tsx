@@ -13,28 +13,17 @@ interface NavItem {
   badge?: number;
 }
 
-interface SidebarItem {
-  title: string;
-  url: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-interface MobileBottomNavProps {
-  navigation?: SidebarItem[];
-}
-
-export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
+export function MobileBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { pendingCount } = useOfflineStorage();
 
-  // Default navigation for subcontractor (backwards compatibility)
-  const defaultNavItems: NavItem[] = [
+  const navItems: NavItem[] = [
     {
       id: 'dashboard',
       label: 'Dashboard',
       icon: Home,
-      path: '/subcontractor/dashboard'
+      path: '/subcontractor'
     },
     {
       id: 'work-orders',
@@ -46,7 +35,7 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
       id: 'submit',
       label: 'Submit',
       icon: Plus,
-      path: '/subcontractor/submit-invoice'
+      path: '/subcontractor/work-orders'
     },
     {
       id: 'reports',
@@ -59,19 +48,9 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
       id: 'profile',
       label: 'Profile',
       icon: User,
-      path: '/subcontractor/profile'
+      path: '/profile'
     }
   ];
-
-  // Convert navigation prop to NavItem format
-  const navItems: NavItem[] = navigation 
-    ? navigation.map(item => ({
-        id: item.title.toLowerCase().replace(/\s+/g, '-'),
-        label: item.title,
-        icon: item.icon,
-        path: item.url,
-      }))
-    : defaultNavItems;
 
   const handleNavClick = (item: NavItem) => {
     // Add haptic feedback
@@ -83,12 +62,8 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
   };
 
   const isActive = (path: string) => {
-    // Handle dashboard routes for both user types
-    if (path === '/subcontractor/dashboard') {
-      return location.pathname === path || location.pathname === '/subcontractor';
-    }
-    if (path === '/partner/dashboard') {
-      return location.pathname === path || location.pathname === '/partner';
+    if (path === '/subcontractor') {
+      return location.pathname === path;
     }
     return location.pathname.startsWith(path);
   };

@@ -159,20 +159,9 @@ export default function SubcontractorWorkOrders() {
                         {hasUnsubmittedReport(workOrder) && (
                           <Badge variant="destructive">Report Due</Badge>
                         )}
-                        {workOrder.work_order_assignments?.[0]?.assignment_type && (
-                          <Badge variant="outline" className="ml-2">
-                            {workOrder.work_order_assignments[0].assignment_type}
-                          </Badge>
-                        )}
                       </div>
 
                       <h4 className="font-medium text-foreground">{workOrder.title}</h4>
-
-                      {workOrder.trades && (
-                        <Badge variant="secondary" className="mt-1">
-                          {workOrder.trades.name}
-                        </Badge>
-                      )}
 
                       {workOrder.store_location && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -184,6 +173,11 @@ export default function SubcontractorWorkOrders() {
                         </div>
                       )}
 
+                      {workOrder.trades && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Trade:</span> {workOrder.trades.name}
+                        </div>
+                      )}
 
                       {workOrder.due_date && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">

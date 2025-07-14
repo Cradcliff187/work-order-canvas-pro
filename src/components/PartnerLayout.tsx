@@ -1,9 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserOrganizations } from '@/hooks/useUserOrganizations';
-import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Sidebar,
   SidebarContent,
@@ -164,11 +161,6 @@ interface PartnerLayoutProps {
 }
 
 const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
-  const { profile } = useAuth();
-  const { data: userOrganizations } = useUserOrganizations();
-  const isMobile = useIsMobile();
-  const primaryOrganization = userOrganizations?.[0];
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -176,28 +168,9 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
         
         <div className="flex-1 flex flex-col">
           <header className="h-14 flex items-center justify-between border-b border-border bg-background px-4">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="lg:hidden">
-                <Menu className="h-5 w-5" />
-              </SidebarTrigger>
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold">
-                  {primaryOrganization?.name || 'Partner'} Portal
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-muted-foreground">
-                {profile && (
-                  <div className="flex flex-col">
-                    <span>{profile.first_name} {profile.last_name}</span>
-                    {primaryOrganization?.name && (
-                      <span className="text-xs">{primaryOrganization.name}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            <SidebarTrigger className="lg:hidden">
+              <Menu className="h-5 w-5" />
+            </SidebarTrigger>
           </header>
 
           <main className="flex-1 overflow-auto">
@@ -205,9 +178,6 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
           </main>
         </div>
       </div>
-      {isMobile && (
-        <MobileBottomNav navigation={sidebarItems} />
-      )}
     </SidebarProvider>
   );
 };

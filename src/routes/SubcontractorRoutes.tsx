@@ -17,17 +17,6 @@ import {
 
 export const SubcontractorRoutes = () => (
   <>
-    {/* Redirect base path to dashboard */}
-    <Route path="/subcontractor" element={
-      <ProtectedRoute requiredUserType="subcontractor">
-        <SubcontractorLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <SubcontractorDashboard />
-          </Suspense>
-        </SubcontractorLayout>
-      </ProtectedRoute>
-    } />
-    
     <Route path="/subcontractor/dashboard" element={
       <ProtectedRoute requiredUserType="subcontractor">
         <SubcontractorLayout>
