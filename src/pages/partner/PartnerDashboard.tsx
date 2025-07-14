@@ -39,14 +39,6 @@ const PartnerDashboard = () => {
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Partner Dashboard</h1>
-          {primaryOrganization && (
-            <div className="flex items-center gap-2 mb-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">
-                Organization: {primaryOrganization.name}
-              </span>
-            </div>
-          )}
           <p className="text-muted-foreground">Manage your organization's work orders and track progress</p>
         </div>
         <Button onClick={() => navigate('/partner/work-orders/new')}>
@@ -54,6 +46,21 @@ const PartnerDashboard = () => {
           New Work Order
         </Button>
       </div>
+
+      {/* Organization Context */}
+      {primaryOrganization && (
+        <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20 mb-4">
+          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Building2 className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold">{primaryOrganization.name}</h2>
+            <p className="text-sm text-muted-foreground">
+              Organization ID: {primaryOrganization.initials || 'Not configured'} • {primaryOrganization.contact_email}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Organization Numbering Status */}
       {!hasInitialsConfigured && (
@@ -76,7 +83,7 @@ const PartnerDashboard = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Work Orders</CardTitle>
@@ -131,7 +138,7 @@ const PartnerDashboard = () => {
       </div>
 
       {/* Recent Work Orders */}
-      <Card>
+      <Card className="lg:col-span-2">
         <CardHeader className="flex items-center justify-between">
           <div>
             <CardTitle>Recent Work Orders</CardTitle>
