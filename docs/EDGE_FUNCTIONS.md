@@ -284,3 +284,280 @@ await supabase.auth.signIn({
 ```
 
 This edge function provides a secure, comprehensive solution for creating authenticated test users while maintaining proper security and providing detailed feedback for development workflows.
+
+### create-admin-user
+
+**Purpose**: Create individual user accounts through the admin interface with conditional email sending
+
+**File**: `supabase/functions/create-admin-user/index.ts`
+
+**Function Features**:
+- **Admin Authentication**: Requires authenticated admin user via Bearer token
+- **Conditional Email Sending**: Control Supabase confirmation emails via `send_welcome_email` parameter
+- **Organization Assignment**: Automatically assigns users to specified organizations
+- **Profile Management**: Creates profiles with comprehensive user data including hourly rates
+- **Audit Logging**: Logs email events to `email_logs` table for tracking
+- **Error Resilience**: Robust retry logic for profile creation and organization assignment
+
+#### Authentication Requirements
+
+The function requires an authenticated admin user:
+
+**Bearer Token Authentication**:
+```typescript
+Headers: {
+  "Authorization": "Bearer <supabase-session-token>",
+  "Content-Type": "application/json"
+}
+```
+
+The authenticated user must have `user_type = 'admin'` in their profile record.
+
+#### Request Format
+
+```typescript
+interface CreateAdminUserRequest {
+  userData: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
+    company_name?: string;
+    phone?: string;
+    hourly_cost_rate?: number;
+    hourly_billable_rate?: number;
+    is_employee?: boolean;
+    organization_ids?: string[]; // Array of organization UUIDs
+  };
+  send_welcome_email?: boolean; // Default: true
+}
+```
+
+**Example Request**:
+```typescript
+const response = await supabase.functions.invoke('create-admin-user', {
+  body: {
+    userData: {
+      email: 'john.doe@company.com',
+      first_name: 'John',
+      last_name: 'Doe',
+      user_type: 'partner',
+      company_name: 'ABC Corp',
+      phone: '555-0123',
+      organization_ids: ['org-uuid-1', 'org-uuid-2']
+    },
+    send_welcome_email: true
+  }
+});
+```
+
+#### Response Format
+
+**Success Response**:
+```json
+{
+  "success": true,
+  "user": {
+    "id": "profile-uuid",
+    "user_id": "auth-uuid",
+    "email": "john.doe@company.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_type": "partner",
+    "company_name": "ABC Corp",
+    "phone": "555-0123",
+    "hourly_cost_rate": null,
+    "hourly_billable_rate": null,
+    "is_employee": false,
+    "is_active": true,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  },
+  "message": "User created successfully. They will receive a Supabase confirmation email to set up their account."
+}
+```
+
+**Error Response**:
+```json
+{
+  "success": false,
+  "error": "Authentication failed",
+  "message": "Admin profile not found"
+}
+```
+
+#### Environment Variables
+
+**Required Environment Variables**:
+```bash
+# Supabase Configuration (automatically available in Edge Functions)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+These environment variables are automatically configured in the Supabase Edge Function environment and do not need manual setup.
+
+#### Email Handling
+
+**Supabase Email Confirmation System**:
+- Uses Supabase's built-in email confirmation when `send_welcome_email: true`
+- Sets `email_confirm: true` in `auth.admin.createUser()` to trigger confirmation email
+- User receives email with link to set their password and confirm account
+- Email delivery is handled entirely by Supabase's email service
+
+**Email Logging**:
+- Logs email events to `email_logs` table for audit trail
+- Records email recipient, template type, and status
+- Provides tracking for email delivery and troubleshooting
+
+**Email Control**:
+```typescript
+// Send welcome email (default behavior)
+{
+  "send_welcome_email": true  // Triggers Supabase confirmation email
+}
+
+// Skip welcome email
+{
+  "send_welcome_email": false  // No confirmation email sent
+}
+```
+
+#### Usage Examples
+
+**Frontend Integration**:
+```typescript
+import { supabase } from '@/integrations/supabase/client';
+
+const createUser = async (userData) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('create-admin-user', {
+      body: {
+        userData: {
+          email: userData.email,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          user_type: userData.userType,
+          organization_ids: userData.selectedOrganizations
+        },
+        send_welcome_email: userData.sendWelcomeEmail ?? true
+      }
+    });
+
+    if (error) {
+      console.error('User creation failed:', error);
+      return { success: false, error };
+    }
+
+    console.log('User created successfully:', data.user);
+    return { success: true, user: data.user };
+  } catch (err) {
+    console.error('Request failed:', err);
+    return { success: false, error: err.message };
+  }
+};
+```
+
+**Direct API Call**:
+```typescript
+const response = await fetch(`https://your-project.supabase.co/functions/v1/create-admin-user`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${sessionToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    userData: {
+      email: 'user@example.com',
+      first_name: 'Jane',
+      last_name: 'Smith',
+      user_type: 'subcontractor',
+      company_name: 'Smith Contracting'
+    },
+    send_welcome_email: true
+  })
+});
+
+const result = await response.json();
+```
+
+#### Troubleshooting
+
+**Authentication Errors**:
+
+*"Admin profile not found"*:
+- **Cause**: Current user is not authenticated or doesn't have admin privileges
+- **Solution**: Ensure user is logged in and has `user_type = 'admin'` in profiles table
+- **Debug**: Check `auth.uid()` returns valid UUID and profile exists
+
+*"Authentication failed"*:
+- **Cause**: Missing or invalid Bearer token in request headers
+- **Solution**: Include valid Supabase session token in Authorization header
+- **Verification**: Test authentication with `supabase.auth.getSession()`
+
+**Email Delivery Issues**:
+
+*Email not received*:
+- **Cause**: Email may be in spam folder or Supabase email service issues
+- **Solution**: Check spam folder, verify email address is correct
+- **Debug**: Check `email_logs` table for delivery status and error messages
+
+*"Failed to log email event"*:
+- **Cause**: Database logging issue, doesn't affect user creation
+- **Solution**: Check `email_logs` table permissions and constraints
+- **Note**: This is a warning only - user creation still succeeds
+
+**Profile Creation Failures**:
+
+*"Profile creation failed after retries"*:
+- **Cause**: Database constraints, duplicate email, or RLS policy issues
+- **Solution**: Check email uniqueness, verify profile table constraints
+- **Debug**: Examine database logs for constraint violations
+
+*"Failed to update profile"*:
+- **Cause**: Invalid data in user profile update
+- **Solution**: Verify all profile fields match expected data types
+- **Check**: Ensure hourly rates are numeric, phone numbers are valid format
+
+**Organization Assignment Issues**:
+
+*"Organization assignment failed"*:
+- **Cause**: Invalid organization IDs or permission issues
+- **Solution**: Verify organization UUIDs exist and are active
+- **Debug**: Check `user_organizations` table for successful assignments
+
+#### Error Handling Patterns
+
+```typescript
+// Comprehensive error handling
+const handleUserCreation = async (userData) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('create-admin-user', {
+      body: { userData, send_welcome_email: true }
+    });
+
+    if (error) {
+      // Handle specific error types
+      switch (error.message) {
+        case 'Admin profile not found':
+          showError('You must be logged in as an admin to create users');
+          break;
+        case 'Profile creation failed after retries':
+          showError('User creation failed. Please check the email address and try again');
+          break;
+        default:
+          showError(`User creation failed: ${error.message}`);
+      }
+      return null;
+    }
+
+    return data.user;
+  } catch (err) {
+    showError('Network error. Please check your connection and try again');
+    return null;
+  }
+};
+```
+
+This edge function provides secure user creation capabilities for admin users while offering flexible email delivery options and comprehensive error handling.
