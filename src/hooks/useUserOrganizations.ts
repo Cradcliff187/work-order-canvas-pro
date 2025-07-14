@@ -13,12 +13,12 @@ export interface UserOrganization {
 }
 
 export const useUserOrganizations = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   return useQuery({
-    queryKey: ['user-organizations', user?.id],
+    queryKey: ['user-organizations', profile?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!profile) return [];
 
       const { data, error } = await supabase
         .from('user_organizations')
@@ -33,7 +33,7 @@ export const useUserOrganizations = () => {
             address
           )
         `)
-        .eq('user_id', user.id);
+        .eq('user_id', profile.id);
 
       if (error) {
         throw new Error(`Failed to fetch user organizations: ${error.message}`);
@@ -41,6 +41,6 @@ export const useUserOrganizations = () => {
 
       return data?.map(item => item.organization).filter(Boolean) as UserOrganization[] || [];
     },
-    enabled: !!user,
+    enabled: !!profile,
   });
 };
