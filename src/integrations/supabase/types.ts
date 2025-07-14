@@ -1449,6 +1449,10 @@ export type Database = {
         Args: { org_id: string }
         Returns: boolean
       }
+      validate_user_organization_assignment: {
+        Args: { p_user_id: string; p_organization_id: string }
+        Returns: boolean
+      }
       verify_test_environment_status: {
         Args: Record<PropertyKey, never>
         Returns: Json
