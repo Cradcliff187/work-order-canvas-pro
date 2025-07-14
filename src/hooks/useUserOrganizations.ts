@@ -25,43 +25,50 @@ export const useUserOrganizations = () => {
         return [];
       }
 
-      // Query user_organizations table with inner join to organizations
-      const { data, error } = await supabase
+      // Get organization IDs first
+      const { data: userOrgs, error: userOrgError } = await supabase
         .from('user_organizations')
-        .select(`
-          organization_id,
-          organizations!inner (
-            id,
-            name,
-            organization_type,
-            initials,
-            contact_email,
-            contact_phone,
-            address
-          )
-        `)
+        .select('organization_id')
         .eq('user_id', profile.id);
 
-      console.log('useUserOrganizations: Query result', { data, error });
+      console.log('useUserOrganizations: User orgs result', { userOrgs, userOrgError });
 
-      if (error) {
-        console.error('useUserOrganizations: Query error', error);
-        throw new Error(`Failed to fetch user organizations: ${error.message}`);
+      if (userOrgError) {
+        console.error('useUserOrganizations: User org query error', userOrgError);
+        throw new Error(`Failed to fetch user organizations: ${userOrgError.message}`);
       }
 
-      // Transform the data to extract organization info
-      const organizations = data?.map(item => ({
-        id: item.organizations.id,
-        name: item.organizations.name,
-        organization_type: item.organizations.organization_type,
-        initials: item.organizations.initials,
-        contact_email: item.organizations.contact_email,
-        contact_phone: item.organizations.contact_phone,
-        address: item.organizations.address,
-      })).filter(Boolean) as UserOrganization[] || [];
+      if (!userOrgs || userOrgs.length === 0) {
+        console.log('useUserOrganizations: No organizations found for user');
+        return [];
+      }
 
-      console.log('useUserOrganizations: Final organizations', organizations);
-      return organizations;
+      // Get organization details
+      const orgIds = userOrgs.map(uo => uo.organization_id);
+      const { data: organizations, error: orgError } = await supabase
+        .from('organizations')
+        .select('id, name, organization_type, initials, contact_email, contact_phone, address')
+        .in('id', orgIds);
+
+      console.log('useUserOrganizations: Organizations result', { organizations, orgError });
+
+      if (orgError) {
+        console.error('useUserOrganizations: Organizations query error', orgError);
+        throw new Error(`Failed to fetch organization details: ${orgError.message}`);
+      }
+
+      const transformedOrgs = organizations?.map(org => ({
+        id: org.id,
+        name: org.name,
+        organization_type: org.organization_type,
+        initials: org.initials,
+        contact_email: org.contact_email,
+        contact_phone: org.contact_phone,
+        address: org.address,
+      })) as UserOrganization[] || [];
+
+      console.log('useUserOrganizations: Final organizations', transformedOrgs);
+      return transformedOrgs;
     },
     enabled: !!profile,
   });
