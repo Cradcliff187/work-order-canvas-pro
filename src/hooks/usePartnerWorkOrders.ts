@@ -195,28 +195,57 @@ export function useCreateWorkOrder() {
       organization_id: string;
       partner_po_number?: string;
       partner_location_number?: string;
+      location_name?: string;
     }) => {
       if (!profile?.id) throw new Error('No user profile');
+
+      // Partner location validation and auto-fill
+      let validatedWorkOrder = { ...workOrder };
+
+      if (workOrder.partner_location_number && workOrder.organization_id) {
+        try {
+          const { data: partnerLocation, error: locationError } = await supabase
+            .from('partner_locations')
+            .select('location_name, location_number')
+            .eq('organization_id', workOrder.organization_id)
+            .eq('location_number', workOrder.partner_location_number)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (locationError) {
+            console.warn('Partner location validation failed:', locationError.message);
+          } else if (partnerLocation) {
+            // Auto-fill location_name and store_location from partner_locations
+            validatedWorkOrder.location_name = partnerLocation.location_name;
+            validatedWorkOrder.store_location = partnerLocation.location_name;
+          } else {
+            console.warn(`Partner location not found: location_number '${workOrder.partner_location_number}' does not exist for organization '${workOrder.organization_id}'`);
+          }
+        } catch (validationError) {
+          console.warn('Partner location validation error:', validationError);
+        }
+      }
 
       // Let the database trigger handle work order number generation
       const { data, error } = await supabase
         .from('work_orders')
         .insert({
-          title: workOrder.title,
-          description: workOrder.description,
-          organization_id: workOrder.organization_id,
-          trade_id: workOrder.trade_id,
-          store_location: workOrder.store_location || null,
-          street_address: workOrder.street_address || null,
-          city: workOrder.city || null,
-          state: workOrder.state || null,
-          zip_code: workOrder.zip_code || null,
-          location_street_address: workOrder.location_street_address || null,
-          location_city: workOrder.location_city || null,
-          location_state: workOrder.location_state || null,
-          location_zip_code: workOrder.location_zip_code || null,
-          partner_po_number: workOrder.partner_po_number || null,
-          partner_location_number: workOrder.partner_location_number || null,
+          title: validatedWorkOrder.title,
+          description: validatedWorkOrder.description,
+          organization_id: validatedWorkOrder.organization_id,
+          trade_id: validatedWorkOrder.trade_id,
+          store_location: validatedWorkOrder.store_location || null,
+          street_address: validatedWorkOrder.street_address || null,
+          city: validatedWorkOrder.city || null,
+          state: validatedWorkOrder.state || null,
+          zip_code: validatedWorkOrder.zip_code || null,
+          location_street_address: validatedWorkOrder.location_street_address || null,
+          location_city: validatedWorkOrder.location_city || null,
+          location_state: validatedWorkOrder.location_state || null,
+          location_zip_code: validatedWorkOrder.location_zip_code || null,
+          location_name: validatedWorkOrder.location_name || null,
+          partner_po_number: validatedWorkOrder.partner_po_number || null,
+          partner_location_number: validatedWorkOrder.partner_location_number || null,
           created_by: profile.id,
           status: 'received',
           date_submitted: new Date().toISOString(),
