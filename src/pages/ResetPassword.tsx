@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { HardHat, AlertCircle, CheckCircle } from 'lucide-react';
+import { HardHat, AlertCircle, CheckCircle, Eye, EyeOff, Check, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,10 +17,27 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isRecoverySession, setIsRecoverySession] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+
+  // Password validation helper functions
+  const validatePassword = (pwd: string) => {
+    return {
+      minLength: pwd.length >= 8,
+      hasUppercase: /[A-Z]/.test(pwd),
+      hasLowercase: /[a-z]/.test(pwd),
+      hasNumber: /\d/.test(pwd),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+    };
+  };
+
+  const passwordRequirements = validatePassword(password);
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+  const isPasswordValid = Object.values(passwordRequirements).every(Boolean) && passwordsMatch;
 
   useEffect(() => {
     const handleRecoverySession = async () => {
@@ -71,8 +88,8 @@ const ResetPassword = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (!isPasswordValid) {
+      setError('Please ensure all password requirements are met');
       setLoading(false);
       return;
     }
@@ -154,34 +171,91 @@ const ResetPassword = () => {
           </CardHeader>
           <CardContent>
             {isRecoverySession ? (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="password">New Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter new password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  
+                  {password.length > 0 && (
+                    <div className="space-y-2 p-3 bg-muted/50 rounded-lg border">
+                      <p className="text-sm font-medium text-foreground">Password Requirements:</p>
+                      <div className="grid grid-cols-1 gap-1 text-sm">
+                        <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-success' : 'text-muted-foreground'}`}>
+                          {passwordRequirements.minLength ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          At least 8 characters
+                        </div>
+                        <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-success' : 'text-muted-foreground'}`}>
+                          {passwordRequirements.hasUppercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          One uppercase letter
+                        </div>
+                        <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-success' : 'text-muted-foreground'}`}>
+                          {passwordRequirements.hasLowercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          One lowercase letter
+                        </div>
+                        <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-success' : 'text-muted-foreground'}`}>
+                          {passwordRequirements.hasNumber ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          One number
+                        </div>
+                        <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-success' : 'text-muted-foreground'}`}>
+                          {passwordRequirements.hasSpecialChar ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                          One special character
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  
+                  {confirmPassword.length > 0 && (
+                    <div className={`flex items-center gap-2 text-sm ${passwordsMatch ? 'text-success' : 'text-destructive'}`}>
+                      {passwordsMatch ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                      {passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
+                    </div>
+                  )}
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || !isPasswordValid}>
                   {loading ? 'Updating...' : 'Update Password'}
                 </Button>
               </form>
