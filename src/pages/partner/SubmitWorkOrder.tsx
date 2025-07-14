@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +13,7 @@ import { ArrowLeft, ArrowRight, CheckCircle, MapPin, Wrench, FileText } from 'lu
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
-import { useOrganizations } from '@/hooks/useOrganizations';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { LocationFields } from '@/components/LocationFields';
@@ -53,7 +53,7 @@ const SubmitWorkOrder = () => {
   const { profile } = useAuth();
   const createWorkOrder = useCreateWorkOrder();
   const { data: trades } = useTrades();
-  const { data: organizations } = useOrganizations();
+  const { organization, loading: organizationLoading } = useUserOrganization();
   const { data: locationHistory } = useLocationHistory();
 
   const form = useForm<WorkOrderFormData>({
@@ -67,11 +67,18 @@ const SubmitWorkOrder = () => {
       zip_code: '',
       trade_id: '',
       description: '',
-      organization_id: '',
+      organization_id: organization?.id || '',
       partner_po_number: '',
       partner_location_number: '',
     },
   });
+
+  // Update organization_id when organization data loads
+  useEffect(() => {
+    if (organization?.id) {
+      form.setValue('organization_id', organization.id);
+    }
+  }, [organization?.id, form]);
 
   // Watch form values for work order number generation
   const organizationId = form.watch('organization_id');
@@ -110,7 +117,7 @@ const SubmitWorkOrder = () => {
       case 2:
         return ['trade_id', 'description'];
       case 3:
-        return ['organization_id'];
+        return []; // No validation needed for step 3 since organization is auto-set
       default:
         return [];
     }
@@ -343,34 +350,20 @@ const SubmitWorkOrder = () => {
               <CardHeader>
                 <CardTitle>Review & Submit</CardTitle>
                 <CardDescription>
-                  Review your work order details and select organization
+                  Review your work order details before submission
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="organization_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Organization</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select organization" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {organizations?.organizations?.map((org) => (
-                            <SelectItem key={org.id} value={org.id}>
-                              {org.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Organization Display */}
+                {organization && (
+                  <div className="bg-muted/50 border rounded-lg p-4">
+                    <h4 className="font-medium mb-2">Organization</h4>
+                    <p className="font-semibold">{organization.name}</p>
+                    {organization.initials && (
+                      <p className="text-sm text-muted-foreground">({organization.initials})</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Work Order Number Preview */}
                 {organizationId && (
