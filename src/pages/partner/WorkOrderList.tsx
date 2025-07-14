@@ -27,6 +27,7 @@ const WorkOrderList = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tradeFilter, setTradeFilter] = useState<string>('all');
+  const [locationFilter, setLocationFilter] = useState<string>('all');
   
   const filters = {
     search: search || undefined,
@@ -38,6 +39,24 @@ const WorkOrderList = () => {
   const { data: trades } = useTrades();
 
   const workOrders = workOrdersData?.data || [];
+
+  // Extract unique locations
+  const uniqueLocations = React.useMemo(() => {
+    const locationSet = new Set<string>();
+    workOrders.forEach(wo => {
+      const location = formatLocationDisplay(wo);
+      if (location && location !== 'N/A') {
+        locationSet.add(location);
+      }
+    });
+    return Array.from(locationSet).sort();
+  }, [workOrders]);
+
+  // Filter work orders by location
+  const filteredWorkOrders = React.useMemo(() => {
+    if (locationFilter === 'all') return workOrders;
+    return workOrders.filter(wo => formatLocationDisplay(wo) === locationFilter);
+  }, [workOrders, locationFilter]);
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -63,7 +82,7 @@ const WorkOrderList = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -101,9 +120,23 @@ const WorkOrderList = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {uniqueLocations.map((location) => (
+                  <SelectItem key={location} value={location}>
+                    {location}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {(search || (statusFilter && statusFilter !== 'all') || (tradeFilter && tradeFilter !== 'all')) && (
+          {(search || (statusFilter && statusFilter !== 'all') || (tradeFilter && tradeFilter !== 'all') || (locationFilter && locationFilter !== 'all')) && (
             <div className="mt-4 flex gap-2">
               <Button
                 variant="ghost"
@@ -112,6 +145,7 @@ const WorkOrderList = () => {
                   setSearch('');
                   setStatusFilter('all');
                   setTradeFilter('all');
+                  setLocationFilter('all');
                 }}
               >
                 Clear Filters
@@ -126,13 +160,13 @@ const WorkOrderList = () => {
         <CardHeader>
           <CardTitle>Your Work Orders</CardTitle>
           <CardDescription>
-            {workOrders.length} work order{workOrders.length !== 1 ? 's' : ''} found
+            {filteredWorkOrders.length} work order{filteredWorkOrders.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Loading work orders...</div>
-          ) : workOrders.length === 0 ? (
+          ) : filteredWorkOrders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No work orders found</p>
               <Button onClick={() => navigate('/partner/work-orders/new')}>
@@ -156,7 +190,7 @@ const WorkOrderList = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {workOrders.map((workOrder) => (
+                  {filteredWorkOrders.map((workOrder) => (
                     <TableRow key={workOrder.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
