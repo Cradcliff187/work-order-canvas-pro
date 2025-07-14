@@ -4,19 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2 } from 'lucide-react';
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
-const statusColors = {
-  received: 'bg-blue-100 text-blue-800',
-  assigned: 'bg-yellow-100 text-yellow-800',
-  in_progress: 'bg-orange-100 text-orange-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
@@ -190,12 +184,7 @@ const PartnerDashboard = () => {
                         {workOrder.trades?.name || 'N/A'}
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="secondary" 
-                          className={statusColors[workOrder.status as keyof typeof statusColors]}
-                        >
-                          {workOrder.status.replace('_', ' ')}
-                        </Badge>
+                        <WorkOrderStatusBadge status={workOrder.status} />
                       </TableCell>
                       <TableCell>
                         {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
