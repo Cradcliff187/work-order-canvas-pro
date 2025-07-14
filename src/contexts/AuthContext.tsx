@@ -112,8 +112,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             setProfile(profileData);
             
-            // Redirect on sign-in events from auth page or root page
+            // Redirect on sign-in events from auth page or root page (but not reset password page)
             if (event === 'SIGNED_IN' && profileData?.user_type && 
+                window.location.pathname !== '/reset-password' &&
                 (window.location.pathname === '/' || window.location.pathname === '/auth')) {
               const redirectPaths = {
                 'admin': '/admin/dashboard',
