@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -221,18 +222,38 @@ export function useWorkOrderMutations() {
 }
 
 export function useOrganizationsForWorkOrders() {
+  const { user, profile, userOrganization } = useAuth();
+  
   return useQuery({
-    queryKey: ['organizations-simple'],
+    queryKey: ['organizations-simple', user?.id, profile?.user_type],
     queryFn: async () => {
+      // For admins, return all active organizations
+      if (profile?.user_type === 'admin') {
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('id, name, initials, organization_type')
+          .eq('is_active', true)
+          .order('name');
+        
+        if (error) throw error;
+        return data || [];
+      }
+
+      // For non-admin users, return only their organization
+      if (!userOrganization) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('organizations')
         .select('id, name, initials, organization_type')
-        .eq('is_active', true)
-        .order('name');
+        .eq('id', userOrganization.id)
+        .eq('is_active', true);
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
+    enabled: !!user && !!profile,
   });
 }
 

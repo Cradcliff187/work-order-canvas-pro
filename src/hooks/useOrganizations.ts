@@ -24,15 +24,13 @@ export interface UpdateOrganizationData {
 }
 
 /**
- * Fetches all organizations with enhanced company-level access support
+ * Fetches organizations with user-type aware access control
  * 
  * @returns Query result containing organizations with user counts and work order metrics
  * 
- * Company Access Features:
- * - Supports partner, subcontractor, and internal organization types
- * - Provides user count for team size management
- * - Includes work order statistics for organization performance tracking
- * - Enables company-level user assignment and collaboration
+ * User Type Behavior:
+ * - admin: Returns all organizations (full access)
+ * - partner/subcontractor/employee: Returns only their assigned organization(s)
  * 
  * Organization Types:
  * - partner: Property management companies that submit work orders
@@ -40,21 +38,74 @@ export interface UpdateOrganizationData {
  * - internal: General contractor company managing workflows
  */
 export function useOrganizations() {
-  const { session, user } = useAuth();
+  const { session, user, profile, userOrganization } = useAuth();
   
   return useQuery({
-    queryKey: ['organizations'],
+    queryKey: ['organizations', user?.id, profile?.user_type],
     queryFn: async () => {
       console.log('🔍 useOrganizations: Starting query...');
       console.log('🔐 useOrganizations: Auth state:', {
         hasSession: !!session,
         hasUser: !!user,
         userId: user?.id,
-        sessionToken: session?.access_token?.substring(0, 20) + '...'
+        userType: profile?.user_type,
+        hasUserOrganization: !!userOrganization
       });
       
-      // Get organizations with user and work order counts for company access management
-      const { data: organizations, error } = await supabase
+      // For admins, return all organizations
+      if (profile?.user_type === 'admin') {
+        const { data: organizations, error } = await supabase
+          .from('organizations')
+          .select(`
+            *,
+            user_organizations(count),
+            work_orders!work_orders_organization_id_fkey(
+              id,
+              status
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('❌ useOrganizations: Query failed:', error);
+          throw new Error(`Failed to fetch organizations: ${error.message}`);
+        }
+
+        const transformedOrgs: Organization[] = organizations?.map(org => ({
+          id: org.id,
+          name: org.name,
+          contact_email: org.contact_email,
+          contact_phone: org.contact_phone,
+          address: org.address,
+          organization_type: org.organization_type,
+          initials: org.initials,
+          is_active: org.is_active,
+          created_at: org.created_at,
+          updated_at: org.updated_at,
+          users_count: org.user_organizations?.length || 0,
+          work_orders_count: org.work_orders?.length || 0,
+          active_work_orders_count: org.work_orders?.filter((wo: any) => 
+            wo.status === 'received' || wo.status === 'assigned' || wo.status === 'in_progress'
+          ).length || 0,
+        })) || [];
+
+        return {
+          organizations: transformedOrgs,
+          totalCount: transformedOrgs.length,
+        };
+      }
+
+      // For non-admin users, return only their organization
+      if (!userOrganization) {
+        console.log('🔍 useOrganizations: No user organization found for non-admin user');
+        return {
+          organizations: [],
+          totalCount: 0,
+        };
+      }
+
+      // Query the user's organization with full details
+      const { data: organization, error } = await supabase
         .from('organizations')
         .select(`
           *,
@@ -64,55 +115,39 @@ export function useOrganizations() {
             status
           )
         `)
-        .order('created_at', { ascending: false });
-
-      console.log('📡 useOrganizations: Raw Supabase response:', {
-        data: organizations,
-        error,
-        dataLength: organizations?.length,
-        errorMessage: error?.message,
-        errorCode: error?.code
-      });
+        .eq('id', userOrganization.id)
+        .single();
 
       if (error) {
         console.error('❌ useOrganizations: Query failed:', error);
-        throw new Error(`Failed to fetch organizations: ${error.message}`);
+        throw new Error(`Failed to fetch user organization: ${error.message}`);
       }
 
-      // Transform the data to include proper counts
-      const transformedOrgs: Organization[] = organizations?.map(org => ({
-        id: org.id,
-        name: org.name,
-        contact_email: org.contact_email,
-        contact_phone: org.contact_phone,
-        address: org.address,
-        organization_type: org.organization_type,
-        initials: org.initials,
-        is_active: org.is_active,
-        created_at: org.created_at,
-        updated_at: org.updated_at,
-        users_count: org.user_organizations?.length || 0,
-        work_orders_count: org.work_orders?.length || 0,
-        active_work_orders_count: org.work_orders?.filter((wo: any) => 
+      const transformedOrg: Organization = {
+        id: organization.id,
+        name: organization.name,
+        contact_email: organization.contact_email,
+        contact_phone: organization.contact_phone,
+        address: organization.address,
+        organization_type: organization.organization_type,
+        initials: organization.initials,
+        is_active: organization.is_active,
+        created_at: organization.created_at,
+        updated_at: organization.updated_at,
+        users_count: organization.user_organizations?.length || 0,
+        work_orders_count: organization.work_orders?.length || 0,
+        active_work_orders_count: organization.work_orders?.filter((wo: any) => 
           wo.status === 'received' || wo.status === 'assigned' || wo.status === 'in_progress'
         ).length || 0,
-      })) || [];
-
-      console.log('🔄 useOrganizations: Transformed data:', {
-        transformedOrgs,
-        orgCount: transformedOrgs.length,
-        sampleOrg: transformedOrgs[0]
-      });
-
-      const result = {
-        organizations: transformedOrgs,
-        totalCount: transformedOrgs.length,
       };
 
-      console.log('✅ useOrganizations: Final result:', result);
-      return result;
+      console.log('✅ useOrganizations: User organization result:', transformedOrg);
+      return {
+        organizations: [transformedOrg], // Single organization in array format
+        totalCount: 1,
+      };
     },
-    enabled: !!session && !!user, // Only run query when user is authenticated
+    enabled: !!session && !!user && !!profile, // Only run query when user is authenticated
   });
 }
 
