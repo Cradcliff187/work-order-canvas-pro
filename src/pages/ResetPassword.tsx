@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { HardHat, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -15,20 +16,48 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isRecoverySession, setIsRecoverySession] = useState(false);
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Check if we have the required tokens in the URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    const type = searchParams.get('type');
+    const handleRecoverySession = async () => {
+      // Check if we have the required tokens in the URL
+      const accessToken = searchParams.get('access_token');
+      const refreshToken = searchParams.get('refresh_token');
+      const type = searchParams.get('type');
 
-    if (!accessToken || !refreshToken || type !== 'recovery') {
-      setError('Invalid or expired reset link. Please request a new password reset.');
-    }
+      if (!accessToken || !refreshToken || type !== 'recovery') {
+        setError('Invalid or expired reset link. Please request a new password reset.');
+        return;
+      }
+
+      try {
+        // Set the session from URL parameters for recovery
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+
+        if (sessionError) {
+          setError('Invalid or expired reset link. Please request a new password reset.');
+          return;
+        }
+
+        // Verify this is actually a recovery session
+        if (sessionData.user && sessionData.session) {
+          setIsRecoverySession(true);
+        } else {
+          setError('Unable to verify recovery session. Please request a new password reset.');
+        }
+      } catch (err) {
+        setError('An error occurred while validating the reset link.');
+      }
+    };
+
+    handleRecoverySession();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,8 +88,9 @@ const ResetPassword = () => {
         description: 'Your password has been successfully updated.',
       });
       
-      // Redirect to auth page after a short delay
-      setTimeout(() => {
+      // Sign out to clear the recovery session and redirect to auth page
+      setTimeout(async () => {
+        await supabase.auth.signOut();
         navigate('/auth');
       }, 2000);
     }
@@ -123,37 +153,43 @@ const ResetPassword = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter new password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
+            {isRecoverySession ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">New Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter new password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Updating...' : 'Update Password'}
+                </Button>
+              </form>
+            ) : !error && (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">Validating reset link...</p>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Updating...' : 'Update Password'}
-              </Button>
-            </form>
+            )}
 
             {error && (
               <Alert variant="destructive" className="mt-4">
