@@ -109,7 +109,7 @@ const SubcontractorDashboard = () => {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold">Company Dashboard</h1>
+            <h1 className="text-3xl font-bold">{primaryOrganization?.name || 'Company'} Dashboard</h1>
             {primaryOrganization && (
               <div className="mb-4">
                 <OrganizationBadge 
@@ -124,7 +124,7 @@ const SubcontractorDashboard = () => {
           <Link to="/subcontractor/work-orders">
             <Button>
               <ClipboardList className="h-4 w-4 mr-2" />
-              View All Company Work Orders
+              View All {primaryOrganization?.name || 'Company'} Work Orders
             </Button>
           </Link>
         </div>
@@ -155,7 +155,7 @@ const SubcontractorDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Active Work Orders</span>
+              <span className="text-sm font-medium">{primaryOrganization?.name || 'Company'} Active Work Orders</span>
             </div>
             <p className="text-2xl font-bold mt-2">{stats?.activeAssignments || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -168,7 +168,7 @@ const SubcontractorDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Reports Pending</span>
+              <span className="text-sm font-medium">{primaryOrganization?.name || 'Company'} Reports Pending</span>
             </div>
             <p className="text-2xl font-bold mt-2">{stats?.pendingReports || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -196,7 +196,7 @@ const SubcontractorDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Completed This Month</span>
+              <span className="text-sm font-medium">{primaryOrganization?.name || 'Company'} Completed This Month</span>
             </div>
             <p className="text-2xl font-bold mt-2">{stats?.completedThisMonth || 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -209,7 +209,7 @@ const SubcontractorDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Earnings This Month</span>
+              <span className="text-sm font-medium">{primaryOrganization?.name || 'Company'} Earnings This Month</span>
             </div>
             <p className="text-2xl font-bold mt-2">
               ${(stats?.earningsThisMonth || 0).toLocaleString()}
@@ -309,7 +309,7 @@ const SubcontractorDashboard = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Recent Company Work Orders</CardTitle>
+            <CardTitle>Recent {primaryOrganization?.name || 'Company'} Work Orders</CardTitle>
             <Link to="/subcontractor/work-orders">
               <Button variant="outline" size="sm">
                 View All
@@ -320,7 +320,7 @@ const SubcontractorDashboard = () => {
         <CardContent>
           {recentWorkOrders.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No company work orders available yet.
+              No {primaryOrganization?.name?.toLowerCase() || 'company'} work orders available yet.
             </p>
           ) : (
             <div className="space-y-4">
