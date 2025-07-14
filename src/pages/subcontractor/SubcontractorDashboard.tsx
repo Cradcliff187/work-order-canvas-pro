@@ -7,6 +7,7 @@ import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 import { useAuth } from "@/contexts/AuthContext";
+import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { 
   ClipboardList, 
   FileText, 
@@ -109,25 +110,14 @@ const SubcontractorDashboard = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold">Company Dashboard</h1>
-            {orgsLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
-              </div>
-            ) : primaryOrganization ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-                <span className="text-sm font-medium">{primaryOrganization.name}</span>
-                {primaryOrganization.initials && (
-                  <Badge variant="outline" className="text-xs">
-                    {primaryOrganization.initials}
-                  </Badge>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-                <span className="text-sm text-muted-foreground">No organization found</span>
+            {primaryOrganization && (
+              <div className="mb-4">
+                <OrganizationBadge 
+                  organization={{
+                    name: primaryOrganization.name,
+                    organization_type: 'subcontractor'
+                  }}
+                />
               </div>
             )}
           </div>
