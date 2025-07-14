@@ -133,14 +133,8 @@ const PartnerDashboard = () => {
 
       {/* Recent Work Orders */}
       <Card className="lg:col-span-2">
-        <CardHeader className="flex items-center justify-between">
-          <div>
-            <CardTitle>Recent Work Orders</CardTitle>
-            <CardDescription>Your latest work order submissions and updates</CardDescription>
-          </div>
-          <Button variant="outline" onClick={() => navigate('/partner/work-orders')}>
-            View All
-          </Button>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
           {workOrdersLoading ? (
