@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2 } from 'lucide-react';
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
@@ -85,7 +86,11 @@ const PartnerDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '—' : stats?.total || 0}
+              {statsLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                stats?.total || 0
+              )}
             </div>
             <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
@@ -98,7 +103,11 @@ const PartnerDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '—' : stats?.active || 0}
+              {statsLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                stats?.active || 0
+              )}
             </div>
             <p className="text-xs text-muted-foreground">In progress</p>
           </CardContent>
@@ -111,7 +120,11 @@ const PartnerDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '—' : stats?.completedThisMonth || 0}
+              {statsLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                stats?.completedThisMonth || 0
+              )}
             </div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
@@ -124,7 +137,11 @@ const PartnerDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '—' : stats?.avgCompletionDays ? `${stats.avgCompletionDays}d` : 'N/A'}
+              {statsLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                stats?.avgCompletionDays ? `${stats.avgCompletionDays}d` : 'N/A'
+              )}
             </div>
             <p className="text-xs text-muted-foreground">Average days</p>
           </CardContent>
@@ -138,7 +155,20 @@ const PartnerDashboard = () => {
         </CardHeader>
         <CardContent>
           {workOrdersLoading ? (
-            <div className="text-center py-8">Loading recent work orders...</div>
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border-b">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-24" />
+                    <div className="flex gap-4">
+                      <Skeleton className="h-3 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+              ))}
+            </div>
           ) : recentOrders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No work orders submitted yet</p>
