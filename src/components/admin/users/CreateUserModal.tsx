@@ -121,7 +121,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
           </DialogTitle>
           <DialogDescription>
             {showSuccess 
-              ? 'The user account has been created and a confirmation email has been sent.'
+              ? 'The user account has been created and a confirmation email will be sent by Supabase.'
               : 'Fill in the details to create a new user account.'
             }
           </DialogDescription>
@@ -142,7 +142,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                   </code>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  <p>✅ Confirmation email sent to user</p>
+                  <p>✅ Confirmation email will be sent by Supabase</p>
                   <p>✅ Password reset link generated</p>
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
               <Mail className="h-4 w-4" />
               <AlertDescription>
                 The user will receive a confirmation email from Supabase to verify their account and set up their password. 
-                No temporary credentials are needed.
+                Check spam folder for noreply@mail.app.supabase.io. No temporary credentials are needed.
               </AlertDescription>
             </Alert>
             
