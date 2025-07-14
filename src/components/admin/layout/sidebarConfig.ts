@@ -33,8 +33,9 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Settings', url: '/admin/settings', icon: Settings },
   { title: 'System Health', url: '/admin/system-health', icon: Activity },
+  { title: 'Email Testing', url: '/admin/test-email', icon: Mail },
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
-export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Dev Tools'];
+export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Email Testing', 'Dev Tools'];
 export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];

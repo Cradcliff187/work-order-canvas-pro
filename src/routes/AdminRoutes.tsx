@@ -24,6 +24,7 @@ import {
   EmployeeTimeReport,
   ReceiptHistory,
   SystemHealthCheck,
+  EmailTestPage,
   DevTools,
   
 } from '@/pages/LazyPages';
@@ -215,6 +216,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <SystemHealthCheck />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/test-email" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <EmailTestPage />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
