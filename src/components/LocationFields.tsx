@@ -18,6 +18,7 @@ interface LocationFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>;
   organizationId?: string;
+  organizationType?: string;
   showPoNumber?: boolean;
   className?: string;
 }
@@ -25,6 +26,7 @@ interface LocationFieldsProps {
 export function LocationFields({ 
   form, 
   organizationId, 
+  organizationType,
   showPoNumber = true,
   className 
 }: LocationFieldsProps) {

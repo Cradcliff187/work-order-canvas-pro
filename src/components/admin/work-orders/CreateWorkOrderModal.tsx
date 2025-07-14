@@ -70,6 +70,9 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
   const organizationId = form.watch('organization_id');
   const locationNumber = form.watch('partner_location_number');
   
+  // Find selected organization to get organization type
+  const selectedOrganization = organizations?.find(org => org.id === organizationId);
+  
   const { 
     workOrderNumber, 
     isLoading: isGeneratingNumber, 
@@ -83,8 +86,6 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
     locationNumber,
   });
 
-  // Find selected organization to check for initials
-  const selectedOrganization = organizations?.find(org => org.id === organizationId);
 
   const onSubmit = async (data: CreateWorkOrderForm) => {
     if (!profile?.id) return;
@@ -256,6 +257,7 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
             <LocationFields 
               form={form}
               organizationId={organizationId}
+              organizationType={selectedOrganization?.organization_type}
               showPoNumber={true}
             />
 
