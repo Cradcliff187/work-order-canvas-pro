@@ -106,7 +106,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 md:ml-64 ${isMobile ? 'pb-20' : ''}`}>
+        <main className={`flex-1 md:ml-64 ${isMobile ? 'pb-16' : ''}`}>
           <div className="container py-6">{children}</div>
         </main>
       </div>
