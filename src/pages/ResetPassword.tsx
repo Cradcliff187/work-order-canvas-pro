@@ -4,17 +4,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { HardHat, AlertCircle, CheckCircle, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { HardHat, AlertCircle, CheckCircle, Eye, EyeOff, Check, X, Clock, Link2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+// Error types for better categorization
+type ResetErrorType = 'EXPIRED_LINK' | 'INVALID_TOKEN' | 'ALREADY_USED' | 'MISSING_PARAMS' | 'SESSION_ERROR' | 'NETWORK_ERROR' | 'UNKNOWN';
+
+interface ResetError {
+  type: ResetErrorType;
+  title: string;
+  message: string;
+  canRetry: boolean;
+  showRequestNewLink: boolean;
+}
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [resetError, setResetError] = useState<ResetError | null>(null);
   const [success, setSuccess] = useState(false);
   const [isRecoverySession, setIsRecoverySession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +34,94 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+
+  // Error categorization helper
+  const categorizeError = (error: any, context: string): ResetError => {
+    const errorMessage = error?.message || error || '';
+    
+    // Check for specific error patterns
+    if (errorMessage.includes('expired') || errorMessage.includes('Token has expired')) {
+      return {
+        type: 'EXPIRED_LINK',
+        title: 'Reset Link Expired',
+        message: 'Your password reset link has expired. Please request a new one to continue.',
+        canRetry: false,
+        showRequestNewLink: true
+      };
+    }
+    
+    if (errorMessage.includes('invalid') || errorMessage.includes('Invalid token') || context === 'missing_params') {
+      return {
+        type: 'INVALID_TOKEN',
+        title: 'Invalid Reset Link',
+        message: 'This password reset link is not valid. Please check your email and use the most recent reset link.',
+        canRetry: false,
+        showRequestNewLink: true
+      };
+    }
+    
+    if (errorMessage.includes('already') || errorMessage.includes('used')) {
+      return {
+        type: 'ALREADY_USED',
+        title: 'Reset Link Already Used',
+        message: 'This password reset link has already been used. Please request a new one if you need to reset your password again.',
+        canRetry: false,
+        showRequestNewLink: true
+      };
+    }
+    
+    if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+      return {
+        type: 'NETWORK_ERROR',
+        title: 'Connection Error',
+        message: 'Unable to connect to the server. Please check your internet connection and try again.',
+        canRetry: true,
+        showRequestNewLink: false
+      };
+    }
+    
+    if (context === 'session_error') {
+      return {
+        type: 'SESSION_ERROR',
+        title: 'Session Error',
+        message: 'Unable to verify your reset session. This usually means the link has expired or been used.',
+        canRetry: false,
+        showRequestNewLink: true
+      };
+    }
+    
+    // Default error
+    return {
+      type: 'UNKNOWN',
+      title: 'Reset Error',
+      message: errorMessage || 'An unexpected error occurred. Please try requesting a new password reset link.',
+      canRetry: false,
+      showRequestNewLink: true
+    };
+  };
+
+  const handleRequestNewLink = () => {
+    navigate('/auth', { state: { showForgotPassword: true } });
+  };
+
+  const handleRetry = () => {
+    setResetError(null);
+    window.location.reload();
+  };
+
+  const getErrorIcon = (type: ResetErrorType) => {
+    switch (type) {
+      case 'EXPIRED_LINK':
+        return <Clock className="h-5 w-5" />;
+      case 'INVALID_TOKEN':
+      case 'ALREADY_USED':
+        return <Link2 className="h-5 w-5" />;
+      case 'NETWORK_ERROR':
+        return <RefreshCw className="h-5 w-5" />;
+      default:
+        return <AlertCircle className="h-5 w-5" />;
+    }
+  };
 
   // Password validation helper functions
   const validatePassword = (pwd: string) => {
@@ -47,7 +146,7 @@ const ResetPassword = () => {
       const type = searchParams.get('type');
 
       if (!accessToken || !refreshToken || type !== 'recovery') {
-        setError('Invalid or expired reset link. Please request a new password reset.');
+        setResetError(categorizeError('Missing required parameters', 'missing_params'));
         return;
       }
 
@@ -59,7 +158,7 @@ const ResetPassword = () => {
         });
 
         if (sessionError) {
-          setError('Invalid or expired reset link. Please request a new password reset.');
+          setResetError(categorizeError(sessionError, 'session_error'));
           return;
         }
 
@@ -67,10 +166,10 @@ const ResetPassword = () => {
         if (sessionData.user && sessionData.session) {
           setIsRecoverySession(true);
         } else {
-          setError('Unable to verify recovery session. Please request a new password reset.');
+          setResetError(categorizeError('Session verification failed', 'session_error'));
         }
       } catch (err) {
-        setError('An error occurred while validating the reset link.');
+        setResetError(categorizeError(err, 'session_error'));
       }
     };
 
@@ -80,16 +179,16 @@ const ResetPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setResetError(null);
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setResetError(categorizeError('Passwords do not match', 'validation_error'));
       setLoading(false);
       return;
     }
 
     if (!isPasswordValid) {
-      setError('Please ensure all password requirements are met');
+      setResetError(categorizeError('Please ensure all password requirements are met', 'validation_error'));
       setLoading(false);
       return;
     }
@@ -97,7 +196,7 @@ const ResetPassword = () => {
     const { error } = await resetPassword(password);
     
     if (error) {
-      setError(error.message);
+      setResetError(categorizeError(error, 'reset_error'));
     } else {
       setSuccess(true);
       toast({
@@ -259,17 +358,43 @@ const ResetPassword = () => {
                   {loading ? 'Updating...' : 'Update Password'}
                 </Button>
               </form>
-            ) : !error && (
+            ) : !resetError && (
               <div className="text-center py-4">
                 <p className="text-muted-foreground">Validating reset link...</p>
               </div>
             )}
 
-            {error && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+            {resetError && (
+              <div className="mt-4 space-y-4">
+                <Alert variant="destructive">
+                  {getErrorIcon(resetError.type)}
+                  <AlertTitle>{resetError.title}</AlertTitle>
+                  <AlertDescription>{resetError.message}</AlertDescription>
+                </Alert>
+                
+                <div className="flex flex-col gap-2">
+                  {resetError.showRequestNewLink && (
+                    <Button
+                      onClick={handleRequestNewLink}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Request New Reset Link
+                    </Button>
+                  )}
+                  
+                  {resetError.canRetry && (
+                    <Button
+                      onClick={handleRetry}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Try Again
+                    </Button>
+                  )}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
