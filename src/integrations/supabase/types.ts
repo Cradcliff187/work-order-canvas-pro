@@ -68,7 +68,6 @@ export type Database = {
           error_message: string | null
           id: string
           recipient_email: string
-          resend_message_id: string | null
           sent_at: string
           status: Database["public"]["Enums"]["email_status"]
           template_used: string | null
@@ -79,7 +78,6 @@ export type Database = {
           error_message?: string | null
           id?: string
           recipient_email: string
-          resend_message_id?: string | null
           sent_at?: string
           status?: Database["public"]["Enums"]["email_status"]
           template_used?: string | null
@@ -90,7 +88,6 @@ export type Database = {
           error_message?: string | null
           id?: string
           recipient_email?: string
-          resend_message_id?: string | null
           sent_at?: string
           status?: Database["public"]["Enums"]["email_status"]
           template_used?: string | null
