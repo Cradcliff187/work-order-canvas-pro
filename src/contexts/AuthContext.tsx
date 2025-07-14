@@ -112,10 +112,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             setProfile(profileData);
             
-            // Redirect on sign-in events from auth page or root page (but not reset password page)
-            if (event === 'SIGNED_IN' && profileData?.user_type && 
-                window.location.pathname !== '/reset-password' &&
-                (window.location.pathname === '/' || window.location.pathname === '/auth')) {
+            // Prevent redirects during password reset flow
+            const isOnProtectedResetFlow = window.location.pathname === '/reset-password';
+            const shouldRedirect = event === 'SIGNED_IN' && 
+                                  profileData?.user_type && 
+                                  !isOnProtectedResetFlow &&
+                                  (window.location.pathname === '/' || window.location.pathname === '/auth');
+            
+            console.log('Auth state change:', {
+              event,
+              pathname: window.location.pathname,
+              userType: profileData?.user_type,
+              isOnProtectedResetFlow,
+              shouldRedirect
+            });
+            
+            if (shouldRedirect) {
               const redirectPaths = {
                 'admin': '/admin/dashboard',
                 'employee': '/admin/employee-dashboard',
