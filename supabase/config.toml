@@ -2,3 +2,6 @@ project_id = "inudoymofztrvxhrlrek"
 
 [functions.setup-test-environment]
 verify_jwt = false
+
+[functions.email-report-reviewed]
+verify_jwt = false
