@@ -17,7 +17,9 @@ import {
   UserCheck,
   Search,
   X,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  RefreshCw
 } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, flexRender, SortingState, ColumnFiltersState } from '@tanstack/react-table';
 import { useDevTools } from '@/hooks/useDevTools';
@@ -60,10 +62,12 @@ const DevTools = () => {
     authLoading,
     sqlLoading,
     counts,
+    emailStats,
     setupResult,
     authResult,
     sqlResult,
     fetchCounts,
+    fetchEmailStats,
     clearTestData,
     setupCompleteEnvironment,
     setupSqlData,
@@ -81,6 +85,7 @@ const DevTools = () => {
   useEffect(() => {
     if (isDevelopment && isAdmin) {
       fetchCounts();
+      fetchEmailStats();
       fetchImpersonationUsers();
     }
   }, [isDevelopment, isAdmin]);
@@ -464,6 +469,73 @@ const DevTools = () => {
                 >
                   {loading ? <LoadingSpinner /> : null}
                   Refresh Counts
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* EMAIL CONFIGURATION STATUS */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Email Configuration Status
+              </CardTitle>
+              <CardDescription>
+                Supabase email service status and delivery statistics
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {emailStats && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <div className="text-2xl font-bold">{emailStats.emails_today}</div>
+                    <div className="text-sm text-muted-foreground">Today</div>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <div className="text-2xl font-bold">{emailStats.total_emails}</div>
+                    <div className="text-sm text-muted-foreground">Total</div>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <div className="text-2xl font-bold text-green-600">{emailStats.emails_delivered}</div>
+                    <div className="text-sm text-muted-foreground">Delivered</div>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <div className="text-2xl font-bold text-red-600">{emailStats.emails_failed}</div>
+                    <div className="text-sm text-muted-foreground">Failed</div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Service Status:</span>
+                  <Badge variant={emailStats?.service_status === 'active' ? 'default' : 'secondary'}>
+                    {emailStats?.service_status === 'active' ? 'Active' : 'Unknown'}
+                  </Badge>
+                </div>
+              </div>
+
+              <Alert className="border-warning bg-warning/10">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Free Tier Limitation:</strong> Supabase free tier limits email sending to 3 emails per hour. 
+                  Emails beyond this limit will be queued and sent in subsequent hours.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => {
+                    fetchEmailStats();
+                    fetchCounts();
+                  }}
+                  disabled={loading}
+                  variant="outline"
+                  size="sm"
+                >
+                  {loading ? <LoadingSpinner /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                  Refresh Stats
                 </Button>
               </div>
             </CardContent>

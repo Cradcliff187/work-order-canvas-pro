@@ -57,6 +57,14 @@ interface ClearTestDataResponse {
   test_work_order_count?: number;
 }
 
+interface EmailStats {
+  total_emails: number;
+  emails_today: number;
+  emails_delivered: number;
+  emails_failed: number;
+  service_status: 'active' | 'unknown';
+}
+
 export const useDevTools = () => {
   const [loading, setLoading] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
@@ -64,6 +72,7 @@ export const useDevTools = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [sqlLoading, setSqlLoading] = useState(false);
   const [counts, setCounts] = useState<TableCounts | null>(null);
+  const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
   const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
   const [authResult, setAuthResult] = useState<any>(null);
   const [sqlResult, setSqlResult] = useState<any>(null);
@@ -531,6 +540,43 @@ export const useDevTools = () => {
     }
   };
 
+  const fetchEmailStats = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const [totalCount, todayCount, deliveredCount, failedCount] = await Promise.all([
+        supabase.from('email_logs').select('*', { count: 'exact', head: true }),
+        supabase.from('email_logs').select('*', { count: 'exact', head: true }).gte('sent_at', today),
+        supabase.from('email_logs').select('*', { count: 'exact', head: true }).eq('status', 'delivered'),
+        supabase.from('email_logs').select('*', { count: 'exact', head: true }).in('status', ['failed', 'bounced'])
+      ]);
+
+      // Try to check if edge function is accessible
+      let serviceStatus: 'active' | 'unknown' = 'unknown';
+      try {
+        await supabase.functions.invoke('create-admin-user', { body: { test: true } });
+        serviceStatus = 'active';
+      } catch {
+        serviceStatus = 'unknown';
+      }
+
+      setEmailStats({
+        total_emails: totalCount.count || 0,
+        emails_today: todayCount.count || 0,
+        emails_delivered: deliveredCount.count || 0,
+        emails_failed: failedCount.count || 0,
+        service_status: serviceStatus
+      });
+    } catch (error) {
+      console.error('Error fetching email stats:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch email statistics",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     loading,
     setupLoading,
@@ -538,10 +584,12 @@ export const useDevTools = () => {
     authLoading,
     sqlLoading,
     counts,
+    emailStats,
     setupResult,
     authResult,
     sqlResult,
     fetchCounts,
+    fetchEmailStats,
     clearTestData,
     setupCompleteEnvironment,
     setupSqlData,
