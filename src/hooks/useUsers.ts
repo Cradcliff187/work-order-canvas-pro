@@ -22,7 +22,7 @@ export interface CreateUserData {
   phone?: string;
   company_name?: string;
   organization_ids?: string[];
-  send_welcome_email?: boolean;
+  
 }
 
 export interface UpdateUserData {

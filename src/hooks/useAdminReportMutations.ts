@@ -76,7 +76,7 @@ export function useAdminReportMutations() {
           reviewNotes: variables.reviewNotes
         }
       }).catch(error => {
-        console.error('Failed to send email notification:', error);
+        
       });
     },
     onError: (error: any) => {

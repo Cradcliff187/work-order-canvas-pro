@@ -29,7 +29,7 @@ interface AssignWorkOrderModalProps {
 export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWorkOrderModalProps) {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  const [sendEmail, setSendEmail] = useState(true);
+  
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
@@ -45,7 +45,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     if (isOpen) {
       setSelectedAssignees([]);
       setNotes('');
-      setSendEmail(true);
+      
       setValidationErrors([]);
     }
   }, [isOpen]);
@@ -129,21 +129,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
           })
           .in('id', workOrders.map(wo => wo.id));
 
-        // Send email notification if requested
-        if (sendEmail) {
-          try {
-            await supabase.functions.invoke('email-work-order-assigned', {
-              body: { 
-                workOrderIds: workOrders.map(wo => wo.id),
-                assignedUserId: leadAssignee,
-                notes 
-              }
-            });
-          } catch (emailError) {
-            console.error('Failed to send assignment email:', emailError);
-            // Don't throw here - assignment succeeded even if email failed
-          }
-        }
       }
 
       onClose();
@@ -450,23 +435,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             />
           </div>
 
-          {/* Email Notification */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="sendEmail"
-              checked={sendEmail}
-              onCheckedChange={(checked) => setSendEmail(!!checked)}
-            />
-            <Label htmlFor="sendEmail" className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Send email notification to assignees
-              {selectedAssigneeData.length > 0 && (
-                <span className="text-muted-foreground text-xs">
-                  ({selectedAssigneeData.length} recipient{selectedAssigneeData.length > 1 ? 's' : ''})
-                </span>
-              )}
-            </Label>
-          </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">

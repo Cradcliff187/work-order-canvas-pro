@@ -27,7 +27,7 @@ export interface CreateEmployeeData {
   company_name?: string;
   hourly_cost_rate?: number;
   hourly_billable_rate?: number;
-  send_welcome_email?: boolean;
+  
 }
 
 export interface EmployeesData {

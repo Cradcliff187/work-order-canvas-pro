@@ -80,17 +80,6 @@ export const useInvoiceSubmission = () => {
         }
       }
 
-      // Send notification to admins
-      try {
-        await supabase.functions.invoke('invoice-submitted', {
-          body: {
-            invoice_id: invoice.id
-          }
-        });
-      } catch (emailError) {
-        console.warn('Failed to send submission notification:', emailError);
-        // Don't fail the entire operation for email issues
-      }
 
       return invoice;
     },

@@ -111,7 +111,7 @@ const AdminUsers = () => {
     } catch (error: any) {
       toast({
         title: "Error sending password reset",
-        description: error.message || "Failed to send password reset email",
+        description: error.message || "Failed to reset password",
         variant: "destructive",
       });
     } finally {

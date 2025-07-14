@@ -20,7 +20,7 @@ const createEmployeeSchema = z.object({
   company_name: z.string().optional(),
   hourly_cost_rate: z.number().min(0, 'Cost rate must be positive').optional().or(z.literal('')),
   hourly_billable_rate: z.number().min(0, 'Billable rate must be positive').optional().or(z.literal('')),
-  send_welcome_email: z.boolean().default(false),
+  
 });
 
 type CreateEmployeeFormData = z.infer<typeof createEmployeeSchema>;
@@ -48,7 +48,7 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
       company_name: '',
       hourly_cost_rate: '',
       hourly_billable_rate: '',
-      send_welcome_email: false,
+      
     },
   });
 
@@ -74,7 +74,7 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
         company_name: data.company_name,
         hourly_cost_rate: data.hourly_cost_rate === '' ? undefined : Number(data.hourly_cost_rate),
         hourly_billable_rate: data.hourly_billable_rate === '' ? undefined : Number(data.hourly_billable_rate),
-        send_welcome_email: data.send_welcome_email,
+        
       });
 
       // For demo purposes, show generated credentials
@@ -155,7 +155,7 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
             
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Mail className="h-4 w-4" />
-              <span>The employee will receive a welcome email with login instructions.</span>
+              <span>Please save these credentials and share them with the employee securely.</span>
             </div>
             
             <DialogFooter>
@@ -306,28 +306,6 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
                 </div>
               </div>
 
-              <Separator />
-
-              <FormField
-                control={form.control}
-                name="send_welcome_email"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Send Welcome Email</FormLabel>
-                      <FormDescription>
-                        Send an email to the employee with their login credentials and getting started information.
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleClose}>

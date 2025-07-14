@@ -519,7 +519,7 @@ const DevTools = () => {
               <Alert className="border-warning bg-warning/10">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Free Tier Limitation:</strong> Supabase free tier limits email sending to 3 emails per hour. 
+                  <strong>Free Tier:</strong> Supabase manages all email communications through edge functions. 
                   Emails beyond this limit will be queued and sent in subsequent hours.
                 </AlertDescription>
               </Alert>

@@ -11,7 +11,7 @@ interface AssignmentData {
   workOrderIds: string[];
   subcontractorId: string;
   notes?: string;
-  sendEmail?: boolean;
+  
 }
 
 export function useSubcontractorsByTrade(tradeId?: string) {
@@ -74,7 +74,7 @@ export function useSubcontractorsByTrade(tradeId?: string) {
  * 
  * Business Logic:
  * - Auto-populates assigned_organization_id based on user's organization
- * - Sends email notifications for new assignments
+ 
  * - Updates work order status from 'received' to 'assigned'
  * - Tracks assignment history for audit trails
  */
@@ -83,7 +83,7 @@ export function useWorkOrderAssignment() {
   const { toast } = useToast();
 
   const assignWorkOrders = useMutation({
-    mutationFn: async ({ workOrderIds, subcontractorId, notes, sendEmail }: AssignmentData) => {
+    mutationFn: async ({ workOrderIds, subcontractorId, notes }: AssignmentData) => {
       const updates = {
         assigned_to: subcontractorId,
         assigned_to_type: 'subcontractor' as const,
@@ -105,21 +105,6 @@ export function useWorkOrderAssignment() {
 
       if (error) throw error;
 
-      // Send email notification if requested
-      if (sendEmail && data?.length > 0) {
-        try {
-          await supabase.functions.invoke('email-work-order-assigned', {
-            body: { 
-              workOrders: data,
-              assignedUser: data[0].assigned_user,
-              notes 
-            }
-          });
-        } catch (emailError) {
-          console.error('Failed to send assignment email:', emailError);
-          // Don't throw here - assignment succeeded even if email failed
-        }
-      }
 
       return data;
     },

@@ -38,7 +38,6 @@ interface TestUserForm {
   first_name: string;
   last_name: string;
   user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
-  send_welcome_email: boolean;
 }
 
 const EmailTestPage = () => {
@@ -55,7 +54,6 @@ const EmailTestPage = () => {
     first_name: 'Test',
     last_name: 'User',
     user_type: 'employee',
-    send_welcome_email: true
   });
 
   useEffect(() => {
@@ -113,12 +111,12 @@ const EmailTestPage = () => {
         first_name: testForm.first_name,
         last_name: testForm.last_name,
         user_type: testForm.user_type,
-        send_welcome_email: testForm.send_welcome_email
+        
       });
 
       setTestResult({
         success: true,
-        message: `Test user created successfully! ${testForm.send_welcome_email ? 'Welcome email sent.' : 'No email sent (disabled).'}`,
+        message: 'Test user created successfully!',
         details: result
       });
 
@@ -285,14 +283,6 @@ const EmailTestPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="send_welcome_email"
-              checked={testForm.send_welcome_email}
-              onCheckedChange={(checked) => setTestForm(prev => ({ ...prev, send_welcome_email: checked }))}
-            />
-            <Label htmlFor="send_welcome_email">Send welcome email</Label>
-          </div>
 
           <Button 
             onClick={handleCreateTestUser}

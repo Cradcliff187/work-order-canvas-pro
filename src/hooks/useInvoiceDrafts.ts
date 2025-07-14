@@ -280,14 +280,6 @@ export const useInvoiceDrafts = () => {
 
       if (updateError) throw updateError;
 
-      // Send notification to admins
-      try {
-        await supabase.functions.invoke('invoice-submitted', {
-          body: { invoice_id: invoice.id }
-        });
-      } catch (emailError) {
-        console.warn('Failed to send submission notification:', emailError);
-      }
 
       return invoice;
     },

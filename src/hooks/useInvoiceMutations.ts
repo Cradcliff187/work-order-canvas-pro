@@ -38,18 +38,6 @@ export const useInvoiceMutations = () => {
       if (error) throw error;
 
       // Send status change notification
-      try {
-        await supabase.functions.invoke('invoice-status-changed', {
-          body: {
-            invoice_id: invoiceId,
-            status: 'approved',
-            notes: notes
-          }
-        });
-      } catch (emailError) {
-        console.warn('Failed to send approval notification:', emailError);
-        // Don't fail the entire operation for email issues
-      }
 
       return data;
     },
@@ -86,18 +74,6 @@ export const useInvoiceMutations = () => {
       if (error) throw error;
 
       // Send status change notification
-      try {
-        await supabase.functions.invoke('invoice-status-changed', {
-          body: {
-            invoice_id: invoiceId,
-            status: 'rejected',
-            notes: notes
-          }
-        });
-      } catch (emailError) {
-        console.warn('Failed to send rejection notification:', emailError);
-        // Don't fail the entire operation for email issues
-      }
 
       return data;
     },
@@ -135,18 +111,6 @@ export const useInvoiceMutations = () => {
       if (error) throw error;
 
       // Send payment notification
-      try {
-        await supabase.functions.invoke('invoice-status-changed', {
-          body: {
-            invoice_id: invoiceId,
-            status: 'paid',
-            payment_reference: paymentReference
-          }
-        });
-      } catch (emailError) {
-        console.warn('Failed to send payment notification:', emailError);
-        // Don't fail the entire operation for email issues
-      }
 
       return data;
     },
