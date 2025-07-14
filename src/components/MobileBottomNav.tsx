@@ -83,8 +83,12 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
   };
 
   const isActive = (path: string) => {
+    // Handle dashboard routes for both user types
     if (path === '/subcontractor/dashboard') {
       return location.pathname === path || location.pathname === '/subcontractor';
+    }
+    if (path === '/partner/dashboard') {
+      return location.pathname === path || location.pathname === '/partner';
     }
     return location.pathname.startsWith(path);
   };

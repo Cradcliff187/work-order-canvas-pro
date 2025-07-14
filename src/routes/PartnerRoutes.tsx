@@ -16,6 +16,17 @@ import {
 
 export const PartnerRoutes = () => (
   <>
+    {/* Redirect base path to dashboard */}
+    <Route path="/partner" element={
+      <ProtectedRoute requiredUserType="partner">
+        <PartnerLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <PartnerDashboard />
+          </Suspense>
+        </PartnerLayout>
+      </ProtectedRoute>
+    } />
+    
     <Route path="/partner/dashboard" element={
       <ProtectedRoute requiredUserType="partner">
         <PartnerLayout>
