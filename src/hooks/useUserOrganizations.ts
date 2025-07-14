@@ -20,6 +20,17 @@ export const useUserOrganizations = () => {
     queryFn: async () => {
       if (!user) return [];
 
+      // Get the profile ID first, then query user_organizations
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profileData) {
+        throw new Error(`Failed to fetch user profile: ${profileError?.message}`);
+      }
+
       const { data, error } = await supabase
         .from('user_organizations')
         .select(`
@@ -33,7 +44,7 @@ export const useUserOrganizations = () => {
             address
           )
         `)
-        .eq('user_id', user.id);
+        .eq('user_id', profileData.id);
 
       if (error) {
         throw new Error(`Failed to fetch user organizations: ${error.message}`);
