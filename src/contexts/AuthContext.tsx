@@ -124,10 +124,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           // Fetch profile data asynchronously
-          fetchProfile(session.user.id).then((profileData) => {
+          fetchProfile(session.user.id).then(async (profileData) => {
             if (!mounted) return;
             
             setProfile(profileData);
+            
+            // Fetch organization data if user has a profile
+            if (profileData) {
+              setOrganizationLoading(true);
+              const organizationData = await fetchUserOrganization(session.user.id);
+              if (mounted) {
+                setUserOrganization(organizationData);
+                setOrganizationLoading(false);
+              }
+            }
             
             // Prevent redirects during password reset flow
             const isOnProtectedResetFlow = window.location.pathname === '/reset-password';
@@ -161,6 +171,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         } else {
           setProfile(null);
+          setUserOrganization(null);
+          setOrganizationLoading(false);
           setLoading(false);
         }
       }
@@ -174,9 +186,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id).then((profileData) => {
+        fetchProfile(session.user.id).then(async (profileData) => {
           if (!mounted) return;
           setProfile(profileData);
+          
+          // Fetch organization data if user has a profile
+          if (profileData) {
+            setOrganizationLoading(true);
+            const organizationData = await fetchUserOrganization(session.user.id);
+            if (mounted) {
+              setUserOrganization(organizationData);
+              setOrganizationLoading(false);
+            }
+          }
+          
           setLoading(false);
           setInitializing(false);
         });
