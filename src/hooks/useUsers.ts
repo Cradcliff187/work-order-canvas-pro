@@ -2,6 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/pages/admin/AdminUsers';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  validateUserOrganizationType, 
+  getUserExpectedOrganizationType
+} from '@/lib/utils/organizationValidation';
+import { filterOrganizationsByUserType } from '@/lib/utils/userOrgMapping';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
 // Generate a secure password for new users
 function generateSecurePassword(): string {
@@ -112,6 +118,31 @@ export function useUserMutations() {
 
   const createUser = useMutation({
     mutationFn: async (userData: CreateUserData) => {
+      // Client-side validation for organization types
+      if (userData.organization_ids && userData.organization_ids.length > 0) {
+        // Get organizations to validate
+        const { data: organizations, error } = await supabase
+          .from('organizations')
+          .select('*')
+          .in('id', userData.organization_ids);
+
+        if (error) {
+          throw new Error(`Failed to fetch organizations for validation: ${error.message}`);
+        }
+
+        // Validate each organization type matches user type
+        const validationErrors = [];
+        for (const org of organizations || []) {
+          if (!validateUserOrganizationType(userData.user_type, org.organization_type)) {
+            validationErrors.push(`User type '${userData.user_type}' cannot belong to organization type '${org.organization_type}' (${org.name})`);
+          }
+        }
+
+        if (validationErrors.length > 0) {
+          throw new Error(`Organization validation failed: ${validationErrors.join(', ')}`);
+        }
+      }
+
       // Generate a secure temporary password
       const temporaryPassword = generateSecurePassword();
       
@@ -393,4 +424,34 @@ export function useUserMutations() {
     toggleUserStatus,
     bulkUpdateUsers,
   };
+}
+
+/**
+ * Hook to get auto-assignment preview for a user type
+ */
+export function useAutoAssignmentPreview(userType: 'admin' | 'partner' | 'subcontractor' | 'employee' | undefined) {
+  const { data: organizationsData } = useOrganizations();
+  
+  return useQuery({
+    queryKey: ['auto-assignment-preview', userType],
+    queryFn: async () => {
+      if (!userType || userType === 'admin') {
+        return { 
+          willAutoAssign: false,
+          organization: null,
+          availableOrganizations: []
+        };
+      }
+
+      const organizations = organizationsData?.organizations || [];
+      const filteredOrganizations = filterOrganizationsByUserType(organizations, userType);
+      
+      return {
+        willAutoAssign: filteredOrganizations.length > 0,
+        organization: filteredOrganizations[0] || null,
+        availableOrganizations: filteredOrganizations
+      };
+    },
+    enabled: !!userType && !!organizationsData,
+  });
 }

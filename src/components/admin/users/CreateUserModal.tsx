@@ -13,7 +13,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Separator } from '@/components/ui/separator';
 import { Copy, Eye, EyeOff, Mail, User, Phone, Building2, Plus, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useUserMutations, CreateUserData } from '@/hooks/useUsers';
+import { useUserMutations, CreateUserData, useAutoAssignmentPreview } from '@/hooks/useUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useToast } from '@/hooks/use-toast';
 import { QuickOrganizationForm } from './QuickOrganizationForm';
@@ -60,6 +60,9 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
 
   const watchedUserType = form.watch('user_type');
   const watchedOrganizations = form.watch('organization_ids') || [];
+  
+  // Auto-assignment preview
+  const { data: autoAssignmentData } = useAutoAssignmentPreview(watchedUserType);
 
   const generatePassword = () => {
     const length = 12;
@@ -253,6 +256,25 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                     Select the organizations this user should be associated with.
                   </FormDescription>
                   
+                  {/* Auto-assignment preview */}
+                  {autoAssignmentData?.willAutoAssign && watchedOrganizations.length === 0 && (
+                    <Alert>
+                      <Building2 className="h-4 w-4" />
+                      <AlertDescription>
+                        <div className="space-y-1">
+                          <p className="font-medium">Auto-assignment enabled</p>
+                          <p className="text-sm">
+                            This {watchedUserType} user will be automatically assigned to: 
+                            <span className="font-medium ml-1">{autoAssignmentData.organization?.name}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            You can select different organizations below to override this.
+                          </p>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
                    {(() => {
                      const allOrgs = organizationsData?.organizations || [];
                      const filteredOrgs = filterOrganizationsByUserType(allOrgs, watchedUserType);
@@ -273,32 +295,25 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                               >
                                 <Building2 className="h-4 w-4 text-muted-foreground" />
                                 {org.name}
+                                {autoAssignmentData?.organization?.id === org.id && watchedOrganizations.length === 0 && (
+                                  <Badge variant="default" className="text-xs ml-2">
+                                    Auto-assigned
+                                  </Badge>
+                                )}
                               </label>
                             </div>
                           ))}
-                       </div>
-                       <div className="border-t pt-2 mt-2">
-                         <Button
-                           type="button"
-                           variant="outline"
-                           size="sm"
-                           onClick={() => setShowCreateOrgDialog(true)}
-                           className="w-full"
-                         >
-                           <Plus className="w-4 h-4 mr-2" />
-                           Create New Organization
-                         </Button>
-                       </div>
                          </div>
-                       ) : (
-                         <Alert>
-                           <AlertCircle className="h-4 w-4" />
-                           <AlertDescription>
-                             No {watchedUserType === 'partner' ? 'partner' : watchedUserType === 'subcontractor' ? 'subcontractor' : 'internal'} organizations available. Create one to continue.
-                           </AlertDescription>
-                         </Alert>
-                       );
-                     })()}
+                       </div>
+                     ) : (
+                       <Alert>
+                         <AlertCircle className="h-4 w-4" />
+                         <AlertDescription>
+                           No {watchedUserType === 'partner' ? 'partner' : watchedUserType === 'subcontractor' ? 'subcontractor' : 'internal'} organizations available. Create one to continue.
+                         </AlertDescription>
+                       </Alert>
+                     );
+                   })()}
 
                   {watchedOrganizations.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
@@ -312,6 +327,19 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                       })}
                     </div>
                   )}
+                  
+                  <div className="border-t pt-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCreateOrgDialog(true)}
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create New Organization
+                    </Button>
+                  </div>
                 </div>
               )}
 

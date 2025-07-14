@@ -2,6 +2,96 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
 
+// Organization validation utilities
+type UserType = 'admin' | 'partner' | 'subcontractor' | 'employee';
+type OrganizationType = 'partner' | 'subcontractor' | 'internal';
+
+function getUserTypeOrganizationTypes(userType: UserType): OrganizationType[] {
+  switch (userType) {
+    case 'partner':
+      return ['partner'];
+    case 'subcontractor':
+      return ['subcontractor'];
+    case 'employee':
+      return ['internal'];
+    case 'admin':
+      return ['partner', 'subcontractor', 'internal']; // Admins can see all
+    default:
+      return [];
+  }
+}
+
+function getUserExpectedOrganizationType(userType: UserType): OrganizationType | null {
+  switch (userType) {
+    case 'partner':
+      return 'partner';
+    case 'subcontractor':
+      return 'subcontractor';
+    case 'employee':
+      return 'internal';
+    case 'admin':
+      return null; // Admins don't have a specific org type
+    default:
+      return null;
+  }
+}
+
+function validateUserOrganizationType(userType: UserType, organizationType: OrganizationType): boolean {
+  const allowedTypes = getUserTypeOrganizationTypes(userType);
+  return allowedTypes.includes(organizationType);
+}
+
+async function getOrganizationsForAutoAssignment(supabaseAdmin: any, userType: UserType): Promise<any[]> {
+  const expectedOrgType = getUserExpectedOrganizationType(userType);
+  if (!expectedOrgType) {
+    return [];
+  }
+
+  const { data: organizations, error } = await supabaseAdmin
+    .from('organizations')
+    .select('*')
+    .eq('organization_type', expectedOrgType)
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Failed to fetch organizations for auto-assignment:', error);
+    return [];
+  }
+
+  return organizations || [];
+}
+
+async function validateAndProcessOrganizations(
+  supabaseAdmin: any, 
+  userType: UserType, 
+  organizationIds: string[]
+): Promise<{ validOrganizations: any[], errors: string[] }> {
+  const validOrganizations = [];
+  const errors = [];
+
+  // Fetch all provided organizations
+  const { data: organizations, error } = await supabaseAdmin
+    .from('organizations')
+    .select('*')
+    .in('id', organizationIds);
+
+  if (error) {
+    throw new Error(`Failed to fetch organizations: ${error.message}`);
+  }
+
+  // Validate each organization
+  for (const org of organizations || []) {
+    if (!validateUserOrganizationType(userType, org.organization_type)) {
+      errors.push(`User type '${userType}' cannot belong to organization type '${org.organization_type}' (${org.name})`);
+    } else {
+      validOrganizations.push(org);
+    }
+  }
+
+  return { validOrganizations, errors };
+}
+
 serve(async (req) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
@@ -139,9 +229,48 @@ serve(async (req) => {
       // Continue anyway, this is not critical
     }
 
-    // Handle organization relationships
+    // Handle organization relationships with validation and auto-assignment
+    let finalOrganizationIds: string[] = [];
+    let autoAssignedOrganizations: any[] = [];
+    
     if (userData.organization_ids && userData.organization_ids.length > 0) {
-      const orgRelationships = userData.organization_ids.map((orgId: string) => ({
+      // Validate provided organizations
+      console.log('Validating provided organizations:', userData.organization_ids);
+      const { validOrganizations, errors } = await validateAndProcessOrganizations(
+        supabaseAdmin,
+        userData.user_type,
+        userData.organization_ids
+      );
+
+      if (errors.length > 0) {
+        console.error('Organization validation failed:', errors);
+        throw new Error(`Organization validation failed: ${errors.join(', ')}`);
+      }
+
+      finalOrganizationIds = validOrganizations.map(org => org.id);
+      console.log('Validated organizations:', validOrganizations.map(org => org.name));
+    } else {
+      // Auto-assign organizations for partner, subcontractor, and employee users
+      if (userData.user_type !== 'admin') {
+        console.log('Auto-assigning organizations for user type:', userData.user_type);
+        const availableOrganizations = await getOrganizationsForAutoAssignment(supabaseAdmin, userData.user_type);
+        
+        if (availableOrganizations.length === 0) {
+          const expectedType = getUserExpectedOrganizationType(userData.user_type);
+          throw new Error(`No ${expectedType} organizations available for auto-assignment. Please create a ${expectedType} organization first.`);
+        }
+        
+        // Auto-assign to the first available organization
+        const selectedOrg = availableOrganizations[0];
+        finalOrganizationIds = [selectedOrg.id];
+        autoAssignedOrganizations = [selectedOrg];
+        console.log('Auto-assigned to organization:', selectedOrg.name);
+      }
+    }
+
+    // Create organization relationships
+    if (finalOrganizationIds.length > 0) {
+      const orgRelationships = finalOrganizationIds.map((orgId: string) => ({
         user_id: newProfile.id,
         organization_id: orgId,
       }));
@@ -152,9 +281,12 @@ serve(async (req) => {
 
       if (orgError) {
         console.error('Organization relationship creation failed:', orgError);
-        // Continue anyway, admin can fix this later
+        // For auto-assignment, this is more critical
+        if (autoAssignedOrganizations.length > 0) {
+          throw new Error(`Failed to assign user to organization: ${orgError.message}`);
+        }
       } else {
-        console.log('Organization relationships created');
+        console.log('Organization relationships created successfully');
       }
     }
 
