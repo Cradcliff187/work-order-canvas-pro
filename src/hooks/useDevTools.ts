@@ -57,12 +57,13 @@ interface ClearTestDataResponse {
   test_work_order_count?: number;
 }
 
+// Email statistics interface for tracking Supabase Auth email communications
 interface EmailStats {
   total_emails: number;
   emails_today: number;
   emails_delivered: number;
   emails_failed: number;
-  service_status: 'active' | 'unknown';
+  service_status: 'active' | 'unknown'; // Supabase Auth service status
 }
 
 export const useDevTools = () => {
