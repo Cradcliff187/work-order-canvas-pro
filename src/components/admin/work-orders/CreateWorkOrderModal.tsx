@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useOrganizationsForWorkOrders, useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { LocationFields } from '@/components/LocationFields';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -48,13 +49,35 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
   const { data: trades } = useTrades();
   const { createWorkOrder } = useWorkOrderMutations();
   const { data: locationHistory } = useLocationHistory();
+  const { organization, loading: organizationLoading } = useUserOrganization();
+
+  // Create dynamic schema based on user type
+  const createWorkOrderSchemaForUser = profile?.user_type === 'admin'
+    ? createWorkOrderSchema
+    : z.object({
+        title: z.string().min(1, 'Title is required'),
+        description: z.string().optional(),
+        organization_id: z.string().optional(), // Auto-populated for partners
+        trade_id: z.string().min(1, 'Trade is required'),
+        store_location: z.string().optional(),
+        street_address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zip_code: z.string().optional(),
+        location_street_address: z.string().optional(),
+        location_city: z.string().optional(),
+        location_state: z.string().optional(),
+        location_zip_code: z.string().optional(),
+        partner_po_number: z.string().optional(),
+        partner_location_number: z.string().optional(),
+      });
 
   const form = useForm<CreateWorkOrderForm>({
-    resolver: zodResolver(createWorkOrderSchema),
+    resolver: zodResolver(createWorkOrderSchemaForUser),
     defaultValues: {
       title: '',
       description: '',
-      organization_id: '',
+      organization_id: profile?.user_type === 'partner' ? (organization?.id || '') : '',
       trade_id: '',
       store_location: '',
       street_address: '',
@@ -66,12 +89,21 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
     },
   });
 
+  // Auto-set organization for partners when organization data loads
+  useEffect(() => {
+    if (profile?.user_type === 'partner' && organization?.id) {
+      form.setValue('organization_id', organization.id);
+    }
+  }, [profile?.user_type, organization?.id, form]);
+
   // Watch form values for work order number generation
   const organizationId = form.watch('organization_id');
   const locationNumber = form.watch('partner_location_number');
   
   // Find selected organization to get organization type
-  const selectedOrganization = organizations?.find(org => org.id === organizationId);
+  const selectedOrganization = profile?.user_type === 'admin' 
+    ? organizations?.find(org => org.id === organizationId)
+    : organization;
   
   const { 
     workOrderNumber, 
@@ -89,6 +121,12 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
 
   const onSubmit = async (data: CreateWorkOrderForm) => {
     if (!profile?.id) return;
+
+    // For partners, ensure organization is set
+    if (profile.user_type === 'partner' && !data.organization_id) {
+      console.error('Partner user must have an organization');
+      return;
+    }
 
     try {
       await createWorkOrder.mutateAsync({
@@ -202,30 +240,54 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="organization_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Organization *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select organization" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {organizations?.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
-                            {org.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Organization - Conditional rendering based on user type */}
+              {profile?.user_type === 'admin' ? (
+                <FormField
+                  control={form.control}
+                  name="organization_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Organization *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select organization" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {organizations?.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              {org.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Organization</label>
+                  {organizationLoading ? (
+                    <div className="bg-muted border rounded-md p-3 flex items-center">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-muted-foreground">Loading organization...</span>
+                    </div>
+                  ) : organization ? (
+                    <div className="bg-muted/50 border rounded-md p-3">
+                      <p className="font-medium">{organization.name}</p>
+                      {organization.initials && (
+                        <p className="text-sm text-muted-foreground">({organization.initials})</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-destructive/5 border border-destructive/20 rounded-md p-3">
+                      <p className="text-sm text-destructive">Organization not found</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <FormField
                 control={form.control}
