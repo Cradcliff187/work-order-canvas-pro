@@ -17,6 +17,7 @@ import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { LocationFields } from '@/components/LocationFields';
+import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
 
 const workOrderSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -218,6 +219,9 @@ const SubmitWorkOrder = () => {
         <h1 className="text-3xl font-bold mb-2">Submit New Work Order</h1>
         <p className="text-muted-foreground">Submit a new work order request for your organization</p>
       </div>
+
+      {/* Organization Validation Alert */}
+      <OrganizationValidationAlert className="mb-6" />
 
       {/* Step Indicator */}
       <div className="mb-8">

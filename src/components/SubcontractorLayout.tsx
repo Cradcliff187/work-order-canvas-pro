@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
+import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
 
 interface SubcontractorLayoutProps {
   children: ReactNode;
@@ -120,7 +121,10 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
 
         {/* Main Content */}
         <main className={`flex-1 md:ml-64 ${isMobile ? 'pb-20' : ''}`}>
-          <div className="container py-6">{children}</div>
+          <div className="container py-6">
+            <OrganizationValidationAlert className="mb-6" />
+            {children}
+          </div>
         </main>
       </div>
 

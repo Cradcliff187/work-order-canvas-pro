@@ -7,6 +7,7 @@ import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 import { useAuth } from "@/contexts/AuthContext";
+import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
 import { 
   ClipboardList, 
   FileText, 
@@ -139,6 +140,9 @@ const SubcontractorDashboard = () => {
           </Link>
         </div>
       </div>
+
+      {/* Organization Validation Alert */}
+      <OrganizationValidationAlert className="mb-6" />
 
       {/* Urgent Items Alert */}
       {urgentItems.length > 0 && (

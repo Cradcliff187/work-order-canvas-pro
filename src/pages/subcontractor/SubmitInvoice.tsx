@@ -21,6 +21,7 @@ import { Save, FileText, Trash2, Clock, TrendingUp } from 'lucide-react';
 import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
 import { FileUpload } from '@/components/FileUpload';
+import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
 
 // Relaxed schema for drafts
 const draftInvoiceSchema = z.object({
@@ -294,6 +295,9 @@ const SubmitInvoice = () => {
 
   return (
     <div className="container max-w-4xl mx-auto py-6 space-y-6">
+      {/* Organization Validation Alert */}
+      <OrganizationValidationAlert />
+
       {/* Draft Management Section */}
       {invoiceDrafts.drafts.length > 0 && (
         <Card>

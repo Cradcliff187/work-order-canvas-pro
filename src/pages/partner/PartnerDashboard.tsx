@@ -10,6 +10,7 @@ import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2 } from '
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
+import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
 import { format } from 'date-fns';
 
 
@@ -41,6 +42,9 @@ const PartnerDashboard = () => {
           New Work Order
         </Button>
       </div>
+
+      {/* Organization Validation Alert */}
+      <OrganizationValidationAlert className="mb-6" />
 
       {/* Organization Context */}
       {primaryOrganization && (

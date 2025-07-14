@@ -13,6 +13,7 @@ import { useFileUpload } from "@/hooks/useFileUpload";
 import { useDraftAutoSave } from "@/hooks/useDraftAutoSave";
 import { FileUpload } from "@/components/FileUpload";
 import { DraftIndicator } from "@/components/DraftIndicator";
+import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
 import { ArrowLeft, FileText, Save } from "lucide-react";
 import type { PhotoAttachment, ReportDraft } from "@/types/offline";
 
@@ -263,6 +264,9 @@ export default function SubmitReport() {
           )}
         </div>
       </div>
+
+      {/* Organization Validation Alert */}
+      <OrganizationValidationAlert className="mb-6" />
 
       {/* Work Order Summary */}
       <Card>
