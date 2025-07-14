@@ -4,6 +4,8 @@
 
 WorkOrderPro uses Supabase Edge Functions for secure server-side operations that require elevated privileges or external API integrations. Edge functions provide secure user creation capabilities that bypass RLS limitations while maintaining proper authentication and validation.
 
+**Note**: Email communications are handled directly by Supabase Auth system.
+
 ## Available Edge Functions
 
 ### create-test-users
@@ -296,7 +298,7 @@ This edge function provides a secure, comprehensive solution for creating authen
 - **Conditional Email Sending**: Control Supabase confirmation emails via `send_welcome_email` parameter
 - **Organization Assignment**: Automatically assigns users to specified organizations
 - **Profile Management**: Creates profiles with comprehensive user data including hourly rates
-- **Audit Logging**: Logs email events to `email_logs` table for tracking
+- **Email Logging**: Logs email events to `email_logs` table for tracking
 - **Error Resilience**: Robust retry logic for profile creation and organization assignment
 
 #### Authentication Requirements
@@ -498,66 +500,57 @@ const result = await response.json();
 
 **Email Delivery Issues**:
 
-*Email not received*:
-- **Cause**: Email may be in spam folder or Supabase email service issues
-- **Solution**: Check spam folder, verify email address is correct
-- **Debug**: Check `email_logs` table for delivery status and error messages
+*"Email confirmation failed"*:
+- **Cause**: Supabase email service issues or configuration problems
+- **Solution**: Check Supabase dashboard for email delivery status and logs
+- **Verification**: Ensure email templates and delivery settings are properly configured
 
-*"Failed to log email event"*:
-- **Cause**: Database logging issue, doesn't affect user creation
-- **Solution**: Check `email_logs` table permissions and constraints
-- **Note**: This is a warning only - user creation still succeeds
+**Profile Creation Issues**:
 
-**Profile Creation Failures**:
-
-*"Profile creation failed after retries"*:
-- **Cause**: Database constraints, duplicate email, or RLS policy issues
-- **Solution**: Check email uniqueness, verify profile table constraints
-- **Debug**: Examine database logs for constraint violations
-
-*"Failed to update profile"*:
-- **Cause**: Invalid data in user profile update
-- **Solution**: Verify all profile fields match expected data types
-- **Check**: Ensure hourly rates are numeric, phone numbers are valid format
+*"Profile creation failed"*:
+- **Cause**: Database constraint violations or validation errors
+- **Solution**: Verify all required fields are provided and email is unique
+- **Debug**: Check database logs for specific constraint violations
 
 **Organization Assignment Issues**:
 
 *"Organization assignment failed"*:
 - **Cause**: Invalid organization IDs or permission issues
-- **Solution**: Verify organization UUIDs exist and are active
-- **Debug**: Check `user_organizations` table for successful assignments
+- **Solution**: Verify organization IDs exist and user has permission to assign
+- **Debug**: Check user_organizations table constraints and RLS policies
 
 #### Error Handling Patterns
 
+**Comprehensive Error Handling Example**:
 ```typescript
-// Comprehensive error handling
-const handleUserCreation = async (userData) => {
-  try {
-    const { data, error } = await supabase.functions.invoke('create-admin-user', {
-      body: { userData, send_welcome_email: true }
-    });
+try {
+  const { data, error } = await supabase.functions.invoke('create-admin-user', {
+    body: { userData, send_welcome_email: true }
+  });
 
-    if (error) {
-      // Handle specific error types
-      switch (error.message) {
-        case 'Admin profile not found':
-          showError('You must be logged in as an admin to create users');
-          break;
-        case 'Profile creation failed after retries':
-          showError('User creation failed. Please check the email address and try again');
-          break;
-        default:
-          showError(`User creation failed: ${error.message}`);
-      }
-      return null;
+  if (error) {
+    // Handle specific error types
+    switch (error.message) {
+      case 'Authentication failed':
+        console.error('User not authorized to create accounts');
+        break;
+      case 'Email already exists':
+        console.error('User with this email already exists');
+        break;
+      case 'Organization assignment failed':
+        console.error('Failed to assign user to organization');
+        break;
+      default:
+        console.error('Unknown error:', error.message);
     }
-
-    return data.user;
-  } catch (err) {
-    showError('Network error. Please check your connection and try again');
-    return null;
+    return { success: false, error: error.message };
   }
-};
+
+  return { success: true, user: data.user };
+} catch (networkError) {
+  console.error('Network or request error:', networkError);
+  return { success: false, error: 'Failed to connect to user creation service' };
+}
 ```
 
-This edge function provides secure user creation capabilities for admin users while offering flexible email delivery options and comprehensive error handling.
+This edge function provides secure, authenticated user creation with proper error handling, email management, and comprehensive audit logging for administrative user management workflows.

@@ -36,13 +36,13 @@ graph TD
 - **Backend**: Supabase hosted PostgreSQL
 - **Edge Functions**: Supabase Edge Runtime
 - **Storage**: Supabase Storage buckets
-- **Email**: Resend API integration
+- **Email**: Supabase Auth handles email communications directly
 
 **Environment Variables:**
 All secrets are managed through Supabase Edge Function secrets:
 ```bash
 # Required Production Secrets
-RESEND_API_KEY                 # Email service
+
 SUPABASE_URL                   # Database connection
 SUPABASE_ANON_KEY             # Public database access
 SUPABASE_SERVICE_ROLE_KEY     # Administrative access
@@ -71,11 +71,6 @@ SUPABASE_DB_URL               # Direct database connection
 - [ ] CORS settings verified
 - [ ] RLS policies enforce data isolation
 
-**✅ Email Integration**
-- [ ] Resend API key configured
-- [ ] Email templates active
-- [ ] Webhook endpoints verified
-- [ ] Delivery tracking enabled
 
 ### Edge Function Deployment
 

@@ -95,7 +95,7 @@ These functions avoid infinite recursion in RLS policies by providing secure acc
 
 ## Email Notification Functions
 
-These functions use `pg_net` to call Supabase Edge Functions for automated email delivery through Resend.
+These functions use `pg_net` to call Supabase Edge Functions for automated email delivery through Supabase Auth.
 
 ### notify_work_order_created()
 **Purpose**: Send email notification when new work orders are created  
@@ -283,7 +283,7 @@ These functions use `pg_net` to call Supabase Edge Functions for automated email
 
 ## System Architecture
 
-**Email Integration**: Automated email notifications using Resend service through Edge Functions  
+**Email Integration**: Automated email notifications using Supabase Auth through Edge Functions  
 **Security Model**: SECURITY DEFINER functions prevent RLS recursion while maintaining access control  
 **Audit System**: Comprehensive change tracking with user attribution and timestamp logging  
 **Analytics**: Real-time business intelligence with materialized views for performance  

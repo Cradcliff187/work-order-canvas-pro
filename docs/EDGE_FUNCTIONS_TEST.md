@@ -39,12 +39,6 @@ verify_jwt = true
 
 [functions.clear-test-data]  
 verify_jwt = true
-
-[functions.email-work-order-created]
-verify_jwt = false
-
-[functions.resend-webhook]
-verify_jwt = false
 ```
 
 **Environment Variables**:
@@ -53,7 +47,6 @@ verify_jwt = false
 SUPABASE_URL=https://inudoymofztrvxhrlrek.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-RESEND_API_KEY=your_resend_api_key
 ```
 
 ### 3. Security Settings Review
@@ -105,13 +98,8 @@ supabase functions list
 **Expected Functions**:
 - `seed-database` - Database seeding (protected)
 - `clear-test-data` - Test data cleanup (protected)
-- `email-work-order-created` - New work order notifications (public)
-- `email-work-order-assigned` - Assignment notifications (public)
-- `email-report-submitted` - Report submission notifications (public)
-- `email-report-reviewed` - Report review notifications (public)
-- `email-work-order-completed` - Completion notifications (public)
-- `email-welcome` - Welcome email for new users (public)
-- `resend-webhook` - Email status webhooks (public)
+- `create-test-users` - Test user creation (protected)
+- `create-admin-user` - Admin user creation (protected)
 
 ### 2. Individual Function Testing
 
@@ -143,28 +131,28 @@ curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/clear-test-da
   }'
 ```
 
-**Test Public Functions**:
+**Test User Creation Functions**:
 ```bash
-# Test email function
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-welcome \
+# Test create-test-users function
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/create-test-users \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
   -d '{
-    "user_id": "test-user-id",
-    "email": "test@example.com",
-    "first_name": "Test",
-    "last_name": "User",
-    "user_type": "admin"
+    "admin_key": "test-admin-key"
   }'
 
-# Test webhook function
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/resend-webhook \
+# Test create-admin-user function
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/create-admin-user \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
   -d '{
-    "type": "email.delivered",
-    "data": {
-      "email_id": "test-email-id",
-      "to": "test@example.com"
-    }
+    "userData": {
+      "email": "test@example.com",
+      "first_name": "Test",
+      "last_name": "User",
+      "user_type": "admin"
+    },
+    "send_welcome_email": true
   }'
 ```
 
@@ -177,14 +165,14 @@ curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/resend-webhoo
 4. Test user authentication with seeded accounts
 5. Create test work orders
 6. Submit test reports
-7. Test email notifications
+7. Test email notifications (handled by Supabase Auth)
 
-**Email Integration Flow**:
-1. Trigger email functions with test data
-2. Verify email logs are created
-3. Check Resend dashboard for delivery status
-4. Test webhook reception and processing
-5. Validate email template rendering
+**User Creation Flow**:
+1. Create test users via `create-test-users` function
+2. Verify user profiles are created correctly
+3. Test authentication with generated credentials
+4. Verify organization assignments
+5. Test role-based access control
 
 ## Test Data Validation Queries
 
@@ -389,25 +377,25 @@ Error: Function execution timeout
 
 ### 3. Email Integration Issues
 
-**Email Function Failures**:
+**User Creation Function Failures**:
 ```
-Error: Failed to send email
+Error: Failed to create user
 ```
 **Solutions**:
-- Verify RESEND_API_KEY is set correctly
-- Check Resend account status and limits
-- Validate email template data structure
-- Test with valid recipient email addresses
+- Verify admin authentication credentials
+- Check user data validation requirements
+- Ensure organization exists for assignment
+- Validate email format and uniqueness
 
-**Webhook Processing Issues**:
+**Email Processing Issues**:
 ```
-Error: Webhook signature verification failed
+Error: Email confirmation failed
 ```
 **Solutions**:
-- Verify webhook URL is correctly configured in Resend
-- Check webhook signature validation logic
-- Ensure proper JSON parsing of webhook payload
-- Add debugging logs for webhook data inspection
+- Email handling is managed by Supabase Auth automatically
+- Check Supabase dashboard for email delivery status
+- Verify user has confirmed their email if required
+- Check email logs table for delivery tracking
 
 ### 4. Data Validation Issues
 

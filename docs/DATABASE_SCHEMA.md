@@ -255,7 +255,7 @@ erDiagram
         uuid work_order_id FK
         text template_used
         text recipient_email
-        text resend_message_id
+        
         email_status status
         text error_message
         timestamp sent_at
@@ -733,7 +733,7 @@ This comprehensive seed data ensures thorough testing of all business workflows,
 | work_order_id | uuid | Yes | - | References work_orders.id |
 | template_used | text | Yes | - | Template name used |
 | recipient_email | text | No | - | Recipient email |
-| resend_message_id | text | Yes | - | Resend service message ID |
+
 | status | email_status | No | 'sent' | Email status |
 | error_message | text | Yes | - | Error message if failed |
 | sent_at | timestamp | No | now() | Send timestamp |
@@ -2151,7 +2151,7 @@ The trigger-based email system provides:
 
 **Edge Function Integration:**
 - Triggers call Supabase Edge Functions via `pg_net.http_post`
-- Edge functions handle email templating and delivery via Resend
+- Edge functions handle email templating and delivery via Supabase Auth
 - Email delivery status tracked in `email_logs` table
 
 **Error Resilience:**
