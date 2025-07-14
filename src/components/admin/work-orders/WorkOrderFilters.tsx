@@ -9,6 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Search, Filter, Calendar as CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
+import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import { cn } from '@/lib/utils';
 
 interface WorkOrderFiltersProps {
@@ -35,6 +36,7 @@ const statusOptions = [
 export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: WorkOrderFiltersProps) {
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
+  const { shouldShowSelector } = useAutoOrganization();
   const [dateFrom, setDateFrom] = useState<Date | undefined>(
     filters.date_from ? new Date(filters.date_from) : undefined
   );
@@ -86,7 +88,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${shouldShowSelector ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
         {/* Search */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Search</label>
@@ -101,29 +103,31 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
           </div>
         </div>
 
-        {/* Organization */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Organization</label>
-          <Select
-            value={filters.organization_id || 'all-organizations'}
-            onValueChange={(value) => onFiltersChange({ 
-              ...filters, 
-              organization_id: value === 'all-organizations' ? undefined : value 
-            })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Organizations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-organizations">All Organizations</SelectItem>
-              {Array.isArray(organizations) && organizations.map((org) => (
-                <SelectItem key={org.id} value={org.id || `org-${org.name}`}>
-                  {org.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Organization - Only show for admin users */}
+        {shouldShowSelector && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Organization</label>
+            <Select
+              value={filters.organization_id || 'all-organizations'}
+              onValueChange={(value) => onFiltersChange({ 
+                ...filters, 
+                organization_id: value === 'all-organizations' ? undefined : value 
+              })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All Organizations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-organizations">All Organizations</SelectItem>
+                {Array.isArray(organizations) && organizations.map((org) => (
+                  <SelectItem key={org.id} value={org.id || `org-${org.name}`}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Trade */}
         <div className="space-y-2">

@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserMutations, UpdateUserData } from '@/hooks/useUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useToast } from '@/hooks/use-toast';
+import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import { User } from '@/pages/admin/AdminUsers';
 import { QuickOrganizationForm } from './QuickOrganizationForm';
 import { filterOrganizationsByUserType } from '@/lib/utils/userOrgMapping';
@@ -46,6 +47,7 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
   const { toast } = useToast();
   const { data: organizationsData, refetch } = useOrganizations();
   const { updateUser } = useUserMutations();
+  const { shouldShowSelector } = useAutoOrganization();
   
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
@@ -228,67 +230,79 @@ export function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserM
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Organizations</Label>
                 <FormDescription>
-                  Select the organizations this user should be associated with.
+                  {shouldShowSelector 
+                    ? 'Select the organizations this user should be associated with.' 
+                    : 'This user will be associated with your organization.'}
                 </FormDescription>
                 
-                {(() => {
-                  const allOrgs = organizationsData?.organizations || [];
-                  const filteredOrgs = filterOrganizationsByUserType(allOrgs, watchedUserType);
-                  // Also include any organizations the user is already assigned to (for data integrity)
-                  const userOrgIds = new Set(watchedOrganizations);
-                  const userAssignedOrgs = allOrgs.filter(org => userOrgIds.has(org.id) && org.is_active);
-                  const combinedOrgs = [...new Map([...filteredOrgs, ...userAssignedOrgs].map(org => [org.id, org])).values()];
-                  
-                  return combinedOrgs.length > 0 ? (
-                    <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
-                      <div className="space-y-2">
-                         {combinedOrgs.map((org) => {
-                           const isMatching = filteredOrgs.some(fo => fo.id === org.id);
-                           return (
-                             <div key={org.id} className="flex items-center space-x-2">
-                               <Checkbox
-                                 id={`org-${org.id}`}
-                                 checked={watchedOrganizations.includes(org.id)}
-                                 onCheckedChange={() => toggleOrganization(org.id)}
-                               />
-                               <label
-                                 htmlFor={`org-${org.id}`}
-                                 className={`text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 flex items-center gap-2 ${!isMatching ? 'text-muted-foreground' : ''}`}
-                               >
-                                 <Building2 className="h-4 w-4 text-muted-foreground" />
-                                 {org.name}
-                                 {!isMatching && (
-                                   <Badge variant="outline" className="ml-2 text-xs">
-                                     Legacy
-                                   </Badge>
-                                 )}
-                               </label>
-                             </div>
-                           );
-                         })}
+                {shouldShowSelector ? (
+                  // Admin view - show full organization selection
+                  (() => {
+                    const allOrgs = organizationsData?.organizations || [];
+                    const filteredOrgs = filterOrganizationsByUserType(allOrgs, watchedUserType);
+                    // Also include any organizations the user is already assigned to (for data integrity)
+                    const userOrgIds = new Set(watchedOrganizations);
+                    const userAssignedOrgs = allOrgs.filter(org => userOrgIds.has(org.id) && org.is_active);
+                    const combinedOrgs = [...new Map([...filteredOrgs, ...userAssignedOrgs].map(org => [org.id, org])).values()];
+                    
+                    return combinedOrgs.length > 0 ? (
+                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                        <div className="space-y-2">
+                           {combinedOrgs.map((org) => {
+                             const isMatching = filteredOrgs.some(fo => fo.id === org.id);
+                             return (
+                               <div key={org.id} className="flex items-center space-x-2">
+                                 <Checkbox
+                                   id={`org-${org.id}`}
+                                   checked={watchedOrganizations.includes(org.id)}
+                                   onCheckedChange={() => toggleOrganization(org.id)}
+                                 />
+                                 <label
+                                   htmlFor={`org-${org.id}`}
+                                   className={`text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 flex items-center gap-2 ${!isMatching ? 'text-muted-foreground' : ''}`}
+                                 >
+                                   <Building2 className="h-4 w-4 text-muted-foreground" />
+                                   {org.name}
+                                   {!isMatching && (
+                                     <Badge variant="outline" className="ml-2 text-xs">
+                                       Legacy
+                                     </Badge>
+                                   )}
+                                 </label>
+                               </div>
+                             );
+                           })}
+                         </div>
+                         <div className="border-t pt-2 mt-2">
+                           <Button
+                             type="button"
+                             variant="outline"
+                             size="sm"
+                             onClick={() => setShowCreateOrgDialog(true)}
+                             className="w-full"
+                           >
+                             <Plus className="w-4 h-4 mr-2" />
+                             Create New Organization
+                           </Button>
+                         </div>
                        </div>
-                       <div className="border-t pt-2 mt-2">
-                         <Button
-                           type="button"
-                           variant="outline"
-                           size="sm"
-                           onClick={() => setShowCreateOrgDialog(true)}
-                           className="w-full"
-                         >
-                           <Plus className="w-4 h-4 mr-2" />
-                           Create New Organization
-                         </Button>
-                       </div>
-                     </div>
-                    ) : (
-                      <Alert>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          No {watchedUserType === 'partner' ? 'partner' : watchedUserType === 'subcontractor' ? 'subcontractor' : 'internal'} organizations available. Create one to continue.
-                        </AlertDescription>
-                      </Alert>
-                    );
-                  })()}
+                     ) : (
+                       <Alert>
+                         <AlertCircle className="h-4 w-4" />
+                         <AlertDescription>
+                           No {watchedUserType === 'partner' ? 'partner' : watchedUserType === 'subcontractor' ? 'subcontractor' : 'internal'} organizations available. Create one to continue.
+                         </AlertDescription>
+                       </Alert>
+                     );
+                   })()
+                ) : (
+                  // Partner/Subcontractor view - show their organization info
+                  <div className="bg-muted/50 border rounded-lg p-3">
+                    <p className="text-sm text-muted-foreground">
+                      Organization assignments are managed automatically.
+                    </p>
+                  </div>
+                )}
 
                 {watchedOrganizations.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">

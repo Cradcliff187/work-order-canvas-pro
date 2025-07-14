@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { User } from '@/pages/admin/AdminUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 
 interface UserFiltersProps {
   table: Table<User>;
@@ -16,6 +17,7 @@ interface UserFiltersProps {
 
 export function UserFilters({ table }: UserFiltersProps) {
   const { data: organizationsData } = useOrganizations();
+  const { shouldShowSelector } = useAutoOrganization();
 
   const userTypeFilter = table.getColumn('user_type')?.getFilterValue() as string[] || [];
   const statusFilter = table.getColumn('is_active')?.getFilterValue() as boolean | undefined;
@@ -69,7 +71,7 @@ export function UserFilters({ table }: UserFiltersProps) {
                 Status
               </Badge>
             )}
-            {organizationFilter && (
+            {organizationFilter && shouldShowSelector && (
               <Badge variant="secondary" className="rounded-sm px-1 font-normal lg:hidden">
                 Org
               </Badge>
@@ -140,26 +142,28 @@ export function UserFilters({ table }: UserFiltersProps) {
 
             <Separator />
 
-            {/* Organization Filter */}
-            <div className="space-y-2">
-              <h5 className="text-sm font-medium">Organization</h5>
-              <Select
-                value={organizationFilter || 'all'}
-                onValueChange={setOrganizationFilter}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All organizations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All organizations</SelectItem>
-                  {organizationsData?.organizations?.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Organization Filter - Only show for admin users */}
+            {shouldShowSelector && (
+              <div className="space-y-2">
+                <h5 className="text-sm font-medium">Organization</h5>
+                <Select
+                  value={organizationFilter || 'all'}
+                  onValueChange={setOrganizationFilter}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All organizations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All organizations</SelectItem>
+                    {organizationsData?.organizations?.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </PopoverContent>
       </Popover>

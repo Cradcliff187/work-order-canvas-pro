@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { US_STATES } from '@/constants/states';
 import { useLocationSuggestions, formatLocationDisplay, getDirectionsUrl, LocationSuggestion } from '@/hooks/useLocationSuggestions';
 import { usePartnerOrganizationLocations } from '@/hooks/usePartnerOrganizationLocations';
+import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface LocationFieldsProps {
@@ -34,6 +35,11 @@ export function LocationFields({
   usePartnerLocations = true,
   className 
 }: LocationFieldsProps) {
+  const { organizationId: autoOrgId, organizationType: autoOrgType } = useAutoOrganization();
+  
+  // Use auto-detected organization if not provided
+  const effectiveOrganizationId = organizationId || autoOrgId;
+  const effectiveOrganizationType = organizationType || autoOrgType;
   const [locationSearchOpen, setLocationSearchOpen] = React.useState(false);
   const [locationSearchValue, setLocationSearchValue] = React.useState('');
   const [selectedLocation, setSelectedLocation] = React.useState<LocationSuggestion | null>(null);
@@ -42,13 +48,13 @@ export function LocationFields({
   const [partnerLocationSelected, setPartnerLocationSelected] = React.useState(false);
 
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
-    organizationId,
+    organizationId: effectiveOrganizationId,
     searchTerm: locationSearchValue,
-    enabled: !!organizationId
+    enabled: !!effectiveOrganizationId
   });
 
   const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerOrganizationLocations(
-    usePartnerLocations && organizationId ? organizationId : undefined
+    usePartnerLocations && effectiveOrganizationId ? effectiveOrganizationId : undefined
   );
 
   const handlePartnerLocationSelect = (location: Tables<'partner_locations'>) => {
@@ -117,7 +123,7 @@ export function LocationFields({
   const showLocationDetails = watchedLocationNumber || selectedLocation || manualEntryMode;
 
   // Determine if we should show partner locations dropdown
-  const shouldShowPartnerLocations = usePartnerLocations && organizationId && partnerLocations && partnerLocations.length > 0;
+  const shouldShowPartnerLocations = usePartnerLocations && effectiveOrganizationId && partnerLocations && partnerLocations.length > 0;
   
   // Determine if we should use the search mode (fallback or manual entry)
   const shouldUseSearchMode = !shouldShowPartnerLocations || manualEntryMode;
