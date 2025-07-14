@@ -51,22 +51,80 @@ export function useLocationSuggestions({
   const fetchLocationSuggestions = useCallback(async (): Promise<LocationSuggestion[]> => {
     if (!organizationId) return [];
 
-    // If no search term, return location history as suggestions
-    if (!debouncedSearchTerm && locationHistory) {
-      return locationHistory.map(item => ({
-        location_number: item.partner_location_number || '',
-        location_name: item.store_location,
-        location_street_address: '',
-        location_city: '',
-        location_state: '',
-        location_zip_code: '',
-        full_address: '',
-        usage_count: item.usage_count,
-        last_used: new Date().toISOString()
-      }));
+    let partnerLocationResults: LocationSuggestion[] = [];
+
+    // First, query partner_locations table
+    try {
+      let partnerQuery = supabase
+        .from('partner_locations')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      // Apply search filters if term is provided
+      if (debouncedSearchTerm) {
+        partnerQuery = partnerQuery.or(
+          `location_number.ilike.%${debouncedSearchTerm}%,` +
+          `location_name.ilike.%${debouncedSearchTerm}%,` +
+          `street_address.ilike.%${debouncedSearchTerm}%,` +
+          `city.ilike.%${debouncedSearchTerm}%`
+        );
+      }
+
+      const { data: partnerLocations, error } = await partnerQuery
+        .order('location_number', { ascending: true })
+        .limit(20);
+
+      if (!error && partnerLocations) {
+        partnerLocationResults = partnerLocations.map(loc => ({
+          location_number: loc.location_number,
+          location_name: loc.location_name,
+          location_street_address: loc.street_address || '',
+          location_city: loc.city || '',
+          location_state: loc.state || '',
+          location_zip_code: loc.zip_code || '',
+          full_address: [
+            loc.street_address,
+            loc.city,
+            loc.state,
+            loc.zip_code
+          ].filter(Boolean).join(', '),
+          usage_count: 999, // High priority for partner locations
+          last_used: new Date().toISOString()
+        }));
+      }
+    } catch (error) {
+      console.warn('Error fetching partner locations:', error);
     }
 
-    // When searching, filter location history first
+    // If we have partner location results and no search term, prioritize them
+    if (!debouncedSearchTerm) {
+      // Add location history as fallback
+      if (locationHistory) {
+        const historyResults = locationHistory.map(item => ({
+          location_number: item.partner_location_number || '',
+          location_name: item.store_location,
+          location_street_address: '',
+          location_city: '',
+          location_state: '',
+          location_zip_code: '',
+          full_address: '',
+          usage_count: item.usage_count,
+          last_used: new Date().toISOString()
+        }));
+        
+        // Merge, prioritizing partner locations
+        return [...partnerLocationResults, ...historyResults];
+      }
+      return partnerLocationResults;
+    }
+
+    // When searching, return partner locations first if found
+    if (debouncedSearchTerm && partnerLocationResults.length > 0) {
+      return partnerLocationResults;
+    }
+
+    // Fallback to location history search
     if (debouncedSearchTerm && locationHistory) {
       const filteredHistory = locationHistory.filter(item => 
         item.store_location.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
