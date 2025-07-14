@@ -7,10 +7,15 @@ import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { Loader2, Save, User } from 'lucide-react';
 
 const SubcontractorProfile = () => {
-  const { profile, updateProfile } = useAuth();
+  const { profile } = useUserProfile();
+  const { updateProfile } = useAuth();
+  const { data: userOrganizations } = useUserOrganizations();
+  const primaryOrganization = userOrganizations?.[0];
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -18,7 +23,6 @@ const SubcontractorProfile = () => {
     last_name: profile?.last_name || '',
     email: profile?.email || '',
     phone: profile?.phone || '',
-    company_name: profile?.company_name || '',
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -141,15 +145,6 @@ const SubcontractorProfile = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="company_name">Company/Business Name</Label>
-                  <Input
-                    id="company_name"
-                    value={formData.company_name}
-                    onChange={(e) => handleInputChange('company_name', e.target.value)}
-                    placeholder="Enter your business or company name"
-                  />
-                </div>
               </div>
 
               <Separator />
@@ -171,6 +166,15 @@ const SubcontractorProfile = () => {
                     </p>
                   </div>
                 </div>
+                {primaryOrganization && (
+                  <div className="mt-4">
+                    <Label className="text-sm font-medium text-muted-foreground">Organization</Label>
+                    <p className="text-sm font-medium">{primaryOrganization.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {primaryOrganization.organization_type}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Save Button */}
