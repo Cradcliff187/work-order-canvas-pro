@@ -13,7 +13,7 @@ This directory contains Supabase Edge Functions that provide server-side capabil
 - **email-welcome**: Sends welcome emails to new users
 - **invoice-status-changed**: Handles invoice status change notifications
 - **invoice-submitted**: Processes invoice submission notifications
-- **resend-webhook**: Handles Resend email delivery webhooks
+# Email functions use Supabase Auth for sending emails
 
 
 ## Architecture
@@ -83,7 +83,6 @@ Create `.env.local` in your project root:
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-RESEND_API_KEY=your_resend_key
 ```
 
 ### Testing Functions
@@ -96,11 +95,12 @@ curl -i --location --request POST 'http://localhost:54321/functions/v1/email-wor
   --data '{"work_order_id": "test-work-order-id"}'
 ```
 
-**Test webhook processing:**
+**Test another email function:**
 ```bash
-curl -i --location --request POST 'http://localhost:54321/functions/v1/resend-webhook' \
+curl -i --location --request POST 'http://localhost:54321/functions/v1/email-welcome' \
+  --header 'Authorization: Bearer YOUR_ANON_KEY' \
   --header 'Content-Type: application/json' \
-  --data '{"type": "email.delivered", "data": {"email_id": "test-id"}}'
+  --data '{"user_email": "test@example.com", "user_name": "Test User"}'
 ```
 
 ### Viewing Logs
@@ -131,8 +131,7 @@ supabase functions deploy
 # Deploy specific function
 supabase functions deploy email-work-order-created
 
-# Deploy with environment variables
-supabase secrets set RESEND_API_KEY=your_key_here
+# Deploy functions (no additional secrets needed for Supabase Auth)
 supabase functions deploy
 ```
 

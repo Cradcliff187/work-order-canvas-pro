@@ -45,9 +45,6 @@ supabase functions serve --debug
 ### 2. Environment Variables Setup
 Create `.env.local` in your project root:
 ```bash
-# Required for email functions
-RESEND_API_KEY=your_resend_api_key_here
-
 # Auto-populated by Supabase
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=your_local_anon_key
@@ -64,16 +61,14 @@ curl -i --location --request POST 'http://localhost:54321/functions/v1/email-wor
   --data '{"work_order_id": "test-work-order-uuid"}'
 ```
 
-**Test Webhook Processing:**
+**Test Welcome Email:**
 ```bash
-curl -i --location --request POST 'http://localhost:54321/functions/v1/resend-webhook' \
+curl -i --location --request POST 'http://localhost:54321/functions/v1/email-welcome' \
+  --header 'Authorization: Bearer YOUR_ANON_KEY' \
   --header 'Content-Type: application/json' \
   --data '{
-    "type": "email.delivered",
-    "data": {
-      "email_id": "test-email-id",
-      "message_id": "test-message-id"
-    }
+    "user_email": "test@example.com",
+    "user_name": "Test User"
   }'
 ```
 
@@ -81,12 +76,8 @@ curl -i --location --request POST 'http://localhost:54321/functions/v1/resend-we
 
 ### 1. Set Production Secrets
 ```bash
-# Set required environment variables
-supabase secrets set RESEND_API_KEY=your_production_resend_key
-supabase secrets set SUPABASE_URL=https://your-project.supabase.co
-supabase secrets set SUPABASE_ANON_KEY=your_production_anon_key
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_production_service_role_key
-supabase secrets set SUPABASE_DB_URL=your_production_db_url
+# Functions are deployed automatically with Supabase
+# No additional secrets needed for Supabase Auth emails
 ```
 
 ### 2. Deploy Functions
@@ -101,7 +92,6 @@ supabase functions deploy
 # Deploy individual functions
 supabase functions deploy email-work-order-created
 supabase functions deploy email-work-order-assigned
-supabase functions deploy resend-webhook
 ```
 
 ### 3. Verify Deployment
@@ -150,8 +140,7 @@ verify_jwt = false
 [functions.invoice-status-changed]
 verify_jwt = false
 
-[functions.resend-webhook]
-verify_jwt = false
+# Functions use Supabase Auth by default
 ```
 
 ### CORS Configuration
@@ -200,13 +189,14 @@ Error: Function "function-name" not found
 ls -la supabase/functions/function-name/
 ```
 
-#### 2. Environment Variable Missing
+#### 2. Authentication Error
 ```bash
-Error: Environment variable "RESEND_API_KEY" is not set
+Error: Authentication failed
 ```
-**Solution**: Set the required secret
+**Solution**: Check your authorization headers
 ```bash
-supabase secrets set RESEND_API_KEY=your_key_here
+# Ensure you're using the correct API key
+curl -H "Authorization: Bearer YOUR_ANON_KEY" ...
 ```
 
 #### 3. JWT Verification Error
@@ -307,17 +297,16 @@ supabase start
 
 | Function Name | Purpose | Public | Dependencies |
 |---------------|---------|--------|--------------|
-| email-work-order-created | New work order notifications | Yes | Resend API |
-| email-work-order-assigned | Assignment notifications | Yes | Resend API |
-| email-work-order-completed | Completion notifications | Yes | Resend API |
-| email-report-submitted | Report submission alerts | Yes | Resend API |
-| email-report-reviewed | Report review notifications | Yes | Resend API |
-| email-welcome | Welcome email for new users | Yes | Resend API |
-| invoice-submitted | Invoice submission notifications | Yes | Resend API |
-| invoice-status-changed | Invoice status updates | Yes | Resend API |
-| resend-webhook | Email delivery webhooks | Yes | None |
+| email-work-order-created | New work order notifications | Yes | Supabase Auth |
+| email-work-order-assigned | Assignment notifications | Yes | Supabase Auth |
+| email-work-order-completed | Completion notifications | Yes | Supabase Auth |
+| email-report-submitted | Report submission alerts | Yes | Supabase Auth |
+| email-report-reviewed | Report review notifications | Yes | Supabase Auth |
+| email-welcome | Welcome email for new users | Yes | Supabase Auth |
+| invoice-submitted | Invoice submission notifications | Yes | Supabase Auth |
+| invoice-status-changed | Invoice status updates | Yes | Supabase Auth |
 
-All functions are configured as public (no JWT verification) to support database trigger integration.
+All functions are configured as public (no JWT verification) to support database trigger integration and use Supabase Auth for email delivery.
 
 ## Additional Resources
 
