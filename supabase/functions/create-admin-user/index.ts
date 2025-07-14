@@ -31,9 +31,13 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { userData } = await req.json();
+    const { userData, send_welcome_email = true } = await req.json();
 
-    console.log('Creating user:', { email: userData.email, userType: userData.user_type });
+    console.log('Creating user:', { 
+      email: userData.email, 
+      userType: userData.user_type, 
+      sendWelcomeEmail: send_welcome_email 
+    });
 
     // Create admin client
     const supabaseAdmin = createClient(
@@ -44,11 +48,18 @@ serve(async (req) => {
     // Generate a secure temporary password for initial creation
     const temporaryPassword = crypto.randomUUID() + crypto.randomUUID();
 
-    // Create auth user with email confirmation enabled (triggers Supabase's confirmation email)
+    // Log email configuration
+    if (send_welcome_email) {
+      console.log('✅ Welcome email will be queued by Supabase (email_confirm: true)');
+    } else {
+      console.log('⚠️ Welcome email disabled by request (email_confirm: false)');
+    }
+
+    // Create auth user with conditional email confirmation
     const { data: authUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: temporaryPassword,
-      email_confirm: true, // Always trigger Supabase's confirmation email
+      email_confirm: send_welcome_email, // Use parameter to control email sending
       user_metadata: {
         first_name: userData.first_name,
         last_name: userData.last_name,
@@ -62,6 +73,27 @@ serve(async (req) => {
     }
 
     console.log('Auth user created:', authUser.user.id);
+    
+    // Log email queueing status
+    if (send_welcome_email) {
+      console.log('📧 Supabase confirmation email queued for:', userData.email);
+      
+      // Log to email_logs table for audit trail
+      try {
+        await supabaseAdmin
+          .from('email_logs')
+          .insert({
+            recipient_email: userData.email,
+            template_used: 'supabase_confirmation',
+            status: 'sent',
+            work_order_id: null
+          });
+        console.log('✅ Email event logged to database');
+      } catch (logError) {
+        console.warn('Failed to log email event:', logError);
+        // Don't fail user creation for logging issues
+      }
+    }
 
     // Wait for profile creation and verify with retry logic
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -126,34 +158,21 @@ serve(async (req) => {
       }
     }
 
-    // Generate password reset link for user to set their own password
-    console.log('Generating password reset link for user...');
-    try {
-      const { data: resetLink, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'recovery',
-        email: userData.email,
-        options: {
-          redirectTo: `${Deno.env.get('SUPABASE_URL')?.replace('//', '//')}/auth/callback`
-        }
-      });
-
-      if (resetError) {
-        console.error('Failed to generate password reset link:', resetError);
-      } else {
-        console.log('✅ Password reset link generated successfully');
-        // The user will receive Supabase's built-in confirmation email
-        // followed by the ability to set their password via the reset link
-      }
-    } catch (error) {
-      console.error('Error generating password reset link:', error);
-      // Continue anyway - user can still use the confirmation email
-    }
-
     // Return success response
+    const message = send_welcome_email 
+      ? 'User created successfully. They will receive a Supabase confirmation email to set up their account.'
+      : 'User created successfully. No welcome email sent as requested.';
+
+    console.log('✅ User creation process completed:', { 
+      userId: newProfile.id, 
+      email: userData.email,
+      emailSent: send_welcome_email 
+    });
+
     return createCorsResponse({
       success: true,
       user: newProfile,
-      message: 'User created successfully. They will receive a confirmation email to set up their account.',
+      message,
     });
 
   } catch (error) {
