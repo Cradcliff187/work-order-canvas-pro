@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getUserSingleOrganization } from '@/lib/utils/organizationValidation';
+import type { UserOrganization } from '@/hooks/useUserOrganization';
 
 interface Profile {
   id: string;
@@ -21,12 +23,15 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  userOrganization: UserOrganization | null;
   loading: boolean;
+  organizationLoading: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
   refreshProfile: () => Promise<void>;
+  refreshOrganization: () => Promise<void>;
   impersonatedProfile: Profile | null;
   setImpersonation: (profile: Profile | null) => void;
   clearImpersonation: () => void;
@@ -49,7 +54,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [userOrganization, setUserOrganization] = useState<UserOrganization | null>(null);
   const [loading, setLoading] = useState(true);
+  const [organizationLoading, setOrganizationLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [impersonatedProfile, setImpersonatedProfile] = useState<Profile | null>(null);
   const navigate = useNavigate();
@@ -90,6 +97,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
+      return null;
+    }
+  };
+
+  const fetchUserOrganization = async (userId: string): Promise<UserOrganization | null> => {
+    try {
+      const organization = await getUserSingleOrganization(userId);
+      return organization;
+    } catch (error) {
+      console.error('Error fetching user organization:', error);
       return null;
     }
   };
@@ -245,6 +262,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfile(profileData);
   };
 
+  const refreshOrganization = async () => {
+    if (!user) return;
+    
+    setOrganizationLoading(true);
+    const organizationData = await fetchUserOrganization(user.id);
+    setUserOrganization(organizationData);
+    setOrganizationLoading(false);
+  };
+
   const forgotPassword = async (email: string) => {
     // Use the full qualified URL to ensure Supabase can properly append query parameters
     const redirectUrl = `${window.location.protocol}//${window.location.host}/reset-password`;
@@ -268,12 +294,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     profile: impersonatedProfile || profile, // Return impersonated profile if active
+    userOrganization,
     loading: loading || initializing,
+    organizationLoading,
     signUp,
     signIn,
     signOut,
     updateProfile,
     refreshProfile,
+    refreshOrganization,
     impersonatedProfile,
     setImpersonation,
     clearImpersonation,
