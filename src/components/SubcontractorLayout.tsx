@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { ClipboardList, FileText, Home, LogOut, Menu, History, User, Receipt } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -17,9 +18,12 @@ interface SubcontractorLayoutProps {
 export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
+  const { data: userOrganizations } = useUserOrganizations();
   const location = useLocation();
   const isMobile = useIsMobile();
   const { draftCount } = useInvoiceDrafts();
+
+  const primaryOrganization = userOrganizations?.[0];
 
   const navigation: Array<{name: string, href: string, icon: any, badge?: number}> = [
     { name: "Dashboard", href: "/subcontractor/dashboard", icon: Home },
@@ -94,9 +98,9 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
               {profile && (
                 <span>
                   {profile.first_name} {profile.last_name}
-                  {profile.company_name && (
-                    <span className="block text-xs">{profile.company_name}</span>
-                  )}
+                   {primaryOrganization && (
+                     <span className="block text-xs">{primaryOrganization.name}</span>
+                   )}
                 </span>
               )}
             </div>
