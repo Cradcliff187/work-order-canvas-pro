@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Sidebar,
   SidebarContent,
@@ -161,6 +163,42 @@ interface PartnerLayoutProps {
 }
 
 const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
+  const isMobile = useIsMobile();
+
+  // Convert sidebar items to mobile navigation format
+  const partnerNavItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: BarChart3,
+      path: '/partner/dashboard'
+    },
+    {
+      id: 'submit',
+      label: 'Submit',
+      icon: Plus,
+      path: '/partner/work-orders/new'
+    },
+    {
+      id: 'work-orders',
+      label: 'Work Orders',
+      icon: FileText,
+      path: '/partner/work-orders'
+    },
+    {
+      id: 'locations',
+      label: 'Locations',
+      icon: MapPin,
+      path: '/partner/locations'
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: ClipboardList,
+      path: '/partner/reports'
+    }
+  ];
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -173,10 +211,12 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
             </SidebarTrigger>
           </header>
 
-          <main className="flex-1 overflow-auto">
+          <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
             {children}
           </main>
         </div>
+        
+        {isMobile && <MobileBottomNav navItems={partnerNavItems} />}
       </div>
     </SidebarProvider>
   );

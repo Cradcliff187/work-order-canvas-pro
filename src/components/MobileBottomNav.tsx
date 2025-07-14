@@ -13,12 +13,17 @@ interface NavItem {
   badge?: number;
 }
 
-export function MobileBottomNav() {
+interface MobileBottomNavProps {
+  navItems?: NavItem[];
+}
+
+export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { pendingCount } = useOfflineStorage();
 
-  const navItems: NavItem[] = [
+  // Default subcontractor navigation (for backward compatibility)
+  const defaultNavItems: NavItem[] = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -52,6 +57,9 @@ export function MobileBottomNav() {
     }
   ];
 
+  // Use custom nav items if provided, otherwise use defaults
+  const navItems = customNavItems || defaultNavItems;
+
   const handleNavClick = (item: NavItem) => {
     // Add haptic feedback
     if ('vibrate' in navigator) {
@@ -62,7 +70,8 @@ export function MobileBottomNav() {
   };
 
   const isActive = (path: string) => {
-    if (path === '/subcontractor') {
+    // Handle exact match for dashboard routes (both partner and subcontractor)
+    if (path === '/subcontractor' || path === '/partner/dashboard') {
       return location.pathname === path;
     }
     return location.pathname.startsWith(path);
