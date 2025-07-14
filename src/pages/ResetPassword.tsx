@@ -30,6 +30,8 @@ const ResetPassword = () => {
   const [isRecoverySession, setIsRecoverySession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [countdown, setCountdown] = useState(3);
+  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -109,6 +111,18 @@ const ResetPassword = () => {
     window.location.reload();
   };
 
+  const handleGoToLogin = async () => {
+    // Clear countdown timer
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      setCountdownInterval(null);
+    }
+    
+    // Sign out and navigate
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
   const getErrorIcon = (type: ResetErrorType) => {
     switch (type) {
       case 'EXPIRED_LINK':
@@ -176,6 +190,34 @@ const ResetPassword = () => {
     handleRecoverySession();
   }, [searchParams]);
 
+  // Countdown timer effect
+  useEffect(() => {
+    if (success && countdown > 0) {
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            // Time's up - redirect
+            handleGoToLogin();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      setCountdownInterval(interval);
+      return () => clearInterval(interval);
+    }
+  }, [success, countdown]);
+
+  // Clean up interval on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+    };
+  }, [countdownInterval]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -199,16 +241,11 @@ const ResetPassword = () => {
       setResetError(categorizeError(error, 'reset_error'));
     } else {
       setSuccess(true);
+      setCountdown(3); // Reset countdown to 3 seconds
       toast({
         title: 'Password Updated',
         description: 'Your password has been successfully updated.',
       });
-      
-      // Sign out to clear the recovery session and redirect to auth page
-      setTimeout(async () => {
-        await supabase.auth.signOut();
-        navigate('/auth');
-      }, 2000);
     }
     
     setLoading(false);
@@ -229,18 +266,53 @@ const ResetPassword = () => {
 
           <Card className="shadow-xl border-0 bg-card/95 backdrop-blur">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center">Password Updated</CardTitle>
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center border-2 border-success/20">
+                  <CheckCircle className="w-8 h-8 text-success" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl text-center text-success">Password Updated Successfully!</CardTitle>
               <CardDescription className="text-center">
-                Your password has been successfully changed
+                Your password has been changed and you're ready to sign in
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  You can now sign in with your new password. Redirecting to sign in page...
+            <CardContent className="space-y-6">
+              <Alert className="border-success/20 bg-success/5">
+                <CheckCircle className="h-4 w-4 text-success" />
+                <AlertDescription className="text-success">
+                  You can now use your new password to access your account. Keep it secure!
                 </AlertDescription>
               </Alert>
+              
+              <div className="text-center space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Redirecting in
+                    </span>
+                  </div>
+                  <div className="text-3xl font-bold text-primary">
+                    {countdown}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {countdown === 1 ? 'second' : 'seconds'}
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleGoToLogin}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Go to Login Now
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Or wait for automatic redirect
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
