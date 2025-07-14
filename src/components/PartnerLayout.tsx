@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
+import { SingleOrganizationGuard } from '@/components/SingleOrganizationGuard';
 import {
   Sidebar,
   SidebarContent,
@@ -231,10 +231,11 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
           </header>
 
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
-            <div className="p-6">
-              <OrganizationValidationAlert className="mb-6" />
-              {children}
-            </div>
+            <SingleOrganizationGuard userType="partner">
+              <div className="p-6">
+                {children}
+              </div>
+            </SingleOrganizationGuard>
           </main>
         </div>
         
