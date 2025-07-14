@@ -1,6 +1,6 @@
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { Building2, MapPin, ExternalLink } from 'lucide-react';
+import { Building2, MapPin, ExternalLink, Plus } from 'lucide-react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { US_STATES } from '@/constants/states';
 import { useLocationSuggestions, formatLocationDisplay, getDirectionsUrl, LocationSuggestion } from '@/hooks/useLocationSuggestions';
+import { usePartnerOrganizationLocations } from '@/hooks/usePartnerOrganizationLocations';
+import type { Tables } from '@/integrations/supabase/types';
 
 interface LocationFieldsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,6 +22,7 @@ interface LocationFieldsProps {
   organizationId?: string;
   organizationType?: string;
   showPoNumber?: boolean;
+  usePartnerLocations?: boolean;
   className?: string;
 }
 
@@ -28,12 +31,15 @@ export function LocationFields({
   organizationId, 
   organizationType,
   showPoNumber = true,
+  usePartnerLocations = true,
   className 
 }: LocationFieldsProps) {
   const [locationSearchOpen, setLocationSearchOpen] = React.useState(false);
   const [locationSearchValue, setLocationSearchValue] = React.useState('');
   const [selectedLocation, setSelectedLocation] = React.useState<LocationSuggestion | null>(null);
   const [isReferenceOpen, setIsReferenceOpen] = React.useState(false);
+  const [manualEntryMode, setManualEntryMode] = React.useState(false);
+  const [partnerLocationSelected, setPartnerLocationSelected] = React.useState(false);
 
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
     organizationId,
@@ -41,10 +47,35 @@ export function LocationFields({
     enabled: !!organizationId
   });
 
+  const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerOrganizationLocations(
+    usePartnerLocations && organizationId ? organizationId : undefined
+  );
+
+  const handlePartnerLocationSelect = (location: Tables<'partner_locations'>) => {
+    setPartnerLocationSelected(true);
+    setLocationSearchOpen(false);
+    setManualEntryMode(false);
+
+    // Auto-fill form fields from partner_locations data
+    form.setValue('partner_location_number', location.location_number);
+    form.setValue('store_location', location.location_name);
+    form.setValue('location_street_address', location.street_address || '');
+    form.setValue('location_city', location.city || '');
+    form.setValue('location_state', location.state || '');
+    form.setValue('location_zip_code', location.zip_code || '');
+
+    // Also fill legacy fields for backward compatibility
+    form.setValue('street_address', location.street_address || '');
+    form.setValue('city', location.city || '');
+    form.setValue('state', location.state || '');
+    form.setValue('zip_code', location.zip_code || '');
+  };
+
   const handleLocationSelect = (suggestion: LocationSuggestion) => {
     setSelectedLocation(suggestion);
     setLocationSearchValue(suggestion.location_number);
     setLocationSearchOpen(false);
+    setPartnerLocationSelected(false);
 
     // Auto-fill form fields
     form.setValue('partner_location_number', suggestion.location_number);
@@ -61,9 +92,19 @@ export function LocationFields({
     form.setValue('zip_code', suggestion.location_zip_code);
   };
 
+  const handleAddNewLocation = () => {
+    setManualEntryMode(true);
+    setLocationSearchOpen(false);
+    setPartnerLocationSelected(false);
+    setSelectedLocation(null);
+    clearLocationSelection();
+  };
+
   const clearLocationSelection = () => {
     setSelectedLocation(null);
     setLocationSearchValue('');
+    setPartnerLocationSelected(false);
+    setManualEntryMode(false);
     form.setValue('partner_location_number', '');
     form.setValue('store_location', '');
     form.setValue('location_street_address', '');
@@ -73,7 +114,13 @@ export function LocationFields({
   };
 
   const watchedLocationNumber = form.watch('partner_location_number');
-  const showLocationDetails = watchedLocationNumber || selectedLocation;
+  const showLocationDetails = watchedLocationNumber || selectedLocation || manualEntryMode;
+
+  // Determine if we should show partner locations dropdown
+  const shouldShowPartnerLocations = usePartnerLocations && organizationId && partnerLocations && partnerLocations.length > 0;
+  
+  // Determine if we should use the search mode (fallback or manual entry)
+  const shouldUseSearchMode = !shouldShowPartnerLocations || manualEntryMode;
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -125,107 +172,144 @@ export function LocationFields({
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    Location Number
+                    Location
                   </FormLabel>
                   <FormControl>
-                    <Popover open={locationSearchOpen} onOpenChange={setLocationSearchOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={locationSearchOpen}
-                          className="w-full justify-between"
-                          type="button"
-                        >
-                          {field.value ? field.value : "Search location..."}
-                          <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput 
-                            placeholder="Search by location number, name, or address..." 
-                            value={locationSearchValue}
-                            onValueChange={setLocationSearchValue}
-                          />
-                          <CommandList>
-                            <CommandEmpty>
-                              {isLoading ? "Searching..." : locationSearchValue ? "No matching locations found." : "Type to add a new location."}
-                            </CommandEmpty>
-                            {!locationSearchValue && locationSuggestions && locationSuggestions.length > 0 && (
-                              <CommandGroup heading="Recent Locations">
-                                {locationSuggestions.slice(0, 10).map((suggestion) => (
-                                  <CommandItem
-                                    key={suggestion.location_number || suggestion.location_name}
-                                    value={suggestion.location_number || suggestion.location_name}
-                                    onSelect={() => handleLocationSelect(suggestion)}
-                                    className="flex flex-col items-start gap-1"
-                                  >
-                                    <div className="flex items-center gap-2 w-full">
-                                      {suggestion.location_number && (
-                                        <Badge variant="secondary">
-                                          {suggestion.location_number}
+                    {shouldShowPartnerLocations && !shouldUseSearchMode ? (
+                      // Partner Locations Dropdown
+                      <Select onValueChange={(value) => {
+                        if (value === "add_new") {
+                          handleAddNewLocation();
+                        } else {
+                          const location = partnerLocations?.find(loc => loc.id === value);
+                          if (location) {
+                            handlePartnerLocationSelect(location);
+                          }
+                        }
+                      }} value={partnerLocationSelected ? field.value : ""}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={isLoadingPartnerLocations ? "Loading..." : "Select a location"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {partnerLocations?.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary">
+                                  {location.location_number}
+                                </Badge>
+                                <span>{location.location_name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="add_new">
+                            <div className="flex items-center gap-2 text-primary">
+                              <Plus className="h-4 w-4" />
+                              <span>Add New Location</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      // Search Mode (fallback or manual entry)
+                      <Popover open={locationSearchOpen} onOpenChange={setLocationSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={locationSearchOpen}
+                            className="w-full justify-between"
+                            type="button"
+                          >
+                            {field.value ? field.value : "Search location..."}
+                            <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput 
+                              placeholder="Search by location number, name, or address..." 
+                              value={locationSearchValue}
+                              onValueChange={setLocationSearchValue}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                {isLoading ? "Searching..." : locationSearchValue ? "No matching locations found." : "Type to add a new location."}
+                              </CommandEmpty>
+                              {!locationSearchValue && locationSuggestions && locationSuggestions.length > 0 && (
+                                <CommandGroup heading="Recent Locations">
+                                  {locationSuggestions.slice(0, 10).map((suggestion) => (
+                                    <CommandItem
+                                      key={suggestion.location_number || suggestion.location_name}
+                                      value={suggestion.location_number || suggestion.location_name}
+                                      onSelect={() => handleLocationSelect(suggestion)}
+                                      className="flex flex-col items-start gap-1"
+                                    >
+                                      <div className="flex items-center gap-2 w-full">
+                                        {suggestion.location_number && (
+                                          <Badge variant="secondary">
+                                            {suggestion.location_number}
+                                          </Badge>
+                                        )}
+                                        {suggestion.location_name && (
+                                          <span className="font-medium">
+                                            {suggestion.location_name}
+                                          </span>
+                                        )}
+                                        <Badge variant="outline" className="ml-auto">
+                                          Used {suggestion.usage_count}x
                                         </Badge>
-                                      )}
-                                      {suggestion.location_name && (
-                                        <span className="font-medium">
-                                          {suggestion.location_name}
+                                      </div>
+                                      {suggestion.full_address && (
+                                        <span className="text-sm text-muted-foreground">
+                                          {suggestion.full_address}
                                         </span>
                                       )}
-                                      <Badge variant="outline" className="ml-auto">
-                                        Used {suggestion.usage_count}x
-                                      </Badge>
-                                    </div>
-                                    {suggestion.full_address && (
-                                      <span className="text-sm text-muted-foreground">
-                                        {suggestion.full_address}
-                                      </span>
-                                    )}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            )}
-                            {locationSearchValue && (
-                              <CommandGroup heading={locationSuggestions && locationSuggestions.length > 0 ? "Search Results" : "No Results"}>
-                                {locationSuggestions?.map((suggestion) => (
-                                  <CommandItem
-                                    key={suggestion.location_number || suggestion.location_name}
-                                    value={suggestion.location_number || suggestion.location_name}
-                                    onSelect={() => handleLocationSelect(suggestion)}
-                                    className="flex flex-col items-start gap-1"
-                                  >
-                                    <div className="flex items-center gap-2 w-full">
-                                      {suggestion.location_number && (
-                                        <Badge variant="secondary">
-                                          {suggestion.location_number}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                              {locationSearchValue && (
+                                <CommandGroup heading={locationSuggestions && locationSuggestions.length > 0 ? "Search Results" : "No Results"}>
+                                  {locationSuggestions?.map((suggestion) => (
+                                    <CommandItem
+                                      key={suggestion.location_number || suggestion.location_name}
+                                      value={suggestion.location_number || suggestion.location_name}
+                                      onSelect={() => handleLocationSelect(suggestion)}
+                                      className="flex flex-col items-start gap-1"
+                                    >
+                                      <div className="flex items-center gap-2 w-full">
+                                        {suggestion.location_number && (
+                                          <Badge variant="secondary">
+                                            {suggestion.location_number}
+                                          </Badge>
+                                        )}
+                                        {suggestion.location_name && (
+                                          <span className="font-medium">
+                                            {suggestion.location_name}
+                                          </span>
+                                        )}
+                                        <Badge variant="outline" className="ml-auto">
+                                          Used {suggestion.usage_count}x
                                         </Badge>
-                                      )}
-                                      {suggestion.location_name && (
-                                        <span className="font-medium">
-                                          {suggestion.location_name}
+                                      </div>
+                                      {suggestion.full_address && (
+                                        <span className="text-sm text-muted-foreground">
+                                          {suggestion.full_address}
                                         </span>
                                       )}
-                                      <Badge variant="outline" className="ml-auto">
-                                        Used {suggestion.usage_count}x
-                                      </Badge>
-                                    </div>
-                                    {suggestion.full_address && (
-                                      <span className="text-sm text-muted-foreground">
-                                        {suggestion.full_address}
-                                      </span>
-                                    )}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </FormControl>
                   <FormMessage />
-                  {selectedLocation && (
-                    <div className="flex gap-2">
+                  {(selectedLocation || partnerLocationSelected || manualEntryMode) && (
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         variant="outline"
@@ -234,7 +318,17 @@ export function LocationFields({
                       >
                         Clear Selection
                       </Button>
-                      {selectedLocation.full_address && (
+                      {shouldShowPartnerLocations && !manualEntryMode && !partnerLocationSelected && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setManualEntryMode(false)}
+                        >
+                          Use Partner Locations
+                        </Button>
+                      )}
+                      {selectedLocation?.full_address && (
                         <Button
                           type="button"
                           variant="outline"
