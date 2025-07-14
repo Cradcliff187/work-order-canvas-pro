@@ -34,7 +34,7 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
       id: 'dashboard',
       label: 'Dashboard',
       icon: Home,
-      path: '/subcontractor'
+      path: '/subcontractor/dashboard'
     },
     {
       id: 'work-orders',
@@ -46,7 +46,7 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
       id: 'submit',
       label: 'Submit',
       icon: Plus,
-      path: '/subcontractor/work-orders'
+      path: '/subcontractor/submit-invoice'
     },
     {
       id: 'reports',
@@ -59,7 +59,7 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
       id: 'profile',
       label: 'Profile',
       icon: User,
-      path: '/profile'
+      path: '/subcontractor/profile'
     }
   ];
 
@@ -83,8 +83,8 @@ export function MobileBottomNav({ navigation }: MobileBottomNavProps) {
   };
 
   const isActive = (path: string) => {
-    if (path === '/subcontractor') {
-      return location.pathname === path;
+    if (path === '/subcontractor/dashboard') {
+      return location.pathname === path || location.pathname === '/subcontractor';
     }
     return location.pathname.startsWith(path);
   };
