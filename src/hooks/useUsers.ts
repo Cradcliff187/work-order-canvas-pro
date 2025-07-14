@@ -115,18 +115,89 @@ export function useUserMutations() {
       // Generate a secure temporary password
       const temporaryPassword = generateSecurePassword();
       
-      // Call the Edge Function to create the user
-      const { data, error } = await supabase.functions.invoke('create-admin-user', {
-        body: {
-          userData,
-          temporaryPassword,
-        }
-      });
+      // Helper function to check if error is related to Edge Function configuration
+      const isConfigurationError = (error: any): boolean => {
+        const message = error?.message?.toLowerCase() || '';
+        const status = error?.status || '';
+        return message.includes('not found') || 
+               message.includes('function not found') ||
+               status === 404 ||
+               status === '404';
+      };
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Failed to create user');
-      }
+      // Helper function to check if error is a network error
+      const isNetworkError = (error: any): boolean => {
+        const message = error?.message?.toLowerCase() || '';
+        return message.includes('network') ||
+               message.includes('fetch') ||
+               message.includes('connection') ||
+               message.includes('timeout');
+      };
+
+      // Retry wrapper for network errors
+      const invokeWithRetry = async (retries = 3): Promise<any> => {
+        try {
+          const { data, error } = await supabase.functions.invoke('create-admin-user', {
+            body: {
+              userData,
+              temporaryPassword,
+            }
+          });
+
+          if (error) {
+            // Log full error details for debugging
+            console.error('Edge function error details:', {
+              error,
+              message: error.message,
+              status: error.status,
+              userData: userData.email,
+              timestamp: new Date().toISOString()
+            });
+
+            // Check for configuration errors
+            if (isConfigurationError(error)) {
+              throw new Error('User creation service not configured. Contact admin.');
+            }
+
+            // Retry network errors
+            if (isNetworkError(error) && retries > 0) {
+              console.warn(`Network error detected, retrying... (${retries} attempts left)`);
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, 4 - retries) * 1000));
+              return invokeWithRetry(retries - 1);
+            }
+
+            throw new Error(error.message || 'Failed to create user');
+          }
+
+          return { data, error };
+        } catch (err: any) {
+          // Log full error details for debugging
+          console.error('Edge function invocation error:', {
+            error: err,
+            message: err.message,
+            stack: err.stack,
+            userData: userData.email,
+            timestamp: new Date().toISOString()
+          });
+
+          // Check for configuration errors
+          if (isConfigurationError(err)) {
+            throw new Error('User creation service not configured. Contact admin.');
+          }
+
+          // Retry network errors
+          if (isNetworkError(err) && retries > 0) {
+            console.warn(`Network error detected, retrying... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, 4 - retries) * 1000));
+            return invokeWithRetry(retries - 1);
+          }
+
+          throw err;
+        }
+      };
+
+      // Call the Edge Function with retry logic
+      const { data } = await invokeWithRetry();
 
       if (!data.success) {
         console.error('User creation failed:', data.error);
