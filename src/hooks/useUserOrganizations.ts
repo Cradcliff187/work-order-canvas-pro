@@ -18,12 +18,19 @@ export const useUserOrganizations = () => {
   return useQuery({
     queryKey: ['user-organizations', profile?.id],
     queryFn: async () => {
-      if (!profile) return [];
+      console.log('useUserOrganizations: Starting query', { profileId: profile?.id });
+      
+      if (!profile) {
+        console.log('useUserOrganizations: No profile found');
+        return [];
+      }
 
+      // Query user_organizations table with inner join to organizations
       const { data, error } = await supabase
         .from('user_organizations')
         .select(`
-          organization:organizations (
+          organization_id,
+          organizations!inner (
             id,
             name,
             organization_type,
@@ -35,11 +42,26 @@ export const useUserOrganizations = () => {
         `)
         .eq('user_id', profile.id);
 
+      console.log('useUserOrganizations: Query result', { data, error });
+
       if (error) {
+        console.error('useUserOrganizations: Query error', error);
         throw new Error(`Failed to fetch user organizations: ${error.message}`);
       }
 
-      return data?.map(item => item.organization).filter(Boolean) as UserOrganization[] || [];
+      // Transform the data to extract organization info
+      const organizations = data?.map(item => ({
+        id: item.organizations.id,
+        name: item.organizations.name,
+        organization_type: item.organizations.organization_type,
+        initials: item.organizations.initials,
+        contact_email: item.organizations.contact_email,
+        contact_phone: item.organizations.contact_phone,
+        address: item.organizations.address,
+      })).filter(Boolean) as UserOrganization[] || [];
+
+      console.log('useUserOrganizations: Final organizations', organizations);
+      return organizations;
     },
     enabled: !!profile,
   });
