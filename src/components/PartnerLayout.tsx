@@ -181,12 +181,9 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
                 <Menu className="h-5 w-5" />
               </SidebarTrigger>
               <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold">Partner Portal</span>
-                {primaryOrganization && (
-                  <span className="text-sm font-medium text-primary">
-                    {primaryOrganization.name}
-                  </span>
-                )}
+                <span className="text-lg font-semibold">
+                  {primaryOrganization?.name || 'Partner'} Portal
+                </span>
               </div>
             </div>
             <div className="flex items-center space-x-4">
