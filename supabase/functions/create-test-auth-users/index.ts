@@ -113,17 +113,19 @@ serve(async (req) => {
         console.log(`Creating user: ${testUser.email}`);
 
         // Create auth user with metadata
-        const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
-          email: testUser.email,
-          password: testUser.password,
-          email_confirm: true,
-          user_metadata: {
-            first_name: testUser.first_name,
-            last_name: testUser.last_name,
-            user_type: testUser.user_type,
-            company_name: testUser.company_name
-          }
-        });
+      const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
+        email: testUser.email,
+        password: testUser.password,
+        email_confirm: true,
+        app_metadata: {  // Security data (admin-only)
+          user_type: testUser.user_type
+        },
+        user_metadata: {  // Non-security data (user-editable)
+          first_name: testUser.first_name,
+          last_name: testUser.last_name,
+          company_name: testUser.company_name
+        }
+      });
 
         if (authError) {
           if (authError.message.includes('already registered')) {
