@@ -17,10 +17,9 @@ const createEmployeeSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   phone: z.string().optional(),
-  company_name: z.string().optional(),
+  organization_id: z.string().optional(), // Reference to organization instead of company_name
   hourly_cost_rate: z.number().min(0, 'Cost rate must be positive').optional().or(z.literal('')),
   hourly_billable_rate: z.number().min(0, 'Billable rate must be positive').optional().or(z.literal('')),
-  
 });
 
 type CreateEmployeeFormData = z.infer<typeof createEmployeeSchema>;
@@ -45,10 +44,9 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
       first_name: '',
       last_name: '',
       phone: '',
-      company_name: '',
+      organization_id: '',
       hourly_cost_rate: '',
       hourly_billable_rate: '',
-      
     },
   });
 
@@ -71,7 +69,7 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
         first_name: data.first_name!,
         last_name: data.last_name!,
         phone: data.phone,
-        company_name: data.company_name,
+        organization_id: data.organization_id, // Updated to use organization_id
         hourly_cost_rate: data.hourly_cost_rate === '' ? undefined : Number(data.hourly_cost_rate),
         hourly_billable_rate: data.hourly_billable_rate === '' ? undefined : Number(data.hourly_billable_rate),
         
@@ -224,12 +222,12 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
                 />
                 <FormField
                   control={form.control}
-                  name="company_name"
+                  name="organization_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Company Name (Optional)</FormLabel>
+                      <FormLabel>Organization (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your Company" {...field} />
+                        <Input placeholder="Organization ID" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

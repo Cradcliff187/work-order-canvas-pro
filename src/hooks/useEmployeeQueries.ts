@@ -7,7 +7,7 @@ export function useEmployees() {
     queryKey: ['employees'],
     queryFn: async (): Promise<EmployeesData> => {
       const { data: profiles, error } = await supabase
-        .from('profiles')
+        .from('user_profiles_with_organization')
         .select('*')
         .eq('is_employee', true)
         .order('created_at', { ascending: false });
@@ -25,7 +25,8 @@ export function useEmployees() {
         hourly_cost_rate: profile.hourly_cost_rate,
         hourly_billable_rate: profile.hourly_billable_rate,
         phone: profile.phone,
-        company_name: profile.company_name,
+        company_name: profile.company_name, // From organization via view
+        organization_id: profile.organization_id, // From organization via view
         created_at: profile.created_at,
         updated_at: profile.updated_at,
         user_type: 'employee',
@@ -53,7 +54,7 @@ export function useEmployee(employeeId: string) {
     queryKey: ['employee', employeeId],
     queryFn: async () => {
       const { data: profile, error } = await supabase
-        .from('profiles')
+        .from('user_profiles_with_organization')
         .select('*')
         .eq('id', employeeId)
         .eq('is_employee', true)

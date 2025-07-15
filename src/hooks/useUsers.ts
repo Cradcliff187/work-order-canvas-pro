@@ -26,7 +26,7 @@ export interface CreateUserData {
   last_name: string;
   user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   phone?: string;
-  company_name?: string;
+  organization_id?: string; // Reference to organization instead of company_name
   organization_ids?: string[];
   
 }
@@ -36,7 +36,7 @@ export interface UpdateUserData {
   last_name?: string;
   user_type?: 'admin' | 'partner' | 'subcontractor' | 'employee';
   phone?: string;
-  company_name?: string;
+  organization_id?: string; // Reference to organization instead of company_name
   is_active?: boolean;
   organization_ids?: string[];
 }
@@ -60,7 +60,7 @@ export function useUsers() {
         throw new Error(`Failed to fetch users: ${profilesError.message}`);
       }
 
-      // Transform the data to include organizations array
+      // Transform the data to include organizations array and get company name from organization
       const users: User[] = profiles?.map(profile => ({
         id: profile.id,
         email: profile.email,
@@ -69,7 +69,7 @@ export function useUsers() {
         user_type: profile.user_type,
         is_active: profile.is_active,
         phone: profile.phone,
-        company_name: profile.company_name,
+        company_name: profile.user_organizations?.[0]?.organization?.name || null, // From organization relationship
         created_at: profile.created_at,
         updated_at: profile.updated_at,
         organizations: profile.user_organizations?.map((uo: any) => uo.organization) || [],
@@ -267,7 +267,6 @@ export function useUserMutations() {
           last_name: userData.last_name,
           user_type: userData.user_type,
           phone: userData.phone,
-          company_name: userData.company_name,
           is_active: userData.is_active,
         })
         .eq('id', userId)

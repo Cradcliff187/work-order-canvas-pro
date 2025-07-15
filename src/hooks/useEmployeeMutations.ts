@@ -62,7 +62,6 @@ export function useEmployeeMutations() {
           user_type: 'employee',
           is_employee: true,
           phone: employeeData.phone,
-          company_name: employeeData.company_name,
           hourly_cost_rate: employeeData.hourly_cost_rate,
           hourly_billable_rate: employeeData.hourly_billable_rate,
         })
@@ -71,6 +70,22 @@ export function useEmployeeMutations() {
 
       if (profileError) {
         throw new Error(`Failed to create employee: ${profileError.message}`);
+      }
+
+      // Create organization relationship if organization_id provided
+      if (employeeData.organization_id) {
+        const { error: orgError } = await supabase
+          .from('user_organizations')
+          .insert({
+            user_id: profile.id,
+            organization_id: employeeData.organization_id,
+          });
+
+        if (orgError) {
+          // Clean up profile if organization relationship fails
+          await supabase.from('profiles').delete().eq('id', profile.id);
+          throw new Error(`Failed to assign organization: ${orgError.message}`);
+        }
       }
 
       return profile;
