@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
@@ -101,7 +102,8 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <SidebarProvider>
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
@@ -164,6 +166,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
 
       {/* Mobile Bottom Navigation */}
       {isMobile && <MobileBottomNav navItems={subcontractorNavItems} />}
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }
