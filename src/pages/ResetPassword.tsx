@@ -153,16 +153,48 @@ const ResetPassword = () => {
   const isPasswordValid = Object.values(passwordRequirements).every(Boolean) && passwordsMatch;
 
   useEffect(() => {
-    const handleRecoverySession = async () => {
-      // Check if we have the required tokens in the URL
-      const accessToken = searchParams.get('access_token');
-      const refreshToken = searchParams.get('refresh_token');
-      const type = searchParams.get('type');
+    const extractTokensFromUrl = () => {
+      // Check search parameters first
+      const searchParams = new URLSearchParams(window.location.search);
+      let accessToken = searchParams.get('access_token');
+      let refreshToken = searchParams.get('refresh_token');
+      let type = searchParams.get('type');
+      
+      // If not found in search params, check hash fragments
+      if (!accessToken && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        accessToken = hashParams.get('access_token');
+        refreshToken = hashParams.get('refresh_token');
+        type = hashParams.get('type');
+      }
+      
+      return { accessToken, refreshToken, type };
+    };
 
+    const handleRecoverySession = async () => {
+      // Extract tokens from both search params and hash fragments
+      const { accessToken, refreshToken, type } = extractTokensFromUrl();
+      
+      // Debug logging
+      console.log('Reset Password Debug:', {
+        fullUrl: window.location.href,
+        search: window.location.search,
+        hash: window.location.hash,
+        extractedTokens: { accessToken: !!accessToken, refreshToken: !!refreshToken, type }
+      });
+      
+      // Validate required parameters
       if (!accessToken || !refreshToken || type !== 'recovery') {
-        setResetError(categorizeError('Missing required parameters', 'missing_params'));
+        const errorContext = !accessToken ? 'missing_access_token' :
+                           !refreshToken ? 'missing_refresh_token' :
+                           type !== 'recovery' ? 'invalid_type' : 'missing_params';
+        setResetError(categorizeError(`Missing or invalid parameters: ${errorContext}`, 'missing_params'));
         return;
       }
+      
+      // Clean up URL for security
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
 
       try {
         // Set the session from URL parameters for recovery
@@ -172,23 +204,27 @@ const ResetPassword = () => {
         });
 
         if (sessionError) {
+          console.error('Session error:', sessionError);
           setResetError(categorizeError(sessionError, 'session_error'));
           return;
         }
 
         // Verify this is actually a recovery session
         if (sessionData.user && sessionData.session) {
+          console.log('Recovery session established successfully');
           setIsRecoverySession(true);
         } else {
+          console.error('Session verification failed - no user or session data');
           setResetError(categorizeError('Session verification failed', 'session_error'));
         }
       } catch (err) {
+        console.error('Error setting recovery session:', err);
         setResetError(categorizeError(err, 'session_error'));
       }
     };
 
     handleRecoverySession();
-  }, [searchParams]);
+  }, []); // Remove searchParams dependency since we're reading directly from window.location
 
   // Countdown timer effect
   useEffect(() => {
