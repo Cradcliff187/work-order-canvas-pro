@@ -171,24 +171,72 @@ const ResetPassword = () => {
       return { accessToken, refreshToken, type };
     };
 
-    const handleRecoverySession = async () => {
-      // Extract tokens from both search params and hash fragments
-      const { accessToken, refreshToken, type } = extractTokensFromUrl();
+    const validateRecoverySession = (session: any) => {
+      // Check 1: Basic session validity
+      if (!session?.user || !session?.access_token) {
+        return false;
+      }
       
-      // Debug logging
-      console.log('Reset Password Debug:', {
-        fullUrl: window.location.href,
-        search: window.location.search,
-        hash: window.location.hash,
-        extractedTokens: { accessToken: !!accessToken, refreshToken: !!refreshToken, type }
+      // Check 2: Session is not expired
+      const isRecentSession = session.expires_at && 
+        new Date(session.expires_at * 1000) > new Date();
+      if (!isRecentSession) {
+        console.log('Session expired');
+        return false;
+      }
+      
+      // Check 3: Recovery session indicators
+      const isRecoverySession = session.user.aud === 'authenticated' && 
+                               session.user.user_metadata?.iss === 'supabase';
+      
+      // Check 4: Email provider (additional validation)
+      const hasRecoveryContext = session.user.app_metadata?.provider === 'email';
+      
+      // Check 5: User confirmation status for password reset
+      const isConfirmedUser = session.user.email_confirmed_at !== null;
+      
+      console.log('Recovery session validation:', {
+        isRecoverySession,
+        hasRecoveryContext,
+        isConfirmedUser,
+        expiresAt: new Date(session.expires_at * 1000),
+        userAud: session.user.aud,
+        provider: session.user.app_metadata?.provider
       });
       
-      // Validate required parameters
+      return isRecoverySession && hasRecoveryContext && isConfirmedUser;
+    };
+
+    const categorizeSessionError = (session: any, context: string) => {
+      if (!session) {
+        return categorizeError('No session found', 'missing_params');
+      }
+      
+      if (session.expires_at && new Date(session.expires_at * 1000) <= new Date()) {
+        return categorizeError('Recovery session expired', 'expired_link');
+      }
+      
+      if (session.user?.aud !== 'authenticated') {
+        return categorizeError('Invalid session type', 'invalid_token');
+      }
+      
+      if (session.user?.app_metadata?.provider !== 'email') {
+        return categorizeError('Invalid authentication provider', 'invalid_token');
+      }
+      
+      return categorizeError(`Session validation failed: ${context}`, 'session_error');
+    };
+
+    const processUrlParameters = async () => {
+      const { accessToken, refreshToken, type } = extractTokensFromUrl();
+      
+      // Only show "missing parameters" error if we also don't have a valid session
       if (!accessToken || !refreshToken || type !== 'recovery') {
+        console.log('No URL parameters found and no existing session');
         const errorContext = !accessToken ? 'missing_access_token' :
-                           !refreshToken ? 'missing_refresh_token' :
-                           type !== 'recovery' ? 'invalid_type' : 'missing_params';
-        setResetError(categorizeError(`Missing or invalid parameters: ${errorContext}`, 'missing_params'));
+                             !refreshToken ? 'missing_refresh_token' :
+                             type !== 'recovery' ? 'invalid_type' : 'missing_params';
+        setResetError(categorizeError(`Missing parameters: ${errorContext}`, 'missing_params'));
         return;
       }
       
@@ -200,7 +248,7 @@ const ResetPassword = () => {
         // Set the session from URL parameters for recovery
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
-          refresh_token: refreshToken
+          refresh_token: refreshToken,
         });
 
         if (sessionError) {
@@ -211,7 +259,7 @@ const ResetPassword = () => {
 
         // Verify this is actually a recovery session
         if (sessionData.user && sessionData.session) {
-          console.log('Recovery session established successfully');
+          console.log('Recovery session established successfully from URL');
           setIsRecoverySession(true);
         } else {
           console.error('Session verification failed - no user or session data');
@@ -221,6 +269,35 @@ const ResetPassword = () => {
         console.error('Error setting recovery session:', err);
         setResetError(categorizeError(err, 'session_error'));
       }
+    };
+
+    const handleRecoverySession = async () => {
+      // Step 1: Check for existing session first
+      const { data: { session }, error: getSessionError } = await supabase.auth.getSession();
+      
+      if (getSessionError) {
+        console.error('Error getting session:', getSessionError);
+        setResetError(categorizeError(getSessionError, 'session_error'));
+        return;
+      }
+      
+      // Step 2: Validate if existing session is a recovery session
+      if (session?.user) {
+        const isValidRecoverySession = validateRecoverySession(session);
+        if (isValidRecoverySession) {
+          console.log('Found existing valid recovery session');
+          setIsRecoverySession(true);
+          return; // Success - no need to process URL parameters
+        } else {
+          console.log('Existing session is not a valid recovery session');
+          setResetError(categorizeSessionError(session, 'invalid_recovery_session'));
+          return;
+        }
+      }
+      
+      // Step 3: Fallback to URL parameter processing only if no valid session exists
+      console.log('No existing recovery session found, checking URL parameters');
+      await processUrlParameters();
     };
 
     handleRecoverySession();
