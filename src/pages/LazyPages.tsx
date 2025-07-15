@@ -50,3 +50,4 @@ export const PartnerReportDetail = lazy(() => import('@/pages/partner/PartnerRep
 // System Pages
 export const SystemHealthCheck = lazy(() => import('@/pages/admin/SystemHealthCheck'));
 export const EmailTestPage = lazy(() => import('@/pages/admin/EmailTestPage'));
+export const AdminOrganizationDiagnostics = lazy(() => import('@/pages/admin/AdminOrganizationDiagnostics'));
