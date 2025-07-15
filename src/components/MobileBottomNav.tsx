@@ -90,7 +90,7 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
               variant="ghost"
               size="sm"
               onClick={() => handleNavClick(item)}
-              className={`flex flex-col items-center gap-1 h-12 min-w-0 px-2 relative ${
+              className={`flex flex-col items-center gap-1 h-12 min-w-0 px-2 py-2 relative ${
                 active 
                   ? 'text-primary' 
                   : 'text-muted-foreground hover:text-foreground'
