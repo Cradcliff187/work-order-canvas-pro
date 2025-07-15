@@ -141,7 +141,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
         {/* Main Content */}
         <main className={`flex-1 md:ml-64 ${isMobile ? 'pb-20' : ''}`}>
           <SingleOrganizationGuard userType="subcontractor">
-            <div className="container py-6">
+            <div className="p-6">
               {children}
             </div>
           </SingleOrganizationGuard>
