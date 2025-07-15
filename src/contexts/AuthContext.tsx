@@ -325,14 +325,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const forgotPassword = async (email: string) => {
-    // Use the full qualified URL to ensure Supabase can properly append query parameters
-    const redirectUrl = `${window.location.protocol}//${window.location.host}/reset-password`;
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl
-    });
-    
-    return { error };
+    try {
+      // Construct the redirect URL with proper format for Supabase
+      const baseUrl = window.location.origin;
+      const redirectPath = '/reset-password';
+      const redirectUrl = `${baseUrl}${redirectPath}`;
+      
+      // Log the redirect URL for debugging
+      console.log('Password reset redirect URL:', redirectUrl);
+      console.log('Base URL:', baseUrl);
+      console.log('Email being sent to:', email);
+      
+      // Validate the redirect URL format
+      try {
+        new URL(redirectUrl);
+      } catch (urlError) {
+        console.error('Invalid redirect URL format:', redirectUrl);
+        return { 
+          error: { 
+            message: 'Invalid redirect URL configuration',
+            code: 'invalid_redirect_url'
+          } 
+        };
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        console.error('Supabase password reset error:', {
+          message: error.message,
+          status: error.status,
+          redirectUrl: redirectUrl
+        });
+        
+        // Categorize different types of email sending errors
+        if (error.message?.includes('rate limit')) {
+          return { 
+            error: { 
+              ...error, 
+              type: 'rate_limit',
+              friendlyMessage: 'Too many password reset attempts. Please wait before trying again.' 
+            } 
+          };
+        }
+        
+        if (error.message?.includes('invalid email')) {
+          return { 
+            error: { 
+              ...error, 
+              type: 'invalid_email',
+              friendlyMessage: 'Please enter a valid email address.' 
+            } 
+          };
+        }
+        
+        if (error.message?.includes('redirect')) {
+          return { 
+            error: { 
+              ...error, 
+              type: 'redirect_error',
+              friendlyMessage: 'Email configuration error. Please contact support.' 
+            } 
+          };
+        }
+        
+        return { error };
+      }
+
+      console.log('Password reset email sent successfully to:', email);
+      return { error: null };
+      
+    } catch (error) {
+      console.error('Unexpected forgot password error:', error);
+      return { 
+        error: { 
+          message: 'An unexpected error occurred while sending the password reset email',
+          type: 'unexpected_error'
+        } 
+      };
+    }
   };
 
   const resetPassword = async (password: string) => {
