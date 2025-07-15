@@ -1402,6 +1402,16 @@ export type Database = {
           avg_completion_hours: number
         }[]
       }
+      get_profile_id_direct: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
+      get_user_organization_ids_direct: {
+        Args: { p_user_id: string }
+        Returns: {
+          organization_id: string
+        }[]
+      }
       get_user_organizations: {
         Args: Record<PropertyKey, never>
         Returns: {
