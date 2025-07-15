@@ -116,6 +116,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const checkAndFixSubcontractorOrganization = async (profileId: string) => {
+    try {
+      // Check if subcontractor has organization
+      const { data: orgCheck } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
+        .eq('user_id', profileId)
+        .maybeSingle();
+      
+      if (!orgCheck) {
+        // Try to fix from work order assignments
+        const { data: assignment } = await supabase
+          .from('work_order_assignments')
+          .select('assigned_organization_id')
+          .eq('assigned_to', profileId)
+          .not('assigned_organization_id', 'is', null)
+          .limit(1)
+          .maybeSingle();
+        
+        if (assignment?.assigned_organization_id) {
+          await supabase
+            .from('user_organizations')
+            .insert({
+              user_id: profileId,
+              organization_id: assignment.assigned_organization_id
+            });
+          console.log('Auto-fixed subcontractor organization');
+        }
+      }
+    } catch (error) {
+      console.error('Organization check error:', error);
+    }
+  };
+
   const isRecoverySession = (): boolean => {
     if (!session?.user) return false;
     
@@ -162,6 +196,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Fetch organization data if user has a profile
             if (profileData) {
               setOrganizationLoading(true);
+              
+              // Auto-fix subcontractor organizations if needed
+              if (profileData.user_type === 'subcontractor') {
+                await checkAndFixSubcontractorOrganization(profileData.id);
+              }
+              
               const organizationData = await fetchUserOrganization(session.user.id);
               if (mounted) {
                 setUserOrganization(organizationData);
@@ -223,6 +263,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Fetch organization data if user has a profile
           if (profileData) {
             setOrganizationLoading(true);
+            
+            // Auto-fix subcontractor organizations if needed
+            if (profileData.user_type === 'subcontractor') {
+              await checkAndFixSubcontractorOrganization(profileData.id);
+            }
+            
             const organizationData = await fetchUserOrganization(session.user.id);
             if (mounted) {
               setUserOrganization(organizationData);
