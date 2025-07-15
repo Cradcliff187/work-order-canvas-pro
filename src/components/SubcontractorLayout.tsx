@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { ClipboardList, FileText, Home, LogOut, Menu, History, User, Receipt } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ClipboardList, FileText, Home, LogOut, History, User, Receipt } from "lucide-react";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
@@ -70,20 +69,6 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center space-x-4">
-            {/* Mobile menu */}
-            <Sheet>
-              <SheetTrigger asChild className="md:hidden">
-                <Button variant="outline" size="icon">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <div className="flex flex-col space-y-3 mt-4">
-                  <NavItems />
-                </div>
-              </SheetContent>
-            </Sheet>
-            
             <div className="flex items-center space-x-2">
               <h1 className="text-lg font-semibold">WorkOrderPro</h1>
               <span className="text-sm text-muted-foreground">| Subcontractor</span>
