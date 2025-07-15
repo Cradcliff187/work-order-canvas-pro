@@ -150,10 +150,12 @@ serve(async (req) => {
       email: userData.email,
       password: temporaryPassword,
       email_confirm: send_welcome_email, // Use parameter to control email sending
-      user_metadata: {
+      app_metadata: {  // Security data (admin-only)
+        user_type: userData.user_type
+      },
+      user_metadata: {  // Non-security data (user-editable)
         first_name: userData.first_name,
-        last_name: userData.last_name,
-        user_type: userData.user_type,
+        last_name: userData.last_name
       }
     });
 
