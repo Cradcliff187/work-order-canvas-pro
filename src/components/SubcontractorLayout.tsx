@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { ClipboardList, FileText, Home, LogOut, History, User, Receipt, Plus } from "lucide-react";
+import { useUserOrganizations } from "@/hooks/useUserOrganizations";
+import { ClipboardList, FileText, Home, LogOut, History, User, Receipt, Plus, Building2 } from "lucide-react";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
@@ -17,6 +18,8 @@ interface SubcontractorLayoutProps {
 export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
+  const { data: userOrganizations } = useUserOrganizations();
+  const primaryOrg = userOrganizations?.[0];
   const location = useLocation();
   const isMobile = useIsMobile();
   const { draftCount } = useInvoiceDrafts();
@@ -107,6 +110,17 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
               <h1 className="text-lg font-semibold">WorkOrderPro</h1>
               <span className="text-sm text-muted-foreground">| Subcontractor</span>
             </div>
+            {primaryOrg && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">{primaryOrg.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{primaryOrg.organization_type}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-4">
