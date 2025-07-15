@@ -351,7 +351,6 @@ export default function AdminReports() {
                   {subcontractors?.map((subcontractor) => (
                     <SelectItem key={subcontractor.id} value={subcontractor.id}>
                       {subcontractor.first_name} {subcontractor.last_name}
-                      {subcontractor.company_name && ` (${subcontractor.company_name})`}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -334,9 +334,6 @@ export default function AdminWorkOrderDetail() {
                           {assignment.assignment_type}
                         </Badge>
                       </div>
-                      {assignment.assignee.company_name && (
-                        <p className="text-sm text-muted-foreground">{assignment.assignee.company_name}</p>
-                      )}
                       <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                         <Mail className="h-3 w-3" />
                         {assignment.assignee.email}
@@ -355,9 +352,6 @@ export default function AdminWorkOrderDetail() {
                     </p>
                     <Badge variant="outline">legacy</Badge>
                   </div>
-                  {workOrder.assigned_user.company_name && (
-                    <p className="text-sm text-muted-foreground">{workOrder.assigned_user.company_name}</p>
-                  )}
                   <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                     <Mail className="h-3 w-3" />
                     {workOrder.assigned_user.email}
@@ -460,9 +454,6 @@ export default function AdminWorkOrderDetail() {
                       <p className="font-medium">
                         {report.subcontractor_user.first_name} {report.subcontractor_user.last_name}
                       </p>
-                      {report.subcontractor_user.company_name && (
-                        <p className="text-sm text-muted-foreground">{report.subcontractor_user.company_name}</p>
-                      )}
                       <p className="text-sm text-muted-foreground">
                         Submitted {formatDateTime(report.submitted_at)}
                       </p>

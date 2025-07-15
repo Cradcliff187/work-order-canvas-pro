@@ -10,7 +10,7 @@ export interface AssigneeData {
   organization_id?: string;
   workload: number;
   is_active: boolean;
-  company_name?: string;
+  
   email: string;
 }
 
@@ -70,14 +70,11 @@ export function useAllAssignees(tradeId?: string) {
       
       // Get subcontractors with their organization relationships
       const { data: subs, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          user_organizations!inner(organization_id, organizations!inner(id, name, organization_type))
-        `)
+        .from('user_profiles_with_organization')
+        .select('*')
         .eq('user_type', 'subcontractor')
         .eq('is_active', true)
-        .eq('user_organizations.organizations.organization_type', 'subcontractor')
+        .eq('organization_type', 'subcontractor')
         .order('first_name');
 
       if (error) {
@@ -96,11 +93,10 @@ export function useAllAssignees(tradeId?: string) {
           first_name: sub.first_name,
           last_name: sub.last_name,
           type: 'subcontractor' as const,
-          organization: sub.company_name || 'External',
+          organization: 'External',
           organization_id: undefined,
           workload: 0,
           is_active: sub.is_active,
-          company_name: sub.company_name || undefined,
           email: sub.email
         }));
       }
@@ -122,23 +118,17 @@ export function useAllAssignees(tradeId?: string) {
         return acc;
       }, {} as Record<string, number>);
 
-      return subs.map(sub => {
-        const userOrg = (sub as any).user_organizations?.[0];
-        const organization = userOrg?.organizations;
-        
-        return {
-          id: sub.id,
-          first_name: sub.first_name,
-          last_name: sub.last_name,
-          type: 'subcontractor' as const,
-          organization: organization?.name || sub.company_name || 'External',
-          organization_id: organization?.id || null,
-          workload: workloadMap[sub.id] || 0,
-          is_active: sub.is_active,
-          company_name: sub.company_name || undefined,
-          email: sub.email
-        };
-      });
+      return subs.map(sub => ({
+        id: sub.id,
+        first_name: sub.first_name,
+        last_name: sub.last_name,
+        type: 'subcontractor' as const,
+        organization: sub.company_name || 'External',
+        organization_id: sub.organization_id || null,
+        workload: workloadMap[sub.id] || 0,
+        is_active: sub.is_active,
+        email: sub.email
+      }));
     },
     enabled: !!tradeId,
   });

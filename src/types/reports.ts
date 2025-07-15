@@ -16,7 +16,6 @@ export type WorkOrderReport = Database['public']['Tables']['work_order_reports']
   subcontractor: {
     first_name: string;
     last_name: string;
-    company_name: string | null;
     email: string;
     phone: string | null;
   } | null;

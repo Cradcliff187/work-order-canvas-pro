@@ -18,7 +18,6 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     last_name: string;
     email: string;
     phone: string | null;
-    company_name: string | null;
   } | null;
   created_user: { 
     first_name: string; 
@@ -35,7 +34,6 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     subcontractor_user: {
       first_name: string;
       last_name: string;
-      company_name: string | null;
     };
   }>;
   work_order_attachments: Array<{
@@ -71,12 +69,11 @@ export function useWorkOrderDetail(id: string) {
             name,
             description
           ),
-          assigned_user:profiles!assigned_to(
+          assigned_user:user_profiles_with_organization!assigned_to(
             first_name,
             last_name,
             email,
-            phone,
-            company_name
+            phone
           ),
           created_user:profiles!created_by(
             first_name,
@@ -90,10 +87,9 @@ export function useWorkOrderDetail(id: string) {
             invoice_amount,
             work_performed,
             hours_worked,
-            subcontractor_user:profiles!subcontractor_user_id(
+            subcontractor_user:user_profiles_with_organization!subcontractor_user_id(
               first_name,
-              last_name,
-              company_name
+              last_name
             )
           ),
           work_order_attachments(

@@ -18,7 +18,6 @@ type WorkOrderReport = Database['public']['Tables']['work_order_reports']['Row']
   subcontractor: {
     first_name: string;
     last_name: string;
-    company_name: string | null;
   } | null;
   reviewed_by: {
     first_name: string;
@@ -67,10 +66,9 @@ export function usePartnerReports(
             organizations!organization_id(name),
             trades!trade_id(name)
           ),
-          subcontractor:profiles!subcontractor_user_id(
+          subcontractor:user_profiles_with_organization!subcontractor_user_id(
             first_name,
-            last_name,
-            company_name
+            last_name
           ),
           reviewed_by:profiles!reviewed_by_user_id(
             first_name,
@@ -133,10 +131,9 @@ export function usePartnerReportDetail(reportId: string) {
             organizations!organization_id(name),
             trades!trade_id(name)
           ),
-          subcontractor:profiles!subcontractor_user_id(
+          subcontractor:user_profiles_with_organization!subcontractor_user_id(
             first_name,
-            last_name,
-            company_name
+            last_name
           ),
           reviewed_by:profiles!reviewed_by_user_id(
             first_name,

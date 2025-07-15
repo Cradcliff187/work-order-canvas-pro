@@ -6,7 +6,7 @@ export function useSubcontractors() {
     queryKey: ['subcontractors'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_profiles_with_organization')
         .select('id, first_name, last_name, company_name')
         .eq('user_type', 'subcontractor')
         .eq('is_active', true)

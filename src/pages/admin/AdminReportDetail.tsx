@@ -362,9 +362,6 @@ export default function AdminReportDetail() {
                     <p className="font-medium">
                       {subcontractor.first_name} {subcontractor.last_name}
                     </p>
-                    {subcontractor.company_name && (
-                      <p className="text-sm text-muted-foreground">{subcontractor.company_name}</p>
-                    )}
                   </div>
                   {subcontractor.email && (
                     <div>

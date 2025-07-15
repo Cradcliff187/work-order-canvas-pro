@@ -15,10 +15,9 @@ export function useAdminReportDetail(reportId: string) {
             organizations!organization_id(name),
             trades!trade_id(name)
           ),
-          subcontractor:profiles!subcontractor_user_id(
+          subcontractor:user_profiles_with_organization!subcontractor_user_id(
             first_name,
             last_name,
-            company_name,
             email,
             phone
           ),

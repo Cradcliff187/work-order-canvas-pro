@@ -95,7 +95,7 @@ const DevTools = () => {
     
     // Look specifically for test users with @workorderpro.test domain
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles_with_organization')
       .select(`
         id,
         email,
@@ -121,41 +121,17 @@ const DevTools = () => {
     console.log(`📊 Found ${data.length} active users`);
     
     // Filter and prioritize test users
-    const testUsers = data.filter(u => u.email.includes('@workorderpro.test'));
-    const otherUsers = data.filter(u => !u.email.includes('@workorderpro.test'));
+    const testUsers = data.filter(u => u?.email?.includes('@workorderpro.test'));
+    const otherUsers = data.filter(u => u?.email && !u.email.includes('@workorderpro.test'));
     
     console.log(`🧪 Test users found: ${testUsers.length}, Other users: ${otherUsers.length}`);
 
-    const usersWithOrganizations = await Promise.all(
-      [...testUsers, ...otherUsers].map(async (user) => {
-        let organizationName = 'No Organization';
-        
-        try {
-          if (user.user_type === 'partner') {
-            const { data: orgData } = await supabase
-              .from('user_organizations')
-              .select('organizations(name)')
-              .eq('user_id', user.id)
-              .limit(1);
-            
-            if (orgData && orgData.length > 0 && orgData[0].organizations) {
-              organizationName = (orgData[0].organizations as any).name;
-            }
-          } else if (user.user_type === 'subcontractor' && user.company_name) {
-            organizationName = user.company_name;
-          } else if (user.user_type === 'employee') {
-            organizationName = 'Internal';
-          }
-        } catch (error) {
-          console.error(`Error fetching organization for ${user.email}:`, error);
-        }
-
-        return {
-          ...user,
-          organization_name: organizationName
-        } as ImpersonationUser;
-      })
-    );
+    const usersWithOrganizations = [...testUsers, ...otherUsers]
+      .filter(user => user && user.email)
+      .map(user => ({
+        ...user,
+        organization_name: user.company_name || 'No Organization'
+      } as ImpersonationUser));
 
     console.log(`✅ Processed ${usersWithOrganizations.length} users for impersonation`);
     setImpersonationUsers(usersWithOrganizations);

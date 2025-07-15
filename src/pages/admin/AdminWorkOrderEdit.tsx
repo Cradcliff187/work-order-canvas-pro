@@ -376,7 +376,7 @@ export default function AdminWorkOrderEdit() {
                             {subcontractors?.map((sub) => (
                               <SelectItem key={sub.id} value={sub.id}>
                                 {sub.first_name} {sub.last_name}
-                                {sub.company_name && ` (${sub.company_name})`}
+                                
                                 {sub.workload !== undefined && ` - ${sub.workload} active jobs`}
                               </SelectItem>
                             ))}
