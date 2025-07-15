@@ -1365,6 +1365,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      ensure_single_organization_assignment: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       fix_existing_test_user_organizations: {
         Args: Record<PropertyKey, never>
         Returns: Json

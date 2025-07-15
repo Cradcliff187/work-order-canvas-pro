@@ -1,71 +1,119 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.4";
+
+interface TestUser {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
+  company_name?: string;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
-interface TestUser {
-  email: string
-  password: string
-  first_name: string
-  last_name: string
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee'
-  company_name?: string
-}
-
+// Test users with single organization assignments
 const TEST_USERS: TestUser[] = [
   {
-    email: 'partner1@workorderpro.test',
+    email: 'partner1@abc.com',
     password: 'TestPass123!',
-    first_name: 'John',
-    last_name: 'Partner',
-    user_type: 'partner'
+    first_name: 'Sarah',
+    last_name: 'Johnson',
+    user_type: 'partner',
+    company_name: 'ABC Property Management'
   },
   {
-    email: 'sub1@workorderpro.test', 
+    email: 'partner2@xyz.com', 
     password: 'TestPass123!',
     first_name: 'Mike',
-    last_name: 'Contractor',
+    last_name: 'Chen',
+    user_type: 'partner',
+    company_name: 'XYZ Commercial Properties'
+  },
+  {
+    email: 'partner3@premium.com',
+    password: 'TestPass123!',
+    first_name: 'Emily', 
+    last_name: 'Rodriguez',
+    user_type: 'partner',
+    company_name: 'Premium Facilities Group'
+  },
+  {
+    email: 'plumber@pipesmore.com',
+    password: 'TestPass123!',
+    first_name: 'Tom',
+    last_name: 'Wilson', 
     user_type: 'subcontractor',
     company_name: 'Pipes & More Plumbing'
   },
   {
-    email: 'employee1@workorderpro.test',
-    password: 'TestPass123!', 
-    first_name: 'Sarah',
-    last_name: 'Employee',
-    user_type: 'employee'
+    email: 'electrician@sparks.com',
+    password: 'TestPass123!',
+    first_name: 'Lisa',
+    last_name: 'Anderson',
+    user_type: 'subcontractor', 
+    company_name: 'Sparks Electric'
+  },
+  {
+    email: 'hvac@coolair.com',
+    password: 'TestPass123!',
+    first_name: 'David',
+    last_name: 'Martinez',
+    user_type: 'subcontractor',
+    company_name: 'Cool Air HVAC'
+  },
+  {
+    email: 'carpenter@woodworks.com',
+    password: 'TestPass123!',
+    first_name: 'Jessica',
+    last_name: 'Taylor',
+    user_type: 'subcontractor',
+    company_name: 'Wood Works Carpentry'
+  },
+  {
+    email: 'maintenance@workorderpro.com',
+    password: 'TestPass123!',
+    first_name: 'Alex',
+    last_name: 'Thompson',
+    user_type: 'employee',
+    company_name: 'WorkOrderPro'
+  },
+  {
+    email: 'supervisor@workorderpro.com',
+    password: 'TestPass123!',
+    first_name: 'Jordan',
+    last_name: 'Lee',
+    user_type: 'employee',
+    company_name: 'WorkOrderPro'
   }
-]
+];
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Create admin client using service role key
-    const supabaseAdmin = createClient(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
 
-    console.log('🔐 Starting auth user creation process...')
+    const created_users = [];
+    const errors = [];
 
-    const results = []
-    let successCount = 0
-    let errorCount = 0
+    console.log(`Starting creation of ${TEST_USERS.length} test users`);
 
-    // Create each test user
     for (const testUser of TEST_USERS) {
       try {
-        console.log(`👤 Creating auth user: ${testUser.email}`)
+        console.log(`Creating user: ${testUser.email}`);
 
-        // Create auth user
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        // Create auth user with metadata
+        const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
           email: testUser.email,
           password: testUser.password,
           email_confirm: true,
@@ -75,144 +123,164 @@ serve(async (req) => {
             user_type: testUser.user_type,
             company_name: testUser.company_name
           }
-        })
+        });
 
         if (authError) {
-          console.error(`❌ Auth user creation failed for ${testUser.email}:`, authError)
-          
-          // If user already exists, try to update their profile
-          if (authError.message.includes('already been registered')) {
-            console.log(`📝 User ${testUser.email} already exists, updating profile...`)
+          if (authError.message.includes('already registered')) {
+            console.log(`User ${testUser.email} already exists, updating profile...`);
             
-            // Get existing user
-            const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-            const existingUser = existingUsers.users?.find(u => u.email === testUser.email)
+            // Try to find existing user and update profile
+            const { data: existingUsers } = await supabaseClient.auth.admin.listUsers();
+            const existingUser = existingUsers.users.find(u => u.email === testUser.email);
             
             if (existingUser) {
-              // Update profile if it exists
-              const { error: updateError } = await supabaseAdmin
+              // Update existing profile
+              const { error: updateError } = await supabaseClient
                 .from('profiles')
-                .upsert({
-                  user_id: existingUser.id,
-                  email: testUser.email,
+                .update({
                   first_name: testUser.first_name,
                   last_name: testUser.last_name,
                   user_type: testUser.user_type,
                   company_name: testUser.company_name,
-                  is_active: true
+                  is_active: true,
+                  updated_at: new Date().toISOString()
                 })
+                .eq('user_id', existingUser.id);
 
               if (updateError) {
-                console.error(`❌ Profile update failed for ${testUser.email}:`, updateError)
-                results.push({
+                console.error(`Error updating profile for ${testUser.email}:`, updateError);
+                errors.push({
                   email: testUser.email,
-                  success: false,
-                  error: `Profile update failed: ${updateError.message}`
-                })
-                errorCount++
+                  error: updateError.message,
+                  action: 'update_profile'
+                });
               } else {
-                console.log(`✅ Profile updated for ${testUser.email}`)
-                results.push({
+                created_users.push({
                   email: testUser.email,
-                  success: true,
-                  action: 'updated'
-                })
-                successCount++
+                  action: 'updated_existing',
+                  user_type: testUser.user_type
+                });
               }
-            } else {
-              results.push({
-                email: testUser.email,
-                success: false,
-                error: 'User exists but could not be found'
-              })
-              errorCount++
             }
           } else {
-            results.push({
+            console.error(`Error creating user ${testUser.email}:`, authError);
+            errors.push({
               email: testUser.email,
-              success: false,
-              error: authError.message
-            })
-            errorCount++
+              error: authError.message,
+              action: 'create_auth_user'
+            });
           }
-          continue
+          continue;
         }
 
-        if (!authData?.user) {
-          throw new Error('No user data returned from auth creation')
+        if (authData.user) {
+          console.log(`Successfully created auth user: ${testUser.email}`);
+          
+          // Create or update profile
+          const { error: profileError } = await supabaseClient
+            .from('profiles')
+            .upsert({
+              user_id: authData.user.id,
+              email: testUser.email,
+              first_name: testUser.first_name,
+              last_name: testUser.last_name,
+              user_type: testUser.user_type,
+              company_name: testUser.company_name,
+              is_active: true,
+              is_employee: testUser.user_type === 'employee'
+            });
+
+          if (profileError) {
+            console.error(`Error creating profile for ${testUser.email}:`, profileError);
+            errors.push({
+              email: testUser.email,
+              error: profileError.message,
+              action: 'create_profile'
+            });
+          } else {
+            created_users.push({
+              email: testUser.email,
+              user_id: authData.user.id,
+              action: 'created_new',
+              user_type: testUser.user_type
+            });
+          }
         }
 
-        console.log(`✅ Auth user created successfully: ${testUser.email}`)
-        results.push({
+      } catch (userError) {
+        console.error(`Unexpected error for user ${testUser.email}:`, userError);
+        errors.push({
           email: testUser.email,
-          success: true,
-          action: 'created',
-          user_id: authData.user.id
-        })
-        successCount++
-
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-      } catch (error: any) {
-        console.error(`❌ Unexpected error creating ${testUser.email}:`, error)
-        results.push({
-          email: testUser.email,
-          success: false,
-          error: error.message
-        })
-        errorCount++
+          error: userError.message,
+          action: 'unexpected_error'
+        });
       }
     }
 
-    // After creating auth users, immediately fix user-organization relationships
-    console.log('🔧 Fixing user-organization relationships...')
+    // Now fix user-organization relationships
+    console.log('Fixing user-organization relationships...');
     
-    try {
-      const { data: fixResult, error: fixError } = await supabaseAdmin.rpc('fix_existing_test_user_organizations')
-      
-      if (fixError) {
-        console.error('❌ Error fixing user organizations:', fixError)
-      } else {
-        console.log('✅ User-organization relationships fixed:', fixResult)
-      }
-    } catch (fixErr) {
-      console.error('❌ Failed to fix user organizations:', fixErr)
+    const { data: fixResult, error: fixError } = await supabaseClient
+      .rpc('fix_existing_test_user_organizations');
+
+    if (fixError) {
+      console.error('Error fixing user organizations:', fixError);
+      errors.push({
+        action: 'fix_user_organizations',
+        error: fixError.message
+      });
     }
 
-    console.log(`📊 Auth user creation completed: ${successCount} success, ${errorCount} errors`)
+    // Run cleanup to ensure single organization assignments
+    console.log('Ensuring single organization assignments...');
+    
+    const { data: cleanupResult, error: cleanupError } = await supabaseClient
+      .rpc('ensure_single_organization_assignment');
+
+    if (cleanupError) {
+      console.error('Error in cleanup:', cleanupError);
+      errors.push({
+        action: 'cleanup_organizations',
+        error: cleanupError.message
+      });
+    }
 
     const response = {
-      success: errorCount === 0,
-      message: `Auth user creation completed: ${successCount} success, ${errorCount} errors`,
-      data: {
-        total_users: TEST_USERS.length,
-        success_count: successCount,
-        error_count: errorCount,
-        results: results,
-        credentials: TEST_USERS.map(u => ({
+      success: true,
+      message: `Test user creation completed. Created/updated ${created_users.length} users.`,
+      created_users,
+      errors,
+      fix_organizations_result: fixResult,
+      cleanup_result: cleanupResult,
+      test_credentials: {
+        note: 'All test users use password: TestPass123!',
+        users: TEST_USERS.map(u => ({
           email: u.email,
-          password: u.password,
-          type: u.user_type
+          user_type: u.user_type,
+          company: u.company_name
         }))
       }
-    }
+    };
+
+    console.log('Test user creation completed:', response);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
-    })
+    });
 
-  } catch (error: any) {
-    console.error('💥 Fatal error in auth user creation:', error)
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message,
-      message: 'Fatal error during auth user creation process'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
+  } catch (error) {
+    console.error('Edge function error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        message: 'Failed to create test users'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
+    );
   }
-})
+});
