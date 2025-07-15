@@ -36,14 +36,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
     // When impersonating, require exact user type match for better UX
     if (isImpersonating) {
       console.log('ProtectedRoute - ACCESS DENIED - Impersonating user must have exact user type match');
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-            <p className="text-muted-foreground">You don't have permission to access this page while impersonating.</p>
-          </div>
-        </div>
-      );
+      const redirectPath = profile?.user_type === 'admin' ? '/admin/dashboard' :
+                           profile?.user_type === 'partner' ? '/partner/dashboard' :
+                           profile?.user_type === 'subcontractor' ? '/subcontractor/dashboard' :
+                           profile?.user_type === 'employee' ? '/admin/employee-dashboard' :
+                           '/auth';
+      return <Navigate to={redirectPath} replace />;
     }
     
     // For non-impersonated access, check hierarchy
@@ -61,14 +59,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
 
     if (userLevel < requiredLevel) {
       console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-            <p className="text-muted-foreground">You don't have permission to access this page.</p>
-          </div>
-        </div>
-      );
+      const redirectPath = profile?.user_type === 'admin' ? '/admin/dashboard' :
+                           profile?.user_type === 'partner' ? '/partner/dashboard' :
+                           profile?.user_type === 'subcontractor' ? '/subcontractor/dashboard' :
+                           profile?.user_type === 'employee' ? '/admin/employee-dashboard' :
+                           '/auth';
+      return <Navigate to={redirectPath} replace />;
     } else {
       console.log('ProtectedRoute - Access granted via hierarchy');
     }
