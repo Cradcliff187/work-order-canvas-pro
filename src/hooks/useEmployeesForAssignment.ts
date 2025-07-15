@@ -70,36 +70,21 @@ export function useAllAssignees(tradeId?: string) {
       
       // Get subcontractors with their organization relationships
       const { data: subs, error } = await supabase
-        .from('user_profiles_with_organization')
-        .select('*')
+        .from('profiles')
+        .select(`
+          *,
+          user_organizations!inner(
+            organization:organizations!inner(
+              id, name, organization_type
+            )
+          )
+        `)
         .eq('user_type', 'subcontractor')
         .eq('is_active', true)
-        .eq('organization_type', 'subcontractor')
+        .eq('user_organizations.organization.organization_type', 'subcontractor')
         .order('first_name');
 
-      if (error) {
-        // Fallback to basic query if join fails
-        const { data: fallbackSubs, error: fallbackError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_type', 'subcontractor')
-          .eq('is_active', true)
-          .order('first_name');
-        
-        if (fallbackError) throw fallbackError;
-        
-        return fallbackSubs.map(sub => ({
-          id: sub.id,
-          first_name: sub.first_name,
-          last_name: sub.last_name,
-          type: 'subcontractor' as const,
-          organization: 'External',
-          organization_id: undefined,
-          workload: 0,
-          is_active: sub.is_active,
-          email: sub.email
-        }));
-      }
+      if (error) throw error;
 
       // Get workload for subcontractors
       const { data: workOrders, error: workOrderError } = await supabase
@@ -123,8 +108,8 @@ export function useAllAssignees(tradeId?: string) {
         first_name: sub.first_name,
         last_name: sub.last_name,
         type: 'subcontractor' as const,
-        organization: sub.company_name || 'External',
-        organization_id: sub.organization_id || null,
+        organization: sub.company_name || sub.user_organizations?.[0]?.organization?.name || 'External',
+        organization_id: sub.user_organizations?.[0]?.organization?.id || null,
         workload: workloadMap[sub.id] || 0,
         is_active: sub.is_active,
         email: sub.email

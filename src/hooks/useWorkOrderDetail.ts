@@ -69,7 +69,7 @@ export function useWorkOrderDetail(id: string) {
             name,
             description
           ),
-          assigned_user:user_profiles_with_organization!assigned_to(
+          assigned_user:profiles!assigned_to(
             first_name,
             last_name,
             email,
@@ -87,7 +87,7 @@ export function useWorkOrderDetail(id: string) {
             invoice_amount,
             work_performed,
             hours_worked,
-            subcontractor_user:user_profiles_with_organization!subcontractor_user_id(
+            subcontractor_user:profiles!subcontractor_user_id(
               first_name,
               last_name
             )

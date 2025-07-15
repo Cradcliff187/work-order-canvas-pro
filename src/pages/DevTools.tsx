@@ -95,7 +95,7 @@ const DevTools = () => {
     
     // Look specifically for test users with @workorderpro.test domain
     const { data, error } = await supabase
-      .from('user_profiles_with_organization')
+      .from('profiles')
       .select(`
         id,
         email,
