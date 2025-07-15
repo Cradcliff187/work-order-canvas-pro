@@ -27,12 +27,11 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [resetError, setResetError] = useState<ResetError | null>(null);
   const [success, setSuccess] = useState(false);
-  const [isRecoverySession, setIsRecoverySession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
-  const { resetPassword } = useAuth();
+  const { resetPassword, isRecoverySession, setRecoveryFlow } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -257,10 +256,10 @@ const ResetPassword = () => {
           return;
         }
 
-        // Verify this is actually a recovery session
+        // Verify this is actually a recovery session and set recovery flow
         if (sessionData.user && sessionData.session) {
           console.log('Recovery session established successfully from URL');
-          setIsRecoverySession(true);
+          setRecoveryFlow(true);
         } else {
           console.error('Session verification failed - no user or session data');
           setResetError(categorizeError('Session verification failed', 'session_error'));
@@ -286,7 +285,7 @@ const ResetPassword = () => {
         const isValidRecoverySession = validateRecoverySession(session);
         if (isValidRecoverySession) {
           console.log('Found existing valid recovery session');
-          setIsRecoverySession(true);
+          setRecoveryFlow(true);
           return; // Success - no need to process URL parameters
         } else {
           console.log('Existing session is not a valid recovery session');
@@ -454,7 +453,7 @@ const ResetPassword = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isRecoverySession ? (
+            {isRecoverySession() ? (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="password">New Password</Label>

@@ -37,7 +37,11 @@ interface AuthContextType {
   clearImpersonation: () => void;
   isImpersonating: boolean;
   forgotPassword: (email: string) => Promise<{ error: any }>;
-  resetPassword: (password: string) => Promise<{ error: any }>;
+  resetPassword: (password: string) => Promise<{ error: any; errorType?: string }>;
+  isRecoverySession: () => boolean;
+  shouldPreventRedirect: () => boolean;
+  isInRecoveryFlow: boolean;
+  setRecoveryFlow: (inFlow: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [organizationLoading, setOrganizationLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [impersonatedProfile, setImpersonatedProfile] = useState<Profile | null>(null);
+  const [isInRecoveryFlow, setIsInRecoveryFlow] = useState(false);
   const navigate = useNavigate();
 
   // Load impersonation from sessionStorage on mount
@@ -111,6 +116,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isRecoverySession = (): boolean => {
+    if (!session?.user) return false;
+    
+    // Check if session is not expired
+    const isSessionValid = session.expires_at && 
+      new Date(session.expires_at * 1000) > new Date();
+    
+    if (!isSessionValid) return false;
+    
+    // Check for recovery session indicators
+    const isAuthenticatedUser = session.user.aud === 'authenticated';
+    const isEmailProvider = session.user.app_metadata?.provider === 'email';
+    const isConfirmedUser = session.user.email_confirmed_at !== null;
+    
+    return isAuthenticatedUser && isEmailProvider && isConfirmedUser;
+  };
+
+  const shouldPreventRedirect = (): boolean => {
+    const isOnResetPassword = window.location.pathname === '/reset-password';
+    const isInRecovery = isInRecoveryFlow;
+    const hasRecoverySession = isRecoverySession();
+    
+    return isOnResetPassword || isInRecovery || hasRecoverySession;
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -139,18 +169,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
             
-            // Prevent redirects during password reset flow
-            const isOnProtectedResetFlow = window.location.pathname === '/reset-password';
+            // Prevent redirects during password reset flow using the new method
+            const preventRedirect = shouldPreventRedirect();
             const shouldRedirect = event === 'SIGNED_IN' && 
                                   profileData?.user_type && 
-                                  !isOnProtectedResetFlow &&
+                                  !preventRedirect &&
                                   (window.location.pathname === '/' || window.location.pathname === '/auth');
             
             console.log('Auth state change:', {
               event,
               pathname: window.location.pathname,
               userType: profileData?.user_type,
-              isOnProtectedResetFlow,
+              preventRedirect,
               shouldRedirect
             });
             
@@ -306,11 +336,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password: password
-    });
-    
-    return { error };
+    try {
+      // Validate recovery session before attempting password reset
+      if (!isRecoverySession()) {
+        return { 
+          error: 'Invalid recovery session. Please request a new password reset link.',
+          errorType: 'INVALID_SESSION'
+        };
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+      
+      if (error) {
+        // Categorize errors for better user feedback
+        let errorType = 'UNKNOWN';
+        if (error.message.includes('expired')) {
+          errorType = 'EXPIRED_TOKEN';
+        } else if (error.message.includes('invalid')) {
+          errorType = 'INVALID_TOKEN';
+        } else if (error.message.includes('network')) {
+          errorType = 'NETWORK_ERROR';
+        }
+        
+        return { error: error.message, errorType };
+      }
+
+      // Clear recovery flow state on successful reset
+      setIsInRecoveryFlow(false);
+      
+      return { error: null };
+    } catch (err: any) {
+      return { 
+        error: err.message || 'An unexpected error occurred',
+        errorType: 'UNKNOWN'
+      };
+    }
+  };
+
+  const setRecoveryFlow = (inFlow: boolean) => {
+    setIsInRecoveryFlow(inFlow);
   };
 
   const value = {
@@ -332,6 +398,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isImpersonating: !!impersonatedProfile,
     forgotPassword,
     resetPassword,
+    isRecoverySession,
+    shouldPreventRedirect,
+    isInRecoveryFlow,
+    setRecoveryFlow,
   };
 
   return (
