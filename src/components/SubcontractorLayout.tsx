@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { ClipboardList, FileText, Home, LogOut, History, User, Receipt } from "lucide-react";
+import { ClipboardList, FileText, Home, LogOut, History, User, Receipt, Plus } from "lucide-react";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
@@ -33,6 +33,40 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
     },
     { name: "Report History", href: "/subcontractor/reports", icon: History },
     { name: "Profile Settings", href: "/subcontractor/profile", icon: User },
+  ];
+
+  // Convert navigation items to mobile navigation format
+  const subcontractorNavItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: Home,
+      path: '/subcontractor/dashboard'
+    },
+    {
+      id: 'work-orders',
+      label: 'Work Orders',
+      icon: ClipboardList,
+      path: '/subcontractor/work-orders'
+    },
+    {
+      id: 'submit',
+      label: 'Submit',
+      icon: Plus,
+      path: '/subcontractor/submit-invoice'
+    },
+    {
+      id: 'invoices',
+      label: 'Invoices',
+      icon: Receipt,
+      path: '/subcontractor/invoices'
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: User,
+      path: '/subcontractor/profile'
+    }
   ];
 
   const NavItems = () => (
@@ -115,7 +149,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      {isMobile && <MobileBottomNav />}
+      {isMobile && <MobileBottomNav navItems={subcontractorNavItems} />}
     </div>
   );
 }
