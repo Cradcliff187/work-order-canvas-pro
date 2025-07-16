@@ -192,11 +192,12 @@ export function LocationFields({
   
   // Stabilize computed values with useMemo
   const showLocationDetails = useMemo(() => {
-    const hasPartnerLocation = partnerLocationSelected && watchedLocationNumber;
+    // Only show location details for manual entry or location search/suggestions
+    // NOT for partner location selections from dropdown
     const hasManualEntry = manualEntryMode;
     const hasSelectedLocation = selectedLocation !== null;
-    return hasPartnerLocation || hasManualEntry || hasSelectedLocation;
-  }, [partnerLocationSelected, watchedLocationNumber, manualEntryMode, selectedLocation]);
+    return hasManualEntry || hasSelectedLocation;
+  }, [manualEntryMode, selectedLocation]);
 
   // Determine if we should show partner locations dropdown
   const shouldShowPartnerLocations = usePartnerLocations && effectiveOrganizationId && partnerLocations && partnerLocations.length > 0;
