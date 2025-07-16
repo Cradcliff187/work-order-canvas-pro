@@ -456,9 +456,11 @@ export type Database = {
           initials: string | null
           is_active: boolean
           name: string
+          next_location_sequence: number | null
           next_sequence_number: number | null
           organization_type: Database["public"]["Enums"]["organization_type"]
           updated_at: string
+          uses_partner_location_numbers: boolean | null
         }
         Insert: {
           address?: string | null
@@ -469,9 +471,11 @@ export type Database = {
           initials?: string | null
           is_active?: boolean
           name: string
+          next_location_sequence?: number | null
           next_sequence_number?: number | null
           organization_type?: Database["public"]["Enums"]["organization_type"]
           updated_at?: string
+          uses_partner_location_numbers?: boolean | null
         }
         Update: {
           address?: string | null
@@ -482,9 +486,11 @@ export type Database = {
           initials?: string | null
           is_active?: boolean
           name?: string
+          next_location_sequence?: number | null
           next_sequence_number?: number | null
           organization_type?: Database["public"]["Enums"]["organization_type"]
           updated_at?: string
+          uses_partner_location_numbers?: boolean | null
         }
         Relationships: []
       }

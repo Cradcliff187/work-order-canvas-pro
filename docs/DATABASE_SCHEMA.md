@@ -132,6 +132,8 @@ erDiagram
         organization_type organization_type
         text initials
         integer next_sequence_number
+        boolean uses_partner_location_numbers
+        integer next_location_sequence
         boolean is_active
         timestamp created_at
         timestamp updated_at
@@ -493,6 +495,8 @@ This comprehensive seed data ensures thorough testing of all business workflows,
 | organization_type | organization_type | No | 'partner' | Organization type: partner/subcontractor/internal |
 | initials | text | Yes | - | Organization abbreviation for work order numbering (e.g., 'ABC', 'WOP') |
 | next_sequence_number | integer | No | 1 | Next available sequence number for this organization |
+| uses_partner_location_numbers | boolean | No | false | When true, enables location-based work order numbering that incorporates partner location numbers |
+| next_location_sequence | integer | No | 1 | Tracks the next sequence number for location-based work order numbering |
 | is_active | boolean | No | true | Whether organization is active |
 | created_at | timestamp | No | now() | Creation timestamp |
 | updated_at | timestamp | No | now() | Last update timestamp |
