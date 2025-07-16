@@ -1383,6 +1383,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_next_location_number: {
+        Args: { org_id: string }
+        Returns: string
+      }
       generate_work_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
