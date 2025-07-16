@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,34 +19,6 @@ import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGenerati
 import { LocationFields } from '@/components/LocationFields';
 import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
 
-const workOrderSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  store_location: z.string().optional(),
-  street_address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional(),
-  // New structured location fields
-  location_street_address: z.string().optional(),
-  location_city: z.string().optional(),
-  location_state: z.string().optional(),
-  location_zip_code: z.string().optional(),
-  trade_id: z.string().min(1, 'Trade selection is required'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  organization_id: z.string().min(1, 'Organization is required'),
-  partner_po_number: z.string().optional(),
-  partner_location_number: z.string().optional(),
-  due_date: z.string().optional(),
-});
-
-type WorkOrderFormData = z.infer<typeof workOrderSchema>;
-
-const steps = [
-  { id: 1, title: 'Location Details', icon: MapPin },
-  { id: 2, title: 'Trade & Description', icon: Wrench },
-  { id: 3, title: 'Review & Submit', icon: FileText },
-];
-
 const SubmitWorkOrder = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [submittedWorkOrder, setSubmittedWorkOrder] = useState<any>(null);
@@ -56,6 +28,36 @@ const SubmitWorkOrder = () => {
   const { data: trades } = useTrades();
   const { organization, loading: organizationLoading } = useUserOrganization();
   const { data: locationHistory } = useLocationHistory();
+
+  const workOrderSchema = useMemo(() => z.object({
+    title: z.string().min(1, 'Title is required'),
+    store_location: z.string().optional(),
+    street_address: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip_code: z.string().optional(),
+    // New structured location fields
+    location_street_address: z.string().optional(),
+    location_city: z.string().optional(),
+    location_state: z.string().optional(),
+    location_zip_code: z.string().optional(),
+    trade_id: z.string().min(1, 'Trade selection is required'),
+    description: z.string().min(10, 'Description must be at least 10 characters'),
+    organization_id: z.string().min(1, 'Organization is required'),
+    partner_po_number: z.string().optional(),
+    partner_location_number: organization?.uses_partner_location_numbers
+      ? z.string().min(1, 'Location number is required')
+      : z.string().optional(),
+    due_date: z.string().optional(),
+  }), [organization?.uses_partner_location_numbers]);
+
+  type WorkOrderFormData = z.infer<typeof workOrderSchema>;
+
+  const steps = [
+    { id: 1, title: 'Location Details', icon: MapPin },
+    { id: 2, title: 'Trade & Description', icon: Wrench },
+    { id: 3, title: 'Review & Submit', icon: FileText },
+  ];
 
   const form = useForm<WorkOrderFormData>({
     resolver: zodResolver(workOrderSchema),

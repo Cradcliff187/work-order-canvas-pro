@@ -10,6 +10,7 @@ export interface UserOrganization {
   contact_email: string;
   contact_phone?: string;
   address?: string;
+  uses_partner_location_numbers?: boolean;
 }
 
 interface UseUserOrganizationReturn {
@@ -52,7 +53,8 @@ export const useUserOrganization = (): UseUserOrganizationReturn => {
             initials,
             contact_email,
             contact_phone,
-            address
+            address,
+            uses_partner_location_numbers
           )
         `)
         .eq('user_id', profileData.id)
