@@ -30,8 +30,7 @@ const SubmitWorkOrder = () => {
   const { data: locationHistory } = useLocationHistory();
 
   const workOrderSchema = useMemo(() => z.object({
-    title: z.string().min(1, 'Title is required'),
-    store_location: z.string().optional(),
+    store_location: z.string().min(1, 'Store location is required'),
     street_address: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
@@ -62,7 +61,6 @@ const SubmitWorkOrder = () => {
   const form = useForm<WorkOrderFormData>({
     resolver: zodResolver(workOrderSchema),
     defaultValues: {
-      title: '',
       store_location: '',
       street_address: '',
       city: '',
@@ -116,7 +114,7 @@ const SubmitWorkOrder = () => {
   const getCurrentStepFields = (): (keyof WorkOrderFormData)[] => {
     switch (currentStep) {
       case 1:
-        return ['title'];
+        return ['store_location'];
       case 2:
         return ['trade_id', 'description'];
       case 3:
@@ -128,8 +126,11 @@ const SubmitWorkOrder = () => {
 
   const onSubmit = async (data: WorkOrderFormData) => {
     try {
+      const selectedTrade = trades?.find(t => t.id === data.trade_id);
+      const autoTitle = `${selectedTrade?.name || 'Work'} at ${data.store_location}`;
+      
       const result = await createWorkOrder.mutateAsync({
-        title: data.title,
+        title: autoTitle,
         store_location: data.store_location || '',
         street_address: data.street_address || '',
         city: data.city || '',
@@ -271,21 +272,7 @@ const SubmitWorkOrder = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Work Order Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Brief description of the issue" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <LocationFields 
+                <LocationFields
                   form={form}
                   organizationId={organizationId}
                   showPoNumber={true}
@@ -425,7 +412,11 @@ const SubmitWorkOrder = () => {
                   <h4 className="font-medium mb-3">Work Order Summary</h4>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">Title:</span> {form.watch('title')}
+                      <span className="font-medium">Work Order Title:</span>
+                      <p className="text-muted-foreground">
+                        {trades?.find(t => t.id === form.watch('trade_id'))?.name || 'Work'} at {form.watch('store_location') || 'Location'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">(Auto-generated)</p>
                     </div>
                     <div>
                       <span className="font-medium">Location:</span> {form.watch('store_location')}
