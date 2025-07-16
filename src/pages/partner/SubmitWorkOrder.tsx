@@ -81,6 +81,20 @@ const SubmitWorkOrder = () => {
     }
   }, [organization?.id, form]);
 
+  // Auto-populate store_location based on location entry method
+  useEffect(() => {
+    const locationNum = form.watch('partner_location_number');
+    const street = form.watch('location_street_address');
+    const currentStore = form.watch('store_location');
+    
+    if (!currentStore && (locationNum || street)) {
+      const autoStore = locationNum 
+        ? `Location ${locationNum}`
+        : street || 'New Location';
+      form.setValue('store_location', autoStore);
+    }
+  }, [form.watch('partner_location_number'), form.watch('location_street_address')]);
+
   // Watch form values for work order number generation
   const organizationId = form.watch('organization_id');
   const locationNumber = form.watch('partner_location_number');
@@ -131,7 +145,7 @@ const SubmitWorkOrder = () => {
       
       const result = await createWorkOrder.mutateAsync({
         title: autoTitle,
-        store_location: data.store_location || '',
+        store_location: data.store_location || `Location ${data.partner_location_number || 'Manual'}`,
         street_address: data.street_address || '',
         city: data.city || '',
         state: data.state || '',
