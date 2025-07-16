@@ -557,7 +557,7 @@ This comprehensive seed data ensures thorough testing of all business workflows,
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
 | id | uuid | No | gen_random_uuid() | Primary key |
-| name | text | No | - | Trade name (e.g., "Plumbing", "HVAC") |
+| name | text | No | - | Trade name (e.g., "Plumbing", "HVAC", "Other") |
 | description | text | Yes | - | Trade description |
 | is_active | boolean | No | true | Whether trade is available |
 | created_at | timestamp | No | now() | Creation timestamp |
