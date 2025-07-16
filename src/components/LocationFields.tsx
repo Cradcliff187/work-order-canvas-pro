@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Building2, MapPin, ExternalLink, Plus, Loader2 } from 'lucide-react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -43,12 +43,13 @@ export function LocationFields({
   // Use auto-detected organization if not provided
   const effectiveOrganizationId = organizationId || autoOrgId;
   const effectiveOrganizationType = organizationType || autoOrgType;
-  const [locationSearchOpen, setLocationSearchOpen] = React.useState(false);
-  const [locationSearchValue, setLocationSearchValue] = React.useState('');
-  const [selectedLocation, setSelectedLocation] = React.useState<LocationSuggestion | null>(null);
-  const [manualEntryMode, setManualEntryMode] = React.useState(false);
-  const [partnerLocationSelected, setPartnerLocationSelected] = React.useState(false);
-  const [isGeneratingNumber, setIsGeneratingNumber] = React.useState(false);
+  const [locationSearchOpen, setLocationSearchOpen] = useState(false);
+  const [locationSearchValue, setLocationSearchValue] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<LocationSuggestion | null>(null);
+  const [manualEntryMode, setManualEntryMode] = useState(false);
+  const [partnerLocationSelected, setPartnerLocationSelected] = useState(false);
+  const [isGeneratingNumber, setIsGeneratingNumber] = useState(false);
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
   // Query organization data to get uses_partner_location_numbers setting
   const { data: organization, isLoading: isLoadingOrganization } = useOrganization(
@@ -65,46 +66,71 @@ export function LocationFields({
     usePartnerLocations && effectiveOrganizationId ? effectiveOrganizationId : undefined
   );
 
-  const handlePartnerLocationSelect = (location: Tables<'partner_locations'>) => {
+  const handlePartnerLocationSelect = useCallback((location: Tables<'partner_locations'>) => {
+    if (isUpdatingLocation) return; // Prevent rapid updates
+    
+    setIsUpdatingLocation(true);
+    
+    // Get current form values to preserve other data
+    const currentValues = form.getValues();
+    
+    // Batch all form updates into a single operation
+    form.reset({
+      ...currentValues,
+      partner_location_number: location.location_number,
+      store_location: location.location_name,
+      location_street_address: location.street_address || '',
+      location_city: location.city || '',
+      location_state: location.state || '',
+      location_zip_code: location.zip_code || '',
+      // Legacy fields for backward compatibility
+      street_address: location.street_address || '',
+      city: location.city || '',
+      state: location.state || '',
+      zip_code: location.zip_code || ''
+    });
+    
+    // Update state in single batch
     setPartnerLocationSelected(true);
     setLocationSearchOpen(false);
     setManualEntryMode(false);
+    setSelectedLocation(null);
+    
+    setIsUpdatingLocation(false);
+  }, [form, isUpdatingLocation]);
 
-    // Auto-fill form fields from partner_locations data
-    form.setValue('partner_location_number', location.location_number);
-    form.setValue('store_location', location.location_name);
-    form.setValue('location_street_address', location.street_address || '');
-    form.setValue('location_city', location.city || '');
-    form.setValue('location_state', location.state || '');
-    form.setValue('location_zip_code', location.zip_code || '');
-
-    // Also fill legacy fields for backward compatibility
-    form.setValue('street_address', location.street_address || '');
-    form.setValue('city', location.city || '');
-    form.setValue('state', location.state || '');
-    form.setValue('zip_code', location.zip_code || '');
-  };
-
-  const handleLocationSelect = (suggestion: LocationSuggestion) => {
+  const handleLocationSelect = useCallback((suggestion: LocationSuggestion) => {
+    if (isUpdatingLocation) return; // Prevent rapid updates
+    
+    setIsUpdatingLocation(true);
+    
+    // Get current form values to preserve other data
+    const currentValues = form.getValues();
+    
+    // Batch all form updates into a single operation
+    form.reset({
+      ...currentValues,
+      partner_location_number: suggestion.location_number,
+      store_location: suggestion.location_name,
+      location_street_address: suggestion.location_street_address,
+      location_city: suggestion.location_city,
+      location_state: suggestion.location_state,
+      location_zip_code: suggestion.location_zip_code,
+      // Legacy fields for backward compatibility
+      street_address: suggestion.location_street_address,
+      city: suggestion.location_city,
+      state: suggestion.location_state,
+      zip_code: suggestion.location_zip_code
+    });
+    
+    // Update state in single batch
     setSelectedLocation(suggestion);
     setLocationSearchValue(suggestion.location_number);
     setLocationSearchOpen(false);
     setPartnerLocationSelected(false);
-
-    // Auto-fill form fields
-    form.setValue('partner_location_number', suggestion.location_number);
-    form.setValue('store_location', suggestion.location_name);
-    form.setValue('location_street_address', suggestion.location_street_address);
-    form.setValue('location_city', suggestion.location_city);
-    form.setValue('location_state', suggestion.location_state);
-    form.setValue('location_zip_code', suggestion.location_zip_code);
-
-    // Also fill legacy fields for backward compatibility
-    form.setValue('street_address', suggestion.location_street_address);
-    form.setValue('city', suggestion.location_city);
-    form.setValue('state', suggestion.location_state);
-    form.setValue('zip_code', suggestion.location_zip_code);
-  };
+    
+    setIsUpdatingLocation(false);
+  }, [form, isUpdatingLocation]);
 
   const handleAddNewLocation = async () => {
     setManualEntryMode(true);
@@ -163,7 +189,14 @@ export function LocationFields({
   };
 
   const watchedLocationNumber = form.watch('partner_location_number');
-  const showLocationDetails = watchedLocationNumber || selectedLocation || manualEntryMode;
+  
+  // Stabilize computed values with useMemo
+  const showLocationDetails = useMemo(() => {
+    const hasPartnerLocation = partnerLocationSelected && watchedLocationNumber;
+    const hasManualEntry = manualEntryMode;
+    const hasSelectedLocation = selectedLocation !== null;
+    return hasPartnerLocation || hasManualEntry || hasSelectedLocation;
+  }, [partnerLocationSelected, watchedLocationNumber, manualEntryMode, selectedLocation]);
 
   // Determine if we should show partner locations dropdown
   const shouldShowPartnerLocations = usePartnerLocations && effectiveOrganizationId && partnerLocations && partnerLocations.length > 0;
