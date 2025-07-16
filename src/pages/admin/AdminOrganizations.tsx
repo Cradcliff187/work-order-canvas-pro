@@ -34,6 +34,7 @@ export interface Organization {
   users_count?: number;
   work_orders_count?: number;
   active_work_orders_count?: number;
+  uses_partner_location_numbers?: boolean;
 }
 
 const AdminOrganizations = () => {

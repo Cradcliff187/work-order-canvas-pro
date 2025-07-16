@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Building2, Mail, Phone, MapPin, Hash } from 'lucide-react';
 import { useOrganizationMutations, UpdateOrganizationData } from '@/hooks/useOrganizations';
@@ -21,6 +22,7 @@ const editOrganizationSchema = z.object({
   initials: z.string()
     .regex(/^[A-Z]{2,4}$/, 'Must be 2-4 uppercase letters')
     .optional(),
+  uses_partner_location_numbers: z.boolean().default(false),
 }).superRefine((data, ctx) => {
   if (data.organization_type === 'partner' && !data.initials) {
     ctx.addIssue({
@@ -52,6 +54,7 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
       address: organization?.address || '',
       organization_type: organization?.organization_type || 'partner',
       initials: organization?.initials || '',
+      uses_partner_location_numbers: organization?.uses_partner_location_numbers || false,
     },
   });
 
@@ -64,6 +67,7 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
         address: organization.address || '',
         organization_type: organization.organization_type,
         initials: organization.initials || '',
+        uses_partner_location_numbers: organization.uses_partner_location_numbers || false,
       });
     }
   }, [organization, form]);
@@ -81,6 +85,7 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
           address: data.address,
           organization_type: data.organization_type,
           initials: data.initials,
+          uses_partner_location_numbers: data.uses_partner_location_numbers,
         },
       });
       onOpenChange(false);
@@ -238,6 +243,29 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
                     The type of organization determines their role in the system
                   </FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="uses_partner_location_numbers"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Partner Uses Location Numbers
+                    </FormLabel>
+                    <FormDescription>
+                      Enable if partner provides their own location codes
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

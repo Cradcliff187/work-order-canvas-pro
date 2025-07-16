@@ -21,6 +21,7 @@ export interface UpdateOrganizationData {
   organization_type?: 'partner' | 'subcontractor' | 'internal';
   initials?: string;
   is_active?: boolean;
+  uses_partner_location_numbers?: boolean;
 }
 
 /**
@@ -241,6 +242,7 @@ export function useOrganizationMutations() {
           organization_type: orgData.organization_type,
           initials: orgData.initials,
           is_active: orgData.is_active,
+          uses_partner_location_numbers: orgData.uses_partner_location_numbers,
         })
         .eq('id', organizationId)
         .select()
