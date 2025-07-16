@@ -349,14 +349,6 @@ export function LocationFields({
               <p className="text-sm text-muted-foreground mt-1">
                 Select a saved location or add new below
               </p>
-              {!isLoadingOrganization && organization && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {organization.uses_partner_location_numbers 
-                    ? "Required - Enter your location code"
-                    : "Will be generated automatically"
-                  }
-                </p>
-              )}
               <FormMessage />
             </FormItem>
           )}
@@ -388,9 +380,6 @@ export function LocationFields({
                     {...field} 
                   />
                 </FormControl>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Optional - Your purchase order reference
-                </p>
                 <FormMessage />
               </FormItem>
             )}
