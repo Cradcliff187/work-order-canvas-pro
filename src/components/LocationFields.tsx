@@ -1,6 +1,6 @@
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { Building2, MapPin, ExternalLink, Plus } from 'lucide-react';
+import { Building2, MapPin, ExternalLink, Plus, Loader2 } from 'lucide-react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +15,9 @@ import { US_STATES } from '@/constants/states';
 import { useLocationSuggestions, formatLocationDisplay, getDirectionsUrl, LocationSuggestion } from '@/hooks/useLocationSuggestions';
 import { usePartnerOrganizationLocations } from '@/hooks/usePartnerOrganizationLocations';
 import { useAutoOrganization } from '@/hooks/useAutoOrganization';
+import { useOrganization } from '@/hooks/useOrganizations';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface LocationFieldsProps {
@@ -36,6 +39,7 @@ export function LocationFields({
   className 
 }: LocationFieldsProps) {
   const { organizationId: autoOrgId, organizationType: autoOrgType } = useAutoOrganization();
+  const { toast } = useToast();
   
   // Use auto-detected organization if not provided
   const effectiveOrganizationId = organizationId || autoOrgId;
@@ -46,6 +50,12 @@ export function LocationFields({
   const [isReferenceOpen, setIsReferenceOpen] = React.useState(false);
   const [manualEntryMode, setManualEntryMode] = React.useState(false);
   const [partnerLocationSelected, setPartnerLocationSelected] = React.useState(false);
+  const [isGeneratingNumber, setIsGeneratingNumber] = React.useState(false);
+
+  // Query organization data to get uses_partner_location_numbers setting
+  const { data: organization, isLoading: isLoadingOrganization } = useOrganization(
+    effectiveOrganizationId || ''
+  );
 
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
     organizationId: effectiveOrganizationId,
@@ -98,12 +108,47 @@ export function LocationFields({
     form.setValue('zip_code', suggestion.location_zip_code);
   };
 
-  const handleAddNewLocation = () => {
+  const handleAddNewLocation = async () => {
     setManualEntryMode(true);
     setLocationSearchOpen(false);
     setPartnerLocationSelected(false);
     setSelectedLocation(null);
     clearLocationSelection();
+
+    // Auto-generate location number if organization doesn't use manual numbering
+    if (effectiveOrganizationId && !organization?.uses_partner_location_numbers) {
+      setIsGeneratingNumber(true);
+      try {
+        const { data: generatedNumber, error } = await supabase.rpc(
+          'generate_next_location_number',
+          { org_id: effectiveOrganizationId }
+        );
+
+        if (error) {
+          console.error('Failed to generate location number:', error);
+          toast({
+            title: "Auto-numbering failed",
+            description: "Could not generate location number automatically. Please enter manually.",
+            variant: "destructive",
+          });
+        } else if (generatedNumber) {
+          form.setValue('partner_location_number', generatedNumber);
+          toast({
+            title: "Location number generated",
+            description: `Auto-generated location number: ${generatedNumber}`,
+          });
+        }
+      } catch (error) {
+        console.error('Error generating location number:', error);
+        toast({
+          title: "Auto-numbering error",
+          description: "An error occurred while generating location number. Please enter manually.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGeneratingNumber(false);
+      }
+    }
   };
 
   const clearLocationSelection = () => {
@@ -176,10 +221,11 @@ export function LocationFields({
               name="partner_location_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Location
-                  </FormLabel>
+                   <FormLabel className="flex items-center gap-2">
+                     <MapPin className="h-4 w-4" />
+                     Location {organization?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
+                     {isGeneratingNumber && <span className="text-sm text-muted-foreground">(generating...)</span>}
+                   </FormLabel>
                   <FormControl>
                     {shouldShowPartnerLocations && !shouldUseSearchMode ? (
                       // Partner Locations Dropdown
@@ -219,16 +265,28 @@ export function LocationFields({
                       // Search Mode (fallback or manual entry)
                       <Popover open={locationSearchOpen} onOpenChange={setLocationSearchOpen}>
                         <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={locationSearchOpen}
-                            className="w-full justify-between"
-                            type="button"
-                          >
-                            {field.value ? field.value : "Search location..."}
-                            <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
+                           <Button
+                             variant="outline"
+                             role="combobox"
+                             aria-expanded={locationSearchOpen}
+                             className="w-full justify-between"
+                             type="button"
+                             disabled={isGeneratingNumber}
+                           >
+                             {isGeneratingNumber ? (
+                               <>
+                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                 Generating number...
+                               </>
+                             ) : field.value ? (
+                               field.value
+                             ) : organization?.uses_partner_location_numbers ? (
+                               "Enter location number..."
+                             ) : (
+                               "Auto-generated on save"
+                             )}
+                             <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-full p-0" align="start">
                           <Command>
