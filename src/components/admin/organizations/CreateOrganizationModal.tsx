@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Building2, Mail, Phone, MapPin, Hash } from 'lucide-react';
 import { useOrganizationMutations, CreateOrganizationData } from '@/hooks/useOrganizations';
@@ -20,6 +21,7 @@ const createOrganizationSchema = z.object({
   initials: z.string()
     .regex(/^[A-Z]{2,4}$/, 'Must be 2-4 uppercase letters')
     .optional(),
+  uses_partner_location_numbers: z.boolean().default(false),
 }).superRefine((data, ctx) => {
   if (data.organization_type === 'partner' && !data.initials) {
     ctx.addIssue({
@@ -50,6 +52,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
       address: '',
       organization_type: 'partner' as const,
       initials: '',
+      uses_partner_location_numbers: false,
     },
   });
 
@@ -62,6 +65,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
         address: data.address,
         organization_type: data.organization_type,
         initials: data.initials,
+        uses_partner_location_numbers: data.uses_partner_location_numbers,
       });
       form.reset();
       onOpenChange(false);
@@ -222,6 +226,31 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                 </FormItem>
               )}
             />
+
+            {form.watch('organization_type') === 'partner' && (
+              <FormField
+                control={form.control}
+                name="uses_partner_location_numbers"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Partner Uses Location Numbers
+                      </FormLabel>
+                      <FormDescription>
+                        Enable if partner provides their own location codes
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>

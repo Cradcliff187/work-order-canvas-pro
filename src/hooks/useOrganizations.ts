@@ -11,6 +11,7 @@ export interface CreateOrganizationData {
   address?: string;
   organization_type: 'partner' | 'subcontractor' | 'internal';
   initials?: string;
+  uses_partner_location_numbers?: boolean;
 }
 
 export interface UpdateOrganizationData {
@@ -204,6 +205,7 @@ export function useOrganizationMutations() {
           address: orgData.address,
           organization_type: orgData.organization_type,
           initials: orgData.initials,
+          uses_partner_location_numbers: orgData.uses_partner_location_numbers || false,
         })
         .select()
         .single();
