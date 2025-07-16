@@ -114,7 +114,7 @@ const SubmitWorkOrder = () => {
   const getCurrentStepFields = (): (keyof WorkOrderFormData)[] => {
     switch (currentStep) {
       case 1:
-        return ['store_location'];
+        return []; // LocationFields handles its own validation internally
       case 2:
         return ['trade_id', 'description'];
       case 3:
