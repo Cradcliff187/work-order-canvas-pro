@@ -173,39 +173,25 @@ export function LocationFields({
 
   return (
     <div className={cn("space-y-6", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {showPoNumber && (
-          <FormField
-            control={form.control}
-            name="partner_po_number"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  PO Number
-                </FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Purchase order number" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+      {/* Location Selection Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-medium">Location Selection</h3>
+          <p className="text-sm text-muted-foreground">
+            Choose from existing locations or add a new one
+          </p>
+        </div>
 
         <FormField
           control={form.control}
           name="partner_location_number"
           render={({ field }) => (
             <FormItem>
-               <FormLabel className="flex items-center gap-2">
-                 <MapPin className="h-4 w-4" />
-                 Location {organization?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
-                 {isGeneratingNumber && <span className="text-sm text-muted-foreground">(generating...)</span>}
-               </FormLabel>
+              <FormLabel className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Location {organization?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
+                {isGeneratingNumber && <span className="text-sm text-muted-foreground">(generating...)</span>}
+              </FormLabel>
               <FormControl>
                 {shouldShowPartnerLocations && !shouldUseSearchMode ? (
                   // Partner Locations Dropdown
@@ -245,28 +231,28 @@ export function LocationFields({
                   // Search Mode (fallback or manual entry)
                   <Popover open={locationSearchOpen} onOpenChange={setLocationSearchOpen}>
                     <PopoverTrigger asChild>
-                       <Button
-                         variant="outline"
-                         role="combobox"
-                         aria-expanded={locationSearchOpen}
-                         className="w-full justify-between"
-                         type="button"
-                         disabled={isGeneratingNumber}
-                       >
-                         {isGeneratingNumber ? (
-                           <>
-                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                             Generating number...
-                           </>
-                         ) : field.value ? (
-                           field.value
-                         ) : organization?.uses_partner_location_numbers ? (
-                           "Enter location number..."
-                         ) : (
-                           "Auto-generated on save"
-                         )}
-                         <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                       </Button>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={locationSearchOpen}
+                        className="w-full justify-between"
+                        type="button"
+                        disabled={isGeneratingNumber}
+                      >
+                        {isGeneratingNumber ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating number...
+                          </>
+                        ) : field.value ? (
+                          field.value
+                        ) : organization?.uses_partner_location_numbers ? (
+                          "Enter location number, name, or search existing"
+                        ) : (
+                          "Auto-generated when saved"
+                        )}
+                        <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0" align="start">
                       <Command>
@@ -316,7 +302,7 @@ export function LocationFields({
                             <CommandGroup heading={locationSuggestions && locationSuggestions.length > 0 ? "Search Results" : "No Results"}>
                               {locationSuggestions?.map((suggestion) => (
                                 <CommandItem
-                                  key={suggestion.location_number || suggestion.location_name}
+                                  key={suggestion.location_number || suggestion.location_number}
                                   value={suggestion.location_number || suggestion.location_name}
                                   onSelect={() => handleLocationSelect(suggestion)}
                                   className="flex flex-col items-start gap-1"
@@ -366,22 +352,56 @@ export function LocationFields({
         />
       </div>
 
+      {/* Purchase Information Section */}
+      {showPoNumber && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium">Purchase Information</h3>
+            <p className="text-sm text-muted-foreground">
+              Optional purchase order number for tracking
+            </p>
+          </div>
+
+          <FormField
+            control={form.control}
+            name="partner_po_number"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  PO Number <span className="text-sm text-muted-foreground">(Optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Purchase order number for tracking" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
+
+      {/* Location Details Section */}
       {showLocationDetails && (
-        <Card>
-          <CardContent className="pt-6">
-            <h4 className="font-medium mb-4 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Location Details
-            </h4>
-            
-            <div className="grid grid-cols-1 gap-4">
-              <FormField
-                control={form.control}
-                name="store_location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Store/Location Name *</FormLabel>
-                    <FormControl>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium">Location Details</h3>
+            <p className="text-sm text-muted-foreground">
+              Complete the address information for this location
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="store_location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Store/Location Name *</FormLabel>
+                  <FormControl>
                       <Input placeholder="Main Street Store" {...field} />
                     </FormControl>
                     <FormMessage />
@@ -389,111 +409,106 @@ export function LocationFields({
                 )}
               />
 
-              <div className="grid grid-cols-1 gap-4">
-                <FormField
-                  control={form.control}
-                  name="location_street_address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Street Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123 Main Street" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="location_city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl>
-                          <Input placeholder="City" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="location_state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {US_STATES.map((state) => (
-                              <SelectItem key={state.value} value={state.value}>
-                                {state.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="location_zip_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ZIP Code</FormLabel>
-                        <FormControl>
-                          <Input placeholder="12345" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {(selectedLocation || partnerLocationSelected) && (
+            <FormField
+              control={form.control}
+              name="location_street_address"
+              render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm font-medium">
-                        {selectedLocation ? 
-                          formatLocationDisplay(selectedLocation) : 
-                          `${form.watch('partner_location_number')} - ${form.watch('store_location')}`
-                        }
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {selectedLocation && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(
-                            getDirectionsUrl(selectedLocation),
-                            '_blank'
-                          )}
-                          className="h-8 px-2"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  <FormLabel>Street Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Main Street" {...field} />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="location_city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="location_state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {US_STATES.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="location_zip_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ZIP Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="12345" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </CardContent>
-        </Card>
+
+            {(selectedLocation || partnerLocationSelected) && (
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    {selectedLocation ? 
+                      formatLocationDisplay(selectedLocation) : 
+                      `${form.watch('partner_location_number')} - ${form.watch('store_location')}`
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedLocation && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(
+                        getDirectionsUrl(selectedLocation),
+                        '_blank'
+                      )}
+                      className="h-8 px-2"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
