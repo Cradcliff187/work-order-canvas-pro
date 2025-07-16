@@ -346,6 +346,17 @@ export function LocationFields({
                   </Popover>
                 )}
               </FormControl>
+              <p className="text-sm text-muted-foreground mt-1">
+                Select a saved location or add new below
+              </p>
+              {!isLoadingOrganization && organization && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {organization.uses_partner_location_numbers 
+                    ? "Required - Enter your location code"
+                    : "Will be generated automatically"
+                  }
+                </p>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -377,6 +388,9 @@ export function LocationFields({
                     {...field} 
                   />
                 </FormControl>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Optional - Your purchase order reference
+                </p>
                 <FormMessage />
               </FormItem>
             )}
@@ -390,7 +404,7 @@ export function LocationFields({
           <div>
             <h3 className="text-lg font-medium">Location Details</h3>
             <p className="text-sm text-muted-foreground">
-              Complete the address information for this location
+              Complete the address details
             </p>
           </div>
           
