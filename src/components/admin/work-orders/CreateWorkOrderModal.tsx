@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,32 +11,30 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useOrganizationsForWorkOrders, useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/hooks/useOrganizations';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { LocationFields } from '@/components/LocationFields';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
-const createWorkOrderSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
-  organization_id: z.string().min(1, 'Organization is required'),
-  trade_id: z.string().min(1, 'Trade is required'),
-  store_location: z.string().optional(),
-  street_address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional(),
-  // New structured location fields
-  location_street_address: z.string().optional(),
-  location_city: z.string().optional(),
-  location_state: z.string().optional(),
-  location_zip_code: z.string().optional(),
-  partner_po_number: z.string().optional(),
-  partner_location_number: z.string().optional(),
-});
-
-type CreateWorkOrderForm = z.infer<typeof createWorkOrderSchema>;
+type CreateWorkOrderForm = {
+  title: string;
+  description?: string;
+  organization_id: string;
+  trade_id: string;
+  store_location?: string;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  location_street_address?: string;
+  location_city?: string;
+  location_state?: string;
+  location_zip_code?: string;
+  partner_po_number?: string;
+  partner_location_number?: string;
+};
 
 interface CreateWorkOrderModalProps {
   isOpen: boolean;
@@ -51,8 +49,34 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
   const { data: locationHistory } = useLocationHistory();
   const { organization, loading: organizationLoading } = useUserOrganization();
 
+  // Watch form values for work order number generation
+  const [organizationId, setOrganizationId] = useState('');
+  const [locationNumber, setLocationNumber] = useState('');
+  const { data: selectedOrg } = useOrganization(organizationId);
+
+  // Create dynamic schema with conditional partner_location_number validation
+  const createWorkOrderSchema = useMemo(() => z.object({
+    title: z.string().min(1, 'Title is required'),
+    description: z.string().optional(),
+    organization_id: z.string().min(1, 'Organization is required'),
+    trade_id: z.string().min(1, 'Trade is required'),
+    store_location: z.string().optional(),
+    street_address: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip_code: z.string().optional(),
+    location_street_address: z.string().optional(),
+    location_city: z.string().optional(),
+    location_state: z.string().optional(),
+    location_zip_code: z.string().optional(),
+    partner_po_number: z.string().optional(),
+    partner_location_number: selectedOrg?.uses_partner_location_numbers
+      ? z.string().min(1, 'Location number is required')
+      : z.string().optional(),
+  }), [selectedOrg?.uses_partner_location_numbers]);
+
   // Create dynamic schema based on user type
-  const createWorkOrderSchemaForUser = profile?.user_type === 'admin'
+  const createWorkOrderSchemaForUser = useMemo(() => profile?.user_type === 'admin'
     ? createWorkOrderSchema
     : z.object({
         title: z.string().min(1, 'Title is required'),
@@ -69,8 +93,10 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
         location_state: z.string().optional(),
         location_zip_code: z.string().optional(),
         partner_po_number: z.string().optional(),
-        partner_location_number: z.string().optional(),
-      });
+        partner_location_number: selectedOrg?.uses_partner_location_numbers
+          ? z.string().min(1, 'Location number is required')
+          : z.string().optional(),
+      }), [profile?.user_type, createWorkOrderSchema, selectedOrg?.uses_partner_location_numbers]);
 
   const form = useForm<CreateWorkOrderForm>({
     resolver: zodResolver(createWorkOrderSchemaForUser),
@@ -93,12 +119,27 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
   useEffect(() => {
     if (profile?.user_type === 'partner' && organization?.id) {
       form.setValue('organization_id', organization.id);
+      setOrganizationId(organization.id);
     }
   }, [profile?.user_type, organization?.id, form]);
 
-  // Watch form values for work order number generation
-  const organizationId = form.watch('organization_id');
-  const locationNumber = form.watch('partner_location_number');
+  // Watch for organization and location changes
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      if (values.organization_id !== organizationId) {
+        setOrganizationId(values.organization_id || '');
+      }
+      if (values.partner_location_number !== locationNumber) {
+        setLocationNumber(values.partner_location_number || '');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, organizationId, locationNumber]);
+
+  // Trigger validation when schema changes
+  useEffect(() => {
+    form.trigger();
+  }, [createWorkOrderSchemaForUser, form]);
   
   // Find selected organization to get organization type
   const selectedOrganization = profile?.user_type === 'admin' 
