@@ -159,11 +159,18 @@ const SubmitWorkOrder = () => {
   });
 
   const handleNext = async () => {
+    console.log('🔍 DEBUG: handleNext called - Current step:', currentStep);
     const currentStepFields = getCurrentStepFields();
+    console.log('🔍 DEBUG: Step fields to validate:', currentStepFields);
+    
     const isValid = await form.trigger(currentStepFields);
+    console.log('🔍 DEBUG: Step validation result:', isValid);
     
     if (isValid) {
+      console.log('🔍 DEBUG: Moving from step', currentStep, 'to step', currentStep + 1);
       setCurrentStep(prev => prev + 1);
+    } else {
+      console.log('🔍 DEBUG: Validation failed, staying on step', currentStep);
     }
   };
 
@@ -188,10 +195,13 @@ const SubmitWorkOrder = () => {
   };
 
   const onSubmit = async (data: WorkOrderFormData) => {
+    console.log('🔍 DEBUG: onSubmit called with data:', data);
+    console.log('🔍 DEBUG: Current step when onSubmit called:', currentStep);
     try {
       const selectedTrade = trades?.find(t => t.id === data.trade_id);
       const autoTitle = `${selectedTrade?.name || 'Work'} at ${data.store_location}`;
       
+      console.log('🔍 DEBUG: About to call createWorkOrder.mutateAsync');
       const result = await createWorkOrder.mutateAsync({
         title: autoTitle,
         store_location: data.store_location || `Location ${data.partner_location_number || 'Manual'}`,
@@ -209,10 +219,11 @@ const SubmitWorkOrder = () => {
         partner_po_number: data.partner_po_number || null,
         partner_location_number: data.partner_location_number || null,
       });
+      console.log('🔍 DEBUG: Work order submitted successfully:', result);
       setSubmittedWorkOrder(result);
       setCurrentStep(4); // Success step
     } catch (error) {
-      console.error('Error submitting work order:', error);
+      console.error('🔍 DEBUG: Error submitting work order:', error);
     }
   };
 
