@@ -139,28 +139,65 @@ export function LocationFields({
     setSelectedLocation(null);
     clearLocationSelection();
 
-    // Auto-generate location number if organization doesn't use manual numbering
-    if (effectiveOrganizationId && !organization?.uses_partner_location_numbers) {
+    // Auto-generate location number based on organization settings
+    if (effectiveOrganizationId && organization) {
       setIsGeneratingNumber(true);
       try {
-        const { data: generatedNumber, error } = await supabase.rpc(
-          'generate_next_location_number',
-          { org_id: effectiveOrganizationId }
-        );
+        if (organization.uses_partner_location_numbers) {
+          // Organizations that use location numbers - call RPC function
+          const { data: generatedNumber, error } = await supabase.rpc(
+            'generate_next_location_number',
+            { org_id: effectiveOrganizationId }
+          );
 
-        if (error) {
-          console.error('Failed to generate location number:', error);
-          toast({
-            title: "Auto-numbering failed",
-            description: "Could not generate location number automatically. Please enter manually.",
-            variant: "destructive",
-          });
-        } else if (generatedNumber) {
-          form.setValue('partner_location_number', generatedNumber);
-          toast({
-            title: "Location number generated",
-            description: `Auto-generated location number: ${generatedNumber}`,
-          });
+          if (error) {
+            console.error('Failed to generate location number:', error);
+            toast({
+              title: "Auto-numbering failed",
+              description: "Could not generate location number automatically. Please enter manually.",
+              variant: "destructive",
+            });
+          } else if (generatedNumber) {
+            form.setValue('partner_location_number', generatedNumber);
+            toast({
+              title: "Location number generated",
+              description: `Auto-generated location number: ${generatedNumber}`,
+            });
+          }
+        } else {
+          // Organizations that don't use location numbers - custom logic
+          const { data: existingLocations, error } = await supabase
+            .from('partner_locations')
+            .select('location_number')
+            .eq('organization_id', effectiveOrganizationId)
+            .order('location_number', { ascending: false })
+            .limit(1);
+
+          if (error) {
+            console.error('Failed to query existing locations:', error);
+            toast({
+              title: "Auto-numbering failed",
+              description: "Could not generate location number automatically. Please enter manually.",
+              variant: "destructive",
+            });
+          } else {
+            // Find the highest existing number and increment
+            let nextNumber = 1;
+            if (existingLocations && existingLocations.length > 0) {
+              const highestNumber = parseInt(existingLocations[0].location_number);
+              if (!isNaN(highestNumber)) {
+                nextNumber = highestNumber + 1;
+              }
+            }
+            
+            // Pad to 2 digits
+            const locationNumber = String(nextNumber).padStart(2, '0');
+            form.setValue('partner_location_number', locationNumber);
+            toast({
+              title: "Location number assigned",
+              description: `Location number assigned: ${locationNumber}`,
+            });
+          }
         }
       } catch (error) {
         console.error('Error generating location number:', error);
