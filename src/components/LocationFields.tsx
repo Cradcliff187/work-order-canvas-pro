@@ -65,7 +65,8 @@ export function LocationFields({
   });
 
   const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerOrganizationLocations(
-    usePartnerLocations && effectiveOrganizationId ? effectiveOrganizationId : undefined
+    effectiveOrganizationId,
+    usePartnerLocations
   );
 
   if (isLoadingOrganization) {
