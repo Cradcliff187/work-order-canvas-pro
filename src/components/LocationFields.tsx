@@ -486,38 +486,6 @@ export function LocationFields({
         />
       </div>
 
-      {/* Purchase Information Section */}
-      {showPoNumber && (
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Purchase Information</h3>
-            <p className="text-sm text-muted-foreground">
-              Optional purchase order number for tracking
-            </p>
-          </div>
-
-          <FormField
-            control={form.control}
-            name="partner_po_number"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  PO Number <span className="text-sm text-muted-foreground">(Optional)</span>
-                </FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Purchase order number for tracking" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      )}
-
       {/* Location Details Section */}
       {showLocationDetails && (
         <div className="space-y-4">
@@ -642,6 +610,38 @@ export function LocationFields({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Purchase Information Section */}
+      {showPoNumber && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium">Purchase Information</h3>
+            <p className="text-sm text-muted-foreground">
+              Optional purchase order number for tracking
+            </p>
+          </div>
+
+          <FormField
+            control={form.control}
+            name="partner_po_number"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  PO Number <span className="text-sm text-muted-foreground">(Optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Purchase order number for tracking" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       )}
     </div>
