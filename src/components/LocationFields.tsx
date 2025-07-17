@@ -284,12 +284,7 @@ export function LocationFields({
     }
   }, [organization, isLoadingOrganization, effectiveOrganizationId, form, toast, clearLocationSelection]);
 
-  // All hooks declared above - now check loading state
-  if (isLoadingOrganization) {
-    return <Skeleton className="h-10 w-full" />;
-  }
-
-
+  // Move all hook calls before conditional return
   const watchedLocationNumber = form.watch('partner_location_number');
   
   // Stabilize computed values with useMemo
@@ -300,6 +295,11 @@ export function LocationFields({
     const hasSelectedLocation = selectedLocation !== null;
     return hasManualEntry || hasSelectedLocation;
   }, [manualEntryMode, selectedLocation]);
+
+  // All hooks declared above - now check loading state
+  if (isLoadingOrganization) {
+    return <Skeleton className="h-10 w-full" />;
+  }
 
   // Determine if we should show partner locations dropdown
   const shouldShowPartnerLocations = effectiveOrganizationId && partnerLocations && partnerLocations.length > 0;
