@@ -281,15 +281,6 @@ export function useCreateWorkOrder() {
               .rpc('generate_next_location_number', { org_id: variables.organization_id });
 
             if (!genError && locationNumber) {
-              // Debug: Log variables object and location fields
-              console.log('🔍 DEBUG: variables object for partner location:', variables);
-              console.log('🔍 DEBUG: location fields:', {
-                location_street_address: variables.location_street_address,
-                location_city: variables.location_city,
-                location_state: variables.location_state,
-                location_zip_code: variables.location_zip_code
-              });
-
               const insertData = {
                 organization_id: variables.organization_id,
                 location_number: locationNumber,
@@ -301,20 +292,12 @@ export function useCreateWorkOrder() {
                 is_active: true
               };
 
-              console.log('🔍 DEBUG: Data being inserted into partner_locations:', insertData);
-
               // Create the partner location
               const { error: createError } = await supabase
                 .from('partner_locations')
                 .insert(insertData);
 
-              console.log('🔍 DEBUG: Partner location creation result:', { 
-                createError, 
-                success: !createError 
-              });
-
               if (!createError) {
-                console.log('🔍 DEBUG: Partner location created successfully');
                 // Update the work order with the new location number
                 await supabase
                   .from('work_orders')
