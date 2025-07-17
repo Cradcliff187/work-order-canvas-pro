@@ -26,7 +26,6 @@ interface LocationFieldsProps {
   organizationId?: string;
   organizationType?: string;
   showPoNumber?: boolean;
-  usePartnerLocations?: boolean;
   className?: string;
 }
 
@@ -35,7 +34,6 @@ export function LocationFields({
   organizationId, 
   organizationType,
   showPoNumber = true,
-  usePartnerLocations = true,
   className 
 }: LocationFieldsProps) {
   const { organizationId: autoOrgId, organizationType: autoOrgType } = useAutoOrganization();
