@@ -148,6 +148,8 @@ export function LocationFields({
     if (effectiveOrganizationId && organization) {
       setIsGeneratingNumber(true);
       try {
+        let generatedLocationNumber: string | null = null;
+
         if (organization.uses_partner_location_numbers) {
           // Organizations that use location numbers - call RPC function
           const { data: generatedNumber, error } = await supabase.rpc(
@@ -162,12 +164,9 @@ export function LocationFields({
               description: "Could not generate location number automatically. Please enter manually.",
               variant: "destructive",
             });
+            return;
           } else if (generatedNumber) {
-            form.setValue('partner_location_number', generatedNumber);
-            toast({
-              title: "Location number generated",
-              description: `Auto-generated location number: ${generatedNumber}`,
-            });
+            generatedLocationNumber = generatedNumber;
           }
         } else {
           // Organizations that don't use location numbers - custom logic
@@ -183,6 +182,7 @@ export function LocationFields({
               description: "Could not generate location number automatically. Please enter manually.",
               variant: "destructive",
             });
+            return;
           } else {
             // Convert all location numbers to integers and filter out NaN values
             const existingNumbers = existingLocations
@@ -194,12 +194,50 @@ export function LocationFields({
             
             // Add 1 and pad to 2 digits
             const nextNumber = highestNumber + 1;
-            const locationNumber = String(nextNumber).padStart(2, '0');
-            
-            form.setValue('partner_location_number', locationNumber);
+            generatedLocationNumber = String(nextNumber).padStart(2, '0');
+          }
+        }
+
+        // Check for duplicates before setting the generated number
+        if (generatedLocationNumber) {
+          const { data: duplicateCheck, error: duplicateError } = await supabase
+            .from('partner_locations')
+            .select('id')
+            .eq('organization_id', effectiveOrganizationId)
+            .eq('location_number', generatedLocationNumber)
+            .limit(1);
+
+          if (duplicateError) {
+            console.error('Failed to check for duplicate location number:', duplicateError);
+            toast({
+              title: "Duplicate check failed",
+              description: "Could not verify location number uniqueness. Please enter manually.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (duplicateCheck && duplicateCheck.length > 0) {
+            toast({
+              title: "Duplicate location number",
+              description: `Location number ${generatedLocationNumber} already exists`,
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // No duplicates found, proceed to set the form value
+          form.setValue('partner_location_number', generatedLocationNumber);
+          
+          if (organization.uses_partner_location_numbers) {
+            toast({
+              title: "Location number generated",
+              description: `Auto-generated location number: ${generatedLocationNumber}`,
+            });
+          } else {
             toast({
               title: "Location number assigned",
-              description: `Location number assigned: ${locationNumber}`,
+              description: `Location number assigned: ${generatedLocationNumber}`,
             });
           }
         }
