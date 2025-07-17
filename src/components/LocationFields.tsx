@@ -136,6 +136,20 @@ export function LocationFields({
     setIsUpdatingLocation(false);
   }, [form, isUpdatingLocation]);
 
+  const clearLocationSelection = () => {
+    setSelectedLocation(null);
+    setLocationSearchValue('');
+    setPartnerLocationSelected(false);
+    setSelectedLocationId('');
+    setManualEntryMode(false);
+    form.setValue('partner_location_number', '');
+    form.setValue('store_location', '');
+    form.setValue('location_street_address', '');
+    form.setValue('location_city', '');
+    form.setValue('location_state', '');
+    form.setValue('location_zip_code', '');
+  };
+
   const handleAddNewLocation = async () => {
     // Safety check: prevent execution if organization data hasn't loaded yet
     if (!organization || isLoadingOrganization) {
@@ -259,19 +273,6 @@ export function LocationFields({
     }
   };
 
-  const clearLocationSelection = () => {
-    setSelectedLocation(null);
-    setLocationSearchValue('');
-    setPartnerLocationSelected(false);
-    setSelectedLocationId('');
-    setManualEntryMode(false);
-    form.setValue('partner_location_number', '');
-    form.setValue('store_location', '');
-    form.setValue('location_street_address', '');
-    form.setValue('location_city', '');
-    form.setValue('location_state', '');
-    form.setValue('location_zip_code', '');
-  };
 
   const watchedLocationNumber = form.watch('partner_location_number');
   
