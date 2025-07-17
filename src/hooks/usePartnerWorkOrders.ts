@@ -8,6 +8,9 @@ type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
   trades: { name: string } | null;
   assigned_user: { first_name: string; last_name: string } | null;
+  location_contact_name?: string | null;
+  location_contact_phone?: string | null;
+  location_contact_email?: string | null;
   work_order_assignments?: Array<{
     assigned_to: string;
     assignment_type: string;
@@ -404,7 +407,8 @@ export function useWorkOrderById(id: string) {
       
       const organizationIds = userOrgs.map(org => org.organization_id);
 
-      const { data, error } = await supabase
+      // First query: Get work order details
+      const { data: workOrder, error } = await supabase
         .from('work_orders')
         .select(`
           *,
@@ -418,7 +422,27 @@ export function useWorkOrderById(id: string) {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Second query: Get partner location contact info if available
+      let locationContactInfo = null;
+      if (workOrder.partner_location_number && workOrder.organization_id) {
+        const { data: locationData } = await supabase
+          .from('partner_locations')
+          .select('contact_name, contact_phone, contact_email')
+          .eq('organization_id', workOrder.organization_id)
+          .eq('location_number', workOrder.partner_location_number)
+          .maybeSingle();
+
+        locationContactInfo = locationData;
+      }
+
+      // Merge the results
+      return {
+        ...workOrder,
+        location_contact_name: locationContactInfo?.contact_name || null,
+        location_contact_phone: locationContactInfo?.contact_phone || null,
+        location_contact_email: locationContactInfo?.contact_email || null,
+      };
     },
     enabled: !!profile?.id && !!id,
   });
