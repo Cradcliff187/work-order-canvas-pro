@@ -132,6 +132,11 @@ export function LocationFields({
   }, [form, isUpdatingLocation]);
 
   const handleAddNewLocation = async () => {
+    // Safety check: prevent execution if organization data hasn't loaded yet
+    if (!organization || isLoadingOrganization) {
+      return;
+    }
+    
     setManualEntryMode(true);
     setLocationSearchOpen(false);
     setPartnerLocationSelected(false);
