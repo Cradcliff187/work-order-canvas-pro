@@ -98,7 +98,7 @@ export function LocationFields({
     setSelectedLocation(null);
     
     setIsUpdatingLocation(false);
-  }, [form, isUpdatingLocation, setSelectedLocationId, setPartnerLocationSelected, setLocationSearchOpen, setManualEntryMode, setSelectedLocation, setIsUpdatingLocation]);
+  }, [form, isUpdatingLocation]);
 
   const handleLocationSelect = useCallback((suggestion: LocationSuggestion) => {
     if (isUpdatingLocation) return; // Prevent rapid updates
@@ -132,7 +132,7 @@ export function LocationFields({
     setSelectedLocationId('');
     
     setIsUpdatingLocation(false);
-  }, [form, isUpdatingLocation, setSelectedLocation, setLocationSearchValue, setLocationSearchOpen, setPartnerLocationSelected, setSelectedLocationId, setIsUpdatingLocation]);
+  }, [form, isUpdatingLocation]);
 
   const clearLocationSelection = useCallback(() => {
     setSelectedLocation(null);
@@ -146,7 +146,7 @@ export function LocationFields({
     form.setValue('location_city', '');
     form.setValue('location_state', '');
     form.setValue('location_zip_code', '');
-  }, [form, setSelectedLocation, setLocationSearchValue, setPartnerLocationSelected, setSelectedLocationId, setManualEntryMode]);
+  }, [form]);
 
   const handleAddNewLocation = useCallback(async () => {
     // Safety check: prevent execution if organization data hasn't loaded yet
@@ -269,7 +269,7 @@ export function LocationFields({
         setIsGeneratingNumber(false);
       }
     }
-  }, [organization, isLoadingOrganization, effectiveOrganizationId, form, toast, clearLocationSelection, setManualEntryMode, setLocationSearchOpen, setPartnerLocationSelected, setSelectedLocation, setSelectedLocationId, setIsGeneratingNumber]);
+  }, [organization, isLoadingOrganization, effectiveOrganizationId, form, toast, clearLocationSelection]);
 
 
   const watchedLocationNumber = form.watch('partner_location_number');
