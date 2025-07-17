@@ -280,7 +280,7 @@ export function LocationFields({
                         handlePartnerLocationSelect(location);
                       }
                     }
-                  }} value={partnerLocationSelected ? selectedLocationId : ""}>
+                  }} value={selectedLocationId}>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingPartnerLocations ? "Loading..." : "Select a location"} />
                     </SelectTrigger>
