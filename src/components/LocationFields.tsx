@@ -282,7 +282,7 @@ export function LocationFields({
   }, [manualEntryMode, selectedLocation]);
 
   // All hooks declared above - now check loading state
-  if (isLoadingOrganization) {
+  if (isLoadingOrganization && !effectiveOrganizationId) {
     return <Skeleton className="h-10 w-full" />;
   }
 
