@@ -479,7 +479,7 @@ export function LocationFields({
               name="store_location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Store/Location Name {showLocationDetails && '*'}</FormLabel>
+                  <FormLabel>Store/Location Name {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
                   <FormControl>
                       <Input placeholder="Main Street Store" {...field} />
                     </FormControl>
@@ -493,7 +493,7 @@ export function LocationFields({
               name="location_street_address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Street Address {showLocationDetails && '*'}</FormLabel>
+                  <FormLabel>Street Address {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
                   <FormControl>
                     <Input placeholder="123 Main Street" {...field} />
                   </FormControl>
@@ -508,7 +508,7 @@ export function LocationFields({
                 name="location_city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City {showLocationDetails && '*'}</FormLabel>
+                    <FormLabel>City {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
                     <FormControl>
                       <Input placeholder="City" {...field} />
                     </FormControl>
@@ -522,7 +522,7 @@ export function LocationFields({
                 name="location_state"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>State {showLocationDetails && '*'}</FormLabel>
+                    <FormLabel>State {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -547,7 +547,7 @@ export function LocationFields({
                 name="location_zip_code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ZIP Code {showLocationDetails && '*'}</FormLabel>
+                    <FormLabel>ZIP Code {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
                     <FormControl>
                       <Input placeholder="12345" {...field} />
                     </FormControl>
