@@ -453,7 +453,7 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
             {/* Location Information - Always show for admin modal */}
             <LocationFields 
               form={form}
-              organizationId={organizationId}
+              organizationId={form.watch('organization_id')}
               organizationType={selectedOrganization?.organization_type}
               showPoNumber={true}
             />
