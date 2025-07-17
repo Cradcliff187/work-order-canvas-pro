@@ -72,28 +72,24 @@ export function LocationFields({
     
     setIsUpdatingLocation(true);
     
-    // Get current form values to preserve other data
-    const currentValues = form.getValues();
-    
-    // Batch all form updates into a single operation
-    form.reset({
-      ...currentValues,
-      partner_location_number: location.location_number,
-      store_location: location.location_name,
-      location_street_address: location.street_address || '',
-      location_city: location.city || '',
-      location_state: location.state || '',
-      location_zip_code: location.zip_code || '',
-      // Legacy fields for backward compatibility
-      street_address: location.street_address || '',
-      city: location.city || '',
-      state: location.state || '',
-      zip_code: location.zip_code || ''
-    });
-    
-    // Update state in single batch
-    setPartnerLocationSelected(true);
+    // Set selected location ID first for proper Select state
     setSelectedLocationId(location.id);
+    setPartnerLocationSelected(true);
+    
+    // Use individual setValue calls instead of reset to avoid Select disruption
+    form.setValue('partner_location_number', location.location_number);
+    form.setValue('store_location', location.location_name);
+    form.setValue('location_street_address', location.street_address || '');
+    form.setValue('location_city', location.city || '');
+    form.setValue('location_state', location.state || '');
+    form.setValue('location_zip_code', location.zip_code || '');
+    // Legacy fields for backward compatibility
+    form.setValue('street_address', location.street_address || '');
+    form.setValue('city', location.city || '');
+    form.setValue('state', location.state || '');
+    form.setValue('zip_code', location.zip_code || '');
+    
+    // Update other state
     setLocationSearchOpen(false);
     setManualEntryMode(false);
     setSelectedLocation(null);
@@ -280,7 +276,7 @@ export function LocationFields({
                         handlePartnerLocationSelect(location);
                       }
                     }
-                  }} value={selectedLocationId || ""}>
+                  }} value={partnerLocationSelected ? selectedLocationId : ""}>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingPartnerLocations ? "Loading..." : "Select a location"} />
                     </SelectTrigger>
