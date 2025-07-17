@@ -10,7 +10,7 @@ import { Search, Filter, Eye, Plus, MapPin, ChevronUp, ChevronDown } from 'lucid
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 
@@ -78,6 +78,10 @@ const WorkOrderList = () => {
         case 'status':
           aValue = a.status;
           bValue = b.status;
+          break;
+        case 'daysOld':
+          aValue = differenceInDays(new Date(), new Date(a.date_submitted));
+          bValue = differenceInDays(new Date(), new Date(b.date_submitted));
           break;
         default:
           return 0;
@@ -256,6 +260,15 @@ const WorkOrderList = () => {
                         {renderSortIcon('status')}
                       </div>
                     </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('daysOld')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Days Old
+                        {renderSortIcon('daysOld')}
+                      </div>
+                    </TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead>Est. Completion</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -314,6 +327,11 @@ const WorkOrderList = () => {
                         >
                           {workOrder.status.replace('_', ' ')}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
+                        </span>
                       </TableCell>
                       <TableCell>
                         {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
