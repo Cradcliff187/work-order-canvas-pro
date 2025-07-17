@@ -9,6 +9,9 @@ type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
   trades: { name: string } | null;
   assigned_user: { first_name: string; last_name: string } | null;
+  location_contact_name?: string | null;
+  location_contact_phone?: string | null;
+  location_contact_email?: string | null;
   assignments?: Array<{
     id: string;
     assigned_to: string;
@@ -82,8 +85,15 @@ export function useWorkOrders(
             assignment_type,
             assignee:profiles!assigned_to(first_name, last_name),
             assigned_organization:organizations!assigned_organization_id(name, organization_type)
+          ),
+          partner_locations!left(
+            contact_name,
+            contact_phone,
+            contact_email
           )
-        `, { count: 'exact' });
+        `, { count: 'exact' })
+        .eq('partner_locations.organization_id', 'work_orders.organization_id')
+        .eq('partner_locations.location_number', 'work_orders.partner_location_number');
 
       // Apply filters
       if (filters.status?.length) {
