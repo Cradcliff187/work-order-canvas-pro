@@ -83,10 +83,6 @@ export function LocationFields({
 
   console.log('7️⃣ Before useCallback hooks');
 
-  if (isLoadingOrganization) {
-    return <Skeleton className="h-10 w-full" />;
-  }
-
   const handlePartnerLocationSelect = useCallback((location: Tables<'partner_locations'>) => {
     if (isUpdatingLocation) return; // Prevent rapid updates
     
@@ -287,6 +283,11 @@ export function LocationFields({
       }
     }
   }, [organization, isLoadingOrganization, effectiveOrganizationId, form, toast, clearLocationSelection]);
+
+  // All hooks declared above - now check loading state
+  if (isLoadingOrganization) {
+    return <Skeleton className="h-10 w-full" />;
+  }
 
 
   const watchedLocationNumber = form.watch('partner_location_number');
