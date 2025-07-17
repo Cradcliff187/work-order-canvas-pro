@@ -154,8 +154,12 @@ export function LocationFields({
     setSelectedLocation(null);
     setSelectedLocationId(''); // This clears the dropdown selection
     
-    // Clear all form fields - including the location number
-    form.setValue('partner_location_number', '');
+    // Only clear location number field if organization doesn't require manual entry
+    if (!organization?.uses_partner_location_numbers) {
+      form.setValue('partner_location_number', '');
+    }
+    
+    // Clear all other form fields
     form.setValue('store_location', '');
     form.setValue('location_street_address', '');
     form.setValue('location_city', '');
@@ -166,7 +170,7 @@ export function LocationFields({
     form.setValue('city', '');
     form.setValue('state', '');
     form.setValue('zip_code', '');
-  }, [form]);
+  }, [form, organization?.uses_partner_location_numbers]);
 
   // Move all hook calls before conditional return
   const watchedLocationNumber = form.watch('partner_location_number');
