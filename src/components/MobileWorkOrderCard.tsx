@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { formatLocationDisplay } from '@/lib/utils/addressUtils';
@@ -191,7 +191,7 @@ export function MobileWorkOrderCard({
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span>
-              Submitted {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
+              Submitted {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')} <span className="text-muted-foreground">({differenceInDays(new Date(), new Date(workOrder.date_submitted))} days old)</span>
             </span>
           </div>
 
