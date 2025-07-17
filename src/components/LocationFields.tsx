@@ -58,6 +58,14 @@ export function LocationFields({
     effectiveOrganizationId || ''
   );
 
+  console.log('🔍 LocationFields: Organization data check:', {
+    effectiveOrganizationId,
+    organization,
+    uses_partner_location_numbers: organization?.uses_partner_location_numbers,
+    isLoadingOrganization,
+    route: window.location.pathname
+  });
+
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
     organizationId: effectiveOrganizationId,
     searchTerm: locationSearchValue,
@@ -285,11 +293,16 @@ export function LocationFields({
                           "Loading organization..."
                         ) : organization === null ? (
                           "No organization selected"
-                        ) : organization?.uses_partner_location_numbers ? (
-                          "Enter location number, name, or search existing"
-                        ) : (
-                          "Auto-generated when saved"
-                        )}
+                        ) : (() => {
+                          console.log('🔍 LocationFields: Button text decision:', {
+                            organization,
+                            uses_partner_location_numbers: organization?.uses_partner_location_numbers,
+                            typeof_uses_partner_location_numbers: typeof organization?.uses_partner_location_numbers
+                          });
+                          return organization?.uses_partner_location_numbers ? 
+                            "Enter location number, name, or search existing" : 
+                            "Auto-generated when saved";
+                        })()}
                         <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
