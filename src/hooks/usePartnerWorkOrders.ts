@@ -262,10 +262,10 @@ export function useCreateWorkOrder() {
         const isNewLocation = !variables.partner_location_number && 
           variables.organization_id &&
           variables.store_location &&
-          variables.street_address &&
-          variables.city &&
-          variables.state &&
-          variables.zip_code;
+          variables.location_street_address &&
+          variables.location_city &&
+          variables.location_state &&
+          variables.location_zip_code;
 
         if (isNewLocation) {
           // Check if organization uses partner location numbers
