@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, Eye, Plus, MapPin } from 'lucide-react';
+import { Search, Filter, Eye, Plus, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
@@ -28,6 +28,7 @@ const WorkOrderList = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tradeFilter, setTradeFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [sortConfig, setSortConfig] = useState<{field: string, direction: 'asc' | 'desc'} | null>(null);
   
   const filters = {
     search: search || undefined,
@@ -53,10 +54,58 @@ const WorkOrderList = () => {
   }, [workOrders]);
 
   // Filter work orders by location
-  const filteredWorkOrders = React.useMemo(() => {
+  const filteredWorkOrders = useMemo(() => {
     if (locationFilter === 'all') return workOrders;
     return workOrders.filter(wo => formatLocationDisplay(wo) === locationFilter);
   }, [workOrders, locationFilter]);
+
+  // Sort work orders
+  const sortedWorkOrders = useMemo(() => {
+    if (!sortConfig) return filteredWorkOrders;
+
+    return [...filteredWorkOrders].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortConfig.field) {
+        case 'location':
+          aValue = formatLocationDisplay(a);
+          bValue = formatLocationDisplay(b);
+          break;
+        case 'trade':
+          aValue = a.trades?.name || '';
+          bValue = b.trades?.name || '';
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredWorkOrders, sortConfig]);
+
+  // Handle column sorting
+  const handleSort = (field: string) => {
+    setSortConfig(current => {
+      if (current?.field === field) {
+        return { field, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
+  };
+
+  // Render sort icon
+  const renderSortIcon = (field: string) => {
+    if (sortConfig?.field !== field) return null;
+    return sortConfig.direction === 'asc' ? 
+      <ChevronUp className="h-4 w-4" /> : 
+      <ChevronDown className="h-4 w-4" />;
+  };
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -160,13 +209,13 @@ const WorkOrderList = () => {
         <CardHeader>
           <CardTitle>Your Work Orders</CardTitle>
           <CardDescription>
-            {filteredWorkOrders.length} work order{filteredWorkOrders.length !== 1 ? 's' : ''} found
+            {sortedWorkOrders.length} work order{sortedWorkOrders.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Loading work orders...</div>
-          ) : filteredWorkOrders.length === 0 ? (
+          ) : sortedWorkOrders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">No work orders found</p>
               <Button onClick={() => navigate('/partner/work-orders/new')}>
@@ -180,17 +229,40 @@ const WorkOrderList = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Work Order #</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Trade</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('location')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Location
+                        {renderSortIcon('location')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('trade')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Trade
+                        {renderSortIcon('trade')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Status
+                        {renderSortIcon('status')}
+                      </div>
+                    </TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead>Est. Completion</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredWorkOrders.map((workOrder) => (
+                  {sortedWorkOrders.map((workOrder) => (
                     <TableRow key={workOrder.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -234,13 +306,6 @@ const WorkOrderList = () => {
                       </TableCell>
                       <TableCell>
                         {workOrder.trades?.name || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <AssigneeDisplay 
-                          assignments={workOrder.work_order_assignments}
-                          assignedUser={workOrder.assigned_user}
-                          showOrganization={true}
-                        />
                       </TableCell>
                       <TableCell>
                         <Badge 
