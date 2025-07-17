@@ -152,7 +152,13 @@ export function LocationFields({
     setPartnerLocationSelected(false);
     setSelectedLocation(null);
     setSelectedLocationId('');
-    clearLocationSelection();
+    
+    // Clear form fields manually (without affecting manualEntryMode)
+    form.setValue('store_location', '');
+    form.setValue('location_street_address', '');
+    form.setValue('location_city', '');
+    form.setValue('location_state', '');
+    form.setValue('location_zip_code', '');
 
     // Auto-generate location number based on organization settings
     if (effectiveOrganizationId && organization) {
