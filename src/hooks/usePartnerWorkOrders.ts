@@ -257,8 +257,63 @@ export function useCreateWorkOrder() {
       return data;
     },
     onSuccess: async (data, variables) => {
-      // Auto-save new partner location if applicable
       try {
+        // Check if we should create a new partner location
+        const isNewLocation = !variables.partner_location_number && 
+          variables.organization_id &&
+          variables.store_location &&
+          variables.street_address &&
+          variables.city &&
+          variables.state &&
+          variables.zip_code;
+
+        if (isNewLocation) {
+          // Check if organization uses partner location numbers
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('uses_partner_location_numbers')
+            .eq('id', variables.organization_id)
+            .single();
+
+          if (org?.uses_partner_location_numbers) {
+            // Generate new location number
+            const { data: locationNumber, error: genError } = await supabase
+              .rpc('generate_next_location_number', { org_id: variables.organization_id });
+
+            if (!genError && locationNumber) {
+              // Create the partner location
+              const { error: createError } = await supabase
+                .from('partner_locations')
+                .insert({
+                  organization_id: variables.organization_id,
+                  location_number: locationNumber,
+                  location_name: variables.store_location,
+                  street_address: variables.street_address,
+                  city: variables.city,
+                  state: variables.state,
+                  zip_code: variables.zip_code,
+                  is_active: true
+                });
+
+              if (!createError) {
+                // Update the work order with the new location number
+                await supabase
+                  .from('work_orders')
+                  .update({ partner_location_number: locationNumber })
+                  .eq('id', data.id);
+
+                queryClient.invalidateQueries({ queryKey: ['partner-locations'] });
+                
+                toast({
+                  title: 'New location added',
+                  description: `Location "${variables.store_location}" has been saved with number ${locationNumber}`
+                });
+              }
+            }
+          }
+        }
+
+        // Auto-save existing partner location if applicable (backward compatibility)
         const shouldSaveLocation = variables.partner_location_number && 
           variables.organization_id &&
           variables.location_street_address &&
@@ -293,14 +348,13 @@ export function useCreateWorkOrder() {
             if (locationError) {
               console.warn('Failed to auto-save partner location:', locationError.message);
             } else {
-              // Invalidate partner locations cache
               queryClient.invalidateQueries({ queryKey: ['partner-locations'] });
               console.log('Auto-saved new partner location:', variables.partner_location_number);
             }
           }
         }
       } catch (error) {
-        console.warn('Error during location auto-save:', error);
+        console.warn('Error during location auto-creation:', error);
       }
 
       queryClient.invalidateQueries({ queryKey: ['partner-work-orders'] });
