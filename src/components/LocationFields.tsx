@@ -286,7 +286,7 @@ export function LocationFields({
   }, [manualEntryMode, selectedLocation]);
 
   // Determine if we should show partner locations dropdown
-  const shouldShowPartnerLocations = usePartnerLocations && effectiveOrganizationId && partnerLocations && partnerLocations.length > 0;
+  const shouldShowPartnerLocations = effectiveOrganizationId && partnerLocations && partnerLocations.length > 0;
   
   // Determine if we should use the search mode (fallback or manual entry)
   const shouldUseSearchMode = !shouldShowPartnerLocations || manualEntryMode;
