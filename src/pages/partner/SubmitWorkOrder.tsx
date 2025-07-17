@@ -29,26 +29,74 @@ const SubmitWorkOrder = () => {
   const { organization, loading: organizationLoading } = useUserOrganization();
   const { data: locationHistory } = useLocationHistory();
 
-  const workOrderSchema = useMemo(() => z.object({
-    store_location: z.string().min(1, 'Store location is required'),
-    street_address: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    zip_code: z.string().optional(),
-    // New structured location fields
-    location_street_address: z.string().optional(),
-    location_city: z.string().optional(),
-    location_state: z.string().optional(),
-    location_zip_code: z.string().optional(),
-    trade_id: z.string().min(1, 'Trade selection is required'),
-    description: z.string().min(10, 'Description must be at least 10 characters'),
-    organization_id: z.string().min(1, 'Organization is required'),
-    partner_po_number: z.string().optional(),
-    partner_location_number: organization?.uses_partner_location_numbers
-      ? z.string().min(1, 'Location number is required')
-      : z.string().optional(),
-    due_date: z.string().optional(),
-  }), [organization?.uses_partner_location_numbers]);
+  const workOrderSchema = useMemo(() => {
+    const baseSchema = z.object({
+      store_location: z.string().min(1, 'Store location is required'),
+      street_address: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      zip_code: z.string().optional(),
+      // New structured location fields - conditionally required based on form state
+      location_street_address: z.string().optional(),
+      location_city: z.string().optional(),
+      location_state: z.string().optional(),
+      location_zip_code: z.string().optional(),
+      trade_id: z.string().min(1, 'Trade selection is required'),
+      description: z.string().min(10, 'Description must be at least 10 characters'),
+      organization_id: z.string().min(1, 'Organization is required'),
+      partner_po_number: z.string().optional(),
+      partner_location_number: organization?.uses_partner_location_numbers
+        ? z.string().min(1, 'Location number is required')
+        : z.string().optional(),
+      due_date: z.string().optional(),
+    });
+
+    // Add validation logic for when location details are required
+    return baseSchema.superRefine((data, ctx) => {
+      // Check if we're in new location mode (manual entry or no partner location)
+      const hasPartnerLocation = data.partner_location_number && !data.location_street_address;
+      const isNewLocation = !hasPartnerLocation && (data.location_street_address || data.location_city || data.location_state || data.location_zip_code);
+      
+      if (isNewLocation) {
+        // If any location field is filled, all required fields must be filled
+        if (!data.store_location) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Store/Location Name is required',
+            path: ['store_location'],
+          });
+        }
+        if (!data.location_street_address) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Street Address is required',
+            path: ['location_street_address'],
+          });
+        }
+        if (!data.location_city) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'City is required',
+            path: ['location_city'],
+          });
+        }
+        if (!data.location_state) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'State is required',
+            path: ['location_state'],
+          });
+        }
+        if (!data.location_zip_code) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'ZIP Code is required',
+            path: ['location_zip_code'],
+          });
+        }
+      }
+    });
+  }, [organization?.uses_partner_location_numbers]);
 
   type WorkOrderFormData = z.infer<typeof workOrderSchema>;
 

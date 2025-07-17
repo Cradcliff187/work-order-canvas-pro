@@ -55,48 +55,142 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
   const { data: selectedOrg } = useOrganization(organizationId);
 
   // Create dynamic schema with conditional partner_location_number validation
-  const createWorkOrderSchema = useMemo(() => z.object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
-    organization_id: z.string().min(1, 'Organization is required'),
-    trade_id: z.string().min(1, 'Trade is required'),
-    store_location: z.string().optional(),
-    street_address: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    zip_code: z.string().optional(),
-    location_street_address: z.string().optional(),
-    location_city: z.string().optional(),
-    location_state: z.string().optional(),
-    location_zip_code: z.string().optional(),
-    partner_po_number: z.string().optional(),
-    partner_location_number: selectedOrg?.uses_partner_location_numbers
-      ? z.string().min(1, 'Location number is required')
-      : z.string().optional(),
-  }), [selectedOrg?.uses_partner_location_numbers]);
+  const createWorkOrderSchema = useMemo(() => {
+    const baseSchema = z.object({
+      title: z.string().min(1, 'Title is required'),
+      description: z.string().optional(),
+      organization_id: z.string().min(1, 'Organization is required'),
+      trade_id: z.string().min(1, 'Trade is required'),
+      store_location: z.string().optional(),
+      street_address: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      zip_code: z.string().optional(),
+      location_street_address: z.string().optional(),
+      location_city: z.string().optional(),
+      location_state: z.string().optional(),
+      location_zip_code: z.string().optional(),
+      partner_po_number: z.string().optional(),
+      partner_location_number: selectedOrg?.uses_partner_location_numbers
+        ? z.string().min(1, 'Location number is required')
+        : z.string().optional(),
+    });
+
+    return baseSchema.superRefine((data, ctx) => {
+      // Check if we're in new location mode
+      const hasPartnerLocation = data.partner_location_number && !data.location_street_address;
+      const isNewLocation = !hasPartnerLocation && (data.location_street_address || data.location_city || data.location_state || data.location_zip_code);
+      
+      if (isNewLocation) {
+        if (!data.store_location) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Store/Location Name is required',
+            path: ['store_location'],
+          });
+        }
+        if (!data.location_street_address) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Street Address is required',
+            path: ['location_street_address'],
+          });
+        }
+        if (!data.location_city) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'City is required',
+            path: ['location_city'],
+          });
+        }
+        if (!data.location_state) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'State is required',
+            path: ['location_state'],
+          });
+        }
+        if (!data.location_zip_code) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'ZIP Code is required',
+            path: ['location_zip_code'],
+          });
+        }
+      }
+    });
+  }, [selectedOrg?.uses_partner_location_numbers]);
 
   // Create dynamic schema based on user type
-  const createWorkOrderSchemaForUser = useMemo(() => profile?.user_type === 'admin'
-    ? createWorkOrderSchema
-    : z.object({
-        title: z.string().min(1, 'Title is required'),
-        description: z.string().optional(),
-        organization_id: z.string().optional(), // Auto-populated for partners
-        trade_id: z.string().min(1, 'Trade is required'),
-        store_location: z.string().optional(),
-        street_address: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        zip_code: z.string().optional(),
-        location_street_address: z.string().optional(),
-        location_city: z.string().optional(),
-        location_state: z.string().optional(),
-        location_zip_code: z.string().optional(),
-        partner_po_number: z.string().optional(),
-        partner_location_number: selectedOrg?.uses_partner_location_numbers
-          ? z.string().min(1, 'Location number is required')
-          : z.string().optional(),
-      }), [profile?.user_type, createWorkOrderSchema, selectedOrg?.uses_partner_location_numbers]);
+  const createWorkOrderSchemaForUser = useMemo(() => {
+    if (profile?.user_type === 'admin') {
+      return createWorkOrderSchema;
+    }
+    
+    const partnerBaseSchema = z.object({
+      title: z.string().min(1, 'Title is required'),
+      description: z.string().optional(),
+      organization_id: z.string().optional(), // Auto-populated for partners
+      trade_id: z.string().min(1, 'Trade is required'),
+      store_location: z.string().optional(),
+      street_address: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      zip_code: z.string().optional(),
+      location_street_address: z.string().optional(),
+      location_city: z.string().optional(),
+      location_state: z.string().optional(),
+      location_zip_code: z.string().optional(),
+      partner_po_number: z.string().optional(),
+      partner_location_number: selectedOrg?.uses_partner_location_numbers
+        ? z.string().min(1, 'Location number is required')
+        : z.string().optional(),
+    });
+
+    return partnerBaseSchema.superRefine((data, ctx) => {
+      // Same validation logic for partners
+      const hasPartnerLocation = data.partner_location_number && !data.location_street_address;
+      const isNewLocation = !hasPartnerLocation && (data.location_street_address || data.location_city || data.location_state || data.location_zip_code);
+      
+      if (isNewLocation) {
+        if (!data.store_location) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Store/Location Name is required',
+            path: ['store_location'],
+          });
+        }
+        if (!data.location_street_address) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Street Address is required',
+            path: ['location_street_address'],
+          });
+        }
+        if (!data.location_city) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'City is required',
+            path: ['location_city'],
+          });
+        }
+        if (!data.location_state) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'State is required',
+            path: ['location_state'],
+          });
+        }
+        if (!data.location_zip_code) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'ZIP Code is required',
+            path: ['location_zip_code'],
+          });
+        }
+      }
+    });
+  }, [profile?.user_type, createWorkOrderSchema, selectedOrg?.uses_partner_location_numbers]);
 
   const form = useForm<CreateWorkOrderForm>({
     resolver: zodResolver(createWorkOrderSchemaForUser),
