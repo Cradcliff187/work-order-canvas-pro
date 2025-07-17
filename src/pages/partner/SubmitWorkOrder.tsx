@@ -175,9 +175,9 @@ const SubmitWorkOrder = () => {
     switch (currentStep) {
       case 1:
         if (!organization?.uses_partner_location_numbers) {
-          return ['trade_id', 'store_location'];
+          return ['store_location'];
         }
-        return ['trade_id', 'partner_location_number', 'store_location'];
+        return ['partner_location_number', 'store_location'];
       case 2:
         return ['trade_id', 'description'];
       case 3:
