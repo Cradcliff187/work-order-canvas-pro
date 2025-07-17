@@ -114,6 +114,7 @@ export function useSubcontractorWorkOrders() {
           throw new Error('Invalid work order ID format');
         }
 
+        // First, get the work order data
         const { data, error } = await supabase
           .from("work_orders")
           .select(`
@@ -131,7 +132,26 @@ export function useSubcontractorWorkOrders() {
 
         if (error) throw error;
         if (!data) throw new Error('Work order not found');
-        return data;
+
+        // Then get location contact information if available
+        let locationContact = null;
+        if (data.partner_location_number && data.organization_id) {
+          const { data: locationData } = await supabase
+            .from("partner_locations")
+            .select("contact_name, contact_phone, contact_email")
+            .eq("organization_id", data.organization_id)
+            .eq("location_number", data.partner_location_number)
+            .maybeSingle();
+          
+          locationContact = locationData;
+        }
+
+        return {
+          ...data,
+          location_contact_name: locationContact?.contact_name,
+          location_contact_phone: locationContact?.contact_phone,
+          location_contact_email: locationContact?.contact_email,
+        };
       },
       enabled: !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
     });

@@ -3,8 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
-import { ArrowLeft, FileText, MapPin, Phone, Mail, Clock, Calendar, Plus } from "lucide-react";
+import { ArrowLeft, FileText, MapPin, Phone, Mail, Clock, Calendar, Plus, User } from "lucide-react";
 import { format } from "date-fns";
 
 export default function SubcontractorWorkOrderDetail() {
@@ -249,6 +250,48 @@ export default function SubcontractorWorkOrderDetail() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Site Contact */}
+            {(workOrder.location_contact_name || workOrder.location_contact_phone || workOrder.location_contact_email) && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground mb-3">Site Contact</h4>
+                  <div className="flex gap-4">
+                    {workOrder.location_contact_name && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{workOrder.location_contact_name}</span>
+                      </div>
+                    )}
+                    
+                    {workOrder.location_contact_phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <a 
+                          href={`tel:${workOrder.location_contact_phone}`}
+                          className="text-primary hover:underline"
+                        >
+                          {workOrder.location_contact_phone}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {workOrder.location_contact_email && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <a 
+                          href={`mailto:${workOrder.location_contact_email}`}
+                          className="text-primary hover:underline"
+                        >
+                          {workOrder.location_contact_email}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
