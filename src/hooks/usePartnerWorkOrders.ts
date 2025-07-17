@@ -190,6 +190,9 @@ export function useCreateWorkOrder() {
       location_city?: string;
       location_state?: string;
       location_zip_code?: string;
+      location_contact_name?: string;
+      location_contact_email?: string;
+      location_contact_phone?: string;
       trade_id: string;
       description: string;
       organization_id: string;
@@ -289,6 +292,9 @@ export function useCreateWorkOrder() {
                 city: variables.location_city,
                 state: variables.location_state,
                 zip_code: variables.location_zip_code,
+                contact_name: variables.location_contact_name || null,
+                contact_email: variables.location_contact_email || null,
+                contact_phone: variables.location_contact_phone || null,
                 is_active: true
               };
 
@@ -334,18 +340,21 @@ export function useCreateWorkOrder() {
 
           // Only create if location doesn't exist
           if (!existingLocation) {
-            const { error: locationError } = await supabase
-              .from('partner_locations')
-              .insert({
-                organization_id: variables.organization_id,
-                location_number: variables.partner_location_number!,
-                location_name: variables.store_location || variables.location_name || 'New Location',
-                street_address: variables.location_street_address,
-                city: variables.location_city,
-                state: variables.location_state,
-                zip_code: variables.location_zip_code,
-                is_active: true
-              });
+              const { error: locationError } = await supabase
+                .from('partner_locations')
+                .insert({
+                  organization_id: variables.organization_id,
+                  location_number: variables.partner_location_number!,
+                  location_name: variables.store_location || variables.location_name || 'New Location',
+                  street_address: variables.location_street_address,
+                  city: variables.location_city,
+                  state: variables.location_state,
+                  zip_code: variables.location_zip_code,
+                  contact_name: variables.location_contact_name || null,
+                  contact_email: variables.location_contact_email || null,
+                  contact_phone: variables.location_contact_phone || null,
+                  is_active: true
+                });
 
             if (locationError) {
               console.warn('Failed to auto-save partner location:', locationError.message);

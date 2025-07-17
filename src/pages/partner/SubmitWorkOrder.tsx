@@ -42,6 +42,10 @@ const SubmitWorkOrder = () => {
       location_city: z.string().optional(),
       location_state: z.string().optional(),
       location_zip_code: z.string().optional(),
+      // Optional contact fields for new locations
+      location_contact_name: z.string().optional(),
+      location_contact_email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
+      location_contact_phone: z.string().optional(),
       trade_id: z.string().min(1, 'Trade selection is required'),
       description: z.string().min(10, 'Description must be at least 10 characters'),
       organization_id: z.string().min(1, 'Organization is required'),
@@ -118,6 +122,9 @@ const SubmitWorkOrder = () => {
       organization_id: organization?.id || '',
       partner_po_number: '',
       partner_location_number: '',
+      location_contact_name: '',
+      location_contact_email: '',
+      location_contact_phone: '',
     },
   });
 
@@ -222,6 +229,9 @@ const SubmitWorkOrder = () => {
         location_city: data.location_city || '',
         location_state: data.location_state || '',
         location_zip_code: data.location_zip_code || '',
+        location_contact_name: data.location_contact_name || '',
+        location_contact_email: data.location_contact_email || '',
+        location_contact_phone: data.location_contact_phone || '',
         trade_id: data.trade_id,
         description: data.description,
         organization_id: data.organization_id,
