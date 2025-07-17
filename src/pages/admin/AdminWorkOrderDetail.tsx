@@ -266,6 +266,13 @@ export default function AdminWorkOrderDetail() {
                   ))}
                 </div>
               )}
+              {workOrder.location_contact_name && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  Site Contact: {workOrder.location_contact_name}
+                  {workOrder.location_contact_phone && ` • ${workOrder.location_contact_phone}`}
+                  {workOrder.location_contact_email && ` • ${workOrder.location_contact_email}`}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
