@@ -136,7 +136,7 @@ export function LocationFields({
     setIsUpdatingLocation(false);
   }, [form, isUpdatingLocation]);
 
-  const clearLocationSelection = () => {
+  const clearLocationSelection = useCallback(() => {
     setSelectedLocation(null);
     setLocationSearchValue('');
     setPartnerLocationSelected(false);
@@ -148,7 +148,7 @@ export function LocationFields({
     form.setValue('location_city', '');
     form.setValue('location_state', '');
     form.setValue('location_zip_code', '');
-  };
+  }, [form]);
 
   const handleAddNewLocation = async () => {
     // Safety check: prevent execution if organization data hasn't loaded yet
