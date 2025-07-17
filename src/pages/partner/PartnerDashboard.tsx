@@ -11,7 +11,7 @@ import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartn
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 
 
 const PartnerDashboard = () => {
@@ -190,6 +190,7 @@ const PartnerDashboard = () => {
                     <TableHead>Location</TableHead>
                     <TableHead>Trade</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Days Old</TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -213,6 +214,11 @@ const PartnerDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <WorkOrderStatusBadge status={workOrder.status} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
+                        </span>
                       </TableCell>
                       <TableCell>
                         {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
