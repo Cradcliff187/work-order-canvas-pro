@@ -30,7 +30,12 @@ const locationSchema = z.object({
   state: z.string().nullable().optional(),
   zip_code: z.string().nullable().optional(),
   contact_name: z.string().nullable().optional(),
-  contact_email: z.string().email('Invalid email').nullable().optional().or(z.literal('')),
+  contact_email: z.string().optional().transform(val => 
+    val && val.trim() !== '' ? val : null
+  ).refine(
+    val => !val || z.string().email().safeParse(val).success,
+    'Invalid email'
+  ),
   contact_phone: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
 });
