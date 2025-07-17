@@ -71,7 +71,7 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
       location_state: z.string().optional(),
       location_zip_code: z.string().optional(),
       partner_po_number: z.string().optional(),
-      partner_location_number: selectedOrg?.uses_partner_location_numbers
+      partner_location_number: selectedOrg?.uses_partner_location_numbers === true
         ? z.string().min(1, 'Location number is required')
         : z.string().optional(),
     });
@@ -142,7 +142,7 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
       location_state: z.string().optional(),
       location_zip_code: z.string().optional(),
       partner_po_number: z.string().optional(),
-      partner_location_number: selectedOrg?.uses_partner_location_numbers
+      partner_location_number: selectedOrg?.uses_partner_location_numbers === true
         ? z.string().min(1, 'Location number is required')
         : z.string().optional(),
     });
