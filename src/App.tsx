@@ -40,7 +40,7 @@ const App = () => {
             <Sonner />
             <OfflineIndicator />
             <PWAUpdateNotification />
-            <PWAInstallPrompt />
+            {/* <PWAInstallPrompt /> */}
             <AppRouter />
             {process.env.NODE_ENV !== 'production' && (
               <StorageDebugPanel 
