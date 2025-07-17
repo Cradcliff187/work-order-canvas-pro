@@ -102,8 +102,8 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
             Edit Organization
@@ -114,7 +114,8 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-1">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -270,15 +271,21 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={updateOrganization.isPending}>
-                {updateOrganization.isPending ? 'Updating...' : 'Update Organization'}
-              </Button>
-            </DialogFooter>
-          </form>
+            </form>
+          </div>
+          
+          <DialogFooter className="shrink-0 mt-4">
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={updateOrganization.isPending}
+              onClick={form.handleSubmit(onSubmit)}
+            >
+              {updateOrganization.isPending ? 'Updating...' : 'Update Organization'}
+            </Button>
+          </DialogFooter>
         </Form>
       </DialogContent>
     </Dialog>
