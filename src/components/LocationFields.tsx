@@ -48,6 +48,7 @@ export function LocationFields({
   const [selectedLocation, setSelectedLocation] = useState<LocationSuggestion | null>(null);
   const [manualEntryMode, setManualEntryMode] = useState(false);
   const [partnerLocationSelected, setPartnerLocationSelected] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [isGeneratingNumber, setIsGeneratingNumber] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
@@ -92,6 +93,7 @@ export function LocationFields({
     
     // Update state in single batch
     setPartnerLocationSelected(true);
+    setSelectedLocationId(location.id);
     setLocationSearchOpen(false);
     setManualEntryMode(false);
     setSelectedLocation(null);
@@ -128,6 +130,7 @@ export function LocationFields({
     setLocationSearchValue(suggestion.location_number);
     setLocationSearchOpen(false);
     setPartnerLocationSelected(false);
+    setSelectedLocationId('');
     
     setIsUpdatingLocation(false);
   }, [form, isUpdatingLocation]);
@@ -137,6 +140,7 @@ export function LocationFields({
     setLocationSearchOpen(false);
     setPartnerLocationSelected(false);
     setSelectedLocation(null);
+    setSelectedLocationId('');
     clearLocationSelection();
 
     // Auto-generate location number based on organization settings
@@ -216,6 +220,7 @@ export function LocationFields({
     setSelectedLocation(null);
     setLocationSearchValue('');
     setPartnerLocationSelected(false);
+    setSelectedLocationId('');
     setManualEntryMode(false);
     form.setValue('partner_location_number', '');
     form.setValue('store_location', '');
@@ -275,7 +280,7 @@ export function LocationFields({
                         handlePartnerLocationSelect(location);
                       }
                     }
-                  }} value={partnerLocationSelected ? field.value : ""}>
+                  }} value={selectedLocationId || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingPartnerLocations ? "Loading..." : "Select a location"} />
                     </SelectTrigger>
