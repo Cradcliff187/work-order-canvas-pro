@@ -149,6 +149,18 @@ const SubmitWorkOrder = () => {
     }
   }, [form.watch('partner_location_number'), form.watch('location_street_address')]);
 
+  // Debug organization loading state
+  useEffect(() => {
+    console.log('🔍 Organization Debug:', {
+      organizationLoading,
+      organization: organization,
+      uses_partner_location_numbers: organization?.uses_partner_location_numbers,
+      organization_type: organization?.organization_type,
+      user_type: profile?.user_type,
+      route: window.location.pathname
+    });
+  }, [organization, organizationLoading, profile]);
+
   // Watch form values for work order number generation
   const organizationId = form.watch('organization_id');
   const locationNumber = form.watch('partner_location_number');

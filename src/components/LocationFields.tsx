@@ -279,6 +279,12 @@ export function LocationFields({
                           </>
                         ) : field.value ? (
                           field.value
+                        ) : field.value ? (
+                          field.value
+                        ) : isLoadingOrganization ? (
+                          "Loading organization..."
+                        ) : organization === null ? (
+                          "No organization selected"
                         ) : organization?.uses_partner_location_numbers ? (
                           "Enter location number, name, or search existing"
                         ) : (
