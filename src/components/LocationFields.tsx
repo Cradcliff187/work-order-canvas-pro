@@ -174,9 +174,7 @@ export function LocationFields({
           const { data: existingLocations, error } = await supabase
             .from('partner_locations')
             .select('location_number')
-            .eq('organization_id', effectiveOrganizationId)
-            .order('location_number', { ascending: false })
-            .limit(1);
+            .eq('organization_id', effectiveOrganizationId);
 
           if (error) {
             console.error('Failed to query existing locations:', error);
@@ -186,17 +184,18 @@ export function LocationFields({
               variant: "destructive",
             });
           } else {
-            // Find the highest existing number and increment
-            let nextNumber = 1;
-            if (existingLocations && existingLocations.length > 0) {
-              const highestNumber = parseInt(existingLocations[0].location_number);
-              if (!isNaN(highestNumber)) {
-                nextNumber = highestNumber + 1;
-              }
-            }
+            // Convert all location numbers to integers and filter out NaN values
+            const existingNumbers = existingLocations
+              ?.map(loc => parseInt(loc.location_number))
+              .filter(num => !isNaN(num)) || [];
             
-            // Pad to 2 digits
+            // Find the highest number, default to 0 if none exist
+            const highestNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+            
+            // Add 1 and pad to 2 digits
+            const nextNumber = highestNumber + 1;
             const locationNumber = String(nextNumber).padStart(2, '0');
+            
             form.setValue('partner_location_number', locationNumber);
             toast({
               title: "Location number assigned",
