@@ -123,7 +123,8 @@ export async function getUserSingleOrganization(userId: string): Promise<UserOrg
           initials,
           contact_email,
           contact_phone,
-          address
+          address,
+          uses_partner_location_numbers
         )
       `)
       .eq('user_id', profile.id)
