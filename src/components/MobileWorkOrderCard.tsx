@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Mail, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
@@ -51,6 +51,8 @@ interface WorkOrder {
   organizations?: {
     name: string;
     organization_type?: 'partner' | 'subcontractor' | 'internal';
+    contact_email?: string;
+    contact_phone?: string;
   } | null;
   assigned_organizations?: {
     name: string;
@@ -185,6 +187,14 @@ export function MobileWorkOrderCard({
                 size="sm"
                 showIcon={true}
               />
+            </div>
+          )}
+
+          {/* Organization Contact */}
+          {workOrder.organizations?.contact_email && (
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="truncate">Org: {workOrder.organizations.contact_email}</span>
             </div>
           )}
 

@@ -73,7 +73,7 @@ export function useWorkOrders(
         .from('work_orders')
         .select(`
           *,
-          organizations!organization_id(name),
+          organizations!organization_id(name, contact_email, contact_phone),
           trades!trade_id(name),
           assigned_user:profiles!assigned_to(first_name, last_name),
           assignments:work_order_assignments(
@@ -82,7 +82,7 @@ export function useWorkOrders(
             assignment_type,
             assignee:profiles!assigned_to(first_name, last_name),
             assigned_organization:organizations!assigned_organization_id(name, organization_type)
-          )
+          ),
         `, { count: 'exact' });
 
       // Apply filters

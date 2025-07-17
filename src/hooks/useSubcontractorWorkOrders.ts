@@ -14,26 +14,26 @@ export function useSubcontractorWorkOrders() {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from("work_orders")
-        .select(`
-          *,
-          trades (name),
-          organizations!organization_id (name),
-          work_order_reports (
-            id,
-            status,
-            submitted_at,
-            invoice_amount
-          ),
-          assigned_user:profiles!assigned_to (first_name, last_name, user_type),
-          work_order_assignments (
-            assigned_to,
-            assignment_type,
-            assignee_profile:profiles!assigned_to (first_name, last_name),
-            assigned_organization:organizations!assigned_organization_id(name, organization_type)
-          )
-        `)
+        const { data, error } = await supabase
+          .from("work_orders")
+          .select(`
+            *,
+            trades (name),
+            organizations!organization_id (name, contact_email, contact_phone),
+            work_order_reports (
+              id,
+              status,
+              submitted_at,
+              invoice_amount
+            ),
+            assigned_user:profiles!assigned_to (first_name, last_name, user_type),
+            work_order_assignments (
+              assigned_to,
+              assignment_type,
+              assignee_profile:profiles!assigned_to (first_name, last_name),
+              assigned_organization:organizations!assigned_organization_id(name, organization_type)
+            ),
+          `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -124,7 +124,7 @@ export function useSubcontractorWorkOrders() {
             work_order_reports (
               *,
               profiles!subcontractor_user_id (first_name, last_name)
-            )
+            ),
           `)
           .eq("id", id)
           .maybeSingle();
