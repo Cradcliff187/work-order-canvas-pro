@@ -89,7 +89,13 @@ export function hasAddress(address: StructuredAddress): boolean {
  * Formats location display for work order tables (compact format like "Loc: 504")
  */
 export function formatLocationDisplay(location: LocationDisplay & StructuredAddress): string {
-  // Priority: partner_location_number > store_location > location_name
+  // When both partner location number and store location exist, combine them
+  if (location.partner_location_number && location.store_location) {
+    const combined = `${location.partner_location_number} - ${location.store_location}`;
+    return combined.length > 30 ? `${combined.substring(0, 27)}...` : combined;
+  }
+  
+  // Fallback to individual fields
   if (location.partner_location_number) {
     return `Loc: ${location.partner_location_number}`;
   }
