@@ -22,6 +22,7 @@ import { OrganizationValidationAlert } from '@/components/OrganizationValidation
 const SubmitWorkOrder = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [submittedWorkOrder, setSubmittedWorkOrder] = useState<any>(null);
+  const [isExplicitSubmit, setIsExplicitSubmit] = useState(false);
   const navigate = useNavigate();
   const { profile } = useAuth();
   const createWorkOrder = useCreateWorkOrder();
@@ -197,6 +198,14 @@ const SubmitWorkOrder = () => {
   const onSubmit = async (data: WorkOrderFormData) => {
     console.log('🔍 DEBUG: onSubmit called with data:', data);
     console.log('🔍 DEBUG: Current step when onSubmit called:', currentStep);
+    console.log('🔍 DEBUG: isExplicitSubmit:', isExplicitSubmit);
+    
+    // Only process submission if we're on step 3 and user explicitly clicked submit
+    if (currentStep !== 3 || !isExplicitSubmit) {
+      console.log('🔍 DEBUG: Preventing auto-submission - not on step 3 or not explicit submit');
+      return;
+    }
+    
     try {
       const selectedTrade = trades?.find(t => t.id === data.trade_id);
       const autoTitle = `${selectedTrade?.name || 'Work'} at ${data.store_location}`;
@@ -538,7 +547,11 @@ const SubmitWorkOrder = () => {
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button type="submit" disabled={createWorkOrder.isPending}>
+              <Button 
+                type="submit" 
+                disabled={createWorkOrder.isPending}
+                onClick={() => setIsExplicitSubmit(true)}
+              >
                 {createWorkOrder.isPending ? 'Submitting...' : 'Submit Work Order'}
               </Button>
             )}
