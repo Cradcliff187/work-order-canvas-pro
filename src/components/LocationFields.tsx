@@ -147,8 +147,8 @@ export function LocationFields({
   }, [form]);
 
   const handleAddNewLocation = useCallback(async () => {
-    // Safety check: prevent execution if organization data hasn't loaded yet
-    if (!organization || isLoadingOrganization) {
+    // Safety check: prevent execution if actively loading
+    if (isLoadingOrganization) {
       return;
     }
     
