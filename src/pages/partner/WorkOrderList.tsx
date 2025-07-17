@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, Eye, Plus, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Filter, Eye, Plus, MapPin, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
 import { useTrades } from '@/hooks/useWorkOrders';
@@ -105,10 +105,12 @@ const WorkOrderList = () => {
 
   // Render sort icon
   const renderSortIcon = (field: string) => {
-    if (sortConfig?.field !== field) return null;
-    return sortConfig.direction === 'asc' ? 
-      <ChevronUp className="h-4 w-4" /> : 
-      <ChevronDown className="h-4 w-4" />;
+    if (sortConfig?.field === field) {
+      return sortConfig.direction === 'asc' ? 
+        <ChevronUp className="h-4 w-4" /> : 
+        <ChevronDown className="h-4 w-4" />;
+    }
+    return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
   };
 
   return (
