@@ -9,6 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { US_STATES } from '@/constants/states';
 import { useLocationSuggestions, formatLocationDisplay, getDirectionsUrl, LocationSuggestion } from '@/hooks/useLocationSuggestions';
@@ -66,6 +67,10 @@ export function LocationFields({
   const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerOrganizationLocations(
     usePartnerLocations && effectiveOrganizationId ? effectiveOrganizationId : undefined
   );
+
+  if (isLoadingOrganization) {
+    return <Skeleton className="h-10 w-full" />;
+  }
 
   const handlePartnerLocationSelect = useCallback((location: Tables<'partner_locations'>) => {
     if (isUpdatingLocation) return; // Prevent rapid updates
