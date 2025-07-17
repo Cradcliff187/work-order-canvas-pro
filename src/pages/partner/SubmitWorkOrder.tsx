@@ -45,9 +45,7 @@ const SubmitWorkOrder = () => {
       description: z.string().min(10, 'Description must be at least 10 characters'),
       organization_id: z.string().min(1, 'Organization is required'),
       partner_po_number: z.string().optional(),
-      partner_location_number: organization?.uses_partner_location_numbers
-        ? z.string().min(1, 'Location number is required')
-        : z.string().optional(),
+      partner_location_number: z.string().optional(),
       due_date: z.string().optional(),
     });
 
