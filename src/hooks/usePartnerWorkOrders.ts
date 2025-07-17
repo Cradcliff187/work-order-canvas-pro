@@ -256,7 +256,53 @@ export function useCreateWorkOrder() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data, variables) => {
+      // Auto-save new partner location if applicable
+      try {
+        const shouldSaveLocation = variables.partner_location_number && 
+          variables.organization_id &&
+          variables.location_street_address &&
+          variables.location_city &&
+          variables.location_state &&
+          variables.location_zip_code;
+
+        if (shouldSaveLocation) {
+          // Check if location already exists
+          const { data: existingLocation } = await supabase
+            .from('partner_locations')
+            .select('id')
+            .eq('organization_id', variables.organization_id)
+            .eq('location_number', variables.partner_location_number!)
+            .maybeSingle();
+
+          // Only create if location doesn't exist
+          if (!existingLocation) {
+            const { error: locationError } = await supabase
+              .from('partner_locations')
+              .insert({
+                organization_id: variables.organization_id,
+                location_number: variables.partner_location_number!,
+                location_name: variables.store_location || variables.location_name || 'New Location',
+                street_address: variables.location_street_address,
+                city: variables.location_city,
+                state: variables.location_state,
+                zip_code: variables.location_zip_code,
+                is_active: true
+              });
+
+            if (locationError) {
+              console.warn('Failed to auto-save partner location:', locationError.message);
+            } else {
+              // Invalidate partner locations cache
+              queryClient.invalidateQueries({ queryKey: ['partner-locations'] });
+              console.log('Auto-saved new partner location:', variables.partner_location_number);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error during location auto-save:', error);
+      }
+
       queryClient.invalidateQueries({ queryKey: ['partner-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['partner-work-order-stats'] });
       toast({ 
