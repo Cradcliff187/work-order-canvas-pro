@@ -147,11 +147,6 @@ export function LocationFields({
   }, [form]);
 
   const handleAddNewLocation = useCallback(async () => {
-    // Safety check: prevent execution if actively loading
-    if (isLoadingOrganization) {
-      return;
-    }
-    
     setManualEntryMode(true);
     setLocationSearchOpen(false);
     setPartnerLocationSelected(false);
