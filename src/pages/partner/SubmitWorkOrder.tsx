@@ -176,7 +176,12 @@ const SubmitWorkOrder = () => {
   const getCurrentStepFields = (): (keyof WorkOrderFormData)[] => {
     switch (currentStep) {
       case 1:
-        return []; // LocationFields handles its own validation internally
+        // Step 1 validation based on organization settings
+        if (organization?.uses_partner_location_numbers) {
+          return ['store_location', 'partner_location_number'];
+        } else {
+          return ['store_location'];
+        }
       case 2:
         return ['trade_id', 'description'];
       case 3:
