@@ -288,10 +288,10 @@ export function useCreateWorkOrder() {
                   organization_id: variables.organization_id,
                   location_number: locationNumber,
                   location_name: variables.store_location,
-                  street_address: variables.street_address,
-                  city: variables.city,
-                  state: variables.state,
-                  zip_code: variables.zip_code,
+                  street_address: variables.location_street_address,
+                  city: variables.location_city,
+                  state: variables.location_state,
+                  zip_code: variables.location_zip_code,
                   is_active: true
                 });
 
