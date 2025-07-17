@@ -308,7 +308,13 @@ export function useCreateWorkOrder() {
                 .from('partner_locations')
                 .insert(insertData);
 
+              console.log('🔍 DEBUG: Partner location creation result:', { 
+                createError, 
+                success: !createError 
+              });
+
               if (!createError) {
+                console.log('🔍 DEBUG: Partner location created successfully');
                 // Update the work order with the new location number
                 await supabase
                   .from('work_orders')
