@@ -36,12 +36,24 @@ export function LocationFields({
   showPoNumber = true,
   className 
 }: LocationFieldsProps) {
+  console.log('🔍 LocationFields render start', {
+    organizationId,
+    organizationType,
+    showPoNumber,
+    className
+  });
+
+  console.log('1️⃣ Before useAutoOrganization');
   const { organizationId: autoOrgId, organizationType: autoOrgType } = useAutoOrganization();
+  
+  console.log('2️⃣ Before useToast');
   const { toast } = useToast();
   
   // Use auto-detected organization if not provided
   const effectiveOrganizationId = organizationId || autoOrgId;
   const effectiveOrganizationType = organizationType || autoOrgType;
+  
+  console.log('3️⃣ Before useState calls');
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationSearchValue, setLocationSearchValue] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<LocationSuggestion | null>(null);
@@ -51,20 +63,25 @@ export function LocationFields({
   const [isGeneratingNumber, setIsGeneratingNumber] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
+  console.log('4️⃣ Before useOrganization');
   // Query organization data to get uses_partner_location_numbers setting
   const { data: organization, isLoading: isLoadingOrganization } = useOrganization(
     effectiveOrganizationId || ''
   );
 
+  console.log('5️⃣ Before useLocationSuggestions');
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
     organizationId: effectiveOrganizationId,
     searchTerm: locationSearchValue,
     enabled: !!effectiveOrganizationId
   });
 
+  console.log('6️⃣ Before usePartnerOrganizationLocations');
   const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerOrganizationLocations(
     effectiveOrganizationId
   );
+
+  console.log('7️⃣ Before useCallback hooks');
 
   if (isLoadingOrganization) {
     return <Skeleton className="h-10 w-full" />;
