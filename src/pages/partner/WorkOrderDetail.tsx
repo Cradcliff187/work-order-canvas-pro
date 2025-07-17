@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, MapPin, Calendar, User, Wrench, FileText, Clock, Printer } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Wrench, FileText, Clock, Printer, Phone, Mail } from 'lucide-react';
 import { useWorkOrderById } from '@/hooks/usePartnerWorkOrders';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
@@ -178,6 +178,59 @@ const WorkOrderDetail = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* On-Site Contact */}
+          {(workOrder.location_contact_name || workOrder.location_contact_phone || workOrder.location_contact_email) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  On-Site Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {workOrder.location_contact_name && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <h4 className="font-medium">Contact Name</h4>
+                      <p className="text-muted-foreground">{workOrder.location_contact_name}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {workOrder.location_contact_phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <h4 className="font-medium">Phone</h4>
+                      <a 
+                        href={`tel:${workOrder.location_contact_phone}`}
+                        className="text-primary hover:underline"
+                      >
+                        {workOrder.location_contact_phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                
+                {workOrder.location_contact_email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <h4 className="font-medium">Email</h4>
+                      <a 
+                        href={`mailto:${workOrder.location_contact_email}`}
+                        className="text-primary hover:underline"
+                      >
+                        {workOrder.location_contact_email}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Work Details */}
           <Card>
