@@ -184,12 +184,12 @@ export function LocationFields({
   
   // Stabilize computed values with useMemo
   const showLocationDetails = useMemo(() => {
-    // Only show location details for manual entry or location search/suggestions
-    // NOT for partner location selections from dropdown
+    // Show location details for manual entry, location search/suggestions, OR partner location selections
     const hasManualEntry = manualEntryMode;
     const hasSelectedLocation = selectedLocation !== null;
-    return hasManualEntry || hasSelectedLocation;
-  }, [manualEntryMode, selectedLocation]);
+    const hasPartnerLocationSelected = partnerLocationSelected;
+    return hasManualEntry || hasSelectedLocation || hasPartnerLocationSelected;
+  }, [manualEntryMode, selectedLocation, partnerLocationSelected]);
 
   console.log('Manual Entry Mode:', manualEntryMode);
   console.log('Selected Location:', selectedLocation);
