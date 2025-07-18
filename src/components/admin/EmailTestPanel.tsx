@@ -24,12 +24,64 @@ interface TestResult {
   details?: any;
 }
 
+interface TestData {
+  workOrderId?: string;
+  reportId?: string;
+  userId?: string;
+}
+
 export const EmailTestPanel = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [testResults, setTestResults] = useState<{ [key: string]: TestResult }>({});
   const [testEmail, setTestEmail] = useState('chris.l.radcliff@gmail.com');
   const [isWorkflowTesting, setIsWorkflowTesting] = useState(false);
+  const [testData, setTestData] = useState<TestData>({});
+
+  // Fetch real test data from the database
+  const fetchTestData = async (): Promise<TestData> => {
+    try {
+      // Get a real work order ID
+      const { data: workOrders } = await supabase
+        .from('work_orders')
+        .select('id')
+        .limit(1)
+        .single();
+
+      // Get a real work order report ID
+      const { data: reports } = await supabase
+        .from('work_order_reports')
+        .select('id')
+        .limit(1)
+        .single();
+
+      // Get a real user profile ID for testing
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', testEmail)
+        .limit(1)
+        .single();
+
+      const data: TestData = {
+        workOrderId: workOrders?.id || 'b0f84a38-b56b-487b-8a6e-416fba0e9a53', // Fallback to known ID
+        reportId: reports?.id || 'cc03669c-ec52-4eb6-8ab5-0a276807bfb1', // Fallback to known ID
+        userId: profiles?.id || undefined
+      };
+
+      setTestData(data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch test data:', error);
+      // Use fallback IDs from your database
+      const fallbackData: TestData = {
+        workOrderId: 'b0f84a38-b56b-487b-8a6e-416fba0e9a53',
+        reportId: 'cc03669c-ec52-4eb6-8ab5-0a276807bfb1'
+      };
+      setTestData(fallbackData);
+      return fallbackData;
+    }
+  };
 
   const testEmailFunction = async (functionName: string, payload: any) => {
     try {
@@ -57,20 +109,15 @@ export const EmailTestPanel = () => {
     setIsLoading(true);
     
     try {
+      // Fetch real test data first
+      const data = await fetchTestData();
       let result: TestResult;
 
       switch (testType) {
         case 'welcome':
-          // Create a test user entry for welcome email
-          const { data: testUser } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', testEmail)
-            .single();
-
-          if (testUser) {
+          if (data.userId) {
             result = await testEmailFunction('email-welcome-user', {
-              userId: testUser.id,
+              userId: data.userId,
               temporaryPassword: 'Test123!'
             });
           } else {
@@ -83,26 +130,26 @@ export const EmailTestPanel = () => {
 
         case 'work_order_created':
           result = await testEmailFunction('email-work-order-created', {
-            workOrderId: 'test-wo-id'
+            workOrderId: data.workOrderId
           });
           break;
 
         case 'work_order_assigned':
           result = await testEmailFunction('email-work-order-assigned', {
-            workOrderId: 'test-wo-id',
-            assignedUserId: 'test-user-id'
+            workOrderId: data.workOrderId,
+            assignedUserId: data.userId || 'test-user-id'
           });
           break;
 
         case 'report_submitted':
           result = await testEmailFunction('email-report-submitted', {
-            reportId: 'test-report-id'
+            reportId: data.reportId
           });
           break;
 
         case 'report_reviewed':
           result = await testEmailFunction('email-report-reviewed', {
-            reportId: 'test-report-id',
+            reportId: data.reportId,
             status: 'approved',
             reviewNotes: 'Great work! Report approved.'
           });
@@ -110,7 +157,7 @@ export const EmailTestPanel = () => {
 
         case 'work_order_completed':
           result = await testEmailFunction('email-work-order-completed', {
-            workOrderId: 'test-wo-id'
+            workOrderId: data.workOrderId
           });
           break;
 
@@ -191,31 +238,31 @@ export const EmailTestPanel = () => {
       key: 'work_order_created',
       title: 'Work Order Created',
       description: 'Test new work order notification to admins',
-      status: 'Phase 2 Complete'
+      status: 'Phase 1 - IONOS SMTP'
     },
     {
       key: 'work_order_assigned',
       title: 'Work Order Assigned',
       description: 'Test work order assignment notification',
-      status: 'Phase 2 Complete'
+      status: 'Phase 2 Next'
     },
     {
       key: 'report_submitted',
       title: 'Report Submitted',
       description: 'Test report submission notification to admins',
-      status: 'Phase 2 Complete'
+      status: 'Phase 2 Next'
     },
     {
       key: 'report_reviewed',
       title: 'Report Reviewed',
       description: 'Test report review notification to subcontractor',
-      status: 'Phase 2 Complete'
+      status: 'Phase 2 Next'
     },
     {
       key: 'work_order_completed',
       title: 'Work Order Completed',
       description: 'Test completion notification to partners',
-      status: 'Phase 2 Complete'
+      status: 'Phase 2 Next'
     }
   ];
 
@@ -224,10 +271,10 @@ export const EmailTestPanel = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Mail className="h-5 w-5" />
-          Email System Testing
+          Email System Testing - IONOS SMTP Implementation
         </CardTitle>
         <CardDescription>
-          Test all email functions with IONOS SMTP configuration. Phase 2 & 3 Complete - All Edge Functions Created & Integrated
+          Phase 1: Testing email-work-order-created with IONOS SMTP. Real database IDs: Work Order {testData.workOrderId || 'loading...'}, Report {testData.reportId || 'loading...'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -268,7 +315,10 @@ export const EmailTestPanel = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm">{test.title}</CardTitle>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge 
+                      variant={test.key === 'work_order_created' ? 'default' : 'secondary'} 
+                      className="text-xs"
+                    >
                       {test.status}
                     </Badge>
                   </div>
@@ -319,10 +369,11 @@ export const EmailTestPanel = () => {
         <Alert>
           <Mail className="h-4 w-4" />
           <AlertDescription>
-            <strong>Phase Status:</strong> 
-            <br />✅ Phase 2 Complete: All 6 edge functions created and deployed
-            <br />✅ Phase 3 Complete: Email templates integrated with variable replacement
-            <br />⏳ Phase 4 In Progress: Workflow automation triggers added
+            <strong>Phase 1 Status:</strong> 
+            <br />✅ IONOS SMTP configured for email-work-order-created
+            <br />✅ Real database IDs loaded for testing
+            <br />✅ Using denomailer@1.6.0 for Deno SMTP
+            <br />⏳ Testing with support@workorderportal.com sender
             <br />All emails send through IONOS SMTP from <strong>AKC-WorkOrderPortal &lt;support@workorderportal.com&gt;</strong>.
           </AlertDescription>
         </Alert>
