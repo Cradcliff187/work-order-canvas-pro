@@ -1496,10 +1496,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      trigger_completion_email: {
-        Args: { work_order_id: string }
-        Returns: undefined
-      }
       user_assigned_to_work_order: {
         Args: { wo_id: string }
         Returns: boolean
