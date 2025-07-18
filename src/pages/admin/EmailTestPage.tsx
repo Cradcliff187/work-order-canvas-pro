@@ -1,14 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserMutations } from '@/hooks/useUsers';
+import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
 import { 
   Mail, 
   CheckCircle, 
@@ -19,7 +20,8 @@ import {
   Loader2,
   Server,
   Database,
-  User
+  User,
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,7 +52,7 @@ const EmailTestPage = () => {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
   
   const [testForm, setTestForm] = useState<TestUserForm>({
-    email: '',
+    email: 'chris.l.radcliff@gmail.com',
     first_name: 'Test',
     last_name: 'User',
     user_type: 'employee',
@@ -83,7 +85,7 @@ const EmailTestPage = () => {
         .from('email_logs')
         .select('*')
         .order('sent_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) throw error;
       setEmailLogs(data || []);
@@ -111,7 +113,6 @@ const EmailTestPage = () => {
         first_name: testForm.first_name,
         last_name: testForm.last_name,
         user_type: testForm.user_type,
-        
       });
 
       setTestResult({
@@ -128,7 +129,7 @@ const EmailTestPage = () => {
       // Clear form
       setTestForm(prev => ({
         ...prev,
-        email: '',
+        email: 'chris.l.radcliff@gmail.com',
         first_name: 'Test',
         last_name: 'User'
       }));
@@ -168,7 +169,7 @@ const EmailTestPage = () => {
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Email System Testing</h1>
-        <p className="text-muted-foreground">Test email functionality and monitor delivery status</p>
+        <p className="text-muted-foreground">Test email functionality with IONOS SMTP configuration</p>
       </div>
 
       {/* System Status */}
@@ -177,7 +178,49 @@ const EmailTestPage = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Server className="h-4 w-4" />
-              Edge Function
+              IONOS SMTP
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <span className="text-sm">Configured</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              support@workorderportal.com
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Database className="h-4 w-4" />
+              Email Logs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <span className="text-sm">{emailLogs.length} recent entries</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchEmailLogs}
+              className="mt-2 p-0 h-auto text-xs"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Refresh
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Mail className="h-4 w-4" />
+              Edge Functions
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -196,36 +239,11 @@ const EmailTestPage = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Database className="h-4 w-4" />
-              Email Logs
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" />
-              <span className="text-sm">{emailLogs.length} recent entries</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Mail className="h-4 w-4" />
-              Supabase Email
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" />
-              <span className="text-sm">Built-in service</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Email Function Tests */}
+      <div className="mb-6">
+        <EmailTestPanel />
       </div>
 
       {/* Test User Creation */}
@@ -236,7 +254,7 @@ const EmailTestPage = () => {
             Create Test User
           </CardTitle>
           <CardDescription>
-            Test the user creation process and email delivery
+            Test the user creation process and welcome email delivery
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -332,7 +350,6 @@ const EmailTestPage = () => {
                   <TableHead>Recipient</TableHead>
                   <TableHead>Template</TableHead>
                   <TableHead>Sent</TableHead>
-                  <TableHead>Delivered</TableHead>
                   <TableHead>Error</TableHead>
                 </TableRow>
               </TableHeader>
@@ -349,9 +366,6 @@ const EmailTestPage = () => {
                     <TableCell>{log.template_used || 'N/A'}</TableCell>
                     <TableCell>{new Date(log.sent_at).toLocaleString()}</TableCell>
                     <TableCell>
-                      {log.delivered_at ? new Date(log.delivered_at).toLocaleString() : '-'}
-                    </TableCell>
-                    <TableCell>
                       {log.error_message ? (
                         <span className="text-destructive text-sm">{log.error_message}</span>
                       ) : (
@@ -364,7 +378,7 @@ const EmailTestPage = () => {
             </Table>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              No email logs found. Create a test user to generate email activity.
+              No email logs found. Test email functions to generate activity.
             </div>
           )}
         </CardContent>
