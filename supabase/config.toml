@@ -21,3 +21,6 @@ verify_jwt = false
 
 [functions.email-welcome-user]
 verify_jwt = false
+
+[functions.test-smtp]
+verify_jwt = false
