@@ -410,17 +410,36 @@ export function LocationFields({
       {/* Location Details Section */}
       {showLocationDetails && (
         <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Location Details</h3>
-            <p className="text-sm text-muted-foreground">
-              Complete the address details
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="store_location"
+           <div>
+             <h3 className="text-lg font-medium">Location Details</h3>
+             <p className="text-sm text-muted-foreground">
+               Complete the address details
+             </p>
+           </div>
+           
+           <div className="space-y-4">
+             {organization?.uses_partner_location_numbers && (
+               <FormField
+                 control={form.control}
+                 name="partner_location_number"
+                 render={({ field }) => (
+                   <FormItem>
+                     <FormLabel>Location Number <span className="text-destructive"> *</span></FormLabel>
+                     <FormControl>
+                       <Input placeholder="Enter location number (e.g., 504)" {...field} />
+                     </FormControl>
+                     <p className="text-sm text-muted-foreground">
+                       This organization requires a location number for each location
+                     </p>
+                     <FormMessage />
+                   </FormItem>
+                 )}
+               />
+             )}
+
+             <FormField
+               control={form.control}
+               name="store_location"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Store/Location Name {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
