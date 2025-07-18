@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -20,9 +21,11 @@ import {
   Calendar,
   Eye,
   Power,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react';
 import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
+import { EmailRecipientsTab } from '@/components/admin/EmailRecipientsTab';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { format } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
@@ -37,6 +40,7 @@ const AdminEmailTemplates: React.FC = () => {
   const [viewingTemplate, setViewingTemplate] = useState<EmailTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<EmailTemplate | null>(null);
+  const [activeTab, setActiveTab] = useState('templates');
   
   const {
     templates,
@@ -152,7 +156,7 @@ const AdminEmailTemplates: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Email Templates</h1>
           <p className="text-muted-foreground">
-            Manage email templates for automated notifications
+            Manage email templates and recipient settings for automated notifications
           </p>
         </div>
         
@@ -162,158 +166,177 @@ const AdminEmailTemplates: React.FC = () => {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Mail className="h-5 w-5 mr-2" />
-            Email Templates
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search templates..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Templates
+          </TabsTrigger>
+          <TabsTrigger value="recipients" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Recipients
+          </TabsTrigger>
+        </TabsList>
 
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="mt-2 text-muted-foreground">Loading templates...</p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Template Name</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Updated</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTemplates.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
-                        <div className="flex flex-col items-center gap-2">
-                          <Mail className="h-8 w-8 text-muted-foreground" />
-                          <p className="text-muted-foreground">
-                            {searchTerm ? 'No templates found matching your search.' : 'No email templates found.'}
-                          </p>
-                          {!searchTerm && (
-                            <Button variant="outline" onClick={handleCreate}>
-                              <Plus className="h-4 w-4 mr-2" />
-                              Create your first template
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredTemplates.map((template) => (
-                      <TableRow key={template.id}>
-                        <TableCell className="font-medium font-mono">
-                          {template.template_name}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {template.subject}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={template.is_active}
-                              onCheckedChange={() => handleToggleActive(template)}
-                              disabled={toggleActive.isPending}
-                            />
-                            <Badge variant={template.is_active ? 'default' : 'secondary'}>
-                              {template.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {format(new Date(template.updated_at), 'MMM dd, yyyy')}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <TableActionsDropdown
-                            actions={[
-                              {
-                                label: 'View Details',
-                                icon: Eye,
-                                onClick: () => handleView(template)
-                              },
-                              {
-                                label: 'Edit',
-                                icon: Edit,
-                                onClick: () => handleEdit(template)
-                              },
-                              {
-                                label: 'Toggle Active',
-                                icon: Power,
-                                onClick: () => handleToggleActive(template)
-                              },
-                              {
-                                label: 'Delete',
-                                icon: Trash2,
-                                onClick: () => setDeletingTemplate(template),
-                                variant: 'destructive' as const
-                              }
-                            ]}
-                            itemName={template.template_name}
-                            align="end"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Database Verification Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Eye className="h-5 w-5 mr-2" />
-            Database Verification
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Active email templates in database: {templates?.filter(t => t.is_active).length || 0} of {templates?.length || 0} total
-            </p>
-            {templates && templates.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {templates.map((template) => (
-                  <div key={template.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-mono text-sm font-medium">{template.template_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{template.subject}</p>
-                    </div>
-                    <Badge variant={template.is_active ? 'default' : 'secondary'} className="ml-2">
-                      {template.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-                ))}
+        <TabsContent value="templates" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Mail className="h-5 w-5 mr-2" />
+                Email Templates
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search templates..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+
+              {isLoading ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="mt-2 text-muted-foreground">Loading templates...</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Template Name</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Updated</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTemplates.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            <div className="flex flex-col items-center gap-2">
+                              <Mail className="h-8 w-8 text-muted-foreground" />
+                              <p className="text-muted-foreground">
+                                {searchTerm ? 'No templates found matching your search.' : 'No email templates found.'}
+                              </p>
+                              {!searchTerm && (
+                                <Button variant="outline" onClick={handleCreate}>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Create your first template
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredTemplates.map((template) => (
+                          <TableRow key={template.id}>
+                            <TableCell className="font-medium font-mono">
+                              {template.template_name}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {template.subject}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  checked={template.is_active}
+                                  onCheckedChange={() => handleToggleActive(template)}
+                                  disabled={toggleActive.isPending}
+                                />
+                                <Badge variant={template.is_active ? 'default' : 'secondary'}>
+                                  {template.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                {format(new Date(template.updated_at), 'MMM dd, yyyy')}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <TableActionsDropdown
+                                actions={[
+                                  {
+                                    label: 'View Details',
+                                    icon: Eye,
+                                    onClick: () => handleView(template)
+                                  },
+                                  {
+                                    label: 'Edit',
+                                    icon: Edit,
+                                    onClick: () => handleEdit(template)
+                                  },
+                                  {
+                                    label: 'Toggle Active',
+                                    icon: Power,
+                                    onClick: () => handleToggleActive(template)
+                                  },
+                                  {
+                                    label: 'Delete',
+                                    icon: Trash2,
+                                    onClick: () => setDeletingTemplate(template),
+                                    variant: 'destructive' as const
+                                  }
+                                ]}
+                                itemName={template.template_name}
+                                align="end"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Database Verification Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Eye className="h-5 w-5 mr-2" />
+                Database Verification
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Active email templates in database: {templates?.filter(t => t.is_active).length || 0} of {templates?.length || 0} total
+                </p>
+                {templates && templates.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {templates.map((template) => (
+                      <div key={template.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-mono text-sm font-medium">{template.template_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{template.subject}</p>
+                        </div>
+                        <Badge variant={template.is_active ? 'default' : 'secondary'} className="ml-2">
+                          {template.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="recipients">
+          <EmailRecipientsTab />
+        </TabsContent>
+      </Tabs>
 
       <DeleteConfirmationDialog
         open={!!deletingTemplate}
