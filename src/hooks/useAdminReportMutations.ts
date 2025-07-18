@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -68,16 +69,8 @@ export function useAdminReportMutations() {
         description: `The report has been ${variables.status} successfully.` 
       });
 
-      // Trigger email notification
-      supabase.functions.invoke('email-report-reviewed', {
-        body: { 
-          reportId: variables.reportId,
-          status: variables.status,
-          reviewNotes: variables.reviewNotes
-        }
-      }).catch(error => {
-        
-      });
+      // Email system has been disabled - report review completed without notification
+      console.log(`Report ${variables.reportId} ${variables.status} - email notifications disabled`);
     },
     onError: (error: any) => {
       toast({ 
@@ -145,6 +138,9 @@ export function useAdminReportMutations() {
         title: `${variables.reportIds.length} reports ${variables.status}`, 
         description: `The reports have been ${variables.status} successfully.` 
       });
+
+      // Email system has been disabled - bulk review completed without notifications
+      console.log(`${variables.reportIds.length} reports ${variables.status} - email notifications disabled`);
     },
     onError: (error: any) => {
       toast({ 
