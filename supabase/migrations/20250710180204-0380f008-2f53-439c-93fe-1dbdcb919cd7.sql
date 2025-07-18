@@ -1,3 +1,4 @@
+
 -- Insert default email templates
 INSERT INTO public.email_templates (template_name, subject, html_content, is_active) VALUES
 ('work_order_received', 'New Work Order #{{workOrderNumber}} Received', 
@@ -45,15 +46,6 @@ true),
 <li><strong>Invoice Amount:</strong> ${{invoiceAmount}}</li>
 </ul>
 <a href="{{reviewUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Review & Approve Report</a>', 
-true),
-
-('report_reviewed', 'Your Work Report for #{{workOrderNumber}} has been {{status}}', 
-'<h1>Work Report {{status}}</h1>
-<p>Hello {{subcontractorName}},</p>
-<p>Your work completion report for work order #{{workOrderNumber}} has been reviewed and {{status}}.</p>
-<h3>Review Notes:</h3>
-<p>{{reviewNotes}}</p>
-<a href="{{reportUrl}}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Report Details</a>', 
 true),
 
 ('work_order_completed', 'Work Order #{{workOrderNumber}} Completed', 
