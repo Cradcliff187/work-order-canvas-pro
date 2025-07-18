@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -12,7 +13,9 @@ import {
   Send,
   Loader2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Clock,
+  Workflow
 } from 'lucide-react';
 
 interface TestResult {
@@ -26,6 +29,7 @@ export const EmailTestPanel = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [testResults, setTestResults] = useState<{ [key: string]: TestResult }>({});
   const [testEmail, setTestEmail] = useState('chris.l.radcliff@gmail.com');
+  const [isWorkflowTesting, setIsWorkflowTesting] = useState(false);
 
   const testEmailFunction = async (functionName: string, payload: any) => {
     try {
@@ -149,36 +153,69 @@ export const EmailTestPanel = () => {
     }
   };
 
+  const runWorkflowTest = async () => {
+    setIsWorkflowTesting(true);
+    toast({
+      title: 'Workflow Test Started',
+      description: 'Testing complete work order email lifecycle...'
+    });
+
+    const tests = [
+      'work_order_created',
+      'work_order_assigned', 
+      'report_submitted',
+      'report_reviewed',
+      'work_order_completed'
+    ];
+
+    for (const test of tests) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Delay between tests
+      await runEmailTest(test);
+    }
+
+    setIsWorkflowTesting(false);
+    toast({
+      title: 'Workflow Test Complete',
+      description: 'All workflow emails have been tested'
+    });
+  };
+
   const emailTests = [
     {
       key: 'welcome',
       title: 'Welcome Email',
-      description: 'Test new user welcome email'
+      description: 'Test new user welcome email',
+      status: 'Phase 2 Complete'
     },
     {
       key: 'work_order_created',
       title: 'Work Order Created',
-      description: 'Test new work order notification to admins'
+      description: 'Test new work order notification to admins',
+      status: 'Phase 2 Complete'
     },
     {
       key: 'work_order_assigned',
       title: 'Work Order Assigned',
-      description: 'Test work order assignment notification'
+      description: 'Test work order assignment notification',
+      status: 'Phase 2 Complete'
     },
     {
       key: 'report_submitted',
       title: 'Report Submitted',
-      description: 'Test report submission notification to admins'
+      description: 'Test report submission notification to admins',
+      status: 'Phase 2 Complete'
     },
     {
       key: 'report_reviewed',
       title: 'Report Reviewed',
-      description: 'Test report review notification to subcontractor'
+      description: 'Test report review notification to subcontractor',
+      status: 'Phase 2 Complete'
     },
     {
       key: 'work_order_completed',
       title: 'Work Order Completed',
-      description: 'Test completion notification to partners'
+      description: 'Test completion notification to partners',
+      status: 'Phase 2 Complete'
     }
   ];
 
@@ -190,7 +227,7 @@ export const EmailTestPanel = () => {
           Email System Testing
         </CardTitle>
         <CardDescription>
-          Test all email functions with IONOS SMTP configuration
+          Test all email functions with IONOS SMTP configuration. Phase 2 & 3 Complete - All Edge Functions Created & Integrated
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -205,6 +242,21 @@ export const EmailTestPanel = () => {
               placeholder="test@example.com"
             />
           </div>
+          <div className="flex items-end">
+            <Button
+              onClick={runWorkflowTest}
+              disabled={isWorkflowTesting || !testEmail}
+              className="flex items-center gap-2"
+              variant="outline"
+            >
+              {isWorkflowTesting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Workflow className="h-4 w-4" />
+              )}
+              Test Complete Workflow
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -214,7 +266,12 @@ export const EmailTestPanel = () => {
             return (
               <Card key={test.key} className="border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">{test.title}</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">{test.title}</CardTitle>
+                    <Badge variant="secondary" className="text-xs">
+                      {test.status}
+                    </Badge>
+                  </div>
                   <CardDescription className="text-xs">
                     {test.description}
                   </CardDescription>
@@ -224,7 +281,7 @@ export const EmailTestPanel = () => {
                     <Button
                       size="sm"
                       onClick={() => runEmailTest(test.key)}
-                      disabled={isLoading || !testEmail}
+                      disabled={isLoading || !testEmail || isWorkflowTesting}
                       className="flex items-center gap-2"
                     >
                       {isLoading ? (
@@ -262,8 +319,11 @@ export const EmailTestPanel = () => {
         <Alert>
           <Mail className="h-4 w-4" />
           <AlertDescription>
-            All emails will be sent through IONOS SMTP from <strong>AKC-WorkOrderPortal &lt;support@workorderportal.com&gt;</strong>.
-            Check your email logs in the admin dashboard for delivery status.
+            <strong>Phase Status:</strong> 
+            <br />✅ Phase 2 Complete: All 6 edge functions created and deployed
+            <br />✅ Phase 3 Complete: Email templates integrated with variable replacement
+            <br />⏳ Phase 4 In Progress: Workflow automation triggers added
+            <br />All emails send through IONOS SMTP from <strong>AKC-WorkOrderPortal &lt;support@workorderportal.com&gt;</strong>.
           </AlertDescription>
         </Alert>
       </CardContent>

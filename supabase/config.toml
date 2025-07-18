@@ -1,7 +1,23 @@
+
 project_id = "inudoymofztrvxhrlrek"
 
 [functions.setup-test-environment]
 verify_jwt = false
 
 [functions.email-report-reviewed]
+verify_jwt = false
+
+[functions.email-work-order-created]
+verify_jwt = false
+
+[functions.email-work-order-assigned]
+verify_jwt = false
+
+[functions.email-report-submitted]
+verify_jwt = false
+
+[functions.email-work-order-completed]
+verify_jwt = false
+
+[functions.email-welcome-user]
 verify_jwt = false
