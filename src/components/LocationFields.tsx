@@ -1,6 +1,7 @@
+
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { Building2, MapPin, ExternalLink, Plus, Loader2 } from 'lucide-react';
+import { Building2, MapPin, ExternalLink, Plus, Loader2, User, Phone, Mail } from 'lucide-react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -81,6 +82,10 @@ export function LocationFields({
     form.setValue('location_city', location.city || '');
     form.setValue('location_state', location.state || '');
     form.setValue('location_zip_code', location.zip_code || '');
+    // Contact information fields
+    form.setValue('location_contact_name', location.contact_name || '');
+    form.setValue('location_contact_phone', location.contact_phone || '');
+    form.setValue('location_contact_email', location.contact_email || '');
     // Legacy fields for backward compatibility
     form.setValue('street_address', location.street_address || '');
     form.setValue('city', location.city || '');
@@ -106,6 +111,9 @@ export function LocationFields({
     form.setValue('location_city', '');
     form.setValue('location_state', '');
     form.setValue('location_zip_code', '');
+    form.setValue('location_contact_name', '');
+    form.setValue('location_contact_phone', '');
+    form.setValue('location_contact_email', '');
   }, [form]);
 
   const handleAddNewLocation = useCallback(() => {
@@ -128,6 +136,9 @@ export function LocationFields({
     form.setValue('location_city', '');
     form.setValue('location_state', '');
     form.setValue('location_zip_code', '');
+    form.setValue('location_contact_name', '');
+    form.setValue('location_contact_phone', '');
+    form.setValue('location_contact_email', '');
     // Also clear legacy fields
     form.setValue('street_address', '');
     form.setValue('city', '');
@@ -157,33 +168,36 @@ export function LocationFields({
       {/* Location Selection Section */}
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-medium flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
+          <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
+            <MapPin className="h-5 w-5 text-primary" />
             Location Information
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-1">
             {shouldShowPartnerLocations && !manualEntryMode 
-              ? "Select from your saved locations or add a new one" 
+              ? "Select from saved locations or add a new one" 
               : orgData?.uses_partner_location_numbers 
-                ? "Enter a location number and details for this work order"
-                : "Location details will be auto-generated when saved"
+                ? "Enter location details for this work order"
+                : "Location details will be captured when saved"
             }
           </p>
         </div>
 
         {shouldShowPartnerLocations && !manualEntryMode ? (
-          // Partner Locations Selection Mode
-          <FormField
-            control={form.control}
-            name="partner_location_selection"
-            render={() => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Select Location
-                </FormLabel>
-                <FormControl>
-                  <div className="space-y-3">
+          // Saved Locations Mode
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-foreground">Saved Locations</h4>
+              <Badge variant="secondary" className="text-xs">
+                {partnerLocations?.length} locations
+              </Badge>
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="partner_location_selection"
+              render={() => (
+                <FormItem>
+                  <FormControl>
                     <Select onValueChange={(value) => {
                       if (value === "add_new") {
                         handleAddNewLocation();
@@ -194,18 +208,18 @@ export function LocationFields({
                         }
                       }
                     }} value={selectedLocationId}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder={isLoadingPartnerLocations ? "Loading locations..." : "Choose from saved locations"} />
+                      <SelectTrigger className="h-12 bg-background">
+                        <SelectValue placeholder={isLoadingPartnerLocations ? "Loading locations..." : "Choose a saved location"} />
                       </SelectTrigger>
                       <SelectContent>
                         {partnerLocations?.map((location) => (
                           <SelectItem key={location.id} value={location.id}>
-                            <div className="flex items-center gap-3 py-1">
-                              <Badge variant="secondary" className="font-mono">
+                            <div className="flex items-center gap-3 py-2">
+                              <Badge variant="outline" className="font-mono text-xs">
                                 {location.location_number}
                               </Badge>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{location.location_name}</span>
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium text-sm">{location.location_name}</span>
                                 {location.street_address && (
                                   <span className="text-xs text-muted-foreground">
                                     {location.street_address}, {location.city}, {location.state}
@@ -216,96 +230,99 @@ export function LocationFields({
                           </SelectItem>
                         ))}
                         <SelectItem value="add_new" className="border-t">
-                          <div className="flex items-center gap-2 text-primary font-medium py-1">
+                          <div className="flex items-center gap-2 text-primary font-medium py-2">
                             <Plus className="h-4 w-4" />
                             <span>Add New Location</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                </FormControl>
-              </FormItem>
-            )}
-          />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            {/* Mobile Add New Button */}
+            <div className="md:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddNewLocation}
+                className="w-full h-12 justify-start bg-background"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Location
+              </Button>
+            </div>
+          </div>
         ) : (
           // Manual Entry Mode
-          <FormField
-            control={form.control}
-            name="partner_location_number"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Location Number {orgData?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
-                  {isGeneratingNumber && <span className="text-sm text-muted-foreground">(generating...)</span>}
-                </FormLabel>
-                <FormControl>
-                  {orgData?.uses_partner_location_numbers ? (
-                    <Input
-                      {...field}
-                      placeholder="Enter location number (e.g., 001, ABC-123)"
-                      className="h-11"
-                    />
-                  ) : (
-                    <div className="relative">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-foreground">Manual Entry</h4>
+              {shouldShowPartnerLocations && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setManualEntryMode(false);
+                    setSelectedLocationId('');
+                    clearLocationSelection();
+                  }}
+                  className="text-muted-foreground hover:text-foreground text-xs"
+                >
+                  ← Back to saved locations
+                </Button>
+              )}
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="partner_location_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Location Number {orgData?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
+                    {isGeneratingNumber && <span className="text-xs text-muted-foreground">(generating...)</span>}
+                  </FormLabel>
+                  <FormControl>
+                    {orgData?.uses_partner_location_numbers ? (
                       <Input
                         {...field}
-                        placeholder="Will be auto-generated"
-                        className="h-11 bg-muted/50"
-                        disabled
+                        placeholder="Enter location number (e.g., 001, ABC-123)"
+                        className="h-11 bg-background"
                       />
-                      <Badge variant="outline" className="absolute right-3 top-3">
-                        Auto
-                      </Badge>
-                    </div>
-                  )}
-                </FormControl>
-                {shouldShowPartnerLocations && manualEntryMode && (
-                  <div className="mt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setManualEntryMode(false);
-                        setSelectedLocationId('');
-                        clearLocationSelection();
-                      }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      ← Back to saved locations
-                    </Button>
-                  </div>
-                )}
-              </FormItem>
-            )}
-          />
-        )}
-
-        {/* Add New Location Button for Mobile */}
-        {shouldShowPartnerLocations && !manualEntryMode && (
-          <div className="md:hidden">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddNewLocation}
-              className="w-full h-11 text-left justify-start"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Location
-            </Button>
+                    ) : (
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          placeholder="Will be auto-generated"
+                          className="h-11 bg-muted/30"
+                          disabled
+                        />
+                        <Badge variant="secondary" className="absolute right-3 top-3 text-xs">
+                          Auto
+                        </Badge>
+                      </div>
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         )}
       </div>
 
       {/* Location Details Section */}
       {showLocationDetails && (
-        <Card className="border-primary/20">
-          <CardContent className="p-4 md:p-6 space-y-4">
+        <Card className="border-primary/20 bg-background">
+          <CardContent className="p-6 space-y-6">
             <div className="flex items-center justify-between">
-              <h4 className="text-base font-medium flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
+              <h4 className="text-base font-semibold flex items-center gap-2 text-foreground">
+                <Building2 className="h-4 w-4 text-primary" />
                 Location Details
               </h4>
               <div className="flex items-center gap-2">
@@ -326,7 +343,7 @@ export function LocationFields({
                         });
                       }
                     }}
-                    className="text-muted-foreground hover:text-foreground hidden md:flex"
+                    className="text-muted-foreground hover:text-foreground hidden md:flex text-xs"
                   >
                     <ExternalLink className="h-4 w-4 mr-1" />
                     Directions
@@ -337,32 +354,38 @@ export function LocationFields({
                   variant="ghost"
                   size="sm"
                   onClick={clearLocationSelection}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground text-xs"
                 >
                   Clear
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="store_location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Location Name *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g. Downtown Office, Main Store, Store #123" 
-                        className="h-11"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Location Name */}
+            <FormField
+              control={form.control}
+              name="store_location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Location Name *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="e.g. Downtown Office, Main Store, Store #123" 
+                      className="h-11 bg-background"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            {/* Address Fields */}
+            <div className="space-y-4">
+              <h5 className="text-sm font-medium text-foreground border-b border-border pb-2">
+                Address Information
+              </h5>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -373,7 +396,7 @@ export function LocationFields({
                       <FormControl>
                         <Input 
                           placeholder="123 Main Street" 
-                          className="h-11"
+                          className="h-11 bg-background"
                           {...field} 
                         />
                       </FormControl>
@@ -391,7 +414,7 @@ export function LocationFields({
                       <FormControl>
                         <Input 
                           placeholder="City" 
-                          className="h-11"
+                          className="h-11 bg-background"
                           {...field} 
                         />
                       </FormControl>
@@ -408,7 +431,7 @@ export function LocationFields({
                       <FormLabel className="text-sm font-medium">State</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-11">
+                          <SelectTrigger className="h-11 bg-background">
                             <SelectValue placeholder="Select state" />
                           </SelectTrigger>
                         </FormControl>
@@ -434,7 +457,82 @@ export function LocationFields({
                       <FormControl>
                         <Input 
                           placeholder="12345" 
-                          className="h-11"
+                          className="h-11 bg-background"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Site Contact Information */}
+            <div className="space-y-4">
+              <h5 className="text-sm font-medium text-foreground border-b border-border pb-2 flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" />
+                Site Contact Information
+                <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+              </h5>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="location_contact_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        Contact Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="John Smith" 
+                          className="h-11 bg-background"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location_contact_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium flex items-center gap-2">
+                        <Phone className="h-3 w-3" />
+                        Phone Number
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="(555) 123-4567" 
+                          className="h-11 bg-background"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location_contact_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium flex items-center gap-2">
+                        <Mail className="h-3 w-3" />
+                        Email Address
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="contact@company.com" 
+                          type="email"
+                          className="h-11 bg-background"
                           {...field} 
                         />
                       </FormControl>
@@ -450,11 +548,11 @@ export function LocationFields({
 
       {/* Purchase Information Section */}
       {showPoNumber && (
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <h4 className="text-base font-medium mb-4 flex items-center gap-2">
-              <div className="h-4 w-4 rounded-full bg-muted flex items-center justify-center">
-                <span className="text-xs">#</span>
+        <Card className="bg-background">
+          <CardContent className="p-6">
+            <h4 className="text-base font-semibold mb-4 flex items-center gap-2 text-foreground">
+              <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-xs text-primary font-medium">#</span>
               </div>
               Purchase Information
             </h4>
@@ -467,7 +565,7 @@ export function LocationFields({
                   <FormControl>
                     <Input 
                       placeholder="Enter purchase order number" 
-                      className="h-11"
+                      className="h-11 bg-background"
                       {...field} 
                     />
                   </FormControl>
