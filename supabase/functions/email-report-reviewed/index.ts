@@ -1,5 +1,7 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.4';
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,12 +101,32 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     try {
-      // Use Supabase Auth admin to send email
-      const { error: emailError } = await supabase.auth.admin.sendEmail({
-        email: recipientEmail,
+      console.log(`Attempting to send email to ${recipientEmail}`);
+      
+      // Create SMTP client for email
+      const client = new SMTPClient({
+        connection: {
+          hostname: Deno.env.get('IONOS_SMTP_HOST') || 'smtp.ionos.com',
+          port: parseInt(Deno.env.get('IONOS_SMTP_PORT') || '587'),
+          tls: true,
+          auth: {
+            username: Deno.env.get('IONOS_SMTP_USER') || '',
+            password: Deno.env.get('IONOS_SMTP_PASS') || '',
+          },
+        },
+      });
+
+      // Send email
+      await client.send({
+        from: "AKC-WorkOrderPortal <support@workorderportal.com>",
+        to: recipientEmail,
         subject: subject,
+        content: emailContent,
         html: emailContent,
       });
+
+      // Close the client
+      await client.close();
 
       // Log email attempt
       const { error: logError } = await supabase
@@ -112,28 +134,12 @@ const handler = async (req: Request): Promise<Response> => {
         .insert({
           recipient_email: recipientEmail,
           template_used: 'report_reviewed',
-          status: emailError ? 'failed' : 'sent',
-          error_message: emailError?.message || null,
+          status: 'sent',
           sent_at: new Date().toISOString()
         });
 
       if (logError) {
         console.error('Failed to log email:', logError);
-      }
-
-      if (emailError) {
-        console.error('Failed to send email:', emailError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: emailError.message,
-            logged: !logError 
-          }),
-          {
-            status: 200, // Don't fail the main operation if email fails
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-          }
-        );
       }
 
       console.log('Email sent successfully to:', recipientEmail);

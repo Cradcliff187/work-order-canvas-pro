@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.4';
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -96,12 +97,32 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/{{description}}/g, workOrderData.description || 'No description provided');
 
     try {
+      console.log(`Attempting to send email to ${assignedUser.email}`);
+      
+      // Create SMTP client for email
+      const client = new SMTPClient({
+        connection: {
+          hostname: Deno.env.get('IONOS_SMTP_HOST') || 'smtp.ionos.com',
+          port: parseInt(Deno.env.get('IONOS_SMTP_PORT') || '587'),
+          tls: true,
+          auth: {
+            username: Deno.env.get('IONOS_SMTP_USER') || '',
+            password: Deno.env.get('IONOS_SMTP_PASS') || '',
+          },
+        },
+      });
+
       // Send email to assigned user
-      const { error: emailError } = await supabase.auth.admin.sendEmail({
-        email: assignedUser.email,
+      await client.send({
+        from: "AKC-WorkOrderPortal <support@workorderportal.com>",
+        to: assignedUser.email,
         subject: subject,
+        content: emailContent,
         html: emailContent,
       });
+
+      // Close the client
+      await client.close();
 
       // Log email attempt
       await supabase
@@ -110,24 +131,9 @@ const handler = async (req: Request): Promise<Response> => {
           work_order_id: workOrderId,
           recipient_email: assignedUser.email,
           template_used: 'work_order_assigned',
-          status: emailError ? 'failed' : 'sent',
-          error_message: emailError?.message || null,
+          status: 'sent',
           sent_at: new Date().toISOString()
         });
-
-      if (emailError) {
-        console.error('Failed to send assignment email:', emailError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: emailError.message 
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-          }
-        );
-      }
 
       console.log('Assignment email sent successfully to:', assignedUser.email);
       

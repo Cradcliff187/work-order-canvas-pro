@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.4';
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -87,12 +88,32 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     try {
+      console.log(`Attempting to send welcome email to ${userData.email}`);
+      
+      // Create SMTP client for email
+      const client = new SMTPClient({
+        connection: {
+          hostname: Deno.env.get('IONOS_SMTP_HOST') || 'smtp.ionos.com',
+          port: parseInt(Deno.env.get('IONOS_SMTP_PORT') || '587'),
+          tls: true,
+          auth: {
+            username: Deno.env.get('IONOS_SMTP_USER') || '',
+            password: Deno.env.get('IONOS_SMTP_PASS') || '',
+          },
+        },
+      });
+
       // Send welcome email
-      const { error: emailError } = await supabase.auth.admin.sendEmail({
-        email: userData.email,
+      await client.send({
+        from: "AKC-WorkOrderPortal <support@workorderportal.com>",
+        to: userData.email,
         subject: subject,
+        content: emailContent,
         html: emailContent,
       });
+
+      // Close the client
+      await client.close();
 
       // Log email attempt
       await supabase
@@ -100,24 +121,9 @@ const handler = async (req: Request): Promise<Response> => {
         .insert({
           recipient_email: userData.email,
           template_used: 'welcome_email',
-          status: emailError ? 'failed' : 'sent',
-          error_message: emailError?.message || null,
+          status: 'sent',
           sent_at: new Date().toISOString()
         });
-
-      if (emailError) {
-        console.error('Failed to send welcome email:', emailError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: emailError.message 
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-          }
-        );
-      }
 
       console.log('Welcome email sent successfully to:', userData.email);
       
