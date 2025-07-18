@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +23,7 @@ import { RecentActivity } from '@/components/admin/RecentActivity';
 import { SystemVerificationPanel } from '@/components/admin/SystemVerificationPanel';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -89,6 +89,9 @@ const AdminDashboard = () => {
 
       {/* System Verification Panel */}
       <SystemVerificationPanel />
+
+      {/* Email Test Panel */}
+      <EmailTestPanel />
 
       {/* Metrics Overview */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
