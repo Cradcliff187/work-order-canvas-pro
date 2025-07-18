@@ -65,9 +65,15 @@ const SubmitWorkOrder = () => {
         });
       }
 
-      // Check if we're in new location mode (manual entry or no partner location)
-      const hasPartnerLocation = data.partner_location_number && !data.location_street_address;
-      const isNewLocation = !hasPartnerLocation && (data.location_street_address || data.location_city || data.location_state || data.location_zip_code);
+      // Check if user selected an existing location from dropdown (will have all fields pre-filled)
+      const selectedExistingLocation = data.partner_location_number && 
+        data.location_street_address && 
+        data.location_city && 
+        data.location_state && 
+        data.location_zip_code;
+
+      // If not all fields are filled, we're in manual entry mode
+      const isNewLocation = !selectedExistingLocation;
       
       if (isNewLocation) {
         // If any location field is filled, all required fields must be filled
