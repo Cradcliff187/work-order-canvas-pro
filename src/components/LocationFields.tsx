@@ -16,6 +16,7 @@ import { useLocationSuggestions, formatLocationDisplay, getDirectionsUrl, Locati
 import { usePartnerOrganizationLocations } from '@/hooks/usePartnerOrganizationLocations';
 import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import { useOrganization } from '@/hooks/useOrganizations';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
@@ -53,10 +54,16 @@ export function LocationFields({
   const [isGeneratingNumber, setIsGeneratingNumber] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
-  // Query organization data to get uses_partner_location_numbers setting
+  // Get the user's organization data
+  const { organization: userOrg, loading: loadingUserOrg } = useUserOrganization();
+
+  // Use user's organization if no specific org ID provided
   const { data: organization, isLoading: isLoadingOrganization } = useOrganization(
     effectiveOrganizationId || ''
   );
+
+  // Use whichever organization data is available
+  const orgData = organization || userOrg;
 
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
     organizationId: effectiveOrganizationId,
@@ -155,7 +162,7 @@ export function LocationFields({
     setSelectedLocationId(''); // This clears the dropdown selection
     
     // Only clear location number field if organization doesn't require manual entry
-    if (!organization?.uses_partner_location_numbers) {
+    if (!orgData?.uses_partner_location_numbers) {
       form.setValue('partner_location_number', '');
     }
     
@@ -170,7 +177,7 @@ export function LocationFields({
     form.setValue('city', '');
     form.setValue('state', '');
     form.setValue('zip_code', '');
-  }, [form, organization?.uses_partner_location_numbers]);
+  }, [form, orgData?.uses_partner_location_numbers]);
 
   // Move all hook calls before conditional return
   const watchedLocationNumber = form.watch('partner_location_number');
@@ -195,14 +202,14 @@ export function LocationFields({
   useEffect(() => {
     console.log('=== LOCATION FIELDS DEBUG ===');
     console.log('Organization ID:', effectiveOrganizationId);
-    console.log('Organization Data:', organization);
-    console.log('Uses Partner Location Numbers:', organization?.uses_partner_location_numbers);
-    console.log('Is Loading:', isLoadingOrganization);
+    console.log('Organization Data:', orgData);
+    console.log('Uses Partner Location Numbers:', orgData?.uses_partner_location_numbers);
+    console.log('Is Loading:', isLoadingOrganization || loadingUserOrg);
     console.log('Show Location Details:', showLocationDetails);
-  }, [organization, effectiveOrganizationId, isLoadingOrganization, showLocationDetails]);
+  }, [orgData, effectiveOrganizationId, isLoadingOrganization, loadingUserOrg, showLocationDetails]);
 
   // All hooks declared above - now check loading state
-  if (isLoadingOrganization && !effectiveOrganizationId) {
+  if ((isLoadingOrganization || loadingUserOrg) && !effectiveOrganizationId) {
     return <Skeleton className="h-10 w-full" />;
   }
 
@@ -230,7 +237,7 @@ export function LocationFields({
             <FormItem>
               <FormLabel className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Location {organization?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
+                Location {orgData?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
                 {isGeneratingNumber && <span className="text-sm text-muted-foreground">(generating...)</span>}
               </FormLabel>
               <FormControl>
@@ -300,18 +307,18 @@ export function LocationFields({
                           field.value
                         ) : isLoadingOrganization ? (
                           "Loading organization..."
-                        ) : organization === null ? (
-                          "No organization selected"
-                        ) : (() => {
-                          console.log('🔍 LocationFields: Button text decision:', {
-                            organization,
-                            uses_partner_location_numbers: organization?.uses_partner_location_numbers,
-                            typeof_uses_partner_location_numbers: typeof organization?.uses_partner_location_numbers
-                          });
-                          return organization?.uses_partner_location_numbers ? 
-                            "Enter location number, name, or search existing" : 
-                            "Auto-generated when saved";
-                        })()}
+                         ) : orgData === null ? (
+                           "No organization selected"
+                         ) : (() => {
+                           console.log('🔍 LocationFields: Button text decision:', {
+                             orgData,
+                             uses_partner_location_numbers: orgData?.uses_partner_location_numbers,
+                             typeof_uses_partner_location_numbers: typeof orgData?.uses_partner_location_numbers
+                           });
+                           return orgData?.uses_partner_location_numbers ? 
+                             "Enter location number, name, or search existing" : 
+                             "Auto-generated when saved";
+                         })()}
                         <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
