@@ -103,6 +103,41 @@ export type Database = {
           },
         ]
       }
+      email_recipient_settings: {
+        Row: {
+          created_at: string
+          id: string
+          receives_email: boolean
+          role: Database["public"]["Enums"]["user_type"]
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          receives_email?: boolean
+          role: Database["public"]["Enums"]["user_type"]
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          receives_email?: boolean
+          role?: Database["public"]["Enums"]["user_type"]
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_recipient_settings_template_name_fkey"
+            columns: ["template_name"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["template_name"]
+          },
+        ]
+      }
       email_settings: {
         Row: {
           id: string
