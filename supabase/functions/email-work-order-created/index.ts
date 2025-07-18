@@ -87,22 +87,27 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/{{description}}/g, workOrderData.description || 'No description provided')
       .replace(/{{title}}/g, workOrderData.title || 'N/A');
 
-    // Initialize SMTP client with IONOS configuration
-    const client = new SMTPClient({
-      connection: {
-        hostname: Deno.env.get('IONOS_SMTP_HOST') || 'smtp.ionos.com',
-        port: parseInt(Deno.env.get('IONOS_SMTP_PORT') || '587'),
-        tls: true,
-        auth: {
-          username: Deno.env.get('IONOS_SMTP_USER') || '',
-          password: Deno.env.get('IONOS_SMTP_PASS') || '',
-        },
-      },
-    });
-
-    // Send emails to all admin users
-    const emailPromises = adminUsers.map(async (admin) => {
+    // Send emails individually with proper error handling
+    const results = [];
+    
+    for (const admin of adminUsers) {
       try {
+        console.log(`Attempting to send email to ${admin.email}`);
+        
+        // Create new SMTP client for each email
+        const client = new SMTPClient({
+          connection: {
+            hostname: Deno.env.get('IONOS_SMTP_HOST') || 'smtp.ionos.com',
+            port: parseInt(Deno.env.get('IONOS_SMTP_PORT') || '587'),
+            tls: true,
+            auth: {
+              username: Deno.env.get('IONOS_SMTP_USER') || '',
+              password: Deno.env.get('IONOS_SMTP_PASS') || '',
+            },
+          },
+        });
+
+        // Send the email
         await client.send({
           from: "AKC-WorkOrderPortal <support@workorderportal.com>",
           to: admin.email,
@@ -110,6 +115,9 @@ const handler = async (req: Request): Promise<Response> => {
           content: emailContent,
           html: emailContent,
         });
+
+        // Close the client
+        await client.close();
 
         // Log successful email
         await supabase
@@ -123,7 +131,8 @@ const handler = async (req: Request): Promise<Response> => {
           });
 
         console.log(`Email sent successfully to ${admin.email}`);
-        return { email: admin.email, success: true, error: null };
+        results.push({ email: admin.email, success: true, error: null });
+
       } catch (error: any) {
         console.error(`Failed to send email to ${admin.email}:`, error);
         
@@ -139,22 +148,19 @@ const handler = async (req: Request): Promise<Response> => {
             sent_at: new Date().toISOString()
           });
 
-        return { email: admin.email, success: false, error: error.message };
+        results.push({ email: admin.email, success: false, error: error.message });
       }
-    });
+    }
 
-    await client.close();
+    const successCount = results.filter(r => r.success).length;
 
-    const emailResults = await Promise.all(emailPromises);
-    const successCount = emailResults.filter(r => r.success).length;
-
-    console.log(`Sent ${successCount}/${emailResults.length} emails successfully`);
+    console.log(`Sent ${successCount}/${results.length} emails successfully`);
     
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: `Email notifications sent to ${successCount} admin users`,
-        details: emailResults
+        details: results
       }),
       {
         status: 200,
