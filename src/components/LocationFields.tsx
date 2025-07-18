@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Building2, MapPin, ExternalLink, Plus, Loader2 } from 'lucide-react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -57,14 +57,6 @@ export function LocationFields({
   const { data: organization, isLoading: isLoadingOrganization } = useOrganization(
     effectiveOrganizationId || ''
   );
-
-  console.log('🔍 LocationFields: Organization data check:', {
-    effectiveOrganizationId,
-    organization,
-    uses_partner_location_numbers: organization?.uses_partner_location_numbers,
-    isLoadingOrganization,
-    route: window.location.pathname
-  });
 
   const { data: locationSuggestions, isLoading } = useLocationSuggestions({
     organizationId: effectiveOrganizationId,
@@ -191,6 +183,15 @@ export function LocationFields({
     const hasSelectedLocation = selectedLocation !== null;
     return hasManualEntry || hasSelectedLocation;
   }, [manualEntryMode, selectedLocation]);
+
+  useEffect(() => {
+    console.log('=== LOCATION FIELDS DEBUG ===');
+    console.log('Organization ID:', effectiveOrganizationId);
+    console.log('Organization Data:', organization);
+    console.log('Uses Partner Location Numbers:', organization?.uses_partner_location_numbers);
+    console.log('Is Loading:', isLoadingOrganization);
+    console.log('Show Location Details:', showLocationDetails);
+  }, [organization, effectiveOrganizationId, isLoadingOrganization, showLocationDetails]);
 
   // All hooks declared above - now check loading state
   if (isLoadingOrganization && !effectiveOrganizationId) {
