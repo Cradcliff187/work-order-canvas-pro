@@ -53,18 +53,31 @@ const handler = async (req: Request): Promise<Response> => {
     const subject = template?.subject || `Welcome to WorkOrderPortal - ${userData.first_name} ${userData.last_name}`;
     
     let emailContent = template?.html_content || `
-      <h2>Welcome to WorkOrderPortal!</h2>
-      <p>Hello {{first_name}} {{last_name}},</p>
-      <p>Your WorkOrderPortal account has been created successfully! You can now access the system.</p>
-      <div style="background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 5px;">
-        <h3>Your Login Credentials:</h3>
-        <p><strong>Email:</strong> {{email}}</p>
-        {{#if temporary_password}}<p><strong>Temporary Password:</strong> {{temporary_password}}</p>{{/if}}
-        <p><strong>Account Type:</strong> {{user_type}}</p>
-      </div>
-      <p>{{#if temporary_password}}<strong>Important:</strong> Please change your password after your first login for security purposes.{{/if}}</p>
-      <p>If you have any questions or need assistance, please contact your administrator.</p>
-      <p>Best regards,<br/>The WorkOrderPortal Team</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to WorkOrderPortal</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Welcome to WorkOrderPortal!</h2>
+        <p>Hello {{first_name}} {{last_name}},</p>
+        <p>Your WorkOrderPortal account has been created successfully! You can now access the system.</p>
+        <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Your Login Credentials:</h3>
+          <p><strong>Email:</strong> {{email}}</p>
+          ${temporaryPassword ? `<p><strong>Temporary Password:</strong> ${temporaryPassword}</p>` : ''}
+          <p><strong>Account Type:</strong> {{user_type}}</p>
+        </div>
+        ${temporaryPassword ? '<p style="color: #dc2626;"><strong>Important:</strong> Please change your password after your first login for security purposes.</p>' : ''}
+        <p>If you have any questions or need assistance, please contact your administrator.</p>
+        <p>Best regards,<br/>The WorkOrderPortal Team</p>
+        <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+          This email was sent by WorkOrderPro - Work Order Management System
+        </p>
+      </body>
+      </html>
     `;
 
     // Replace template variables
@@ -75,17 +88,11 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/{{user_type}}/g, userData.user_type || 'user')
       .replace(/{{site_url}}/g, 'https://workorderportal.com');
 
-    // Handle conditional temporary password
-    if (temporaryPassword) {
-      emailContent = emailContent.replace(/{{#if temporary_password}}.*?{{\/if}}/gs, (match) => {
-        return match
-          .replace(/{{#if temporary_password}}/g, '')
-          .replace(/{{\/if}}/g, '')
-          .replace(/{{temporary_password}}/g, temporaryPassword);
-      });
-    } else {
-      emailContent = emailContent.replace(/{{#if temporary_password}}.*?{{\/if}}/gs, '');
-    }
+    // Create plain text version
+    const textContent = emailContent
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
 
     try {
       console.log(`Attempting to send welcome email to ${userData.email}`);
@@ -103,13 +110,17 @@ const handler = async (req: Request): Promise<Response> => {
         },
       });
 
-      // Send welcome email
+      // Send welcome email with proper MIME headers
       await client.send({
-        from: "support@workorderportal.com",
+        from: "WorkOrderPro <support@workorderportal.com>",
         to: userData.email,
         subject: subject,
-        content: emailContent,
+        content: textContent,
         html: emailContent,
+        headers: {
+          "MIME-Version": "1.0",
+          "Content-Type": "text/html; charset=utf-8",
+        },
       });
 
       // Close the client

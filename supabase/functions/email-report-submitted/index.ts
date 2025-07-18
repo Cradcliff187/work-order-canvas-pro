@@ -79,15 +79,30 @@ const handler = async (req: Request): Promise<Response> => {
     const subject = template?.subject || `Work Report Submitted - ${reportData.work_orders?.work_order_number}`;
     
     let emailContent = template?.html_content || `
-      <h2>Work Report Submitted</h2>
-      <p>A work completion report has been submitted and is ready for review.</p>
-      <p><strong>Work Order:</strong> {{work_order_number}}</p>
-      <p><strong>Subcontractor:</strong> {{subcontractor_name}}</p>
-      <p><strong>Organization:</strong> {{organization_name}}</p>
-      <p><strong>Location:</strong> {{store_location}}</p>
-      <p><strong>Work Performed:</strong> {{work_performed}}</p>
-      <p><strong>Invoice Amount:</strong> ${{invoice_amount}}</p>
-      <p>Please review and approve or request changes.</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Work Report Submitted</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Work Report Submitted</h2>
+        <p>A work completion report has been submitted and is ready for review.</p>
+        <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Work Order:</strong> {{work_order_number}}</p>
+          <p><strong>Subcontractor:</strong> {{subcontractor_name}}</p>
+          <p><strong>Organization:</strong> {{organization_name}}</p>
+          <p><strong>Location:</strong> {{store_location}}</p>
+          <p><strong>Work Performed:</strong> {{work_performed}}</p>
+          <p><strong>Invoice Amount:</strong> ${{invoice_amount}}</p>
+        </div>
+        <p>Please review and approve or request changes.</p>
+        <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+          This email was sent by WorkOrderPro - Work Order Management System
+        </p>
+      </body>
+      </html>
     `;
 
     const subcontractorName = reportData.profiles?.company_name || 
@@ -102,6 +117,12 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/{{store_location}}/g, reportData.work_orders?.store_location || 'N/A')
       .replace(/{{work_performed}}/g, reportData.work_performed || 'No details provided')
       .replace(/{{invoice_amount}}/g, reportData.invoice_amount?.toString() || '0.00');
+
+    // Create plain text version
+    const textContent = emailContent
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
 
     // Send emails to all admin users
     const emailPromises = adminUsers.map(async (admin) => {
@@ -121,13 +142,17 @@ const handler = async (req: Request): Promise<Response> => {
           },
         });
 
-        // Send email
+        // Send email with proper MIME headers
         await client.send({
-          from: "support@workorderportal.com",
+          from: "WorkOrderPro <support@workorderportal.com>",
           to: admin.email,
           subject: subject,
-          content: emailContent,
+          content: textContent,
           html: emailContent,
+          headers: {
+            "MIME-Version": "1.0",
+            "Content-Type": "text/html; charset=utf-8",
+          },
         });
 
         // Close the client

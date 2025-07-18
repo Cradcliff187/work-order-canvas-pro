@@ -69,17 +69,32 @@ const handler = async (req: Request): Promise<Response> => {
     const subject = template?.subject || `Work Order Assignment - ${workOrderData.work_order_number}`;
     
     let emailContent = template?.html_content || `
-      <h2>Work Order Assignment</h2>
-      <p>Hello {{first_name}},</p>
-      <p>You have been assigned a new work order. Please review the details below:</p>
-      <p><strong>Work Order:</strong> {{work_order_number}}</p>
-      <p><strong>Title:</strong> {{title}}</p>
-      <p><strong>Organization:</strong> {{organization_name}}</p>
-      <p><strong>Location:</strong> {{store_location}}</p>
-      <p><strong>Address:</strong> {{street_address}}, {{city}}, {{state}} {{zip_code}}</p>
-      <p><strong>Trade:</strong> {{trade_name}}</p>
-      <p><strong>Description:</strong> {{description}}</p>
-      <p>Please log in to view full details and begin work.</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Work Order Assignment</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Work Order Assignment</h2>
+        <p>Hello {{first_name}},</p>
+        <p>You have been assigned a new work order. Please review the details below:</p>
+        <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Work Order:</strong> {{work_order_number}}</p>
+          <p><strong>Title:</strong> {{title}}</p>
+          <p><strong>Organization:</strong> {{organization_name}}</p>
+          <p><strong>Location:</strong> {{store_location}}</p>
+          <p><strong>Address:</strong> {{street_address}}, {{city}}, {{state}} {{zip_code}}</p>
+          <p><strong>Trade:</strong> {{trade_name}}</p>
+          <p><strong>Description:</strong> {{description}}</p>
+        </div>
+        <p>Please log in to view full details and begin work.</p>
+        <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+          This email was sent by WorkOrderPro - Work Order Management System
+        </p>
+      </body>
+      </html>
     `;
 
     // Replace template variables
@@ -95,6 +110,12 @@ const handler = async (req: Request): Promise<Response> => {
       .replace(/{{zip_code}}/g, workOrderData.zip_code || 'N/A')
       .replace(/{{trade_name}}/g, workOrderData.trades?.name || 'N/A')
       .replace(/{{description}}/g, workOrderData.description || 'No description provided');
+
+    // Create plain text version
+    const textContent = emailContent
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
 
     try {
       console.log(`Attempting to send email to ${assignedUser.email}`);
@@ -112,13 +133,17 @@ const handler = async (req: Request): Promise<Response> => {
         },
       });
 
-      // Send email to assigned user
+      // Send email to assigned user with proper MIME headers
       await client.send({
-        from: "support@workorderportal.com",
+        from: "WorkOrderPro <support@workorderportal.com>",
         to: assignedUser.email,
         subject: subject,
-        content: emailContent,
+        content: textContent,
         html: emailContent,
+        headers: {
+          "MIME-Version": "1.0",
+          "Content-Type": "text/html; charset=utf-8",
+        },
       });
 
       // Close the client
