@@ -5,8 +5,6 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/comp
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,7 +15,6 @@ import { usePartnerOrganizationLocations } from '@/hooks/usePartnerOrganizationL
 import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import { useOrganization } from '@/hooks/useOrganizations';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -45,7 +42,6 @@ export function LocationFields({
   const effectiveOrganizationId = organizationId || autoOrgId;
   const effectiveOrganizationType = organizationType || autoOrgType;
   
-  const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationSearchValue, setLocationSearchValue] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<LocationSuggestion | null>(null);
   const [manualEntryMode, setManualEntryMode] = useState(false);
@@ -64,12 +60,6 @@ export function LocationFields({
 
   // Use whichever organization data is available
   const orgData = organization || userOrg;
-
-  const { data: locationSuggestions, isLoading } = useLocationSuggestions({
-    organizationId: effectiveOrganizationId,
-    searchTerm: locationSearchValue,
-    enabled: !!effectiveOrganizationId
-  });
 
   const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerOrganizationLocations(
     effectiveOrganizationId
@@ -98,43 +88,8 @@ export function LocationFields({
     form.setValue('zip_code', location.zip_code || '');
     
     // Update other state
-    setLocationSearchOpen(false);
     setManualEntryMode(false);
     setSelectedLocation(null);
-    
-    setIsUpdatingLocation(false);
-  }, [form, isUpdatingLocation]);
-
-  const handleLocationSelect = useCallback((suggestion: LocationSuggestion) => {
-    if (isUpdatingLocation) return; // Prevent rapid updates
-    
-    setIsUpdatingLocation(true);
-    
-    // Get current form values to preserve other data
-    const currentValues = form.getValues();
-    
-    // Batch all form updates into a single operation
-    form.reset({
-      ...currentValues,
-      partner_location_number: suggestion.location_number,
-      store_location: suggestion.location_name,
-      location_street_address: suggestion.location_street_address,
-      location_city: suggestion.location_city,
-      location_state: suggestion.location_state,
-      location_zip_code: suggestion.location_zip_code,
-      // Legacy fields for backward compatibility
-      street_address: suggestion.location_street_address,
-      city: suggestion.location_city,
-      state: suggestion.location_state,
-      zip_code: suggestion.location_zip_code
-    });
-    
-    // Update state in single batch
-    setSelectedLocation(suggestion);
-    setLocationSearchValue(suggestion.location_number);
-    setLocationSearchOpen(false);
-    setPartnerLocationSelected(false);
-    setSelectedLocationId('');
     
     setIsUpdatingLocation(false);
   }, [form, isUpdatingLocation]);
@@ -156,13 +111,14 @@ export function LocationFields({
   const handleAddNewLocation = useCallback(() => {
     // Clear all existing state and form data immediately
     setManualEntryMode(true);
-    setLocationSearchOpen(false);
     setPartnerLocationSelected(false);
     setSelectedLocation(null);
     setSelectedLocationId(''); // This clears the dropdown selection
     
-    // Only clear location number field if organization doesn't require manual entry
-    if (!orgData?.uses_partner_location_numbers) {
+    // Preserve typed location number for organizations that require manual entry
+    if (orgData?.uses_partner_location_numbers && locationSearchValue) {
+      form.setValue('partner_location_number', locationSearchValue);
+    } else if (!orgData?.uses_partner_location_numbers) {
       form.setValue('partner_location_number', '');
     }
     
@@ -177,11 +133,8 @@ export function LocationFields({
     form.setValue('city', '');
     form.setValue('state', '');
     form.setValue('zip_code', '');
-  }, [form, orgData?.uses_partner_location_numbers]);
+  }, [form, orgData?.uses_partner_location_numbers, locationSearchValue]);
 
-  // Move all hook calls before conditional return
-  const watchedLocationNumber = form.watch('partner_location_number');
-  
   // Stabilize computed values with useMemo
   const showLocationDetails = useMemo(() => {
     // Show location details for manual entry, location search/suggestions, OR partner location selections
@@ -191,23 +144,6 @@ export function LocationFields({
     return hasManualEntry || hasSelectedLocation || hasPartnerLocationSelected;
   }, [manualEntryMode, selectedLocation, partnerLocationSelected]);
 
-  console.log('Manual Entry Mode:', manualEntryMode);
-  console.log('Selected Location:', selectedLocation);
-  console.log('Show Location Details calculation:', {
-    manualEntryMode,
-    hasSelectedLocation: selectedLocation !== null,
-    result: showLocationDetails
-  });
-
-  useEffect(() => {
-    console.log('=== LOCATION FIELDS DEBUG ===');
-    console.log('Organization ID:', effectiveOrganizationId);
-    console.log('Organization Data:', orgData);
-    console.log('Uses Partner Location Numbers:', orgData?.uses_partner_location_numbers);
-    console.log('Is Loading:', isLoadingOrganization || loadingUserOrg);
-    console.log('Show Location Details:', showLocationDetails);
-  }, [orgData, effectiveOrganizationId, isLoadingOrganization, loadingUserOrg, showLocationDetails]);
-
   // All hooks declared above - now check loading state
   if ((isLoadingOrganization || loadingUserOrg) && !effectiveOrganizationId) {
     return <Skeleton className="h-10 w-full" />;
@@ -215,446 +151,332 @@ export function LocationFields({
 
   // Determine if we should show partner locations dropdown
   const shouldShowPartnerLocations = effectiveOrganizationId && partnerLocations && partnerLocations.length > 0;
-  
-  // Determine if we should use the search mode (fallback or manual entry)
-  const shouldUseSearchMode = !shouldShowPartnerLocations || manualEntryMode;
 
   return (
     <div className={cn("space-y-6", className)}>
       {/* Location Selection Section */}
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-medium">Location Selection</h3>
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Location Information
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Choose from existing locations or add a new one
+            {shouldShowPartnerLocations && !manualEntryMode 
+              ? "Select from your saved locations or add a new one" 
+              : orgData?.uses_partner_location_numbers 
+                ? "Enter a location number and details for this work order"
+                : "Location details will be auto-generated when saved"
+            }
           </p>
         </div>
 
-        <FormField
-          control={form.control}
-          name="partner_location_number"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Location {orgData?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
-                {isGeneratingNumber && <span className="text-sm text-muted-foreground">(generating...)</span>}
-              </FormLabel>
-              <FormControl>
-                {shouldShowPartnerLocations && !shouldUseSearchMode ? (
-                  // Partner Locations Dropdown
-                  <Select onValueChange={(value) => {
-                    if (value === "add_new") {
-                      handleAddNewLocation();
-                    } else {
-                      const location = partnerLocations?.find(loc => loc.id === value);
-                      if (location) {
-                        handlePartnerLocationSelect(location);
+        {shouldShowPartnerLocations && !manualEntryMode ? (
+          // Partner Locations Selection Mode
+          <FormField
+            control={form.control}
+            name="partner_location_selection"
+            render={() => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Select Location
+                </FormLabel>
+                <FormControl>
+                  <div className="space-y-3">
+                    <Select onValueChange={(value) => {
+                      if (value === "add_new") {
+                        handleAddNewLocation();
+                      } else {
+                        const location = partnerLocations?.find(loc => loc.id === value);
+                        if (location) {
+                          handlePartnerLocationSelect(location);
+                        }
                       }
-                    }
-                  }} value={selectedLocationId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingPartnerLocations ? "Loading..." : "Select a location"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {partnerLocations?.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">
-                              {location.location_number}
-                            </Badge>
-                            <span>{location.location_name}</span>
+                    }} value={selectedLocationId}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder={isLoadingPartnerLocations ? "Loading locations..." : "Choose from saved locations"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {partnerLocations?.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            <div className="flex items-center gap-3 py-1">
+                              <Badge variant="secondary" className="font-mono">
+                                {location.location_number}
+                              </Badge>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{location.location_name}</span>
+                                {location.street_address && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {location.street_address}, {location.city}, {location.state}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="add_new" className="border-t">
+                          <div className="flex items-center gap-2 text-primary font-medium py-1">
+                            <Plus className="h-4 w-4" />
+                            <span>Add New Location</span>
                           </div>
                         </SelectItem>
-                      ))}
-                      <SelectItem value="add_new" disabled={isLoadingOrganization}>
-                        <div className="flex items-center gap-2 text-primary">
-                          {isLoadingOrganization ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span className="text-muted-foreground">Loading...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="h-4 w-4" />
-                              <span>Add New Location</span>
-                            </>
-                          )}
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  // Search Mode (fallback or manual entry)
-                  <Popover open={locationSearchOpen} onOpenChange={setLocationSearchOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={locationSearchOpen}
-                        className="w-full justify-between"
-                        type="button"
-                        disabled={isGeneratingNumber}
-                      >
-                        {isGeneratingNumber ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating number...
-                          </>
-                        ) : field.value ? (
-                          field.value
-                        ) : field.value ? (
-                          field.value
-                        ) : isLoadingOrganization ? (
-                          "Loading organization..."
-                         ) : orgData === null ? (
-                           "No organization selected"
-                         ) : (() => {
-                           console.log('🔍 LocationFields: Button text decision:', {
-                             orgData,
-                             uses_partner_location_numbers: orgData?.uses_partner_location_numbers,
-                             typeof_uses_partner_location_numbers: typeof orgData?.uses_partner_location_numbers
-                           });
-                           return orgData?.uses_partner_location_numbers ? 
-                             "Enter location number, name, or search existing" : 
-                             "Auto-generated when saved";
-                         })()}
-                        <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
-                      <Command>
-                        <CommandInput 
-                          placeholder="Search by location number, name, or address..." 
-                          value={locationSearchValue}
-                          onValueChange={setLocationSearchValue}
-                        />
-                        <CommandList>
-                          <CommandEmpty>
-                            {isLoading ? "Searching..." : locationSearchValue ? "No matching locations found." : "Type to add a new location."}
-                          </CommandEmpty>
-                          {!locationSearchValue && locationSuggestions && locationSuggestions.length > 0 && (
-                            <CommandGroup heading="Recent Locations">
-                              {locationSuggestions.slice(0, 10).map((suggestion) => (
-                                <CommandItem
-                                  key={suggestion.location_number || suggestion.location_name}
-                                  value={suggestion.location_number || suggestion.location_name}
-                                  onSelect={() => handleLocationSelect(suggestion)}
-                                  className="flex flex-col items-start gap-1"
-                                >
-                                  <div className="flex items-center gap-2 w-full">
-                                    {suggestion.location_number && (
-                                      <Badge variant="secondary">
-                                        {suggestion.location_number}
-                                      </Badge>
-                                    )}
-                                    {suggestion.location_name && (
-                                      <span className="font-medium">
-                                        {suggestion.location_name}
-                                      </span>
-                                    )}
-                                    <Badge variant="outline" className="ml-auto">
-                                      Used {suggestion.usage_count}x
-                                    </Badge>
-                                  </div>
-                                  {suggestion.full_address && (
-                                    <span className="text-sm text-muted-foreground">
-                                      {suggestion.full_address}
-                                    </span>
-                                  )}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )}
-                          {locationSearchValue && (
-                            <CommandGroup heading={locationSuggestions && locationSuggestions.length > 0 ? "Search Results" : "No Results"}>
-                              {locationSuggestions?.map((suggestion) => (
-                                <CommandItem
-                                  key={suggestion.location_number || suggestion.location_number}
-                                  value={suggestion.location_number || suggestion.location_name}
-                                  onSelect={() => handleLocationSelect(suggestion)}
-                                  className="flex flex-col items-start gap-1"
-                                >
-                                  <div className="flex items-center gap-2 w-full">
-                                    {suggestion.location_number && (
-                                      <Badge variant="secondary">
-                                        {suggestion.location_number}
-                                      </Badge>
-                                    )}
-                                    {suggestion.location_name && (
-                                      <span className="font-medium">
-                                        {suggestion.location_name}
-                                      </span>
-                                    )}
-                                    <Badge variant="outline" className="ml-auto">
-                                      Used {suggestion.usage_count}x
-                                    </Badge>
-                                  </div>
-                                  {suggestion.full_address && (
-                                    <span className="text-sm text-muted-foreground">
-                                      {suggestion.full_address}
-                                    </span>
-                                  )}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )}
-                          {locationSearchValue && (
-                            <CommandItem
-                              onSelect={() => handleAddNewLocation()}
-                              className="flex items-center gap-2 text-primary"
-                            >
-                              <Plus className="h-4 w-4" />
-                              <span>Add "{locationSearchValue}" as new location</span>
-                            </CommandItem>
-                          )}
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        ) : (
+          // Manual Entry Mode
+          <FormField
+            control={form.control}
+            name="partner_location_number"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Location Number {orgData?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
+                  {isGeneratingNumber && <span className="text-sm text-muted-foreground">(generating...)</span>}
+                </FormLabel>
+                <FormControl>
+                  {orgData?.uses_partner_location_numbers ? (
+                    <Input
+                      {...field}
+                      placeholder="Enter location number (e.g., 001, ABC-123)"
+                      className="h-11"
+                    />
+                  ) : (
+                    <div className="relative">
+                      <Input
+                        {...field}
+                        placeholder="Will be auto-generated"
+                        className="h-11 bg-muted/50"
+                        disabled
+                      />
+                      <Badge variant="outline" className="absolute right-3 top-3">
+                        Auto
+                      </Badge>
+                    </div>
+                  )}
+                </FormControl>
+                {shouldShowPartnerLocations && manualEntryMode && (
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setManualEntryMode(false);
+                        setSelectedLocationId('');
+                        clearLocationSelection();
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      ← Back to saved locations
+                    </Button>
+                  </div>
                 )}
-              </FormControl>
-              <p className="text-sm text-muted-foreground mt-1">
-                Select a saved location or add new below
-              </p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* Add New Location Button for Mobile */}
+        {shouldShowPartnerLocations && !manualEntryMode && (
+          <div className="md:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddNewLocation}
+              className="w-full h-11 text-left justify-start"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Location
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Location Details Section */}
       {showLocationDetails && (
-        <div className="space-y-4">
-           <div>
-             <h3 className="text-lg font-medium">Location Details</h3>
-             <p className="text-sm text-muted-foreground">
-               Complete the address details
-             </p>
-           </div>
-           
-           <div className="space-y-4">
-             {organization?.uses_partner_location_numbers && (
-               <FormField
-                 control={form.control}
-                 name="partner_location_number"
-                 render={({ field }) => (
-                   <FormItem>
-                     <FormLabel>Location Number <span className="text-destructive"> *</span></FormLabel>
-                     <FormControl>
-                       <Input placeholder="Enter location number (e.g., 504)" {...field} />
-                     </FormControl>
-                     <p className="text-sm text-muted-foreground">
-                       This organization requires a location number for each location
-                     </p>
-                     <FormMessage />
-                   </FormItem>
-                 )}
-               />
-             )}
-
-             <FormField
-               control={form.control}
-               name="store_location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Store/Location Name {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
-                  <FormControl>
-                      <Input placeholder="Main Street Store" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+        <Card className="border-primary/20">
+          <CardContent className="p-4 md:p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-base font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Location Details
+              </h4>
+              <div className="flex items-center gap-2">
+                {selectedLocation && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const url = getDirectionsUrl(selectedLocation);
+                      if (url) {
+                        window.open(url, '_blank');
+                      } else {
+                        toast({
+                          title: "No address available",
+                          description: "Cannot get directions without a complete address.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-foreground hidden md:flex"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    Directions
+                  </Button>
                 )}
-              />
-
-            <FormField
-              control={form.control}
-              name="location_street_address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Street Address {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main Street" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="location_city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="City" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="location_state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {US_STATES.map((state) => (
-                          <SelectItem key={state.value} value={state.value}>
-                            {state.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="location_zip_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ZIP Code {showLocationDetails && <span className="text-destructive"> *</span>}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="12345" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearLocationSelection}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </Button>
+              </div>
             </div>
 
-            {/* On-Site Contact Information - Only show for new location creation */}
-            {showLocationDetails && (
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-md font-medium">On-Site Contact Information</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Optional contact details for this location
-                  </p>
-                </div>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="store_location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Location Name *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g. Downtown Office, Main Store, Store #123" 
+                        className="h-11"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="location_contact_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="location_contact_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="(555) 123-4567" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="location_street_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Street Address</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="123 Main Street" 
+                          className="h-11"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
-                  name="location_contact_email"
+                  name="location_city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
+                      <FormLabel className="text-sm font-medium">City</FormLabel>
                       <FormControl>
-                        <Input placeholder="contact@example.com" type="email" {...field} />
+                        <Input 
+                          placeholder="City" 
+                          className="h-11"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location_state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">State</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {US_STATES.map((state) => (
+                            <SelectItem key={state.value} value={state.value}>
+                              {state.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location_zip_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">ZIP Code</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="12345" 
+                          className="h-11"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-            )}
-
-            {(selectedLocation || partnerLocationSelected) && (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    {selectedLocation ? 
-                      formatLocationDisplay(selectedLocation) : 
-                      `${form.watch('partner_location_number')} - ${form.watch('store_location')}`
-                    }
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {selectedLocation && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(
-                        getDirectionsUrl(selectedLocation),
-                        '_blank'
-                      )}
-                      className="h-8 px-2"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Purchase Information Section */}
       {showPoNumber && (
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Purchase Information</h3>
-            <p className="text-sm text-muted-foreground">
-              Optional purchase order number for tracking
-            </p>
-          </div>
-
-          <FormField
-            control={form.control}
-            name="partner_po_number"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  PO Number <span className="text-sm text-muted-foreground">(Optional)</span>
-                </FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Purchase order number for tracking" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <Card>
+          <CardContent className="p-4 md:p-6">
+            <h4 className="text-base font-medium mb-4 flex items-center gap-2">
+              <div className="h-4 w-4 rounded-full bg-muted flex items-center justify-center">
+                <span className="text-xs">#</span>
+              </div>
+              Purchase Information
+            </h4>
+            <FormField
+              control={form.control}
+              name="partner_po_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">PO Number (Optional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter purchase order number" 
+                      className="h-11"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );
