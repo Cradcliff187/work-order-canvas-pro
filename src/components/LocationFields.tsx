@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Building2, MapPin, ExternalLink, Plus, Loader2, User, Phone, Mail } from 'lucide-react';
@@ -66,6 +65,26 @@ export function LocationFields({
     effectiveOrganizationId
   );
 
+  // Add field synchronization between new and legacy field names
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (!name) return;
+
+      // Sync new location fields to legacy fields for backward compatibility
+      if (name === 'location_street_address') {
+        form.setValue('street_address', value.location_street_address || '');
+      } else if (name === 'location_city') {
+        form.setValue('city', value.location_city || '');
+      } else if (name === 'location_state') {
+        form.setValue('state', value.location_state || '');
+      } else if (name === 'location_zip_code') {
+        form.setValue('zip_code', value.location_zip_code || '');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const handlePartnerLocationSelect = useCallback((location: Tables<'partner_locations'>) => {
     if (isUpdatingLocation) return; // Prevent rapid updates
     
@@ -114,6 +133,11 @@ export function LocationFields({
     form.setValue('location_contact_name', '');
     form.setValue('location_contact_phone', '');
     form.setValue('location_contact_email', '');
+    // Clear legacy fields too
+    form.setValue('street_address', '');
+    form.setValue('city', '');
+    form.setValue('state', '');
+    form.setValue('zip_code', '');
   }, [form]);
 
   const handleAddNewLocation = useCallback(() => {

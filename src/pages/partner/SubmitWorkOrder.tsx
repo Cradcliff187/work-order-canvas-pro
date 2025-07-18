@@ -542,8 +542,26 @@ const SubmitWorkOrder = () => {
                       <span className="font-medium">Location:</span> {form.watch('store_location')}
                     </div>
                     <div>
-                      <span className="font-medium">Address:</span> {form.watch('street_address')}, {form.watch('city')}, {form.watch('state')} {form.watch('zip_code')}
+                      <span className="font-medium">Address:</span>
+                      <p className="text-muted-foreground">
+                        {/* Prioritize new field names over legacy ones */}
+                        {form.watch('location_street_address') || form.watch('street_address')}, {' '}
+                        {form.watch('location_city') || form.watch('city')}, {' '}
+                        {form.watch('location_state') || form.watch('state')} {' '}
+                        {form.watch('location_zip_code') || form.watch('zip_code')}
+                      </p>
                     </div>
+                    {/* Show contact information if provided */}
+                    {(form.watch('location_contact_name') || form.watch('location_contact_phone') || form.watch('location_contact_email')) && (
+                      <div>
+                        <span className="font-medium">Site Contact:</span>
+                        <div className="mt-1 text-muted-foreground">
+                          {form.watch('location_contact_name') && <p>Name: {form.watch('location_contact_name')}</p>}
+                          {form.watch('location_contact_phone') && <p>Phone: {form.watch('location_contact_phone')}</p>}
+                          {form.watch('location_contact_email') && <p>Email: {form.watch('location_contact_email')}</p>}
+                        </div>
+                      </div>
+                    )}
                     {(form.watch('partner_po_number') || form.watch('partner_location_number')) && (
                       <div>
                         <span className="font-medium">Partner References:</span>
