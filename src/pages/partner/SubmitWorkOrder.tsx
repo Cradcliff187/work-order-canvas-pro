@@ -56,6 +56,15 @@ const SubmitWorkOrder = () => {
 
     // Add validation logic for when location details are required
     return baseSchema.superRefine((data, ctx) => {
+      // Check if location number is required by organization
+      if (organization?.uses_partner_location_numbers && !data.partner_location_number) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Location number is required for this organization',
+          path: ['partner_location_number'],
+        });
+      }
+
       // Check if we're in new location mode (manual entry or no partner location)
       const hasPartnerLocation = data.partner_location_number && !data.location_street_address;
       const isNewLocation = !hasPartnerLocation && (data.location_street_address || data.location_city || data.location_state || data.location_zip_code);
