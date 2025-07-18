@@ -93,8 +93,8 @@ const handler = async (req: Request): Promise<Response> => {
       // Create SMTP client for email
       const client = new SMTPClient({
         connection: {
-          hostname: Deno.env.get('IONOS_SMTP_HOST') || 'smtp.ionos.com',
-          port: parseInt(Deno.env.get('IONOS_SMTP_PORT') || '587'),
+          hostname: "smtp.ionos.com",
+          port: 587,
           tls: true,
           auth: {
             username: Deno.env.get('IONOS_SMTP_USER') || '',
@@ -105,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Send welcome email
       await client.send({
-        from: "AKC-WorkOrderPortal <support@workorderportal.com>",
+        from: "support@workorderportal.com",
         to: userData.email,
         subject: subject,
         content: emailContent,

@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.4';
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,11 +106,32 @@ const handler = async (req: Request): Promise<Response> => {
     // Send emails to all admin users
     const emailPromises = adminUsers.map(async (admin) => {
       try {
-        const { error: emailError } = await supabase.auth.admin.sendEmail({
-          email: admin.email,
+        console.log(`Attempting to send email to ${admin.email}`);
+        
+        // Create SMTP client for email
+        const client = new SMTPClient({
+          connection: {
+            hostname: "smtp.ionos.com",
+            port: 587,
+            tls: true,
+            auth: {
+              username: Deno.env.get('IONOS_SMTP_USER') || '',
+              password: Deno.env.get('IONOS_SMTP_PASS') || '',
+            },
+          },
+        });
+
+        // Send email
+        await client.send({
+          from: "support@workorderportal.com",
+          to: admin.email,
           subject: subject,
+          content: emailContent,
           html: emailContent,
         });
+
+        // Close the client
+        await client.close();
 
         // Log email attempt
         await supabase
@@ -118,14 +140,27 @@ const handler = async (req: Request): Promise<Response> => {
             work_order_id: reportData.work_order_id,
             recipient_email: admin.email,
             template_used: 'report_submitted',
-            status: emailError ? 'failed' : 'sent',
-            error_message: emailError?.message || null,
+            status: 'sent',
             sent_at: new Date().toISOString()
           });
 
-        return { email: admin.email, success: !emailError, error: emailError };
+        console.log(`Email sent successfully to ${admin.email}`);
+        return { email: admin.email, success: true, error: null };
       } catch (error: any) {
         console.error(`Failed to send email to ${admin.email}:`, error);
+        
+        // Log failed email
+        await supabase
+          .from('email_logs')
+          .insert({
+            work_order_id: reportData.work_order_id,
+            recipient_email: admin.email,
+            template_used: 'report_submitted',
+            status: 'failed',
+            error_message: error.message || 'Unknown error',
+            sent_at: new Date().toISOString()
+          });
+
         return { email: admin.email, success: false, error: error.message };
       }
     });

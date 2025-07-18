@@ -18,8 +18,8 @@ serve(async (req) => {
     // Test SMTP connection
     const client = new SMTPClient({
       connection: {
-        hostname: Deno.env.get('IONOS_SMTP_HOST') || 'smtp.ionos.com',
-        port: parseInt(Deno.env.get('IONOS_SMTP_PORT') || '587'),
+        hostname: "smtp.ionos.com",
+        port: 587,
         tls: true,
         auth: {
           username: Deno.env.get('IONOS_SMTP_USER') || '',
@@ -29,7 +29,7 @@ serve(async (req) => {
     });
 
     const testEmail = {
-      from: "AKC-WorkOrderPortal <support@workorderportal.com>",
+      from: "support@workorderportal.com",
       to: "cradcliff@austinkunzconstruction.com",
       subject: "SMTP Test - WorkOrderPortal",
       content: "This is a test email to verify SMTP configuration.",
