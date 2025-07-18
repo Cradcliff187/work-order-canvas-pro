@@ -142,7 +142,7 @@ const handler = async (req: Request): Promise<Response> => {
           },
         });
 
-        // Send email with proper MIME headers
+        // Send email with fixed MIME headers
         await client.send({
           from: "WorkOrderPro <support@workorderportal.com>",
           to: admin.email,
@@ -151,7 +151,6 @@ const handler = async (req: Request): Promise<Response> => {
           html: emailContent,
           headers: {
             "MIME-Version": "1.0",
-            "Content-Type": "text/html; charset=utf-8",
           },
         });
 
