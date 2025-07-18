@@ -184,6 +184,14 @@ export function LocationFields({
     return hasManualEntry || hasSelectedLocation;
   }, [manualEntryMode, selectedLocation]);
 
+  console.log('Manual Entry Mode:', manualEntryMode);
+  console.log('Selected Location:', selectedLocation);
+  console.log('Show Location Details calculation:', {
+    manualEntryMode,
+    hasSelectedLocation: selectedLocation !== null,
+    result: showLocationDetails
+  });
+
   useEffect(() => {
     console.log('=== LOCATION FIELDS DEBUG ===');
     console.log('Organization ID:', effectiveOrganizationId);
