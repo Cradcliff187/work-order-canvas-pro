@@ -379,7 +379,7 @@ const SubmitWorkOrder = () => {
               <CardContent className="space-y-4">
                 <LocationFields
                   form={form}
-                  organizationId={organizationId}
+                  organizationId={organization?.id}
                   showPoNumber={true}
                 />
               </CardContent>
