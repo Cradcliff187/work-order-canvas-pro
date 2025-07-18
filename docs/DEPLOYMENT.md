@@ -1,8 +1,51 @@
+
 # WorkOrderPro Deployment Guide
 
 ## Overview
 
-WorkOrderPro uses automated Edge Function deployment through Lovable's integration with Supabase. This guide covers production deployment procedures, environment configuration, and maintenance workflows.
+WorkOrderPro uses automated deployment through Lovable's integration with Supabase. This guide covers production deployment procedures, environment configuration, and maintenance workflows for the live workorderportal.com application.
+
+## Production Configuration
+
+### Domain Setup
+- **Production URL**: https://workorderportal.com
+- **Domain Provider**: IONOS
+- **SSL Certificate**: Automatically managed by Lovable
+- **DNS Configuration**: 
+  - A records: @ and www → 185.158.133.1 (Lovable)
+  - MX records: Configured for IONOS email
+  - SPF record: `v=spf1 include:_spf-us.ionos.com -all`
+
+### Email Configuration
+
+#### IONOS Email Account
+- **Email Address**: support@workorderportal.com
+- **Purpose**: All system emails (automated notifications + support)
+- **Provider**: IONOS Mail Basic
+- **Daily Limit**: 1,000 emails
+
+#### Supabase SMTP Integration
+- **Configuration Location**: Supabase Dashboard → Authentication → SMTP Settings
+- **Custom SMTP**: Enabled
+- **Settings**:
+  - Sender email: support@workorderportal.com
+  - Sender name: AKC-WorkOrderPortal
+  - SMTP Host: smtp.ionos.com
+  - SMTP Port: 587
+  - Authentication: Required
+
+#### Email Rate Limits
+- **Configured in**: Supabase Dashboard → Authentication → Rate Limits
+- **Email sending**: 20 per hour
+- **Token refresh**: 150 per 5 minutes
+
+### Environment Configuration
+
+This application uses Lovable's automatic environment configuration:
+- **No .env files needed**
+- **Supabase credentials**: Automatically injected by Lovable
+- **SMTP settings**: Configured in Supabase Dashboard
+- **All secrets**: Managed through platform integrations
 
 ## Deployment Architecture
 
@@ -12,7 +55,7 @@ WorkOrderPro uses **automatic deployment** triggered by code changes:
 
 ```mermaid
 graph TD
-    A[Code Push to Main] --> B[Lovable CI/CD Trigger]
+    A[Code Changes in Lovable] --> B[Lovable CI/CD Trigger]
     B --> C[Build React Application]
     B --> D[Deploy Edge Functions]
     C --> E[Deploy to CDN]
@@ -25,9 +68,9 @@ graph TD
 ```
 
 **Deployment Triggers:**
-- Push to main branch (automatic)
+- Code changes in Lovable editor (automatic)
 - Manual deployment via Lovable dashboard
-- Preview deployments for feature branches
+- Preview deployments for testing
 
 ### Environment Management
 
@@ -36,17 +79,15 @@ graph TD
 - **Backend**: Supabase hosted PostgreSQL
 - **Edge Functions**: Supabase Edge Runtime
 - **Storage**: Supabase Storage buckets
-- **Email**: Supabase Auth handles email communications directly
+- **Email**: IONOS SMTP via Supabase Auth
 
 **Environment Variables:**
-All secrets are managed through Supabase Edge Function secrets:
+All secrets are managed through Supabase and Lovable:
 ```bash
-# Required Production Secrets
-
+# Auto-managed by Lovable
 SUPABASE_URL                   # Database connection
 SUPABASE_ANON_KEY             # Public database access
 SUPABASE_SERVICE_ROLE_KEY     # Administrative access
-SUPABASE_DB_URL               # Direct database connection
 ```
 
 ## Production Deployment Checklist
@@ -60,10 +101,16 @@ SUPABASE_DB_URL               # Direct database connection
 - [ ] Audit triggers enabled
 
 **✅ Edge Function Configuration**
-- [ ] All required secrets configured
-- [ ] Function deployment successful
+- [ ] All 6 email functions deployed
+- [ ] Email templates configured
+- [ ] Database triggers active
 - [ ] Error handling implemented
-- [ ] Logging configured for monitoring
+
+**✅ Email System**
+- [ ] IONOS SMTP configured in Supabase
+- [ ] SPF record verified
+- [ ] Rate limits configured
+- [ ] Test emails delivered successfully
 
 **✅ Security Configuration**
 - [ ] Service role key secured
@@ -71,46 +118,81 @@ SUPABASE_DB_URL               # Direct database connection
 - [ ] CORS settings verified
 - [ ] RLS policies enforce data isolation
 
-
 ### Edge Function Deployment
 
 #### Automatic Deployment
 
-Edge Functions are deployed automatically when code is pushed to the main branch:
+Edge Functions are deployed automatically when code is changed in Lovable:
 
 ```typescript
 // supabase/functions/ structure
 functions/
-├── seed-database/
-│   └── index.ts              # Database seeding
-├── clear-test-data/
-│   └── index.ts              # Test data cleanup
 ├── email-work-order-created/
-│   └── index.ts              # Work order notifications
+│   └── index.ts              # Work order creation notifications
 ├── email-work-order-assigned/
 │   └── index.ts              # Assignment notifications
-└── _shared/
-    ├── cors.ts               # CORS utilities
-    ├── types.ts              # Shared type definitions
-    └── seed-data.ts          # Test data definitions
+├── email-work-order-completed/
+│   └── index.ts              # Completion notifications
+├── email-report-submitted/
+│   └── index.ts              # Report submission notifications
+├── email-report-reviewed/
+│   └── index.ts              # Report review notifications
+├── email-welcome/
+│   └── index.ts              # Welcome email for new users
+├── setup-test-environment/
+│   └── index.ts              # Database seeding
+└── clear-test-data/
+    └── index.ts              # Test data cleanup
 ```
 
-#### Function Versioning
+#### Function Monitoring
 
 **Version Management:**
 - Functions are versioned automatically
 - Rollback capability through Supabase dashboard
-- Blue-green deployment pattern for zero downtime
+- Zero downtime deployment
 
-**Function Monitoring:**
+**Function Health Checks:**
 ```bash
-# Monitor function performance
-supabase functions logs --follow
+# Monitor function performance via Supabase Dashboard
+# Check specific function health at:
+# https://supabase.com/dashboard/project/inudoymofztrvxhrlrek/functions
+```
 
-# Check specific function health
-curl -X POST 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database' \
-  -H 'Content-Type: application/json' \
-  -d '{"admin_key": "test"}'
+### Monitoring Production
+
+#### Email Monitoring
+- **Application Logs**: `/admin/email-logs`
+- **Supabase Logs**: Dashboard → Logs → Auth
+- **Delivery Issues**: Check spam folders, verify SPF record
+- **Test Panel**: `/admin/email-test` for function testing
+
+#### Function Monitoring
+- **Edge Function logs**: Supabase Dashboard → Functions → Logs
+- **Database triggers**: Monitor `audit_logs` table
+- **Email delivery**: Track via `email_logs` table
+
+#### Health Check Endpoints
+
+**Application Health:**
+```typescript
+// Health check through email test panel
+const emailTest = async () => {
+  const response = await fetch('/admin/email-test');
+  return response.status === 200;
+};
+```
+
+**Database Health:**
+```sql
+-- Connection test
+SELECT 1;
+
+-- Email system check
+SELECT count(*) FROM email_templates WHERE is_active = true;
+
+-- Recent activity check
+SELECT count(*) FROM work_orders WHERE created_at > now() - interval '24 hours';
 ```
 
 ### Security Configuration
@@ -120,14 +202,12 @@ curl -X POST 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-databas
 **Service Role Key Usage:**
 - Used exclusively in Edge Functions
 - Never exposed to frontend code
-- Rotated regularly (quarterly recommended)
+- Automatically managed by Lovable
 
-**Key Rotation Process:**
-1. Generate new service role key in Supabase dashboard
-2. Update Edge Function secrets: `supabase secrets set SUPABASE_SERVICE_ROLE_KEY=new_key`
-3. Deploy updated functions
-4. Verify function operation
-5. Revoke old key
+**SMTP Security:**
+- Credentials stored securely in Supabase Dashboard
+- TLS/SSL encryption for all email transmission
+- Regular monitoring of email delivery logs
 
 #### RLS Policy Verification
 
@@ -163,139 +243,26 @@ CREATE INDEX CONCURRENTLY idx_work_orders_assigned ON work_orders(assigned_to, s
 -- User organization lookups
 CREATE INDEX CONCURRENTLY idx_user_org_active ON user_organizations(user_id, organization_id);
 
--- Report filtering
-CREATE INDEX CONCURRENTLY idx_reports_status ON work_order_reports(status, submitted_at);
+-- Email logs performance
+CREATE INDEX CONCURRENTLY idx_email_logs_work_order ON email_logs(work_order_id, sent_at);
 ```
-
-## Production Configuration
-
-### Environment Setup
-
-**Supabase Project Configuration:**
-```toml
-# supabase/config.toml
-project_id = "inudoymofztrvxhrlrek"
-
-[auth]
-enabled = true
-external_email_enabled = true
-external_phone_enabled = false
-
-[db]
-major_version = 15
-
-[functions]
-verify_jwt = true  # Default for all functions
-
-[functions.seed-database]
-verify_jwt = true  # Admin authentication required
-
-[functions.clear-test-data]  
-verify_jwt = true  # Admin authentication required
-```
-
-### Performance Considerations
-
-**Database Performance:**
-- Row Level Security adds query overhead
-- Use materialized views for analytics
-- Monitor slow queries via Supabase dashboard
-
-**Edge Function Performance:**
-- Functions have 60-second timeout
-- Memory limit: 512MB per function
-- Cold start latency: ~100-300ms
-
-**Frontend Performance:**
-- Vite build optimization enabled
-- Code splitting for large components
-- Service worker for offline capabilities
-
-### Monitoring and Alerting
-
-#### Health Check Endpoints
-
-**Application Health:**
-```typescript
-// Health check through Edge Function
-const healthCheck = async () => {
-  const response = await fetch(
-    'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ admin_key: 'health-check' })
-    }
-  );
-  return response.status === 200;
-};
-```
-
-**Database Health:**
-```sql
--- Connection test
-SELECT 1;
-
--- Performance check
-SELECT count(*) FROM work_orders WHERE created_at > now() - interval '24 hours';
-```
-
-#### Log Monitoring
-
-**Edge Function Logs:**
-```bash
-# Monitor all function logs
-supabase functions logs --follow
-
-# Filter by function
-supabase functions logs seed-database
-
-# Search for errors
-supabase functions logs --filter "ERROR"
-```
-
-**Database Logs:**
-- Access via Supabase dashboard
-- Monitor slow queries (>1000ms)
-- Track RLS policy violations
-- Monitor connection pool usage
 
 ### Rollback Procedures
 
-#### Edge Function Rollback
+#### Code Rollback via Lovable
 
-**Manual Rollback:**
-1. Access Supabase Functions dashboard
-2. Navigate to function version history
-3. Select previous stable version
-4. Deploy rollback version
-5. Verify function operation
-
-**Code-Based Rollback:**
-```bash
-# Revert to previous commit
-git revert HEAD
-
-# Force deployment
-git push origin main --force
-```
+**Automatic Rollback:**
+1. Access Lovable project history
+2. Select previous stable version
+3. Deploy rollback version
+4. Verify application operation
 
 #### Database Rollback
 
 **Schema Rollback:**
-```sql
--- Use migration rollback (if supported)
--- Or manual schema restoration
-
--- Example: Rollback table changes
-DROP TABLE IF EXISTS new_table_name;
-ALTER TABLE old_table_name RENAME TO new_table_name;
-```
-
-**Data Rollback:**
-- Point-in-time recovery through Supabase dashboard
+- Use Supabase Dashboard migration history
+- Point-in-time recovery available
 - Manual data restoration from backups
-- Use audit logs to track changes
 
 ### Backup and Recovery
 
@@ -306,77 +273,33 @@ ALTER TABLE old_table_name RENAME TO new_table_name;
 - Point-in-time recovery (7 days)
 - Cross-region backup replication
 
-#### Manual Backup Procedures
+#### Email System Backup
 
-**Database Backup:**
-```bash
-# Full database dump
-supabase db dump > backup_$(date +%Y%m%d).sql
-
-# Schema only
-supabase db dump --schema-only > schema_backup.sql
-
-# Data only
-supabase db dump --data-only > data_backup.sql
-```
-
-**Function Backup:**
-```bash
-# Download all function code
-git clone <repository_url>
-tar -czf functions_backup_$(date +%Y%m%d).tar.gz supabase/functions/
-```
-
-### Security Hardening
-
-#### API Security
-
-**Rate Limiting:**
-- Implemented at Supabase level
-- 1000 requests/minute per IP
-- Edge Function rate limiting: 100 requests/minute
-
-**CORS Configuration:**
-```typescript
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-```
-
-#### Data Security
-
-**Encryption:**
-- All data encrypted at rest (Supabase default)
-- TLS 1.3 for data in transit
-- Database connection encryption
-
-**Access Control:**
-- Row Level Security enforced on all tables
-- Service role limited to Edge Functions
-- Regular access audit reviews
+**Template Backup:**
+- Email templates stored in database
+- Included in automatic Supabase backups
+- Supabase Auth templates backed up separately
 
 ### Maintenance Procedures
 
 #### Regular Maintenance Tasks
 
 **Weekly:**
-- [ ] Review Edge Function logs for errors
-- [ ] Monitor database performance metrics
-- [ ] Check email delivery success rates
-- [ ] Verify backup completion
+- [ ] Review email delivery logs at `/admin/email-logs`
+- [ ] Monitor Edge Function performance
+- [ ] Check email rate limit usage
+- [ ] Verify domain and SSL certificate status
 
 **Monthly:**
-- [ ] Update dependencies (`npm audit`)
-- [ ] Review and rotate API keys
-- [ ] Analyze performance metrics
+- [ ] Review email template effectiveness
+- [ ] Analyze email delivery success rates
+- [ ] Update any changed IONOS configurations
 - [ ] Test disaster recovery procedures
 
 **Quarterly:**
 - [ ] Full security audit
-- [ ] Service role key rotation
 - [ ] Performance optimization review
+- [ ] Email system load testing
 - [ ] Documentation updates
 
 #### Performance Optimization
@@ -386,17 +309,17 @@ const corsHeaders = {
 -- Analyze table statistics
 ANALYZE;
 
--- Vacuum full (maintenance window required)
-VACUUM FULL;
-
--- Reindex for performance
-REINDEX DATABASE postgres;
+-- Monitor email performance
+SELECT template_used, avg(delivered_at - sent_at) as avg_delivery_time
+FROM email_logs 
+WHERE delivered_at IS NOT NULL
+GROUP BY template_used;
 ```
 
-**Function Optimization:**
-- Monitor cold start times
-- Optimize function memory usage
-- Review function duration metrics
-- Implement connection pooling
+**Email System Optimization:**
+- Monitor IONOS daily limits
+- Optimize email template content
+- Review and adjust rate limits
+- Track bounce and delivery rates
 
-This deployment guide ensures reliable, secure, and maintainable production deployments of WorkOrderPro while providing clear procedures for monitoring, maintenance, and incident response.
+This deployment guide ensures reliable, secure, and maintainable production deployments of WorkOrderPro at workorderportal.com while providing clear procedures for monitoring, maintenance, and incident response with IONOS email integration.
