@@ -37,11 +37,13 @@ const SystemSettingsPanel = () => {
       if (settings) {
         settings.forEach(setting => {
           if (setting.setting_key === 'service_role_key') {
-            setServiceKey(setting.setting_value?.key || '');
+            const keyValue = setting.setting_value as any;
+            setServiceKey(keyValue?.key || '');
           } else if (setting.setting_key in emailSettings) {
+            const settingValue = setting.setting_value as any;
             setEmailSettings(prev => ({
               ...prev,
-              [setting.setting_key]: setting.setting_value?.value || ''
+              [setting.setting_key]: settingValue?.value || ''
             }));
           }
         });

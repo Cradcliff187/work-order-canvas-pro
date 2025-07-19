@@ -1,5 +1,5 @@
 
-import { SystemSettingsPanel } from '@/components/admin/SystemSettingsPanel';
+import SystemSettingsPanel from '@/components/admin/SystemSettingsPanel';
 
 const SystemSettings = () => {
   return (

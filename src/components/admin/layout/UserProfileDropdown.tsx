@@ -1,50 +1,49 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, LogOut } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfileDropdownProps {
-  collapsed?: boolean;
+  collapsed: boolean;
 }
 
-export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownProps) {
-  const { profile, signOut } = useAuth();
+export function UserProfileDropdown({ collapsed }: UserProfileDropdownProps) {
+  const { profile } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
+    await supabase.auth.signOut();
+    navigate('/auth');
   };
 
-  const userInitials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`;
+  const initials = profile ? 
+    `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() :
+    'U';
 
   if (collapsed) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="w-full p-2">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-xs">
-                {userInitials}
-              </AvatarFallback>
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
-            Profile Settings
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
+        <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
+            Sign out
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -54,27 +53,28 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">
-              {userInitials}
-            </AvatarFallback>
+        <Button variant="ghost" className="flex items-center gap-2 w-full justify-start">
+          <Avatar className="h-6 w-6">
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col items-start text-xs">
-            <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-            <span className="text-muted-foreground capitalize">{profile?.user_type}</span>
+          <div className="flex flex-col items-start text-sm">
+            <span className="font-medium">
+              {profile?.first_name} {profile?.last_name}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {profile?.user_type}
+            </span>
           </div>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end">
         <DropdownMenuItem>
-          <Settings className="mr-2 h-4 w-4" />
-          Profile Settings
+          <User className="mr-2 h-4 w-4" />
+          Profile
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

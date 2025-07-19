@@ -73,7 +73,7 @@ const DEFAULT_TEMPLATES = [
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Work Report Submitted</title>
-      </hand>
+      </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Work Report Submitted</h2>
         <p>A work completion report has been submitted and is ready for review.</p>
@@ -113,7 +113,7 @@ const DEFAULT_TEMPLATES = [
           <p><strong>Work Order:</strong> {{work_order_number}}</p>
           <p><strong>Organization:</strong> {{organization_name}}</p>
           <p><strong>Status:</strong> <span style="color: #059669; font-weight: bold;">{{status}}</span></p>
-          {{#if review_notes}}<p><strong>Review Notes:</strong> {{review_notes}}</p>{{/if}}
+          <p><strong>Review Notes:</strong> {{review_notes}}</p>
         </div>
         <p>Thank you for your work!</p>
         <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">

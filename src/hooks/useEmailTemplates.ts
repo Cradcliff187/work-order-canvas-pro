@@ -1,11 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
-
-type EmailTemplate = Tables<'email_templates'>;
-type EmailTemplateInsert = TablesInsert<'email_templates'>;
-type EmailTemplateUpdate = TablesUpdate<'email_templates'>;
 
 export const useEmailTemplates = () => {
   const { toast } = useToast();
@@ -21,7 +17,7 @@ export const useEmailTemplates = () => {
       const { data, error } = await supabase
         .from('email_templates')
         .select('*')
-        .order('template_name');
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
@@ -29,10 +25,16 @@ export const useEmailTemplates = () => {
   });
 
   const createTemplate = useMutation({
-    mutationFn: async (template: EmailTemplateInsert) => {
+    mutationFn: async (templateData: {
+      template_name: string;
+      subject: string;
+      html_content: string;
+      text_content?: string;
+      is_active: boolean;
+    }) => {
       const { data, error } = await supabase
         .from('email_templates')
-        .insert(template)
+        .insert(templateData)
         .select()
         .single();
 
@@ -47,6 +49,7 @@ export const useEmailTemplates = () => {
       });
     },
     onError: (error) => {
+      console.error('Error creating template:', error);
       toast({
         title: 'Error',
         description: 'Failed to create email template',
@@ -56,10 +59,17 @@ export const useEmailTemplates = () => {
   });
 
   const updateTemplate = useMutation({
-    mutationFn: async ({ id, ...updates }: EmailTemplateUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...templateData }: {
+      id: string;
+      template_name?: string;
+      subject?: string;
+      html_content?: string;
+      text_content?: string;
+      is_active?: boolean;
+    }) => {
       const { data, error } = await supabase
         .from('email_templates')
-        .update(updates)
+        .update(templateData)
         .eq('id', id)
         .select()
         .single();
@@ -75,6 +85,7 @@ export const useEmailTemplates = () => {
       });
     },
     onError: (error) => {
+      console.error('Error updating template:', error);
       toast({
         title: 'Error',
         description: 'Failed to update email template',
@@ -95,14 +106,15 @@ export const useEmailTemplates = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email_templates'] });
       toast({
         title: 'Success',
-        description: `Template ${data.is_active ? 'activated' : 'deactivated'}`,
+        description: 'Template status updated successfully',
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error toggling template status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update template status',
@@ -127,7 +139,8 @@ export const useEmailTemplates = () => {
         description: 'Email template deleted successfully',
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error deleting template:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete email template',
