@@ -16,7 +16,8 @@ import {
   UserCheck,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  TestTube
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { DashboardChart } from '@/components/admin/DashboardChart';
@@ -24,7 +25,6 @@ import { RecentActivity } from '@/components/admin/RecentActivity';
 import { SystemVerificationPanel } from '@/components/admin/SystemVerificationPanel';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -107,17 +107,20 @@ const AdminDashboard = () => {
             <ClipboardList className="h-4 w-4 mr-2" />
             Manage Work Orders
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/admin/test-email')}
+          >
+            <TestTube className="h-4 w-4 mr-2" />
+            Test Email
+          </Button>
         </div>
       </div>
 
       {/* System Verification Panel with error boundary */}
       <div>
         <SystemVerificationPanel />
-      </div>
-
-      {/* Email Test Panel with error boundary */}
-      <div>
-        <EmailTestPanel />
       </div>
 
       {/* Metrics Overview */}
