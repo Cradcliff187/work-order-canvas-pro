@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +16,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-  TestTube
+  TestTube,
+  Mail
 } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { DashboardChart } from '@/components/admin/DashboardChart';
@@ -25,6 +25,7 @@ import { RecentActivity } from '@/components/admin/RecentActivity';
 import { SystemVerificationPanel } from '@/components/admin/SystemVerificationPanel';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -122,6 +123,22 @@ const AdminDashboard = () => {
       <div>
         <SystemVerificationPanel />
       </div>
+
+      {/* Email System Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Email System</CardTitle>
+          <CardDescription>Test email templates and monitor delivery</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link to="/admin/email-test">
+            <Button variant="outline" className="w-full">
+              <Mail className="h-4 w-4 mr-2" />
+              Open Email Test Panel
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
 
       {/* Metrics Overview */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
