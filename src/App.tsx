@@ -6,9 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import DashboardRouter from "@/components/DashboardRouter";
 
 // Public pages
-import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 
 // Admin pages
@@ -31,8 +31,14 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
+            {/* Root route - redirect authenticated users to appropriate dashboard */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <DashboardRouter />
+              </ProtectedRoute>
+            } />
+
+            {/* Public auth route */}
             <Route path="/auth" element={<Auth />} />
 
             {/* Admin routes */}
@@ -53,7 +59,7 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Catch all route - redirect to home */}
+            {/* Catch all route - redirect to root */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
