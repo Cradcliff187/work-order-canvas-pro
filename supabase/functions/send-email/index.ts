@@ -1,9 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.4";
-import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -118,14 +116,34 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send actual email
-    const emailResult = await resend.emails.send({
-      from: 'WorkOrderPro <noreply@workorderpro.com>',
-      to: [toEmail],
-      subject,
-      html: htmlContent,
-      text: textContent,
+    // Configure SMTP client for IONOS
+    const smtpClient = new SMTPClient({
+      connection: {
+        hostname: "smtp.ionos.com",
+        port: 587,
+        tls: false,
+        auth: {
+          username: Deno.env.get("IONOS_SMTP_USER") ?? '',
+          password: Deno.env.get("IONOS_SMTP_PASS") ?? '',
+        },
+      },
     });
+
+    console.log('Connecting to IONOS SMTP...');
+
+    // Send actual email via IONOS SMTP
+    await smtpClient.send({
+      from: "WorkOrderPro <support@workorderportal.com>",
+      to: toEmail,
+      subject: subject,
+      content: textContent,
+      html: htmlContent,
+    });
+
+    console.log('Email sent successfully via IONOS SMTP to:', toEmail);
+
+    // Close SMTP connection
+    await smtpClient.close();
 
     // Log email
     await supabase.from('email_logs').insert({
@@ -135,10 +153,8 @@ const handler = async (req: Request): Promise<Response> => {
       work_order_id: emailData.work_order_id || null
     });
 
-    console.log('Email sent successfully:', emailResult);
-
     return new Response(
-      JSON.stringify({ success: true, emailId: emailResult.data?.id }),
+      JSON.stringify({ success: true, provider: 'IONOS SMTP' }),
       { 
         status: 200, 
         headers: { 'Content-Type': 'application/json', ...corsHeaders } 
@@ -147,8 +163,18 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error('Error sending email:', error);
+    
+    // Enhanced error logging for SMTP issues
+    if (error.message?.includes('SMTP') || error.message?.includes('connection')) {
+      console.error('SMTP Connection Error - Check IONOS credentials and settings');
+    }
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        provider: 'IONOS SMTP',
+        details: 'Check IONOS_SMTP_USER and IONOS_SMTP_PASS environment variables'
+      }),
       { 
         status: 500, 
         headers: { 'Content-Type': 'application/json', ...corsHeaders } 
