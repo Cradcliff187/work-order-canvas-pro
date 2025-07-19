@@ -15,15 +15,22 @@ export const EmailTestPanel = () => {
   const { templates, isLoading } = useEmailTemplates();
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [recordId, setRecordId] = useState('');
+  const [recordType, setRecordType] = useState('');
   const [testEmail, setTestEmail] = useState('');
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [emailResult, setEmailResult] = useState<any>(null);
 
+  const recordTypes = [
+    { value: 'work_order', label: 'Work Order' },
+    { value: 'work_order_assignment', label: 'Work Order Assignment' },
+    { value: 'work_order_report', label: 'Work Order Report' },
+  ];
+
   const handleTestEmail = async () => {
-    if (!selectedTemplate || !recordId) {
+    if (!selectedTemplate || !recordId || !recordType) {
       toast({
         title: 'Error',
-        description: 'Please select a template and enter a record ID',
+        description: 'Please select a template, record type, and enter a record ID',
         variant: 'destructive',
       });
       return;
@@ -35,10 +42,11 @@ export const EmailTestPanel = () => {
     try {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
-          templateName: selectedTemplate,
-          recordId: recordId,
-          recipientEmail: testEmail || undefined,
-          testMode: true
+          template_name: selectedTemplate,
+          record_id: recordId,
+          record_type: recordType,
+          recipient_email: testEmail || undefined,
+          test_mode: true
         }
       });
 
@@ -62,10 +70,10 @@ export const EmailTestPanel = () => {
   };
 
   const handleSendEmail = async () => {
-    if (!selectedTemplate || !recordId) {
+    if (!selectedTemplate || !recordId || !recordType) {
       toast({
         title: 'Error',
-        description: 'Please select a template and enter a record ID',
+        description: 'Please select a template, record type, and enter a record ID',
         variant: 'destructive',
       });
       return;
@@ -76,10 +84,11 @@ export const EmailTestPanel = () => {
     try {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
-          templateName: selectedTemplate,
-          recordId: recordId,
-          recipientEmail: testEmail || undefined,
-          testMode: false
+          template_name: selectedTemplate,
+          record_id: recordId,
+          record_type: recordType,
+          recipient_email: testEmail || undefined,
+          test_mode: false
         }
       });
 
@@ -120,7 +129,7 @@ export const EmailTestPanel = () => {
         <CardTitle>Email System Test</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <Label htmlFor="template">Email Template</Label>
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
@@ -138,12 +147,28 @@ export const EmailTestPanel = () => {
           </div>
 
           <div>
+            <Label htmlFor="recordType">Record Type</Label>
+            <Select value={recordType} onValueChange={setRecordType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select record type" />
+              </SelectTrigger>
+              <SelectContent>
+                {recordTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
             <Label htmlFor="recordId">Record ID</Label>
             <Input
               id="recordId"
               value={recordId}
               onChange={(e) => setRecordId(e.target.value)}
-              placeholder="Enter work order, assignment, or report ID"
+              placeholder="Enter record UUID"
             />
           </div>
         </div>
@@ -181,11 +206,11 @@ export const EmailTestPanel = () => {
             <div className="space-y-2 text-sm">
               <p><strong>Recipient:</strong> {emailResult.recipient}</p>
               <p><strong>Subject:</strong> {emailResult.subject}</p>
-              {emailResult.htmlPreview && (
+              {emailResult.html_preview && (
                 <div>
                   <strong>HTML Preview:</strong>
                   <Textarea 
-                    value={emailResult.htmlPreview} 
+                    value={emailResult.html_preview} 
                     readOnly 
                     rows={4}
                     className="mt-1"
@@ -197,13 +222,13 @@ export const EmailTestPanel = () => {
         )}
 
         <div className="text-sm text-muted-foreground">
-          <p><strong>Template Types:</strong></p>
+          <p><strong>Record Type Examples:</strong></p>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong>work_order_assigned:</strong> Use assignment ID</li>
-            <li><strong>work_order_completed:</strong> Use work order ID</li>
-            <li><strong>report_submitted:</strong> Use report ID</li>
-            <li><strong>report_reviewed:</strong> Use report ID</li>
+            <li><strong>work_order:</strong> For work order creation/completion notifications</li>
+            <li><strong>work_order_assignment:</strong> For assignment notifications</li>
+            <li><strong>work_order_report:</strong> For report submission/review notifications</li>
           </ul>
+          <p className="mt-2"><strong>Note:</strong> The function automatically determines recipient emails based on the record type and template.</p>
         </div>
       </CardContent>
     </Card>

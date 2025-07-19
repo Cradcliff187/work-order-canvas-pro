@@ -9,10 +9,11 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  templateName: string;
-  recordId: string;
-  recipientEmail?: string;
-  testMode?: boolean;
+  template_name: string;
+  record_id: string;
+  record_type: string;
+  recipient_email?: string;
+  test_mode?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -27,20 +28,20 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { templateName, recordId, recipientEmail, testMode = false }: EmailRequest = await req.json();
+    const { template_name, record_id, record_type, recipient_email, test_mode = false }: EmailRequest = await req.json();
 
-    console.log(`Processing email request: ${templateName} for record ${recordId}`);
+    console.log(`Processing email request: ${template_name} for ${record_type} record ${record_id}`);
 
     // Get email template
     const { data: template, error: templateError } = await supabase
       .from('email_templates')
       .select('*')
-      .eq('template_name', templateName)
+      .eq('template_name', template_name)
       .eq('is_active', true)
       .single();
 
     if (templateError || !template) {
-      console.error(`Template not found: ${templateName}`, templateError);
+      console.error(`Template not found: ${template_name}`, templateError);
       return new Response(
         JSON.stringify({ error: 'Email template not found' }),
         { 
@@ -50,30 +51,37 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch data and build email content based on template type
+    // Fetch data and build email content based on record type
     let emailData: any = {};
-    let toEmail = recipientEmail;
+    let toEmail = recipient_email;
 
-    switch (templateName) {
-      case 'work_order_assigned':
-        emailData = await getWorkOrderAssignedData(supabase, recordId);
+    switch (record_type) {
+      case 'work_order_assignment':
+        emailData = await getWorkOrderAssignmentData(supabase, record_id);
         toEmail = toEmail || emailData.assignee_email;
         break;
-      case 'work_order_completed':
-        emailData = await getWorkOrderCompletedData(supabase, recordId);
-        toEmail = toEmail || emailData.partner_email;
+      case 'work_order':
+        if (template_name === 'work_order_completed') {
+          emailData = await getWorkOrderCompletedData(supabase, record_id);
+          toEmail = toEmail || emailData.partner_email;
+        } else {
+          // Default work order data
+          emailData = await getWorkOrderData(supabase, record_id);
+          toEmail = toEmail || emailData.organization_contact_email;
+        }
         break;
-      case 'report_submitted':
-        emailData = await getReportSubmittedData(supabase, recordId);
-        toEmail = toEmail || 'admin@workorderpro.com'; // Default admin email
-        break;
-      case 'report_reviewed':
-        emailData = await getReportReviewedData(supabase, recordId);
-        toEmail = toEmail || emailData.subcontractor_email;
+      case 'work_order_report':
+        if (template_name === 'report_submitted') {
+          emailData = await getReportSubmittedData(supabase, record_id);
+          toEmail = toEmail || 'admin@workorderpro.com'; // Default admin email
+        } else if (template_name === 'report_reviewed') {
+          emailData = await getReportReviewedData(supabase, record_id);
+          toEmail = toEmail || emailData.subcontractor_email;
+        }
         break;
       default:
         return new Response(
-          JSON.stringify({ error: 'Unknown template type' }),
+          JSON.stringify({ error: `Unknown record type: ${record_type}` }),
           { 
             status: 400, 
             headers: { 'Content-Type': 'application/json', ...corsHeaders } 
@@ -82,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!toEmail) {
-      console.error(`No recipient email found for ${templateName}`);
+      console.error(`No recipient email found for ${template_name} on ${record_type}`);
       return new Response(
         JSON.stringify({ error: 'No recipient email found' }),
         { 
@@ -98,16 +106,16 @@ const handler = async (req: Request): Promise<Response> => {
     const textContent = replaceVariables(template.text_content || '', emailData);
 
     // Send email in test mode or real mode
-    if (testMode) {
+    if (test_mode) {
       console.log('Test mode - email would be sent to:', toEmail);
       console.log('Subject:', subject);
       return new Response(
         JSON.stringify({ 
           success: true, 
-          testMode: true,
+          test_mode: true,
           recipient: toEmail,
           subject,
-          htmlPreview: htmlContent.substring(0, 200) + '...'
+          html_preview: htmlContent.substring(0, 200) + '...'
         }),
         { 
           status: 200, 
@@ -147,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log email
     await supabase.from('email_logs').insert({
-      template_used: templateName,
+      template_used: template_name,
       recipient_email: toEmail,
       status: 'sent',
       work_order_id: emailData.work_order_id || null
@@ -183,8 +191,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// Helper functions to fetch data for each email type
-async function getWorkOrderAssignedData(supabase: any, assignmentId: string) {
+// Helper functions to fetch data for each record type
+async function getWorkOrderAssignmentData(supabase: any, assignmentId: string) {
   const { data } = await supabase
     .from('work_order_assignments')
     .select(`
@@ -210,6 +218,28 @@ async function getWorkOrderAssignedData(supabase: any, assignmentId: string) {
     assignee_email: data?.assignee?.email,
     assignment_notes: data?.notes,
     first_name: data?.assignee?.first_name
+  };
+}
+
+async function getWorkOrderData(supabase: any, workOrderId: string) {
+  const { data } = await supabase
+    .from('work_orders')
+    .select(`
+      *,
+      organization:organization_id (name, contact_email),
+      trade:trade_id (name)
+    `)
+    .eq('id', workOrderId)
+    .single();
+
+  return {
+    work_order_id: workOrderId,
+    work_order_number: data?.work_order_number,
+    work_order_title: data?.title,
+    organization_name: data?.organization?.name,
+    organization_contact_email: data?.organization?.contact_email,
+    trade_name: data?.trade?.name,
+    created_at: data?.created_at
   };
 }
 
