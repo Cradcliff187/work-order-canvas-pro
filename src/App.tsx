@@ -27,8 +27,7 @@ import {
   AdminOrganizations,
   AdminWorkOrders,
   AdminReports,
-  SystemSettings,
-  EmailTemplates,
+  AdminEmailTemplates,
   
   // Partner pages
   PartnerDashboard,
@@ -110,14 +109,9 @@ const App = () => (
                         <AdminReports />
                       </Suspense>
                     } />
-                    <Route path="system-settings" element={
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <SystemSettings />
-                      </Suspense>
-                    } />
                     <Route path="email-templates" element={
                       <Suspense fallback={<LoadingSpinner />}>
-                        <EmailTemplates />
+                        <AdminEmailTemplates />
                       </Suspense>
                     } />
                   </Routes>
