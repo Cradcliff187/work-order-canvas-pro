@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,9 @@ import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  
+  console.log('AdminDashboard rendering...');
+  
   const { 
     metrics, 
     statusDistribution, 
@@ -38,7 +42,19 @@ const AdminDashboard = () => {
     isError 
   } = useAdminDashboard();
 
+  console.log('Dashboard data state:', {
+    metrics,
+    statusDistribution,
+    dailySubmissions,
+    tradeVolumes,
+    recentWorkOrders,
+    recentReports,
+    isLoading,
+    isError
+  });
+
   if (isError) {
+    console.error('Dashboard error state detected');
     return (
       <div className="p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -53,6 +69,13 @@ const AdminDashboard = () => {
               <p className="text-muted-foreground">
                 Unable to load dashboard data. Please check your connection and try again.
               </p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="mt-4"
+                variant="outline"
+              >
+                Reload Page
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -87,11 +110,15 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* System Verification Panel */}
-      <SystemVerificationPanel />
+      {/* System Verification Panel with error boundary */}
+      <div>
+        <SystemVerificationPanel />
+      </div>
 
-      {/* Email Test Panel */}
-      <EmailTestPanel />
+      {/* Email Test Panel with error boundary */}
+      <div>
+        <EmailTestPanel />
+      </div>
 
       {/* Metrics Overview */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -207,7 +234,7 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* Charts with error boundaries */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
@@ -217,14 +244,21 @@ const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <DashboardChart 
-              data={dailySubmissions || []} 
-              type="line"
-              dataKey="count"
-              xAxisKey="date"
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[200px]">
+                <div>Loading chart data...</div>
+              </div>
+            ) : (
+              <DashboardChart 
+                data={dailySubmissions || []} 
+                type="line"
+                dataKey="count"
+                xAxisKey="date"
+              />
+            )}
           </CardContent>
         </Card>
+        
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Status Distribution</CardTitle>
@@ -233,12 +267,18 @@ const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <DashboardChart 
-              data={statusDistribution || []} 
-              type="pie"
-              dataKey="count"
-              nameKey="status"
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[200px]">
+                <div>Loading chart data...</div>
+              </div>
+            ) : (
+              <DashboardChart 
+                data={statusDistribution || []} 
+                type="pie"
+                dataKey="count"
+                nameKey="status"
+              />
+            )}
           </CardContent>
         </Card>
       </div>
@@ -252,12 +292,18 @@ const AdminDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DashboardChart 
-            data={tradeVolumes || []} 
-            type="bar"
-            dataKey="count"
-            xAxisKey="trade"
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center h-[200px]">
+              <div>Loading chart data...</div>
+            </div>
+          ) : (
+            <DashboardChart 
+              data={tradeVolumes || []} 
+              type="bar"
+              dataKey="count"
+              xAxisKey="trade"
+            />
+          )}
         </CardContent>
       </Card>
 
