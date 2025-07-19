@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +23,7 @@ export const EmailTestPanel = () => {
     { value: 'work_order', label: 'Work Order' },
     { value: 'work_order_assignment', label: 'Work Order Assignment' },
     { value: 'work_order_report', label: 'Work Order Report' },
+    { value: 'user', label: 'User Account' },
   ];
 
   const handleTestEmail = async () => {
@@ -227,6 +227,7 @@ export const EmailTestPanel = () => {
             <li><strong>work_order:</strong> For work order creation/completion notifications</li>
             <li><strong>work_order_assignment:</strong> For assignment notifications</li>
             <li><strong>work_order_report:</strong> For report submission/review notifications</li>
+            <li><strong>user:</strong> For user registration/welcome notifications</li>
           </ul>
           <p className="mt-2"><strong>Note:</strong> The function automatically determines recipient emails based on the record type and template.</p>
         </div>
