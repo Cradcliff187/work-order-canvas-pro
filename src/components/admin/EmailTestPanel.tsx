@@ -39,7 +39,14 @@ export const EmailTestPanel = () => {
         case 'work_order':
           query = supabase
             .from('work_orders')
-            .select('id, work_order_number, title, status')
+            .select(`
+              id, 
+              work_order_number, 
+              street_address, 
+              location_address, 
+              location_street_address,
+              organizations!inner(name, address)
+            `)
             .order('created_at', { ascending: false })
             .limit(50);
           break;
@@ -49,8 +56,7 @@ export const EmailTestPanel = () => {
             .from('work_order_assignments')
             .select(`
               id,
-              assignment_type,
-              work_orders!inner(work_order_number, title),
+              work_orders!inner(work_order_number),
               profiles!inner(first_name, last_name)
             `)
             .order('created_at', { ascending: false })
@@ -62,8 +68,8 @@ export const EmailTestPanel = () => {
             .from('work_order_reports')
             .select(`
               id,
-              status,
-              work_orders!inner(work_order_number, title)
+              work_orders!inner(work_order_number),
+              profiles!inner(first_name)
             `)
             .order('submitted_at', { ascending: false })
             .limit(50);
@@ -72,7 +78,7 @@ export const EmailTestPanel = () => {
         case 'user':
           query = supabase
             .from('profiles')
-            .select('id, email, first_name, last_name, user_type')
+            .select('id, email, first_name, last_name')
             .order('created_at', { ascending: false })
             .limit(50);
           break;
@@ -101,19 +107,21 @@ export const EmailTestPanel = () => {
   const getRecordLabel = (record: any, type: string): string => {
     switch (type) {
       case 'work_order':
-        return `${record.work_order_number || 'No Number'} - ${record.title} (${record.status})`;
+        const address = record.street_address || record.location_address || record.location_street_address || 'No address';
+        return `${record.work_order_number || 'No Number'} - ${address}`;
       
       case 'work_order_assignment':
         const workOrder = record.work_orders;
         const assignee = record.profiles;
-        return `Assignment for ${workOrder?.work_order_number || 'Unknown'} - ${record.assignment_type} (${assignee?.first_name} ${assignee?.last_name})`;
+        return `${workOrder?.work_order_number || 'Unknown'} - ${assignee?.first_name} ${assignee?.last_name}`;
       
       case 'work_order_report':
         const reportWorkOrder = record.work_orders;
-        return `Report for ${reportWorkOrder?.work_order_number || 'Unknown'} - ${record.status}`;
+        const subcontractor = record.profiles;
+        return `${reportWorkOrder?.work_order_number || 'Unknown'} - Report by ${subcontractor?.first_name}`;
       
       case 'user':
-        return `${record.first_name} ${record.last_name} (${record.email}) - ${record.user_type}`;
+        return `${record.first_name} ${record.last_name} (${record.email})`;
       
       default:
         return record.id;
