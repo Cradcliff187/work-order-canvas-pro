@@ -7,6 +7,12 @@ import {
   BarChart3,
   Settings,
   Mail,
+  Clock,
+  Receipt,
+  User,
+  Wrench,
+  Heart,
+  TestTube,
 } from 'lucide-react';
 
 export const sidebarItems = [
@@ -31,9 +37,54 @@ export const sidebarItems = [
     icon: Building2,
   },
   {
+    title: 'Employees',
+    url: '/admin/employees',
+    icon: Users,
+  },
+  {
+    title: 'Invoices',
+    url: '/admin/invoices',
+    icon: FileText,
+  },
+  {
     title: 'Reports',
     url: '/admin/reports',
     icon: BarChart3,
+  },
+  {
+    title: 'Analytics',
+    url: '/admin/analytics',
+    icon: BarChart3,
+  },
+  {
+    title: 'Time Reports',
+    url: '/admin/time-reports',
+    icon: Clock,
+  },
+  {
+    title: 'Receipts',
+    url: '/admin/receipts',
+    icon: Receipt,
+  },
+  {
+    title: 'Profile',
+    url: '/admin/profile',
+    icon: User,
+  },
+  {
+    title: 'System Health',
+    url: '/admin/system-health',
+    icon: Heart,
+  },
+  {
+    title: 'Test Email',
+    url: '/admin/test-email',
+    icon: TestTube,
+  },
+  {
+    title: 'Dev Tools',
+    url: '/dev-tools',
+    icon: Wrench,
   },
   {
     title: 'Email Templates',
@@ -48,12 +99,23 @@ export const sidebarItems = [
 ];
 
 export const adminOnlyItems = [
+  'Users',
+  'Organizations',
   'System Settings',
   'Email Templates',
+  'Employees',
+  'Invoices',
+  'System Health',
+  'Test Email',
+  'Dev Tools',
 ];
 
 export const employeeAccessItems = [
   'Dashboard',
   'Work Orders',
   'Reports',
+  'Analytics',
+  'Time Reports',
+  'Receipts',
+  'Profile',
 ];
