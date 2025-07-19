@@ -1,15 +1,19 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useUserProfile = () => {
-  const { profile, loading, isImpersonating } = useAuth();
+  const { profile, loading, isImpersonating, impersonatedProfile } = useAuth();
 
-  const isAdmin = () => profile?.user_type === 'admin';
-  const isEmployee = () => profile?.user_type === 'employee';
-  const isPartner = () => profile?.user_type === 'partner';
-  const isSubcontractor = () => profile?.user_type === 'subcontractor';
+  // Use effective profile (impersonated if impersonating, otherwise real profile)
+  const effectiveProfile = isImpersonating ? impersonatedProfile : profile;
+
+  const isAdmin = () => effectiveProfile?.user_type === 'admin';
+  const isEmployee = () => effectiveProfile?.user_type === 'employee';
+  const isPartner = () => effectiveProfile?.user_type === 'partner';
+  const isSubcontractor = () => effectiveProfile?.user_type === 'subcontractor';
 
   const hasPermission = (requiredUserType: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
-    if (!profile) return false;
+    if (!effectiveProfile) return false;
     
     const userTypeHierarchy = {
       'admin': 4,
@@ -18,21 +22,24 @@ export const useUserProfile = () => {
       'subcontractor': 1
     };
 
-    const userLevel = userTypeHierarchy[profile.user_type];
+    const userLevel = userTypeHierarchy[effectiveProfile.user_type];
     const requiredLevel = userTypeHierarchy[requiredUserType];
 
     return userLevel >= requiredLevel;
   };
 
   return {
-    profile,
+    profile: effectiveProfile, // Return effective profile
+    realProfile: profile, // Also provide access to real profile
+    impersonatedProfile,
     loading,
     isAdmin,
     isEmployee,
     isPartner,
     isSubcontractor,
     hasPermission,
-    userType: profile?.user_type,
+    userType: effectiveProfile?.user_type,
+    realUserType: profile?.user_type,
     isImpersonating
   };
 };
