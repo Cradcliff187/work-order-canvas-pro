@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 const DEFAULT_TEMPLATES = [
   {
     template_name: 'work_order_created',
-    subject: 'New Work Order Created - {{work_order_number}}',
+    subject: 'New Work Order Created - \{{work_order_number}}',
     html_content: `
       <!DOCTYPE html>
       <html>
@@ -17,10 +17,10 @@ const DEFAULT_TEMPLATES = [
         <h2 style="color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">New Work Order Submitted</h2>
         <p>A new work order has been submitted and requires assignment.</p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Work Order:</strong> {{work_order_number}}</p>
-          <p><strong>Organization:</strong> {{organization_name}}</p>
-          <p><strong>Trade:</strong> {{trade_name}}</p>
-          <p><strong>Description:</strong> {{description}}</p>
+          <p><strong>Work Order:</strong> \{{work_order_number}}</p>
+          <p><strong>Organization:</strong> \{{organization_name}}</p>
+          <p><strong>Trade:</strong> \{{trade_name}}</p>
+          <p><strong>Description:</strong> \{{description}}</p>
         </div>
         <p>Please log in to assign this work order to the appropriate contractor.</p>
         <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
@@ -29,12 +29,12 @@ const DEFAULT_TEMPLATES = [
       </body>
       </html>
     `,
-    text_content: 'New work order {{work_order_number}} has been submitted by {{organization_name}} and requires assignment.',
+    text_content: 'New work order \{{work_order_number}} has been submitted by \{{organization_name}} and requires assignment.',
     is_active: true
   },
   {
     template_name: 'work_order_assigned',
-    subject: 'Work Order Assignment - {{work_order_number}}',
+    subject: 'Work Order Assignment - \{{work_order_number}}',
     html_content: `
       <!DOCTYPE html>
       <html>
@@ -45,13 +45,13 @@ const DEFAULT_TEMPLATES = [
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Work Order Assignment</h2>
-        <p>Hello {{assignee_name}},</p>
+        <p>Hello \{{assignee_name}},</p>
         <p>You have been assigned a new work order. Please review the details below:</p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Work Order:</strong> {{work_order_number}}</p>
-          <p><strong>Organization:</strong> {{organization_name}}</p>
-          <p><strong>Trade:</strong> {{trade_name}}</p>
-          <p><strong>Description:</strong> {{work_order_description}}</p>
+          <p><strong>Work Order:</strong> \{{work_order_number}}</p>
+          <p><strong>Organization:</strong> \{{organization_name}}</p>
+          <p><strong>Trade:</strong> \{{trade_name}}</p>
+          <p><strong>Description:</strong> \{{work_order_description}}</p>
         </div>
         <p>Please log in to view full details and begin work.</p>
         <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
@@ -60,12 +60,12 @@ const DEFAULT_TEMPLATES = [
       </body>
       </html>
     `,
-    text_content: 'You have been assigned work order {{work_order_number}}. Please log in to view details.',
+    text_content: 'You have been assigned work order \{{work_order_number}}. Please log in to view details.',
     is_active: true
   },
   {
     template_name: 'report_submitted',
-    subject: 'Work Report Submitted - {{work_order_number}}',
+    subject: 'Work Report Submitted - \{{work_order_number}}',
     html_content: `
       <!DOCTYPE html>
       <html>
@@ -78,11 +78,11 @@ const DEFAULT_TEMPLATES = [
         <h2 style="color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Work Report Submitted</h2>
         <p>A work completion report has been submitted and is ready for review.</p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Work Order:</strong> {{work_order_number}}</p>
-          <p><strong>Subcontractor:</strong> {{subcontractor_name}}</p>
-          <p><strong>Organization:</strong> {{organization_name}}</p>
-          <p><strong>Work Performed:</strong> {{work_performed}}</p>
-          <p><strong>Invoice Amount:</strong> ${{invoice_amount}}</p>
+          <p><strong>Work Order:</strong> \{{work_order_number}}</p>
+          <p><strong>Subcontractor:</strong> \{{subcontractor_name}}</p>
+          <p><strong>Organization:</strong> \{{organization_name}}</p>
+          <p><strong>Work Performed:</strong> \{{work_performed}}</p>
+          <p><strong>Invoice Amount:</strong> $\{{invoice_amount}}</p>
         </div>
         <p>Please review and approve or request changes.</p>
         <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
@@ -91,12 +91,12 @@ const DEFAULT_TEMPLATES = [
       </body>
       </html>
     `,
-    text_content: 'Work report submitted for {{work_order_number}} by {{subcontractor_name}}. Amount: ${{invoice_amount}}',
+    text_content: 'Work report submitted for \{{work_order_number}} by \{{subcontractor_name}}. Amount: $\{{invoice_amount}}',
     is_active: true
   },
   {
     template_name: 'report_reviewed',
-    subject: 'Work Report {{status}} - {{work_order_number}}',
+    subject: 'Work Report \{{status}} - \{{work_order_number}}',
     html_content: `
       <!DOCTYPE html>
       <html>
@@ -106,14 +106,14 @@ const DEFAULT_TEMPLATES = [
         <title>Work Report Review</title>
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #059669; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Work Report {{status}}</h2>
-        <p>Hello {{first_name}},</p>
-        <p>Your report for work order {{work_order_number}} has been {{status}}.</p>
+        <h2 style="color: #059669; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Work Report \{{status}}</h2>
+        <p>Hello \{{first_name}},</p>
+        <p>Your report for work order \{{work_order_number}} has been \{{status}}.</p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Work Order:</strong> {{work_order_number}}</p>
-          <p><strong>Organization:</strong> {{organization_name}}</p>
-          <p><strong>Status:</strong> <span style="color: #059669; font-weight: bold;">{{status}}</span></p>
-          <p><strong>Review Notes:</strong> {{review_notes}}</p>
+          <p><strong>Work Order:</strong> \{{work_order_number}}</p>
+          <p><strong>Organization:</strong> \{{organization_name}}</p>
+          <p><strong>Status:</strong> <span style="color: #059669; font-weight: bold;">\{{status}}</span></p>
+          <p><strong>Review Notes:</strong> \{{review_notes}}</p>
         </div>
         <p>Thank you for your work!</p>
         <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
@@ -122,7 +122,7 @@ const DEFAULT_TEMPLATES = [
       </body>
       </html>
     `,
-    text_content: 'Your report for work order {{work_order_number}} has been {{status}}.',
+    text_content: 'Your report for work order \{{work_order_number}} has been \{{status}}.',
     is_active: true
   }
 ];
