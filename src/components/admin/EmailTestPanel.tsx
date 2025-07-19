@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
@@ -20,6 +22,8 @@ export const EmailTestPanel = () => {
   const [testEmail, setTestEmail] = useState('');
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [emailResult, setEmailResult] = useState<any>(null);
+  const [useManualEntry, setUseManualEntry] = useState(false);
+  const [manualUuid, setManualUuid] = useState('');
 
   const recordTypes = [
     { value: 'work_order', label: 'Work Order' },
@@ -27,6 +31,12 @@ export const EmailTestPanel = () => {
     { value: 'work_order_report', label: 'Work Order Report' },
     { value: 'user', label: 'User Account' },
   ];
+
+  // UUID validation regex
+  const isValidUuid = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
 
   const fetchRecords = async (type: string) => {
     if (!type) return;
@@ -48,7 +58,7 @@ export const EmailTestPanel = () => {
               organizations!inner(name, address)
             `)
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(20);
           break;
         
         case 'work_order_assignment':
@@ -60,7 +70,7 @@ export const EmailTestPanel = () => {
               profiles!inner(first_name, last_name)
             `)
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(20);
           break;
         
         case 'work_order_report':
@@ -71,8 +81,8 @@ export const EmailTestPanel = () => {
               work_orders!inner(work_order_number),
               profiles!inner(first_name)
             `)
-            .order('submitted_at', { ascending: false })
-            .limit(50);
+            .order('created_at', { ascending: false })
+            .limit(20);
           break;
         
         case 'user':
@@ -80,7 +90,7 @@ export const EmailTestPanel = () => {
             .from('profiles')
             .select('id, email, first_name, last_name')
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(20);
           break;
         
         default:
@@ -131,19 +141,50 @@ export const EmailTestPanel = () => {
   useEffect(() => {
     if (recordType) {
       setRecordId(''); // Clear selected record when type changes
+      setManualUuid(''); // Clear manual UUID when type changes
       setRecords([]); // Clear previous records
-      fetchRecords(recordType);
+      if (!useManualEntry) {
+        fetchRecords(recordType);
+      }
     } else {
       setRecords([]);
       setRecordId('');
+      setManualUuid('');
     }
-  }, [recordType]);
+  }, [recordType, useManualEntry]);
+
+  // Handle manual entry toggle
+  const handleManualEntryToggle = (checked: boolean) => {
+    setUseManualEntry(checked);
+    setRecordId('');
+    setManualUuid('');
+    if (!checked && recordType) {
+      fetchRecords(recordType);
+    }
+  };
+
+  // Handle manual UUID input
+  const handleManualUuidChange = (value: string) => {
+    setManualUuid(value);
+    setRecordId(value);
+  };
+
+  const getCurrentRecordId = () => {
+    return useManualEntry ? manualUuid : recordId;
+  };
+
+  const isValidCurrentRecord = () => {
+    const currentId = getCurrentRecordId();
+    return currentId && (useManualEntry ? isValidUuid(currentId) : true);
+  };
 
   const handleTestEmail = async () => {
-    if (!selectedTemplate || !recordId || !recordType) {
+    if (!selectedTemplate || !isValidCurrentRecord() || !recordType) {
       toast({
         title: 'Error',
-        description: 'Please select a template, record type, and enter a record ID',
+        description: useManualEntry && manualUuid && !isValidUuid(manualUuid) 
+          ? 'Please enter a valid UUID format'
+          : 'Please select a template, record type, and enter a valid record ID',
         variant: 'destructive',
       });
       return;
@@ -156,7 +197,7 @@ export const EmailTestPanel = () => {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           template_name: selectedTemplate,
-          record_id: recordId,
+          record_id: getCurrentRecordId(),
           record_type: recordType,
           recipient_email: testEmail || undefined,
           test_mode: true
@@ -183,10 +224,12 @@ export const EmailTestPanel = () => {
   };
 
   const handleSendEmail = async () => {
-    if (!selectedTemplate || !recordId || !recordType) {
+    if (!selectedTemplate || !isValidCurrentRecord() || !recordType) {
       toast({
         title: 'Error',
-        description: 'Please select a template, record type, and enter a record ID',
+        description: useManualEntry && manualUuid && !isValidUuid(manualUuid)
+          ? 'Please enter a valid UUID format'
+          : 'Please select a template, record type, and enter a valid record ID',
         variant: 'destructive',
       });
       return;
@@ -198,7 +241,7 @@ export const EmailTestPanel = () => {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           template_name: selectedTemplate,
-          record_id: recordId,
+          record_id: getCurrentRecordId(),
           record_type: recordType,
           recipient_email: testEmail || undefined,
           test_mode: false
@@ -242,7 +285,7 @@ export const EmailTestPanel = () => {
         <CardTitle>Email System Test</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="template">Email Template</Label>
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
@@ -274,35 +317,64 @@ export const EmailTestPanel = () => {
               </SelectContent>
             </Select>
           </div>
-
-          <div>
-            <Label htmlFor="recordId">Select Record</Label>
-            <Select value={recordId} onValueChange={setRecordId} disabled={!recordType}>
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  !recordType 
-                    ? "Select record type first" 
-                    : loadingRecords 
-                      ? "Loading records..." 
-                      : "Select a record"
-                } />
-              </SelectTrigger>
-              <SelectContent className="max-h-80 overflow-y-auto">
-                {loadingRecords ? (
-                  <SelectItem value="" disabled>Loading records...</SelectItem>
-                ) : records.length === 0 ? (
-                  <SelectItem value="" disabled>No records found</SelectItem>
-                ) : (
-                  records.map((record: any) => (
-                    <SelectItem key={record.id} value={record.id}>
-                      {getRecordLabel(record, recordType)}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
+
+        {recordType && (
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="manual-entry"
+                checked={useManualEntry}
+                onCheckedChange={handleManualEntryToggle}
+              />
+              <Label htmlFor="manual-entry">Enter UUID manually</Label>
+            </div>
+
+            {useManualEntry ? (
+              <div>
+                <Label htmlFor="manualUuid">Record UUID</Label>
+                <Input
+                  id="manualUuid"
+                  value={manualUuid}
+                  onChange={(e) => handleManualUuidChange(e.target.value)}
+                  placeholder="Enter UUID (e.g., 123e4567-e89b-12d3-a456-426614174000)"
+                  className={manualUuid && !isValidUuid(manualUuid) ? 'border-red-500' : ''}
+                />
+                {manualUuid && !isValidUuid(manualUuid) && (
+                  <p className="text-sm text-red-500 mt-1">Please enter a valid UUID format</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="recordId">Select Record</Label>
+                <Select value={recordId} onValueChange={setRecordId} disabled={!recordType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !recordType 
+                        ? "Select record type first" 
+                        : loadingRecords 
+                          ? "Loading records..." 
+                          : "Select a record (20 most recent)"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-80 overflow-y-auto">
+                    {loadingRecords ? (
+                      <SelectItem value="" disabled>Loading records...</SelectItem>
+                    ) : records.length === 0 ? (
+                      <SelectItem value="" disabled>No records found</SelectItem>
+                    ) : (
+                      records.map((record: any) => (
+                        <SelectItem key={record.id} value={record.id}>
+                          {getRecordLabel(record, recordType)}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <Label htmlFor="testEmail">Test Email (optional)</Label>
@@ -318,14 +390,14 @@ export const EmailTestPanel = () => {
         <div className="flex gap-2">
           <Button 
             onClick={handleTestEmail} 
-            disabled={isTestingEmail}
+            disabled={isTestingEmail || !isValidCurrentRecord()}
             variant="outline"
           >
             {isTestingEmail ? 'Testing...' : 'Test Email (Preview)'}
           </Button>
           <Button 
             onClick={handleSendEmail} 
-            disabled={isTestingEmail}
+            disabled={isTestingEmail || !isValidCurrentRecord()}
           >
             {isTestingEmail ? 'Sending...' : 'Send Email'}
           </Button>
@@ -360,7 +432,7 @@ export const EmailTestPanel = () => {
             <li><strong>work_order_report:</strong> For report submission/review notifications</li>
             <li><strong>user:</strong> For user registration/welcome notifications</li>
           </ul>
-          <p className="mt-2"><strong>Note:</strong> The function automatically determines recipient emails based on the record type and template.</p>
+          <p className="mt-2"><strong>Note:</strong> The function automatically determines recipient emails based on the record type and template. Shows 20 most recent records or enter UUID manually.</p>
         </div>
       </CardContent>
     </Card>
