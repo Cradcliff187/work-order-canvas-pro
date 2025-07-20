@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
 import { SimpleEmailTest } from '@/components/admin/SimpleEmailTest';
 import { EmailSystemTester } from '@/components/admin/EmailSystemTester';
-import { Mail, TestTube, Send, Settings } from 'lucide-react';
+import { ComprehensiveEmailTester } from '@/components/admin/ComprehensiveEmailTester';
+import { Mail, TestTube, Send, Settings, Zap } from 'lucide-react';
 
 const EmailTest = () => {
   return (
@@ -17,11 +18,15 @@ const EmailTest = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="comprehensive" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="comprehensive-v2" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="comprehensive-v2" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Quick Test
+          </TabsTrigger>
           <TabsTrigger value="comprehensive" className="flex items-center gap-2">
             <TestTube className="h-4 w-4" />
-            Comprehensive Tests
+            System Tests
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
@@ -36,6 +41,10 @@ const EmailTest = () => {
             Settings
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="comprehensive-v2">
+          <ComprehensiveEmailTester />
+        </TabsContent>
 
         <TabsContent value="comprehensive">
           <EmailSystemTester />
@@ -63,6 +72,7 @@ const EmailTest = () => {
                 <div><strong>Function Status:</strong> Public (verify_jwt = false)</div>
                 <div><strong>Database Triggers:</strong> Active for all email events</div>
                 <div><strong>Email Templates:</strong> Auto-created if missing</div>
+                <div><strong>URL Generation:</strong> Dynamic based on environment</div>
               </div>
             </CardContent>
           </Card>
