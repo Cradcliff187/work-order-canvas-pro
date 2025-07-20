@@ -120,8 +120,9 @@ serve(async (req) => {
       return createCorsErrorResponse('Only admins can create users', 403);
     }
 
-    // Get request body
-    const { userData, send_welcome_email = true } = await req.json();
+    // Get request body - default to false to prevent duplicate emails
+    // Our database trigger will handle the welcome email via Resend
+    const { userData, send_welcome_email = false } = await req.json();
 
     console.log('Creating user:', { 
       email: userData.email, 
@@ -295,7 +296,7 @@ serve(async (req) => {
     // Return success response
     const message = send_welcome_email 
       ? 'User created successfully. They will receive a Supabase confirmation email to set up their account.'
-      : 'User created successfully. No welcome email sent as requested.';
+      : 'User created successfully. A welcome email has been sent via our custom email system.';
 
     console.log('✅ User creation process completed:', { 
       userId: newProfile.id, 
