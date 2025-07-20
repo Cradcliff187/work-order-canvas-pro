@@ -93,85 +93,96 @@ export const EmailTestPanel = () => {
     const fetchRecords = async () => {
       try {
         let query;
+        let data;
+        let error;
+        
+        console.log('Fetching records for type:', recordType);
         
         switch (recordType) {
           case 'user':
-            query = supabase
+            const userResult = await supabase
               .from('profiles')
               .select('id, first_name, last_name, email')
               .order('created_at', { ascending: false })
               .limit(20);
+            data = userResult.data;
+            error = userResult.error;
             break;
             
           case 'work_order':
-            query = supabase
+            const woResult = await supabase
               .from('work_orders')
-              .select(`
-                id, 
-                work_order_number, 
-                title,
-                street_address, 
-                location_address, 
-                location_street_address,
-                organizations!inner(name, address)
-              `)
+              .select('id, work_order_number, title, description')
               .order('created_at', { ascending: false })
               .limit(20);
+            data = woResult.data;
+            error = woResult.error;
             break;
             
           case 'work_order_assignment':
-            query = supabase
+            const assignmentResult = await supabase
               .from('work_order_assignments')
               .select(`
                 id,
+                notes,
                 work_orders!inner(work_order_number, title),
-                profiles!inner(first_name, last_name)
+                assigned_to_profile:profiles!assigned_to(first_name, last_name)
               `)
               .order('created_at', { ascending: false })
               .limit(20);
+            data = assignmentResult.data;
+            error = assignmentResult.error;
             break;
             
           case 'work_order_report':
-            query = supabase
+            const reportResult = await supabase
               .from('work_order_reports')
               .select(`
                 id,
+                work_performed,
                 work_orders!inner(work_order_number, title),
-                profiles!inner(first_name, last_name)
+                subcontractor_profile:profiles!subcontractor_user_id(first_name, last_name)
               `)
               .order('created_at', { ascending: false })
               .limit(20);
+            data = reportResult.data;
+            error = reportResult.error;
             break;
             
           case 'invoice':
-            query = supabase
+            const invoiceResult = await supabase
               .from('invoices')
-              .select(`
-                id,
-                internal_invoice_number,
-                external_invoice_number,
-                total_amount,
-                status,
-                organizations!inner(name)
-              `)
+              .select('id, internal_invoice_number, external_invoice_number, total_amount, status')
               .order('created_at', { ascending: false })
               .limit(20);
+            data = invoiceResult.data;
+            error = invoiceResult.error;
             break;
         }
         
-        if (query) {
-          const { data, error } = await query;
-          if (!error && data) {
-            setRecords(data);
-          }
+        if (error) {
+          console.error('Error fetching records:', error);
+          toast({
+            title: 'Error',
+            description: `Failed to load ${recordType} records: ${error.message}`,
+            variant: 'destructive',
+          });
+          setRecords([]);
+        } else if (data) {
+          console.log(`Fetched ${data.length} ${recordType} records:`, data);
+          setRecords(data);
+        } else {
+          console.warn(`No data returned for ${recordType}`);
+          setRecords([]);
         }
-      } catch (error) {
-        console.error('Error fetching records:', error);
+      } catch (error: any) {
+        console.error('Fetch records error:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load records',
+          description: `Failed to load records: ${error.message}`,
           variant: 'destructive',
         });
+        setRecords([]);
       } finally {
         setLoadingRecords(false);
       }
@@ -313,21 +324,21 @@ export const EmailTestPanel = () => {
       case 'work_order':
         return records.map((record: any) => (
           <SelectItem key={record.id} value={record.id}>
-            {record.work_order_number} - {record.title || 'No title'}
+            {record.work_order_number} - {record.title || record.description || 'No title'}
           </SelectItem>
         ));
         
       case 'work_order_assignment':
         return records.map((record: any) => (
           <SelectItem key={record.id} value={record.id}>
-            {record.work_orders?.work_order_number} - Assigned to {record.profiles?.first_name} {record.profiles?.last_name}
+            {record.work_orders?.work_order_number || 'Unknown WO'} - Assigned to {record.assigned_to_profile?.first_name || 'Unknown'} {record.assigned_to_profile?.last_name || ''}
           </SelectItem>
         ));
         
       case 'work_order_report':
         return records.map((record: any) => (
           <SelectItem key={record.id} value={record.id}>
-            {record.work_orders?.work_order_number} - Report by {record.profiles?.first_name} {record.profiles?.last_name}
+            {record.work_orders?.work_order_number || 'Unknown WO'} - Report by {record.subcontractor_profile?.first_name || 'Unknown'} {record.subcontractor_profile?.last_name || ''}
           </SelectItem>
         ));
         
@@ -372,7 +383,7 @@ export const EmailTestPanel = () => {
               <SelectContent>
                 {templates?.map((template) => (
                   <SelectItem key={template.id} value={template.template_name}>
-                    {template.template_name}
+                    {template.template_name} - {template.subject}
                   </SelectItem>
                 ))}
               </SelectContent>
