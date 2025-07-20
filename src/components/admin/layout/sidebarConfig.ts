@@ -86,7 +86,7 @@ export const sidebarItems = [
     icon: Mail,
   },
   {
-    title: 'Email Test',
+    title: 'Email Testing',
     url: '/admin/email-test',
     icon: Mail,
   },
@@ -102,7 +102,7 @@ export const adminOnlyItems = [
   'Organizations',
   'System Settings',
   'Email Templates',
-  'Email Test',
+  'Email Testing',
   'Employees',
   'Invoices',
   'System Health',
