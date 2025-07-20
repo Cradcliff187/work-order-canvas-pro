@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,8 @@ import {
   User,
   RefreshCw,
   Workflow,
-  ChevronDown
+  ChevronDown,
+  Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,6 +53,13 @@ interface EdgeFunctionStatus {
   error?: string;
 }
 
+interface DatabaseTrigger {
+  name: string;
+  required: boolean;
+  description: string;
+  status: 'checking' | 'active' | 'missing';
+}
+
 const EmailTestPage = () => {
   const { toast } = useToast();
   const { createUser } = useUserMutations();
@@ -79,7 +86,42 @@ const EmailTestPage = () => {
       status: 'checking'
     }
   ]);
+  
+  const [databaseTriggers, setDatabaseTriggers] = useState<DatabaseTrigger[]>([
+    {
+      name: 'trigger_work_order_created',
+      required: true,
+      description: 'Sends emails when work orders are created',
+      status: 'checking'
+    },
+    {
+      name: 'trigger_work_order_assigned',
+      required: true, 
+      description: 'Sends emails when work orders are assigned',
+      status: 'checking'
+    },
+    {
+      name: 'trigger_report_submitted',
+      required: true,
+      description: 'Sends emails when reports are submitted',
+      status: 'checking'
+    },
+    {
+      name: 'trigger_report_reviewed',
+      required: true,
+      description: 'Sends emails when reports are reviewed',
+      status: 'checking'
+    },
+    {
+      name: 'trigger_auto_report_status_enhanced',
+      required: true,
+      description: 'Enhanced report status automation',
+      status: 'checking'
+    }
+  ]);
+  
   const [functionsExpanded, setFunctionsExpanded] = useState(false);
+  const [triggersExpanded, setTriggersExpanded] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
   
   const [testForm, setTestForm] = useState<TestUserForm>({
@@ -91,8 +133,69 @@ const EmailTestPage = () => {
 
   useEffect(() => {
     checkEmailConfiguration();
+    checkDatabaseTriggers();
     fetchEmailLogs();
   }, []);
+
+  const checkDatabaseTriggers = async () => {
+    const updatedTriggers = [...databaseTriggers];
+    
+    // Reset all to checking status
+    updatedTriggers.forEach(trigger => {
+      trigger.status = 'checking';
+    });
+    setDatabaseTriggers([...updatedTriggers]);
+
+    try {
+      // Query the database for email-related triggers
+      const { data: triggerData, error } = await supabase
+        .rpc('get_email_triggers')
+        .single();
+
+      if (error) {
+        // Fallback: try direct query if RPC doesn't exist
+        const { data: directData, error: directError } = await supabase
+          .from('pg_trigger')
+          .select('tgname')
+          .like('tgname', '%email%')
+          .eq('tgisinternal', false);
+
+        if (directError) {
+          console.error('Failed to check database triggers:', directError);
+          // Mark all as missing if we can't check
+          updatedTriggers.forEach(trigger => {
+            trigger.status = 'missing';
+          });
+          setDatabaseTriggers([...updatedTriggers]);
+          return;
+        }
+        
+        // Process direct query results
+        const activeTriggerNames = directData?.map(t => t.tgname) || [];
+        
+        updatedTriggers.forEach(trigger => {
+          trigger.status = activeTriggerNames.includes(trigger.name) ? 'active' : 'missing';
+        });
+      } else {
+        // Process RPC results if available
+        const activeTriggerNames = triggerData?.trigger_names || [];
+        
+        updatedTriggers.forEach(trigger => {
+          trigger.status = activeTriggerNames.includes(trigger.name) ? 'active' : 'missing';
+        });
+      }
+      
+      setDatabaseTriggers([...updatedTriggers]);
+      
+    } catch (error: any) {
+      console.error('Database trigger check failed:', error);
+      // Mark all as missing on error
+      updatedTriggers.forEach(trigger => {
+        trigger.status = 'missing';
+      });
+      setDatabaseTriggers([...updatedTriggers]);
+    }
+  };
 
   const checkEmailConfiguration = async () => {
     const updatedFunctions = [...edgeFunctions];
@@ -219,8 +322,21 @@ const EmailTestPage = () => {
   const getFunctionStatusIcon = (status: string) => {
     switch (status) {
       case 'available':
+      case 'active':
         return <CheckCircle className="h-4 w-4 text-success" />;
       case 'unavailable':
+      case 'missing':
+        return <XCircle className="h-4 w-4 text-destructive" />;
+      default:
+        return <Loader2 className="h-4 w-4 animate-spin" />;
+    }
+  };
+
+  const getTriggerStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="h-4 w-4 text-success" />;
+      case 'missing':
         return <XCircle className="h-4 w-4 text-destructive" />;
       default:
         return <Loader2 className="h-4 w-4 animate-spin" />;
@@ -239,9 +355,26 @@ const EmailTestPage = () => {
     return { available: availableRequired, total: requiredFunctions.length };
   };
 
+  const getActiveTriggerCount = () => {
+    const active = databaseTriggers.filter(t => t.status === 'active').length;
+    const total = databaseTriggers.length;
+    return { active, total };
+  };
+
+  const getRequiredTriggerCount = () => {
+    const requiredTriggers = databaseTriggers.filter(t => t.required);
+    const activeRequired = requiredTriggers.filter(t => t.status === 'active').length;
+    return { active: activeRequired, total: requiredTriggers.length };
+  };
+
   const { available: workingCount, total: totalCount } = getWorkingFunctionCount();
   const { available: requiredAvailable, total: requiredTotal } = getRequiredFunctionCount();
+  const { active: activeTriggerCount, total: totalTriggerCount } = getActiveTriggerCount();
+  const { active: requiredTriggersActive, total: requiredTriggersTotal } = getRequiredTriggerCount();
+  
   const allRequiredWorking = requiredAvailable === requiredTotal;
+  const allRequiredTriggersActive = requiredTriggersActive === requiredTriggersTotal;
+  const systemHealthy = allRequiredWorking && allRequiredTriggersActive;
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -252,7 +385,6 @@ const EmailTestPage = () => {
         </p>
       </div>
 
-      {/* Implementation Status */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -294,8 +426,7 @@ const EmailTestPage = () => {
         </CardContent>
       </Card>
 
-      {/* System Status */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
@@ -389,28 +520,49 @@ const EmailTestPage = () => {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Workflow className="h-4 w-4" />
-              System Status
+              <Zap className="h-4 w-4" />
+              Database Triggers
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {allRequiredWorking ? (
+              {activeTriggerCount === totalTriggerCount ? (
                 <CheckCircle className="h-4 w-4 text-success" />
-              ) : (
+              ) : activeTriggerCount === 0 ? (
                 <XCircle className="h-4 w-4 text-destructive" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-warning" />
               )}
               <span className="text-sm">
-                {allRequiredWorking ? 'Ready' : 'Issues Detected'}
+                {activeTriggerCount}/{totalTriggerCount} Triggers Active
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {allRequiredWorking ? 'All required functions working' : 'Required functions unavailable'}
-            </p>
+            <Collapsible open={triggersExpanded} onOpenChange={setTriggersExpanded}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="mt-2 p-0 h-auto text-xs">
+                  <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${triggersExpanded ? 'rotate-180' : ''}`} />
+                  Details
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-1">
+                {databaseTriggers.map((trigger) => (
+                  <div key={trigger.name} className="flex items-center gap-2 text-xs">
+                    {getTriggerStatusIcon(trigger.status)}
+                    <span className={trigger.required ? 'font-medium' : ''}>
+                      {trigger.name.replace('trigger_', '')}
+                      {trigger.required && <span className="text-destructive">*</span>}
+                    </span>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground mt-2">
+                  * Required triggers
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
             <Button
               variant="ghost"
               size="sm"
-              onClick={checkEmailConfiguration}
+              onClick={checkDatabaseTriggers}
               className="mt-2 p-0 h-auto text-xs"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
@@ -418,14 +570,48 @@ const EmailTestPage = () => {
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Workflow className="h-4 w-4" />
+              System Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              {systemHealthy ? (
+                <CheckCircle className="h-4 w-4 text-success" />
+              ) : (
+                <XCircle className="h-4 w-4 text-destructive" />
+              )}
+              <span className="text-sm">
+                {systemHealthy ? 'Ready' : 'Issues Detected'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {systemHealthy ? 'All systems operational' : 'Functions or triggers unavailable'}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                checkEmailConfiguration();
+                checkDatabaseTriggers();
+              }}
+              className="mt-2 p-0 h-auto text-xs"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Recheck All
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Email Function Tests */}
       <div className="mb-6">
         <EmailTestPanel />
       </div>
 
-      {/* Test User Creation */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -482,7 +668,7 @@ const EmailTestPage = () => {
 
           <Button 
             onClick={handleCreateTestUser}
-            disabled={isLoading || !allRequiredWorking}
+            disabled={isLoading || !systemHealthy}
             className="flex items-center gap-2"
           >
             {isLoading ? (
@@ -493,11 +679,11 @@ const EmailTestPage = () => {
             Create Test User
           </Button>
 
-          {!allRequiredWorking && (
+          {!systemHealthy && (
             <Alert className="border-warning">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Some required functions are unavailable. User creation may fail.
+                Some required functions or triggers are unavailable. User creation may fail.
               </AlertDescription>
             </Alert>
           )}
@@ -517,7 +703,6 @@ const EmailTestPage = () => {
         </CardContent>
       </Card>
 
-      {/* Email Logs */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
