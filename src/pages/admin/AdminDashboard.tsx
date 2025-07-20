@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -111,7 +112,7 @@ const AdminDashboard = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/admin/test-email')}
+            onClick={() => navigate('/admin/email-test')}
           >
             <TestTube className="h-4 w-4 mr-2" />
             Test Email
