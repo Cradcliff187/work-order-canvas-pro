@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Mail, CheckCircle, XCircle, Clock, Send, Database, Eye, User, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,6 +89,7 @@ export function EmailTestingPanel() {
   const [showLogs, setShowLogs] = useState(false);
   const [filterCategory, setFilterCategory] = useState<'all' | 'work_order' | 'report' | 'auth'>('all');
   const [authStats, setAuthStats] = useState<{auth_confirmation: number, password_reset: number} | null>(null);
+  const [testRecipient, setTestRecipient] = useState('');
   
   const { toast } = useToast();
   const { createUser } = useUserMutations();
@@ -105,7 +108,7 @@ export function EmailTestingPanel() {
     
     try {
       // Create a test user to trigger auth confirmation email
-      const testEmail = `test-auth-${Date.now()}@workorderpro.test`;
+      const testEmail = testRecipient || `test-auth-${Date.now()}@workorderportal.com`;
       
       await createUser.mutateAsync({
         email: testEmail,
@@ -130,7 +133,7 @@ export function EmailTestingPanel() {
       if (error) throw error;
 
       if (emailLog) {
-        updateTestStatus('auth_confirmation', 'success', `Auth confirmation email found - Status: ${emailLog.status}`);
+        updateTestStatus('auth_confirmation', 'success', `Auth confirmation email sent to ${testEmail} - Status: ${emailLog.status}`);
         toast({
           title: "Auth Confirmation Test Successful",
           description: `Email sent to ${testEmail}`,
@@ -173,8 +176,8 @@ export function EmailTestingPanel() {
     updateTestStatus('password_reset', 'testing');
     
     try {
-      // Use a known test email for password reset
-      const testEmail = 'test-password-reset@workorderpro.test';
+      // Use the test recipient if provided, otherwise use a default test email
+      const testEmail = testRecipient || 'test-password-reset@workorderportal.com';
       
       // Trigger password reset
       const result = await forgotPassword(testEmail);
@@ -199,7 +202,7 @@ export function EmailTestingPanel() {
       if (error) throw error;
 
       if (emailLog) {
-        updateTestStatus('password_reset', 'success', `Password reset email found - Status: ${emailLog.status}`);
+        updateTestStatus('password_reset', 'success', `Password reset email sent to ${testEmail} - Status: ${emailLog.status}`);
         toast({
           title: "Password Reset Test Successful",
           description: `Email sent to ${testEmail}`,
@@ -237,33 +240,37 @@ export function EmailTestingPanel() {
     
     try {
       // Call the send-email edge function directly for testing work order/report emails
-      const response = await fetch(`https://inudoymofztrvxhrlrek.supabase.co/functions/v1/send-email`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImludWRveW1vZnp0cnZ4aHJscmVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxNjI2NTksImV4cCI6MjA2NzczODY1OX0.Qm8B5GLXnXcZrz_3idT9UCUYxF_cPi1gtr5F3eMeNI4`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await supabase.functions.invoke('send-email', {
+        body: {
           template_name: test.template_name,
           record_id: `TEST-${test.id.toUpperCase()}-001`,
           record_type: test.record_type,
-          test_mode: false
-        })
+          test_mode: Boolean(testRecipient),
+          test_recipient: testRecipient || undefined,
+          custom_data: testRecipient ? {
+            work_order_number: 'TEST-001',
+            organization_name: 'Test Organization',
+            first_name: 'Test',
+            last_name: 'User',
+            status: 'approved',
+            title: 'Test Work Order',
+            review_notes: 'This is a test email'
+          } : undefined
+        }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Email test response error:', errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      if (response.error) {
+        console.error('Email test response error:', response.error);
+        throw new Error(response.error.message || 'Email test failed');
       }
 
-      const result = await response.json();
+      const result = response.data;
       
-      updateTestStatus(test.id, 'success', `Email sent successfully - Recipients: ${result.recipients || 1}`);
+      updateTestStatus(test.id, 'success', `Email sent successfully - Recipients: ${result.recipients || 1} - Email sent to: ${testRecipient || 'template recipients'}`);
       
       toast({
         title: "Email Test Successful",
-        description: `${test.name} email sent successfully`,
+        description: `${test.name} email sent successfully to ${testRecipient || 'template recipients'}`,
       });
 
       await fetchEmailLogs();
@@ -408,6 +415,23 @@ export function EmailTestingPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Test Recipient Input */}
+          <div className="space-y-2">
+            <Label htmlFor="test-recipient">Test Recipient Email (Optional)</Label>
+            <Input
+              id="test-recipient"
+              type="email"
+              placeholder="your-email@example.com"
+              value={testRecipient}
+              onChange={(e) => setTestRecipient(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Leave empty to use template default recipients, or enter your email to receive test emails directly.
+            </p>
+          </div>
+          
+          <Separator />
+
           {/* Category Filter */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -599,7 +623,8 @@ export function EmailTestingPanel() {
               <p>• <strong>Work Order Emails:</strong> Creation and assignment notifications</p>
               <p>• <strong>Report Emails:</strong> Submission and review notifications</p>
               <p>• <strong>Delivery:</strong> All emails sent via Resend with delivery tracking</p>
-              <p>• <strong>Test Data:</strong> Automatically creates test data when needed for testing</p>
+              <p>• <strong>Test Mode:</strong> Enter your email above to receive test emails directly</p>
+              <p>• <strong>Domain:</strong> Using workorderportal.com for all email addresses</p>
             </div>
           </div>
         </AlertDescription>
