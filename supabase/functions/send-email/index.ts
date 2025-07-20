@@ -41,115 +41,180 @@ serve(async (req) => {
       return createCorsErrorResponse('Missing required parameters: template_name, record_id, record_type', 400);
     }
 
-    // Only handle work_order_created for now
-    if (template_name !== 'work_order_created') {
-      return createCorsErrorResponse(`Template '${template_name}' not supported yet. Only 'work_order_created' is currently supported.`, 400);
-    }
-
     console.log('Processing email request:', { template_name, record_id, record_type });
 
-    // Fetch work order with organization data
-    const { data: workOrder, error: workOrderError } = await supabase
-      .from('work_orders')
-      .select(`
-        *,
-        organizations!inner(name),
-        trades(name)
-      `)
-      .eq('id', record_id)
-      .single();
+    // Handle work_order_created emails
+    if (template_name === 'work_order_created') {
+      // Fetch work order with organization data
+      const { data: workOrder, error: workOrderError } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          organizations!inner(name),
+          trades(name)
+        `)
+        .eq('id', record_id)
+        .single();
 
-    if (workOrderError || !workOrder) {
-      console.error('Work order fetch error:', workOrderError);
-      return createCorsErrorResponse('Work order not found', 404);
+      if (workOrderError || !workOrder) {
+        console.error('Work order fetch error:', workOrderError);
+        return createCorsErrorResponse('Work order not found', 404);
+      }
+
+      console.log('Found work order:', workOrder.work_order_number);
+
+      // Get admin email addresses
+      const { data: adminProfiles, error: adminError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('user_type', 'admin')
+        .eq('is_active', true);
+
+      if (adminError || !adminProfiles || adminProfiles.length === 0) {
+        console.error('Admin profiles fetch error:', adminError);
+        return createCorsErrorResponse('No admin recipients found', 500);
+      }
+
+      const adminEmails = adminProfiles.map(profile => profile.email);
+      console.log('Found admin recipients:', adminEmails.length);
+
+      // Fetch email template
+      const { data: template, error: templateError } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('template_name', template_name)
+        .eq('is_active', true)
+        .single();
+
+      if (templateError || !template) {
+        console.error('Template fetch error:', templateError);
+        return createCorsErrorResponse('Email template not found', 500);
+      }
+
+      console.log('Found email template:', template.template_name);
+
+      // Prepare template variables
+      const variables = {
+        work_order_number: workOrder.work_order_number || 'N/A',
+        organization_name: workOrder.organizations?.name || 'Unknown Organization'
+      };
+
+      console.log('Template variables:', variables);
+
+      // Replace variables in subject and HTML content
+      let processedSubject = template.subject;
+      let processedHtml = template.html_content;
+
+      Object.entries(variables).forEach(([key, value]) => {
+        const placeholder = `{{${key}}}`;
+        processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);
+        processedHtml = processedHtml.replace(new RegExp(placeholder, 'g'), value);
+      });
+
+      console.log('Processed email subject:', processedSubject);
+
+      // Send email using Resend service
+      const emailResult = await sendEmail({
+        to: adminEmails,
+        subject: processedSubject,
+        html: processedHtml
+      });
+
+      // Log email attempt to database
+      const logPromises = adminEmails.map(email => 
+        supabase.from('email_logs').insert({
+          work_order_id: record_id,
+          template_used: template_name,
+          recipient_email: email,
+          status: emailResult.success ? 'sent' : 'failed',
+          error_message: emailResult.success ? null : emailResult.error
+        })
+      );
+
+      await Promise.all(logPromises);
+      console.log('Email logs created for', adminEmails.length, 'recipients');
+
+      if (!emailResult.success) {
+        console.error('Email sending failed:', emailResult.error);
+        return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
+      }
+
+      console.log('Email sent successfully to', adminEmails.length, 'recipients');
+
+      return createCorsResponse({
+        success: true,
+        message: 'Email sent successfully',
+        recipients: adminEmails.length,
+        email_id: emailResult.id
+      });
     }
 
-    console.log('Found work order:', workOrder.work_order_number);
+    // Handle report_reviewed emails  
+    if (template_name === 'report_reviewed') {
+      // This is a work_order_report, not a work_order
+      const { data: report } = await supabase
+        .from('work_order_reports')
+        .select(`
+          *,
+          work_orders!work_order_id(work_order_number, title, organizations!organization_id(name)),
+          profiles!subcontractor_user_id(email, first_name)
+        `)
+        .eq('id', record_id)
+        .single();
 
-    // Get admin email addresses
-    const { data: adminProfiles, error: adminError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('user_type', 'admin')
-      .eq('is_active', true);
+      if (!report || !report.profiles?.email) {
+        return createCorsErrorResponse('Report or recipient not found', 404);
+      }
 
-    if (adminError || !adminProfiles || adminProfiles.length === 0) {
-      console.error('Admin profiles fetch error:', adminError);
-      return createCorsErrorResponse('No admin recipients found', 500);
-    }
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('subject, html_content')
+        .eq('template_name', 'report_reviewed')
+        .single();
 
-    const adminEmails = adminProfiles.map(profile => profile.email);
-    console.log('Found admin recipients:', adminEmails.length);
+      if (!template) {
+        return createCorsErrorResponse('Email template not found', 500);
+      }
 
-    // Fetch email template
-    const { data: template, error: templateError } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('template_name', template_name)
-      .eq('is_active', true)
-      .single();
+      // Get status and notes from the report
+      const status = report.status;
+      const reviewNotes = report.review_notes || '';
 
-    if (templateError || !template) {
-      console.error('Template fetch error:', templateError);
-      return createCorsErrorResponse('Email template not found', 500);
-    }
+      // Replace variables
+      let subject = template.subject
+        .replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '')
+        .replace(/{{status}}/g, status);
 
-    console.log('Found email template:', template.template_name);
+      let html = template.html_content
+        .replace(/{{first_name}}/g, report.profiles?.first_name || '')
+        .replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '')
+        .replace(/{{work_order_title}}/g, report.work_orders?.title || '')
+        .replace(/{{organization_name}}/g, report.work_orders?.organizations?.name || '')
+        .replace(/{{status}}/g, status)
+        .replace(/{{review_notes}}/g, reviewNotes);
 
-    // Prepare template variables
-    const variables = {
-      work_order_number: workOrder.work_order_number || 'N/A',
-      organization_name: workOrder.organizations?.name || 'Unknown Organization'
-    };
+      const emailResult = await sendEmail({
+        to: [report.profiles.email],
+        subject: subject,
+        html: html
+      });
 
-    console.log('Template variables:', variables);
-
-    // Replace variables in subject and HTML content
-    let processedSubject = template.subject;
-    let processedHtml = template.html_content;
-
-    Object.entries(variables).forEach(([key, value]) => {
-      const placeholder = `{{${key}}}`;
-      processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);
-      processedHtml = processedHtml.replace(new RegExp(placeholder, 'g'), value);
-    });
-
-    console.log('Processed email subject:', processedSubject);
-
-    // Send email using Resend service
-    const emailResult = await sendEmail({
-      to: adminEmails,
-      subject: processedSubject,
-      html: processedHtml
-    });
-
-    // Log email attempt to database
-    const logPromises = adminEmails.map(email => 
-      supabase.from('email_logs').insert({
-        work_order_id: record_id,
-        template_used: template_name,
-        recipient_email: email,
+      await supabase.from('email_logs').insert({
+        work_order_id: report.work_order_id,
+        template_used: 'report_reviewed',
+        recipient_email: report.profiles.email,
         status: emailResult.success ? 'sent' : 'failed',
-        error_message: emailResult.success ? null : emailResult.error
-      })
-    );
+        error_message: emailResult.error || null
+      });
 
-    await Promise.all(logPromises);
-    console.log('Email logs created for', adminEmails.length, 'recipients');
-
-    if (!emailResult.success) {
-      console.error('Email sending failed:', emailResult.error);
-      return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
+      return createCorsResponse({
+        success: emailResult.success,
+        message: emailResult.success ? 'Email sent successfully' : emailResult.error
+      });
     }
 
-    console.log('Email sent successfully to', adminEmails.length, 'recipients');
-
-    return createCorsResponse({
-      success: true,
-      message: 'Email sent successfully',
-      recipients: adminEmails.length,
-      email_id: emailResult.id
-    });
+    // For all other templates (not implemented yet)
+    return createCorsErrorResponse(`Template ${template_name} not implemented yet`, 501);
 
   } catch (error) {
     console.error('Send email function error:', error);
