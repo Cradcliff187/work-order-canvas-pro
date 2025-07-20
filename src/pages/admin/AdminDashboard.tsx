@@ -1,382 +1,202 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useWorkOrderStats } from "@/hooks/useWorkOrderStats";
+import { useEmailSystemHealth } from "@/hooks/useEmailSystemHealth";
+import { EmailSystemActions } from "@/components/admin/EmailSystemActions";
+import { SimpleEmailTest } from "@/components/admin/SimpleEmailTest";
 import { 
   ClipboardList, 
   Users, 
-  Building, 
-  TrendingUp, 
-  AlertCircle,
-  CheckSquare,
-  Clock,
-  FileText,
-  DollarSign,
-  UserCheck,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
-  TestTube,
-  Mail
-} from 'lucide-react';
-import { useAdminDashboard } from '@/hooks/useAdminDashboard';
-import { DashboardChart } from '@/components/admin/DashboardChart';
-import { RecentActivity } from '@/components/admin/RecentActivity';
-import { SystemVerificationPanel } from '@/components/admin/SystemVerificationPanel';
-import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+  Building2, 
+  CheckCircle2, 
+  AlertTriangle,
+  Mail,
+  MailCheck,
+  MailX,
+  Clock
+} from "lucide-react";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-  
-  console.log('AdminDashboard rendering...');
-  
+  const { data: stats, isLoading: statsLoading } = useWorkOrderStats();
   const { 
-    metrics, 
-    statusDistribution, 
-    dailySubmissions, 
-    tradeVolumes, 
-    recentWorkOrders, 
-    recentReports, 
-    isLoading, 
-    isError 
-  } = useAdminDashboard();
+    healthData, 
+    isLoading: healthLoading, 
+    testEmailSystem, 
+    createTestWorkOrder, 
+    refreshHealth,
+    isTestRunning,
+    lastTestResult
+  } = useEmailSystemHealth();
 
-  console.log('Dashboard data state:', {
-    metrics,
-    statusDistribution,
-    dailySubmissions,
-    tradeVolumes,
-    recentWorkOrders,
-    recentReports,
-    isLoading,
-    isError
-  });
-
-  if (isError) {
-    console.error('Dashboard error state detected');
+  if (statsLoading || healthLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center text-destructive">
-                <AlertCircle className="h-5 w-5 mr-2" />
-                Dashboard Error
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Unable to load dashboard data. Please check your connection and try again.
-              </p>
-              <Button 
-                onClick={() => window.location.reload()} 
-                className="mt-4"
-                variant="outline"
-              >
-                Reload Page
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="space-y-6">
+        <div className="h-8 bg-muted rounded animate-pulse" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="space-y-3">
+                  <div className="h-4 bg-muted rounded animate-pulse" />
+                  <div className="h-8 bg-muted rounded animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
   }
 
-  const getTrendIcon = (trend: 'up' | 'down' | 'same') => {
-    switch (trend) {
-      case 'up':
-        return <ArrowUpRight className="h-4 w-4 text-green-600" />;
-      case 'down':
-        return <ArrowDownRight className="h-4 w-4 text-red-600" />;
-      default:
-        return <Minus className="h-4 w-4 text-gray-400" />;
+  const getHealthStatusColor = (status: string) => {
+    switch (status) {
+      case 'healthy': return 'text-success';
+      case 'warning': return 'text-warning';
+      case 'critical': return 'text-destructive';
+      default: return 'text-muted-foreground';
     }
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/admin/work-orders')}
-          >
-            <ClipboardList className="h-4 w-4 mr-2" />
-            Manage Work Orders
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/admin/email-test')}
-          >
-            <TestTube className="h-4 w-4 mr-2" />
-            Test Email
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Badge variant="outline" className="text-sm">
+          Last updated: {new Date().toLocaleTimeString()}
+        </Badge>
       </div>
 
-      {/* System Verification Panel with error boundary */}
-      <div>
-        <SystemVerificationPanel />
-      </div>
-
-      {/* Email System Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Email System</CardTitle>
-          <CardDescription>Test email templates and monitor delivery</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link to="/admin/email-test">
-            <Button variant="outline" className="w-full">
-              <Mail className="h-4 w-4 mr-2" />
-              Open Email Test Panel
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-
-      {/* Metrics Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Overview */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Work Orders</CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? '...' : metrics?.totalWorkOrders.current || 0}
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Total Work Orders</span>
             </div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {metrics && getTrendIcon(metrics.totalWorkOrders.trend)}
-              <span className="ml-1">
-                {metrics?.totalWorkOrders.lastMonth || 0} last month
-              </span>
-            </div>
+            <p className="text-2xl font-bold mt-2">{stats?.totalWorkOrders || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              All time
+            </p>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Assignments</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? '...' : metrics?.pendingAssignments || 0}
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Pending Work Orders</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-2xl font-bold mt-2">{stats?.pendingWorkOrders || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">
               Awaiting assignment
             </p>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue Work Orders</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? '...' : metrics?.overdueWorkOrders || 0}
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Active Users</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Past due date
+            <p className="text-2xl font-bold mt-2">{stats?.activeUsers || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              All user types
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
-            <CheckSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? '...' : metrics?.completedThisMonth || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(), 'MMMM yyyy')}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Financial Metrics */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? '...' : metrics?.pendingInvoices || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting approval
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved Unpaid</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? '...' : metrics?.unpaidApprovedInvoices || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ready for payment
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Employees On Duty</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? '...' : metrics?.employeesOnDuty || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Active in last 3 days
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts with error boundaries */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Work Order Submissions</CardTitle>
-            <CardDescription>
-              Daily work order submissions over the last 7 days
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-[200px]">
-                <div>Loading chart data...</div>
-              </div>
-            ) : (
-              <DashboardChart 
-                data={dailySubmissions || []} 
-                type="line"
-                dataKey="count"
-                xAxisKey="date"
-              />
-            )}
           </CardContent>
         </Card>
         
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Status Distribution</CardTitle>
-            <CardDescription>
-              Current work order status breakdown
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center h-[200px]">
-                <div>Loading chart data...</div>
-              </div>
-            ) : (
-              <DashboardChart 
-                data={statusDistribution || []} 
-                type="pie"
-                dataKey="count"
-                nameKey="status"
-              />
-            )}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Organizations</span>
+            </div>
+            <p className="text-2xl font-bold mt-2">{stats?.totalOrganizations || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Partners & Subcontractors
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Trade Volumes */}
+      {/* Email System Health */}
       <Card>
         <CardHeader>
-          <CardTitle>Top Trade Volumes</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email System Health
+          </CardTitle>
           <CardDescription>
-            Most active trades by work order count
+            Monitor email system status and delivery metrics
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-[200px]">
-              <div>Loading chart data...</div>
+          <div className="grid gap-4 sm:grid-cols-4 mb-6">
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getHealthStatusColor(healthData?.smtp_status || 'unknown')}`}>
+                {healthData?.smtp_status === 'healthy' ? (
+                  <MailCheck className="h-8 w-8 mx-auto mb-2" />
+                ) : (
+                  <MailX className="h-8 w-8 mx-auto mb-2" />
+                )}
+                {healthData?.smtp_status || 'Unknown'}
+              </div>
+              <div className="text-sm text-muted-foreground">SMTP Status</div>
             </div>
-          ) : (
-            <DashboardChart 
-              data={tradeVolumes || []} 
-              type="bar"
-              dataKey="count"
-              xAxisKey="trade"
-            />
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold">{healthData?.emails_sent_today || 0}</div>
+              <div className="text-sm text-muted-foreground">Emails Today</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-success">{healthData?.successful_deliveries || 0}</div>
+              <div className="text-sm text-muted-foreground">Delivered</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-destructive">{healthData?.failed_deliveries || 0}</div>
+              <div className="text-sm text-muted-foreground">Failed</div>
+            </div>
+          </div>
+
+          {healthData?.recent_errors && healthData.recent_errors.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-medium mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                Recent Errors
+              </h4>
+              <div className="space-y-2">
+                {healthData.recent_errors.slice(0, 3).map((error: any, index: number) => (
+                  <div key={index} className="text-sm p-2 bg-destructive/10 rounded">
+                    <div className="font-medium">{error.error_type}</div>
+                    <div className="text-muted-foreground">{error.error_message}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(error.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <RecentActivity 
-          title="Recent Work Orders"
-          items={recentWorkOrders || []}
-          type="work-orders"
-          isLoading={isLoading}
+      {/* Email Testing Tools */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <EmailSystemActions 
+          onTestEmailSystem={testEmailSystem}
+          onCreateTestWorkOrder={createTestWorkOrder}
+          onRefreshHealth={refreshHealth}
+          isTestRunning={isTestRunning}
+          lastTestResult={lastTestResult}
         />
-        <RecentActivity 
-          title="Recent Reports"
-          items={recentReports || []}
-          type="reports"
-          isLoading={isLoading}
-        />
+        <SimpleEmailTest />
       </div>
-
-      {/* Recent Payments */}
-      {metrics?.recentPayments && metrics.recentPayments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Payments</CardTitle>
-            <CardDescription>
-              Latest payments processed in the last 7 days
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {metrics.recentPayments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{payment.internal_invoice_number}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {payment.subcontractor_name} • {format(new Date(payment.paid_at), 'MMM dd, yyyy')}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">${payment.total_amount.toFixed(2)}</p>
-                    {payment.payment_reference && (
-                      <p className="text-xs text-muted-foreground">
-                        Ref: {payment.payment_reference}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
