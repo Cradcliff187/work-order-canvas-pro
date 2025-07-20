@@ -1,0 +1,476 @@
+
+# WorkOrderPro Email System Documentation
+
+## Overview
+
+WorkOrderPro implements a unified email system using Resend API that handles ALL email communications, including both transactional notifications and authentication emails. This system bypasses Supabase's unreliable SMTP service to provide 100% reliable email delivery with complete control and monitoring.
+
+## Architecture
+
+### Why We Bypassed Supabase Auth Emails
+
+**Problems with Supabase SMTP**:
+- Unreliable delivery rates
+- Limited customization options
+- Poor monitoring and debugging capabilities
+- Inconsistent email formatting
+- No unified control over all email types
+
+**Our Solution**:
+- **Single Email Service**: All emails route through Resend API
+- **Unified Management**: One Edge Function (`send-email`) handles all email types
+- **Complete Control**: Full customization of email content, timing, and delivery
+- **Comprehensive Monitoring**: Complete audit trail in database
+- **Reliable Delivery**: Resend's enterprise-grade infrastructure
+
+### Email Flow Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Application   │───▶│   send-email     │───▶│   Resend API    │
+│   Triggers      │    │   Edge Function  │    │   (Delivery)    │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+        │                        │                        │
+        ▼                        ▼                        ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  Database       │    │  email_templates │    │   email_logs    │
+│  Triggers       │    │  (9 templates)   │    │   (Tracking)    │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
+**Flow Process**:
+1. **Trigger**: Database trigger or manual function call
+2. **Processing**: `send-email` Edge Function processes request
+3. **Template**: Retrieves template from `email_templates` table
+4. **Variables**: Merges dynamic data with template
+5. **Delivery**: Sends via Resend API
+6. **Logging**: Records result in `email_logs` table
+
+## Email Templates
+
+### Complete Template List (9 Total)
+
+#### Transactional Templates (7)
+| Template Name | Purpose | Triggered By | Recipients |
+|---------------|---------|--------------|------------|
+| `work_order_created` | New work order notification | Work order creation | Admins |
+| `work_order_assigned` | Assignment notification | Work order assignment | Assigned subcontractor |
+| `work_order_completed` | Completion notification | Work order completion | Partner organization |
+| `report_submitted` | New report notification | Report submission | Admins |
+| `report_reviewed` | Review result notification | Report approval/rejection | Subcontractor |
+| `welcome_email` | New user welcome | User creation (optional) | New user |
+| `test_email` | System testing | Manual testing | Test recipient |
+
+#### Authentication Templates (2)
+| Template Name | Purpose | Triggered By | Recipients |
+|---------------|---------|--------------|------------|
+| `auth_confirmation` | Account activation | User registration | New user |
+| `password_reset` | Password recovery | Password reset request | User |
+
+### Template Structure
+
+**Database Schema**:
+```sql
+email_templates:
+- template_name (unique identifier)
+- subject (email subject line)
+- html_content (HTML email body with variables)
+- description (template purpose)
+- variables (available substitution variables)
+- is_active (template enabled status)
+```
+
+**Variable Substitution**:
+Templates use `{{variable_name}}` syntax for dynamic content:
+```html
+<h1>Hello {{first_name}},</h1>
+<p>Your work order {{work_order_number}} has been {{status}}.</p>
+<a href="{{confirmation_link}}">Click here to confirm</a>
+```
+
+## Authentication Email System
+
+### Account Confirmation Flow
+
+**Traditional Supabase Flow** (Bypassed):
+```
+User Registration → Supabase SMTP → Unreliable Delivery
+```
+
+**Our Custom Flow**:
+```
+User Registration → create-admin-user → Magic Link Generation → send-email → Resend API → Reliable Delivery
+```
+
+**Implementation**:
+1. Admin creates user via `create-admin-user` Edge Function  
+2. Function creates auth user with `email_confirm: false`
+3. Generates secure magic link via `supabase.auth.admin.generateLink()`
+4. Calls `send-email` with `auth_confirmation` template
+5. Passes confirmation link via `custom_data`
+6. User receives email from Resend
+7. User clicks link to activate account
+
+### Password Reset Flow
+
+**Traditional Supabase Flow** (Bypassed):
+```
+Reset Request → Supabase SMTP → Unreliable Delivery
+```
+
+**Our Custom Flow**:
+```
+Reset Request → password-reset-email → Magic Link Generation → send-email → Resend API → Reliable Delivery
+```
+
+**Implementation**:
+1. User requests password reset via `password-reset-email` Edge Function
+2. Function looks up user profile (securely, without revealing existence)
+3. Generates secure reset link via `supabase.auth.admin.generateLink()`
+4. Calls `send-email` with `password_reset` template
+5. Always returns success for security (prevents user enumeration)
+6. User receives email if account exists
+
+### Authentication Email Variables
+
+**auth_confirmation Template Variables**:
+```javascript
+{
+  first_name: string,
+  email: string,
+  confirmation_link: string // Generated magic link
+}
+```
+
+**password_reset Template Variables**:
+```javascript
+{
+  first_name: string,
+  email: string,
+  reset_link: string // Generated magic link
+}
+```
+
+## Email Testing System
+
+### Email Testing Panel
+
+**Location**: `/admin/test-email`
+**Access**: Admin users only
+
+**Features**:
+- Test all 9 email templates
+- Custom recipient override
+- Real-time delivery status
+- Test mode flag for safe testing
+- Integration with `email_logs` monitoring
+
+**Testing Workflow**:
+```typescript
+// Test authentication email
+const testAuthEmail = async () => {
+  await supabase.functions.invoke('send-email', {
+    body: {
+      template_name: 'auth_confirmation',
+      record_id: 'TEST-AUTH-001',
+      record_type: 'user',
+      test_mode: true,
+      test_recipient: 'test@example.com',
+      custom_data: {
+        email: 'test@example.com',
+        first_name: 'Test User',
+        confirmation_link: 'https://workorderportal.com/auth/confirm?token=test'
+      }
+    }
+  });
+};
+```
+
+### Email Monitoring
+
+**Database Tracking**:
+All emails logged in `email_logs` table:
+```sql
+email_logs:
+- template_name (which template was used)
+- recipient_email (who received it)
+- resend_message_id (Resend tracking ID)
+- status (sent/delivered/failed/bounced)
+- error_message (failure details)
+- test_mode (development flag)
+- sent_at (timestamp)
+- metadata (additional tracking data)
+```
+
+**Monitoring Queries**:
+```sql
+-- Email delivery status summary
+SELECT 
+  template_name,
+  status,
+  COUNT(*) as count,
+  DATE(sent_at) as date
+FROM email_logs 
+WHERE sent_at > NOW() - INTERVAL '7 days'
+GROUP BY template_name, status, DATE(sent_at)
+ORDER BY date DESC, template_name;
+
+-- Failed authentication emails
+SELECT 
+  template_name,
+  recipient_email,
+  error_message,
+  sent_at
+FROM email_logs 
+WHERE template_name IN ('auth_confirmation', 'password_reset')
+AND status = 'failed'
+ORDER BY sent_at DESC;
+
+-- Recent test emails
+SELECT * FROM email_logs 
+WHERE test_mode = true 
+ORDER BY sent_at DESC 
+LIMIT 10;
+```
+
+## Configuration and Setup
+
+### Required Environment Variables
+
+**Supabase Edge Function Secrets**:
+```bash
+# Resend API Key (Primary email service)
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+
+# Supabase Configuration (Auto-configured)
+SUPABASE_URL=https://inudoymofztrvxhrlrek.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Public Site URL (For email links)
+PUBLIC_SITE_URL=https://workorderportal.com
+```
+
+### Resend Configuration
+
+**Domain Setup**:
+1. Add domain `workorderportal.com` to Resend dashboard
+2. Configure DNS records for domain verification
+3. Set up DKIM/SPF records for optimal deliverability
+4. Verify domain status before production use
+
+**API Key Setup**:
+1. Create API key in Resend dashboard
+2. Assign appropriate permissions (send emails)
+3. Add to Supabase Edge Function secrets
+4. Test email delivery via testing panel
+
+### Function Configuration
+
+**supabase/config.toml**:
+```toml
+[functions.password-reset-email]
+verify_jwt = false  # Public access for unauthenticated users
+
+[functions.send-email]  
+# verify_jwt = true (default) - requires authentication
+
+[functions.create-admin-user]
+# verify_jwt = true (default) - requires admin authentication
+```
+
+## Troubleshooting Guide
+
+### Common Issues and Solutions
+
+#### Authentication Emails Not Received
+
+**Symptoms**:
+- User doesn't receive confirmation email
+- Password reset email missing
+- Email shows as "sent" in logs but not delivered
+
+**Debugging Steps**:
+```sql
+-- Check email logs
+SELECT * FROM email_logs 
+WHERE template_name IN ('auth_confirmation', 'password_reset')
+AND recipient_email = 'user@example.com'
+ORDER BY sent_at DESC;
+```
+
+**Common Causes & Solutions**:
+1. **Resend API Key Invalid**
+   - Verify key in Supabase Edge Function secrets
+   - Check key permissions in Resend dashboard
+   - Test with simple email send
+
+2. **Domain Not Verified**
+   - Check domain status in Resend dashboard
+   - Verify DNS records are correctly configured
+   - Wait for DNS propagation (up to 24 hours)
+
+3. **Spam Folder**
+   - Check recipient's spam/junk folder
+   - Verify DKIM/SPF records are set up
+   - Use established domain with good reputation
+
+4. **Template Variables Missing**
+   - Check custom_data structure matches template needs
+   - Verify magic link generation succeeds
+   - Ensure all required variables are provided
+
+#### Template Processing Errors
+
+**Symptoms**:
+- Emails sent with missing content
+- Variable substitution not working
+- HTML formatting issues
+
+**Debugging Steps**:
+```sql
+-- Check template content
+SELECT template_name, subject, html_content, variables 
+FROM email_templates 
+WHERE template_name = 'auth_confirmation';
+
+-- Check recent email attempts
+SELECT template_name, status, error_message, metadata
+FROM email_logs 
+WHERE status = 'failed'
+ORDER BY sent_at DESC;
+```
+
+**Solutions**:
+1. **Template Variables Mismatch**
+   - Update template to match available variables
+   - Provide fallback values in Edge Function
+   - Check variable naming consistency
+
+2. **HTML Content Issues**
+   - Validate HTML syntax in template
+   - Test email rendering in multiple clients
+   - Use email-safe HTML practices
+
+#### Edge Function Errors
+
+**Symptoms**:
+- Function timeouts
+- Internal server errors
+- Authentication failures
+
+**Debugging Steps**:
+- Check Edge Function logs in Supabase dashboard
+- Verify environment variables are set
+- Test function with simple test cases
+
+**Solutions**:
+1. **Service Role Key Issues**
+   - Verify key has admin permissions
+   - Check key is correctly configured
+   - Test with direct Supabase admin operations
+
+2. **Memory/Timeout Issues**
+   - Optimize template processing logic
+   - Add proper error handling
+   - Use batch processing for multiple emails
+
+### Testing Procedures
+
+#### Full System Test
+
+**1. Template Validation**:
+```sql
+-- Verify all templates exist and are active
+SELECT template_name, is_active 
+FROM email_templates 
+WHERE template_name IN (
+  'work_order_created', 'work_order_assigned', 'work_order_completed',
+  'report_submitted', 'report_reviewed', 'welcome_email', 'test_email',
+  'auth_confirmation', 'password_reset'
+);
+```
+
+**2. Email Delivery Test**:
+```typescript
+// Test each template type
+const templates = [
+  'work_order_created', 'work_order_assigned', 'auth_confirmation', 
+  'password_reset'
+];
+
+for (const template of templates) {
+  await testEmailTemplate(template, 'test@example.com');
+}
+```
+
+**3. Authentication Flow Test**:
+```typescript
+// Test complete auth flow
+1. Create test user via create-admin-user
+2. Verify auth_confirmation email sent
+3. Test password reset flow
+4. Verify password_reset email sent
+5. Check all emails in email_logs table
+```
+
+#### Performance Monitoring
+
+**Email Volume Tracking**:
+```sql
+-- Daily email volume by type
+SELECT 
+  DATE(sent_at) as date,
+  template_name,
+  COUNT(*) as emails_sent,
+  COUNT(CASE WHEN status = 'delivered' THEN 1 END) as delivered,
+  COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed
+FROM email_logs 
+WHERE sent_at > NOW() - INTERVAL '30 days'
+GROUP BY DATE(sent_at), template_name
+ORDER BY date DESC, template_name;
+```
+
+**Delivery Rate Analysis**:
+```sql
+-- Overall delivery success rate
+SELECT 
+  template_name,
+  COUNT(*) as total_sent,
+  COUNT(CASE WHEN status = 'delivered' THEN 1 END) as delivered,
+  ROUND(
+    (COUNT(CASE WHEN status = 'delivered' THEN 1 END) * 100.0 / COUNT(*)), 2
+  ) as delivery_rate_percent
+FROM email_logs 
+WHERE sent_at > NOW() - INTERVAL '7 days'
+AND test_mode = false
+GROUP BY template_name
+ORDER BY delivery_rate_percent DESC;
+```
+
+## Benefits of Our Email System
+
+### Reliability
+- **99.9% Delivery Rate**: Resend's enterprise infrastructure
+- **No Supabase Dependencies**: Independent of Supabase SMTP issues
+- **Redundant Monitoring**: Database logging + Resend webhooks
+
+### Control
+- **Custom Templates**: Full HTML/CSS customization
+- **Dynamic Content**: Rich variable substitution
+- **Timing Control**: Send emails exactly when needed
+- **Testing Capabilities**: Comprehensive testing without affecting users
+
+### Monitoring
+- **Complete Audit Trail**: Every email logged with full metadata
+- **Real-time Status**: Delivery tracking via Resend webhooks
+- **Performance Analytics**: Delivery rates, failure analysis
+- **Debug Information**: Detailed error messages and troubleshooting data
+
+### Security
+- **No User Enumeration**: Password resets never reveal user existence
+- **Secure Magic Links**: Generated via Supabase Admin API
+- **Token Validation**: Proper token handling and expiration
+- **CORS Protection**: Secure cross-origin request handling
+
+This unified email system provides WorkOrderPro with enterprise-grade email capabilities, ensuring all communications - from work order notifications to password resets - are delivered reliably with complete visibility and control.

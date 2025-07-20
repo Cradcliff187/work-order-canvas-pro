@@ -1,3 +1,4 @@
+
 # WorkOrderPro
 
 A comprehensive construction work order management system that facilitates workflows between Partners (Property Management), WorkOrderPro (General Contractor), and Subcontractors (Trade Companies). Features company-level access control, multi-organization architecture, and complete financial privacy between organizations.
@@ -8,7 +9,7 @@ A comprehensive construction work order management system that facilitates workf
 - **UI**: Tailwind CSS + shadcn/ui components  
 - **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
 - **State**: TanStack Query + React Router
-- **Email**: Resend (SMTP for auth emails, API for transactional emails)
+- **Email**: Resend (All emails including auth - SMTP configured but bypassed)
 
 ## 🚀 Live Application
 
@@ -36,6 +37,8 @@ npm run dev
 - [Database Schema](./docs/DATABASE_SCHEMA.md) - Tables and relationships
 - [RLS Policies](./docs/RLS_POLICIES.md) - Security implementation
 - [Database Functions](./docs/DATABASE_FUNCTIONS.md) - Server-side operations
+- [Edge Functions](./docs/EDGE_FUNCTIONS.md) - Server-side functions and email system
+- [Email System](./docs/EMAIL_SYSTEM.md) - Unified Resend email architecture
 
 **Deployment**
 - [Deployment Guide](./docs/DEPLOYMENT.md) - Production procedures
