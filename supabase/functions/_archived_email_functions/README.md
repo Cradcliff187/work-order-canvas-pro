@@ -1,4 +1,5 @@
 
+
 # Archived Email Edge Functions
 
 This directory contains email-related edge functions that have been archived but preserved for potential future use.
@@ -13,7 +14,10 @@ This directory contains email-related edge functions that have been archived but
 - `email-welcome-user/` - Sends welcome emails to new users
 
 ## Archive Date
-January 18, 2025
+July 20, 2025
+
+## Archive Status
+**COMPLETE** - All legacy email functions have been successfully archived. The new `send-email` function using IONOS SMTP is now the active email system.
 
 ## Restoration Instructions
 
@@ -36,3 +40,8 @@ These functions use:
 - Comprehensive error logging to email_logs table
 
 All functions are preserved with their complete implementation and can be restored without modification.
+
+## Current Active Email System
+
+The active email system is now handled by the `send-email` function located in `supabase/functions/send-email/`, which uses IONOS SMTP for reliable email delivery.
+
