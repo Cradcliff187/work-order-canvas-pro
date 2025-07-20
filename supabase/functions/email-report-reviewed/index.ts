@@ -13,6 +13,10 @@ interface EmailReportRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  // DEPRECATED: Migrated to unified send-email function
+  console.warn('DEPRECATED FUNCTION CALLED:', 'email-report-reviewed');
+  // Remove this function after: 2025-07-27
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
