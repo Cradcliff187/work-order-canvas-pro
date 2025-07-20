@@ -26,11 +26,35 @@ export const EmailTestPanel = () => {
   const [manualUuid, setManualUuid] = useState('');
 
   const recordTypes = [
+    { value: 'user', label: 'User Profile' },
     { value: 'work_order', label: 'Work Order' },
     { value: 'work_order_assignment', label: 'Work Order Assignment' },
     { value: 'work_order_report', label: 'Work Order Report' },
-    { value: 'user', label: 'User Account' },
+    { value: 'invoice', label: 'Invoice' },
   ];
+
+  // Template to record type mapping
+  const getRecordTypeForTemplate = (templateName: string): string => {
+    const mapping: Record<string, string> = {
+      'welcome_email': 'user',
+      'work_order_created': 'work_order',
+      'work_order_completed': 'work_order',
+      'work_order_assigned': 'work_order_assignment',
+      'report_submitted': 'work_order_report',
+      'report_reviewed': 'work_order_report',
+      'invoice_submitted': 'invoice',
+    };
+    return mapping[templateName] || '';
+  };
+
+  // Handle template selection and auto-select record type
+  const handleTemplateChange = (templateName: string) => {
+    setSelectedTemplate(templateName);
+    const autoRecordType = getRecordTypeForTemplate(templateName);
+    if (autoRecordType) {
+      setRecordType(autoRecordType);
+    }
+  };
 
   // UUID validation regex
   const isValidUuid = (uuid: string): boolean => {
@@ -38,7 +62,7 @@ export const EmailTestPanel = () => {
     return uuidRegex.test(uuid);
   };
 
-  // New improved useEffect to replace the existing one
+  // Fetch records based on record type
   useEffect(() => {
     if (!recordType) {
       setRecords([]);
@@ -53,12 +77,21 @@ export const EmailTestPanel = () => {
         let query;
         
         switch (recordType) {
+          case 'user':
+            query = supabase
+              .from('profiles')
+              .select('id, first_name, last_name, email')
+              .order('created_at', { ascending: false })
+              .limit(20);
+            break;
+            
           case 'work_order':
             query = supabase
               .from('work_orders')
               .select(`
                 id, 
                 work_order_number, 
+                title,
                 street_address, 
                 location_address, 
                 location_street_address,
@@ -73,7 +106,7 @@ export const EmailTestPanel = () => {
               .from('work_order_assignments')
               .select(`
                 id,
-                work_orders!inner(work_order_number),
+                work_orders!inner(work_order_number, title),
                 profiles!inner(first_name, last_name)
               `)
               .order('created_at', { ascending: false })
@@ -85,17 +118,24 @@ export const EmailTestPanel = () => {
               .from('work_order_reports')
               .select(`
                 id,
-                work_orders!inner(work_order_number),
-                profiles!inner(first_name)
+                work_orders!inner(work_order_number, title),
+                profiles!inner(first_name, last_name)
               `)
               .order('created_at', { ascending: false })
               .limit(20);
             break;
             
-          case 'user':
+          case 'invoice':
             query = supabase
-              .from('profiles')
-              .select('id, first_name, last_name, email')
+              .from('invoices')
+              .select(`
+                id,
+                internal_invoice_number,
+                external_invoice_number,
+                total_amount,
+                status,
+                organizations!inner(name)
+              `)
               .order('created_at', { ascending: false })
               .limit(20);
             break;
@@ -234,6 +274,57 @@ export const EmailTestPanel = () => {
     }
   };
 
+  // Render record selection options
+  const renderRecordOptions = () => {
+    if (loadingRecords) {
+      return <SelectItem value="" disabled>Loading records...</SelectItem>;
+    }
+    
+    if (records.length === 0) {
+      return <SelectItem value="" disabled>No records found</SelectItem>;
+    }
+
+    switch (recordType) {
+      case 'user':
+        return records.map((record: any) => (
+          <SelectItem key={record.id} value={record.id}>
+            {record.first_name} {record.last_name} ({record.email})
+          </SelectItem>
+        ));
+        
+      case 'work_order':
+        return records.map((record: any) => (
+          <SelectItem key={record.id} value={record.id}>
+            {record.work_order_number} - {record.title || 'No title'}
+          </SelectItem>
+        ));
+        
+      case 'work_order_assignment':
+        return records.map((record: any) => (
+          <SelectItem key={record.id} value={record.id}>
+            {record.work_orders?.work_order_number} - Assigned to {record.profiles?.first_name} {record.profiles?.last_name}
+          </SelectItem>
+        ));
+        
+      case 'work_order_report':
+        return records.map((record: any) => (
+          <SelectItem key={record.id} value={record.id}>
+            {record.work_orders?.work_order_number} - Report by {record.profiles?.first_name} {record.profiles?.last_name}
+          </SelectItem>
+        ));
+        
+      case 'invoice':
+        return records.map((record: any) => (
+          <SelectItem key={record.id} value={record.id}>
+            {record.internal_invoice_number} - ${record.total_amount} ({record.status})
+          </SelectItem>
+        ));
+        
+      default:
+        return <SelectItem value="" disabled>Select record type first</SelectItem>;
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -256,7 +347,7 @@ export const EmailTestPanel = () => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="template">Email Template</Label>
-            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select template" />
               </SelectTrigger>
@@ -326,34 +417,7 @@ export const EmailTestPanel = () => {
                     } />
                   </SelectTrigger>
                   <SelectContent className="max-h-80 overflow-y-auto">
-                    {loadingRecords ? (
-                      <SelectItem value="" disabled>Loading records...</SelectItem>
-                    ) : records.length === 0 ? (
-                      <SelectItem value="" disabled>No records found</SelectItem>
-                    ) : (
-                      <>
-                        {recordType === 'work_order' && records.map((record: any) => (
-                          <SelectItem key={record.id} value={record.id}>
-                            {record.work_order_number} - {record.organizations?.address || 'No address'}
-                          </SelectItem>
-                        ))}
-                        {recordType === 'work_order_assignment' && records.map((record: any) => (
-                          <SelectItem key={record.id} value={record.id}>
-                            {record.work_orders?.work_order_number} - {record.profiles?.first_name} {record.profiles?.last_name}
-                          </SelectItem>
-                        ))}
-                        {recordType === 'work_order_report' && records.map((record: any) => (
-                          <SelectItem key={record.id} value={record.id}>
-                            {record.work_orders?.work_order_number} - Report by {record.profiles?.first_name} {record.profiles?.last_name}
-                          </SelectItem>
-                        ))}
-                        {recordType === 'user' && records.map((record: any) => (
-                          <SelectItem key={record.id} value={record.id}>
-                            {record.first_name} {record.last_name} ({record.email})
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
+                    {renderRecordOptions()}
                   </SelectContent>
                 </Select>
               </div>
@@ -410,14 +474,15 @@ export const EmailTestPanel = () => {
         )}
 
         <div className="text-sm text-muted-foreground">
-          <p><strong>Record Type Examples:</strong></p>
+          <p><strong>Template → Record Type Mapping:</strong></p>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong>work_order:</strong> For work order creation/completion notifications</li>
-            <li><strong>work_order_assignment:</strong> For assignment notifications</li>
-            <li><strong>work_order_report:</strong> For report submission/review notifications</li>
-            <li><strong>user:</strong> For user registration/welcome notifications</li>
+            <li><strong>welcome_email:</strong> User Profile (user registration/welcome)</li>
+            <li><strong>work_order_created/completed:</strong> Work Order (creation/completion notifications)</li>
+            <li><strong>work_order_assigned:</strong> Work Order Assignment (assignment notifications)</li>
+            <li><strong>report_submitted/reviewed:</strong> Work Order Report (report submission/review)</li>
+            <li><strong>invoice_submitted:</strong> Invoice (invoice submission notifications)</li>
           </ul>
-          <p className="mt-2"><strong>Note:</strong> The function automatically determines recipient emails based on the record type and template. Shows 20 most recent records or enter UUID manually.</p>
+          <p className="mt-2"><strong>Note:</strong> Selecting a template automatically chooses the correct record type. Shows 20 most recent records or enter UUID manually.</p>
         </div>
       </CardContent>
     </Card>
