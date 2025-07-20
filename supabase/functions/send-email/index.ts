@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.4';
+import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -117,34 +118,61 @@ const serve_handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // For now, simulate successful email sending
-    // This bypasses the SMTP issues while we establish the working foundation
-    console.log(`Would send email to: ${finalRecipient}`);
+    // Send email via Resend
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+    
+    console.log(`Sending email to: ${finalRecipient}`);
     console.log(`Subject: ${subject}`);
     console.log(`Template: ${template_name}`);
 
-    // Log email attempt
     try {
+      const emailResponse = await resend.emails.send({
+        from: "WorkOrderPro <noreply@workorderpro.com>", // You'll need to update this with your verified domain
+        to: [finalRecipient],
+        subject: subject,
+        html: htmlContent,
+        text: textContent,
+      });
+
+      console.log("Email sent successfully:", emailResponse);
+
+      // Log successful email
       await supabase.from('email_logs').insert({
         template_used: template_name,
         recipient_email: finalRecipient,
         status: 'sent',
+        resend_message_id: emailResponse.data?.id,
       });
-    } catch (logError) {
-      console.warn('Failed to log email:', logError);
-    }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Email sent successfully (simulated)',
-      recipient: finalRecipient,
-      subject: subject,
-      template_used: template_name,
-      note: 'SMTP integration will be added once foundation is stable'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Email sent successfully',
+        recipient: finalRecipient,
+        subject: subject,
+        template_used: template_name,
+        message_id: emailResponse.data?.id
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+
+    } catch (emailError: any) {
+      console.error('Failed to send email via Resend:', emailError);
+      
+      // Log failed email attempt
+      try {
+        await supabase.from('email_logs').insert({
+          template_used: template_name,
+          recipient_email: finalRecipient,
+          status: 'failed',
+          error_message: emailError.message,
+        });
+      } catch (logError) {
+        console.warn('Failed to log email error:', logError);
+      }
+
+      throw new Error(`Email delivery failed: ${emailError.message}`);
+    }
 
   } catch (error: any) {
     console.error('Email function error:', error);
