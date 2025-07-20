@@ -5,15 +5,13 @@ This directory contains Supabase Edge Functions that provide server-side capabil
 ## Function Overview
 
 ### Email Functions
-- **email-work-order-created**: Sends notifications when new work orders are created
-- **email-work-order-assigned**: Notifies subcontractors when work orders are assigned
-- **email-work-order-completed**: Sends completion notifications to partners
-- **email-report-submitted**: Notifies admins when work reports are submitted
-- **email-report-reviewed**: Notifies subcontractors of report review status
-- **email-welcome**: Sends welcome emails to new users
-- **invoice-status-changed**: Handles invoice status change notifications
-- **invoice-submitted**: Processes invoice submission notifications
-# Email functions use Supabase Auth for sending emails
+- **send-email**: Unified email handler for all transactional emails
+  - Handles all email templates (work_order_created, assigned, completed, report_submitted, reviewed, welcome)
+  - Uses Resend API for superior deliverability
+  - Supports test mode for development
+  - Logs all emails to email_logs table
+
+# Email functions use Resend API for sending emails
 
 
 ## Architecture
@@ -37,6 +35,11 @@ This directory contains Supabase Edge Functions that provide server-side capabil
 - Trade categories and work order templates  
 - Helper functions for data generation
 - Default configuration values
+
+**resend-service.ts**: Resend API integration
+- Centralized email sending via Resend
+- Consistent error handling
+- Returns success/failure with message ID
 
 ## Security Model
 
@@ -87,32 +90,32 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 ### Testing Functions
 
-**Test email notification function:**
+**Test unified email function:**
 ```bash
-curl -i --location --request POST 'http://localhost:54321/functions/v1/email-work-order-created' \
+curl -i --location --request POST 'http://localhost:54321/functions/v1/send-email' \
   --header 'Authorization: Bearer YOUR_ANON_KEY' \
   --header 'Content-Type: application/json' \
-  --data '{"work_order_id": "test-work-order-id"}'
+  --data '{"template_name": "work_order_created", "record_id": "test-work-order-id", "record_type": "work_order"}'
 ```
 
-**Test another email function:**
+**Test welcome email:**
 ```bash
-curl -i --location --request POST 'http://localhost:54321/functions/v1/email-welcome' \
+curl -i --location --request POST 'http://localhost:54321/functions/v1/send-email' \
   --header 'Authorization: Bearer YOUR_ANON_KEY' \
   --header 'Content-Type: application/json' \
-  --data '{"user_email": "test@example.com", "user_name": "Test User"}'
+  --data '{"template_name": "welcome_email", "record_id": "test-user-id", "record_type": "profile"}'
 ```
 
 ### Viewing Logs
 ```bash
 # View logs for specific function
-supabase functions logs email-work-order-created
+supabase functions logs send-email
 
 # Stream logs in real-time
 supabase functions logs --follow
 
 # View logs with filters
-supabase functions logs email-work-order-created --level info
+supabase functions logs send-email --level info
 ```
 
 ## Deployment
@@ -129,9 +132,9 @@ Functions are automatically deployed when:
 supabase functions deploy
 
 # Deploy specific function
-supabase functions deploy email-work-order-created
+supabase functions deploy send-email
 
-# Deploy functions (no additional secrets needed for Supabase Auth)
+# Deploy functions (no additional secrets needed for Resend API)
 supabase functions deploy
 ```
 

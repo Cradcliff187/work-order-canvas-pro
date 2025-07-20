@@ -55,21 +55,18 @@ SUPABASE_SERVICE_ROLE_KEY=your_local_service_role_key
 
 **Test Email Notification:**
 ```bash
-curl -i --location --request POST 'http://localhost:54321/functions/v1/email-work-order-created' \
+curl -i --location --request POST 'http://localhost:54321/functions/v1/send-email' \
   --header 'Authorization: Bearer YOUR_ANON_KEY' \
   --header 'Content-Type: application/json' \
-  --data '{"work_order_id": "test-work-order-uuid"}'
+  --data '{"template_name": "work_order_created", "record_id": "test-work-order-uuid", "record_type": "work_order"}'
 ```
 
 **Test Welcome Email:**
 ```bash
-curl -i --location --request POST 'http://localhost:54321/functions/v1/email-welcome' \
+curl -i --location --request POST 'http://localhost:54321/functions/v1/send-email' \
   --header 'Authorization: Bearer YOUR_ANON_KEY' \
   --header 'Content-Type: application/json' \
-  --data '{
-    "user_email": "test@example.com",
-    "user_name": "Test User"
-  }'
+  --data '{"template_name": "welcome_email", "record_id": "test-user-uuid", "record_type": "profile"}'
 ```
 
 ## Production Deployment
@@ -77,7 +74,7 @@ curl -i --location --request POST 'http://localhost:54321/functions/v1/email-wel
 ### 1. Set Production Secrets
 ```bash
 # Functions are deployed automatically with Supabase
-# No additional secrets needed for Supabase Auth emails
+# Resend API key required for email sending
 ```
 
 ### 2. Deploy Functions
@@ -90,8 +87,8 @@ supabase functions deploy
 #### Deploy Specific Function
 ```bash
 # Deploy individual functions
-supabase functions deploy email-work-order-created
-supabase functions deploy email-work-order-assigned
+supabase functions deploy send-email
+supabase functions deploy create-admin-user
 ```
 
 ### 3. Verify Deployment
@@ -103,10 +100,10 @@ supabase status
 supabase functions list
 
 # Test deployed function
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-order-created \
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/send-email \
   -H "Authorization: Bearer YOUR_ANON_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"work_order_id": "real-work-order-uuid"}'
+  -d '{"template_name": "work_order_created", "record_id": "real-work-order-uuid", "record_type": "work_order"}'
 ```
 
 ## Function Configuration
@@ -115,32 +112,17 @@ curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-or
 ```toml
 project_id = "inudoymofztrvxhrlrek"
 
-# Email notification functions
-[functions.email-work-order-created]
+# Unified email function
+[functions.send-email]
 verify_jwt = false
 
-[functions.email-work-order-assigned]
+[functions.create-admin-user]
+verify_jwt = true
+
+[functions.create-test-users]
 verify_jwt = false
 
-[functions.email-work-order-completed]
-verify_jwt = false
-
-[functions.email-report-submitted]
-verify_jwt = false
-
-[functions.email-report-reviewed]
-verify_jwt = false
-
-[functions.email-welcome]
-verify_jwt = false
-
-[functions.invoice-submitted]
-verify_jwt = false
-
-[functions.invoice-status-changed]
-verify_jwt = false
-
-# Functions use Supabase Auth by default
+# Functions use Resend API for emails
 ```
 
 ### CORS Configuration
@@ -157,19 +139,19 @@ const corsHeaders = {
 ### View Function Logs
 ```bash
 # View logs for specific function
-supabase functions logs email-work-order-created
+supabase functions logs send-email
 
 # Stream logs in real-time
 supabase functions logs --follow
 
 # Filter logs by level
-supabase functions logs email-work-order-created --level error
+supabase functions logs send-email --level error
 ```
 
 ### Check Function Health
 ```bash
 # Test function endpoint
-curl -i 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/email-work-order-created' \
+curl -i 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/send-email' \
   --header 'Authorization: Bearer YOUR_ANON_KEY'
 
 # Check function status in Supabase Dashboard
@@ -295,18 +277,13 @@ supabase start
 
 ## Available Functions
 
-| Function Name | Purpose | Public | Dependencies |
-|---------------|---------|--------|--------------|
-| email-work-order-created | New work order notifications | Yes | Supabase Auth |
-| email-work-order-assigned | Assignment notifications | Yes | Supabase Auth |
-| email-work-order-completed | Completion notifications | Yes | Supabase Auth |
-| email-report-submitted | Report submission alerts | Yes | Supabase Auth |
-| email-report-reviewed | Report review notifications | Yes | Supabase Auth |
-| email-welcome | Welcome email for new users | Yes | Supabase Auth |
-| invoice-submitted | Invoice submission notifications | Yes | Supabase Auth |
-| invoice-status-changed | Invoice status updates | Yes | Supabase Auth |
+| Function Name | Purpose | Auth Required | Dependencies |
+|---------------|---------|---------------|--------------|
+| send-email | Unified email notifications | No (called by triggers) | Resend API |
+| create-admin-user | Create users with admin privileges | Yes (admin) | Supabase Auth |
+| create-test-users | Create test users for development | Yes (admin key) | Supabase Auth |
 
-All functions are configured as public (no JWT verification) to support database trigger integration and use Supabase Auth for email delivery.
+The send-email function is called by database triggers and uses the Resend API for reliable email delivery. User creation functions require authentication.
 
 ## Additional Resources
 

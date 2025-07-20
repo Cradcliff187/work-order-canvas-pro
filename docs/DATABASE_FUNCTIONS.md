@@ -95,13 +95,13 @@ These functions avoid infinite recursion in RLS policies by providing secure acc
 
 ## Email Notification Functions
 
-These functions use `pg_net` to call Supabase Edge Functions for automated email delivery through Supabase Auth.
+These functions use `call_send_email_trigger()` to call the unified send-email Edge Function for automated email delivery through Resend API.
 
 ### notify_work_order_created()
 **Purpose**: Send email notification when new work orders are created  
 **Trigger**: `trigger_work_order_created_email` on `work_orders` table (AFTER INSERT)  
 **Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
-**Edge Function**: `email-work-order-created`  
+**Edge Function**: `send-email` (handles all email templates)  
 **Recipients**: System administrators and relevant stakeholders  
 **Usage**: Automatic notification when partners submit new work orders
 
@@ -109,7 +109,7 @@ These functions use `pg_net` to call Supabase Edge Functions for automated email
 **Purpose**: Send email notification when subcontractors submit work order reports  
 **Trigger**: `trigger_report_submitted_email` on `work_order_reports` table (AFTER INSERT)  
 **Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
-**Edge Function**: `email-report-submitted`  
+**Edge Function**: `send-email` (handles all email templates)  
 **Recipients**: Administrators and report reviewers  
 **Usage**: Immediate notification when work completion reports are submitted
 
@@ -117,7 +117,7 @@ These functions use `pg_net` to call Supabase Edge Functions for automated email
 **Purpose**: Send email notification when work order reports are reviewed  
 **Trigger**: `trigger_report_reviewed_email` on `work_order_reports` table (AFTER UPDATE OF status)  
 **Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
-**Edge Function**: `email-report-reviewed`  
+**Edge Function**: `send-email` (handles all email templates)  
 **Recipients**: Subcontractor who submitted the report  
 **Usage**: Notify subcontractors of report approval or rejection with admin notes
 
@@ -125,7 +125,7 @@ These functions use `pg_net` to call Supabase Edge Functions for automated email
 **Purpose**: Send welcome email when new user profiles are created  
 **Trigger**: `trigger_user_welcome_email` on `profiles` table (AFTER INSERT)  
 **Migration**: `20250710230712-6f4c4413-17f5-4e75-845b-4b51d7a6ecd1.sql`  
-**Edge Function**: `email-welcome`  
+**Edge Function**: `send-email` (handles all email templates)  
 **Recipients**: Newly created user  
 **Usage**: Onboard new users with welcome message and account setup instructions
 

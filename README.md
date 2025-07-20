@@ -8,7 +8,7 @@ A comprehensive construction work order management system that facilitates workf
 - **UI**: Tailwind CSS + shadcn/ui components  
 - **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
 - **State**: TanStack Query + React Router
-- **Email**: Supabase Auth handles email communications
+- **Email**: Resend (SMTP for auth emails, API for transactional emails)
 
 ## 🚀 Live Application
 

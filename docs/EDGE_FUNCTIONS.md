@@ -4,9 +4,32 @@
 
 WorkOrderPro uses Supabase Edge Functions for secure server-side operations that require elevated privileges or external API integrations. Edge functions provide secure user creation capabilities that bypass RLS limitations while maintaining proper authentication and validation.
 
-**Note**: Email communications are handled directly by Supabase Auth system.
+**Note**: Authentication emails (password reset, confirmation) use Supabase Auth with Resend SMTP. Transactional emails (work orders, reports) use Resend API via the unified send-email edge function.
 
 ## Available Edge Functions
+
+### send-email
+
+**Purpose**: Unified email handler for all transactional notifications
+
+**File**: `supabase/functions/send-email/index.ts`
+
+**Features**:
+- Handles all email templates through single endpoint
+- Database trigger integration via `call_send_email_trigger()`
+- Resend API for reliable delivery
+- Test mode for development
+- Comprehensive email logging
+
+**Supported Templates**:
+- `work_order_created` - Notifies admins of new work orders
+- `work_order_assigned` - Notifies assigned subcontractor
+- `work_order_completed` - Notifies partner of completion
+- `report_submitted` - Notifies admins of new reports
+- `report_reviewed` - Notifies subcontractor of review status
+- `welcome_email` - Welcome message for new users
+
+**Usage**: Called automatically by database triggers when relevant events occur
 
 ### create-test-users
 
