@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserMutations } from '@/hooks/useUsers';
 import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
@@ -21,7 +23,8 @@ import {
   Database,
   User,
   RefreshCw,
-  Workflow
+  Workflow,
+  ChevronDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,13 +45,41 @@ interface TestUserForm {
   user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
 }
 
+interface EdgeFunctionStatus {
+  name: string;
+  required: boolean;
+  description: string;
+  status: 'checking' | 'available' | 'unavailable';
+  error?: string;
+}
+
 const EmailTestPage = () => {
   const { toast } = useToast();
   const { createUser } = useUserMutations();
   
   const [isLoading, setIsLoading] = useState(false);
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
-  const [edgeFunctionStatus, setEdgeFunctionStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
+  const [edgeFunctions, setEdgeFunctions] = useState<EdgeFunctionStatus[]>([
+    {
+      name: 'send-email',
+      required: true,
+      description: 'Main email sending function (handles all email templates)',
+      status: 'checking'
+    },
+    {
+      name: 'test-smtp',
+      required: false,
+      description: 'SMTP configuration testing',
+      status: 'checking'
+    },
+    {
+      name: 'setup-test-environment',
+      required: false,
+      description: 'Test data environment setup',
+      status: 'checking'
+    }
+  ]);
+  const [functionsExpanded, setFunctionsExpanded] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
   
   const [testForm, setTestForm] = useState<TestUserForm>({
@@ -64,18 +95,38 @@ const EmailTestPage = () => {
   }, []);
 
   const checkEmailConfiguration = async () => {
-    setEdgeFunctionStatus('checking');
-    try {
-      // Test if the Edge Function is accessible
-      const { error } = await supabase.functions.invoke('email-welcome-user', {
-        body: { test: true }
-      });
+    const updatedFunctions = [...edgeFunctions];
+    
+    // Reset all to checking status
+    updatedFunctions.forEach(fn => {
+      fn.status = 'checking';
+      fn.error = undefined;
+    });
+    setEdgeFunctions([...updatedFunctions]);
+
+    // Test each function
+    for (let i = 0; i < updatedFunctions.length; i++) {
+      const func = updatedFunctions[i];
       
-      // Even if it returns an error, if it's accessible we consider it available
-      setEdgeFunctionStatus('available');
-    } catch (error: any) {
-      console.error('Edge function check failed:', error);
-      setEdgeFunctionStatus('unavailable');
+      try {
+        const { error } = await supabase.functions.invoke(func.name, {
+          body: { test: true }
+        });
+        
+        // Function is accessible if we get a response (even with error)
+        func.status = 'available';
+        
+        // Update state after each function test for real-time feedback
+        setEdgeFunctions([...updatedFunctions]);
+        
+      } catch (error: any) {
+        console.error(`Edge function ${func.name} check failed:`, error);
+        func.status = 'unavailable';
+        func.error = error.message || 'Connection failed';
+        
+        // Update state after each function test for real-time feedback
+        setEdgeFunctions([...updatedFunctions]);
+      }
     }
   };
 
@@ -165,6 +216,33 @@ const EmailTestPage = () => {
     return <Badge variant={variant}>{status}</Badge>;
   };
 
+  const getFunctionStatusIcon = (status: string) => {
+    switch (status) {
+      case 'available':
+        return <CheckCircle className="h-4 w-4 text-success" />;
+      case 'unavailable':
+        return <XCircle className="h-4 w-4 text-destructive" />;
+      default:
+        return <Loader2 className="h-4 w-4 animate-spin" />;
+    }
+  };
+
+  const getWorkingFunctionCount = () => {
+    const available = edgeFunctions.filter(f => f.status === 'available').length;
+    const total = edgeFunctions.length;
+    return { available, total };
+  };
+
+  const getRequiredFunctionCount = () => {
+    const requiredFunctions = edgeFunctions.filter(f => f.required);
+    const availableRequired = requiredFunctions.filter(f => f.status === 'available').length;
+    return { available: availableRequired, total: requiredFunctions.length };
+  };
+
+  const { available: workingCount, total: totalCount } = getWorkingFunctionCount();
+  const { available: requiredAvailable, total: requiredTotal } = getRequiredFunctionCount();
+  const allRequiredWorking = requiredAvailable === requiredTotal;
+
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
@@ -191,7 +269,7 @@ const EmailTestPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-success" />
-                <span className="text-sm font-medium">Phase 2: All 6 Edge Functions Created</span>
+                <span className="text-sm font-medium">Phase 2: Consolidated Email Functions</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-success" />
@@ -204,8 +282,8 @@ const EmailTestPage = () => {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-warning" />
-                <span className="text-sm font-medium">Phase 5: Supabase Auth Template Branding</span>
+                <CheckCircle className="h-4 w-4 text-success" />
+                <span className="text-sm font-medium">Phase 5: Email Recipient Settings</span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-warning" />
@@ -269,18 +347,42 @@ const EmailTestPage = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {edgeFunctionStatus === 'checking' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : edgeFunctionStatus === 'available' ? (
+              {workingCount === totalCount ? (
                 <CheckCircle className="h-4 w-4 text-success" />
-              ) : (
+              ) : workingCount === 0 ? (
                 <XCircle className="h-4 w-4 text-destructive" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-warning" />
               )}
               <span className="text-sm">
-                {edgeFunctionStatus === 'checking' ? 'Checking...' :
-                 edgeFunctionStatus === 'available' ? '6 Functions Ready' : 'Unavailable'}
+                {workingCount}/{totalCount} Functions Ready
               </span>
             </div>
+            <Collapsible open={functionsExpanded} onOpenChange={setFunctionsExpanded}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="mt-2 p-0 h-auto text-xs">
+                  <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${functionsExpanded ? 'rotate-180' : ''}`} />
+                  Details
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-1">
+                {edgeFunctions.map((func) => (
+                  <div key={func.name} className="flex items-center gap-2 text-xs">
+                    {getFunctionStatusIcon(func.status)}
+                    <span className={func.required ? 'font-medium' : ''}>
+                      {func.name}
+                      {func.required && <span className="text-destructive">*</span>}
+                    </span>
+                    {func.error && (
+                      <span className="text-destructive text-xs">({func.error})</span>
+                    )}
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground mt-2">
+                  * Required functions
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
           </CardContent>
         </Card>
 
@@ -288,17 +390,32 @@ const EmailTestPage = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Workflow className="h-4 w-4" />
-              Automation
+              System Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" />
-              <span className="text-sm">Triggers Active</span>
+              {allRequiredWorking ? (
+                <CheckCircle className="h-4 w-4 text-success" />
+              ) : (
+                <XCircle className="h-4 w-4 text-destructive" />
+              )}
+              <span className="text-sm">
+                {allRequiredWorking ? 'Ready' : 'Issues Detected'}
+              </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              5 workflow triggers
+              {allRequiredWorking ? 'All required functions working' : 'Required functions unavailable'}
             </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={checkEmailConfiguration}
+              className="mt-2 p-0 h-auto text-xs"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Recheck
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -363,10 +480,9 @@ const EmailTestPage = () => {
             </div>
           </div>
 
-
           <Button 
             onClick={handleCreateTestUser}
-            disabled={isLoading || edgeFunctionStatus !== 'available'}
+            disabled={isLoading || !allRequiredWorking}
             className="flex items-center gap-2"
           >
             {isLoading ? (
@@ -376,6 +492,15 @@ const EmailTestPage = () => {
             )}
             Create Test User
           </Button>
+
+          {!allRequiredWorking && (
+            <Alert className="border-warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Some required functions are unavailable. User creation may fail.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {testResult && (
             <Alert className={testResult.success ? 'border-success' : 'border-destructive'}>
