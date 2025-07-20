@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -107,6 +108,9 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   if (!editor) {
     return <div>Loading editor...</div>;
   }
+
+  // Extract variables from htmlContent for preview
+  const extractedVariables = htmlContent.match(/{{[^}]+}}/g) || [];
 
   return (
     <div className="space-y-6">
@@ -219,9 +223,9 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
 
         <TabsContent value="preview" className="space-y-4">
           <EmailPreview
-            subject={subject}
+            templateName={templateName}
             htmlContent={htmlContent}
-            templateType={templateName}
+            variables={extractedVariables}
           />
         </TabsContent>
       </Tabs>
