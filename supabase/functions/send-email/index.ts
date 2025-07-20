@@ -120,31 +120,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Handle test mode early
-    if (test_mode) {
-      console.log('Test mode - email would be sent to:', recipient_email || 'test@workorderpro.com');
-      console.log('Subject:', template?.subject || 'Test Email');
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          test_mode: true,
-          recipient: recipient_email || 'test@workorderpro.com',
-          subject: template?.subject || 'Test Email',
-          template_found: !!template
-        }),
-        { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
-
     // Fetch data and build email content based on record type
     let emailData: any = {};
     let toEmail = recipient_email;
 
-    // Only fetch real data if not in test mode
+    // Fetch real data for all record types (even in test mode for proper testing)
     switch (record_type) {
+      case 'user':
+        emailData = await getUserProfileData(supabase, record_id);
+        toEmail = toEmail || emailData.email;
+        break;
       case 'work_order_assignment':
         emailData = await getWorkOrderAssignmentData(supabase, record_id);
         toEmail = toEmail || emailData.assignee_email;
@@ -166,6 +151,10 @@ const handler = async (req: Request): Promise<Response> => {
           emailData = await getReportReviewedData(supabase, record_id);
           toEmail = toEmail || emailData.subcontractor_email;
         }
+        break;
+      case 'invoice':
+        emailData = await getInvoiceData(supabase, record_id);
+        toEmail = toEmail || 'admin@workorderpro.com';
         break;
       default:
         return new Response(
@@ -192,6 +181,27 @@ const handler = async (req: Request): Promise<Response> => {
     const subject = replaceVariables(template!.subject, emailData);
     const htmlContent = replaceVariables(template!.html_content, emailData);
     const textContent = replaceVariables(template!.text_content || '', emailData);
+
+    // Handle test mode - return preview without sending
+    if (test_mode) {
+      console.log('Test mode - returning email preview');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          test_mode: true,
+          recipient: toEmail,
+          subject: subject,
+          html_preview: htmlContent.substring(0, 500) + (htmlContent.length > 500 ? '...' : ''),
+          template_found: !!template,
+          data_fetched: true,
+          email_data_keys: Object.keys(emailData)
+        }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
 
     // Configure SMTP client for IONOS
     const smtpClient = new SMTPClient({
@@ -259,6 +269,59 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 };
+
+// Helper function to fetch user profile data
+async function getUserProfileData(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from('profiles')
+    .select(`
+      *,
+      user_organizations!inner(
+        organization:organization_id (name, contact_email)
+      )
+    `)
+    .eq('id', userId)
+    .maybeSingle();
+
+  return {
+    user_id: userId,
+    email: data?.email,
+    first_name: data?.first_name,
+    last_name: data?.last_name,
+    full_name: `${data?.first_name} ${data?.last_name}`,
+    user_type: data?.user_type,
+    company_name: data?.company_name || data?.user_organizations?.[0]?.organization?.name,
+    organization_name: data?.user_organizations?.[0]?.organization?.name,
+    created_at: data?.created_at
+  };
+}
+
+// Helper function to fetch invoice data
+async function getInvoiceData(supabase: any, invoiceId: string) {
+  const { data } = await supabase
+    .from('invoices')
+    .select(`
+      *,
+      organization:organization_id (name, contact_email),
+      submitted_by:submitted_by_user_id (first_name, last_name, email)
+    `)
+    .eq('id', invoiceId)
+    .maybeSingle();
+
+  return {
+    invoice_id: invoiceId,
+    internal_invoice_number: data?.internal_invoice_number,
+    external_invoice_number: data?.external_invoice_number,
+    total_amount: data?.total_amount,
+    status: data?.status,
+    organization_name: data?.organization?.name,
+    organization_contact_email: data?.organization?.contact_email,
+    submitted_by_name: `${data?.submitted_by?.first_name} ${data?.submitted_by?.last_name}`,
+    submitted_by_email: data?.submitted_by?.email,
+    submitted_at: data?.submitted_at,
+    description: data?.description
+  };
+}
 
 // Helper functions to fetch data for each record type
 async function getWorkOrderAssignmentData(supabase: any, assignmentId: string) {

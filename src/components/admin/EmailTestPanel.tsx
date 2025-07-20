@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
+import { Info, Lock } from 'lucide-react';
 
 export const EmailTestPanel = () => {
   const { toast } = useToast();
@@ -25,14 +27,6 @@ export const EmailTestPanel = () => {
   const [useManualEntry, setUseManualEntry] = useState(false);
   const [manualUuid, setManualUuid] = useState('');
 
-  const recordTypes = [
-    { value: 'user', label: 'User Profile' },
-    { value: 'work_order', label: 'Work Order' },
-    { value: 'work_order_assignment', label: 'Work Order Assignment' },
-    { value: 'work_order_report', label: 'Work Order Report' },
-    { value: 'invoice', label: 'Invoice' },
-  ];
-
   // Template to record type mapping
   const getRecordTypeForTemplate = (templateName: string): string => {
     const mapping: Record<string, string> = {
@@ -47,13 +41,37 @@ export const EmailTestPanel = () => {
     return mapping[templateName] || '';
   };
 
+  // Get available record types (now only shows the correct one for selected template)
+  const getAvailableRecordTypes = () => {
+    if (!selectedTemplate) {
+      return [
+        { value: 'user', label: 'User Profile' },
+        { value: 'work_order', label: 'Work Order' },
+        { value: 'work_order_assignment', label: 'Work Order Assignment' },
+        { value: 'work_order_report', label: 'Work Order Report' },
+        { value: 'invoice', label: 'Invoice' },
+      ];
+    }
+    
+    const correctRecordType = getRecordTypeForTemplate(selectedTemplate);
+    const typeLabels: Record<string, string> = {
+      'user': 'User Profile',
+      'work_order': 'Work Order',
+      'work_order_assignment': 'Work Order Assignment', 
+      'work_order_report': 'Work Order Report',
+      'invoice': 'Invoice',
+    };
+    
+    return correctRecordType ? [{ value: correctRecordType, label: typeLabels[correctRecordType] }] : [];
+  };
+
   // Handle template selection and auto-select record type
   const handleTemplateChange = (templateName: string) => {
     setSelectedTemplate(templateName);
     const autoRecordType = getRecordTypeForTemplate(templateName);
-    if (autoRecordType) {
-      setRecordType(autoRecordType);
-    }
+    setRecordType(autoRecordType);
+    setRecordId(''); // Clear record selection when template changes
+    setManualUuid('');
   };
 
   // UUID validation regex
@@ -192,7 +210,7 @@ export const EmailTestPanel = () => {
         title: 'Error',
         description: useManualEntry && manualUuid && !isValidUuid(manualUuid) 
           ? 'Please enter a valid UUID format'
-          : 'Please select a template, record type, and enter a valid record ID',
+          : 'Please select a template and enter a valid record ID',
         variant: 'destructive',
       });
       return;
@@ -237,7 +255,7 @@ export const EmailTestPanel = () => {
         title: 'Error',
         description: useManualEntry && manualUuid && !isValidUuid(manualUuid)
           ? 'Please enter a valid UUID format'
-          : 'Please select a template, record type, and enter a valid record ID',
+          : 'Please select a template and enter a valid record ID',
         variant: 'destructive',
       });
       return;
@@ -321,7 +339,7 @@ export const EmailTestPanel = () => {
         ));
         
       default:
-        return <SelectItem value="__select_type__" disabled>Select record type first</SelectItem>;
+        return <SelectItem value="__select_template__" disabled>Select template first</SelectItem>;
     }
   };
 
@@ -362,19 +380,28 @@ export const EmailTestPanel = () => {
           </div>
 
           <div>
-            <Label htmlFor="recordType">Record Type</Label>
-            <Select value={recordType} onValueChange={setRecordType}>
+            <Label htmlFor="recordType" className="flex items-center gap-2">
+              Record Type
+              {selectedTemplate && <Lock className="h-3 w-3 text-muted-foreground" />}
+            </Label>
+            <Select value={recordType} onValueChange={setRecordType} disabled={!!selectedTemplate}>
               <SelectTrigger>
-                <SelectValue placeholder="Select record type" />
+                <SelectValue placeholder={selectedTemplate ? `Auto-selected: ${recordType}` : "Select record type"} />
               </SelectTrigger>
               <SelectContent>
-                {recordTypes.map((type) => (
+                {getAvailableRecordTypes().map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {selectedTemplate && (
+              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <Info className="h-3 w-3" />
+                <span>Record type auto-selected for this template</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -410,7 +437,7 @@ export const EmailTestPanel = () => {
                   <SelectTrigger>
                     <SelectValue placeholder={
                       !recordType 
-                        ? "Select record type first" 
+                        ? "Select template first" 
                         : loadingRecords 
                           ? "Loading records..." 
                           : "Select a record (20 most recent)"
@@ -452,6 +479,15 @@ export const EmailTestPanel = () => {
           </Button>
         </div>
 
+        {!selectedTemplate && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Select an email template first. The record type will be automatically chosen based on the template.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {emailResult && (
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
             <h3 className="font-semibold mb-2">Test Result:</h3>
@@ -474,15 +510,15 @@ export const EmailTestPanel = () => {
         )}
 
         <div className="text-sm text-muted-foreground">
-          <p><strong>Record Type Examples:</strong></p>
+          <p><strong>Template-Record Type Mapping:</strong></p>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong>work_order:</strong> For work order notifications (created, completed)</li>
-            <li><strong>work_order_assignment:</strong> For assignment notifications to subcontractors</li>
-            <li><strong>work_order_report:</strong> For report submission and review notifications</li>
-            <li><strong>user:</strong> For new user welcome emails (queries profiles table)</li>
-            <li><strong>invoice:</strong> For invoice submission notifications</li>
+            <li><strong>welcome_email:</strong> User Profile (for new user notifications)</li>
+            <li><strong>work_order_created/completed:</strong> Work Order (for WO notifications)</li>
+            <li><strong>work_order_assigned:</strong> Work Order Assignment (for assignment notifications)</li>
+            <li><strong>report_submitted/reviewed:</strong> Work Order Report (for report notifications)</li>
+            <li><strong>invoice_submitted:</strong> Invoice (for invoice notifications)</li>
           </ul>
-          <p className="mt-2"><strong>Note:</strong> Selecting a template automatically chooses the correct record type. Shows 20 most recent records or enter UUID manually.</p>
+          <p className="mt-2">Record type is automatically selected based on the chosen template to ensure compatibility.</p>
         </div>
       </CardContent>
     </Card>
