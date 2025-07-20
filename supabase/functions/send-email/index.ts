@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
@@ -177,7 +178,7 @@ serve(async (req) => {
 
       // Get status and notes from the report
       const status = report.status;
-      const reviewNotes = report.review_notes || '';
+      const reviewNotes = report.admin_notes || '';
 
       // Replace variables
       let subject = template.subject
