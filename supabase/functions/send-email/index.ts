@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
@@ -211,6 +210,160 @@ serve(async (req) => {
         success: emailResult.success,
         message: emailResult.success ? 'Email sent successfully' : emailResult.error
       });
+    }
+
+    // Handle work_order_assigned emails
+    if (template_name === 'work_order_assigned') {
+      const { data: workOrder } = await supabase
+        .from('work_orders')
+        .select('*, organizations!organization_id(name), profiles!assigned_to(email, first_name)')
+        .eq('id', record_id)
+        .single();
+
+      if (!workOrder?.profiles?.email) {
+        return new Response(JSON.stringify({ error: 'No assignee found' }), { status: 404 });
+      }
+
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('subject, html_content')
+        .eq('template_name', 'work_order_assigned')
+        .single();
+
+      let subject = template.subject.replace(/{{work_order_number}}/g, workOrder.work_order_number);
+      let html = template.html_content
+        .replace(/{{work_order_number}}/g, workOrder.work_order_number)
+        .replace(/{{first_name}}/g, workOrder.profiles.first_name || '');
+
+      const emailResult = await sendEmail({
+        to: [workOrder.profiles.email],
+        subject: subject,
+        html: html
+      });
+
+      await supabase.from('email_logs').insert({
+        work_order_id: workOrder.id,
+        template_used: 'work_order_assigned',
+        recipient_email: workOrder.profiles.email,
+        status: emailResult.success ? 'sent' : 'failed'
+      });
+
+      return new Response(JSON.stringify({ success: emailResult.success }), { status: 200, headers: corsHeaders });
+    }
+
+    // Handle report_submitted emails
+    if (template_name === 'report_submitted') {
+      const { data: report } = await supabase
+        .from('work_order_reports')
+        .select('*, work_orders!work_order_id(work_order_number)')
+        .eq('id', record_id)
+        .single();
+
+      const { data: admins } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('user_type', 'admin')
+        .eq('is_active', true);
+
+      if (!admins?.length) return new Response(JSON.stringify({ error: 'No admins' }), { status: 404 });
+
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('subject, html_content')
+        .eq('template_name', 'report_submitted')
+        .single();
+
+      let subject = template.subject.replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '');
+      let html = template.html_content.replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '');
+
+      const emailResult = await sendEmail({
+        to: admins.map(a => a.email),
+        subject: subject,
+        html: html
+      });
+
+      await supabase.from('email_logs').insert({
+        work_order_id: report.work_order_id,
+        template_used: 'report_submitted',
+        recipient_email: admins.map(a => a.email).join(', '),
+        status: emailResult.success ? 'sent' : 'failed'
+      });
+
+      return new Response(JSON.stringify({ success: emailResult.success }), { status: 200, headers: corsHeaders });
+    }
+
+    // Handle work_order_completed emails  
+    if (template_name === 'work_order_completed') {
+      const { data: workOrder } = await supabase
+        .from('work_orders')
+        .select('*, organizations!organization_id(name), profiles!created_by(email)')
+        .eq('id', record_id)
+        .single();
+
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('subject, html_content')
+        .eq('template_name', 'work_order_completed')
+        .single();
+
+      let subject = template.subject.replace(/{{work_order_number}}/g, workOrder.work_order_number);
+      let html = template.html_content
+        .replace(/{{work_order_number}}/g, workOrder.work_order_number)
+        .replace(/{{organization_name}}/g, workOrder.organizations?.name || '');
+
+      // Send to partner who created it
+      const emailResult = await sendEmail({
+        to: [workOrder.profiles.email],
+        subject: subject,
+        html: html
+      });
+
+      await supabase.from('email_logs').insert({
+        work_order_id: workOrder.id,
+        template_used: 'work_order_completed',
+        recipient_email: workOrder.profiles.email,
+        status: emailResult.success ? 'sent' : 'failed'
+      });
+
+      return new Response(JSON.stringify({ success: emailResult.success }), { status: 200, headers: corsHeaders });
+    }
+
+    // Handle welcome_email
+    if (template_name === 'welcome_email') {
+      // For welcome emails, record_id is the profile id
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email, first_name, user_type')
+        .eq('id', record_id)
+        .single();
+
+      if (!profile?.email) {
+        return new Response(JSON.stringify({ error: 'Profile not found' }), { status: 404 });
+      }
+
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('subject, html_content')
+        .eq('template_name', 'welcome_email')
+        .single();
+
+      let html = template.html_content
+        .replace(/{{first_name}}/g, profile.first_name || '')
+        .replace(/{{user_type}}/g, profile.user_type || '');
+
+      const emailResult = await sendEmail({
+        to: [profile.email],
+        subject: template.subject,
+        html: html
+      });
+
+      await supabase.from('email_logs').insert({
+        template_used: 'welcome_email',
+        recipient_email: profile.email,
+        status: emailResult.success ? 'sent' : 'failed'
+      });
+
+      return new Response(JSON.stringify({ success: emailResult.success }), { status: 200, headers: corsHeaders });
     }
 
     // For all other templates (not implemented yet)
