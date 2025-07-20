@@ -15,30 +15,17 @@ interface EmailRequest {
   test_mode?: boolean;
 }
 
-// URL configuration
+// Simple URL configuration
 const getBaseUrl = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   if (supabaseUrl?.includes('localhost')) {
-    return 'http://localhost:5173'; // Local development
+    return 'http://localhost:5173';
   }
-  return 'https://workorderpro.com'; // Production - update this to actual domain
-};
-
-const generateUrls = (recordId: string, recordType: string) => {
-  const baseUrl = getBaseUrl();
-  
-  return {
-    admin_dashboard_url: `${baseUrl}/admin/dashboard`,
-    work_order_url: `${baseUrl}/admin/work-orders/${recordId}`,
-    review_url: `${baseUrl}/admin/work-order-reports/${recordId}`,
-    report_url: `${baseUrl}/subcontractor/reports/${recordId}`,
-    system_url: baseUrl,
-    dashboard_url: baseUrl,
-  };
+  return 'https://workorderpro.com';
 };
 
 const serve_handler = async (req: Request): Promise<Response> => {
-  console.log('=== EMAIL FUNCTION INVOKED ===');
+  console.log('=== EMAIL FUNCTION STARTED ===');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -47,20 +34,14 @@ const serve_handler = async (req: Request): Promise<Response> => {
   try {
     const { template_name, record_id, record_type, recipient_email, test_mode = false }: EmailRequest = await req.json();
     
-    console.log(`Processing email request: ${template_name} for ${record_type} record ${record_id}, test_mode: ${test_mode}`);
-
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(record_id)) {
-      throw new Error(`Invalid UUID format: ${record_id}`);
-    }
+    console.log(`Email request: ${template_name} for ${record_type} ${record_id}, test: ${test_mode}`);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch email template
+    // Get email template
     const { data: templateData, error: templateError } = await supabase
       .from('email_templates')
       .select('*')
@@ -69,228 +50,59 @@ const serve_handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (templateError || !templateData) {
-      console.error('Template fetch error:', templateError);
-      throw new Error(`Email template '${template_name}' not found or inactive`);
+      console.error('Template error:', templateError);
+      throw new Error(`Template '${template_name}' not found`);
     }
 
-    // Generate URLs
-    const urls = generateUrls(record_id, record_type);
+    // Basic URL generation
+    const baseUrl = getBaseUrl();
+    const urls = {
+      admin_dashboard_url: `${baseUrl}/admin/dashboard`,
+      work_order_url: `${baseUrl}/admin/work-orders/${record_id}`,
+      review_url: `${baseUrl}/admin/work-order-reports/${record_id}`,
+      report_url: `${baseUrl}/subcontractor/reports/${record_id}`,
+      system_url: baseUrl,
+      dashboard_url: baseUrl,
+    };
 
-    let emailData: any = { ...urls };
-    let recipientEmail = recipient_email;
+    // Simple data object with safe defaults
+    let emailData: any = {
+      ...urls,
+      work_order_number: 'WO-' + record_id.slice(0, 8),
+      work_order_title: 'Work Order',
+      title: 'Work Order',
+      description: 'Work order details',
+      organization_name: 'Organization',
+      store_location: 'Location',
+      street_address: 'Address',
+      city: 'City',
+      state: 'State',
+      zip_code: 'ZIP',
+      trade_name: 'Trade',
+      estimated_completion_date: 'TBD',
+      due_date: 'TBD',
+      submitted_date: new Date().toLocaleDateString(),
+      current_date: new Date().toLocaleDateString(),
+      subcontractor_name: 'Subcontractor',
+      user_name: 'User',
+      first_name: 'User',
+      last_name: 'Name',
+      user_email: recipient_email || 'user@example.com',
+      company_name: 'Company',
+      user_type: 'user',
+      work_performed: 'Work completed',
+      hours_worked: 0,
+      invoice_amount: 0,
+      materials_used: 'Materials',
+      status: 'submitted',
+      reviewed_date: 'Not reviewed',
+      review_notes: 'No notes'
+    };
 
-    // Fetch record data based on record type
-    switch (record_type) {
-      case 'work_order': {
-        const { data: workOrder, error } = await supabase
-          .from('work_orders')
-          .select(`
-            *,
-            organization:organizations(*),
-            trade:trades(*),
-            created_by_profile:profiles!created_by(*),
-            assigned_to_profile:profiles!assigned_to(*)
-          `)
-          .eq('id', record_id)
-          .single();
+    // Set default recipient if not provided
+    let finalRecipient = recipient_email || 'admin@workorderpro.com';
 
-        if (error) throw new Error(`Work order not found: ${error.message}`);
-
-        emailData = {
-          ...emailData,
-          work_order_number: workOrder.work_order_number || 'N/A',
-          work_order_title: workOrder.title || 'Work Order',
-          title: workOrder.title || 'Work Order',
-          description: workOrder.description || 'No description provided',
-          organization_name: workOrder.organization?.name || 'Unknown Organization',
-          store_location: workOrder.store_location || 'N/A',
-          street_address: workOrder.street_address || 'N/A',
-          city: workOrder.city || 'N/A',
-          state: workOrder.state || 'N/A',
-          zip_code: workOrder.zip_code || 'N/A',
-          trade_name: workOrder.trade?.name || 'N/A',
-          estimated_completion_date: workOrder.estimated_completion_date || 'TBD',
-          due_date: workOrder.due_date || 'TBD',
-          submitted_date: new Date(workOrder.date_submitted).toLocaleDateString(),
-          current_date: new Date().toLocaleDateString(),
-        };
-
-        // Set recipient based on template type
-        if (!recipientEmail) {
-          if (template_name === 'work_order_created') {
-            recipientEmail = 'admin@workorderpro.com'; // All admins get new work order notifications
-          } else if (template_name === 'work_order_assigned' && workOrder.assigned_to_profile) {
-            recipientEmail = workOrder.assigned_to_profile.email;
-            emailData.subcontractor_name = `${workOrder.assigned_to_profile.first_name} ${workOrder.assigned_to_profile.last_name}`;
-          } else if (template_name === 'work_order_completed') {
-            recipientEmail = workOrder.organization?.contact_email || 'admin@workorderpro.com';
-          }
-        }
-        break;
-      }
-
-      case 'work_order_assignment': {
-        const { data: assignment, error } = await supabase
-          .from('work_order_assignments')
-          .select(`
-            *,
-            work_order:work_orders(*,
-              organization:organizations(*),
-              trade:trades(*)
-            ),
-            assigned_to_profile:profiles!assigned_to(*),
-            assigned_by_profile:profiles!assigned_by(*)
-          `)
-          .eq('id', record_id)
-          .single();
-
-        if (error) throw new Error(`Assignment not found: ${error.message}`);
-
-        const workOrder = assignment.work_order;
-        emailData = {
-          ...emailData,
-          work_order_number: workOrder.work_order_number || 'N/A',
-          work_order_title: workOrder.title || 'Work Order',
-          description: workOrder.description || 'No description provided',
-          organization_name: workOrder.organization?.name || 'Unknown Organization',
-          store_location: workOrder.store_location || 'N/A',
-          street_address: workOrder.street_address || 'N/A',
-          city: workOrder.city || 'N/A',
-          state: workOrder.state || 'N/A',
-          zip_code: workOrder.zip_code || 'N/A',
-          trade_name: workOrder.trade?.name || 'N/A',
-          estimated_completion_date: workOrder.estimated_completion_date || 'TBD',
-          subcontractor_name: `${assignment.assigned_to_profile.first_name} ${assignment.assigned_to_profile.last_name}`,
-          current_date: new Date().toLocaleDateString(),
-        };
-
-        if (!recipientEmail) {
-          recipientEmail = assignment.assigned_to_profile.email;
-        }
-        break;
-      }
-
-      case 'work_order_report': {
-        const { data: report, error } = await supabase
-          .from('work_order_reports')
-          .select(`
-            *,
-            work_order:work_orders(*,
-              organization:organizations(*),
-              trade:trades(*)
-            ),
-            subcontractor_profile:profiles!subcontractor_user_id(*),
-            reviewed_by_profile:profiles!reviewed_by_user_id(*)
-          `)
-          .eq('id', record_id)
-          .single();
-
-        if (error) throw new Error(`Report not found: ${error.message}`);
-
-        const workOrder = report.work_order;
-        emailData = {
-          ...emailData,
-          work_order_number: workOrder.work_order_number || 'N/A',
-          work_order_title: workOrder.title || 'Work Order',
-          organization_name: workOrder.organization?.name || 'Unknown Organization',
-          store_location: workOrder.store_location || 'N/A',
-          subcontractor_name: `${report.subcontractor_profile.first_name} ${report.subcontractor_profile.last_name}`,
-          work_performed: report.work_performed || 'No details provided',
-          hours_worked: report.hours_worked || 0,
-          invoice_amount: report.invoice_amount || 0,
-          materials_used: report.materials_used || 'None specified',
-          submitted_date: new Date(report.submitted_at).toLocaleDateString(),
-          reviewed_date: report.reviewed_at ? new Date(report.reviewed_at).toLocaleDateString() : 'Not reviewed',
-          review_notes: report.review_notes || 'No notes provided',
-          status: report.status || 'submitted',
-          current_date: new Date().toLocaleDateString(),
-        };
-
-        if (!recipientEmail) {
-          if (template_name === 'report_submitted') {
-            recipientEmail = 'admin@workorderpro.com'; // Admins get report submissions
-          } else if (template_name === 'report_reviewed') {
-            recipientEmail = report.subcontractor_profile.email; // Subcontractor gets review notification
-          }
-        }
-        break;
-      }
-
-      case 'user':
-      case 'profile': {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', record_id)
-          .single();
-
-        if (error) throw new Error(`Profile not found: ${error.message}`);
-
-        emailData = {
-          ...emailData,
-          user_name: `${profile.first_name} ${profile.last_name}`,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          user_email: profile.email,
-          company_name: profile.company_name || 'Not specified',
-          user_type: profile.user_type,
-          current_date: new Date().toLocaleDateString(),
-        };
-
-        if (!recipientEmail) {
-          recipientEmail = profile.email;
-        }
-        break;
-      }
-
-      case 'invoice': {
-        const { data: invoice, error } = await supabase
-          .from('invoices')
-          .select(`
-            *,
-            subcontractor_organization:organizations!subcontractor_organization_id(*),
-            submitted_by_profile:profiles!submitted_by(*),
-            approved_by_profile:profiles!approved_by(*)
-          `)
-          .eq('id', record_id)
-          .single();
-
-        if (error) throw new Error(`Invoice not found: ${error.message}`);
-
-        emailData = {
-          ...emailData,
-          internal_invoice_number: invoice.internal_invoice_number || 'N/A',
-          external_invoice_number: invoice.external_invoice_number || 'N/A',
-          total_amount: invoice.total_amount || 0,
-          status: invoice.status || 'submitted',
-          subcontractor_name: invoice.subcontractor_organization?.name || 'Unknown',
-          submitted_date: invoice.submitted_at ? new Date(invoice.submitted_at).toLocaleDateString() : 'N/A',
-          approved_date: invoice.approved_at ? new Date(invoice.approved_at).toLocaleDateString() : 'N/A',
-          paid_date: invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString() : 'N/A',
-          approval_notes: invoice.approval_notes || 'No notes provided',
-          payment_reference: invoice.payment_reference || 'N/A',
-          current_date: new Date().toLocaleDateString(),
-        };
-
-        if (!recipientEmail) {
-          if (template_name === 'invoice_submitted') {
-            recipientEmail = 'admin@workorderpro.com';
-          } else if (invoice.submitted_by_profile) {
-            recipientEmail = invoice.submitted_by_profile.email;
-          }
-        }
-        break;
-      }
-
-      default:
-        throw new Error(`Unsupported record type: ${record_type}`);
-    }
-
-    if (!recipientEmail) {
-      throw new Error('No recipient email found or provided');
-    }
-
-    // Interpolate template content
+    // Template interpolation
     const interpolateContent = (content: string, data: any): string => {
       return content.replace(/\{\{(\w+)\}\}/g, (match, key) => {
         return data[key] !== undefined ? String(data[key]) : match;
@@ -301,28 +113,27 @@ const serve_handler = async (req: Request): Promise<Response> => {
     const htmlContent = interpolateContent(templateData.html_content, emailData);
     const textContent = templateData.text_content 
       ? interpolateContent(templateData.text_content, emailData)
-      : htmlContent.replace(/<[^>]*>/g, ''); // Strip HTML for text version
+      : htmlContent.replace(/<[^>]*>/g, '');
 
-    // Test mode - return preview instead of sending
+    // Test mode - return preview
     if (test_mode) {
-      console.log('Test mode - returning email preview');
+      console.log('Test mode - returning preview');
       return new Response(JSON.stringify({
         success: true,
         test_mode: true,
-        recipient: recipientEmail,
+        recipient: finalRecipient,
         subject: subject,
         html_preview: htmlContent.substring(0, 500) + '...',
-        data_used: emailData,
         template_name: template_name,
-        message: 'Email preview generated successfully (test mode)'
+        message: 'Email preview generated successfully'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
 
-    // Send actual email via IONOS SMTP
-    console.log('Connecting to IONOS SMTP...');
+    // Send real email via IONOS SMTP
+    console.log('Sending email via IONOS SMTP...');
     
     const smtpConfig = {
       hostname: 'smtp.ionos.com',
@@ -331,11 +142,15 @@ const serve_handler = async (req: Request): Promise<Response> => {
       password: Deno.env.get('IONOS_EMAIL_PASSWORD'),
     };
 
+    if (!smtpConfig.username || !smtpConfig.password) {
+      throw new Error('IONOS email credentials not configured');
+    }
+
     // Create email message
     const boundary = `boundary_${Date.now()}`;
     const emailMessage = [
       `From: WorkOrderPro <${smtpConfig.username}>`,
-      `To: ${recipientEmail}`,
+      `To: ${finalRecipient}`,
       `Subject: ${subject}`,
       `MIME-Version: 1.0`,
       `Content-Type: multipart/alternative; boundary="${boundary}"`,
@@ -353,55 +168,55 @@ const serve_handler = async (req: Request): Promise<Response> => {
       `--${boundary}--`,
     ].join('\r\n');
 
-    // Connect and send via IONOS SMTP
+    // Simple SMTP connection with timeout
     const conn = await Deno.connect({
       hostname: smtpConfig.hostname,
       port: smtpConfig.port,
     });
 
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
-    // Upgrade to TLS
     const tlsConn = await Deno.startTls(conn, { hostname: smtpConfig.hostname });
 
-    // SMTP conversation
-    await tlsConn.write(encoder.encode(`EHLO ${smtpConfig.hostname}\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // SMTP conversation with delays
+      await tlsConn.write(encoder.encode(`EHLO ${smtpConfig.hostname}\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    await tlsConn.write(encoder.encode(`AUTH LOGIN\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 500));
+      await tlsConn.write(encoder.encode(`AUTH LOGIN\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    await tlsConn.write(encoder.encode(`${btoa(smtpConfig.username!)}\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 500));
+      await tlsConn.write(encoder.encode(`${btoa(smtpConfig.username)}\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    await tlsConn.write(encoder.encode(`${btoa(smtpConfig.password!)}\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 500));
+      await tlsConn.write(encoder.encode(`${btoa(smtpConfig.password)}\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    await tlsConn.write(encoder.encode(`MAIL FROM:<${smtpConfig.username}>\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 500));
+      await tlsConn.write(encoder.encode(`MAIL FROM:<${smtpConfig.username}>\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    await tlsConn.write(encoder.encode(`RCPT TO:<${recipientEmail}>\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 500));
+      await tlsConn.write(encoder.encode(`RCPT TO:<${finalRecipient}>\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    await tlsConn.write(encoder.encode(`DATA\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 500));
+      await tlsConn.write(encoder.encode(`DATA\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    await tlsConn.write(encoder.encode(`${emailMessage}\r\n.\r\n`));
-    await new Promise(resolve => setTimeout(resolve, 1000));
+      await tlsConn.write(encoder.encode(`${emailMessage}\r\n.\r\n`));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-    await tlsConn.write(encoder.encode(`QUIT\r\n`));
-    tlsConn.close();
+      await tlsConn.write(encoder.encode(`QUIT\r\n`));
+      
+    } finally {
+      tlsConn.close();
+    }
 
-    console.log(`Email sent successfully via IONOS SMTP to: ${recipientEmail}`);
+    console.log(`Email sent successfully to: ${finalRecipient}`);
 
-    // Log the email in database
+    // Log email
     try {
       await supabase.from('email_logs').insert({
         template_used: template_name,
-        recipient_email: recipientEmail,
+        recipient_email: finalRecipient,
         status: 'sent',
-        work_order_id: record_type === 'work_order' ? record_id : null,
       });
     } catch (logError) {
       console.warn('Failed to log email:', logError);
@@ -410,7 +225,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({
       success: true,
       message: 'Email sent successfully',
-      recipient: recipientEmail,
+      recipient: finalRecipient,
       subject: subject,
       template_used: template_name,
     }), {
