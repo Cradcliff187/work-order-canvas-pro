@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { Mail, CheckCircle, XCircle, Clock, Send, Database, Eye } from 'lucide-react';
+import { Mail, CheckCircle, XCircle, Clock, Send, Database, Eye, User, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserMutations } from '@/hooks/useUsers';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EmailTest {
   id: string;
@@ -15,6 +17,7 @@ interface EmailTest {
   description: string;
   template_name: string;
   record_type: string;
+  category: 'work_order' | 'report' | 'auth';
   status: 'idle' | 'testing' | 'success' | 'error';
   result?: string;
   error?: string;
@@ -22,20 +25,14 @@ interface EmailTest {
 
 export function EmailTestingPanel() {
   const [tests, setTests] = useState<EmailTest[]>([
-    {
-      id: 'welcome',
-      name: 'Welcome Email',
-      description: 'Test the welcome email sent when a new user is created',
-      template_name: 'welcome_email',
-      record_type: 'profile',
-      status: 'idle'
-    },
+    // Work Order Tests
     {
       id: 'work_order_created',
       name: 'Work Order Created',
       description: 'Test email sent when a new work order is created',
       template_name: 'work_order_created',
       record_type: 'work_order',
+      category: 'work_order',
       status: 'idle'
     },
     {
@@ -44,14 +41,17 @@ export function EmailTestingPanel() {
       description: 'Test email sent when a work order is assigned',
       template_name: 'work_order_assigned',
       record_type: 'work_order',
+      category: 'work_order',
       status: 'idle'
     },
+    // Report Tests
     {
       id: 'report_submitted',
       name: 'Report Submitted',
       description: 'Test email sent when a work order report is submitted',
       template_name: 'report_submitted',
       record_type: 'work_order_report',
+      category: 'report',
       status: 'idle'
     },
     {
@@ -60,13 +60,38 @@ export function EmailTestingPanel() {
       description: 'Test email sent when a report is approved/rejected',
       template_name: 'report_reviewed',
       record_type: 'work_order_report',
+      category: 'report',
+      status: 'idle'
+    },
+    // Authentication Tests
+    {
+      id: 'auth_confirmation',
+      name: 'Auth Confirmation Email',
+      description: 'Test welcome email sent when creating a new user account',
+      template_name: 'auth_confirmation',
+      record_type: 'auth',
+      category: 'auth',
+      status: 'idle'
+    },
+    {
+      id: 'password_reset',
+      name: 'Password Reset Email',
+      description: 'Test password reset email functionality',
+      template_name: 'password_reset',
+      record_type: 'auth',
+      category: 'auth',
       status: 'idle'
     }
   ]);
   
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [showLogs, setShowLogs] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<'all' | 'work_order' | 'report' | 'auth'>('all');
+  const [authStats, setAuthStats] = useState<{auth_confirmation: number, password_reset: number} | null>(null);
+  
   const { toast } = useToast();
+  const { createUser } = useUserMutations();
+  const { forgotPassword } = useAuth();
 
   const updateTestStatus = (testId: string, status: EmailTest['status'], result?: string, error?: string) => {
     setTests(prev => prev.map(test => 
@@ -76,11 +101,144 @@ export function EmailTestingPanel() {
     ));
   };
 
+  const testAuthConfirmation = async () => {
+    updateTestStatus('auth_confirmation', 'testing');
+    
+    try {
+      // Create a test user to trigger auth confirmation email
+      const testEmail = `test-auth-${Date.now()}@workorderpro.test`;
+      
+      await createUser.mutateAsync({
+        email: testEmail,
+        first_name: 'Test',
+        last_name: 'User',
+        user_type: 'employee',
+        sendWelcomeEmail: true
+      });
+
+      // Wait a moment for the email to be processed
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check email logs for auth_confirmation entry
+      const { data: emailLog, error } = await supabase
+        .from('email_logs')
+        .select('*')
+        .eq('recipient_email', testEmail)
+        .eq('template_used', 'auth_confirmation')
+        .order('sent_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (emailLog) {
+        updateTestStatus('auth_confirmation', 'success', `Auth confirmation email found - Status: ${emailLog.status}`);
+        toast({
+          title: "Auth Confirmation Test Successful",
+          description: `Email sent to ${testEmail}`,
+        });
+      } else {
+        throw new Error('Auth confirmation email not found in logs');
+      }
+
+      // Clean up test user
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', testEmail)
+          .single();
+        
+        if (profile) {
+          await supabase.from('profiles').delete().eq('id', profile.id);
+        }
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup test user:', cleanupError);
+      }
+
+      await fetchEmailLogs();
+      await fetchAuthStats();
+      
+    } catch (error) {
+      console.error(`Auth confirmation test failed:`, error);
+      updateTestStatus('auth_confirmation', 'error', undefined, error instanceof Error ? error.message : 'Unknown error');
+      
+      toast({
+        title: "Auth Confirmation Test Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const testPasswordReset = async () => {
+    updateTestStatus('password_reset', 'testing');
+    
+    try {
+      // Use a known test email for password reset
+      const testEmail = 'test-password-reset@workorderpro.test';
+      
+      // Trigger password reset
+      const result = await forgotPassword(testEmail);
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Password reset failed');
+      }
+
+      // Wait a moment for the email to be processed
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check email logs for password_reset entry
+      const { data: emailLog, error } = await supabase
+        .from('email_logs')
+        .select('*')
+        .eq('recipient_email', testEmail)
+        .eq('template_used', 'password_reset')
+        .order('sent_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (emailLog) {
+        updateTestStatus('password_reset', 'success', `Password reset email found - Status: ${emailLog.status}`);
+        toast({
+          title: "Password Reset Test Successful",
+          description: `Email sent to ${testEmail}`,
+        });
+      } else {
+        throw new Error('Password reset email not found in logs');
+      }
+
+      await fetchEmailLogs();
+      await fetchAuthStats();
+      
+    } catch (error) {
+      console.error(`Password reset test failed:`, error);
+      updateTestStatus('password_reset', 'error', undefined, error instanceof Error ? error.message : 'Unknown error');
+      
+      toast({
+        title: "Password Reset Test Failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive",
+      });
+    }
+  };
+
   const testEmailTrigger = async (test: EmailTest) => {
+    if (test.category === 'auth') {
+      if (test.id === 'auth_confirmation') {
+        await testAuthConfirmation();
+      } else if (test.id === 'password_reset') {
+        await testPasswordReset();
+      }
+      return;
+    }
+
     updateTestStatus(test.id, 'testing');
     
     try {
-      // Call the send-email edge function directly for testing
+      // Call the send-email edge function directly for testing work order/report emails
       const response = await fetch(`https://inudoymofztrvxhrlrek.supabase.co/functions/v1/send-email`, {
         method: 'POST',
         headers: {
@@ -108,7 +266,6 @@ export function EmailTestingPanel() {
         description: `${test.name} email sent successfully`,
       });
 
-      // Refresh email logs
       await fetchEmailLogs();
       
     } catch (error) {
@@ -129,7 +286,7 @@ export function EmailTestingPanel() {
         .from('email_logs')
         .select('*')
         .order('sent_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) throw error;
       setEmailLogs(data || []);
@@ -138,10 +295,42 @@ export function EmailTestingPanel() {
     }
   };
 
+  const fetchAuthStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('email_logs')
+        .select('template_used')
+        .in('template_used', ['auth_confirmation', 'password_reset'])
+        .gte('sent_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      if (error) throw error;
+
+      const stats = {
+        auth_confirmation: data?.filter(log => log.template_used === 'auth_confirmation').length || 0,
+        password_reset: data?.filter(log => log.template_used === 'password_reset').length || 0
+      };
+
+      setAuthStats(stats);
+    } catch (error) {
+      console.error('Failed to fetch auth stats:', error);
+    }
+  };
+
   const runAllTests = async () => {
-    for (const test of tests) {
+    const filteredTests = filterCategory === 'all' ? tests : tests.filter(t => t.category === filterCategory);
+    
+    for (const test of filteredTests) {
       await testEmailTrigger(test);
       // Add a small delay between tests
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  };
+
+  const runCategoryTests = async (category: 'work_order' | 'report' | 'auth') => {
+    const categoryTests = tests.filter(t => t.category === category);
+    
+    for (const test of categoryTests) {
+      await testEmailTrigger(test);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
@@ -172,8 +361,37 @@ export function EmailTestingPanel() {
     }
   };
 
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'auth':
+        return <Shield className="h-4 w-4" />;
+      case 'work_order':
+        return <Mail className="h-4 w-4" />;
+      case 'report':
+        return <Database className="h-4 w-4" />;
+      default:
+        return <Mail className="h-4 w-4" />;
+    }
+  };
+
+  const filteredTests = filterCategory === 'all' ? tests : tests.filter(t => t.category === filterCategory);
+  const filteredLogs = filterCategory === 'all' ? emailLogs : 
+    emailLogs.filter(log => {
+      if (filterCategory === 'auth') {
+        return ['auth_confirmation', 'password_reset'].includes(log.template_used);
+      }
+      if (filterCategory === 'work_order') {
+        return ['work_order_created', 'work_order_assigned'].includes(log.template_used);
+      }
+      if (filterCategory === 'report') {
+        return ['report_submitted', 'report_reviewed'].includes(log.template_used);
+      }
+      return true;
+    });
+
   React.useEffect(() => {
     fetchEmailLogs();
+    fetchAuthStats();
   }, []);
 
   return (
@@ -186,22 +404,94 @@ export function EmailTestingPanel() {
           </CardTitle>
           <CardDescription>
             Test all email triggers to ensure the unified email system is working correctly.
-            This will send test emails using the Resend service.
+            This includes authentication, work order, and report email functionality.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-medium">Email Trigger Tests</h3>
-            <Button onClick={runAllTests} disabled={tests.some(t => t.status === 'testing')}>
-              <Send className="h-4 w-4 mr-2" />
-              Run All Tests
+          {/* Category Filter */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium">Filter by Category:</h3>
+              <div className="flex gap-1">
+                {[
+                  { key: 'all', label: 'All', icon: Mail },
+                  { key: 'auth', label: 'Auth', icon: Shield },
+                  { key: 'work_order', label: 'Work Orders', icon: Mail },
+                  { key: 'report', label: 'Reports', icon: Database }
+                ].map(({ key, label, icon: Icon }) => (
+                  <Button
+                    key={key}
+                    variant={filterCategory === key ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterCategory(key as any)}
+                  >
+                    <Icon className="h-3 w-3 mr-1" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={runAllTests} disabled={tests.some(t => t.status === 'testing')} size="sm">
+                <Send className="h-4 w-4 mr-2" />
+                Run All Tests
+              </Button>
+            </div>
+          </div>
+
+          {/* Category-specific Test Buttons */}
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => runCategoryTests('auth')}
+              disabled={tests.some(t => t.status === 'testing')}
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Test Auth Emails
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => runCategoryTests('work_order')}
+              disabled={tests.some(t => t.status === 'testing')}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Test Work Orders
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => runCategoryTests('report')}
+              disabled={tests.some(t => t.status === 'testing')}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Test Reports
             </Button>
           </div>
+
+          {/* Auth Statistics */}
+          {authStats && filterCategory === 'auth' && (
+            <div className="bg-muted p-3 rounded-lg">
+              <h4 className="font-medium mb-2">Auth Email Statistics (Last 24 Hours)</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Confirmation Emails:</span>
+                  <span className="ml-2 font-medium">{authStats.auth_confirmation}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Password Resets:</span>
+                  <span className="ml-2 font-medium">{authStats.password_reset}</span>
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="space-y-3">
-            {tests.map((test) => (
+            {filteredTests.map((test) => (
               <div key={test.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
+                  {getCategoryIcon(test.category)}
                   {getStatusIcon(test.status)}
                   <div>
                     <div className="font-medium">{test.name}</div>
@@ -256,18 +546,19 @@ export function EmailTestingPanel() {
           
           {showLogs && (
             <div className="space-y-2">
-              {emailLogs.length > 0 ? (
-                emailLogs.map((log, index) => (
+              {filteredLogs.length > 0 ? (
+                filteredLogs.map((log, index) => (
                   <div key={index} className="p-3 bg-muted rounded-lg text-sm">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium">{log.template_used}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {getCategoryIcon(
+                            ['auth_confirmation', 'password_reset'].includes(log.template_used) ? 'auth' :
+                            ['work_order_created', 'work_order_assigned'].includes(log.template_used) ? 'work_order' : 'report'
+                          )}
+                          {log.template_used}
+                        </div>
                         <div className="text-muted-foreground">To: {log.recipient_email}</div>
-                        {log.resend_message_id && (
-                          <div className="text-xs text-muted-foreground">
-                            Message ID: {log.resend_message_id}
-                          </div>
-                        )}
                       </div>
                       <div className="text-right">
                         <Badge 
@@ -290,7 +581,7 @@ export function EmailTestingPanel() {
                 ))
               ) : (
                 <div className="text-center text-muted-foreground py-4">
-                  No email logs found
+                  No email logs found for {filterCategory === 'all' ? 'any category' : filterCategory}
                 </div>
               )}
             </div>
@@ -304,10 +595,10 @@ export function EmailTestingPanel() {
           <div className="space-y-2">
             <p className="font-medium">Email System Status:</p>
             <div className="text-sm space-y-1">
-              <p>• <strong>Welcome Emails:</strong> Sent via Resend with custom branding</p>
-              <p>• <strong>Work Order Emails:</strong> Sent via Resend with custom branding</p>
-              <p>• <strong>Report Emails:</strong> Sent via Resend with custom branding</p>
-              <p>• <strong>Auth Emails:</strong> Sent via Supabase SMTP (password reset, etc.)</p>
+              <p>• <strong>Authentication Emails:</strong> User welcome emails and password resets</p>
+              <p>• <strong>Work Order Emails:</strong> Creation and assignment notifications</p>
+              <p>• <strong>Report Emails:</strong> Submission and review notifications</p>
+              <p>• <strong>Delivery:</strong> All emails sent via Resend with delivery tracking</p>
             </div>
           </div>
         </AlertDescription>
