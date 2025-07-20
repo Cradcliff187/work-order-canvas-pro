@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,24 +9,23 @@ import { useTemplatePreview } from '@/hooks/useTemplatePreview';
 import { useToast } from '@/hooks/use-toast';
 
 interface EmailPreviewProps {
-  subject: string;
+  templateName: string;
   htmlContent: string;
-  templateType?: string;
+  variables: string[];
 }
 
 export const EmailPreview: React.FC<EmailPreviewProps> = ({
-  subject,
+  templateName,
   htmlContent,
-  templateType,
+  variables,
 }) => {
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const { interpolateTemplate, getAvailableVariables } = useTemplatePreview();
   const { toast } = useToast();
 
-  const interpolatedSubject = interpolateTemplate(subject);
   const interpolatedContent = interpolateTemplate(htmlContent);
   
-  const availableVariables = getAvailableVariables(templateType);
+  const availableVariables = getAvailableVariables();
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -85,8 +85,8 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
 
           <Card>
             <CardHeader className="pb-2">
-              <div className="text-sm text-muted-foreground">Subject:</div>
-              <div className="font-medium">{interpolatedSubject}</div>
+              <div className="text-sm text-muted-foreground">Template:</div>
+              <div className="font-medium">{templateName}</div>
             </CardHeader>
             <CardContent>
               <div
@@ -112,13 +112,13 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(availableVariables).map(([category, variables]) => (
+              {Object.entries(availableVariables).map(([category, categoryVariables]) => (
                 <div key={category}>
                   <h4 className="font-medium mb-2 capitalize">
                     {category.replace('_', ' ')} Variables
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {variables.map((variable) => (
+                    {categoryVariables.map((variable) => (
                       <Badge
                         key={variable}
                         variant="secondary"
@@ -131,6 +131,24 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
                   </div>
                 </div>
               ))}
+              
+              {variables.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Template Variables</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {variables.map((variable, index) => (
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="font-mono cursor-pointer"
+                        onClick={() => copyToClipboard(variable)}
+                      >
+                        {variable}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

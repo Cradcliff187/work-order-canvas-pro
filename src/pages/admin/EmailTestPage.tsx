@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserMutations } from '@/hooks/useUsers';
+import { EmailPreview } from '@/components/admin/EmailPreview';
 import { 
   Mail, 
   CheckCircle, 
@@ -48,6 +49,8 @@ const EmailTestPage = () => {
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [edgeFunctionStatus, setEdgeFunctionStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('welcome_email');
+  const [templates, setTemplates] = useState<any[]>([]);
   
   const [testForm, setTestForm] = useState<TestUserForm>({
     email: '',
@@ -60,6 +63,18 @@ const EmailTestPage = () => {
     checkEmailConfiguration();
     fetchEmailLogs();
   }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    const { data } = await supabase
+      .from('email_templates')
+      .select('template_name, html_content')
+      .eq('is_active', true);
+    if (data) setTemplates(data);
+  };
 
   const checkEmailConfiguration = async () => {
     setEdgeFunctionStatus('checking');
@@ -283,7 +298,6 @@ const EmailTestPage = () => {
             </div>
           </div>
 
-
           <Button 
             onClick={handleCreateTestUser}
             disabled={isLoading || edgeFunctionStatus !== 'available'}
@@ -311,6 +325,42 @@ const EmailTestPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Email Template Preview */}
+      {templates.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Email Template Preview</CardTitle>
+            <CardDescription>
+              Preview how emails will look with sample data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <Label>Select Template</Label>
+              <select 
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                {templates.map(t => (
+                  <option key={t.template_name} value={t.template_name}>
+                    {t.template_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {templates.find(t => t.template_name === selectedTemplate) && (
+              <EmailPreview
+                templateName={selectedTemplate}
+                htmlContent={templates.find(t => t.template_name === selectedTemplate)!.html_content}
+                variables={templates.find(t => t.template_name === selectedTemplate)!.html_content.match(/{{[^}]+}}/g) || []}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Email Logs */}
       <Card>
