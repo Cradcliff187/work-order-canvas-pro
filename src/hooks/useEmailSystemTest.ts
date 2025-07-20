@@ -20,11 +20,13 @@ export const useEmailSystemTest = () => {
     const timestamp = new Date().toISOString();
 
     try {
-      // Test the send-email function with test mode
+      // Test the send-email function with test mode and a proper test UUID
+      const testUUID = crypto.randomUUID();
+      
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           template_name: 'work_order_created',
-          record_id: 'test-id',
+          record_id: testUUID,
           record_type: 'work_order',
           test_mode: true,
           recipient_email: 'test@workorderpro.com'
@@ -99,26 +101,30 @@ export const useEmailSystemTest = () => {
 
       if (!profile) throw new Error('User profile not found');
 
-      // Get a test organization
+      // Get a test organization - handle case where none exist
       const { data: org } = await supabase
         .from('organizations')
         .select('id')
         .eq('organization_type', 'partner')
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (!org) throw new Error('No test organization found');
+      if (!org) {
+        throw new Error('No partner organization found. Please create organizations first.');
+      }
 
-      // Get a test trade
+      // Get a test trade - handle case where none exist
       const { data: trade } = await supabase
         .from('trades')
         .select('id')
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (!trade) throw new Error('No test trade found');
+      if (!trade) {
+        throw new Error('No trades found. Please create trades first.');
+      }
 
-      // Create test work order
+      // Create test work order with better error handling
       const { data: workOrder, error } = await supabase
         .from('work_orders')
         .insert({
@@ -137,7 +143,10 @@ export const useEmailSystemTest = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Work order creation error:', error);
+        throw error;
+      }
 
       toast({
         title: "Test Work Order Created",
@@ -147,6 +156,7 @@ export const useEmailSystemTest = () => {
       return { success: true, workOrder };
 
     } catch (error: any) {
+      console.error('Create test work order error:', error);
       toast({
         title: "Failed to Create Test Work Order",
         description: error.message,

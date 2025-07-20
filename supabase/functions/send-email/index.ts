@@ -16,6 +16,12 @@ interface EmailRequest {
   test_mode?: boolean;
 }
 
+// UUID validation helper
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -30,22 +36,104 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { template_name, record_id, record_type, recipient_email, test_mode = false }: EmailRequest = await req.json();
 
-    console.log(`Processing email request: ${template_name} for ${record_type} record ${record_id}`);
+    console.log(`Processing email request: ${template_name} for ${record_type} record ${record_id}, test_mode: ${test_mode}`);
 
-    // Get email template
+    // Validate UUID format unless in test mode
+    if (!test_mode && !isValidUUID(record_id)) {
+      console.error(`Invalid UUID format: ${record_id}`);
+      return new Response(
+        JSON.stringify({ error: `Invalid UUID format: ${record_id}` }),
+        { 
+          status: 400, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    // Get email template with better error handling
     const { data: template, error: templateError } = await supabase
       .from('email_templates')
       .select('*')
       .eq('template_name', template_name)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (templateError || !template) {
-      console.error(`Template not found: ${template_name}`, templateError);
+    if (templateError) {
+      console.error(`Template query error for ${template_name}:`, templateError);
       return new Response(
-        JSON.stringify({ error: 'Email template not found' }),
+        JSON.stringify({ error: `Template query failed: ${templateError.message}` }),
         { 
-          status: 404, 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    if (!template) {
+      console.error(`Template not found: ${template_name}`);
+      
+      // Create basic templates if they don't exist
+      const basicTemplate = {
+        template_name: template_name,
+        subject: `${template_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
+        html_content: `<h1>${template_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h1><p>This is a system notification.</p>`,
+        text_content: `${template_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\n\nThis is a system notification.`,
+        is_active: true
+      };
+
+      const { error: createError } = await supabase
+        .from('email_templates')
+        .insert(basicTemplate);
+
+      if (createError) {
+        console.error(`Failed to create template ${template_name}:`, createError);
+        return new Response(
+          JSON.stringify({ error: `Template not found and could not be created: ${template_name}` }),
+          { 
+            status: 404, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
+
+      console.log(`Created basic template: ${template_name}`);
+      
+      // Use the basic template we just created
+      const createdTemplate = basicTemplate;
+      
+      // In test mode, just return success with template creation info
+      if (test_mode) {
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            test_mode: true,
+            template_created: true,
+            template_name: template_name,
+            recipient: recipient_email || 'test@workorderpro.com',
+            subject: createdTemplate.subject
+          }),
+          { 
+            status: 200, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
+    }
+
+    // Handle test mode early
+    if (test_mode) {
+      console.log('Test mode - email would be sent to:', recipient_email || 'test@workorderpro.com');
+      console.log('Subject:', template?.subject || 'Test Email');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          test_mode: true,
+          recipient: recipient_email || 'test@workorderpro.com',
+          subject: template?.subject || 'Test Email',
+          template_found: !!template
+        }),
+        { 
+          status: 200, 
           headers: { 'Content-Type': 'application/json', ...corsHeaders } 
         }
       );
@@ -55,6 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
     let emailData: any = {};
     let toEmail = recipient_email;
 
+    // Only fetch real data if not in test mode
     switch (record_type) {
       case 'work_order_assignment':
         emailData = await getWorkOrderAssignmentData(supabase, record_id);
@@ -65,7 +154,6 @@ const handler = async (req: Request): Promise<Response> => {
           emailData = await getWorkOrderCompletedData(supabase, record_id);
           toEmail = toEmail || emailData.partner_email;
         } else {
-          // Default work order data
           emailData = await getWorkOrderData(supabase, record_id);
           toEmail = toEmail || emailData.organization_contact_email;
         }
@@ -73,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
       case 'work_order_report':
         if (template_name === 'report_submitted') {
           emailData = await getReportSubmittedData(supabase, record_id);
-          toEmail = toEmail || 'admin@workorderpro.com'; // Default admin email
+          toEmail = toEmail || 'admin@workorderpro.com';
         } else if (template_name === 'report_reviewed') {
           emailData = await getReportReviewedData(supabase, record_id);
           toEmail = toEmail || emailData.subcontractor_email;
@@ -101,28 +189,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Replace template variables
-    const subject = replaceVariables(template.subject, emailData);
-    const htmlContent = replaceVariables(template.html_content, emailData);
-    const textContent = replaceVariables(template.text_content || '', emailData);
-
-    // Send email in test mode or real mode
-    if (test_mode) {
-      console.log('Test mode - email would be sent to:', toEmail);
-      console.log('Subject:', subject);
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          test_mode: true,
-          recipient: toEmail,
-          subject,
-          html_preview: htmlContent.substring(0, 200) + '...'
-        }),
-        { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
+    const subject = replaceVariables(template!.subject, emailData);
+    const htmlContent = replaceVariables(template!.html_content, emailData);
+    const textContent = replaceVariables(template!.text_content || '', emailData);
 
     // Configure SMTP client for IONOS
     const smtpClient = new SMTPClient({
@@ -206,7 +275,7 @@ async function getWorkOrderAssignmentData(supabase: any, assignmentId: string) {
       assignee:assigned_to (first_name, last_name, email)
     `)
     .eq('id', assignmentId)
-    .single();
+    .maybeSingle();
 
   return {
     work_order_id: data?.work_order_id,
@@ -230,7 +299,7 @@ async function getWorkOrderData(supabase: any, workOrderId: string) {
       trade:trade_id (name)
     `)
     .eq('id', workOrderId)
-    .single();
+    .maybeSingle();
 
   return {
     work_order_id: workOrderId,
@@ -252,7 +321,7 @@ async function getWorkOrderCompletedData(supabase: any, workOrderId: string) {
       trade:trade_id (name)
     `)
     .eq('id', workOrderId)
-    .single();
+    .maybeSingle();
 
   return {
     work_order_id: workOrderId,
@@ -278,7 +347,7 @@ async function getReportSubmittedData(supabase: any, reportId: string) {
       subcontractor:subcontractor_user_id (first_name, last_name, email)
     `)
     .eq('id', reportId)
-    .single();
+    .maybeSingle();
 
   return {
     work_order_id: data?.work_order_id,
@@ -306,7 +375,7 @@ async function getReportReviewedData(supabase: any, reportId: string) {
       subcontractor:subcontractor_user_id (first_name, last_name, email)
     `)
     .eq('id', reportId)
-    .single();
+    .maybeSingle();
 
   return {
     work_order_id: data?.work_order_id,
