@@ -21,8 +21,8 @@ serve(async (req) => {
     const client = new SMTPClient({
       connection: {
         hostname: "smtp.ionos.com",
-        port: 465,  // Use SSL port
-        tls: true,
+        port: 587,  // Port 587 uses STARTTLS
+        tls: false,  // Port 587 uses STARTTLS
         auth: {
           username: Deno.env.get('IONOS_SMTP_USER') || '',
           password: Deno.env.get('IONOS_SMTP_PASS') || '',

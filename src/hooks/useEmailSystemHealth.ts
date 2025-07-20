@@ -144,8 +144,8 @@ export const useEmailSystemHealth = () => {
     }
   };
 
-  const refreshHealth = () => {
-    refetch();
+  const refreshHealth = async () => {
+    await refetch();
   };
 
   return {
