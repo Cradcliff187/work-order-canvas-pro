@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -165,6 +167,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Invoice Details</DialogTitle>
+            <DialogDescription>
+              View and manage invoice details, including approval status, payment information, and linked work orders.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
