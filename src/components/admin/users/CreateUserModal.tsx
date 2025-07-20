@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -64,18 +63,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
   const watchedUserType = form.watch('user_type');
   const watchedOrganizations = form.watch('organization_ids') || [];
   
-  // Auto-assignment preview
   const { data: autoAssignmentData } = useAutoAssignmentPreview(watchedUserType);
-
-  const generatePassword = () => {
-    const length = 12;
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    return password;
-  };
 
   const onSubmit = async (data: CreateUserFormData) => {
     try {
@@ -88,13 +76,9 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
         organization_ids: data.organization_ids || [],
       });
 
-      // Show success message
       setCreatedUserEmail(data.email);
       setShowSuccess(true);
-      
-      // Reset form but keep modal open to show success
       form.reset();
-      
       onSuccess();
     } catch (error) {
       console.error('Failed to create user:', error);
@@ -107,7 +91,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
     setCreatedUserEmail('');
     onOpenChange(false);
   };
-
 
   const toggleOrganization = (orgId: string) => {
     const current = form.getValues('organization_ids') || [];
@@ -127,7 +110,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
           </DialogTitle>
           <DialogDescription>
             {showSuccess 
-              ? 'The user account has been created and a welcome email has been sent.'
+              ? 'The user account has been created and welcome emails have been sent.'
               : 'Fill in the details to create a new user account.'
             }
           </DialogDescription>
@@ -150,7 +133,11 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                 <div className="text-sm text-muted-foreground space-y-1">
                   <p className="flex items-center gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600" />
-                    Welcome email sent via WorkOrderPro system
+                    Branded welcome email sent via Resend
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                    Supabase confirmation email sent
                   </p>
                   <p className="flex items-center gap-2">
                     <CheckCircle className="h-3 w-3 text-green-600" />
@@ -166,10 +153,10 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                 <div className="space-y-2">
                   <p className="font-medium">Next Steps for the New User:</p>
                   <div className="text-sm space-y-1">
-                    <p>1. Check email for welcome message from WorkOrderPro</p>
-                    <p>2. Visit the login page and click "Forgot Password"</p>
-                    <p>3. Enter their email to receive a password reset link</p>
-                    <p>4. Set up their password and log in</p>
+                    <p>1. Check email for both welcome and confirmation messages</p>
+                    <p>2. Click the confirmation link in the Supabase email to verify account</p>
+                    <p>3. Use "Forgot Password" to set up their password</p>
+                    <p>4. Log in with their credentials</p>
                   </div>
                 </div>
               </AlertDescription>
@@ -264,7 +251,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                 />
               </div>
 
-
               {watchedUserType && watchedUserType !== 'admin' && (
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">Organizations</Label>
@@ -274,7 +260,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                       : 'This user will be associated with your organization.'}
                   </FormDescription>
                   
-                  {/* Auto-assignment preview */}
                   {autoAssignmentData?.willAutoAssign && watchedOrganizations.length === 0 && (
                     <Alert>
                       <Building2 className="h-4 w-4" />
@@ -294,7 +279,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                   )}
                   
                    {shouldShowSelector ? (
-                     // Admin view - show full organization selection
                      (() => {
                        const allOrgs = organizationsData?.organizations || [];
                        const filteredOrgs = filterOrganizationsByUserType(allOrgs, watchedUserType);
@@ -335,7 +319,6 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                        );
                      })()
                    ) : (
-                     // Partner/Subcontractor view - show their organization info
                      <div className="bg-muted/50 border rounded-lg p-3">
                        <p className="text-sm text-muted-foreground">
                          Users will be automatically assigned to your organization.
@@ -379,11 +362,11 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                 <Mail className="h-4 w-4" />
                 <AlertDescription>
                   <div className="space-y-2">
-                    <p className="font-medium">Email Setup Process:</p>
+                    <p className="font-medium">Dual Email System:</p>
                     <div className="text-sm space-y-1">
-                      <p>• A branded welcome email will be sent immediately</p>
-                      <p>• User must use "Forgot Password" to set their password</p>
-                      <p>• No temporary credentials are provided</p>
+                      <p>• Branded welcome email sent via Resend immediately</p>
+                      <p>• Supabase confirmation email sent for account verification</p>
+                      <p>• User must confirm email and set password to access system</p>
                     </div>
                   </div>
                 </AlertDescription>

@@ -171,7 +171,7 @@ export function useUserMutations() {
           const { data, error } = await supabase.functions.invoke('create-admin-user', {
             body: {
               userData,
-              temporaryPassword,
+              send_welcome_email: true,
             }
           });
 
@@ -238,14 +238,13 @@ export function useUserMutations() {
       return {
         profile: data.user,
         authUser: null, // Not needed from Edge Function
-        temporaryPassword: data.credentials?.password || temporaryPassword,
       };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({
         title: "User created",
-        description: "The new user has been created successfully.",
+        description: "The new user has been created successfully and will receive both welcome and confirmation emails.",
       });
     },
     onError: (error: Error) => {
