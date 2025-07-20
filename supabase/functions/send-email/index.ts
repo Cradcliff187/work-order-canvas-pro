@@ -15,6 +15,17 @@ interface SendEmailRequest {
   record_type: string;
   test_mode?: boolean;
   test_recipient?: string;
+  custom_data?: Record<string, any>;
+}
+
+// Helper function for variable replacement
+function replaceTemplateVariables(content: string, variables: Record<string, any>): string {
+  let processedContent = content;
+  Object.entries(variables).forEach(([key, value]) => {
+    const placeholder = `{{${key}}}`;
+    processedContent = processedContent.replace(new RegExp(placeholder, 'g'), String(value || ''));
+  });
+  return processedContent;
 }
 
 serve(async (req) => {
@@ -35,7 +46,7 @@ serve(async (req) => {
       return createCorsErrorResponse('Method not allowed', 405);
     }
 
-    const { template_name, record_id, record_type, test_mode, test_recipient }: SendEmailRequest = await req.json();
+    const { template_name, record_id, record_type, test_mode, test_recipient, custom_data }: SendEmailRequest = await req.json();
 
     // Validate required parameters
     if (!template_name || !record_id || !record_type) {
@@ -69,19 +80,14 @@ serve(async (req) => {
       }
       
       // Replace all variables with mock data
-      let subject = template.subject;
-      let html = template.html_content;
-      
-      Object.entries(mockData).forEach(([key, value]) => {
-        subject = subject.replace(new RegExp(`{{${key}}}`, 'g'), value);
-        html = html.replace(new RegExp(`{{${key}}}`, 'g'), value);
-      });
+      const processedSubject = replaceTemplateVariables(template.subject, mockData);
+      const processedHtml = replaceTemplateVariables(template.html_content, mockData);
       
       // Send test email
       const emailResult = await sendEmail({
         to: [test_recipient],
-        subject: `[TEST] ${subject}`,
-        html: html
+        subject: `[TEST] ${processedSubject}`,
+        html: processedHtml
       });
       
       // Log as test
@@ -96,6 +102,144 @@ serve(async (req) => {
         success: emailResult.success,
         message: 'Test email sent',
         test: true
+      });
+    }
+
+    // Handle auth_confirmation emails
+    if (template_name === 'auth_confirmation') {
+      if (!custom_data) {
+        return createCorsErrorResponse('custom_data is required for auth_confirmation template', 400);
+      }
+
+      const { email, first_name, confirmation_link } = custom_data;
+
+      if (!email || !confirmation_link) {
+        return createCorsErrorResponse('email and confirmation_link are required in custom_data', 400);
+      }
+
+      console.log('Processing auth confirmation for:', email);
+
+      // Fetch email template
+      const { data: template, error: templateError } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('template_name', 'auth_confirmation')
+        .eq('is_active', true)
+        .single();
+
+      if (templateError || !template) {
+        console.error('Auth confirmation template fetch error:', templateError);
+        return createCorsErrorResponse('Email template not found', 500);
+      }
+
+      // Prepare template variables
+      const variables = {
+        email: email,
+        first_name: first_name || 'User',
+        confirmation_link: confirmation_link
+      };
+
+      // Replace variables in subject and HTML content
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
+
+      console.log('Processed auth confirmation email subject:', processedSubject);
+
+      // Send email using Resend service
+      const emailResult = await sendEmail({
+        to: [email],
+        subject: processedSubject,
+        html: processedHtml
+      });
+
+      // Log email attempt to database
+      await supabase.from('email_logs').insert({
+        template_used: template_name,
+        recipient_email: email,
+        status: emailResult.success ? 'sent' : 'failed',
+        error_message: emailResult.success ? null : emailResult.error
+      });
+
+      if (!emailResult.success) {
+        console.error('Auth confirmation email sending failed:', emailResult.error);
+        return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
+      }
+
+      console.log('Auth confirmation email sent successfully to:', email);
+
+      return createCorsResponse({
+        success: true,
+        message: 'Auth confirmation email sent successfully',
+        email_id: emailResult.id
+      });
+    }
+
+    // Handle password_reset emails
+    if (template_name === 'password_reset') {
+      if (!custom_data) {
+        return createCorsErrorResponse('custom_data is required for password_reset template', 400);
+      }
+
+      const { email, first_name, reset_link } = custom_data;
+
+      if (!email || !reset_link) {
+        return createCorsErrorResponse('email and reset_link are required in custom_data', 400);
+      }
+
+      console.log('Processing password reset for:', email);
+
+      // Fetch email template
+      const { data: template, error: templateError } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('template_name', 'password_reset')
+        .eq('is_active', true)
+        .single();
+
+      if (templateError || !template) {
+        console.error('Password reset template fetch error:', templateError);
+        return createCorsErrorResponse('Email template not found', 500);
+      }
+
+      // Prepare template variables
+      const variables = {
+        email: email,
+        first_name: first_name || 'User',
+        reset_link: reset_link
+      };
+
+      // Replace variables in subject and HTML content
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
+
+      console.log('Processed password reset email subject:', processedSubject);
+
+      // Send email using Resend service
+      const emailResult = await sendEmail({
+        to: [email],
+        subject: processedSubject,
+        html: processedHtml
+      });
+
+      // Log email attempt to database
+      await supabase.from('email_logs').insert({
+        template_used: template_name,
+        recipient_email: email,
+        status: emailResult.success ? 'sent' : 'failed',
+        error_message: emailResult.success ? null : emailResult.error
+      });
+
+      if (!emailResult.success) {
+        console.error('Password reset email sending failed:', emailResult.error);
+        return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
+      }
+
+      console.log('Password reset email sent successfully to:', email);
+
+      return createCorsResponse({
+        success: true,
+        message: 'Password reset email sent successfully',
+        email_id: emailResult.id
       });
     }
 
@@ -158,14 +302,8 @@ serve(async (req) => {
       console.log('Template variables:', variables);
 
       // Replace variables in subject and HTML content
-      let processedSubject = template.subject;
-      let processedHtml = template.html_content;
-
-      Object.entries(variables).forEach(([key, value]) => {
-        const placeholder = `{{${key}}}`;
-        processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);
-        processedHtml = processedHtml.replace(new RegExp(placeholder, 'g'), value);
-      });
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
       console.log('Processed email subject:', processedSubject);
 
@@ -237,22 +375,22 @@ serve(async (req) => {
       const reviewNotes = report.admin_notes || '';
 
       // Replace variables
-      let subject = template.subject
-        .replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '')
-        .replace(/{{status}}/g, status);
+      const variables = {
+        first_name: report.profiles?.first_name || '',
+        work_order_number: report.work_orders?.work_order_number || '',
+        work_order_title: report.work_orders?.title || '',
+        organization_name: report.work_orders?.organizations?.name || '',
+        status: status,
+        review_notes: reviewNotes
+      };
 
-      let html = template.html_content
-        .replace(/{{first_name}}/g, report.profiles?.first_name || '')
-        .replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '')
-        .replace(/{{work_order_title}}/g, report.work_orders?.title || '')
-        .replace(/{{organization_name}}/g, report.work_orders?.organizations?.name || '')
-        .replace(/{{status}}/g, status)
-        .replace(/{{review_notes}}/g, reviewNotes);
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
       const emailResult = await sendEmail({
         to: [report.profiles.email],
-        subject: subject,
-        html: html
+        subject: processedSubject,
+        html: processedHtml
       });
 
       await supabase.from('email_logs').insert({
@@ -287,15 +425,18 @@ serve(async (req) => {
         .eq('template_name', 'work_order_assigned')
         .single();
 
-      let subject = template.subject.replace(/{{work_order_number}}/g, workOrder.work_order_number);
-      let html = template.html_content
-        .replace(/{{work_order_number}}/g, workOrder.work_order_number)
-        .replace(/{{first_name}}/g, workOrder.profiles.first_name || '');
+      const variables = {
+        work_order_number: workOrder.work_order_number,
+        first_name: workOrder.profiles.first_name || ''
+      };
+
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
       const emailResult = await sendEmail({
         to: [workOrder.profiles.email],
-        subject: subject,
-        html: html
+        subject: processedSubject,
+        html: processedHtml
       });
 
       await supabase.from('email_logs').insert({
@@ -330,13 +471,17 @@ serve(async (req) => {
         .eq('template_name', 'report_submitted')
         .single();
 
-      let subject = template.subject.replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '');
-      let html = template.html_content.replace(/{{work_order_number}}/g, report.work_orders?.work_order_number || '');
+      const variables = {
+        work_order_number: report.work_orders?.work_order_number || ''
+      };
+
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
       const emailResult = await sendEmail({
         to: admins.map(a => a.email),
-        subject: subject,
-        html: html
+        subject: processedSubject,
+        html: processedHtml
       });
 
       await supabase.from('email_logs').insert({
@@ -363,16 +508,19 @@ serve(async (req) => {
         .eq('template_name', 'work_order_completed')
         .single();
 
-      let subject = template.subject.replace(/{{work_order_number}}/g, workOrder.work_order_number);
-      let html = template.html_content
-        .replace(/{{work_order_number}}/g, workOrder.work_order_number)
-        .replace(/{{organization_name}}/g, workOrder.organizations?.name || '');
+      const variables = {
+        work_order_number: workOrder.work_order_number,
+        organization_name: workOrder.organizations?.name || ''
+      };
+
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
       // Send to partner who created it
       const emailResult = await sendEmail({
         to: [workOrder.profiles.email],
-        subject: subject,
-        html: html
+        subject: processedSubject,
+        html: processedHtml
       });
 
       await supabase.from('email_logs').insert({
@@ -404,14 +552,17 @@ serve(async (req) => {
         .eq('template_name', 'welcome_email')
         .single();
 
-      let html = template.html_content
-        .replace(/{{first_name}}/g, profile.first_name || '')
-        .replace(/{{user_type}}/g, profile.user_type || '');
+      const variables = {
+        first_name: profile.first_name || '',
+        user_type: profile.user_type || ''
+      };
+
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
       const emailResult = await sendEmail({
         to: [profile.email],
         subject: template.subject,
-        html: html
+        html: processedHtml
       });
 
       await supabase.from('email_logs').insert({
