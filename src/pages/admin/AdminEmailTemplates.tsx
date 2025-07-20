@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +21,8 @@ import {
   Calendar,
   Eye,
   Power,
-  Trash2
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
@@ -161,6 +163,26 @@ const AdminEmailTemplates: React.FC = () => {
           Create Template
         </Button>
       </div>
+
+      <Card className="mb-6">
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="flex items-center space-x-4">
+            <Mail className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Email Provider: Resend</p>
+              <p className="text-xs text-muted-foreground">
+                Emails are sent via Resend for superior deliverability
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <a href="https://resend.com/emails" target="_blank" rel="noopener noreferrer">
+              View Email Analytics
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
