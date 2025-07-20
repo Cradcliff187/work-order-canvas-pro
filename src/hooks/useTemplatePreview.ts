@@ -1,42 +1,68 @@
 import { useMemo } from 'react';
 
+// Updated to match actual database schema and Edge Function variable mapping
 export const TEMPLATE_VARIABLES = {
   work_order: {
-    'work_order_number': 'WO-2024-0001',
+    // Work Order Details (matches database fields)
+    'work_order_number': 'WO-ABC-001-001',
     'work_order_title': 'HVAC System Repair',
+    'title': 'HVAC System Repair',
     'description': 'Replace faulty compressor in main HVAC unit',
-    'store_location': 'Main Street Store #123',
+    
+    // Location Details (matches database schema)
+    'store_location': 'Downtown Office',
     'street_address': '123 Main Street',
     'city': 'Springfield',
     'state': 'IL',
     'zip_code': '62701',
-    'estimated_completion_date': '2024-01-15',
-    'due_date': '2024-01-20',
+    'location_address': '123 Main Street, Springfield, IL, 62701',
+    
+    // Trade Details
     'trade_name': 'HVAC',
-    'work_order_url': 'https://workorderpro.com/work-orders/123',
+    
+    // Dates (formatted as Edge Function provides)
+    'date_submitted': 'January 15, 2024',
+    'submitted_date': 'January 15, 2024',
+    'estimated_completion_date': 'January 20, 2024',
+    'due_date': 'January 20, 2024',
+    'date_assigned': 'January 16, 2024',
+    'reviewed_date': 'January 22, 2024',
+    
+    // URLs (matches Edge Function URL generation)
+    'work_order_url': 'https://inudoymofztrvxhrlrek.supabase.co/work-orders/123',
+    'admin_dashboard_url': 'https://inudoymofztrvxhrlrek.supabase.co/admin/dashboard',
+    'review_url': 'https://inudoymofztrvxhrlrek.supabase.co/admin/reports/456',
+    'report_url': 'https://inudoymofztrvxhrlrek.supabase.co/reports/456',
   },
   user: {
+    // User Details (matches profiles table)
     'subcontractor_name': 'John Smith',
+    'first_name': 'John',
     'partner_name': 'Jane Doe',
     'admin_name': 'Mike Johnson',
-    'user_email': 'user@example.com',
+    'user_email': 'john.smith@pipesmore.test',
     'user_phone': '(555) 123-4567',
-    'company_name': 'Smith HVAC Services',
+    'company_name': 'Pipes & More Plumbing',
   },
   organization: {
-    'organization_name': 'Retail Corp',
-    'organization_email': 'admin@retailcorp.com',
+    // Organization Details (matches organizations table)
+    'organization_name': 'ABC Property Management',
+    'organization_email': 'contact@abc-property.test',
     'organization_phone': '(555) 987-6543',
   },
   system: {
+    // System Variables
     'system_url': 'https://workorderpro.com',
-    'current_date': new Date().toLocaleDateString(),
+    'current_date': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
   },
   report: {
-    'invoice_amount': '$1,250.00',
+    // Report Details (matches work_order_reports table)
+    'work_performed': 'Replaced faulty compressor and recharged HVAC system',
     'hours_worked': '4.5',
     'materials_used': 'Compressor unit, refrigerant, gaskets',
-    'work_performed': 'Replaced faulty compressor and recharged system',
+    'invoice_amount': '$1,250.00',
+    'status': 'approved',
+    'review_notes': 'Work completed satisfactorily. Quality meets standards.',
   },
 };
 

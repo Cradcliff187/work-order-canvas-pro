@@ -4,6 +4,60 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/resend-service.ts";
 
+// Rate limiting helper
+let lastEmailTime = 0;
+const RATE_LIMIT_DELAY = 500; // 500ms = 0.5s to respect 2 requests/second limit with buffer
+
+async function rateLimitedSend(emailData: any): Promise<any> {
+  const now = Date.now();
+  const timeSinceLastEmail = now - lastEmailTime;
+  
+  if (timeSinceLastEmail < RATE_LIMIT_DELAY) {
+    const waitTime = RATE_LIMIT_DELAY - timeSinceLastEmail;
+    console.log(`🚥 Rate limiting: waiting ${waitTime}ms`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  lastEmailTime = Date.now();
+  return await sendEmail(emailData);
+}
+
+// URL generation helper
+function generateUrls(workOrderId: string, reportId?: string) {
+  const baseUrl = 'https://inudoymofztrvxhrlrek.supabase.co'; // Production Supabase URL
+  return {
+    work_order_url: `${baseUrl}/work-orders/${workOrderId}`,
+    admin_dashboard_url: `${baseUrl}/admin/dashboard`,
+    review_url: reportId ? `${baseUrl}/admin/reports/${reportId}` : `${baseUrl}/admin/work-orders/${workOrderId}`,
+    report_url: reportId ? `${baseUrl}/reports/${reportId}` : `${baseUrl}/work-orders/${workOrderId}/reports`
+  };
+}
+
+// Date formatting helper
+function formatDate(dateString: string | null): string {
+  if (!dateString) return '';
+  try {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+// Address formatting helper
+function formatAddress(workOrder: any): string {
+  const parts = [
+    workOrder.street_address,
+    workOrder.city,
+    workOrder.state,
+    workOrder.zip_code
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+
 // Create Supabase client with service role
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -512,39 +566,32 @@ serve(async (req) => {
 
     // Handle work_order_created emails
     if (template_name === 'work_order_created') {
-      let workOrder;
+      console.log('📋 Processing work_order_created email for:', record_id);
 
-      // Check if this is a test ID and create test data if needed
-      if (record_id.startsWith('TEST-WORK_ORDER_CREATED-')) {
-        workOrder = await createTestDataForEmail(template_name, record_id);
-        if (!workOrder) {
-          return createCorsErrorResponse('Failed to create test work order', 500);
-        }
-      } else {
-        // Fetch work order with organization data
-        const { data: workOrderData, error: workOrderError } = await supabase
-          .from('work_orders')
-          .select(`
-            *,
-            organizations!organization_id(name),
-            trades(name)
-          `)
-          .eq('id', record_id)
-          .single();
+      // Fetch work order with comprehensive JOINs
+      const { data: workOrderData, error: workOrderError } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          organizations!organization_id(name, contact_email, contact_phone),
+          trades(name),
+          profiles!created_by(first_name, last_name, email)
+        `)
+        .eq('id', record_id)
+        .single();
 
-        if (workOrderError || !workOrderData) {
-          console.error('❌ Work order fetch error:', workOrderError);
-          return createCorsErrorResponse('Work order not found', 404);
-        }
-        workOrder = workOrderData;
+      if (workOrderError || !workOrderData) {
+        console.error('❌ Work order fetch error:', workOrderError);
+        return createCorsErrorResponse('Work order not found', 404);
       }
 
+      const workOrder = workOrderData;
       console.log('📋 Found work order:', workOrder.work_order_number);
 
       // Get admin email addresses
       const { data: adminProfiles, error: adminError } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, first_name, last_name')
         .eq('user_type', 'admin')
         .eq('is_active', true);
 
@@ -569,16 +616,50 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      console.log('📄 Found email template:', template.template_name);
+      // Generate URLs
+      const urls = generateUrls(workOrder.id);
 
-      // Prepare template variables using enhanced merging
+      // Prepare comprehensive template variables
       const databaseData = {
+        // Work Order Details
         work_order_number: workOrder.work_order_number || 'N/A',
-        organization_name: workOrder.organizations?.name || 'Unknown Organization'
+        work_order_title: workOrder.title || 'Work Order',
+        title: workOrder.title || 'Work Order',
+        description: workOrder.description || 'No description provided',
+        
+        // Organization Details
+        organization_name: workOrder.organizations?.name || 'Unknown Organization',
+        organization_email: workOrder.organizations?.contact_email || '',
+        organization_phone: workOrder.organizations?.contact_phone || '',
+        
+        // Location Details
+        store_location: workOrder.store_location || workOrder.location_name || '',
+        street_address: workOrder.street_address || workOrder.location_street_address || '',
+        city: workOrder.city || workOrder.location_city || '',
+        state: workOrder.state || workOrder.location_state || '',
+        zip_code: workOrder.zip_code || workOrder.location_zip_code || '',
+        location_address: formatAddress(workOrder),
+        
+        // Trade Details
+        trade_name: workOrder.trades?.name || 'General',
+        
+        // Dates
+        date_submitted: formatDate(workOrder.date_submitted),
+        submitted_date: formatDate(workOrder.date_submitted),
+        estimated_completion_date: formatDate(workOrder.estimated_completion_date),
+        due_date: formatDate(workOrder.due_date),
+        
+        // URLs
+        work_order_url: urls.work_order_url,
+        admin_dashboard_url: urls.admin_dashboard_url,
+        
+        // System Details
+        current_date: formatDate(new Date().toISOString()),
+        system_url: 'https://workorderpro.com'
       };
-      const variables = mergeTemplateVariables(databaseData, custom_data);
 
-      console.log('🔧 Template variables:', variables);
+      const variables = mergeTemplateVariables(databaseData, custom_data);
+      console.log('🔧 Template variables count:', Object.keys(variables).length);
 
       // Replace variables in subject and HTML content
       const processedSubject = replaceTemplateVariables(template.subject, variables);
@@ -586,8 +667,8 @@ serve(async (req) => {
 
       console.log('📧 Processed email subject:', processedSubject);
 
-      // Send email using Resend service
-      const emailResult = await sendEmail({
+      // Send email with rate limiting
+      const emailResult = await rateLimitedSend({
         to: adminEmails,
         subject: processedSubject,
         html: processedHtml
@@ -616,7 +697,7 @@ serve(async (req) => {
 
       return createCorsResponse({
         success: true,
-        message: 'Email sent successfully',
+        message: 'Work order created email sent successfully',
         recipients: adminEmails.length,
         email_id: emailResult.id
       });
@@ -624,39 +705,37 @@ serve(async (req) => {
 
     // Handle work_order_assigned emails
     if (template_name === 'work_order_assigned') {
-      let workOrder;
+      console.log('👤 Processing work_order_assigned email for:', record_id);
 
-      // Check if this is a test ID and create test data if needed
-      if (record_id.startsWith('TEST-WORK_ORDER_ASSIGNED-')) {
-        workOrder = await createTestDataForEmail(template_name, record_id);
-        if (!workOrder) {
-          return createCorsErrorResponse('Failed to create test assigned work order', 500);
-        }
-      } else {
-        const { data: workOrderData, error: workOrderError } = await supabase
-          .from('work_orders')
-          .select(`
-            *,
-            organizations!organization_id(name),
-            profiles!assigned_to(email, first_name)
-          `)
-          .eq('id', record_id)
-          .single();
+      // Fetch work order with comprehensive JOINs
+      const { data: workOrderData, error: workOrderError } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          organizations!organization_id(name, contact_email, contact_phone),
+          trades(name),
+          profiles!assigned_to(email, first_name, last_name, company_name)
+        `)
+        .eq('id', record_id)
+        .single();
 
-        if (workOrderError || !workOrderData) {
-          console.error('❌ Assigned work order fetch error:', workOrderError);
-          return createCorsErrorResponse('Assigned work order not found', 404);
-        }
-        workOrder = workOrderData;
+      if (workOrderError || !workOrderData) {
+        console.error('❌ Assigned work order fetch error:', workOrderError);
+        return createCorsErrorResponse('Assigned work order not found', 404);
       }
+
+      const workOrder = workOrderData;
 
       if (!workOrder?.profiles?.email) {
         return createCorsErrorResponse('No assignee found for work order', 404);
       }
 
+      console.log('👤 Found assignee:', workOrder.profiles.email);
+
+      // Fetch email template
       const { data: template, error: templateError } = await supabase
         .from('email_templates')
-        .select('subject, html_content')
+        .select('*')
         .eq('template_name', 'work_order_assigned')
         .eq('is_active', true)
         .single();
@@ -665,22 +744,69 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Prepare template variables using enhanced merging
-      const databaseData = {
-        work_order_number: workOrder.work_order_number,
-        first_name: workOrder.profiles.first_name || ''
-      };
-      const variables = mergeTemplateVariables(databaseData, custom_data);
+      // Generate URLs
+      const urls = generateUrls(workOrder.id);
 
+      // Prepare comprehensive template variables
+      const databaseData = {
+        // Subcontractor Details
+        subcontractor_name: `${workOrder.profiles.first_name || ''} ${workOrder.profiles.last_name || ''}`.trim(),
+        first_name: workOrder.profiles.first_name || '',
+        user_email: workOrder.profiles.email,
+        company_name: workOrder.profiles.company_name || '',
+        
+        // Work Order Details
+        work_order_number: workOrder.work_order_number || 'N/A',
+        work_order_title: workOrder.title || 'Work Order',
+        title: workOrder.title || 'Work Order',
+        description: workOrder.description || 'No description provided',
+        
+        // Organization Details
+        organization_name: workOrder.organizations?.name || 'Unknown Organization',
+        organization_email: workOrder.organizations?.contact_email || '',
+        organization_phone: workOrder.organizations?.contact_phone || '',
+        
+        // Location Details
+        store_location: workOrder.store_location || workOrder.location_name || '',
+        street_address: workOrder.street_address || workOrder.location_street_address || '',
+        city: workOrder.city || workOrder.location_city || '',
+        state: workOrder.state || workOrder.location_state || '',
+        zip_code: workOrder.zip_code || workOrder.location_zip_code || '',
+        location_address: formatAddress(workOrder),
+        
+        // Trade Details
+        trade_name: workOrder.trades?.name || 'General',
+        
+        // Dates
+        estimated_completion_date: formatDate(workOrder.estimated_completion_date),
+        due_date: formatDate(workOrder.due_date),
+        date_assigned: formatDate(workOrder.date_assigned),
+        
+        // URLs
+        work_order_url: urls.work_order_url,
+        
+        // System Details
+        current_date: formatDate(new Date().toISOString()),
+        system_url: 'https://workorderpro.com'
+      };
+
+      const variables = mergeTemplateVariables(databaseData, custom_data);
+      console.log('🔧 Template variables count:', Object.keys(variables).length);
+
+      // Replace variables in subject and HTML content
       const processedSubject = replaceTemplateVariables(template.subject, variables);
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
-      const emailResult = await sendEmail({
+      console.log('📧 Processed email subject:', processedSubject);
+
+      // Send email with rate limiting
+      const emailResult = await rateLimitedSend({
         to: [workOrder.profiles.email],
         subject: processedSubject,
         html: processedHtml
       });
 
+      // Log email attempt to database
       await supabase.from('email_logs').insert({
         work_order_id: workOrder.id,
         template_used: 'work_order_assigned',
@@ -690,8 +816,11 @@ serve(async (req) => {
       });
 
       if (!emailResult.success) {
+        console.error('❌ Email sending failed:', emailResult.error);
         return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
       }
+
+      console.log('✅ Work order assigned email sent successfully');
 
       return createCorsResponse({
         success: true,
@@ -703,34 +832,41 @@ serve(async (req) => {
 
     // Handle report_submitted emails
     if (template_name === 'report_submitted') {
-      let report;
+      console.log('📝 Processing report_submitted email for:', record_id);
 
-      // Check if this is a test ID and create test data if needed
-      if (record_id.startsWith('TEST-REPORT_SUBMITTED-')) {
-        report = await createTestDataForEmail(template_name, record_id);
-        if (!report) {
-          return createCorsErrorResponse('Failed to create test report', 500);
-        }
-      } else {
-        const { data: reportData, error: reportError } = await supabase
-          .from('work_order_reports')
-          .select(`
-            *,
-            work_orders!work_order_id(work_order_number, organizations!organization_id(name))
-          `)
-          .eq('id', record_id)
-          .single();
+      // Fetch work order report with comprehensive JOINs
+      const { data: reportData, error: reportError } = await supabase
+        .from('work_order_reports')
+        .select(`
+          *,
+          work_orders!work_order_id(
+            id,
+            work_order_number,
+            title,
+            store_location,
+            street_address,
+            city,
+            state,
+            zip_code,
+            organizations!organization_id(name, contact_email, contact_phone)
+          ),
+          profiles!subcontractor_user_id(email, first_name, last_name, company_name)
+        `)
+        .eq('id', record_id)
+        .single();
 
-        if (reportError || !reportData) {
-          console.error('❌ Report fetch error:', reportError);
-          return createCorsErrorResponse('Report not found', 404);
-        }
-        report = reportData;
+      if (reportError || !reportData) {
+        console.error('❌ Report fetch error:', reportError);
+        return createCorsErrorResponse('Report not found', 404);
       }
 
+      const report = reportData;
+      console.log('📝 Found report for work order:', report.work_orders?.work_order_number);
+
+      // Get admin email addresses
       const { data: admins, error: adminError } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, first_name, last_name')
         .eq('user_type', 'admin')
         .eq('is_active', true);
 
@@ -738,9 +874,10 @@ serve(async (req) => {
         return createCorsErrorResponse('No admin recipients found', 404);
       }
 
+      // Fetch email template
       const { data: template, error: templateError } = await supabase
         .from('email_templates')
-        .select('subject, html_content')
+        .select('*')
         .eq('template_name', 'report_submitted')
         .eq('is_active', true)
         .single();
@@ -749,21 +886,56 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Prepare template variables using enhanced merging
-      const databaseData = {
-        work_order_number: report.work_orders?.work_order_number || ''
-      };
-      const variables = mergeTemplateVariables(databaseData, custom_data);
+      // Generate URLs
+      const urls = generateUrls(report.work_order_id, report.id);
 
+      // Prepare comprehensive template variables
+      const databaseData = {
+        // Work Order Details
+        work_order_number: report.work_orders?.work_order_number || 'N/A',
+        
+        // Subcontractor Details
+        subcontractor_name: `${report.profiles?.first_name || ''} ${report.profiles?.last_name || ''}`.trim(),
+        
+        // Organization Details
+        organization_name: report.work_orders?.organizations?.name || 'Unknown Organization',
+        
+        // Location Details
+        store_location: report.work_orders?.store_location || '',
+        
+        // Work Summary
+        work_performed: report.work_performed || 'No work description provided',
+        hours_worked: report.hours_worked ? report.hours_worked.toString() : '',
+        invoice_amount: report.invoice_amount ? `$${parseFloat(report.invoice_amount.toString()).toFixed(2)}` : '$0.00',
+        
+        // Report Details
+        submitted_date: formatDate(report.submitted_at),
+        
+        // URLs
+        review_url: urls.review_url,
+        
+        // System Details
+        current_date: formatDate(new Date().toISOString()),
+        system_url: 'https://workorderpro.com'
+      };
+
+      const variables = mergeTemplateVariables(databaseData, custom_data);
+      console.log('🔧 Template variables count:', Object.keys(variables).length);
+
+      // Replace variables in subject and HTML content
       const processedSubject = replaceTemplateVariables(template.subject, variables);
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
-      const emailResult = await sendEmail({
+      console.log('📧 Processed email subject:', processedSubject);
+
+      // Send email with rate limiting
+      const emailResult = await rateLimitedSend({
         to: admins.map(a => a.email),
         subject: processedSubject,
         html: processedHtml
       });
 
+      // Log email attempt to database
       const logPromises = admins.map(admin => 
         supabase.from('email_logs').insert({
           work_order_id: report.work_order_id,
@@ -775,10 +947,14 @@ serve(async (req) => {
       );
 
       await Promise.all(logPromises);
+      console.log('📝 Email logs created for', admins.length, 'recipients');
 
       if (!emailResult.success) {
+        console.error('❌ Email sending failed:', emailResult.error);
         return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
       }
+
+      console.log('✅ Report submitted email sent successfully');
 
       return createCorsResponse({
         success: true,
@@ -790,49 +966,37 @@ serve(async (req) => {
 
     // Handle report_reviewed emails  
     if (template_name === 'report_reviewed') {
-      let report;
+      console.log('📋 Processing report_reviewed email for:', record_id);
 
-      // Check if this is a test ID and create test data if needed
-      if (record_id.startsWith('TEST-REPORT_REVIEWED-')) {
-        // For test mode, create a mock report structure
-        report = {
-          id: record_id,
-          status: 'approved',
-          admin_notes: 'This is a test review',
-          profiles: {
-            email: 'test-subcontractor@workorderportal.com',
-            first_name: 'Test'
-          },
-          work_orders: {
-            work_order_number: 'TEST-WO-001',
-            title: 'Test Work Order',
-            organizations: {
-              name: 'Test Organization'
-            }
-          }
-        };
-      } else {
-        // This is a work_order_report, not a work_order
-        const { data: reportData, error: reportError } = await supabase
-          .from('work_order_reports')
-          .select(`
-            *,
-            work_orders!work_order_id(work_order_number, title, organizations!organization_id(name)),
-            profiles!subcontractor_user_id(email, first_name)
-          `)
-          .eq('id', record_id)
-          .single();
+      // Fetch work order report with comprehensive JOINs
+      const { data: reportData, error: reportError } = await supabase
+        .from('work_order_reports')
+        .select(`
+          *,
+          work_orders!work_order_id(
+            id,
+            work_order_number,
+            title,
+            store_location,
+            organizations!organization_id(name, contact_email, contact_phone)
+          ),
+          profiles!subcontractor_user_id(email, first_name, last_name, company_name)
+        `)
+        .eq('id', record_id)
+        .single();
 
-        if (reportError || !reportData || !reportData.profiles?.email) {
-          console.error('❌ Report reviewed fetch error:', reportError);
-          return createCorsErrorResponse('Report or recipient not found', 404);
-        }
-        report = reportData;
+      if (reportError || !reportData || !reportData.profiles?.email) {
+        console.error('❌ Report reviewed fetch error:', reportError);
+        return createCorsErrorResponse('Report or recipient not found', 404);
       }
 
+      const report = reportData;
+      console.log('📋 Found report for work order:', report.work_orders?.work_order_number);
+
+      // Fetch email template
       const { data: template, error: templateError } = await supabase
         .from('email_templates')
-        .select('subject, html_content')
+        .select('*')
         .eq('template_name', 'report_reviewed')
         .eq('is_active', true)
         .single();
@@ -841,26 +1005,55 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Prepare template variables using enhanced merging
-      const databaseData = {
-        first_name: report.profiles?.first_name || '',
-        work_order_number: report.work_orders?.work_order_number || '',
-        work_order_title: report.work_orders?.title || '',
-        organization_name: report.work_orders?.organizations?.name || '',
-        status: report.status,
-        review_notes: report.admin_notes || ''
-      };
-      const variables = mergeTemplateVariables(databaseData, custom_data);
+      // Generate URLs
+      const urls = generateUrls(report.work_order_id, report.id);
 
+      // Prepare comprehensive template variables
+      const databaseData = {
+        // Subcontractor Details
+        subcontractor_name: `${report.profiles?.first_name || ''} ${report.profiles?.last_name || ''}`.trim(),
+        first_name: report.profiles?.first_name || '',
+        
+        // Work Order Details
+        work_order_number: report.work_orders?.work_order_number || 'N/A',
+        work_order_title: report.work_orders?.title || 'Work Order',
+        
+        // Organization Details
+        organization_name: report.work_orders?.organizations?.name || 'Unknown Organization',
+        
+        // Location Details
+        store_location: report.work_orders?.store_location || '',
+        
+        // Review Details
+        status: report.status,
+        review_notes: report.review_notes || '',
+        reviewed_date: formatDate(report.reviewed_at),
+        
+        // URLs
+        report_url: urls.report_url,
+        
+        // System Details
+        current_date: formatDate(new Date().toISOString()),
+        system_url: 'https://workorderpro.com'
+      };
+
+      const variables = mergeTemplateVariables(databaseData, custom_data);
+      console.log('🔧 Template variables count:', Object.keys(variables).length);
+
+      // Replace variables in subject and HTML content
       const processedSubject = replaceTemplateVariables(template.subject, variables);
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
-      const emailResult = await sendEmail({
+      console.log('📧 Processed email subject:', processedSubject);
+
+      // Send email with rate limiting
+      const emailResult = await rateLimitedSend({
         to: [report.profiles.email],
         subject: processedSubject,
         html: processedHtml
       });
 
+      // Log email attempt to database
       await supabase.from('email_logs').insert({
         work_order_id: report.work_order_id,
         template_used: 'report_reviewed',
@@ -870,11 +1063,14 @@ serve(async (req) => {
       });
 
       if (!emailResult.success) {
+        console.error('❌ Email sending failed:', emailResult.error);
         return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
       }
 
+      console.log('✅ Report reviewed email sent successfully');
+
       return createCorsResponse({
-        success: emailResult.success,
+        success: true,
         message: 'Report reviewed email sent successfully',
         recipients: 1,
         email_id: emailResult.id
