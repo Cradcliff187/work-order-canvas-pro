@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
@@ -167,9 +168,58 @@ serve(async (req) => {
 
     console.log('Auth user created:', authUser.user.id);
     
+    // Manual confirmation email sending via Resend
+    if (send_welcome_email) {
+      try {
+        console.log('🔗 Generating magic link for confirmation email...');
+        
+        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'magiclink',
+          email: userData.email,
+          options: {
+            redirectTo: Deno.env.get('PUBLIC_SITE_URL') || 'https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12'
+          }
+        });
+
+        if (linkData?.properties?.action_link) {
+          console.log('📧 Sending confirmation email with link:', linkData.properties.action_link);
+          
+          try {
+            const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
+              body: {
+                template_name: 'auth_confirmation',
+                record_id: authUser.user.id,
+                record_type: 'auth_user',
+                custom_data: {
+                  email: userData.email,
+                  first_name: userData.first_name,
+                  last_name: userData.last_name,
+                  confirmation_link: linkData.properties.action_link
+                }
+              }
+            });
+            
+            if (emailError) {
+              console.error('Email sending failed:', emailError);
+            } else {
+              console.log('✅ Confirmation email sent successfully');
+            }
+          } catch (emailSendError) {
+            console.error('Email send error:', emailSendError);
+            console.log('📧 Email sending failed, but user creation succeeded');
+          }
+        } else {
+          console.error('Magic link generation failed:', linkError);
+        }
+      } catch (error) {
+        console.error('Email process error:', error);
+        // Don't fail user creation if email fails
+      }
+    }
+    
     // Log email queueing status
     if (send_welcome_email) {
-      console.log('📧 Supabase confirmation email queued for:', userData.email);
+      console.log('📧 Confirmation email process completed');
       
       // Log to email_logs table for audit trail
       try {
@@ -177,7 +227,7 @@ serve(async (req) => {
           .from('email_logs')
           .insert({
             recipient_email: userData.email,
-            template_used: 'supabase_confirmation',
+            template_used: 'auth_confirmation',
             status: 'sent',
             work_order_id: null
           });
@@ -295,7 +345,7 @@ serve(async (req) => {
 
     // Return success response
     const message = send_welcome_email 
-      ? 'User created successfully. They will receive a Supabase confirmation email to set up their account.'
+      ? 'User created successfully. They will receive a confirmation email to set up their account.'
       : 'User created successfully. A welcome email has been sent via our custom email system.';
 
     console.log('✅ User creation process completed:', { 
