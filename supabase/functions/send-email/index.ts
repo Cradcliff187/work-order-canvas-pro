@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
@@ -26,6 +27,24 @@ function replaceTemplateVariables(content: string, variables: Record<string, any
     processedContent = processedContent.replace(new RegExp(placeholder, 'g'), String(value || ''));
   });
   return processedContent;
+}
+
+// Enhanced helper function to merge custom_data with database data
+function mergeTemplateVariables(databaseData: Record<string, any> = {}, customData: Record<string, any> = {}): Record<string, any> {
+  // Custom data takes priority over database data
+  const merged = { ...databaseData, ...customData };
+  
+  // Ensure all values are properly converted to strings for template replacement
+  const processed: Record<string, any> = {};
+  Object.entries(merged).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      processed[key] = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    } else {
+      processed[key] = '';
+    }
+  });
+  
+  return processed;
 }
 
 serve(async (req) => {
@@ -79,9 +98,12 @@ serve(async (req) => {
         return createCorsErrorResponse('Template not found', 404);
       }
       
-      // Replace all variables with mock data
-      const processedSubject = replaceTemplateVariables(template.subject, mockData);
-      const processedHtml = replaceTemplateVariables(template.html_content, mockData);
+      // Merge mock data with custom_data
+      const variables = mergeTemplateVariables(mockData, custom_data);
+      
+      // Replace all variables
+      const processedSubject = replaceTemplateVariables(template.subject, variables);
+      const processedHtml = replaceTemplateVariables(template.html_content, variables);
       
       // Send test email
       const emailResult = await sendEmail({
@@ -132,12 +154,9 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Prepare template variables
-      const variables = {
-        email: email,
-        first_name: first_name || 'User',
-        confirmation_link: confirmation_link
-      };
+      // Prepare template variables using enhanced merging
+      const databaseData = {};
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       // Replace variables in subject and HTML content
       const processedSubject = replaceTemplateVariables(template.subject, variables);
@@ -201,12 +220,9 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Prepare template variables
-      const variables = {
-        email: email,
-        first_name: first_name || 'User',
-        reset_link: reset_link
-      };
+      // Prepare template variables using enhanced merging
+      const databaseData = {};
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       // Replace variables in subject and HTML content
       const processedSubject = replaceTemplateVariables(template.subject, variables);
@@ -293,11 +309,12 @@ serve(async (req) => {
 
       console.log('Found email template:', template.template_name);
 
-      // Prepare template variables
-      const variables = {
+      // Prepare template variables using enhanced merging
+      const databaseData = {
         work_order_number: workOrder.work_order_number || 'N/A',
         organization_name: workOrder.organizations?.name || 'Unknown Organization'
       };
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       console.log('Template variables:', variables);
 
@@ -370,19 +387,16 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Get status and notes from the report
-      const status = report.status;
-      const reviewNotes = report.admin_notes || '';
-
-      // Replace variables
-      const variables = {
+      // Prepare template variables using enhanced merging
+      const databaseData = {
         first_name: report.profiles?.first_name || '',
         work_order_number: report.work_orders?.work_order_number || '',
         work_order_title: report.work_orders?.title || '',
         organization_name: report.work_orders?.organizations?.name || '',
-        status: status,
-        review_notes: reviewNotes
+        status: report.status,
+        review_notes: report.admin_notes || ''
       };
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       const processedSubject = replaceTemplateVariables(template.subject, variables);
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
@@ -425,10 +439,12 @@ serve(async (req) => {
         .eq('template_name', 'work_order_assigned')
         .single();
 
-      const variables = {
+      // Prepare template variables using enhanced merging
+      const databaseData = {
         work_order_number: workOrder.work_order_number,
         first_name: workOrder.profiles.first_name || ''
       };
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       const processedSubject = replaceTemplateVariables(template.subject, variables);
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
@@ -471,9 +487,11 @@ serve(async (req) => {
         .eq('template_name', 'report_submitted')
         .single();
 
-      const variables = {
+      // Prepare template variables using enhanced merging
+      const databaseData = {
         work_order_number: report.work_orders?.work_order_number || ''
       };
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       const processedSubject = replaceTemplateVariables(template.subject, variables);
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
@@ -508,10 +526,12 @@ serve(async (req) => {
         .eq('template_name', 'work_order_completed')
         .single();
 
-      const variables = {
+      // Prepare template variables using enhanced merging
+      const databaseData = {
         work_order_number: workOrder.work_order_number,
         organization_name: workOrder.organizations?.name || ''
       };
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       const processedSubject = replaceTemplateVariables(template.subject, variables);
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
@@ -552,10 +572,12 @@ serve(async (req) => {
         .eq('template_name', 'welcome_email')
         .single();
 
-      const variables = {
+      // Prepare template variables using enhanced merging
+      const databaseData = {
         first_name: profile.first_name || '',
         user_type: profile.user_type || ''
       };
+      const variables = mergeTemplateVariables(databaseData, custom_data);
 
       const processedHtml = replaceTemplateVariables(template.html_content, variables);
 
