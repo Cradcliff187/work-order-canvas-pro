@@ -1,4 +1,5 @@
 
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
@@ -17,12 +18,12 @@ serve(async (req) => {
 
     console.log('Simple email function called:', { to, subject, message });
 
-    // Simple SMTP client
+    // Simple SMTP client with direct SSL on port 465
     const client = new SMTPClient({
       connection: {
         hostname: "smtp.ionos.com",
-        port: 587,  // Port 587 uses STARTTLS
-        tls: false,  // Port 587 uses STARTTLS
+        port: 465,  // Port 465 uses direct SSL
+        tls: true,  // Direct SSL connection
         auth: {
           username: Deno.env.get('IONOS_SMTP_USER') || '',
           password: Deno.env.get('IONOS_SMTP_PASS') || '',
@@ -58,3 +59,4 @@ serve(async (req) => {
     );
   }
 });
+
