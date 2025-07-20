@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Menu } from 'lucide-react';
@@ -21,9 +22,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </SidebarTrigger>
           </header>
 
-          {/* Main content */}
+          {/* Main content with consistent container and padding */}
           <main className="flex-1 overflow-auto">
-            {children}
+            <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+              {children}
+            </div>
           </main>
         </div>
       </div>
