@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,9 @@ const EmailTestPage = () => {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('welcome_email');
   const [templates, setTemplates] = useState<any[]>([]);
+  const [testEmail, setTestEmail] = useState('');
+  const [testDataType, setTestDataType] = useState('work_order');
+  const [isSending, setIsSending] = useState(false);
   
   const [testForm, setTestForm] = useState<TestUserForm>({
     email: '',
@@ -156,6 +160,49 @@ const EmailTestPage = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setIsSending(true);
+    try {
+      // Use test IDs based on template type
+      const testIds = {
+        work_order_created: 'TEST-WO-001',
+        work_order_assigned: 'TEST-WO-001',
+        work_order_completed: 'TEST-WO-001',
+        report_submitted: 'TEST-REPORT-001',
+        report_reviewed: 'TEST-REPORT-001',
+        welcome_email: 'TEST-PROFILE-001'
+      };
+
+      const { error } = await supabase.functions.invoke('send-email', {
+        body: {
+          template_name: selectedTemplate,
+          record_id: testIds[selectedTemplate as keyof typeof testIds] || 'TEST-001',
+          record_type: testDataType,
+          test_mode: true,
+          test_recipient: testEmail
+        }
+      });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Test Email Sent",
+        description: `${selectedTemplate} sent to ${testEmail}`,
+      });
+      
+      // Refresh logs
+      fetchEmailLogs();
+    } catch (error: any) {
+      toast({
+        title: "Failed to send test email",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -361,6 +408,53 @@ const EmailTestPage = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Direct Email Testing */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Send Test Email</CardTitle>
+          <CardDescription>
+            Test any email template directly without going through workflows
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Recipient Email</Label>
+            <Input
+              type="email"
+              placeholder="test@example.com"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <Label>Test Data Type</Label>
+            <select
+              value={testDataType}
+              onChange={(e) => setTestDataType(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+            >
+              <option value="work_order">Work Order</option>
+              <option value="report">Report</option>
+              <option value="profile">Profile</option>
+            </select>
+          </div>
+
+          <Button 
+            onClick={handleSendTestEmail}
+            disabled={!testEmail || isSending}
+            className="w-full"
+          >
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            Send Test Email
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Email Logs */}
       <Card>
