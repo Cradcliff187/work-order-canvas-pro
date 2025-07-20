@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserMutations } from '@/hooks/useUsers';
+import { useEmailHealth } from '@/hooks/useEmailHealth';
+import { useEmailSystemTest } from '@/hooks/useEmailSystemTest';
 import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
+import { EmailHealthScore } from '@/components/admin/EmailHealthScore';
+import { EmailSystemActions } from '@/components/admin/EmailSystemActions';
 import { 
   Mail, 
   CheckCircle, 
@@ -25,7 +28,8 @@ import {
   RefreshCw,
   Workflow,
   ChevronDown,
-  Zap
+  Zap,
+  Activity
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -67,6 +71,11 @@ const EmailTestPage = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
+  
+  // Use new hooks
+  const { emailMetrics, triggerMetrics, isLoading: healthLoading, refreshHealth } = useEmailHealth();
+  const { testEmailSystem, createTestWorkOrder, isTestRunning, lastTestResult } = useEmailSystemTest();
+  
   const [edgeFunctions, setEdgeFunctions] = useState<EdgeFunctionStatus[]>([
     {
       name: 'send-email',
@@ -371,22 +380,104 @@ const EmailTestPage = () => {
     return { active, total };
   };
 
+  const handleTestEmailSystem = async () => {
+    await testEmailSystem();
+    // Refresh health after test
+    setTimeout(() => {
+      refreshHealth();
+      fetchEmailLogs();
+    }, 2000);
+  };
+
+  const handleCreateTestWorkOrder = async () => {
+    await createTestWorkOrder();
+    // Refresh metrics after creating work order
+    setTimeout(() => {
+      refreshHealth();
+    }, 1000);
+  };
+
+  const handleRefreshHealth = async () => {
+    await refreshHealth();
+    fetchEmailLogs();
+    checkEmailConfiguration();
+    verifyEmailAutomation();
+  };
+
   const { available: workingCount, total: totalCount } = getWorkingFunctionCount();
   const { available: requiredAvailable, total: requiredTotal } = getRequiredFunctionCount();
   const { active: activeAutomationCount, total: totalAutomationCount } = getActiveAutomationCount();
   
   const allRequiredWorking = requiredAvailable === requiredTotal;
   const allAutomationActive = activeAutomationCount === totalAutomationCount;
-  const systemHealthy = allRequiredWorking && allAutomationActive;
+  const systemHealthy = allRequiredWorking && allAutomationActive && emailMetrics.alertLevel === 'healthy';
 
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Email System Testing</h1>
         <p className="text-muted-foreground">
-          Complete email system with IONOS SMTP, automated triggers, and comprehensive testing
+          Comprehensive email system monitoring with IONOS SMTP, automated triggers, and health analytics
         </p>
       </div>
+
+      {/* Enhanced System Health Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <EmailHealthScore
+          healthScore={emailMetrics.healthScore}
+          alertLevel={emailMetrics.alertLevel}
+          alertMessage={emailMetrics.alertMessage}
+          totalEmails={emailMetrics.totalEmailsLast7Days}
+          successRate={emailMetrics.successRate}
+          daysSinceLastEmail={emailMetrics.daysSinceLastEmail}
+          lastEmailSent={emailMetrics.lastEmailSent}
+          isLoading={healthLoading}
+        />
+
+        <EmailSystemActions
+          onTestEmailSystem={handleTestEmailSystem}
+          onCreateTestWorkOrder={handleCreateTestWorkOrder}
+          onRefreshHealth={handleRefreshHealth}
+          isTestRunning={isTestRunning}
+          lastTestResult={lastTestResult}
+        />
+      </div>
+
+      {/* Trigger Events Overview */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            System Activity (Last 7 Days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-primary">{triggerMetrics.workOrdersLast7Days}</div>
+              <div className="text-sm text-muted-foreground">Work Orders</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-primary">{triggerMetrics.reportsLast7Days}</div>
+              <div className="text-sm text-muted-foreground">Reports Submitted</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-primary">{emailMetrics.totalEmailsLast7Days}</div>
+              <div className="text-sm text-muted-foreground">Emails Sent</div>
+            </div>
+          </div>
+          
+          {triggerMetrics.totalTriggerEvents === 0 && (
+            <Alert className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                No trigger events detected. This could indicate low system activity or disabled triggers.
+                Consider creating a test work order to verify email automation.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
         <CardHeader>
@@ -429,7 +520,7 @@ const EmailTestPage = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
@@ -575,42 +666,6 @@ const EmailTestPage = () => {
             </Button>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Workflow className="h-4 w-4" />
-              System Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {systemHealthy ? (
-                <CheckCircle className="h-4 w-4 text-success" />
-              ) : (
-                <XCircle className="h-4 w-4 text-destructive" />
-              )}
-              <span className="text-sm">
-                {systemHealthy ? 'Ready' : 'Issues Detected'}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {systemHealthy ? 'All systems operational' : 'Functions or automation unavailable'}
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                checkEmailConfiguration();
-                verifyEmailAutomation();
-              }}
-              className="mt-2 p-0 h-auto text-xs"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Recheck All
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="mb-6">
@@ -713,6 +768,7 @@ const EmailTestPage = () => {
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             Recent Email Logs
+            <Badge variant="outline">{emailLogs.length} entries</Badge>
           </CardTitle>
           <CardDescription>
             Monitor email delivery status and troubleshoot issues
@@ -755,7 +811,9 @@ const EmailTestPage = () => {
             </Table>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              No email logs found. Test email functions to generate activity.
+              <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">No email logs found</p>
+              <p className="text-sm">Test email functions or create trigger events to generate activity.</p>
             </div>
           )}
         </CardContent>
