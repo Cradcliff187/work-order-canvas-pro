@@ -47,6 +47,170 @@ function mergeTemplateVariables(databaseData: Record<string, any> = {}, customDa
   return processed;
 }
 
+// Helper function to create test data when needed
+async function createTestDataForEmail(template_name: string, record_id: string): Promise<any> {
+  console.log(`Creating test data for template: ${template_name}, record_id: ${record_id}`);
+  
+  if (template_name === 'work_order_created' && record_id.startsWith('TEST-WORK_ORDER_CREATED-')) {
+    // Create a test work order
+    const testWorkOrder = {
+      id: crypto.randomUUID(),
+      work_order_number: record_id,
+      title: 'Test Work Order Created',
+      description: 'This is a test work order for email testing',
+      organization_id: null, // Will be set to a test organization
+      trade_id: null, // Will be set to a test trade
+      status: 'received',
+      created_by: null,
+      date_submitted: new Date().toISOString(),
+      store_location: 'Test Location',
+      street_address: '123 Test Street',
+      city: 'Test City',
+      state: 'TS',
+      zip_code: '12345',
+      estimated_hours: 2.0
+    };
+
+    // Try to get or create a test organization
+    const { data: testOrg } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('name', 'Test Organization')
+      .single();
+
+    if (!testOrg) {
+      const { data: newOrg } = await supabase
+        .from('organizations')
+        .insert({
+          name: 'Test Organization',
+          contact_email: 'test@example.com',
+          organization_type: 'partner'
+        })
+        .select('id')
+        .single();
+      testWorkOrder.organization_id = newOrg?.id;
+    } else {
+      testWorkOrder.organization_id = testOrg.id;
+    }
+
+    // Try to get or create a test trade
+    const { data: testTrade } = await supabase
+      .from('trades')
+      .select('id')
+      .eq('name', 'Test Trade')
+      .single();
+
+    if (!testTrade) {
+      const { data: newTrade } = await supabase
+        .from('trades')
+        .insert({
+          name: 'Test Trade',
+          description: 'Test trade for email testing'
+        })
+        .select('id')
+        .single();
+      testWorkOrder.trade_id = newTrade?.id;
+    } else {
+      testWorkOrder.trade_id = testTrade.id;
+    }
+
+    // Insert the test work order
+    const { data: insertedWorkOrder, error } = await supabase
+      .from('work_orders')
+      .insert(testWorkOrder)
+      .select(`
+        *,
+        organizations!organization_id(name),
+        trades(name)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Failed to create test work order:', error);
+      return null;
+    }
+
+    console.log('Created test work order:', insertedWorkOrder);
+    return insertedWorkOrder;
+  }
+
+  if (template_name === 'report_submitted' && record_id.startsWith('TEST-REPORT_SUBMITTED-')) {
+    // Create a test work order report
+    const testReport = {
+      id: crypto.randomUUID(),
+      work_order_id: null, // Will be set to a test work order
+      subcontractor_user_id: null, // Will be set to a test user
+      work_performed: 'Test work performed for email testing',
+      invoice_amount: 100.00,
+      status: 'submitted',
+      submitted_at: new Date().toISOString()
+    };
+
+    // Try to get or create a test work order
+    const { data: testWorkOrder } = await supabase
+      .from('work_orders')
+      .select('id')
+      .eq('work_order_number', 'TEST-WO-001')
+      .single();
+
+    if (!testWorkOrder) {
+      // Create a minimal test work order first
+      const { data: newWorkOrder } = await supabase
+        .from('work_orders')
+        .insert({
+          work_order_number: 'TEST-WO-001',
+          title: 'Test Work Order for Report',
+          organization_id: (await supabase.from('organizations').select('id').limit(1).single()).data?.id,
+          status: 'in_progress'
+        })
+        .select('id')
+        .single();
+      testReport.work_order_id = newWorkOrder?.id;
+    } else {
+      testReport.work_order_id = testWorkOrder.id;
+    }
+
+    // Try to get or create a test user
+    const { data: testUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', 'test-subcontractor@workorderpro.test')
+      .single();
+
+    if (testUser) {
+      testReport.subcontractor_user_id = testUser.id;
+    } else {
+      // Use the first available user
+      const { data: firstUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1)
+        .single();
+      testReport.subcontractor_user_id = firstUser?.id;
+    }
+
+    // Insert the test report
+    const { data: insertedReport, error } = await supabase
+      .from('work_order_reports')
+      .insert(testReport)
+      .select(`
+        *,
+        work_orders!work_order_id(work_order_number, organizations!organization_id(name))
+      `)
+      .single();
+
+    if (error) {
+      console.error('Failed to create test report:', error);
+      return null;
+    }
+
+    console.log('Created test work order report:', insertedReport);
+    return insertedReport;
+  }
+
+  return null;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   const corsResponse = handleCors(req);
@@ -261,20 +425,31 @@ serve(async (req) => {
 
     // Handle work_order_created emails
     if (template_name === 'work_order_created') {
-      // Fetch work order with organization data
-      const { data: workOrder, error: workOrderError } = await supabase
-        .from('work_orders')
-        .select(`
-          *,
-          organizations!inner(name),
-          trades(name)
-        `)
-        .eq('id', record_id)
-        .single();
+      let workOrder;
 
-      if (workOrderError || !workOrder) {
-        console.error('Work order fetch error:', workOrderError);
-        return createCorsErrorResponse('Work order not found', 404);
+      // Check if this is a test ID and create test data if needed
+      if (record_id.startsWith('TEST-WORK_ORDER_CREATED-')) {
+        workOrder = await createTestDataForEmail(template_name, record_id);
+        if (!workOrder) {
+          return createCorsErrorResponse('Failed to create test work order', 500);
+        }
+      } else {
+        // Fetch work order with organization data - FIX THE AMBIGUOUS QUERY
+        const { data: workOrderData, error: workOrderError } = await supabase
+          .from('work_orders')
+          .select(`
+            *,
+            organizations!organization_id(name),
+            trades(name)
+          `)
+          .eq('id', record_id)
+          .single();
+
+        if (workOrderError || !workOrderData) {
+          console.error('Work order fetch error:', workOrderError);
+          return createCorsErrorResponse('Work order not found', 404);
+        }
+        workOrder = workOrderData;
       }
 
       console.log('Found work order:', workOrder.work_order_number);
@@ -334,7 +509,7 @@ serve(async (req) => {
       // Log email attempt to database
       const logPromises = adminEmails.map(email => 
         supabase.from('email_logs').insert({
-          work_order_id: record_id,
+          work_order_id: workOrder.id,
           template_used: template_name,
           recipient_email: email,
           status: emailResult.success ? 'sent' : 'failed',
@@ -362,19 +537,43 @@ serve(async (req) => {
 
     // Handle report_reviewed emails  
     if (template_name === 'report_reviewed') {
-      // This is a work_order_report, not a work_order
-      const { data: report } = await supabase
-        .from('work_order_reports')
-        .select(`
-          *,
-          work_orders!work_order_id(work_order_number, title, organizations!organization_id(name)),
-          profiles!subcontractor_user_id(email, first_name)
-        `)
-        .eq('id', record_id)
-        .single();
+      let report;
 
-      if (!report || !report.profiles?.email) {
-        return createCorsErrorResponse('Report or recipient not found', 404);
+      // Check if this is a test ID and create test data if needed
+      if (record_id.startsWith('TEST-REPORT_REVIEWED-')) {
+        // For test mode, create a mock report structure
+        report = {
+          id: record_id,
+          status: 'approved',
+          admin_notes: 'This is a test review',
+          profiles: {
+            email: 'test-subcontractor@workorderpro.test',
+            first_name: 'Test'
+          },
+          work_orders: {
+            work_order_number: 'TEST-WO-001',
+            title: 'Test Work Order',
+            organizations: {
+              name: 'Test Organization'
+            }
+          }
+        };
+      } else {
+        // This is a work_order_report, not a work_order - FIX THE AMBIGUOUS QUERY
+        const { data: reportData } = await supabase
+          .from('work_order_reports')
+          .select(`
+            *,
+            work_orders!work_order_id(work_order_number, title, organizations!organization_id(name)),
+            profiles!subcontractor_user_id(email, first_name)
+          `)
+          .eq('id', record_id)
+          .single();
+
+        if (!reportData || !reportData.profiles?.email) {
+          return createCorsErrorResponse('Report or recipient not found', 404);
+        }
+        report = reportData;
       }
 
       const { data: template } = await supabase
@@ -423,6 +622,7 @@ serve(async (req) => {
 
     // Handle work_order_assigned emails
     if (template_name === 'work_order_assigned') {
+      // FIX THE AMBIGUOUS QUERY
       const { data: workOrder } = await supabase
         .from('work_orders')
         .select('*, organizations!organization_id(name), profiles!assigned_to(email, first_name)')
@@ -467,11 +667,26 @@ serve(async (req) => {
 
     // Handle report_submitted emails
     if (template_name === 'report_submitted') {
-      const { data: report } = await supabase
-        .from('work_order_reports')
-        .select('*, work_orders!work_order_id(work_order_number)')
-        .eq('id', record_id)
-        .single();
+      let report;
+
+      // Check if this is a test ID and create test data if needed
+      if (record_id.startsWith('TEST-REPORT_SUBMITTED-')) {
+        report = await createTestDataForEmail(template_name, record_id);
+        if (!report) {
+          return createCorsErrorResponse('Failed to create test report', 500);
+        }
+      } else {
+        const { data: reportData } = await supabase
+          .from('work_order_reports')
+          .select('*, work_orders!work_order_id(work_order_number)')
+          .eq('id', record_id)
+          .single();
+
+        if (!reportData) {
+          return createCorsErrorResponse('Report not found', 404);
+        }
+        report = reportData;
+      }
 
       const { data: admins } = await supabase
         .from('profiles')
@@ -514,6 +729,7 @@ serve(async (req) => {
 
     // Handle work_order_completed emails  
     if (template_name === 'work_order_completed') {
+      // FIX THE AMBIGUOUS QUERY
       const { data: workOrder } = await supabase
         .from('work_orders')
         .select('*, organizations!organization_id(name), profiles!created_by(email)')

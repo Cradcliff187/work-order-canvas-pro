@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,7 +115,7 @@ export function EmailTestingPanel() {
       });
 
       // Wait a moment for the email to be processed
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Check email logs for auth_confirmation entry
       const { data: emailLog, error } = await supabase
@@ -185,7 +184,7 @@ export function EmailTestingPanel() {
       }
 
       // Wait a moment for the email to be processed
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Check email logs for password_reset entry
       const { data: emailLog, error } = await supabase
@@ -248,17 +247,19 @@ export function EmailTestingPanel() {
           template_name: test.template_name,
           record_id: `TEST-${test.id.toUpperCase()}-001`,
           record_type: test.record_type,
-          test_mode: true
+          test_mode: false
         })
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('Email test response error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
       
-      updateTestStatus(test.id, 'success', `Email sent successfully - ID: ${result.message_id || 'N/A'}`);
+      updateTestStatus(test.id, 'success', `Email sent successfully - Recipients: ${result.recipients || 1}`);
       
       toast({
         title: "Email Test Successful",
@@ -321,7 +322,7 @@ export function EmailTestingPanel() {
     for (const test of filteredTests) {
       await testEmailTrigger(test);
       // Add a small delay between tests
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   };
 
@@ -330,7 +331,7 @@ export function EmailTestingPanel() {
     
     for (const test of categoryTests) {
       await testEmailTrigger(test);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   };
 
@@ -470,7 +471,7 @@ export function EmailTestingPanel() {
           </div>
 
           {/* Auth Statistics */}
-          {authStats && filterCategory === 'auth' && (
+          {authStats && (filterCategory === 'auth' || filterCategory === 'all') && (
             <div className="bg-muted p-3 rounded-lg">
               <h4 className="font-medium mb-2">Auth Email Statistics (Last 24 Hours)</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -598,6 +599,7 @@ export function EmailTestingPanel() {
               <p>• <strong>Work Order Emails:</strong> Creation and assignment notifications</p>
               <p>• <strong>Report Emails:</strong> Submission and review notifications</p>
               <p>• <strong>Delivery:</strong> All emails sent via Resend with delivery tracking</p>
+              <p>• <strong>Test Data:</strong> Automatically creates test data when needed for testing</p>
             </div>
           </div>
         </AlertDescription>
