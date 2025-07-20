@@ -24,7 +24,7 @@ import {
   EmployeeTimeReport,
   ReceiptHistory,
   SystemHealthCheck,
-  EmailTestPage,
+  TestEmailPage,
   AdminOrganizationDiagnostics,
   DevTools,
   
@@ -236,7 +236,7 @@ export const AdminRoutes = () => (
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            <EmailTestPage />
+            <TestEmailPage />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>

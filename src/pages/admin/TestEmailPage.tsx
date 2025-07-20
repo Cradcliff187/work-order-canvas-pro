@@ -3,7 +3,7 @@ import React from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { EmailTestingPanel } from '@/components/admin/EmailTestingPanel';
 
-export function TestEmailPage() {
+export default function TestEmailPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
