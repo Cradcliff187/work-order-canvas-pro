@@ -68,16 +68,7 @@ export function useAdminReportMutations() {
         description: `The report has been ${variables.status} successfully.` 
       });
 
-      // Trigger email notification
-      supabase.functions.invoke('email-report-reviewed', {
-        body: { 
-          reportId: variables.reportId,
-          status: variables.status,
-          reviewNotes: variables.reviewNotes
-        }
-      }).catch(error => {
-        
-      });
+      // Email notification handled automatically by database trigger
     },
     onError: (error: any) => {
       toast({ 

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -94,6 +95,9 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
       <DialogContent ref={modalRef} className="max-w-md" role="dialog" aria-labelledby="add-location-title" tabIndex={-1}>
         <DialogHeader>
           <DialogTitle id="add-location-title">Add New Location</DialogTitle>
+          <DialogDescription>
+            Add a new location for your organization. This location will be available for work order submissions.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" aria-busy={createLocation.isPending}>

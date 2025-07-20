@@ -5,6 +5,7 @@ import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -101,6 +102,9 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
       <DialogContent ref={modalRef} className="max-w-md" role="dialog" aria-labelledby="edit-location-title" tabIndex={-1}>
         <DialogHeader>
           <DialogTitle id="edit-location-title">Edit Location</DialogTitle>
+          <DialogDescription>
+            Update the location details. Changes will be reflected in future work order submissions.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" aria-busy={updateLocation.isPending}>
