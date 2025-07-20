@@ -85,19 +85,7 @@ const EmailTestPage = () => {
     {
       name: 'send-email',
       required: true,
-      description: 'Main email sending function (handles all email templates)',
-      status: 'checking'
-    },
-    {
-      name: 'test-smtp',
-      required: false,
-      description: 'SMTP configuration testing',
-      status: 'checking'
-    },
-    {
-      name: 'setup-test-environment',
-      required: false,
-      description: 'Test data environment setup',
+      description: 'Unified email sending function using IONOS SMTP',
       status: 'checking'
     }
   ]);
@@ -591,7 +579,7 @@ const EmailTestPage = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Mail className="h-4 w-4" />
-              Edge Functions
+              Email System
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -604,7 +592,7 @@ const EmailTestPage = () => {
                 <AlertTriangle className="h-4 w-4 text-warning" />
               )}
               <span className="text-sm">
-                {workingCount}/{totalCount} Functions Ready
+                {workingCount === totalCount ? 'Operational' : 'Issues Detected'}
               </span>
             </div>
             <Collapsible open={functionsExpanded} onOpenChange={setFunctionsExpanded}>
