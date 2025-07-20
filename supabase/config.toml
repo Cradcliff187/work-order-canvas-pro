@@ -1,4 +1,5 @@
 
+
 project_id = "inudoymofztrvxhrlrek"
 
 [functions.setup-test-environment]
@@ -9,3 +10,7 @@ verify_jwt = false
 
 [functions.send-email]
 verify_jwt = false
+
+[functions.password-reset-email]
+verify_jwt = false
+
