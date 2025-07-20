@@ -126,7 +126,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
           </DialogTitle>
           <DialogDescription>
             {showSuccess 
-              ? 'The user account has been created and a confirmation email will be sent by Supabase.'
+              ? 'The user account has been created and a welcome email has been sent.'
               : 'Fill in the details to create a new user account.'
             }
           </DialogDescription>
