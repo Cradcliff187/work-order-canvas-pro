@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,11 +54,11 @@ interface EdgeFunctionStatus {
   error?: string;
 }
 
-interface DatabaseTrigger {
+interface EmailAutomationStatus {
   name: string;
-  required: boolean;
   description: string;
-  status: 'checking' | 'active' | 'missing';
+  status: 'checking' | 'active' | 'inactive';
+  details?: string;
 }
 
 const EmailTestPage = () => {
@@ -87,41 +88,31 @@ const EmailTestPage = () => {
     }
   ]);
   
-  const [databaseTriggers, setDatabaseTriggers] = useState<DatabaseTrigger[]>([
+  const [emailAutomation, setEmailAutomation] = useState<EmailAutomationStatus[]>([
     {
-      name: 'trigger_work_order_created',
-      required: true,
-      description: 'Sends emails when work orders are created',
+      name: 'Email Templates',
+      description: 'Email templates are configured and active',
       status: 'checking'
     },
     {
-      name: 'trigger_work_order_assigned',
-      required: true, 
-      description: 'Sends emails when work orders are assigned',
+      name: 'Recipient Settings',
+      description: 'Email recipient configurations exist',
       status: 'checking'
     },
     {
-      name: 'trigger_report_submitted',
-      required: true,
-      description: 'Sends emails when reports are submitted',
+      name: 'Recent Email Activity',
+      description: 'Recent emails have been sent successfully',
       status: 'checking'
     },
     {
-      name: 'trigger_report_reviewed',
-      required: true,
-      description: 'Sends emails when reports are reviewed',
-      status: 'checking'
-    },
-    {
-      name: 'trigger_auto_report_status_enhanced',
-      required: true,
-      description: 'Enhanced report status automation',
+      name: 'Automation Working',
+      description: 'Email automation triggers are functioning',
       status: 'checking'
     }
   ]);
   
   const [functionsExpanded, setFunctionsExpanded] = useState(false);
-  const [triggersExpanded, setTriggersExpanded] = useState(false);
+  const [automationExpanded, setAutomationExpanded] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; details?: any } | null>(null);
   
   const [testForm, setTestForm] = useState<TestUserForm>({
@@ -133,67 +124,97 @@ const EmailTestPage = () => {
 
   useEffect(() => {
     checkEmailConfiguration();
-    checkDatabaseTriggers();
+    verifyEmailAutomation();
     fetchEmailLogs();
   }, []);
 
-  const checkDatabaseTriggers = async () => {
-    const updatedTriggers = [...databaseTriggers];
+  const verifyEmailAutomation = async () => {
+    const updatedAutomation = [...emailAutomation];
     
     // Reset all to checking status
-    updatedTriggers.forEach(trigger => {
-      trigger.status = 'checking';
+    updatedAutomation.forEach(item => {
+      item.status = 'checking';
+      item.details = undefined;
     });
-    setDatabaseTriggers([...updatedTriggers]);
+    setEmailAutomation([...updatedAutomation]);
 
     try {
-      // Query the database for email-related triggers
-      const { data: triggerData, error } = await supabase
-        .rpc('get_email_triggers')
-        .single();
+      // Check email templates exist and are active
+      const { data: templates, error: templatesError } = await supabase
+        .from('email_templates')
+        .select('id, template_name, is_active')
+        .eq('is_active', true);
 
-      if (error) {
-        // Fallback: try direct query if RPC doesn't exist
-        const { data: directData, error: directError } = await supabase
-          .from('pg_trigger')
-          .select('tgname')
-          .like('tgname', '%email%')
-          .eq('tgisinternal', false);
-
-        if (directError) {
-          console.error('Failed to check database triggers:', directError);
-          // Mark all as missing if we can't check
-          updatedTriggers.forEach(trigger => {
-            trigger.status = 'missing';
-          });
-          setDatabaseTriggers([...updatedTriggers]);
-          return;
+      const templatesItem = updatedAutomation.find(item => item.name === 'Email Templates');
+      if (templatesItem) {
+        if (templatesError) {
+          templatesItem.status = 'inactive';
+          templatesItem.details = 'Error fetching templates';
+        } else {
+          templatesItem.status = templates && templates.length > 0 ? 'active' : 'inactive';
+          templatesItem.details = `${templates?.length || 0} active templates`;
         }
-        
-        // Process direct query results
-        const activeTriggerNames = directData?.map(t => t.tgname) || [];
-        
-        updatedTriggers.forEach(trigger => {
-          trigger.status = activeTriggerNames.includes(trigger.name) ? 'active' : 'missing';
-        });
-      } else {
-        // Process RPC results if available
-        const activeTriggerNames = triggerData?.trigger_names || [];
-        
-        updatedTriggers.forEach(trigger => {
-          trigger.status = activeTriggerNames.includes(trigger.name) ? 'active' : 'missing';
-        });
       }
       
-      setDatabaseTriggers([...updatedTriggers]);
+      // Check recipient settings exist
+      const { data: recipients, error: recipientsError } = await supabase
+        .from('email_recipient_settings')
+        .select('id, template_name, receives_email')
+        .eq('receives_email', true);
+
+      const recipientsItem = updatedAutomation.find(item => item.name === 'Recipient Settings');
+      if (recipientsItem) {
+        if (recipientsError) {
+          recipientsItem.status = 'inactive';
+          recipientsItem.details = 'Error fetching recipient settings';
+        } else {
+          recipientsItem.status = recipients && recipients.length > 0 ? 'active' : 'inactive';
+          recipientsItem.details = `${recipients?.length || 0} recipient configurations`;
+        }
+      }
+
+      // Check recent email activity (last 24 hours)
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentEmails, error: emailsError } = await supabase
+        .from('email_logs')
+        .select('id, template_used, status, sent_at')
+        .gte('sent_at', twentyFourHoursAgo);
+
+      const activityItem = updatedAutomation.find(item => item.name === 'Recent Email Activity');
+      if (activityItem) {
+        if (emailsError) {
+          activityItem.status = 'inactive';
+          activityItem.details = 'Error fetching email logs';
+        } else {
+          const successfulEmails = recentEmails?.filter(email => email.status === 'sent' || email.status === 'delivered') || [];
+          activityItem.status = successfulEmails.length > 0 ? 'active' : 'inactive';
+          activityItem.details = `${successfulEmails.length} successful emails in 24h`;
+        }
+      }
+
+      // Overall automation status based on other checks
+      const automationItem = updatedAutomation.find(item => item.name === 'Automation Working');
+      if (automationItem) {
+        const allActive = updatedAutomation
+          .filter(item => item.name !== 'Automation Working')
+          .every(item => item.status === 'active');
+        
+        automationItem.status = allActive ? 'active' : 'inactive';
+        automationItem.details = allActive 
+          ? 'All email automation components are working'
+          : 'Some email automation components need attention';
+      }
+      
+      setEmailAutomation([...updatedAutomation]);
       
     } catch (error: any) {
-      console.error('Database trigger check failed:', error);
-      // Mark all as missing on error
-      updatedTriggers.forEach(trigger => {
-        trigger.status = 'missing';
+      console.error('Email automation check failed:', error);
+      // Mark all as inactive on error
+      updatedAutomation.forEach(item => {
+        item.status = 'inactive';
+        item.details = 'Verification failed';
       });
-      setDatabaseTriggers([...updatedTriggers]);
+      setEmailAutomation([...updatedAutomation]);
     }
   };
 
@@ -325,18 +346,7 @@ const EmailTestPage = () => {
       case 'active':
         return <CheckCircle className="h-4 w-4 text-success" />;
       case 'unavailable':
-      case 'missing':
-        return <XCircle className="h-4 w-4 text-destructive" />;
-      default:
-        return <Loader2 className="h-4 w-4 animate-spin" />;
-    }
-  };
-
-  const getTriggerStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      case 'missing':
+      case 'inactive':
         return <XCircle className="h-4 w-4 text-destructive" />;
       default:
         return <Loader2 className="h-4 w-4 animate-spin" />;
@@ -355,26 +365,19 @@ const EmailTestPage = () => {
     return { available: availableRequired, total: requiredFunctions.length };
   };
 
-  const getActiveTriggerCount = () => {
-    const active = databaseTriggers.filter(t => t.status === 'active').length;
-    const total = databaseTriggers.length;
+  const getActiveAutomationCount = () => {
+    const active = emailAutomation.filter(a => a.status === 'active').length;
+    const total = emailAutomation.length;
     return { active, total };
-  };
-
-  const getRequiredTriggerCount = () => {
-    const requiredTriggers = databaseTriggers.filter(t => t.required);
-    const activeRequired = requiredTriggers.filter(t => t.status === 'active').length;
-    return { active: activeRequired, total: requiredTriggers.length };
   };
 
   const { available: workingCount, total: totalCount } = getWorkingFunctionCount();
   const { available: requiredAvailable, total: requiredTotal } = getRequiredFunctionCount();
-  const { active: activeTriggerCount, total: totalTriggerCount } = getActiveTriggerCount();
-  const { active: requiredTriggersActive, total: requiredTriggersTotal } = getRequiredTriggerCount();
+  const { active: activeAutomationCount, total: totalAutomationCount } = getActiveAutomationCount();
   
   const allRequiredWorking = requiredAvailable === requiredTotal;
-  const allRequiredTriggersActive = requiredTriggersActive === requiredTriggersTotal;
-  const systemHealthy = allRequiredWorking && allRequiredTriggersActive;
+  const allAutomationActive = activeAutomationCount === totalAutomationCount;
+  const systemHealthy = allRequiredWorking && allAutomationActive;
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -521,48 +524,50 @@ const EmailTestPage = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Zap className="h-4 w-4" />
-              Database Triggers
+              Email Automation
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {activeTriggerCount === totalTriggerCount ? (
+              {activeAutomationCount === totalAutomationCount ? (
                 <CheckCircle className="h-4 w-4 text-success" />
-              ) : activeTriggerCount === 0 ? (
+              ) : activeAutomationCount === 0 ? (
                 <XCircle className="h-4 w-4 text-destructive" />
               ) : (
                 <AlertTriangle className="h-4 w-4 text-warning" />
               )}
               <span className="text-sm">
-                {activeTriggerCount}/{totalTriggerCount} Triggers Active
+                {activeAutomationCount}/{totalAutomationCount} Components Active
               </span>
             </div>
-            <Collapsible open={triggersExpanded} onOpenChange={setTriggersExpanded}>
+            <Collapsible open={automationExpanded} onOpenChange={setAutomationExpanded}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="mt-2 p-0 h-auto text-xs">
-                  <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${triggersExpanded ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${automationExpanded ? 'rotate-180' : ''}`} />
                   Details
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-1">
-                {databaseTriggers.map((trigger) => (
-                  <div key={trigger.name} className="flex items-center gap-2 text-xs">
-                    {getTriggerStatusIcon(trigger.status)}
-                    <span className={trigger.required ? 'font-medium' : ''}>
-                      {trigger.name.replace('trigger_', '')}
-                      {trigger.required && <span className="text-destructive">*</span>}
-                    </span>
+                {emailAutomation.map((item) => (
+                  <div key={item.name} className="text-xs">
+                    <div className="flex items-center gap-2">
+                      {getFunctionStatusIcon(item.status)}
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                    {item.details && (
+                      <p className="text-muted-foreground ml-6">{item.details}</p>
+                    )}
                   </div>
                 ))}
                 <p className="text-xs text-muted-foreground mt-2">
-                  * Required triggers
+                  Note: Verifies automation is working, not individual triggers
                 </p>
               </CollapsibleContent>
             </Collapsible>
             <Button
               variant="ghost"
               size="sm"
-              onClick={checkDatabaseTriggers}
+              onClick={verifyEmailAutomation}
               className="mt-2 p-0 h-auto text-xs"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
@@ -590,14 +595,14 @@ const EmailTestPage = () => {
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {systemHealthy ? 'All systems operational' : 'Functions or triggers unavailable'}
+              {systemHealthy ? 'All systems operational' : 'Functions or automation unavailable'}
             </p>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 checkEmailConfiguration();
-                checkDatabaseTriggers();
+                verifyEmailAutomation();
               }}
               className="mt-2 p-0 h-auto text-xs"
             >
@@ -683,7 +688,7 @@ const EmailTestPage = () => {
             <Alert className="border-warning">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Some required functions or triggers are unavailable. User creation may fail.
+                Some required functions or automation components are unavailable. User creation may fail.
               </AlertDescription>
             </Alert>
           )}
