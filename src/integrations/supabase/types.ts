@@ -103,6 +103,41 @@ export type Database = {
           },
         ]
       }
+      email_recipient_settings: {
+        Row: {
+          created_at: string
+          id: string
+          receives_email: boolean
+          role: Database["public"]["Enums"]["user_type"]
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          receives_email?: boolean
+          role: Database["public"]["Enums"]["user_type"]
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          receives_email?: boolean
+          role?: Database["public"]["Enums"]["user_type"]
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_recipient_settings_template_name_fkey"
+            columns: ["template_name"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["template_name"]
+          },
+        ]
+      }
       email_settings: {
         Row: {
           id: string
@@ -1355,6 +1390,10 @@ export type Database = {
         Args: { start_date?: string; end_date?: string }
         Returns: number
       }
+      call_send_email_trigger: {
+        Args: { template_name: string; record_id: string; record_type: string }
+        Returns: undefined
+      }
       check_assignment_completion_status: {
         Args: { work_order_id: string }
         Returns: boolean
@@ -1461,8 +1500,8 @@ export type Database = {
         }
         Returns: boolean
       }
-      trigger_completion_email: {
-        Args: { work_order_id: string }
+      trigger_send_email: {
+        Args: { template_name: string; record_id: string; record_type: string }
         Returns: undefined
       }
       user_assigned_to_work_order: {
