@@ -79,7 +79,7 @@ export const EmailHealthScore: React.FC<EmailHealthScoreProps> = ({
             <div className="h-20 bg-muted rounded animate-pulse" />
           </div>
         </CardContent>
-      </CardContent>
+      </Card>
     );
   }
 
