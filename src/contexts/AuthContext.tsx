@@ -66,7 +66,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isInRecoveryFlow, setIsInRecoveryFlow] = useState(false);
   const navigate = useNavigate();
 
-  // Load impersonation from sessionStorage on mount
   useEffect(() => {
     const storedImpersonation = sessionStorage.getItem('impersonatedProfile');
     if (storedImpersonation) {
@@ -372,75 +371,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPassword = async (email: string) => {
     try {
-      // Construct the redirect URL with proper format for Supabase
-      const baseUrl = window.location.origin;
-      const redirectPath = '/reset-password';
-      const redirectUrl = `${baseUrl}${redirectPath}`;
+      console.log('Sending password reset email to:', email);
       
-      // Log the redirect URL for debugging
-      console.log('Password reset redirect URL:', redirectUrl);
-      console.log('Base URL:', baseUrl);
-      console.log('Email being sent to:', email);
-      
-      // Validate the redirect URL format
-      try {
-        new URL(redirectUrl);
-      } catch (urlError) {
-        console.error('Invalid redirect URL format:', redirectUrl);
+      const { data, error } = await supabase.functions.invoke('password-reset-email', {
+        body: { email }
+      });
+
+      if (error) {
+        console.error('Password reset Edge Function error:', error);
         return { 
           error: { 
-            message: 'Invalid redirect URL configuration',
-            code: 'invalid_redirect_url'
+            message: error.message || 'Failed to send password reset email',
+            type: 'edge_function_error'
           } 
         };
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
-      });
-
-      if (error) {
-        console.error('Supabase password reset error:', {
-          message: error.message,
-          status: error.status,
-          redirectUrl: redirectUrl
-        });
-        
-        // Categorize different types of email sending errors
-        if (error.message?.includes('rate limit')) {
-          return { 
-            error: { 
-              ...error, 
-              type: 'rate_limit',
-              friendlyMessage: 'Too many password reset attempts. Please wait before trying again.' 
-            } 
-          };
-        }
-        
-        if (error.message?.includes('invalid email')) {
-          return { 
-            error: { 
-              ...error, 
-              type: 'invalid_email',
-              friendlyMessage: 'Please enter a valid email address.' 
-            } 
-          };
-        }
-        
-        if (error.message?.includes('redirect')) {
-          return { 
-            error: { 
-              ...error, 
-              type: 'redirect_error',
-              friendlyMessage: 'Email configuration error. Please contact support.' 
-            } 
-          };
-        }
-        
-        return { error };
-      }
-
-      console.log('Password reset email sent successfully to:', email);
+      console.log('Password reset email sent successfully:', data);
       return { error: null };
       
     } catch (error) {
