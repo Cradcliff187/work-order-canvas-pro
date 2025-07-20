@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
@@ -14,6 +13,8 @@ interface SendEmailRequest {
   template_name: string;
   record_id: string;
   record_type: string;
+  test_mode?: boolean;
+  test_recipient?: string;
 }
 
 serve(async (req) => {
@@ -34,14 +35,69 @@ serve(async (req) => {
       return createCorsErrorResponse('Method not allowed', 405);
     }
 
-    const { template_name, record_id, record_type }: SendEmailRequest = await req.json();
+    const { template_name, record_id, record_type, test_mode, test_recipient }: SendEmailRequest = await req.json();
 
     // Validate required parameters
     if (!template_name || !record_id || !record_type) {
       return createCorsErrorResponse('Missing required parameters: template_name, record_id, record_type', 400);
     }
 
-    console.log('Processing email request:', { template_name, record_id, record_type });
+    console.log('Processing email request:', { template_name, record_id, record_type, test_mode });
+
+    // Handle test mode
+    if (test_mode && test_recipient) {
+      // Create mock data for testing
+      const mockData = {
+        work_order_number: 'TEST-001',
+        organization_name: 'Test Organization',
+        first_name: 'Test',
+        last_name: 'User',
+        status: 'approved',
+        title: 'Test Work Order',
+        review_notes: 'This is a test email'
+      };
+      
+      // Get template
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('subject, html_content')
+        .eq('template_name', template_name)
+        .single();
+        
+      if (!template) {
+        return createCorsErrorResponse('Template not found', 404);
+      }
+      
+      // Replace all variables with mock data
+      let subject = template.subject;
+      let html = template.html_content;
+      
+      Object.entries(mockData).forEach(([key, value]) => {
+        subject = subject.replace(new RegExp(`{{${key}}}`, 'g'), value);
+        html = html.replace(new RegExp(`{{${key}}}`, 'g'), value);
+      });
+      
+      // Send test email
+      const emailResult = await sendEmail({
+        to: [test_recipient],
+        subject: `[TEST] ${subject}`,
+        html: html
+      });
+      
+      // Log as test
+      await supabase.from('email_logs').insert({
+        template_used: template_name,
+        recipient_email: test_recipient,
+        status: emailResult.success ? 'sent' : 'failed',
+        error_message: emailResult.error || null
+      });
+      
+      return createCorsResponse({
+        success: emailResult.success,
+        message: 'Test email sent',
+        test: true
+      });
+    }
 
     // Handle work_order_created emails
     if (template_name === 'work_order_created') {
