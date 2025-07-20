@@ -48,10 +48,10 @@ export const useEmailStatistics = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Get today's email statistics
+      // Get today's email statistics with id field included
       const { data: todayEmails, error: todayError } = await supabase
         .from('email_logs')
-        .select('status, sent_at, delivered_at, error_message, recipient_email, template_used')
+        .select('id, status, sent_at, delivered_at, error_message, recipient_email, template_used')
         .gte('sent_at', today);
 
       if (todayError) throw todayError;

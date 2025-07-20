@@ -391,7 +391,7 @@ const EmailTestPage = () => {
     return { active, total };
   };
 
-  const handleTestEmailSystem = async () => {
+  const handleTestEmailSystemWrapper = async (): Promise<void> => {
     await testEmailSystem();
     // Refresh health after test
     setTimeout(() => {
@@ -400,7 +400,7 @@ const EmailTestPage = () => {
     }, 2000);
   };
 
-  const handleCreateTestWorkOrder = async () => {
+  const handleCreateTestWorkOrderWrapper = async (): Promise<void> => {
     await createTestWorkOrder();
     // Refresh metrics after creating work order
     setTimeout(() => {
@@ -408,7 +408,7 @@ const EmailTestPage = () => {
     }, 1000);
   };
 
-  const handleRefreshHealth = async () => {
+  const handleRefreshHealthWrapper = async (): Promise<void> => {
     await refreshHealth();
     fetchEmailLogs();
     checkEmailConfiguration();
@@ -449,9 +449,9 @@ const EmailTestPage = () => {
         />
 
         <EmailSystemActions
-          onTestEmailSystem={testEmailSystem}
-          onCreateTestWorkOrder={createTestWorkOrder}
-          onRefreshHealth={handleRefreshData}
+          onTestEmailSystem={handleTestEmailSystemWrapper}
+          onCreateTestWorkOrder={handleCreateTestWorkOrderWrapper}
+          onRefreshHealth={handleRefreshHealthWrapper}
           isTestRunning={isTestRunning}
           lastTestResult={lastTestResult}
         />

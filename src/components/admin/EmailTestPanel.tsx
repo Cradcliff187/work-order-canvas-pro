@@ -277,11 +277,11 @@ export const EmailTestPanel = () => {
   // Render record selection options
   const renderRecordOptions = () => {
     if (loadingRecords) {
-      return <SelectItem value="" disabled>Loading records...</SelectItem>;
+      return <SelectItem value="__loading__" disabled>Loading records...</SelectItem>;
     }
     
     if (records.length === 0) {
-      return <SelectItem value="" disabled>No records found</SelectItem>;
+      return <SelectItem value="__no_records__" disabled>No records found</SelectItem>;
     }
 
     switch (recordType) {
@@ -321,7 +321,7 @@ export const EmailTestPanel = () => {
         ));
         
       default:
-        return <SelectItem value="" disabled>Select record type first</SelectItem>;
+        return <SelectItem value="__select_type__" disabled>Select record type first</SelectItem>;
     }
   };
 
