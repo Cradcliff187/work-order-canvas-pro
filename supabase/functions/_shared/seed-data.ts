@@ -837,13 +837,10 @@ export const trades: Omit<Trade, 'id' | 'created_at'>[] = [
 // ============================================================================
 
 /**
- * Email Templates (4 total)
+ * Email Templates (5 total)
  * 
- * Core email notification workflow templates for system communications.
+ * Complete email notification workflow templates for all system communications.
  * Each template supports variable substitution for personalized messages.
- * 
- * Note: The report_reviewed template is handled by dedicated migration file
- * 20250714170455-1a0875c6-8169-4b69-9200-316fa8008d68.sql
  */
 export const emailTemplates: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>[] = [
   {
@@ -957,6 +954,44 @@ export const emailTemplates: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_
       Invoice amount: ${{invoice_amount}}
       
       Please review the work report and approve or request changes.
+    `,
+    is_active: true
+  },
+  {
+    /**
+     * Report Reviewed Template
+     * 
+     * Purpose: Notify submitter when their report is reviewed
+     * Trigger: Admin approves or rejects work report
+     * Recipients: Report submitter
+     * Variables: {{work_order_number}}, {{status}}, {{review_notes}}
+     */
+    template_name: 'report_reviewed',
+    subject: 'Work Report {{status}} - {{work_order_number}}',
+    html_content: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #dc2626; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+          Work Report {{status}}
+        </h1>
+        <p style="font-size: 16px; line-height: 1.5;">
+          Your work report has been reviewed and {{status}}.
+        </p>
+        <div style="background-color: #fef2f2; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <strong>Work Order Number:</strong> {{work_order_number}}<br>
+          <strong>Status:</strong> {{status}}<br>
+          {{#if review_notes}}<strong>Review Notes:</strong> {{review_notes}}{{/if}}
+        </div>
+        <p>{{#if approved}}Thank you for completing this work order.{{else}}Please review the feedback and resubmit if necessary.{{/if}}</p>
+      </div>
+    `,
+    text_content: `
+      Work Report {{status}}
+      
+      Your work report has been {{status}} for: {{work_order_number}}
+      Status: {{status}}
+      {{#if review_notes}}Review notes: {{review_notes}}{{/if}}
+      
+      {{#if approved}}Thank you for completing this work order.{{else}}Please review the feedback and resubmit if necessary.{{/if}}
     `,
     is_active: true
   },

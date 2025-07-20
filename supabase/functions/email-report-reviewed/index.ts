@@ -1,7 +1,5 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.4';
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +56,14 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Report not found');
     }
 
+    // Get email template for report reviewed
+    const { data: template } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('template_name', 'report_reviewed')
+      .eq('is_active', true)
+      .single();
+
     const recipientEmail = reportData.profiles?.email;
     const recipientName = `${reportData.profiles?.first_name || ''} ${reportData.profiles?.last_name || ''}`.trim();
 
@@ -67,81 +73,38 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Prepare email content
-    const subject = `Work Order Report ${status.charAt(0).toUpperCase() + status.slice(1)} - ${reportData.work_orders?.work_order_number}`;
+    const subject = template?.subject || `Work Order Report ${status.charAt(0).toUpperCase() + status.slice(1)}`;
     
-    let emailContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Work Report ${status === 'approved' ? 'Approved' : 'Needs Revision'}</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: ${status === 'approved' ? '#059669' : '#dc2626'}; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
-          Work Report ${status === 'approved' ? 'Approved' : 'Needs Revision'}
-        </h2>
-        <p>Hello {{first_name}},</p>
-        <p>Your report for work order {{work_order_number}} has been ${status}.</p>
-        <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Work Order:</strong> {{work_order_number}}</p>
-          <p><strong>Organization:</strong> {{organization_name}}</p>
-          <p><strong>Status:</strong> <span style="color: ${status === 'approved' ? '#059669' : '#dc2626'}; font-weight: bold;">${status.toUpperCase()}</span></p>
-          ${reviewNotes ? `<p><strong>Review Notes:</strong> ${reviewNotes}</p>` : ''}
-        </div>
-        ${status === 'approved' ? 
-          '<p style="color: #059669;"><strong>Congratulations!</strong> Your work has been approved. You should expect payment processing to begin.</p>' :
-          '<p style="color: #dc2626;"><strong>Action Required:</strong> Please review the feedback and make necessary revisions to your report.</p>'
-        }
-        <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
-          This email was sent by WorkOrderPro - Work Order Management System
-        </p>
-      </body>
-      </html>
+    let emailContent = template?.html_content || `
+      <h2>Your work order report has been ${status}</h2>
+      <p>Hello {{first_name}},</p>
+      <p>Your report for work order {{work_order_number}} - {{work_order_title}} has been ${status}.</p>
+      {{#if review_notes}}<p><strong>Review Notes:</strong> {{review_notes}}</p>{{/if}}
+      <p>Best regards,<br/>WorkOrderPro Team</p>
     `;
 
-    // Replace template variables
+    // Simple template variable replacement
     emailContent = emailContent
       .replace(/{{first_name}}/g, reportData.profiles?.first_name || 'Contractor')
       .replace(/{{work_order_number}}/g, reportData.work_orders?.work_order_number || 'N/A')
+      .replace(/{{work_order_title}}/g, reportData.work_orders?.title || 'N/A')
+      .replace(/{{status}}/g, status)
       .replace(/{{organization_name}}/g, reportData.work_orders?.organizations?.name || 'Client');
 
-    // Create plain text version
-    const textContent = emailContent
-      .replace(/<[^>]*>/g, '') // Remove HTML tags
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
+    // Handle review notes conditionally
+    if (reviewNotes) {
+      emailContent = emailContent.replace(/{{#if review_notes}}.*?{{\/if}}/gs, `<p><strong>Review Notes:</strong> ${reviewNotes}</p>`);
+    } else {
+      emailContent = emailContent.replace(/{{#if review_notes}}.*?{{\/if}}/gs, '');
+    }
 
     try {
-      console.log(`Attempting to send email to ${recipientEmail}`);
-      
-      // Create SMTP client for email
-      const client = new SMTPClient({
-        connection: {
-          hostname: "smtp.ionos.com",
-          port: 587,
-          tls: true,
-          auth: {
-            username: Deno.env.get('IONOS_SMTP_USER') || '',
-            password: Deno.env.get('IONOS_SMTP_PASS') || '',
-          },
-        },
-      });
-
-      // Send email with fixed MIME headers
-      await client.send({
-        from: "WorkOrderPro <support@workorderportal.com>",
-        to: recipientEmail,
+      // Use Supabase Auth admin to send email
+      const { error: emailError } = await supabase.auth.admin.sendEmail({
+        email: recipientEmail,
         subject: subject,
-        content: textContent,
         html: emailContent,
-        headers: {
-          "MIME-Version": "1.0",
-        },
       });
-
-      // Close the client
-      await client.close();
 
       // Log email attempt
       const { error: logError } = await supabase
@@ -149,12 +112,28 @@ const handler = async (req: Request): Promise<Response> => {
         .insert({
           recipient_email: recipientEmail,
           template_used: 'report_reviewed',
-          status: 'sent',
+          status: emailError ? 'failed' : 'sent',
+          error_message: emailError?.message || null,
           sent_at: new Date().toISOString()
         });
 
       if (logError) {
         console.error('Failed to log email:', logError);
+      }
+
+      if (emailError) {
+        console.error('Failed to send email:', emailError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: emailError.message,
+            logged: !logError 
+          }),
+          {
+            status: 200, // Don't fail the main operation if email fails
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          }
+        );
       }
 
       console.log('Email sent successfully to:', recipientEmail);

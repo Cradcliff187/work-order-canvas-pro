@@ -1,120 +1,42 @@
-
 import {
-  LayoutDashboard,
+  BarChart3,
+  FileText,
   Users,
   Building2,
-  FileText,
-  BarChart3,
+  ClipboardList,
   Settings,
-  Mail,
-  Clock,
-  Receipt,
-  User,
   Wrench,
-  Heart,
+  Mail,
+  Activity,
+  Receipt,
+  Clock
 } from 'lucide-react';
 
-export const sidebarItems = [
-  {
-    title: 'Dashboard',
-    url: '/admin/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Work Orders',
-    url: '/admin/work-orders',
-    icon: FileText,
-  },
-  {
-    title: 'Users',
-    url: '/admin/users',
-    icon: Users,
-  },
-  {
-    title: 'Organizations',
-    url: '/admin/organizations',
-    icon: Building2,
-  },
-  {
-    title: 'Employees',
-    url: '/admin/employees',
-    icon: Users,
-  },
-  {
-    title: 'Invoices',
-    url: '/admin/invoices',
-    icon: FileText,
-  },
-  {
-    title: 'Reports',
-    url: '/admin/reports',
-    icon: BarChart3,
-  },
-  {
-    title: 'Analytics',
-    url: '/admin/analytics',
-    icon: BarChart3,
-  },
-  {
-    title: 'Time Reports',
-    url: '/admin/time-reports',
-    icon: Clock,
-  },
-  {
-    title: 'Receipts',
-    url: '/admin/receipts',
-    icon: Receipt,
-  },
-  {
-    title: 'Profile',
-    url: '/admin/profile',
-    icon: User,
-  },
-  {
-    title: 'System Health',
-    url: '/admin/system-health',
-    icon: Heart,
-  },
-  {
-    title: 'Dev Tools',
-    url: '/dev-tools',
-    icon: Wrench,
-  },
-  {
-    title: 'Email Templates',
-    url: '/admin/email-templates',
-    icon: Mail,
-  },
-  {
-    title: 'Email Testing',
-    url: '/admin/email-test',
-    icon: Mail,
-  },
-  {
-    title: 'System Settings',
-    url: '/admin/system-settings',
-    icon: Settings,
-  },
+export interface SidebarItem {
+  title: string;
+  url: string;
+  icon: typeof BarChart3;
+}
+
+export const sidebarItems: SidebarItem[] = [
+  { title: 'Admin Dashboard', url: '/admin/dashboard', icon: BarChart3 },
+  { title: 'Employee Dashboard', url: '/admin/employee-dashboard', icon: BarChart3 },
+  { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
+  { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
+  { title: 'Time Reports', url: '/admin/time-reports', icon: Clock },
+  { title: 'Receipts', url: '/admin/receipts', icon: Receipt },
+  { title: 'Invoices', url: '/admin/invoices', icon: Receipt },
+  { title: 'Users', url: '/admin/users', icon: Users },
+  { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
+  { title: 'Employees', url: '/admin/employees', icon: Users },
+  { title: 'Email Templates', url: '/admin/email-templates', icon: Mail },
+  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Settings', url: '/admin/settings', icon: Settings },
+  { title: 'System Health', url: '/admin/system-health', icon: Activity },
+  { title: 'Organization Diagnostics', url: '/admin/organization-diagnostics', icon: Activity },
+  { title: 'Email Testing', url: '/admin/test-email', icon: Mail },
+  { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
-export const adminOnlyItems = [
-  'Users',
-  'Organizations',
-  'System Settings',
-  'Email Templates',
-  'Email Testing',
-  'Employees',
-  'Invoices',
-  'System Health',
-  'Dev Tools',
-];
-
-export const employeeAccessItems = [
-  'Dashboard',
-  'Work Orders',
-  'Reports',
-  'Analytics',
-  'Time Reports',
-  'Receipts',
-  'Profile',
-];
+export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Organization Diagnostics', 'Email Testing', 'Dev Tools'];
+export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];

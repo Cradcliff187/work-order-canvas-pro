@@ -1,4 +1,3 @@
-
 # Documentation Index
 
 This documentation map helps developers quickly find the right documentation for their specific needs and workflow stage.
@@ -7,9 +6,9 @@ This documentation map helps developers quickly find the right documentation for
 
 | File | Description | When to Reference |
 |------|-------------|-------------------|
-| [README.md](../README.md) | Project overview, tech stack, and production URL | First time setup, project introduction, understanding live application |
-| [DEVELOPMENT.md](./DEVELOPMENT.md) | Lovable cloud development workflows and testing | Setting up development workflow, understanding cloud-first approach |
-| [EMAIL_CONFIGURATION.md](./EMAIL_CONFIGURATION.md) | Complete email system documentation | Setting up emails, troubleshooting delivery, template management |
+| [README.md](../README.md) | Project overview, tech stack, and quick start guide | First time setup, project introduction, getting the app running |
+| [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) | Development setup, testing, and workflow procedures | Setting up local environment, understanding dev workflows |
+| [TEST_SCENARIOS.md](./TEST_SCENARIOS.md) | Test data, login credentials, and testing procedures | Finding test user accounts, understanding test data structure |
 
 ## 🏗️ Architecture & Design
 
@@ -25,14 +24,14 @@ This documentation map helps developers quickly find the right documentation for
 |------|-------------|-------------------|
 | [DATABASE_FUNCTIONS.md](./DATABASE_FUNCTIONS.md) | Server-side database functions and stored procedures | Writing complex queries, implementing business logic in DB |
 | [RLS_POLICIES.md](./RLS_POLICIES.md) | Row Level Security policies and access control rules | Implementing security features, debugging permission issues |
-| [EDGE_FUNCTIONS.md](./EDGE_FUNCTIONS.md) | Supabase Edge Functions for email and external integrations | Creating new integrations, debugging serverless functions |
 | [OFFLINE_STORAGE_GUIDE.md](./OFFLINE_STORAGE_GUIDE.md) | PWA capabilities and offline data management | Adding offline features, troubleshooting sync issues |
+| [EDGE_FUNCTIONS.md](./EDGE_FUNCTIONS.md) | Supabase Edge Functions for external integrations | Creating new integrations, debugging serverless functions |
 
 ## ⚙️ Operations & Maintenance
 
 | File | Description | When to Reference |
 |------|-------------|-------------------|
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Production deployment procedures and IONOS configuration | Managing production environment, email setup, domain configuration |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) | Production deployment procedures and environment setup | Deploying to production, configuring environments |
 | [SEEDING.md](./SEEDING.md) | Database initialization and test data management | Setting up fresh databases, managing test environments |
 | [AUDIT_SYSTEM.md](./AUDIT_SYSTEM.md) | Change tracking, audit logs, and compliance features | Implementing audit requirements, tracking system changes |
 | [MIGRATION_HISTORY.md](./MIGRATION_HISTORY.md) | Database migration history and rollback procedures | Understanding schema evolution, troubleshooting migration issues |
@@ -41,59 +40,42 @@ This documentation map helps developers quickly find the right documentation for
 
 | File | Description | When to Reference |
 |------|-------------|-------------------|
-| [EMAIL_CONFIGURATION.md](./EMAIL_CONFIGURATION.md) | Email testing procedures and IONOS SMTP troubleshooting | Testing email functions, debugging delivery issues |
+| [EDGE_FUNCTIONS_TEST.md](./EDGE_FUNCTIONS_TEST.md) | Edge function testing procedures and debugging | Testing serverless functions, debugging integration issues |
+| [DEVELOPMENT.md](./DEVELOPMENT.md) | Legacy development notes and historical context | Understanding older implementation decisions, troubleshooting legacy code |
 
 ## 📱 Quick Navigation by Role
 
 ### **New Developer**
-Start with: README.md → DEVELOPMENT.md → EMAIL_CONFIGURATION.md → UI_DESIGN_SYSTEM.md
+Start with: README.md → DEVELOPMENT_GUIDE.md → TEST_SCENARIOS.md → UI_DESIGN_SYSTEM.md
 
 ### **Frontend Developer**
-Focus on: UI_DESIGN_SYSTEM.md → DATABASE_SCHEMA.md → DEVELOPMENT.md
+Focus on: UI_DESIGN_SYSTEM.md → DATABASE_SCHEMA.md → OFFLINE_STORAGE_GUIDE.md
 
 ### **Backend Developer**
 Focus on: DATABASE_SCHEMA.md → DATABASE_FUNCTIONS.md → RLS_POLICIES.md → EDGE_FUNCTIONS.md
 
 ### **DevOps/Admin**
-Focus on: DEPLOYMENT.md → EMAIL_CONFIGURATION.md → SEEDING.md → MIGRATION_HISTORY.md
+Focus on: DEPLOYMENT.md → SEEDING.md → MIGRATION_HISTORY.md → AUDIT_SYSTEM.md
 
 ### **QA/Testing**
-Focus on: DEVELOPMENT.md → EMAIL_CONFIGURATION.md → SEEDING.md
-
-## 🌐 Production Quick Links
-
-### **Live Application**
-- **Production URL**: https://workorderportal.com
-- **Admin Panel**: https://workorderportal.com/admin
-- **Email Test Panel**: https://workorderportal.com/admin/email-test
-- **Dev Tools**: https://workorderportal.com/dev-tools
-
-### **Development Environment**
-- **Lovable Project**: https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12
-- **Supabase Dashboard**: https://supabase.com/dashboard/project/inudoymofztrvxhrlrek
-
-### **Email System**
-- **IONOS Email**: support@workorderportal.com
-- **SMTP Configuration**: Via Supabase Dashboard → Auth → SMTP
-- **Email Logs**: Application → `/admin/email-logs`
+Focus on: TEST_SCENARIOS.md → EDGE_FUNCTIONS_TEST.md → SEEDING.md
 
 ## 🔄 Maintenance Notes
 
 - **Update Frequency**: Review and update this index when adding new documentation files
 - **Broken Links**: Check all links quarterly to ensure documentation structure remains intact  
 - **Content Owners**: Each documentation file should have a clear owner responsible for updates
-- **Version Sync**: Ensure all linked documentation reflects the current workorderportal.com production environment
+- **Version Sync**: Ensure all linked documentation reflects the current system architecture
 
 ## 📞 Getting Help
 
 If you can't find what you're looking for in this documentation:
 
 1. **Search the codebase**: Many implementation details are documented in code comments
-2. **Check Lovable project**: Use AI assistant for specific questions
-3. **Email system issues**: Check EMAIL_CONFIGURATION.md first
-4. **Production issues**: Start with DEPLOYMENT.md
-5. **Update this index**: If you create new documentation, add it here
+2. **Check Git history**: For context on specific changes or decisions
+3. **Team communication**: Reach out to the development team for clarification
+4. **Update this index**: If you create new documentation, add it here
 
 ---
 
-*Last Updated: Production documentation for workorderportal.com with IONOS SMTP integration*
+*Last Updated: Project documentation as of system current state*

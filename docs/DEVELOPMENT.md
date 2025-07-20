@@ -1,197 +1,212 @@
-
 # WorkOrderPro Development Guide
 
 ## Overview
 
-This guide covers development workflows for WorkOrderPro using Lovable's cloud-based development platform. All development happens in the cloud with automatic deployment to the live workorderportal.com application.
+This guide covers local development setup, testing procedures, and common development workflows for WorkOrderPro. The application uses database function-based seeding for secure, server-side data initialization.
 
-## Cloud-First Development Setup
+## Local Development Setup
 
 ### Prerequisites
 
-- **Lovable Account**: Access to the WorkOrderPro project in Lovable
-- **Web Browser**: Modern browser for Lovable platform access
-- **Internet Connection**: Required for cloud development
+- **Node.js 18+** with npm
+- **Supabase CLI** for Edge Function development
+- **Git** for version control
 
-### Development Environment
+### Environment Configuration
 
-**No Local Setup Required:**
-- All development happens in Lovable's cloud platform
-- Environment variables automatically managed
-- Database connections handled automatically
-- No Docker, Node.js, or local tools needed
-
-### Access the Development Environment
-
-1. **Navigate to Lovable Project**
-   ```
-   https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12
+1. **Clone the Repository**
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd workorderpro
+   npm install
    ```
 
-2. **Start Developing**
-   - Use AI assistant for code changes
-   - Edit code directly in browser
-   - Changes auto-deploy to production
-
-3. **Live Application**
-   ```
-   https://workorderportal.com
+2. **Environment Variables**
+   ```bash
+   # No .env file needed - project uses direct Supabase references
+   # All configuration is handled through supabase/config.toml
    ```
 
-## Development Workflow
+3. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
-### Making Changes
+### Supabase Configuration
 
-#### Using AI Assistant (Recommended)
-1. Describe desired changes in natural language
-2. AI assistant implements changes
-3. Review changes in real-time preview
-4. Changes automatically deploy to production
+The project connects to a live Supabase instance with these settings:
+- **Project ID**: `inudoymofztrvxhrlrek`
+- **URL**: `https://inudoymofztrvxhrlrek.supabase.co`
+- **Configuration**: Managed in `supabase/config.toml`
 
-#### Direct Code Editing
-1. Enable code editing in account settings
-2. Edit files directly in Lovable editor
-3. Save changes for automatic deployment
-4. Test on live application
+## Database Function Development
 
-### Database Development
+### Database Seeding Workflow
 
-#### Database Management
-- **Schema Changes**: Handled through Lovable migrations
-- **Test Data**: Use `/dev-tools` seeding functions
-- **Production Data**: Managed through live Supabase instance
+#### Using Dev Tools Panel (Recommended)
 
-#### Seeding Workflow
-
-**Using Dev Tools Panel (Recommended):**
-1. Navigate to `/dev-tools` on workorderportal.com
-2. Use **Database Seeding** section:
+1. Navigate to `/dev-tools` in your browser
+2. Use the **Database Seeding** section:
    - **Seed Database**: Populate with test data using `seed_test_data()` function
    - **Clear Test Data**: Remove all test data using `clear_test_data()` function
 
-**Test Data Patterns:**
-- **Organizations**: 8 total (1 internal, 3 partners, 4 subcontractors)
-- **Work Orders**: Sample orders across different statuses
-- **Users**: Test users for each role type
-- **Assignments**: Work order assignments to test users
+#### Programmatic Seeding
 
-### Email System Development
+```typescript
+// Seed database with test data
+const { data, error } = await supabase.rpc('seed_test_data');
 
-#### Email Testing
-1. **Navigate to Email Test Panel**: `/admin/email-test`
-2. **Select Email Type**: Choose from 6 available email functions
-3. **Provide Test Data**: Fill required fields for email template
-4. **Send Test Email**: Verify delivery and formatting
-5. **Monitor Results**: Check email logs and delivery status
+if (error) {
+  console.error('Seeding failed:', error);
+} else {
+  console.log('Seeding successful:', data.details);
+}
 
-#### Email Template Development
-- **Auth Templates**: Edit in Supabase Dashboard → Authentication → Email Templates
-- **App Templates**: Stored in `email_templates` database table
-- **Template Variables**: Use handlebars syntax `{{variable_name}}`
+// Clear test data
+const { data, error } = await supabase.rpc('clear_test_data');
 
-### Testing Guide
+if (error) {
+  console.error('Clear failed:', error);
+} else {
+  console.log('Clear successful:', data.deleted_counts);
+}
+```
 
-#### User Roles and Access
+## Development Tools
 
-**Test User Credentials:**
-- **Admin**: Use your existing admin account
-- **Partner**: partner1@abc.com, partner2@xyz.com (password: Test123!)
-- **Subcontractor**: sub1@pipes.com, sub2@sparks.com (password: Test123!)
-- **Employee**: employee1@workorderpro.com (password: Test123!)
+### Dev Tools Panel Features
 
-#### Testing Workflows
+Access at `/dev-tools` for comprehensive development utilities:
 
-**Complete Work Order Lifecycle:**
-1. Login as partner user
-2. Create new work order
-3. Login as admin
-4. Assign work order to subcontractor
-5. Login as subcontractor
-6. Submit work report
-7. Login as admin
-8. Review and approve report
-9. Verify email notifications at each step
+**Database Operations:**
+- **Database Seeding**: Comprehensive test data creation with constraint compliance
+- **Test Data Cleanup**: Foreign key safe cleanup with admin protection
+- **Real-time Results**: Detailed success/failure reporting with count summaries
 
-#### Email Testing Workflow
-1. **Setup Test Data**: Use dev tools to seed database
-2. **Create Test Users**: Use existing test credentials
-3. **Test Email Functions**: Use `/admin/email-test` panel
-4. **Verify Delivery**: Check email logs and actual delivery
-5. **Test Templates**: Verify all template variables render correctly
+**User Management:**
+- **Create Test Users**: Real authenticated users via edge function (5 users across all roles)
+- **User Credentials Display**: Login information for testing different perspectives  
+- **Organization Integration**: Automatic user-organization relationship creation
+- **Role-Based Testing**: Admin, partner, subcontractor, and employee user types
+
+**System Diagnostics:**
+- **Authentication Status**: Current user type and permission verification
+- **Database Connection**: Live connection and function health monitoring
+- **Constraint Validation**: Real-time constraint compliance checking
+- **Performance Metrics**: Operation timing and success rate tracking
+
+### Complete Testing Workflow
+
+**Step 1: Database Seeding**
+```typescript
+// Creates comprehensive business data with proper constraints
+const { data } = await supabase.rpc('seed_test_data');
+console.log('Created:', data.details.organizations_created, 'organizations');
+```
+
+**Step 2: User Creation**  
+```typescript
+// Creates 5 real authenticated users across all roles
+const response = await fetch('/api/create-test-users', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ admin_key: 'your-admin-key' })
+});
+```
+
+**Step 3: Role-Based Testing**
+- Login with different user credentials
+- Test organization-level access control
+- Verify role-specific permissions and UI
+- Test team collaboration workflows
 
 ### Hot Reloading and Debugging
 
-**Real-Time Development:**
-- Lovable provides instant preview updates
-- Changes reflect immediately in browser
-- No build or restart processes needed
+**React Development:**
+- Vite provides instant hot reloading
+- TypeScript errors display in browser console
+- React Developer Tools recommended
 
-**Debugging Tools:**
-- **Browser DevTools**: Standard debugging capabilities
-- **Supabase Dashboard**: Database and function monitoring
-- **Email Logs**: Application-level email tracking at `/admin/email-logs`
-- **Function Logs**: Supabase Dashboard → Functions → Logs
+**Database Debugging:**
+- Use Supabase Dashboard SQL Editor
+- Monitor database function logs in audit_logs table
+- Check function execution with: `SELECT * FROM audit_logs WHERE action = 'STATUS_CHANGE' ORDER BY created_at DESC;`
 
-### Production Considerations
+## Testing Guide
 
-#### Direct Production Development
-- **Live Environment**: All changes deploy directly to workorderportal.com
-- **User Impact**: Consider user activity when making changes
-- **Testing**: Always test in development areas (`/dev-tools`, `/admin/email-test`)
+### Test Data Patterns
 
-#### Safety Practices
-- **Database Seeding**: Use test data functions to avoid polluting production
-- **Email Testing**: Use test panel to avoid sending emails to real users
-- **User Management**: Use test user accounts for development testing
+**Test Organizations (8 total from seeding):**
+- 1 Internal organization (WorkOrderPro Internal)
+- 3 Partner organizations (ABC, XYZ, Premium)  
+- 4 Subcontractor organizations (Pipes & More, Sparks Electric, etc.)
 
-### Common Development Tasks
+**Test Users (5 total from edge function):**
+- **partner1@abc.com** - ABC Property Management partner user
+- **partner2@xyz.com** - XYZ Commercial Properties partner user  
+- **sub1@pipes.com** - Pipes & More Plumbing subcontractor
+- **sub2@sparks.com** - Sparks Electric subcontractor
+- **employee1@workorderpro.com** - Internal employee with rates
 
-#### Adding New Features
+**Default Test Password:** `Test123!` (for all created users)
+
+**Note**: Admin users are not created by the edge function. Use your existing admin account for administrative testing.
+
+### User Credential Management
+
 ```typescript
-// 1. Describe feature to AI assistant
-"Add a new report type for maintenance schedules"
+// Test user login credentials (created by create-test-users edge function)
+const testCredentials = {
+  // Use your existing admin account - edge function doesn't create admin users
+  admin: { email: 'your-admin@email.com', password: 'your-password' },
+  
+  // Created by edge function:
+  partner1: { email: 'partner1@abc.com', password: 'Test123!' },
+  partner2: { email: 'partner2@xyz.com', password: 'Test123!' },
+  subcontractor1: { email: 'sub1@pipes.com', password: 'Test123!' },
+  subcontractor2: { email: 'sub2@sparks.com', password: 'Test123!' },
+  employee: { email: 'employee1@workorderpro.com', password: 'Test123!' }
+};
 
-// 2. AI implements:
-// - Database schema changes
-// - Frontend components
-// - Backend logic
-// - Email notifications
-
-// 3. Test using dev tools and test panel
+// Access via DevTools after user creation
+console.log('Test users created:', response.users);
 ```
 
-#### Database Changes
-- **Schema Updates**: Handled automatically through Lovable
-- **Data Migration**: Test with seeding functions first
-- **Index Creation**: Monitor performance via Supabase Dashboard
+### Organization Setup Testing
 
-#### Email System Changes
-- **New Email Types**: Add to Edge Functions and templates
-- **Template Updates**: Edit templates in database or Supabase Dashboard
-- **Trigger Changes**: Update database triggers for new workflows
+**Test Organization Access:**
+1. **ABC Property Management**: 4 locations with structured numbering
+2. **XYZ Commercial Properties**: 3 tech-focused locations
+3. **Premium Facilities Group**: 3 luxury properties
+4. **Pipes & More Plumbing**: 2-person plumbing team
+5. **Sparks Electric**: Single electrician contractor
 
-### Performance Monitoring
+## Additional Resources
 
-#### Application Performance
-- **Supabase Dashboard**: Monitor database performance
-- **Function Logs**: Track Edge Function execution times
-- **Email Delivery**: Monitor via `/admin/email-logs`
+### Common Commands
 
-#### User Experience
-- **Live Site Monitoring**: Check workorderportal.com regularly
-- **Error Tracking**: Monitor browser console for client errors
-- **Email Delivery**: Verify templates render correctly across email clients
+```bash
+# Development
+npm run dev                          # Start development server
+npm run build                        # Build for production
+npm run type-check                   # TypeScript checking
 
-### Additional Resources
+# Supabase
+supabase start                       # Start local Supabase
+supabase db reset                    # Reset local database
+supabase secrets list               # List configured secrets
 
-#### Documentation
-- **Email Configuration**: See `EMAIL_CONFIGURATION.md`
-- **Database Schema**: See `DATABASE_SCHEMA.md`
-- **Deployment Guide**: See `DEPLOYMENT.md`
+# Database
+supabase db dump --data-only        # Export data
+supabase db push                     # Push schema changes
+supabase gen types typescript       # Generate TypeScript types
+```
 
-#### External Resources
-- **Lovable Documentation**: https://docs.lovable.dev
-- **Supabase Dashboard**: Project management and monitoring
-- **IONOS Email**: Email account management
+### Further Reading
 
-This development guide provides all essential information for productive cloud-based development using Lovable's platform, with emphasis on the live workorderportal.com environment and professional email system integration.
+For comprehensive development workflows, testing strategies, and troubleshooting guides, see:
+- **[Development Guide](./DEVELOPMENT_GUIDE.md)** - Complete development workflow and best practices
+- **[Database Functions](./DATABASE_FUNCTIONS.md)** - Database function reference
+- **[RLS Policies](./RLS_POLICIES.md)** - Row Level Security documentation
+
+This development guide provides all the essential information for productive local development using database functions for secure, reliable data management.
