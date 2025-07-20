@@ -5,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { HardHat, AlertCircle, CheckCircle, Eye, EyeOff, Check, X, Clock, Link2, RefreshCw } from 'lucide-react';
+import { HardHat, AlertCircle, CheckCircle, Eye, EyeOff, Check, X, Clock, Link2, RefreshCw, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 // Error types for better categorization
-type ResetErrorType = 'EXPIRED_LINK' | 'INVALID_TOKEN' | 'ALREADY_USED' | 'MISSING_PARAMS' | 'SESSION_ERROR' | 'NETWORK_ERROR' | 'UNKNOWN';
+type ResetErrorType = 'EXPIRED_LINK' | 'INVALID_TOKEN' | 'ALREADY_USED' | 'MISSING_PARAMS' | 'SESSION_ERROR' | 'NETWORK_ERROR' | 'URL_CONFIG' | 'UNKNOWN';
 
 interface ResetError {
   type: ResetErrorType;
@@ -19,6 +19,7 @@ interface ResetError {
   message: string;
   canRetry: boolean;
   showRequestNewLink: boolean;
+  showConfigHelp?: boolean;
 }
 
 const ResetPassword = () => {
@@ -40,6 +41,28 @@ const ResetPassword = () => {
   const categorizeError = (error: any, context: string): ResetError => {
     const errorMessage = error?.message || error || '';
     
+    console.log('Reset Password Error Details:', {
+      error: errorMessage,
+      context,
+      currentURL: window.location.href,
+      hasSearchParams: window.location.search.length > 0,
+      hasHashParams: window.location.hash.length > 0
+    });
+    
+    // Check for URL configuration issues first
+    if (errorMessage.includes('One-time token not found') || 
+        errorMessage.includes('Email link is invalid') ||
+        context === 'missing_params' && !window.location.search && !window.location.hash) {
+      return {
+        type: 'URL_CONFIG',
+        title: 'URL Configuration Issue',
+        message: 'The password reset link appears to be missing authentication parameters. This usually indicates that the Supabase URL configuration needs to be updated.',
+        canRetry: false,
+        showRequestNewLink: true,
+        showConfigHelp: true
+      };
+    }
+    
     // Check for specific error patterns
     if (errorMessage.includes('expired') || errorMessage.includes('Token has expired')) {
       return {
@@ -51,7 +74,7 @@ const ResetPassword = () => {
       };
     }
     
-    if (errorMessage.includes('invalid') || errorMessage.includes('Invalid token') || context === 'missing_params') {
+    if (errorMessage.includes('invalid') || errorMessage.includes('Invalid token')) {
       return {
         type: 'INVALID_TOKEN',
         title: 'Invalid Reset Link',
@@ -131,6 +154,8 @@ const ResetPassword = () => {
         return <Link2 className="h-5 w-5" />;
       case 'NETWORK_ERROR':
         return <RefreshCw className="h-5 w-5" />;
+      case 'URL_CONFIG':
+        return <Settings className="h-5 w-5" />;
       default:
         return <AlertCircle className="h-5 w-5" />;
     }
@@ -153,11 +178,15 @@ const ResetPassword = () => {
 
   useEffect(() => {
     const extractTokensFromUrl = () => {
+      console.log('Extracting tokens from URL:', window.location.href);
+      
       // Check search parameters first
       const searchParams = new URLSearchParams(window.location.search);
       let accessToken = searchParams.get('access_token');
       let refreshToken = searchParams.get('refresh_token');
       let type = searchParams.get('type');
+      
+      console.log('Search params found:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
       
       // If not found in search params, check hash fragments
       if (!accessToken && window.location.hash) {
@@ -165,14 +194,26 @@ const ResetPassword = () => {
         accessToken = hashParams.get('access_token');
         refreshToken = hashParams.get('refresh_token');
         type = hashParams.get('type');
+        
+        console.log('Hash params found:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
       }
       
       return { accessToken, refreshToken, type };
     };
 
     const validateRecoverySession = (session: any) => {
+      console.log('Validating recovery session:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        hasAccessToken: !!session?.access_token,
+        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000) : null,
+        userAud: session?.user?.aud,
+        provider: session?.user?.app_metadata?.provider
+      });
+      
       // Check 1: Basic session validity
       if (!session?.user || !session?.access_token) {
+        console.log('Session validation failed: Missing user or access token');
         return false;
       }
       
@@ -180,64 +221,38 @@ const ResetPassword = () => {
       const isRecentSession = session.expires_at && 
         new Date(session.expires_at * 1000) > new Date();
       if (!isRecentSession) {
-        console.log('Session expired');
+        console.log('Session validation failed: Session expired');
         return false;
       }
       
       // Check 3: Recovery session indicators
-      const isRecoverySession = session.user.aud === 'authenticated' && 
-                               session.user.user_metadata?.iss === 'supabase';
-      
-      // Check 4: Email provider (additional validation)
+      const isRecoverySession = session.user.aud === 'authenticated';
       const hasRecoveryContext = session.user.app_metadata?.provider === 'email';
-      
-      // Check 5: User confirmation status for password reset
       const isConfirmedUser = session.user.email_confirmed_at !== null;
       
       console.log('Recovery session validation:', {
         isRecoverySession,
         hasRecoveryContext,
-        isConfirmedUser,
-        expiresAt: new Date(session.expires_at * 1000),
-        userAud: session.user.aud,
-        provider: session.user.app_metadata?.provider
+        isConfirmedUser
       });
       
       return isRecoverySession && hasRecoveryContext && isConfirmedUser;
     };
 
-    const categorizeSessionError = (session: any, context: string) => {
-      if (!session) {
-        return categorizeError('No session found', 'missing_params');
-      }
-      
-      if (session.expires_at && new Date(session.expires_at * 1000) <= new Date()) {
-        return categorizeError('Recovery session expired', 'expired_link');
-      }
-      
-      if (session.user?.aud !== 'authenticated') {
-        return categorizeError('Invalid session type', 'invalid_token');
-      }
-      
-      if (session.user?.app_metadata?.provider !== 'email') {
-        return categorizeError('Invalid authentication provider', 'invalid_token');
-      }
-      
-      return categorizeError(`Session validation failed: ${context}`, 'session_error');
-    };
-
     const processUrlParameters = async () => {
       const { accessToken, refreshToken, type } = extractTokensFromUrl();
       
-      // Only show "missing parameters" error if we also don't have a valid session
+      // Check if we have the required parameters
       if (!accessToken || !refreshToken || type !== 'recovery') {
-        console.log('No URL parameters found and no existing session');
+        console.log('Missing URL parameters for password reset');
         const errorContext = !accessToken ? 'missing_access_token' :
                              !refreshToken ? 'missing_refresh_token' :
                              type !== 'recovery' ? 'invalid_type' : 'missing_params';
         setResetError(categorizeError(`Missing parameters: ${errorContext}`, 'missing_params'));
         return;
       }
+      
+      console.log('Valid URL parameters found, setting session...');
       
       // Clean up URL for security
       const cleanUrl = window.location.origin + window.location.pathname;
@@ -271,6 +286,8 @@ const ResetPassword = () => {
     };
 
     const handleRecoverySession = async () => {
+      console.log('Handling recovery session...');
+      
       // Step 1: Check for existing session first
       const { data: { session }, error: getSessionError } = await supabase.auth.getSession();
       
@@ -289,18 +306,16 @@ const ResetPassword = () => {
           return; // Success - no need to process URL parameters
         } else {
           console.log('Existing session is not a valid recovery session');
-          setResetError(categorizeSessionError(session, 'invalid_recovery_session'));
-          return;
         }
       }
       
-      // Step 3: Fallback to URL parameter processing only if no valid session exists
+      // Step 3: Fallback to URL parameter processing
       console.log('No existing recovery session found, checking URL parameters');
       await processUrlParameters();
     };
 
     handleRecoverySession();
-  }, []); // Remove searchParams dependency since we're reading directly from window.location
+  }, []);
 
   // Countdown timer effect
   useEffect(() => {
@@ -555,6 +570,23 @@ const ResetPassword = () => {
                   <AlertTitle>{resetError.title}</AlertTitle>
                   <AlertDescription>{resetError.message}</AlertDescription>
                 </Alert>
+                
+                {resetError.showConfigHelp && (
+                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                    <Settings className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800 dark:text-amber-400">URL Configuration Required</AlertTitle>
+                    <AlertDescription className="text-amber-700 dark:text-amber-300">
+                      <div className="space-y-2">
+                        <p>To fix this issue, configure these URLs in your Supabase Dashboard:</p>
+                        <div className="text-xs font-mono bg-amber-100 dark:bg-amber-900/30 p-2 rounded border">
+                          <div><strong>Site URL:</strong> {window.location.origin}</div>
+                          <div><strong>Redirect URLs:</strong> {window.location.origin}/reset-password</div>
+                        </div>
+                        <p className="text-xs">Go to: Authentication → URL Configuration in your Supabase Dashboard</p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
                 
                 <div className="flex flex-col gap-2">
                   {resetError.showRequestNewLink && (
