@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/AdminLayout';
 import { EmailTestingPanel } from '@/components/admin/EmailTestingPanel';
 
 export function TestEmailPage() {

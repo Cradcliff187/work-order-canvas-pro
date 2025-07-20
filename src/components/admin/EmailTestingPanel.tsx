@@ -81,10 +81,10 @@ export function EmailTestingPanel() {
     
     try {
       // Call the send-email edge function directly for testing
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/send-email`, {
+      const response = await fetch(`https://inudoymofztrvxhrlrek.supabase.co/functions/v1/send-email`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImludWRveW1vZnp0cnZ4aHJscmVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxNjI2NTksImV4cCI6MjA2NzczODY1OX0.Qm8B5GLXnXcZrz_3idT9UCUYxF_cPi1gtr5F3eMeNI4`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
