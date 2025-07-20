@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Copy, Eye, EyeOff, Mail, User, Phone, Building2, Plus, AlertCircle } from 'lucide-react';
+import { Copy, Eye, EyeOff, Mail, User, Phone, Building2, Plus, AlertCircle, CheckCircle, Key } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserMutations, CreateUserData, useAutoAssignmentPreview } from '@/hooks/useUsers';
 import { useOrganizations } from '@/hooks/useOrganizations';
@@ -136,8 +137,8 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
           <div className="space-y-4">
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-medium mb-2 flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Account Setup
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                Account Created Successfully
               </h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -146,18 +147,31 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                     {createdUserEmail}
                   </code>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  <p>✅ Confirmation email will be sent by Supabase</p>
-                  <p>✅ Password reset link generated</p>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                    Welcome email sent via WorkOrderPro system
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                    User account registered in database
+                  </p>
                 </div>
               </div>
             </div>
             
             <Alert>
-              <Mail className="h-4 w-4" />
+              <Key className="h-4 w-4" />
               <AlertDescription>
-                The user will receive a confirmation email from Supabase to verify their account and set up their password. 
-                Check spam folder for noreply@mail.app.supabase.io. No temporary credentials are needed.
+                <div className="space-y-2">
+                  <p className="font-medium">Next Steps for the New User:</p>
+                  <div className="text-sm space-y-1">
+                    <p>1. Check email for welcome message from WorkOrderPro</p>
+                    <p>2. Visit the login page and click "Forgot Password"</p>
+                    <p>3. Enter their email to receive a password reset link</p>
+                    <p>4. Set up their password and log in</p>
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
             
@@ -364,7 +378,14 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
               <Alert>
                 <Mail className="h-4 w-4" />
                 <AlertDescription>
-                  Users will automatically receive a confirmation email from Supabase to verify their account and set up their password.
+                  <div className="space-y-2">
+                    <p className="font-medium">Email Setup Process:</p>
+                    <div className="text-sm space-y-1">
+                      <p>• A branded welcome email will be sent immediately</p>
+                      <p>• User must use "Forgot Password" to set their password</p>
+                      <p>• No temporary credentials are provided</p>
+                    </div>
+                  </div>
                 </AlertDescription>
               </Alert>
 
