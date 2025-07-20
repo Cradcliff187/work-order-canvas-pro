@@ -112,8 +112,7 @@ export function EmailTestingPanel() {
         email: testEmail,
         first_name: 'Test',
         last_name: 'User',
-        user_type: 'employee',
-        sendWelcomeEmail: true
+        user_type: 'employee'
       });
 
       // Wait a moment for the email to be processed
