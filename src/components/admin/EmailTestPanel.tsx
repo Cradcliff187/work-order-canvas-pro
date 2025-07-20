@@ -124,30 +124,6 @@ export const EmailTestPanel = () => {
     }
   }, [recordType, useManualEntry, toast]);
 
-  const getRecordLabel = (record: any, type: string): string => {
-    switch (type) {
-      case 'work_order':
-        const address = record.street_address || record.location_address || record.location_street_address || 'No address';
-        return `${record.work_order_number || 'No Number'} - ${address}`;
-      
-      case 'work_order_assignment':
-        const workOrder = record.work_orders;
-        const assignee = record.profiles;
-        return `${workOrder?.work_order_number || 'Unknown'} - ${assignee?.first_name} ${assignee?.last_name}`;
-      
-      case 'work_order_report':
-        const reportWorkOrder = record.work_orders;
-        const subcontractor = record.profiles;
-        return `${reportWorkOrder?.work_order_number || 'Unknown'} - Report by ${subcontractor?.first_name}`;
-      
-      case 'user':
-        return `${record.first_name} ${record.last_name} (${record.email})`;
-      
-      default:
-        return record.id;
-    }
-  };
-
   // Handle manual entry toggle
   const handleManualEntryToggle = (checked: boolean) => {
     setUseManualEntry(checked);
@@ -355,11 +331,28 @@ export const EmailTestPanel = () => {
                     ) : records.length === 0 ? (
                       <SelectItem value="" disabled>No records found</SelectItem>
                     ) : (
-                      records.map((record: any) => (
-                        <SelectItem key={record.id} value={record.id}>
-                          {getRecordLabel(record, recordType)}
-                        </SelectItem>
-                      ))
+                      <>
+                        {recordType === 'work_order' && records.map((record: any) => (
+                          <SelectItem key={record.id} value={record.id}>
+                            {record.work_order_number} - {record.organizations?.address || 'No address'}
+                          </SelectItem>
+                        ))}
+                        {recordType === 'work_order_assignment' && records.map((record: any) => (
+                          <SelectItem key={record.id} value={record.id}>
+                            {record.work_orders?.work_order_number} - {record.profiles?.first_name} {record.profiles?.last_name}
+                          </SelectItem>
+                        ))}
+                        {recordType === 'work_order_report' && records.map((record: any) => (
+                          <SelectItem key={record.id} value={record.id}>
+                            {record.work_orders?.work_order_number} - Report by {record.profiles?.first_name} {record.profiles?.last_name}
+                          </SelectItem>
+                        ))}
+                        {recordType === 'user' && records.map((record: any) => (
+                          <SelectItem key={record.id} value={record.id}>
+                            {record.first_name} {record.last_name} ({record.email})
+                          </SelectItem>
+                        ))}
+                      </>
                     )}
                   </SelectContent>
                 </Select>
