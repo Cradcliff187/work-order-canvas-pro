@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,6 +6,7 @@ import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SingleOrganizationGuard } from '@/components/SingleOrganizationGuard';
+import { StandardHeader } from '@/components/layout/StandardHeader';
 import {
   Sidebar,
   SidebarContent,
@@ -15,7 +17,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
   SidebarHeader,
   SidebarFooter,
   useSidebar,
@@ -35,10 +36,8 @@ import {
   Plus,
   Settings,
   LogOut,
-  Menu,
   ClipboardList,
   MapPin,
-  Building2,
 } from 'lucide-react';
 
 const sidebarItems = [
@@ -167,8 +166,6 @@ interface PartnerLayoutProps {
 
 const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
   const { user } = useAuth();
-  const { data: userOrganizations } = useUserOrganizations();
-  const primaryOrg = userOrganizations?.[0];
   const isMobile = useIsMobile();
 
   // Convert sidebar items to mobile navigation format
@@ -211,24 +208,11 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
         <PartnerSidebar />
         
         <div className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center justify-between border-b border-border bg-background px-4">
-            <SidebarTrigger className="lg:hidden">
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
-            <div className="flex items-center gap-2 flex-1">
-              {primaryOrg && (
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
-                    <Building2 className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{primaryOrg.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{primaryOrg.organization_type}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </header>
+          <StandardHeader 
+            variant="partner"
+            showUserInfo={false}
+            showSignOut={false}
+          />
 
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
             <SingleOrganizationGuard userType="partner">
