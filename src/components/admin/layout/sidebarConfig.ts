@@ -12,7 +12,6 @@ import {
   User,
   Wrench,
   Heart,
-  TestTube,
 } from 'lucide-react';
 
 export const sidebarItems = [
@@ -77,11 +76,6 @@ export const sidebarItems = [
     icon: Heart,
   },
   {
-    title: 'Test Email',
-    url: '/admin/test-email',
-    icon: TestTube,
-  },
-  {
     title: 'Dev Tools',
     url: '/dev-tools',
     icon: Wrench,
@@ -112,7 +106,6 @@ export const adminOnlyItems = [
   'Employees',
   'Invoices',
   'System Health',
-  'Test Email',
   'Dev Tools',
 ];
 
