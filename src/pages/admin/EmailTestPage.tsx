@@ -11,9 +11,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUserMutations } from '@/hooks/useUsers';
 import { useEmailHealth } from '@/hooks/useEmailHealth';
 import { useEmailSystemTest } from '@/hooks/useEmailSystemTest';
+import { useEmailStatistics } from '@/hooks/useEmailStatistics';
 import { EmailTestPanel } from '@/components/admin/EmailTestPanel';
 import { EmailHealthScore } from '@/components/admin/EmailHealthScore';
 import { EmailSystemActions } from '@/components/admin/EmailSystemActions';
+import { AlertBanner } from '@/components/admin/AlertBanner';
+import { EmailStatsCard } from '@/components/admin/EmailStatsCard';
 import { 
   Mail, 
   CheckCircle, 
@@ -71,10 +74,12 @@ const EmailTestPage = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
+  const [lastRefresh, setLastRefresh] = useState<Date>();
   
-  // Use new hooks
+  // Use enhanced hooks
   const { emailMetrics, triggerMetrics, isLoading: healthLoading, refreshHealth } = useEmailHealth();
   const { testEmailSystem, createTestWorkOrder, isTestRunning, lastTestResult } = useEmailSystemTest();
+  const { statistics, alerts, isLoading: statsLoading, refreshData } = useEmailStatistics();
   
   const [edgeFunctions, setEdgeFunctions] = useState<EdgeFunctionStatus[]>([
     {
@@ -329,6 +334,12 @@ const EmailTestPage = () => {
     }
   };
 
+  const handleRefreshData = () => {
+    refreshData();
+    setLastRefresh(new Date());
+    fetchEmailLogs();
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case 'sent':
@@ -421,6 +432,9 @@ const EmailTestPage = () => {
         </p>
       </div>
 
+      {/* Critical Configuration Alerts */}
+      <AlertBanner alerts={alerts} />
+
       {/* Enhanced System Health Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <EmailHealthScore
@@ -435,11 +449,21 @@ const EmailTestPage = () => {
         />
 
         <EmailSystemActions
-          onTestEmailSystem={handleTestEmailSystem}
-          onCreateTestWorkOrder={handleCreateTestWorkOrder}
-          onRefreshHealth={handleRefreshHealth}
+          onTestEmailSystem={testEmailSystem}
+          onCreateTestWorkOrder={createTestWorkOrder}
+          onRefreshHealth={handleRefreshData}
           isTestRunning={isTestRunning}
           lastTestResult={lastTestResult}
+        />
+      </div>
+
+      {/* Enhanced Email Statistics Card */}
+      <div className="mb-6">
+        <EmailStatsCard
+          statistics={statistics}
+          isLoading={statsLoading}
+          onRefresh={handleRefreshData}
+          lastRefresh={lastRefresh}
         />
       </div>
 
