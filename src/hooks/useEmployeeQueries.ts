@@ -9,7 +9,7 @@ export function useEmployees() {
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('is_employee', true)
+        .eq('user_type', 'employee')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -28,7 +28,7 @@ export function useEmployees() {
         company_name: profile.company_name, // Now directly from profiles table
         created_at: profile.created_at,
         updated_at: profile.updated_at,
-        user_type: 'employee',
+        user_type: 'employee' as const,
         is_employee: profile.is_employee,
       })) || [];
 
@@ -56,7 +56,7 @@ export function useEmployee(employeeId: string) {
         .from('profiles')
         .select('*')
         .eq('id', employeeId)
-        .eq('is_employee', true)
+        .eq('user_type', 'employee')
         .single();
 
       if (error) {
