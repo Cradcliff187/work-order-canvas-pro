@@ -881,8 +881,103 @@ serve(async (req) => {
       });
     }
 
-    // For all other templates (not implemented yet)
-    return createCorsErrorResponse(`Template ${template_name} not implemented yet`, 501);
+    // Handle generic templates (for templates not requiring special logic)
+    console.log(`🔧 Processing generic template: ${template_name}`);
+    
+    // Fetch the template
+    const { data: template, error: templateError } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('template_name', template_name)
+      .eq('is_active', true)
+      .single();
+
+    if (templateError || !template) {
+      console.error(`❌ Template '${template_name}' fetch error:`, templateError);
+      return createCorsErrorResponse(`Email template '${template_name}' not found or inactive`, 404);
+    }
+
+    console.log(`📄 Found generic email template: ${template.template_name}`);
+
+    // For generic templates, use custom_data or create default variables
+    const variables = mergeTemplateVariables({}, custom_data || {});
+    
+    // Add default system variables if not provided
+    if (!variables.system_url) {
+      variables.system_url = 'https://workorderportal.com';
+    }
+    if (!variables.current_date) {
+      variables.current_date = new Date().toLocaleDateString();
+    }
+
+    console.log('🔧 Generic template variables:', variables);
+
+    // Replace variables in subject and HTML content
+    const processedSubject = replaceTemplateVariables(template.subject, variables);
+    const processedHtml = replaceTemplateVariables(template.html_content, variables);
+
+    console.log(`📧 Processed generic email subject: ${processedSubject}`);
+
+    // Determine recipients - if no custom recipient provided, use admins as fallback
+    let recipients: string[] = [];
+    
+    if (test_mode && test_recipient) {
+      recipients = [test_recipient];
+      console.log(`🧪 Test mode - sending to: ${test_recipient}`);
+    } else if (custom_data?.recipient_email) {
+      recipients = [custom_data.recipient_email];
+      console.log(`📤 Custom recipient: ${custom_data.recipient_email}`);
+    } else {
+      // Fallback to admin emails
+      const { data: adminProfiles, error: adminError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('user_type', 'admin')
+        .eq('is_active', true);
+
+      if (adminError || !adminProfiles || adminProfiles.length === 0) {
+        console.error('❌ No recipients found for generic template');
+        return createCorsErrorResponse('No recipients found - please provide recipient_email in custom_data', 400);
+      }
+
+      recipients = adminProfiles.map(profile => profile.email);
+      console.log(`👥 Fallback to admin recipients: ${recipients.length}`);
+    }
+
+    // Send email using Resend service
+    const emailResult = await sendEmail({
+      to: recipients,
+      subject: processedSubject,
+      html: processedHtml
+    });
+
+    // Log email attempt to database
+    const logPromises = recipients.map(email => 
+      supabase.from('email_logs').insert({
+        template_used: template_name,
+        recipient_email: email,
+        status: emailResult.success ? 'sent' : 'failed',
+        error_message: emailResult.success ? null : emailResult.error
+      })
+    );
+
+    await Promise.all(logPromises);
+    console.log(`📝 Email logs created for ${recipients.length} recipients`);
+
+    if (!emailResult.success) {
+      console.error(`❌ Generic template '${template_name}' email sending failed:`, emailResult.error);
+      return createCorsErrorResponse(`Email sending failed: ${emailResult.error}`, 500);
+    }
+
+    console.log(`✅ Generic template '${template_name}' email sent successfully to ${recipients.length} recipients`);
+
+    return createCorsResponse({
+      success: true,
+      message: `${template_name} email sent successfully`,
+      recipients: recipients.length,
+      email_id: emailResult.id,
+      template_name: template_name
+    });
 
   } catch (error) {
     console.error('❌ Send email function error:', error);
