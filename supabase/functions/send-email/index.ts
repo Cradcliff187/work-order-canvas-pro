@@ -77,16 +77,16 @@ const serve_handler = async (req: Request): Promise<Response> => {
       status: 'submitted',
       reviewed_date: 'Not reviewed',
       review_notes: 'No notes',
-      admin_dashboard_url: 'https://workorderpro.com/admin/dashboard',
-      work_order_url: `https://workorderpro.com/admin/work-orders/${record_id}`,
-      review_url: `https://workorderpro.com/admin/work-order-reports/${record_id}`,
-      report_url: `https://workorderpro.com/subcontractor/reports/${record_id}`,
-      system_url: 'https://workorderpro.com',
-      dashboard_url: 'https://workorderpro.com'
+      admin_dashboard_url: 'https://workorderportal.com/admin/dashboard',
+      work_order_url: `https://workorderportal.com/admin/work-orders/${record_id}`,
+      review_url: `https://workorderportal.com/admin/work-order-reports/${record_id}`,
+      report_url: `https://workorderportal.com/subcontractor/reports/${record_id}`,
+      system_url: 'https://workorderportal.com',
+      dashboard_url: 'https://workorderportal.com'
     };
 
     // Set default recipient if not provided
-    const finalRecipient = recipient_email || 'admin@workorderpro.com';
+    const finalRecipient = recipient_email || 'admin@workorderportal.com';
 
     // Template interpolation
     const interpolateContent = (content: string, data: any): string => {
@@ -127,7 +127,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
 
     try {
       const emailResponse = await resend.emails.send({
-        from: "WorkOrderPro <noreply@workorderpro.com>", // You'll need to update this with your verified domain
+        from: "WorkOrderPro <noreply@workorderportal.com>",
         to: [finalRecipient],
         subject: subject,
         html: htmlContent,
