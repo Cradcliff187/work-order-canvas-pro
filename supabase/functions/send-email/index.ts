@@ -130,6 +130,10 @@ const handler = async (req: Request): Promise<Response> => {
         emailData = await getUserProfileData(supabase, record_id);
         toEmail = toEmail || emailData.email;
         break;
+      case 'profile':
+        emailData = await getProfileData(supabase, record_id);
+        toEmail = toEmail || emailData.email;
+        break;
       case 'work_order_assignment':
         emailData = await getWorkOrderAssignmentData(supabase, record_id);
         toEmail = toEmail || emailData.assignee_email;
@@ -203,12 +207,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Configure SMTP client for IONOS
+    // Configure SMTP client for IONOS - fixed to match working simple-email function
     const smtpClient = new SMTPClient({
       connection: {
         hostname: "smtp.ionos.com",
-        port: 587,
-        tls: false,
+        port: 465,  // Port 465 uses direct SSL
+        tls: true,  // Direct SSL connection
         auth: {
           username: Deno.env.get("IONOS_SMTP_USER") ?? '',
           password: Deno.env.get("IONOS_SMTP_PASS") ?? '',
@@ -285,6 +289,32 @@ async function getUserProfileData(supabase: any, userId: string) {
 
   return {
     user_id: userId,
+    email: data?.email,
+    first_name: data?.first_name,
+    last_name: data?.last_name,
+    full_name: `${data?.first_name} ${data?.last_name}`,
+    user_type: data?.user_type,
+    company_name: data?.company_name || data?.user_organizations?.[0]?.organization?.name,
+    organization_name: data?.user_organizations?.[0]?.organization?.name,
+    created_at: data?.created_at
+  };
+}
+
+// Helper function to fetch profile data for welcome emails
+async function getProfileData(supabase: any, profileId: string) {
+  const { data } = await supabase
+    .from('profiles')
+    .select(`
+      *,
+      user_organizations(
+        organization:organization_id (name, contact_email)
+      )
+    `)
+    .eq('id', profileId)
+    .maybeSingle();
+
+  return {
+    profile_id: profileId,
     email: data?.email,
     first_name: data?.first_name,
     last_name: data?.last_name,

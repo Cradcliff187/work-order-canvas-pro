@@ -1390,6 +1390,10 @@ export type Database = {
         Args: { start_date?: string; end_date?: string }
         Returns: number
       }
+      call_send_email_trigger: {
+        Args: { template_name: string; record_id: string; record_type: string }
+        Returns: undefined
+      }
       check_assignment_completion_status: {
         Args: { work_order_id: string }
         Returns: boolean
@@ -1495,6 +1499,10 @@ export type Database = {
           user_id?: string
         }
         Returns: boolean
+      }
+      trigger_send_email: {
+        Args: { template_name: string; record_id: string; record_type: string }
+        Returns: undefined
       }
       user_assigned_to_work_order: {
         Args: { wo_id: string }
