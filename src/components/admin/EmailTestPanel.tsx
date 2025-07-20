@@ -474,13 +474,13 @@ export const EmailTestPanel = () => {
         )}
 
         <div className="text-sm text-muted-foreground">
-          <p><strong>Template → Record Type Mapping:</strong></p>
+          <p><strong>Record Type Examples:</strong></p>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong>welcome_email:</strong> User Profile (user registration/welcome)</li>
-            <li><strong>work_order_created/completed:</strong> Work Order (creation/completion notifications)</li>
-            <li><strong>work_order_assigned:</strong> Work Order Assignment (assignment notifications)</li>
-            <li><strong>report_submitted/reviewed:</strong> Work Order Report (report submission/review)</li>
-            <li><strong>invoice_submitted:</strong> Invoice (invoice submission notifications)</li>
+            <li><strong>work_order:</strong> For work order notifications (created, completed)</li>
+            <li><strong>work_order_assignment:</strong> For assignment notifications to subcontractors</li>
+            <li><strong>work_order_report:</strong> For report submission and review notifications</li>
+            <li><strong>user:</strong> For new user welcome emails (queries profiles table)</li>
+            <li><strong>invoice:</strong> For invoice submission notifications</li>
           </ul>
           <p className="mt-2"><strong>Note:</strong> Selecting a template automatically chooses the correct record type. Shows 20 most recent records or enter UUID manually.</p>
         </div>
