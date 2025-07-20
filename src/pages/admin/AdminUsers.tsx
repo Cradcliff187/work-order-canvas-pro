@@ -96,8 +96,8 @@ const AdminUsers = () => {
     setResettingPasswordFor(user.id);
     
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password`
+      const { error } = await supabase.functions.invoke('password-reset-email', {
+        body: { email: user.email }
       });
       
       if (error) {
@@ -106,12 +106,12 @@ const AdminUsers = () => {
       
       toast({
         title: "Password reset email sent",
-        description: `Password reset email sent to ${user.email}`,
+        description: `If an account exists for ${user.email}, a password reset link has been sent.`,
       });
     } catch (error: any) {
       toast({
         title: "Error sending password reset",
-        description: error.message || "Failed to reset password",
+        description: error.message || "Failed to send password reset email",
         variant: "destructive",
       });
     } finally {
@@ -299,7 +299,7 @@ const AdminUsers = () => {
       enableSorting: false,
       enableHiding: false,
     },
-  ], []);
+  ], [resettingPasswordFor]);
 
   // Filter users by organization if filter is present
   const filteredUsers = useMemo(() => {
