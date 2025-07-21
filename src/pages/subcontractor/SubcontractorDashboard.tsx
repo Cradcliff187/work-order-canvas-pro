@@ -22,29 +22,29 @@ import { format } from 'date-fns';
 
 const SubcontractorDashboard = () => {
   const navigate = useNavigate();
-  const { workOrders, reports, stats } = useSubcontractorWorkOrders();
+  const { assignedWorkOrders, reports, dashboardStats } = useSubcontractorWorkOrders();
 
   // Get recent work orders (last 5)
-  const recentWorkOrders = workOrders.data?.slice(0, 5) || [];
+  const recentWorkOrders = assignedWorkOrders.data?.slice(0, 5) || [];
 
   // Map stats data to StatCard format
   const statsData: StatCard[] = [
     {
       icon: FileText,
       label: "Available Work Orders",
-      value: workOrders.data?.length || 0,
+      value: assignedWorkOrders.data?.length || 0,
       description: "Assigned to you"
     },
     {
       icon: Clock,
       label: "Active Work Orders",
-      value: workOrders.data?.filter(wo => wo.status === 'assigned' || wo.status === 'in_progress').length || 0,
+      value: assignedWorkOrders.data?.filter(wo => wo.status === 'assigned' || wo.status === 'in_progress').length || 0,
       description: "In progress"
     },
     {
       icon: CheckCircle,
       label: "Completed This Month",
-      value: stats.data?.completedThisMonth || 0,
+      value: dashboardStats.data?.completedThisMonth || 0,
       description: "This month"
     },
     {
@@ -63,7 +63,7 @@ const SubcontractorDashboard = () => {
       </div>
 
       {/* Summary Cards */}
-      <StandardDashboardStats stats={statsData} loading={workOrders.isLoading} className="mb-8" />
+      <StandardDashboardStats stats={statsData} loading={assignedWorkOrders.isLoading} className="mb-8" />
 
       {/* Recent Work Orders */}
       <Card>
@@ -78,7 +78,7 @@ const SubcontractorDashboard = () => {
           </Button>
         </CardHeader>
         <CardContent>
-          {workOrders.isLoading ? (
+          {assignedWorkOrders.isLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
@@ -100,7 +100,7 @@ const SubcontractorDashboard = () => {
                 onClick: () => navigate('/subcontractor/work-orders'),
                 icon: Eye
               }}
-              variant="full"
+              variant="card"
             />
           ) : (
             <div className="space-y-4">

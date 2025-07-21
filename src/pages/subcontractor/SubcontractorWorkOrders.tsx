@@ -30,11 +30,11 @@ import { format } from 'date-fns';
 
 const SubcontractorWorkOrders = () => {
   const navigate = useNavigate();
-  const { workOrders } = useSubcontractorWorkOrders();
+  const { assignedWorkOrders } = useSubcontractorWorkOrders();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const workOrderList = workOrders.data || [];
+  const workOrderList = assignedWorkOrders.data || [];
 
   const filteredWorkOrders = workOrderList.filter((workOrder) => {
     const matchesSearch = 
@@ -50,7 +50,7 @@ const SubcontractorWorkOrders = () => {
 
   const hasFilters = searchTerm || statusFilter !== 'all';
 
-  if (workOrders.isLoading) {
+  if (assignedWorkOrders.isLoading) {
     return (
       <div className="space-y-6">
         <div className="h-8 bg-muted rounded animate-pulse" />
@@ -133,10 +133,11 @@ const SubcontractorWorkOrders = () => {
               },
               icon: Filter
             } : {
-              label: "Browse All Work Orders",
+              label: "View All Work Orders",
               onClick: () => navigate('/subcontractor/work-orders'),
               icon: Eye
             }}
+            variant="full"
           />
         ) : (
           filteredWorkOrders.map((workOrder) => (
