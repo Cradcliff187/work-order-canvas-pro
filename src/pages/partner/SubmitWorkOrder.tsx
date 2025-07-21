@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -15,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check, RefreshCw } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check, RefreshCw, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
@@ -55,40 +54,41 @@ const workOrderFormSchema = z.object({
 
 type FormData = z.infer<typeof workOrderFormSchema>;
 
-// Step component for progress indicator
+// Enhanced Step component for progress indicator with better visual cues
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
   const steps = [
-    { number: 1, title: 'Location Details' },
-    { number: 2, title: 'Trade & Description' },
-    { number: 3, title: 'Confirm Submission' }
+    { number: 1, title: '1. Location', shortTitle: 'Location' },
+    { number: 2, title: '2. Work Details', shortTitle: 'Work Details' },
+    { number: 3, title: '3. Confirm', shortTitle: 'Confirm' }
   ];
 
   return (
-    <div className="flex items-center justify-center space-x-8 mb-8">
+    <div className="flex items-center justify-center space-x-4 sm:space-x-8 mb-8">
       {steps.map((step, index) => (
         <div key={step.number} className="flex items-center">
           <div className="flex flex-col items-center">
-            <div className={`w-12 h-12 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
               step.number < currentStep 
-                ? 'bg-primary text-primary-foreground' 
+                ? 'bg-primary text-primary-foreground shadow-lg' 
                 : step.number === currentStep 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-lg ring-4 ring-primary/20' 
+                  : 'bg-muted text-muted-foreground border-2 border-muted-foreground/20'
             }`}>
               {step.number < currentStep ? (
-                <Check className="h-5 w-5" />
+                <Check className="h-4 w-4 sm:h-5 sm:w-5" />
               ) : (
                 step.number
               )}
             </div>
-            <span className={`mt-2 text-xs font-medium ${
+            <span className={`mt-2 text-xs sm:text-sm font-medium transition-colors duration-300 ${
               step.number === currentStep ? 'text-foreground' : 'text-muted-foreground'
             }`}>
-              {step.title}
+              <span className="hidden sm:inline">{step.title}</span>
+              <span className="sm:hidden">{step.shortTitle}</span>
             </span>
           </div>
           {index < steps.length - 1 && (
-            <div className={`w-16 h-0.5 mx-4 ${
+            <div className={`w-8 sm:w-16 h-0.5 mx-2 sm:mx-4 transition-colors duration-300 ${
               step.number < currentStep ? 'bg-primary' : 'bg-muted'
             }`} />
           )}
@@ -107,6 +107,11 @@ export default function SubmitWorkOrder() {
   const [isLoadingTrades, setIsLoadingTrades] = useState(true);
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // Touch gesture state
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Determine if user is admin
   const isAdmin = profile?.user_type === 'admin';
@@ -217,74 +222,128 @@ export default function SubmitWorkOrder() {
     }
   }, [effectiveOrganizationId, form]);
 
+  // Enhanced keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in an input
+      if (event.target instanceof HTMLInputElement || 
+          event.target instanceof HTMLTextAreaElement || 
+          event.target instanceof HTMLSelectElement) {
+        return;
+      }
+
+      if (event.key === 'Enter' && currentStep < 3) {
+        event.preventDefault();
+        handleNext();
+      } else if (event.key === 'Escape' && currentStep > 1) {
+        event.preventDefault();
+        handlePrevious();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [currentStep]);
+
+  // Touch gesture handlers for mobile swipe navigation
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentStep < 3) {
+      handleNext();
+    }
+    if (isRightSwipe && currentStep > 1) {
+      handlePrevious();
+    }
+  };
+
   // Step validation functions with improved error messages
   const validateStep = async (step: number) => {
-    switch (step) {
-      case 1:
-        // For admin users, organization selection is required first
-        if (isAdmin && !selectedOrganizationId) {
-          toast({
-            variant: "destructive",
-            title: "Organization Required",
-            description: "Please choose an organization first.",
-          });
-          return false;
-        }
-
-        const storeLocation = form.getValues('store_location');
-        const partnerLocationSelection = form.getValues('partner_location_selection');
-        const partnerLocationNumber = form.getValues('partner_location_number');
-        
-        // Check if organization uses partner location codes
-        const selectedOrg = partnerOrganizations.find(org => org.id === selectedOrganizationId);
-        const usesPartnerLocationNumbers = userOrganization?.uses_partner_location_numbers || selectedOrg?.uses_partner_location_numbers;
-        
-        // Scenario 1: Partner location selected from dropdown
-        if (partnerLocationSelection && partnerLocationSelection !== 'add_new') {
-          return true;
-        }
-        
-        // Scenario 2: Manual entry mode - store location must be filled
-        if (storeLocation) {
-          // If organization uses partner location codes, require location code
-          if (usesPartnerLocationNumbers && !partnerLocationNumber) {
+    setIsNavigating(true);
+    
+    try {
+      switch (step) {
+        case 1:
+          // For admin users, organization selection is required first
+          if (isAdmin && !selectedOrganizationId) {
             toast({
               variant: "destructive",
-              title: "Location Code Required",
-              description: "Please enter a location code for this location.",
+              title: "Organization Required",
+              description: "Please choose an organization first.",
             });
             return false;
           }
-          return true;
-        }
-        
-        // Scenario 3: Location code entered but no store location
-        if (partnerLocationNumber && !storeLocation) {
+
+          const storeLocation = form.getValues('store_location');
+          const partnerLocationSelection = form.getValues('partner_location_selection');
+          const partnerLocationNumber = form.getValues('partner_location_number');
+          
+          // Check if organization uses partner location codes
+          const selectedOrg = partnerOrganizations.find(org => org.id === selectedOrganizationId);
+          const usesPartnerLocationNumbers = userOrganization?.uses_partner_location_numbers || selectedOrg?.uses_partner_location_numbers;
+          
+          // Scenario 1: Partner location selected from dropdown
+          if (partnerLocationSelection && partnerLocationSelection !== 'add_new') {
+            return true;
+          }
+          
+          // Scenario 2: Manual entry mode - store location must be filled
+          if (storeLocation) {
+            // If organization uses partner location codes, require location code
+            if (usesPartnerLocationNumbers && !partnerLocationNumber) {
+              toast({
+                variant: "destructive",
+                title: "Location Code Required",
+                description: "Please enter a location code for this location.",
+              });
+              return false;
+            }
+            return true;
+          }
+          
+          // Scenario 3: Location code entered but no store location
+          if (partnerLocationNumber && !storeLocation) {
+            toast({
+              variant: "destructive",
+              title: "Location Name Required",
+              description: "Please enter a location name.",
+            });
+            return false;
+          }
+          
+          // Scenario 4: No location information provided at all
           toast({
             variant: "destructive",
-            title: "Location Name Required",
-            description: "Please enter a location name.",
+            title: "Location Required",
+            description: "Please choose a location.",
           });
           return false;
-        }
-        
-        // Scenario 4: No location information provided at all
-        toast({
-          variant: "destructive",
-          title: "Location Required",
-          description: "Please choose a location.",
-        });
-        return false;
-        
-      case 2:
-        // Only require trade_id for step 2 since title is no longer shown to partners
-        const tradeFields: (keyof FormData)[] = ['trade_id'];
-        const tradeValid = await form.trigger(tradeFields);
-        return tradeValid;
-      case 3:
-        return true;
-      default:
-        return true;
+          
+        case 2:
+          // Only require trade_id for step 2 since title is no longer shown to partners
+          const tradeFields: (keyof FormData)[] = ['trade_id'];
+          const tradeValid = await form.trigger(tradeFields);
+          return tradeValid;
+        case 3:
+          return true;
+        default:
+          return true;
+      }
+    } finally {
+      setIsNavigating(false);
     }
   };
 
@@ -293,12 +352,20 @@ export default function SubmitWorkOrder() {
     const isValid = await validateStep(currentStep);
     if (isValid && currentStep < 3) {
       setCurrentStep(currentStep + 1);
+      // Add haptic feedback on mobile if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(10);
+      }
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      // Add haptic feedback on mobile if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(10);
+      }
     }
   };
 
@@ -349,13 +416,19 @@ export default function SubmitWorkOrder() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div 
+      className="space-y-6"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Header with improved back button */}
       <div className="flex items-center gap-4">
         <Link to="/partner/work-orders">
           <Button variant="outline" size="sm" className="min-h-[48px] sm:min-h-auto">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Work Orders
+            <span className="hidden sm:inline">Back to Work Orders</span>
+            <span className="sm:hidden">Back</span>
           </Button>
         </Link>
         <div>
@@ -419,178 +492,192 @@ export default function SubmitWorkOrder() {
         </div>
       )}
 
-      {/* Step Progress Indicator */}
+      {/* Enhanced Step Progress Indicator */}
       <StepIndicator currentStep={currentStep} totalSteps={3} />
 
-      {/* Form */}
+      {/* Keyboard shortcuts hint */}
+      <div className="hidden sm:block text-center text-xs text-muted-foreground mb-4">
+        Use <kbd className="px-1.5 py-0.5 text-xs font-mono bg-muted rounded">Enter</kbd> to continue, <kbd className="px-1.5 py-0.5 text-xs font-mono bg-muted rounded">Esc</kbd> to go back
+      </div>
+
+      {/* Mobile swipe hint */}
+      <div className="sm:hidden text-center text-xs text-muted-foreground mb-4">
+        Swipe left or right to navigate between steps
+      </div>
+
+      {/* Form with enhanced step transitions */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 sm:space-y-6">
           {/* Step 1: Location Details */}
           {currentStep === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  Location Details
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Enter the location information for this work order
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <LocationFields
-                  form={form}
-                  organizationId={effectiveOrganizationId}
-                  showPoNumber={true}
-                />
-              </CardContent>
-            </Card>
+            <div className="animate-fade-in">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    1. Location Details
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Enter the location information for this work order
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <LocationFields
+                    form={form}
+                    organizationId={effectiveOrganizationId}
+                    showPoNumber={true}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Step 2: Trade & Description */}
           {currentStep === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Trade & Description
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Provide details about the work to be performed
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 gap-6 sm:gap-4">
-                  <FormField
-                    control={form.control}
-                    name="trade_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type of Work *</FormLabel>
-                        {isLoadingTrades ? (
-                          <div className="space-y-2">
-                            <Skeleton className="h-12 w-full" />
-                            <p className="text-sm text-muted-foreground">Loading trade options...</p>
-                          </div>
-                        ) : tradesError ? (
-                          <div className="space-y-2">
-                            <Alert variant="destructive">
-                              <AlertCircle className="h-4 w-4" />
-                              <AlertDescription>
-                                Failed to load trade options. 
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="ml-2"
-                                  onClick={loadTrades}
-                                >
-                                  <RefreshCw className="h-4 w-4 mr-1" />
-                                  Retry
-                                </Button>
-                              </AlertDescription>
-                            </Alert>
-                          </div>
-                        ) : (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-12 sm:h-11">
-                                <SelectValue placeholder="Select the type of work needed" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {trades.map((trade) => (
-                                <SelectItem key={trade.id} value={trade.id}>
-                                  {trade.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        <FormDescription>
-                          Choose the category that best describes the work needed
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
+            <div className="animate-fade-in">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    2. Work Details
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Provide details about the work to be performed
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6 sm:gap-4">
+                    <FormField
+                      control={form.control}
+                      name="trade_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Type of Work *</FormLabel>
+                          {isLoadingTrades ? (
+                            <div className="space-y-2">
+                              <Skeleton className="h-12 w-full" />
+                              <p className="text-sm text-muted-foreground">Loading trade options...</p>
+                            </div>
+                          ) : tradesError ? (
+                            <div className="space-y-2">
+                              <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>
+                                  Failed to load trade options. 
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="ml-2"
+                                    onClick={loadTrades}
+                                  >
+                                    <RefreshCw className="h-4 w-4 mr-1" />
+                                    Retry
+                                  </Button>
+                                </AlertDescription>
+                              </Alert>
+                            </div>
+                          ) : (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-12 sm:h-11">
+                                  <SelectValue placeholder="Select the type of work needed" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {trades.map((trade) => (
+                                  <SelectItem key={trade.id} value={trade.id}>
+                                    {trade.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <FormDescription>
+                            Choose the category that best describes the work needed
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Work Description</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Describe what needs to be done..."
+                              className="min-h-[140px] sm:min-h-[120px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            The more details you provide, the better we can help you
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Admin-only fields */}
+                    {isAdmin && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-4">
+                        <FormField
+                          control={form.control}
+                          name="due_date"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Due Date</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  className="h-12 sm:h-11"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="estimated_hours"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Estimated Hours</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.5"
+                                  min="0"
+                                  placeholder="Estimated hours"
+                                  className="h-12 sm:h-11"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Work Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Describe what needs to be done..."
-                            className="min-h-[140px] sm:min-h-[120px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          The more details you provide, the better we can help you
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Admin-only fields */}
-                  {isAdmin && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-4">
-                      <FormField
-                        control={form.control}
-                        name="due_date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Due Date</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="date"
-                                className="h-12 sm:h-11"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="estimated_hours"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Estimated Hours</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                placeholder="Estimated hours"
-                                className="h-12 sm:h-11"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Step 3: Confirm Submission */}
           {currentStep === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-fade-in">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    Confirm Submission
+                    3. Confirm Submission
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Ready to submit your work order request?
@@ -635,25 +722,27 @@ export default function SubmitWorkOrder() {
             </div>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6">
+          {/* Enhanced Navigation Buttons */}
+          <div className="flex items-center justify-between pt-6 border-t">
             <Button
               type="button"
               variant="outline"
+              size="lg"
               onClick={handlePrevious}
-              disabled={currentStep === 1}
-              className="min-h-[48px] sm:min-h-[44px]"
+              disabled={currentStep === 1 || isNavigating}
+              className="min-h-[56px] px-6 sm:min-h-[48px] transition-all duration-200 hover:scale-105"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Previous
+              <ChevronLeft className="h-5 w-5 mr-2" />
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Back</span>
             </Button>
 
             <div className="flex items-center gap-3">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => navigate('/partner/work-orders')}
-                className="min-h-[48px] sm:min-h-[44px]"
+                className="min-h-[56px] px-4 sm:min-h-[48px]"
               >
                 Cancel
               </Button>
@@ -661,26 +750,39 @@ export default function SubmitWorkOrder() {
               {currentStep < 3 ? (
                 <Button
                   type="button"
+                  size="lg"
                   onClick={handleNext}
-                  className="min-h-[48px] sm:min-h-[44px]"
+                  disabled={isNavigating}
+                  className="min-h-[56px] px-6 sm:min-h-[48px] transition-all duration-200 hover:scale-105"
                 >
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  {isNavigating ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">Continue</span>
+                      <span className="sm:hidden">Next</span>
+                      <ChevronRight className="h-5 w-5 ml-2" />
+                    </>
+                  )}
                 </Button>
               ) : (
                 <Button
                   type="submit"
+                  size="lg"
                   disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
-                  className="min-h-[48px] sm:min-h-[44px]"
+                  className="min-h-[56px] px-6 sm:min-h-[48px] bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
                 >
                   {createWorkOrderMutation.isPending ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                       Submitting...
                     </>
                   ) : (
                     <>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Send className="h-5 w-5 mr-2" />
                       Submit Work Order
                     </>
                   )}
