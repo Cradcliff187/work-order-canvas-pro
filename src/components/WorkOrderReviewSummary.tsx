@@ -2,8 +2,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormContext } from 'react-hook-form';
-import { MapPin, FileText, User, Mail, Phone, Hash, Calendar, Clock } from "lucide-react";
-import { formatDate, formatDateTime } from '@/lib/utils/date';
+import { MapPin, FileText, User, Mail, Phone, Building2 } from "lucide-react";
+import { formatDate } from '@/lib/utils/date';
 import { formatAddress } from '@/lib/utils/addressUtils';
 
 interface WorkOrderReviewSummaryProps {
@@ -19,9 +19,7 @@ interface WorkOrderReviewSummaryProps {
 export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
   trades,
   workOrderNumber,
-  isLoadingWorkOrderNumber,
   organizationName,
-  userProfile,
   selectedLocation,
   generatedLocationNumber
 }) => {
@@ -80,18 +78,18 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Location Details Card */}
+      {/* Property Details Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            Location Details
+            <Building2 className="h-5 w-5 text-primary" />
+            Property Details
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <div className="text-lg font-semibold">
-              {locationData.name || 'Location Name Not Specified'}
+              {locationData.name || 'Property Name Not Specified'}
             </div>
           </div>
 
@@ -104,7 +102,7 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
 
           {(locationData.contactName || locationData.contactEmail || locationData.contactPhone) && (
             <div className="pt-2 border-t">
-              <div className="text-sm font-medium text-muted-foreground mb-3">Contact Information</div>
+              <div className="text-sm font-medium text-muted-foreground mb-3">Site Contact</div>
               <div className="grid grid-cols-1 gap-3">
                 {locationData.contactName && (
                   <div className="flex items-center gap-2">
@@ -130,33 +128,24 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
         </CardContent>
       </Card>
 
-      {/* Work Details Card */}
+      {/* Service Request Details Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            Work Details
+            Service Request Details
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Hash className="h-4 w-4" />
-                Work Order Number
+            {workOrderNumber && (
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Service Request Number</div>
+                <div className="text-lg font-semibold">{workOrderNumber}</div>
               </div>
-              <div className="text-lg font-semibold">
-                {isLoadingWorkOrderNumber ? (
-                  <span className="text-muted-foreground">Generating...</span>
-                ) : workOrderNumber ? (
-                  workOrderNumber
-                ) : (
-                  <span className="text-muted-foreground">Will be generated</span>
-                )}
-              </div>
-            </div>
+            )}
             <div>
-              <div className="text-sm font-medium text-muted-foreground">Type of Work</div>
+              <div className="text-sm font-medium text-muted-foreground">Work Type</div>
               <div className="text-lg font-semibold">{selectedTrade?.name || 'Not specified'}</div>
             </div>
           </div>
@@ -177,19 +166,13 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
             )}
             {formData.due_date && (
               <div>
-                <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Due Date
-                </div>
+                <div className="text-sm font-medium text-muted-foreground">Due Date</div>
                 <div className="text-base">{formatDate(formData.due_date)}</div>
               </div>
             )}
             {formData.estimated_hours && (
               <div>
-                <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Estimated Hours
-                </div>
+                <div className="text-sm font-medium text-muted-foreground">Estimated Hours</div>
                 <div className="text-base">{formData.estimated_hours} hours</div>
               </div>
             )}
@@ -197,9 +180,7 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
 
           <div className="pt-4 border-t">
             <div className="text-sm text-muted-foreground">
-              <strong>Submitting for:</strong> {organizationName || 'Unknown Organization'} • 
-              <strong> By:</strong> {userProfile ? ` ${userProfile.first_name} ${userProfile.last_name}` : ' Current User'} • 
-              <strong> On:</strong> {formatDateTime(new Date())}
+              Submitting service request for {organizationName || 'your organization'}
             </div>
           </div>
         </CardContent>
@@ -211,7 +192,7 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
           <div className="text-center space-y-2">
             <div className="text-lg font-medium">Ready to Submit?</div>
             <div className="text-sm text-muted-foreground">
-              Please review all information above. Once submitted, your work order will be processed and assigned.
+              Please review all information above. Once submitted, your service request will be processed and assigned.
             </div>
           </div>
         </CardContent>
