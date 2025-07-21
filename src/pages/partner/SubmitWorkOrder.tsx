@@ -163,15 +163,6 @@ export default function SubmitWorkOrder() {
     }
   });
 
-  // Watch form values for auto-generation and location selection
-  const watchedStoreLocation = form.watch('store_location');
-  const watchedTradeId = form.watch('trade_id');
-  const watchedTitle = form.watch('title');
-  const partnerLocationSelection = form.watch('partner_location_selection');
-
-  // Find selected location from partner locations
-  const selectedLocation = partnerLocations?.find(loc => loc.id === partnerLocationSelection) || null;
-
   // Auto-generate title when store_location and trade are selected
   useEffect(() => {
     if (watchedStoreLocation && watchedTradeId && !watchedTitle) {
@@ -183,7 +174,32 @@ export default function SubmitWorkOrder() {
     }
   }, [watchedStoreLocation, watchedTradeId, watchedTitle, trades, form]);
 
-  // Work order number generation - watch for partner_location_number changes
+  // Watch form values for auto-generation and location selection
+  const watchedStoreLocation = form.watch('store_location');
+  const watchedTradeId = form.watch('trade_id');
+  const watchedTitle = form.watch('title');
+  const partnerLocationSelection = form.watch('partner_location_selection');
+  const manualLocationNumber = form.watch('partner_location_number');
+
+  // Find selected location from partner locations
+  const selectedLocation = partnerLocations?.find(loc => loc.id === partnerLocationSelection) || null;
+
+  // Compute effective location number for work order generation
+  const getEffectiveLocationNumber = () => {
+    if (partnerLocationSelection && partnerLocationSelection !== 'add_new' && selectedLocation) {
+      // Use existing location's number
+      return selectedLocation.location_number;
+    } else if (partnerLocationSelection === 'add_new') {
+      // Use manual entry
+      return manualLocationNumber;
+    }
+    // For auto-generated location codes or no selection
+    return undefined;
+  };
+
+  const effectiveLocationNumber = getEffectiveLocationNumber();
+
+  // Work order number generation - now uses computed effective location number
   const {
     workOrderNumber,
     isLoading: isLoadingWorkOrderNumber,
@@ -195,7 +211,7 @@ export default function SubmitWorkOrder() {
     locationNumber: generatedLocationNumber,
   } = useWorkOrderNumberGeneration({
     organizationId: effectiveOrganizationId,
-    locationNumber: form.watch('partner_location_number'),
+    locationNumber: effectiveLocationNumber,
   });
 
   // Load trades with retry functionality
@@ -484,21 +500,38 @@ export default function SubmitWorkOrder() {
         </Card>
       )}
 
-      {/* Compact Work Order Number Preview */}
+      {/* Enhanced Work Order Number Preview */}
       {effectiveOrganizationId && (
-        <div className="text-center mb-4">
-          <p className="text-sm text-muted-foreground">
-            {isLoadingWorkOrderNumber ? (
-              "Work Order: Generating..."
-            ) : workOrderNumberError ? (
-              "Work Order: Error"
-            ) : workOrderNumber ? (
-              `Work Order: ${workOrderNumber}`
-            ) : (
-              "Work Order: Will be generated"
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <span className="font-medium">Work Order Number</span>
+            </div>
+            <div className="text-lg font-mono font-bold text-primary">
+              {isLoadingWorkOrderNumber ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Generating...</span>
+                </div>
+              ) : workOrderNumberError ? (
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Error generating number</span>
+                </div>
+              ) : workOrderNumber ? (
+                workOrderNumber
+              ) : (
+                <span className="text-muted-foreground">Will be generated on submission</span>
+              )}
+            </div>
+            {workOrderNumberWarning && (
+              <div className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+                {workOrderNumberWarning}
+              </div>
             )}
-          </p>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Enhanced Step Progress Indicator */}
