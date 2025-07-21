@@ -236,9 +236,9 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
     form.trigger();
   }, [createWorkOrderSchemaForUser, form]);
   
-  // Find selected organization to get organization type
+  // Get the actual organization data with full properties
   const selectedOrganization = profile?.user_type === 'admin' 
-    ? organizations?.find(org => org.id === organizationId)
+    ? selectedOrg || organizations?.find(org => org.id === organizationId)
     : organization;
   
   const { 
