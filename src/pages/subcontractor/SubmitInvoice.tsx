@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -527,7 +526,6 @@ const SubmitInvoice = () => {
                       showCamera={false}
                       showDocumentUpload={true}
                       compactView={true}
-                      acceptedTypes={['.pdf', '.xlsx', '.xls', '.csv', '.doc', '.docx', 'image/*']}
                     />
                   ) : (
                     <FileUpload
