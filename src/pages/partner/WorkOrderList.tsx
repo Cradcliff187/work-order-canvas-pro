@@ -13,6 +13,9 @@ import { useTrades } from '@/hooks/useWorkOrders';
 import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileWorkOrderCard } from '@/components/MobileWorkOrderCard';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 
 const statusColors = {
   received: 'bg-blue-100 text-blue-800',
@@ -24,6 +27,7 @@ const statusColors = {
 
 const WorkOrderList = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tradeFilter, setTradeFilter] = useState<string>('all');
@@ -36,7 +40,7 @@ const WorkOrderList = () => {
     trade_id: tradeFilter && tradeFilter !== 'all' ? tradeFilter : undefined,
   };
 
-  const { data: workOrdersData, isLoading } = usePartnerWorkOrders(filters);
+  const { data: workOrdersData, isLoading, refetch } = usePartnerWorkOrders(filters);
   const { data: trades } = useTrades();
 
   const workOrders = workOrdersData?.data || [];
@@ -113,7 +117,16 @@ const WorkOrderList = () => {
     return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
   };
 
-  return (
+  // Mobile handlers
+  const handleRefresh = async () => {
+    await refetch();
+  };
+
+  const handleWorkOrderTap = (workOrder: any) => {
+    navigate(`/partner/work-orders/${workOrder.id}`);
+  };
+
+  const content = (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
@@ -210,15 +223,16 @@ const WorkOrderList = () => {
         </CardContent>
       </Card>
 
-      {/* Work Orders Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Work Orders</CardTitle>
-          <CardDescription>
-            {sortedWorkOrders.length} work order{sortedWorkOrders.length !== 1 ? 's' : ''} found
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Work Orders - Mobile Cards or Desktop Table */}
+      {isMobile ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Your Work Orders</h2>
+            <p className="text-sm text-muted-foreground">
+              {sortedWorkOrders.length} work order{sortedWorkOrders.length !== 1 ? 's' : ''} found
+            </p>
+          </div>
+          
           {isLoading ? (
             <div className="text-center py-8">Loading work orders...</div>
           ) : sortedWorkOrders.length === 0 ? (
@@ -230,139 +244,181 @@ const WorkOrderList = () => {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Work Order #</TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('location')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Location
-                        {renderSortIcon('location')}
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('trade')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Trade
-                        {renderSortIcon('trade')}
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('status')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Status
-                        {renderSortIcon('status')}
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('daysOld')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Days Old
-                        {renderSortIcon('daysOld')}
-                      </div>
-                    </TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Est. Completion</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedWorkOrders.map((workOrder) => (
-                    <TableRow key={workOrder.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground">
-                            {workOrder.work_order_number || 'Pending'}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium truncate">
-                                    {formatLocationDisplay(workOrder)}
-                                  </div>
-                                </div>
-                                {generateMapUrl(workOrder) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      window.open(generateMapUrl(workOrder)!, '_blank');
-                                    }}
-                                  >
-                                    <MapPin className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="whitespace-pre-line text-sm max-w-64">
-                                {formatLocationTooltip(workOrder)}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                      <TableCell>
-                        {workOrder.trades?.name || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="secondary" 
-                          className={statusColors[workOrder.status as keyof typeof statusColors]}
-                        >
-                          {workOrder.status.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        {workOrder.estimated_completion_date 
-                          ? format(new Date(workOrder.estimated_completion_date), 'MMM d, yyyy')
-                          : 'TBD'
-                        }
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            sortedWorkOrders.map((workOrder) => (
+              <MobileWorkOrderCard
+                key={workOrder.id}
+                workOrder={workOrder}
+                onTap={handleWorkOrderTap}
+                showLocationNumber={true}
+                showTrade={true}
+                showDaysOld={true}
+                fieldsToShow={['location', 'trade', 'assignee']}
+                userType="partner"
+              />
+            ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        // Desktop Table View (unchanged)
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Work Orders</CardTitle>
+            <CardDescription>
+              {sortedWorkOrders.length} work order{sortedWorkOrders.length !== 1 ? 's' : ''} found
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8">Loading work orders...</div>
+            ) : sortedWorkOrders.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No work orders found</p>
+                <Button onClick={() => navigate('/partner/work-orders/new')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Submit Your First Work Order
+                </Button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Work Order #</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('location')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Location
+                          {renderSortIcon('location')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('trade')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Trade
+                          {renderSortIcon('trade')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('status')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Status
+                          {renderSortIcon('status')}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('daysOld')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Days Old
+                          {renderSortIcon('daysOld')}
+                        </div>
+                      </TableHead>
+                      <TableHead>Submitted</TableHead>
+                      <TableHead>Est. Completion</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedWorkOrders.map((workOrder) => (
+                      <TableRow key={workOrder.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground">
+                              {workOrder.work_order_number || 'Pending'}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium truncate">
+                                      {formatLocationDisplay(workOrder)}
+                                    </div>
+                                  </div>
+                                  {generateMapUrl(workOrder) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(generateMapUrl(workOrder)!, '_blank');
+                                      }}
+                                    >
+                                      <MapPin className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="whitespace-pre-line text-sm max-w-64">
+                                  {formatLocationTooltip(workOrder)}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          {workOrder.trades?.name || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="secondary" 
+                            className={statusColors[workOrder.status as keyof typeof statusColors]}
+                          >
+                            {workOrder.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          {workOrder.estimated_completion_date 
+                            ? format(new Date(workOrder.estimated_completion_date), 'MMM d, yyyy')
+                            : 'TBD'
+                          }
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
+
+  return isMobile ? (
+    <MobilePullToRefresh onRefresh={handleRefresh}>
+      {content}
+    </MobilePullToRefresh>
+  ) : content;
 };
 
 export default WorkOrderList;
