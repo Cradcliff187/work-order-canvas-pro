@@ -22,6 +22,7 @@ import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
 import { createUserColumns } from '@/components/admin/users/UserColumns';
 import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
+import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserFilters {
@@ -34,6 +35,7 @@ interface UserFilters {
 export default function AdminUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -151,7 +153,7 @@ export default function AdminUsers() {
             {users?.length ? `${users.length} total users` : 'Manage system users and their access'}
           </p>
         </div>
-        <Button onClick={() => navigate('/admin/users/new')}>
+        <Button onClick={() => setCreateUserModalOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           New User
         </Button>
@@ -182,7 +184,7 @@ export default function AdminUsers() {
               description="Get started by creating your first user"
               action={{
                 label: "Create User",
-                onClick: () => navigate('/admin/users/new'),
+                onClick: () => setCreateUserModalOpen(true),
                 icon: Plus
               }}
               colSpan={columns.length}
@@ -273,6 +275,12 @@ export default function AdminUsers() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create User Modal */}
+      <CreateUserModal 
+        open={createUserModalOpen}
+        onOpenChange={setCreateUserModalOpen}
+      />
     </div>
   );
 }
