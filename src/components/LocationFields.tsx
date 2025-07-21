@@ -22,7 +22,7 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
   const { data: partnerLocations, isLoading: loadingLocations, error: locationsError, refetch: refetchLocations } = usePartnerLocations(organizationId);
 
   const partnerLocationSelection = form.watch('partner_location_selection');
-  const showManualEntry = !partnerLocationSelection || partnerLocationSelection === 'add_new';
+  const showManualEntry = partnerLocationSelection === 'add_new';
 
   return (
     <div className="space-y-4">
