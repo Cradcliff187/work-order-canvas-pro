@@ -24,6 +24,8 @@ export interface BrandingConfig {
   assets: {
     logos: {
       main: string;
+      horizontal: string;
+      square: string;
       light: string;
       dark: string;
       icon: string;
@@ -66,7 +68,7 @@ export const brandingConfig: BrandingConfig = {
     description: 'Professional construction work order management system for commercial projects'
   },
   colors: {
-    primary: 'hsl(210, 95%, 46%)', // Professional Blue
+    primary: 'hsl(210, 100%, 56%)', // AKC Blue extracted from logos
     secondary: 'hsl(210, 10%, 96%)', // Clean Gray
     accent: 'hsl(210, 95%, 96%)', // Light Blue
     success: 'hsl(142, 71%, 45%)', // Green
@@ -75,10 +77,12 @@ export const brandingConfig: BrandingConfig = {
   },
   assets: {
     logos: {
-      main: '/branding/logos/akc-logo-main.svg',
-      light: '/branding/logos/akc-logo-light.svg',
-      dark: '/branding/logos/akc-logo-dark.svg',
-      icon: '/branding/logos/akc-icon.svg',
+      main: '/branding/logos/akc-logo-horizontal.png',
+      horizontal: '/branding/logos/akc-logo-horizontal.png',
+      square: '/branding/logos/akc-logo-square.png',
+      light: '/branding/logos/akc-logo-horizontal.png',
+      dark: '/branding/logos/akc-logo-horizontal.png',
+      icon: '/branding/logos/akc-logo-square.png',
       favicon: '/branding/favicons/favicon.png'
     },
     social: {

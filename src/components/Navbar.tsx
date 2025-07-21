@@ -13,11 +13,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/hooks/useBranding';
-import { HardHat, LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, User } from 'lucide-react';
 
 const Navbar = () => {
   const { profile, signOut } = useAuth();
-  const { getProductDisplayName, getCompanyDisplayName } = useBranding();
+  const { getProductDisplayName, getCompanyDisplayName, assets } = useBranding();
 
   const handleSignOut = async () => {
     await signOut();
@@ -55,11 +55,13 @@ const Navbar = () => {
     <nav className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
       <div className="flex h-16 items-center px-6">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <HardHat className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
+        <div className="flex items-center space-x-3">
+          <img 
+            src={assets.logos.horizontal} 
+            alt={`${getCompanyDisplayName()} Logo`}
+            className="h-8 w-auto"
+          />
+          <div className="hidden sm:flex flex-col">
             <span className="font-bold text-xl">{getProductDisplayName()}</span>
             <span className="text-xs text-muted-foreground">{getCompanyDisplayName()}</span>
           </div>

@@ -1,12 +1,13 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* WorkOrderPro Design System - Construction Management SaaS */
+/* WorkOrderPro Design System - AKC Construction Management SaaS */
 
 @layer base {
   :root {
-    /* Brand Colors - Construction Professional Theme */
+    /* AKC Brand Colors - Construction Professional Theme */
     --background: 210 17% 98%;
     --foreground: 0 0% 20%;
 
@@ -16,10 +17,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 20%;
 
-    /* Primary: Professional Blue #0485EA */
-    --primary: 210 95% 46%;
+    /* Primary: AKC Blue #1E90FF extracted from logos */
+    --primary: 210 100% 56%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 210 95% 56%;
+    --primary-glow: 210 100% 66%;
 
     /* Secondary: Clean Gray for professional look */
     --secondary: 210 10% 96%;
@@ -43,7 +44,7 @@
 
     --border: 210 20% 90%;
     --input: 210 20% 95%;
-    --ring: 210 95% 46%;
+    --ring: 210 100% 56%;
 
     --radius: 0.5rem;
 
@@ -59,20 +60,13 @@
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 210 100% 56%;
   }
 
   .dark {

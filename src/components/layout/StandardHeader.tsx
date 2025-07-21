@@ -24,7 +24,7 @@ export function StandardHeader({
 }: StandardHeaderProps) {
   const { signOut, profile } = useAuth();
   const { data: userOrganizations } = useUserOrganizations();
-  const { getCompanyDisplayName } = useBranding();
+  const { getCompanyDisplayName, assets } = useBranding();
   const primaryOrg = userOrganizations?.[0];
 
   return (
@@ -36,8 +36,20 @@ export function StandardHeader({
         <div className="flex items-center space-x-4">
           <SidebarTrigger className="-ml-1" />
           
+          <div className="flex items-center space-x-3">
+            <img 
+              src={assets.logos.square} 
+              alt={`${getCompanyDisplayName()} Logo`}
+              className="h-8 w-8"
+            />
+            <div className="hidden sm:block">
+              <p className="font-semibold text-sm">{getCompanyDisplayName()}</p>
+              <p className="text-xs text-muted-foreground">WorkOrderPortal</p>
+            </div>
+          </div>
+          
           {primaryOrg && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm border-l pl-4 ml-4">
               <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
                 <Building2 className="h-4 w-4 text-primary" />
               </div>
