@@ -1,12 +1,13 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, AlertCircle } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
-import { formatLocationDisplay } from '@/lib/utils/addressUtils';
+import { formatLocationDisplay, generateMapUrl } from '@/lib/utils/addressUtils';
 
 interface WorkOrder {
   id: string;
@@ -58,12 +59,23 @@ interface WorkOrder {
   } | null;
 }
 
+type FieldType = 'assignee' | 'organization' | 'invoice' | 'trade' | 'location' | 'daysOld';
+
 interface MobileWorkOrderCardProps {
   workOrder: WorkOrder;
   onTap: (workOrder: WorkOrder) => void;
   onSwipeLeft?: (workOrder: WorkOrder) => void;
   onSwipeRight?: (workOrder: WorkOrder) => void;
   showActions?: boolean;
+  // New customization props
+  showAssignee?: boolean;
+  showOrganization?: boolean;
+  showInvoiceAmount?: boolean;
+  showTrade?: boolean;
+  showLocationNumber?: boolean;
+  showDaysOld?: boolean;
+  fieldsToShow?: Array<FieldType>;
+  userType?: 'partner' | 'subcontractor' | 'admin';
 }
 
 const statusColors = {
@@ -80,7 +92,15 @@ export function MobileWorkOrderCard({
   onTap, 
   onSwipeLeft, 
   onSwipeRight,
-  showActions = false 
+  showActions = false,
+  showAssignee = true,
+  showOrganization = true,
+  showInvoiceAmount = true,
+  showTrade = true,
+  showLocationNumber = false,
+  showDaysOld = false,
+  fieldsToShow,
+  userType = 'subcontractor'
 }: MobileWorkOrderCardProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
@@ -119,9 +139,46 @@ export function MobileWorkOrderCard({
     onTap(workOrder);
   };
 
+  // Determine which fields to show based on props or fieldsToShow array
+  const shouldShowField = (field: FieldType): boolean => {
+    if (fieldsToShow) {
+      return fieldsToShow.includes(field);
+    }
+    
+    switch (field) {
+      case 'assignee':
+        return showAssignee;
+      case 'organization':
+        return showOrganization;
+      case 'invoice':
+        return showInvoiceAmount;
+      case 'trade':
+        return showTrade;
+      case 'location':
+        return showLocationNumber;
+      case 'daysOld':
+        return showDaysOld;
+      default:
+        return false;
+    }
+  };
+
+  const daysOld = differenceInDays(new Date(), new Date(workOrder.date_submitted));
+  const isOverdue = daysOld > 7; // Consider 7+ days old as overdue
+  const mapUrl = generateMapUrl(workOrder);
+
+  // Enhanced location display with partner location number
+  const getLocationDisplay = () => {
+    const baseLocation = formatLocationDisplay(workOrder);
+    if (workOrder.partner_location_number && baseLocation !== 'N/A') {
+      return `#${workOrder.partner_location_number} - ${baseLocation}`;
+    }
+    return baseLocation;
+  };
+
   return (
     <Card 
-      className="mb-4 touch-manipulation active:scale-95 transition-transform duration-150"
+      className="mb-4 touch-manipulation active:scale-95 transition-transform duration-150 min-h-[44px]"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -130,7 +187,7 @@ export function MobileWorkOrderCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               {workOrder.work_order_number && (
                 <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground text-xs">
                   {workOrder.work_order_number}
@@ -142,56 +199,102 @@ export function MobileWorkOrderCard({
               >
                 {workOrder.status.replace('_', ' ')}
               </Badge>
+              {shouldShowField('daysOld') && isOverdue && (
+                <Badge variant="destructive" className="text-xs">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  {daysOld} days
+                </Badge>
+              )}
             </div>
             <h3 className="font-semibold text-sm truncate">
               {workOrder.title}
             </h3>
           </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground ml-2 flex-shrink-0" />
+          <div className="flex items-center gap-1 ml-2">
+            {mapUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(mapUrl, '_blank');
+                }}
+              >
+                <MapPin className="h-4 w-4" />
+              </Button>
+            )}
+            <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          </div>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span className="truncate">
-              {formatLocationDisplay(workOrder)}
+              {getLocationDisplay()}
             </span>
           </div>
 
-          {workOrder.trades && (
+          {shouldShowField('trade') && workOrder.trades && (
             <div className="flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="truncate">{workOrder.trades.name}</span>
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-sm">
-            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <AssigneeDisplay 
-              assignments={workOrder.work_order_assignments}
-              assignedUser={workOrder.assigned_user}
-              assignedOrganization={workOrder.assigned_organizations}
-              showIcons={false}
-              showOrganization={true}
-            />
-          </div>
-
-          {/* Show submitting organization for subcontractors */}
-          {workOrder.organizations && (
+          {shouldShowField('assignee') && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">From:</span>
-              <OrganizationBadge 
-                organization={workOrder.organizations}
-                size="sm"
-                showIcon={true}
-              />
+              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <AssigneeDisplay 
+                  assignments={workOrder.work_order_assignments}
+                  assignedUser={workOrder.assigned_user}
+                  assignedOrganization={workOrder.assigned_organizations}
+                  showIcons={false}
+                  showOrganization={true}
+                />
+              </div>
             </div>
+          )}
+
+          {/* Show submitting organization for subcontractors, assigned organization for partners */}
+          {shouldShowField('organization') && (
+            <>
+              {userType === 'subcontractor' && workOrder.organizations && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground">From:</span>
+                  <OrganizationBadge 
+                    organization={workOrder.organizations}
+                    size="sm"
+                    showIcon={false}
+                  />
+                </div>
+              )}
+              {userType === 'partner' && workOrder.assigned_organizations && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground">Assigned to:</span>
+                  <OrganizationBadge 
+                    organization={workOrder.assigned_organizations}
+                    size="sm"
+                    showIcon={false}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span>
-              Submitted {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')} <span className="text-muted-foreground">({differenceInDays(new Date(), new Date(workOrder.date_submitted))} days old)</span>
+              Submitted {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
+              {shouldShowField('daysOld') && (
+                <span className="text-muted-foreground ml-1">
+                  ({daysOld} day{daysOld !== 1 ? 's' : ''} ago)
+                </span>
+              )}
             </span>
           </div>
 
@@ -204,7 +307,7 @@ export function MobileWorkOrderCard({
             </div>
           )}
 
-          {workOrder.subcontractor_invoice_amount && (
+          {shouldShowField('invoice') && workOrder.subcontractor_invoice_amount && (
             <div className="flex items-center gap-2 text-sm">
               <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span>${workOrder.subcontractor_invoice_amount.toFixed(2)}</span>
@@ -214,17 +317,22 @@ export function MobileWorkOrderCard({
 
         {showActions && (
           <div className="flex gap-2 mt-3 pt-3 border-t">
-            <Button size="sm" variant="outline" className="flex-1">
+            <Button size="default" variant="outline" className="flex-1 min-h-[44px]">
               View Details
             </Button>
-            {workOrder.status === 'assigned' && (
-              <Button size="sm" className="flex-1">
+            {userType === 'subcontractor' && workOrder.status === 'assigned' && (
+              <Button size="default" className="flex-1 min-h-[44px]">
                 Start Work
               </Button>
             )}
-            {workOrder.status === 'in_progress' && (
-              <Button size="sm" className="flex-1">
+            {userType === 'subcontractor' && workOrder.status === 'in_progress' && (
+              <Button size="default" className="flex-1 min-h-[44px]">
                 Submit Report
+              </Button>
+            )}
+            {userType === 'partner' && workOrder.status === 'received' && (
+              <Button size="default" className="flex-1 min-h-[44px]">
+                Assign
               </Button>
             )}
           </div>
