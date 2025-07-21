@@ -1,179 +1,130 @@
+
 import React from 'react';
-import { Table } from '@tanstack/react-table';
-import { Filter, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
-import { User } from '@/pages/admin/AdminUsers';
+import { Button } from '@/components/ui/button';
+import { Search, Filter, X } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
-import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 
 interface UserFiltersProps {
-  table: Table<User>;
+  filters: {
+    search: string;
+    userType: string;
+    organizationId: string;
+    status: string;
+  };
+  onFiltersChange: (filters: any) => void;
+  onClearFilters: () => void;
 }
 
-export function UserFilters({ table }: UserFiltersProps) {
-  const { data: organizationsData } = useOrganizations();
-  const { shouldShowSelector } = useAutoOrganization();
+export function UserFilters({ filters, onFiltersChange, onClearFilters }: UserFiltersProps) {
+  const { data: organizations } = useOrganizations();
 
-  const userTypeFilter = table.getColumn('user_type')?.getFilterValue() as string[] || [];
-  const statusFilter = table.getColumn('is_active')?.getFilterValue() as boolean | undefined;
-  const organizationFilter = table.getColumn('organizations')?.getFilterValue() as string || '';
-
-  const setUserTypeFilter = (types: string[]) => {
-    table.getColumn('user_type')?.setFilterValue(types.length > 0 ? types : undefined);
+  const handleFilterChange = (key: string, value: string) => {
+    onFiltersChange({
+      ...filters,
+      [key]: value,
+    });
   };
 
-  const setStatusFilter = (status: boolean | undefined) => {
-    table.getColumn('is_active')?.setFilterValue(status);
-  };
-
-  const setOrganizationFilter = (orgId: string) => {
-    table.getColumn('organizations')?.setFilterValue(orgId === 'all' ? '' : orgId);
-  };
-
-  const clearFilters = () => {
-    table.resetColumnFilters();
-  };
-
-  const hasActiveFilters = userTypeFilter.length > 0 || statusFilter !== undefined || organizationFilter !== '';
-
-  const handleUserTypeChange = (type: string, checked: boolean) => {
-    let newTypes = [...userTypeFilter];
-    if (checked) {
-      newTypes.push(type);
-    } else {
-      newTypes = newTypes.filter(t => t !== type);
-    }
-    setUserTypeFilter(newTypes);
-  };
+  const hasActiveFilters = Object.values(filters).some(value => value !== '');
 
   return (
-    <div className="flex items-center gap-2">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="border-dashed">
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-            {hasActiveFilters && (
-              <Separator orientation="vertical" className="mx-2 h-4" />
-            )}
-            {userTypeFilter.length > 0 && (
-              <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                {userTypeFilter.length} type{userTypeFilter.length > 1 ? 's' : ''}
-              </Badge>
-            )}
-            {statusFilter !== undefined && (
-              <Badge variant="secondary" className="rounded-sm px-1 font-normal lg:hidden">
-                Status
-              </Badge>
-            )}
-            {organizationFilter && shouldShowSelector && (
-              <Badge variant="secondary" className="rounded-sm px-1 font-normal lg:hidden">
-                Org
-              </Badge>
-            )}
+    <div className="bg-card rounded-lg border p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4" />
+          <h3 className="font-medium">Filters</h3>
+        </div>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearFilters}
+            className="h-8 px-2 lg:px-3"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Clear
           </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium leading-none">Filters</h4>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-              )}
-            </div>
-            
-            <Separator />
-            
-            {/* User Type Filter */}
-            <div className="space-y-2">
-              <h5 className="text-sm font-medium">User Type</h5>
-              <div className="space-y-2">
-                {['admin', 'employee', 'partner', 'subcontractor'].map((type) => (
-                  <div key={type} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`type-${type}`}
-                      checked={userTypeFilter.includes(type)}
-                      onCheckedChange={(checked) => handleUserTypeChange(type, !!checked)}
-                    />
-                    <label
-                      htmlFor={`type-${type}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize"
-                    >
-                      {type}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
+        )}
+      </div>
 
-            <Separator />
-
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <h5 className="text-sm font-medium">Status</h5>
-              <Select
-                value={statusFilter === undefined ? 'all' : statusFilter ? 'active' : 'inactive'}
-                onValueChange={(value) => {
-                  if (value === 'all') {
-                    setStatusFilter(undefined);
-                  } else {
-                    setStatusFilter(value === 'active');
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active only</SelectItem>
-                  <SelectItem value="inactive">Inactive only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            {/* Organization Filter - Only show for admin users */}
-            {shouldShowSelector && (
-              <div className="space-y-2">
-                <h5 className="text-sm font-medium">Organization</h5>
-                <Select
-                  value={organizationFilter || 'all'}
-                  onValueChange={setOrganizationFilter}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All organizations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All organizations</SelectItem>
-                    {organizationsData?.organizations?.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Search */}
+        <div className="space-y-2">
+          <Label htmlFor="search">Search</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="search"
+              placeholder="Search users..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="pl-9"
+            />
           </div>
-        </PopoverContent>
-      </Popover>
+        </div>
 
-      {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters}>
-          Reset
-          <X className="ml-2 h-4 w-4" />
-        </Button>
-      )}
+        {/* User Type */}
+        <div className="space-y-2">
+          <Label htmlFor="userType">User Type</Label>
+          <Select
+            value={filters.userType}
+            onValueChange={(value) => handleFilterChange('userType', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All types</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="partner">Partner</SelectItem>
+              <SelectItem value="subcontractor">Subcontractor</SelectItem>
+              <SelectItem value="employee">Employee</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Organization */}
+        <div className="space-y-2">
+          <Label htmlFor="organization">Organization</Label>
+          <Select
+            value={filters.organizationId}
+            onValueChange={(value) => handleFilterChange('organizationId', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All organizations" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All organizations</SelectItem>
+              {organizations?.map((org) => (
+                <SelectItem key={org.id} value={org.id}>
+                  {org.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Status */}
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <Select
+            value={filters.status}
+            onValueChange={(value) => handleFilterChange('status', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
     </div>
   );
 }

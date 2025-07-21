@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,20 +14,15 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Loader2 } from "lucide-react";
 import { US_STATES } from '@/constants/states';
-import { useUpdateOrganization } from '@/hooks/useOrganizations';
-import type { Organization } from '@/integrations/supabase/types';
+import { useUpdateOrganization, Organization } from '@/hooks/useOrganizations';
 
 const editOrganizationSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
   initials: z.string().min(1, 'Initials are required').max(5, 'Initials must be less than 5 characters'),
-  contact_email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  contact_email: z.string().email('Invalid email format'),
   contact_phone: z.string().optional(),
-  street_address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional(),
-  description: z.string().optional(),
-  organization_type: z.string().min(1, 'Organization type is required'),
+  address: z.string().optional(),
+  organization_type: z.enum(['partner', 'subcontractor', 'internal']),
   uses_partner_location_numbers: z.boolean().default(false),
 });
 
@@ -49,12 +45,8 @@ export function EditOrganizationModal({ organization, open, onOpenChange }: Edit
       initials: organization?.initials || '',
       contact_email: organization?.contact_email || '',
       contact_phone: organization?.contact_phone || '',
-      street_address: organization?.street_address || '',
-      city: organization?.city || '',
-      state: organization?.state || '',
-      zip_code: organization?.zip_code || '',
-      description: organization?.description || '',
-      organization_type: organization?.organization_type || '',
+      address: organization?.address || '',
+      organization_type: organization?.organization_type || 'partner',
       uses_partner_location_numbers: organization?.uses_partner_location_numbers || false,
     },
   });
@@ -67,12 +59,8 @@ export function EditOrganizationModal({ organization, open, onOpenChange }: Edit
         initials: organization.initials || '',
         contact_email: organization.contact_email || '',
         contact_phone: organization.contact_phone || '',
-        street_address: organization.street_address || '',
-        city: organization.city || '',
-        state: organization.state || '',
-        zip_code: organization.zip_code || '',
-        description: organization.description || '',
-        organization_type: organization.organization_type || '',
+        address: organization.address || '',
+        organization_type: organization.organization_type || 'partner',
         uses_partner_location_numbers: organization.uses_partner_location_numbers || false,
       });
     }
@@ -146,113 +134,42 @@ export function EditOrganizationModal({ organization, open, onOpenChange }: Edit
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="contact_email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="contact@company.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contact_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="(555) 123-4567" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
-              name="street_address"
+              name="contact_email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Street Address</FormLabel>
+                  <FormLabel>Contact Email *</FormLabel>
                   <FormControl>
-                    <Input placeholder="123 Main Street" {...field} />
+                    <Input type="email" placeholder="contact@company.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input placeholder="City" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {US_STATES.map((state) => (
-                          <SelectItem key={state.value} value={state.value}>
-                            {state.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="zip_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ZIP Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="12345" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="contact_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contact Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="(555) 123-4567" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
-              name="description"
+              name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Description of the organization" {...field} />
+                    <Textarea placeholder="123 Main Street, City, State 12345" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -274,6 +191,7 @@ export function EditOrganizationModal({ organization, open, onOpenChange }: Edit
                     <SelectContent>
                       <SelectItem value="partner">Partner</SelectItem>
                       <SelectItem value="subcontractor">Subcontractor</SelectItem>
+                      <SelectItem value="internal">Internal</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -56,10 +56,13 @@ export function AddLocationModal({ organizationId, open, onOpenChange }: AddLoca
 
   const onSubmit = async (data: AddLocationFormData) => {
     try {
-      await createLocationMutation.mutateAsync({
+      const locationData = {
         ...data,
         organization_id: organizationId,
-      });
+        is_active: true,
+      };
+      
+      await createLocationMutation.mutateAsync(locationData);
       
       toast({
         title: "Location added",

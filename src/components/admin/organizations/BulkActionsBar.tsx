@@ -1,8 +1,9 @@
+
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Download, Archive, Trash2, X } from 'lucide-react';
-import { Organization } from '@/pages/admin/AdminOrganizations';
+import { Organization } from '@/hooks/useOrganizations';
 
 interface BulkActionsBarProps {
   selectedCount: number;

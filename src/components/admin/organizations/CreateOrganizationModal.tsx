@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2 } from "lucide-react";
 import { useCreateOrganization } from '@/hooks/useOrganizations';
 
@@ -26,6 +27,8 @@ const createOrganizationSchema = z.object({
   contact_email: z.string().email({
     message: "Please enter a valid email address.",
   }),
+  contact_phone: z.string().optional(),
+  address: z.string().optional(),
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
   uses_partner_location_numbers: z.boolean().default(false),
 });
@@ -47,6 +50,8 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
       name: '',
       initials: '',
       contact_email: '',
+      contact_phone: '',
+      address: '',
       organization_type: 'partner',
       uses_partner_location_numbers: false,
     },
@@ -54,7 +59,14 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
 
   const onSubmit = async (data: CreateOrganizationFormData) => {
     try {
-      await createOrganizationMutation.mutateAsync(data);
+      const organizationData = {
+        ...data,
+        is_active: true,
+        next_sequence_number: 1,
+        next_location_sequence: 1,
+      };
+      
+      await createOrganizationMutation.mutateAsync(organizationData);
       
       toast({
         title: "Organization created",
@@ -122,6 +134,34 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
                   <FormLabel>Contact Email *</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="contact@company.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="contact_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contact Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="(555) 123-4567" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="123 Main Street, City, State 12345" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

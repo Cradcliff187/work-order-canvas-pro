@@ -1,135 +1,154 @@
+
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useOrganizationMutations } from '@/hooks/useOrganizations';
+import { Label } from '@/components/ui/label';
+import { useCreateOrganization } from '@/hooks/useOrganizations';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 const quickOrgSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
-  contact_email: z.string().email('Invalid email address'),
+  initials: z.string().min(1, 'Initials are required'),
+  contact_email: z.string().email('Invalid email format'),
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
 });
 
 type QuickOrgFormData = z.infer<typeof quickOrgSchema>;
 
 interface QuickOrganizationFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: (orgId: string) => void;
-  userType?: string;
+  onSuccess?: (organization: any) => void;
+  userType: 'partner' | 'subcontractor' | 'employee';
 }
 
-export function QuickOrganizationForm({ open, onOpenChange, onSuccess, userType }: QuickOrganizationFormProps) {
-  const { createOrganization } = useOrganizationMutations();
-  
-  const getDefaultOrgType = (): 'partner' | 'subcontractor' | 'internal' => {
-    if (userType === 'partner') return 'partner';
-    if (userType === 'subcontractor') return 'subcontractor';
-    return 'internal';
-  };
-  
+export function QuickOrganizationForm({ onSuccess, userType }: QuickOrganizationFormProps) {
+  const { toast } = useToast();
+  const [isVisible, setIsVisible] = useState(false);
+  const createOrganizationMutation = useCreateOrganization();
+
   const form = useForm<QuickOrgFormData>({
     resolver: zodResolver(quickOrgSchema),
     defaultValues: {
       name: '',
+      initials: '',
       contact_email: '',
-      organization_type: getDefaultOrgType(),
+      organization_type: userType === 'employee' ? 'internal' : userType,
     },
   });
 
   const onSubmit = async (data: QuickOrgFormData) => {
-    const orgData = {
-      name: data.name,
-      contact_email: data.contact_email,
-      organization_type: data.organization_type,
-    };
-    
-    await createOrganization.mutateAsync(orgData, {
-      onSuccess: (newOrg) => {
-        onSuccess(newOrg.id);
-        onOpenChange(false);
-        form.reset();
-      },
-    });
+    try {
+      const organizationData = {
+        ...data,
+        is_active: true,
+        address: '',
+        contact_phone: '',
+        next_sequence_number: 1,
+        next_location_sequence: 1,
+        uses_partner_location_numbers: false,
+      };
+      
+      const result = await createOrganizationMutation.mutateAsync(organizationData);
+      
+      toast({
+        title: "Organization created",
+        description: "The organization has been successfully created.",
+      });
+      
+      form.reset();
+      setIsVisible(false);
+      onSuccess?.(result);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to create organization",
+      });
+    }
   };
 
+  if (!isVisible) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setIsVisible(true)}
+      >
+        Create New Organization
+      </Button>
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Organization</DialogTitle>
-          <DialogDescription>
-            Create a new organization to assign users to. This organization can be used for work order management.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Organization Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Acme Corporation" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+    <div className="space-y-4 border rounded-lg p-4">
+      <h3 className="font-medium">Create New Organization</h3>
+      
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Organization Name *</Label>
+            <Input
+              id="name"
+              placeholder="Organization Name"
+              {...form.register('name')}
             />
+            {form.formState.errors.name && (
+              <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+            )}
+          </div>
 
-            <FormField
-              control={form.control}
-              name="contact_email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="contact@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div className="space-y-2">
+            <Label htmlFor="initials">Initials *</Label>
+            <Input
+              id="initials"
+              placeholder="ORG"
+              {...form.register('initials')}
             />
+            {form.formState.errors.initials && (
+              <p className="text-sm text-red-600">{form.formState.errors.initials.message}</p>
+            )}
+          </div>
+        </div>
 
-            <FormField
-              control={form.control}
-              name="organization_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Organization Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="partner">Partner</SelectItem>
-                      <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                      <SelectItem value="internal">Internal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div className="space-y-2">
+          <Label htmlFor="contact_email">Contact Email *</Label>
+          <Input
+            id="contact_email"
+            type="email"
+            placeholder="contact@company.com"
+            {...form.register('contact_email')}
+          />
+          {form.formState.errors.contact_email && (
+            <p className="text-sm text-red-600">{form.formState.errors.contact_email.message}</p>
+          )}
+        </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createOrganization.isPending}>
-                {createOrganization.isPending ? 'Creating...' : 'Create'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        <div className="flex gap-2">
+          <Button
+            type="submit"
+            disabled={createOrganizationMutation.isPending}
+          >
+            {createOrganizationMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Organization'
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsVisible(false)}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }
