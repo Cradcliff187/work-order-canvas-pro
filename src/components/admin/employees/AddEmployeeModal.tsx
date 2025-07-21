@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -5,6 +6,7 @@ import * as z from 'zod';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FormattedInput } from '@/components/ui/formatted-input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
@@ -199,7 +201,11 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
                   <FormItem>
                     <FormLabel>Email Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="john.doe@company.com" type="email" {...field} />
+                      <FormattedInput 
+                        formatter="email"
+                        placeholder="john.doe@company.com" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -214,7 +220,11 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
                     <FormItem>
                       <FormLabel>Phone (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="+1 (555) 123-4567" {...field} />
+                        <FormattedInput 
+                          formatter="phone"
+                          placeholder="(555) 123-4567" 
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -303,7 +313,6 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
                   />
                 </div>
               </div>
-
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleClose}>
