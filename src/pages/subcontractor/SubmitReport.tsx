@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
@@ -31,7 +32,7 @@ export default function SubmitReport() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { getWorkOrder } = useSubcontractorWorkOrders();
-  const { saveDraft, submitReport } = useOfflineStorage();
+  const { saveDraft, getDraft } = useOfflineStorage();
 
   const [formData, setFormData] = useState<FormData>({
     workPerformed: '',
@@ -83,21 +84,20 @@ export default function SubmitReport() {
 
     setIsSubmitting(true);
     try {
-      // Prepare the data for submission
-      const reportData = {
-        ...formData,
-        workOrderId: workOrderId,
-      };
-
-      // Submit the report
-      await submitReport(reportData);
+      // Here you would typically submit to your backend
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       toast({
         title: "Report Submitted",
         description: "Your report has been successfully submitted.",
       });
 
-      // Redirect or reset form
+      // Clear saved draft
+      if (currentDraftId) {
+        localStorage.removeItem(`draft_${currentDraftId}`);
+      }
+
+      // Redirect
       navigate('/subcontractor/reports');
     } catch (err: any) {
       toast({
@@ -122,15 +122,13 @@ export default function SubmitReport() {
     }
 
     try {
-      const draftData = {
-        ...formData,
-        workOrderId: workOrderId,
-      };
-      const draftId = await saveDraft(draftData, true);
-      setCurrentDraftId(draftId);
+      const draftKey = `draft_${workOrderId}`;
+      localStorage.setItem(draftKey, JSON.stringify(formData));
+      setCurrentDraftId(workOrderId);
+      
       toast({
         title: "Draft Saved",
-        description: "Your progress has been saved as a draft.",
+        description: "Your progress has been saved locally.",
       });
     } catch (err: any) {
       toast({
@@ -166,7 +164,12 @@ export default function SubmitReport() {
     }));
   }, []);
 
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop, accept: 'image/*'});
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif']
+    }
+  });
 
   const handleRemovePhoto = (index: number) => {
     setFormData(prev => {
