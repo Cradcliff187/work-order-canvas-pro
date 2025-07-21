@@ -17,7 +17,6 @@ import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Buildi
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
-import { WorkOrderNumberPreview } from '@/components/WorkOrderNumberPreview';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
@@ -459,21 +458,21 @@ export default function SubmitWorkOrder() {
         </Card>
       )}
 
-      {/* Work Order Number Preview - Show on all steps */}
+      {/* Compact Work Order Number Preview */}
       {effectiveOrganizationId && (
-        <WorkOrderNumberPreview
-          workOrderNumber={workOrderNumber}
-          isLoading={isLoadingWorkOrderNumber}
-          error={workOrderNumberError}
-          isFallback={isFallback}
-          warning={workOrderNumberWarning}
-          organizationName={organizationName || userOrganization?.name || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.name}
-          organizationInitials={userOrganization?.initials || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.initials}
-          locationNumber={generatedLocationNumber}
-          usesPartnerLocationNumbers={userOrganization?.uses_partner_location_numbers || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.uses_partner_location_numbers}
-          typedLocationCode={form.watch('partner_location_number')}
-          className="sticky top-4 z-10"
-        />
+        <div className="text-center mb-4">
+          <p className="text-sm text-muted-foreground">
+            {isLoadingWorkOrderNumber ? (
+              "Work Order: Generating..."
+            ) : workOrderNumberError ? (
+              "Work Order: Error"
+            ) : workOrderNumber ? (
+              `Work Order: ${workOrderNumber}`
+            ) : (
+              "Work Order: Will be generated"
+            )}
+          </p>
+        </div>
       )}
 
       {/* Step Progress Indicator */}
@@ -612,49 +611,6 @@ export default function SubmitWorkOrder() {
           {/* Step 3: Preview & Submit */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              {/* Enhanced Work Order Number Preview */}
-              <Card className="border-2 border-primary/30 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Work Order Number Preview
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    This is the work order number that will be assigned to your request
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-6">
-                    <div className="text-sm text-muted-foreground mb-3">
-                      Your work order number will be:
-                    </div>
-                    <div className="font-mono text-3xl font-bold text-primary mb-4 p-4 bg-background rounded-lg border-2 border-primary/20">
-                      {isLoadingWorkOrderNumber ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                          <span className="text-lg">Generating...</span>
-                        </div>
-                      ) : workOrderNumberError ? (
-                        <div className="flex items-center justify-center gap-2 text-destructive">
-                          <AlertCircle className="h-6 w-6" />
-                          <span className="text-lg">Error generating number</span>
-                        </div>
-                      ) : (
-                        workOrderNumber || 'Will be generated automatically'
-                      )}
-                    </div>
-                    {isFallback && workOrderNumber && (
-                      <Badge variant="outline" className="text-xs">
-                        Fallback format
-                      </Badge>
-                    )}
-                    <div className="text-xs text-muted-foreground mt-2">
-                      This number will be used for tracking and reference
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Organization Info */}
               {(userOrganization || selectedOrganizationId) && (
                 <Card>
