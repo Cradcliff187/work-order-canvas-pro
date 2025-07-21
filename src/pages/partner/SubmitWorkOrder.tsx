@@ -2,117 +2,176 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, ArrowLeft, Loader2 } from "lucide-react";
+import { Plus, ArrowLeft, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin } from "lucide-react";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
+import { LocationFields } from '@/components/LocationFields';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
+import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
 
-interface FormData {
-  title: string;
-  description: string;
-  trade_id: string;
-  organization_id: string;
-  store_location: string;
-  street_address: string;
-  city: string;
-  state: string;
-  zip_code: string;
-  location_contact_name: string;
-  location_contact_phone: string;
-  location_contact_email: string;
-  partner_po_number: string;
-  partner_location_number: string;
-  due_date: string;
-  estimated_hours: string;
-}
+// Form schema with comprehensive validation
+const workOrderFormSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
+  description: z.string().optional(),
+  trade_id: z.string().min(1, 'Trade is required'),
+  organization_id: z.string().min(1, 'Organization is required'),
+  store_location: z.string().min(1, 'Location name is required'),
+  street_address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip_code: z.string().optional(),
+  location_street_address: z.string().optional(),
+  location_city: z.string().optional(),
+  location_state: z.string().optional(),
+  location_zip_code: z.string().optional(),
+  location_name: z.string().optional(),
+  location_contact_name: z.string().optional(),
+  location_contact_phone: z.string().optional(),
+  location_contact_email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  partner_po_number: z.string().optional(),
+  partner_location_number: z.string().optional(),
+  partner_location_selection: z.string().optional(),
+  due_date: z.string().optional(),
+  estimated_hours: z.string().optional(),
+});
+
+type FormData = z.infer<typeof workOrderFormSchema>;
 
 export default function SubmitWorkOrder() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const [trades, setTrades] = useState<any[]>([]);
-  const [organizations, setOrganizations] = useState<any[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
+  const [isLoadingTrades, setIsLoadingTrades] = useState(true);
+  const [tradesError, setTradesError] = useState<string | null>(null);
 
-  // Setup React Hook Form
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<FormData>({
+  // User organization hook
+  const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();
+
+  // Work order creation hook
+  const createWorkOrderMutation = useCreateWorkOrder();
+
+  // Work order number generation
+  const {
+    workOrderNumber,
+    isLoading: isLoadingWorkOrderNumber,
+    error: workOrderNumberError,
+    isFallback,
+    warning: workOrderNumberWarning,
+    requiresInitials,
+    organizationName,
+  } = useWorkOrderNumberGeneration({
+    organizationId: userOrganization?.id,
+    locationNumber: undefined, // Will be updated based on form values
+  });
+
+  // Form setup with comprehensive validation
+  const form = useForm<FormData>({
+    resolver: zodResolver(workOrderFormSchema),
     defaultValues: {
       title: '',
       description: '',
       trade_id: '',
-      organization_id: '',
+      organization_id: userOrganization?.id || '',
       store_location: '',
       street_address: '',
       city: '',
       state: '',
       zip_code: '',
+      location_street_address: '',
+      location_city: '',
+      location_state: '',
+      location_zip_code: '',
+      location_name: '',
       location_contact_name: '',
       location_contact_phone: '',
       location_contact_email: '',
       partner_po_number: '',
       partner_location_number: '',
+      partner_location_selection: '',
       due_date: '',
       estimated_hours: '',
     }
   });
 
-  // Load trades and organizations
+  // Load trades
   useEffect(() => {
-    const loadData = async () => {
+    const loadTrades = async () => {
       try {
-        const [tradesResult, orgsResult] = await Promise.all([
-          supabase.from('trades').select('*').eq('is_active', true),
-          supabase.from('organizations').select('*').eq('is_active', true)
-        ]);
+        setIsLoadingTrades(true);
+        const { data, error } = await supabase
+          .from('trades')
+          .select('*')
+          .eq('is_active', true)
+          .order('name');
 
-        if (tradesResult.error) throw tradesResult.error;
-        if (orgsResult.error) throw orgsResult.error;
-
-        setTrades(tradesResult.data || []);
-        setOrganizations(orgsResult.data || []);
+        if (error) throw error;
+        setTrades(data || []);
       } catch (error: any) {
-        setDataError(error.message || 'Failed to load data');
+        console.error('Error loading trades:', error);
+        setTradesError(error.message || 'Failed to load trades');
       } finally {
-        setIsLoadingData(false);
+        setIsLoadingTrades(false);
       }
     };
 
-    loadData();
+    loadTrades();
   }, []);
+
+  // Update organization in form when user organization loads
+  useEffect(() => {
+    if (userOrganization?.id && !form.getValues('organization_id')) {
+      form.setValue('organization_id', userOrganization.id);
+    }
+  }, [userOrganization?.id, form]);
 
   // Handle form submission
   const onSubmit = async (data: FormData) => {
     try {
-      const { error } = await supabase
-        .from('work_orders')
-        .insert([{
-          ...data,
-          created_by: user?.id,
-          date_submitted: new Date().toISOString(),
-          status: 'received',
-          due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
-          estimated_hours: data.estimated_hours ? parseFloat(data.estimated_hours) : null,
-        }]);
+      // Prepare submission data
+      const submissionData = {
+        title: data.title,
+        description: data.description || '',
+        trade_id: data.trade_id,
+        organization_id: data.organization_id,
+        store_location: data.store_location,
+        street_address: data.street_address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zip_code: data.zip_code || '',
+        location_street_address: data.location_street_address || '',
+        location_city: data.location_city || '',
+        location_state: data.location_state || '',
+        location_zip_code: data.location_zip_code || '',
+        location_name: data.location_name || '',
+        location_contact_name: data.location_contact_name || '',
+        location_contact_phone: data.location_contact_phone || '',
+        location_contact_email: data.location_contact_email || '',
+        partner_po_number: data.partner_po_number || '',
+        partner_location_number: data.partner_location_number || '',
+      };
 
-      if (error) throw error;
-
-      toast({
-        title: "Work order submitted successfully!",
-        description: "You'll be redirected to the work orders list.",
-      });
+      await createWorkOrderMutation.mutateAsync(submissionData);
       
-      setTimeout(() => {
-        navigate('/partner/work-orders');
-      }, 1500);
+      // Navigate back to work orders list
+      navigate('/partner/work-orders');
     } catch (error: any) {
+      console.error('Error submitting work order:', error);
       toast({
         variant: "destructive",
         title: "Submission error",
@@ -120,6 +179,62 @@ export default function SubmitWorkOrder() {
       });
     }
   };
+
+  // Loading states
+  if (loadingUserOrg || isLoadingTrades) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/partner/work-orders">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Work Orders
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Submit Work Order</h1>
+            <p className="text-muted-foreground">Create a new work order request</p>
+          </div>
+        </div>
+        
+        <Card>
+          <CardContent className="p-6 flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Loading form data...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error states
+  if (tradesError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/partner/work-orders">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Work Orders
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Submit Work Order</h1>
+            <p className="text-muted-foreground">Create a new work order request</p>
+          </div>
+        </div>
+        
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load form data. Please refresh the page and try again.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -137,59 +252,106 @@ export default function SubmitWorkOrder() {
         </div>
       </div>
 
-      {/* Error and Loading States */}
-      {dataError ? (
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            Failed to load data. Please check your network connection and try again.
+      {/* Work Order Number Preview */}
+      {workOrderNumber && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <span className="font-medium">Work Order Number:</span>
+              </div>
+              <Badge variant="outline" className="font-mono text-sm">
+                {workOrderNumber}
+              </Badge>
+              {isFallback && (
+                <Badge variant="secondary" className="text-xs">
+                  Fallback
+                </Badge>
+              )}
+            </div>
+            {workOrderNumberWarning && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {workOrderNumberWarning}
+              </p>
+            )}
           </CardContent>
         </Card>
-      ) : isLoadingData ? (
+      )}
+
+      {/* Organization Info */}
+      {userOrganization && (
         <Card>
-          <CardContent className="p-6 text-center">
-            Loading form data...
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-primary" />
+              <div>
+                <div className="font-medium">{userOrganization.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {userOrganization.contact_email}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      ) : (
-        /* Form */
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      )}
+
+      {/* Form */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <StandardFormLayout>
             <StandardFormLayout.Section
               title="Work Order Details"
               description="Provide detailed information about the work order"
             >
               <StandardFormLayout.FieldGroup>
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    placeholder="Brief title of the work order"
-                    {...register('title', { required: 'Title is required' })}
-                  />
-                  {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-                </div>
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Brief title of the work order"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Detailed description of the work to be performed..."
-                    {...register('description')}
-                    className="min-h-[120px]"
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Detailed description of the work to be performed..."
+                          className="min-h-[120px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="trade_id">Trade *</Label>
-                  <Controller
-                    name="trade_id"
-                    control={control}
-                    rules={{ required: 'Trade is required' }}
-                    render={({ field }) => (
+                <FormField
+                  control={form.control}
+                  name="trade_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Trade *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a trade" />
-                        </SelectTrigger>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a trade" />
+                          </SelectTrigger>
+                        </FormControl>
                         <SelectContent>
                           {trades.map((trade) => (
                             <SelectItem key={trade.id} value={trade.id}>
@@ -198,174 +360,68 @@ export default function SubmitWorkOrder() {
                           ))}
                         </SelectContent>
                       </Select>
-                    )}
-                  />
-                  {errors.trade_id && <p className="text-sm text-destructive">{errors.trade_id.message}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="organization_id">Organization *</Label>
-                  <Controller
-                    name="organization_id"
-                    control={control}
-                    rules={{ required: 'Organization is required' }}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select an organization" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {organizations.map((org) => (
-                            <SelectItem key={org.id} value={org.id}>
-                              {org.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.organization_id && <p className="text-sm text-destructive">{errors.organization_id.message}</p>}
-                </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </StandardFormLayout.FieldGroup>
             </StandardFormLayout.Section>
 
+            {/* Location Fields Integration */}
             <StandardFormLayout.Section
-              title="Location Details"
+              title="Location Information"
               description="Enter the location details for the work order"
             >
-              <StandardFormLayout.FieldGroup>
-                <div className="space-y-2">
-                  <Label htmlFor="store_location">Store/Location</Label>
-                  <Input
-                    id="store_location"
-                    placeholder="Store or specific location within the building"
-                    {...register('store_location')}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="street_address">Street Address</Label>
-                  <Input
-                    id="street_address"
-                    placeholder="Street address"
-                    {...register('street_address')}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    placeholder="City"
-                    {...register('city')}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    placeholder="State"
-                    {...register('state')}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">Zip Code</Label>
-                  <Input
-                    id="zip_code"
-                    placeholder="Zip code"
-                    {...register('zip_code')}
-                  />
-                </div>
-              </StandardFormLayout.FieldGroup>
+              <LocationFields
+                form={form}
+                organizationId={userOrganization?.id}
+                organizationType={userOrganization?.organization_type}
+                showPoNumber={true}
+              />
             </StandardFormLayout.Section>
 
-            <StandardFormLayout.Section
-              title="Contact Information"
-              description="Enter contact details for the location"
-            >
-              <StandardFormLayout.FieldGroup>
-                <div className="space-y-2">
-                  <Label htmlFor="location_contact_name">Contact Name</Label>
-                  <Input
-                    id="location_contact_name"
-                    placeholder="Contact person's name"
-                    {...register('location_contact_name')}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location_contact_phone">Contact Phone</Label>
-                  <Input
-                    id="location_contact_phone"
-                    placeholder="Contact person's phone number"
-                    {...register('location_contact_phone')}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location_contact_email">Contact Email</Label>
-                  <Input
-                    id="location_contact_email"
-                    placeholder="Contact person's email address"
-                    type="email"
-                    {...register('location_contact_email')}
-                  />
-                </div>
-              </StandardFormLayout.FieldGroup>
-            </StandardFormLayout.Section>
-
-            <StandardFormLayout.Section
-              title="Partner References"
-              description="Enter any partner-specific reference numbers"
-            >
-              <StandardFormLayout.FieldGroup>
-                <div className="space-y-2">
-                  <Label htmlFor="partner_po_number">Partner PO Number</Label>
-                  <Input
-                    id="partner_po_number"
-                    placeholder="Partner purchase order number"
-                    {...register('partner_po_number')}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="partner_location_number">Partner Location Number</Label>
-                  <Input
-                    id="partner_location_number"
-                    placeholder="Partner location number"
-                    {...register('partner_location_number')}
-                  />
-                </div>
-              </StandardFormLayout.FieldGroup>
-            </StandardFormLayout.Section>
-
+            {/* Scheduling Section */}
             <StandardFormLayout.Section
               title="Scheduling"
               description="Enter scheduling details for the work order"
             >
               <StandardFormLayout.FieldGroup>
-                <div className="space-y-2">
-                  <Label htmlFor="due_date">Due Date</Label>
-                  <Input
-                    id="due_date"
-                    type="date"
-                    {...register('due_date')}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="due_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="estimated_hours">Estimated Hours</Label>
-                  <Input
-                    id="estimated_hours"
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    placeholder="Estimated hours for the work order"
-                    {...register('estimated_hours')}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="estimated_hours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimated Hours</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          placeholder="Estimated hours for the work order"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </StandardFormLayout.FieldGroup>
             </StandardFormLayout.Section>
 
@@ -380,10 +436,10 @@ export default function SubmitWorkOrder() {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSubmitting}
+                disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
                 className="min-h-[44px]"
               >
-                {isSubmitting ? (
+                {createWorkOrderMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Submitting...
@@ -398,7 +454,7 @@ export default function SubmitWorkOrder() {
             </StandardFormLayout.Actions>
           </StandardFormLayout>
         </form>
-      )}
+      </Form>
     </div>
   );
 }
