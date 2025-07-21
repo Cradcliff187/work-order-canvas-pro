@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
@@ -281,8 +282,9 @@ export function useCreateWorkOrder() {
             .eq('id', variables.organization_id)
             .single();
 
-          if (org?.uses_partner_location_numbers) {
-            // Generate new location number
+          // FIXED: Corrected the logic - auto-generate when org DOES NOT use location numbers
+          if (!org?.uses_partner_location_numbers) {
+            // Generate new location number for organizations that don't use custom location numbers
             const { data: locationNumber, error: genError } = await supabase
               .rpc('generate_next_location_number', { org_id: variables.organization_id });
 
@@ -324,7 +326,7 @@ export function useCreateWorkOrder() {
           }
         }
 
-        // Auto-save existing partner location if applicable (backward compatibility)
+        // Handle existing partner location with provided location number
         const shouldSaveLocation = variables.partner_location_number && 
           variables.organization_id &&
           variables.location_street_address &&

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -108,11 +109,9 @@ export default function SubmitWorkOrder() {
   // User organization hook
   const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();
   
-  // For admin users, load all partner organizations
-  const { data: organizations, isLoading: loadingOrganizations } = useOrganizations({
-    enabled: profile?.user_type === 'admin',
-    organizationType: 'partner'
-  });
+  // For admin users, load all organizations and filter for partners
+  const { data: allOrganizations, isLoading: loadingAllOrganizations } = useOrganizations();
+  const partnerOrganizations = allOrganizations?.organizations?.filter(org => org.organization_type === 'partner') || [];
 
   // Work order creation hook
   const createWorkOrderMutation = useCreateWorkOrder();
@@ -328,7 +327,7 @@ export default function SubmitWorkOrder() {
   };
 
   // Loading states
-  if (loadingUserOrg || isLoadingTrades || (profile?.user_type === 'admin' && loadingOrganizations)) {
+  if (loadingUserOrg || isLoadingTrades || (profile?.user_type === 'admin' && loadingAllOrganizations)) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -417,7 +416,7 @@ export default function SubmitWorkOrder() {
                 <SelectValue placeholder="Select a partner organization" />
               </SelectTrigger>
               <SelectContent>
-                {organizations?.map((org) => (
+                {partnerOrganizations.map((org) => (
                   <SelectItem key={org.id} value={org.id}>
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="font-mono text-xs">
@@ -619,10 +618,10 @@ export default function SubmitWorkOrder() {
                       <Building2 className="h-5 w-5 text-primary" />
                       <div>
                         <div className="font-medium">
-                          {userOrganization?.name || organizations?.find(org => org.id === selectedOrganizationId)?.name}
+                          {userOrganization?.name || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.name}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {userOrganization?.contact_email || organizations?.find(org => org.id === selectedOrganizationId)?.contact_email}
+                          {userOrganization?.contact_email || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.contact_email}
                         </div>
                       </div>
                     </div>
