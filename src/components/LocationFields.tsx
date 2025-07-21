@@ -1,6 +1,7 @@
+
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { Building2, MapPin, ExternalLink, Plus, Loader2, User, Phone, Mail } from 'lucide-react';
+import { Building2, MapPin, ExternalLink, Plus, Loader2, User, Phone, Mail, Info, Eye } from 'lucide-react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { US_STATES } from '@/constants/states';
 import { useLocationSuggestions, formatLocationDisplay, getDirectionsUrl, LocationSuggestion } from '@/hooks/useLocationSuggestions';
@@ -15,6 +17,7 @@ import { usePartnerOrganizationLocations } from '@/hooks/usePartnerOrganizationL
 import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import { useOrganization } from '@/hooks/useOrganizations';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
+import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -64,6 +67,19 @@ export function LocationFields({
   const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerOrganizationLocations(
     effectiveOrganizationId
   );
+
+  // Watch for location code changes to generate work order number preview
+  const locationCodeValue = form.watch('partner_location_number');
+  
+  // Generate work order number preview
+  const {
+    workOrderNumber: previewWorkOrderNumber,
+    isLoading: isLoadingPreview,
+    organizationName,
+  } = useWorkOrderNumberGeneration({
+    organizationId: effectiveOrganizationId,
+    locationNumber: locationCodeValue,
+  });
 
   // Add field synchronization between new and legacy field names
   useEffect(() => {
@@ -147,7 +163,7 @@ export function LocationFields({
     setSelectedLocation(null);
     setSelectedLocationId(''); // This clears the dropdown selection
     
-    // Preserve typed location number for organizations that require manual entry
+    // Preserve typed location code for organizations that require manual entry
     if (orgData?.uses_partner_location_numbers && locationSearchValue) {
       form.setValue('partner_location_number', locationSearchValue);
     } else if (!orgData?.uses_partner_location_numbers) {
@@ -178,6 +194,29 @@ export function LocationFields({
     const hasPartnerLocationSelected = partnerLocationSelected;
     return hasManualEntry || hasSelectedLocation || hasPartnerLocationSelected;
   }, [manualEntryMode, selectedLocation, partnerLocationSelected]);
+
+  // Generate help text based on organization settings
+  const locationCodeHelpText = useMemo(() => {
+    if (!orgData) return '';
+    
+    if (orgData.uses_partner_location_numbers) {
+      const initials = orgData.initials || 'ORG';
+      return `Enter your location code (will appear in work order as: ${initials}-{CODE}-###)`;
+    } else {
+      return 'Location code will be auto-assigned (001, 002, etc.)';
+    }
+  }, [orgData]);
+
+  // Generate placeholder text based on organization settings
+  const locationCodePlaceholder = useMemo(() => {
+    if (!orgData) return '';
+    
+    if (orgData.uses_partner_location_numbers) {
+      return 'e.g., BLDG-A, NORTH-WING, 205';
+    } else {
+      return 'Leave blank for auto-generated';
+    }
+  }, [orgData]);
 
   // All hooks declared above - now check loading state
   if ((isLoadingOrganization || loadingUserOrg) && !effectiveOrganizationId) {
@@ -304,38 +343,61 @@ export function LocationFields({
             <FormField
               control={form.control}
               name="partner_location_number"
+              rules={{
+                required: orgData?.uses_partner_location_numbers ? 'Location code is required' : false
+              }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    Location Number {orgData?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
-                    {isGeneratingNumber && <span className="text-xs text-muted-foreground">(generating...)</span>}
+                    Location Code {orgData?.uses_partner_location_numbers && <span className="text-destructive">*</span>}
+                    {!orgData?.uses_partner_location_numbers && <Badge variant="secondary" className="text-xs">Auto</Badge>}
                   </FormLabel>
                   <FormControl>
-                    {orgData?.uses_partner_location_numbers ? (
-                      <Input
-                        {...field}
-                        placeholder="Enter location number (e.g., 001, ABC-123)"
-                        className="h-11 bg-background"
-                      />
-                    ) : (
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          placeholder="Will be auto-generated"
-                          className="h-11 bg-muted/30"
-                          disabled
-                        />
-                        <Badge variant="secondary" className="absolute right-3 top-3 text-xs">
-                          Auto
-                        </Badge>
-                      </div>
-                    )}
+                    <Input
+                      {...field}
+                      placeholder={locationCodePlaceholder}
+                      className="h-11 bg-background"
+                      disabled={!orgData?.uses_partner_location_numbers}
+                    />
                   </FormControl>
+                  {locationCodeHelpText && (
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>{locationCodeHelpText}</span>
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {/* Work Order Number Preview */}
+            {orgData && (locationCodeValue || !orgData.uses_partner_location_numbers) && (
+              <Alert className="border-primary/20 bg-primary/5">
+                <Eye className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Work Order Preview:</span>
+                    {isLoadingPreview ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-muted-foreground">Generating...</span>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="font-mono">
+                        {previewWorkOrderNumber || 'Preview will appear here'}
+                      </Badge>
+                    )}
+                  </div>
+                  {organizationName && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Organization: {organizationName}
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         )}
       </div>
@@ -389,12 +451,16 @@ export function LocationFields({
             <FormField
               control={form.control}
               name="store_location"
+              rules={{ required: 'Location name is required' }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Location Name *</FormLabel>
+                  <FormLabel className="text-sm font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Location Name *
+                  </FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="e.g. Downtown Office, Main Store, Store #123" 
+                      placeholder="e.g., North Building A, Main Warehouse" 
                       className="h-11 bg-background"
                       {...field} 
                     />
