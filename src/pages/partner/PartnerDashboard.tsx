@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartn
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
+import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
 import { format, differenceInDays } from 'date-fns';
 
 
@@ -29,6 +31,34 @@ const PartnerDashboard = () => {
   
   // Check if user's organizations have initials set up for smart numbering
   const hasInitialsConfigured = primaryOrganization?.initials && primaryOrganization.initials.trim() !== '';
+
+  // Map stats data to StatCard format
+  const statsData: StatCard[] = [
+    {
+      icon: FileText,
+      label: "Total Work Orders",
+      value: stats?.total || 0,
+      description: "All time"
+    },
+    {
+      icon: Clock,
+      label: "Active Work Orders",
+      value: stats?.active || 0,
+      description: "In progress"
+    },
+    {
+      icon: CheckCircle,
+      label: "Completed This Month",
+      value: stats?.completedThisMonth || 0,
+      description: "This month"
+    },
+    {
+      icon: TrendingUp,
+      label: "Avg. Completion Time",
+      value: stats?.avgCompletionDays ? `${stats.avgCompletionDays}d` : 'N/A',
+      description: "Average days"
+    }
+  ];
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -82,75 +112,7 @@ const PartnerDashboard = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Work Orders</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                stats?.total || 0
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">All time</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Work Orders</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                stats?.active || 0
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">In progress</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                stats?.completedThisMonth || 0
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Completion Time</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                stats?.avgCompletionDays ? `${stats.avgCompletionDays}d` : 'N/A'
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">Average days</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StandardDashboardStats stats={statsData} loading={statsLoading} className="mb-8" />
 
       {/* Recent Work Orders */}
       <Card className="lg:col-span-2">
