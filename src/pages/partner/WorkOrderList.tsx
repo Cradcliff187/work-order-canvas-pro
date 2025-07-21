@@ -19,6 +19,8 @@ import {
   FileText
 } from 'lucide-react';
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
+import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import {
   Select,
@@ -32,8 +34,12 @@ import { format } from 'date-fns';
 const WorkOrderList = () => {
   const navigate = useNavigate();
   const { data: workOrdersData, isLoading } = usePartnerWorkOrders();
+  const { data: userOrganization } = useUserOrganization();
+  const { data: locations } = usePartnerLocations(userOrganization?.id);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
 
   const workOrderList = workOrdersData?.data || [];
 
@@ -46,10 +52,20 @@ const WorkOrderList = () => {
     
     const matchesStatus = statusFilter === 'all' || workOrder.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    const matchesLocation = locationFilter === 'all' || 
+      workOrder.partner_location_number === locationFilter ||
+      (locationFilter === 'manual' && !workOrder.partner_location_number);
+    
+    return matchesSearch && matchesStatus && matchesLocation;
   });
 
-  const hasFilters = searchTerm || statusFilter !== 'all';
+  const hasFilters = searchTerm || statusFilter !== 'all' || locationFilter !== 'all';
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setLocationFilter('all');
+  };
 
   if (isLoading) {
     return (
@@ -62,6 +78,7 @@ const WorkOrderList = () => {
           <CardContent className="p-6">
             <div className="flex gap-4 mb-6">
               <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-48" />
               <Skeleton className="h-10 w-48" />
             </div>
           </CardContent>
@@ -120,6 +137,20 @@ const WorkOrderList = () => {
                 <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {locations && locations.length > 0 && locations.map((location) => (
+                  <SelectItem key={location.id} value={location.location_number}>
+                    {location.location_name} ({location.location_number})
+                  </SelectItem>
+                ))}
+                <SelectItem value="manual">Manual Locations</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -136,10 +167,7 @@ const WorkOrderList = () => {
             }
             action={hasFilters ? {
               label: "Clear Filters",
-              onClick: () => {
-                setSearchTerm('');
-                setStatusFilter('all');
-              },
+              onClick: clearAllFilters,
               icon: Filter
             } : {
               label: "Submit Your First Work Order",
