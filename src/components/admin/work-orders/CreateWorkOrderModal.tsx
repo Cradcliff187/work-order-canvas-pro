@@ -236,10 +236,13 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
     form.trigger();
   }, [createWorkOrderSchemaForUser, form]);
   
-  // Get the actual organization data with full properties
+  // Get the organization data with proper type safety
   const selectedOrganization = profile?.user_type === 'admin' 
-    ? selectedOrg || organizations?.find(org => org.id === organizationId)
+    ? selectedOrg
     : organization;
+
+  // For organizations that don't have full data, we need to handle safely
+  const organizationForPreview = selectedOrganization || organizations?.find(org => org.id === organizationId);
   
   const { 
     workOrderNumber, 
@@ -319,10 +322,10 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
                 error={numberError}
                 isFallback={isFallback}
                 warning={warning}
-                organizationName={organizationName || selectedOrganization?.name}
-                organizationInitials={selectedOrganization?.initials}
+                organizationName={organizationName || organizationForPreview?.name}
+                organizationInitials={organizationForPreview?.initials}
                 locationNumber={generatedLocationNumber}
-                usesPartnerLocationNumbers={selectedOrganization?.uses_partner_location_numbers}
+                usesPartnerLocationNumbers={selectedOrganization?.uses_partner_location_numbers ?? false}
                 typedLocationCode={form.watch('partner_location_number')}
               />
             )}
