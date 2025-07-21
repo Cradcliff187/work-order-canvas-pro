@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -12,6 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -31,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2, MapPin, Building2 } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Building2, X, ArrowUpDown } from 'lucide-react';
 import { usePartnerLocations, usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { AddLocationModal } from '@/components/partner/AddLocationModal';
 import { EditLocationModal } from '@/components/partner/EditLocationModal';
@@ -48,8 +56,70 @@ const PartnerLocations: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingLocation, setDeletingLocation] = useState<PartnerLocation | null>(null);
 
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortOption, setSortOption] = useState<string>('name-asc');
+
   const { data: locations = [], isLoading } = usePartnerLocations();
   const { deleteLocation } = usePartnerLocationMutations();
+
+  // Enhanced filtering logic
+  const filteredAndSortedLocations = useMemo(() => {
+    let filtered = locations;
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter((location) => {
+        const searchableFields = [
+          location.location_name,
+          location.location_number,
+          location.contact_name,
+          location.contact_email,
+          location.street_address,
+          location.city,
+          location.state,
+          location.zip_code,
+        ].filter(Boolean);
+        
+        return searchableFields.some(field => 
+          field?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((location) => {
+        if (statusFilter === 'active') return location.is_active;
+        if (statusFilter === 'inactive') return !location.is_active;
+        return true;
+      });
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case 'name-asc':
+          return a.location_name.localeCompare(b.location_name);
+        case 'name-desc':
+          return b.location_name.localeCompare(a.location_name);
+        case 'number-asc':
+          return a.location_number.localeCompare(b.location_number);
+        case 'number-desc':
+          return b.location_number.localeCompare(a.location_number);
+        case 'status-active':
+          return b.is_active === a.is_active ? 0 : b.is_active ? 1 : -1;
+        case 'status-inactive':
+          return b.is_active === a.is_active ? 0 : a.is_active ? 1 : -1;
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [locations, searchTerm, statusFilter, sortOption]);
 
   const columns: ColumnDef<PartnerLocation>[] = [
     {
@@ -143,7 +213,7 @@ const PartnerLocations: React.FC = () => {
   ];
 
   const table = useReactTable({
-    data: locations,
+    data: filteredAndSortedLocations,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -174,7 +244,15 @@ const PartnerLocations: React.FC = () => {
     }
   };
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setSortOption('name-asc');
+  };
+
+  const hasActiveFilters = searchTerm || statusFilter !== 'all' || sortOption !== 'name-asc';
   const activeLocations = locations.filter(location => location.is_active);
+  const isFilteredView = hasActiveFilters && filteredAndSortedLocations.length === 0 && locations.length > 0;
 
   if (isLoading) {
     return (
@@ -188,8 +266,9 @@ const PartnerLocations: React.FC = () => {
     <div className="space-y-6">
       {/* Live region for status updates */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {isLoading ? 'Loading locations...' : `Showing ${locations.length} locations`}
+        {isLoading ? 'Loading locations...' : `Showing ${filteredAndSortedLocations.length} of ${locations.length} locations`}
       </div>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -212,23 +291,70 @@ const PartnerLocations: React.FC = () => {
         </Card>
       </div>
 
-      {/* Table Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Search locations..."
-            value={(table.getColumn('location_name')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn('location_name')?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm"
-            aria-label="Search locations by name"
-          />
+      {/* Filters and Actions */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Locations</h2>
+          <Button onClick={() => setShowAddModal(true)} aria-label="Add new location">
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Add Location
+          </Button>
         </div>
-        <Button onClick={() => setShowAddModal(true)} aria-label="Add new location">
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Add Location
-        </Button>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search by name, number, contact, or address..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+              aria-label="Search locations"
+            />
+          </div>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-48" aria-label="Filter by status">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active Only</SelectItem>
+              <SelectItem value="inactive">Inactive Only</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={sortOption} onValueChange={setSortOption}>
+            <SelectTrigger className="w-full sm:w-48" aria-label="Sort locations">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+              <SelectItem value="number-asc">Number (Low-High)</SelectItem>
+              <SelectItem value="number-desc">Number (High-Low)</SelectItem>
+              <SelectItem value="status-active">Status (Active First)</SelectItem>
+              <SelectItem value="status-inactive">Status (Inactive First)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              onClick={clearFilters}
+              className="w-full sm:w-auto"
+              aria-label="Clear all filters"
+            >
+              <X className="mr-2 h-4 w-4" aria-hidden="true" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
+
+        {hasActiveFilters && (
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredAndSortedLocations.length} of {locations.length} locations
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -259,6 +385,7 @@ const PartnerLocations: React.FC = () => {
                             {typeof header.column.columnDef.header === 'string'
                               ? header.column.columnDef.header
                               : null}
+                            <ArrowUpDown className="ml-2 h-4 w-4" />
                           </Button>
                         )
                         : (
@@ -289,7 +416,16 @@ const PartnerLocations: React.FC = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No locations found.
+                    {isFilteredView ? (
+                      <div className="space-y-2">
+                        <div>No locations match your current filters.</div>
+                        <Button variant="outline" onClick={clearFilters} size="sm">
+                          Clear filters to see all locations
+                        </Button>
+                      </div>
+                    ) : (
+                      'No locations found.'
+                    )}
                   </TableCell>
                 </TableRow>
               )}
