@@ -1,8 +1,8 @@
-# WorkOrderPro Development Guide
+# WorkOrderPortal Development Guide
 
 ## Overview
 
-This guide covers local development setup, testing procedures, and common development workflows for WorkOrderPro. The application uses database function-based seeding for secure, server-side data initialization.
+This guide covers local development setup, testing procedures, and common development workflows for WorkOrderPortal. The application uses database function-based seeding for secure, server-side data initialization.
 
 ## Local Development Setup
 
@@ -137,7 +137,7 @@ const response = await fetch('/api/create-test-users', {
 ### Test Data Patterns
 
 **Test Organizations (8 total from seeding):**
-- 1 Internal organization (WorkOrderPro Internal)
+- 1 Internal organization (WorkOrderPortal Internal)
 - 3 Partner organizations (ABC, XYZ, Premium)  
 - 4 Subcontractor organizations (Pipes & More, Sparks Electric, etc.)
 
@@ -146,7 +146,7 @@ const response = await fetch('/api/create-test-users', {
 - **partner2@xyz.com** - XYZ Commercial Properties partner user  
 - **sub1@pipes.com** - Pipes & More Plumbing subcontractor
 - **sub2@sparks.com** - Sparks Electric subcontractor
-- **employee1@workorderpro.com** - Internal employee with rates
+- **employee1@workorderportal.com** - Internal employee with rates
 
 **Default Test Password:** `Test123!` (for all created users)
 
@@ -165,7 +165,7 @@ const testCredentials = {
   partner2: { email: 'partner2@xyz.com', password: 'Test123!' },
   subcontractor1: { email: 'sub1@pipes.com', password: 'Test123!' },
   subcontractor2: { email: 'sub2@sparks.com', password: 'Test123!' },
-  employee: { email: 'employee1@workorderpro.com', password: 'Test123!' }
+  employee: { email: 'employee1@workorderportal.com', password: 'Test123!' }
 };
 
 // Access via DevTools after user creation

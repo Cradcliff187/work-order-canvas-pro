@@ -1,7 +1,7 @@
 
-# WorkOrderPro
+# WorkOrderPortal
 
-A comprehensive construction work order management system that facilitates workflows between Partners (Property Management), WorkOrderPro (General Contractor), and Subcontractors (Trade Companies). Features company-level access control, multi-organization architecture, and complete financial privacy between organizations.
+A comprehensive construction work order management system that facilitates workflows between Partners (Property Management), WorkOrderPortal (General Contractor), and Subcontractors (Trade Companies). Features company-level access control, multi-organization architecture, and complete financial privacy between organizations.
 
 ## Tech Stack
 

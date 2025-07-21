@@ -1,8 +1,8 @@
-# WorkOrderPro Audit System Documentation
+# WorkOrderPortal Audit System Documentation
 
 ## Business Overview
 
-WorkOrderPro implements a comprehensive audit logging system that automatically tracks all database changes for compliance, debugging, and accountability purposes. The system provides complete traceability of who made what changes when, with organization-level access control.
+WorkOrderPortal implements a comprehensive audit logging system that automatically tracks all database changes for compliance, debugging, and accountability purposes. The system provides complete traceability of who made what changes when, with organization-level access control.
 
 ## What Gets Audited
 

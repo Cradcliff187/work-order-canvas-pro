@@ -1,136 +1,129 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuth } from '@/contexts/AuthContext';
-import { HardHat, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { ForgotPassword } from '@/components/auth/ForgotPassword';
 
-const Auth = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const { signIn, user } = useAuth();
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthForm } from "@/components/auth/AuthForm";
+import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
+import { CreateUserForm } from "@/components/auth/CreateUserForm";
+import { useBranding } from "@/hooks/useBranding";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+export const Auth = () => {
+  const [view, setView] = useState<'sign_in' | 'sign_up' | 'password_reset' | 'create_user'>('sign_in');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const branding = useBranding();
 
-  // Form states  
-  const [signInData, setSignInData] = useState({ email: '', password: '' });
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // Get user profile to determine redirect
+        supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('user_id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              const userType = profile.user_type;
+              switch (userType) {
+                case 'admin':
+                  navigate('/admin/dashboard');
+                  break;
+                case 'partner':
+                  navigate('/partner/dashboard');
+                  break;
+                case 'subcontractor':
+                  navigate('/subcontractor/dashboard');
+                  break;
+                case 'employee':
+                  navigate('/employee/dashboard');
+                  break;
+                default:
+                  navigate('/admin/dashboard');
+              }
+            } else {
+              navigate('/admin/dashboard');
+            }
+          });
+      }
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        toast({
+          title: "Check your email",
+          description: "We've sent you a password reset link.",
+        });
+      }
+    });
 
-  // Removed conflicting redirect - AuthContext handles post-login navigation
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    const { error } = await signIn(signInData.email, signInData.password);
-    
-    if (error) {
-      setError(error.message);
-    } else {
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully signed in.',
-      });
+  const getTitle = () => {
+    switch (view) {
+      case 'sign_up':
+        return 'Create Account';
+      case 'password_reset':
+        return 'Reset Password';
+      case 'create_user':
+        return 'Create New User';
+      default:
+        return 'Sign In';
     }
-    
-    setLoading(false);
   };
 
+  const getSubtitle = () => {
+    switch (view) {
+      case 'sign_up':
+        return 'Join WorkOrderPortal to manage your construction projects';
+      case 'password_reset':
+        return 'Enter your email to receive a password reset link';
+      case 'create_user':
+        return 'Create a new user account for your organization';
+      default:
+        return 'Access your construction management dashboard';
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/20 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-              <HardHat className="w-8 h-8 text-primary-foreground" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">WorkOrderPro</h1>
-          <p className="text-muted-foreground">Construction Work Order Management</p>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <img 
+            src={branding.assets.logos.main} 
+            alt={branding.company.name}
+            className="mx-auto h-12 w-auto mb-6"
+          />
+          <h1 className="text-3xl font-bold text-foreground">
+            WorkOrderPortal
+          </h1>
+          <h2 className="text-xl font-semibold text-foreground mt-2">
+            {getTitle()}
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            {getSubtitle()}
+          </p>
         </div>
 
-        {showForgotPassword ? (
-          <ForgotPassword onBack={() => setShowForgotPassword(false)} />
-        ) : (
-          <Card className="shadow-xl border-0 bg-card/95 backdrop-blur">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center">Access Your Account</CardTitle>
-              <CardDescription className="text-center">
-                Sign in to manage your construction projects
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={signInData.email}
-                    onChange={(e) => setSignInData(prev => ({ ...prev, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={signInData.password}
-                    onChange={(e) => setSignInData(prev => ({ ...prev, password: e.target.value }))}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Signing In...' : 'Sign In'}
-                </Button>
-              </form>
-              
-              <div className="mt-4 text-center">
-                <Button 
-                  variant="link" 
-                  className="text-sm text-muted-foreground"
-                  onClick={() => setShowForgotPassword(true)}
-                >
-                  Forgot your password?
-                </Button>
-              </div>
-              
-              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground text-center">
-                  Don't have an account? Contact your administrator to get access.
-                </p>
-              </div>
+        <div className="bg-card border border-border rounded-lg shadow-sm p-6">
+          {view === 'password_reset' ? (
+            <PasswordResetForm onBack={() => setView('sign_in')} />
+          ) : view === 'create_user' ? (
+            <CreateUserForm onBack={() => setView('sign_in')} />
+          ) : (
+            <AuthForm 
+              view={view} 
+              onViewChange={setView}
+            />
+          )}
+        </div>
 
-              {error && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="text-center mt-6">
-          <p className="text-sm text-muted-foreground">
-            Built for construction professionals
+        <div className="text-center text-sm text-muted-foreground">
+          <p>
+            Powered by {branding.company.name}
           </p>
         </div>
       </div>
     </div>
   );
 };
-
-export default Auth;

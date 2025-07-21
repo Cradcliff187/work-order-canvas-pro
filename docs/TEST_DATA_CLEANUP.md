@@ -1,10 +1,10 @@
 # Test Data Cleanup Guide
 
-This guide provides instructions for safely clearing test data from the WorkOrderPro database using the built-in database function approach.
+This guide provides instructions for safely clearing test data from the WorkOrderPortal database using the built-in database function approach.
 
 ## Overview
 
-The WorkOrderPro application includes a database function `clear_test_data()` that safely removes test data while preserving production data. This function is designed with multiple safety checks to prevent accidental deletion of real data.
+The WorkOrderPortal application includes a database function `clear_test_data()` that safely removes test data while preserving production data. This function is designed with multiple safety checks to prevent accidental deletion of real data.
 
 ## Data to be Deleted
 

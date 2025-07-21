@@ -1,89 +1,24 @@
 
-import React from 'react';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { UserProfileDisplay } from '@/components/shared/UserProfileDisplay';
-import { useAuth } from '@/contexts/AuthContext';
-import { useUserOrganizations } from '@/hooks/useUserOrganizations';
-import { useBranding } from '@/hooks/useBranding';
-import { Building2, LogOut } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useBranding } from "@/hooks/useBranding";
+import { UserDropdown } from "./UserDropdown";
 
-interface StandardHeaderProps {
-  showUserInfo?: boolean;
-  showSignOut?: boolean;
-  variant?: 'subcontractor' | 'partner';
-  className?: string;
-}
-
-export function StandardHeader({ 
-  showUserInfo = true, 
-  showSignOut = true, 
-  variant = 'subcontractor',
-  className 
-}: StandardHeaderProps) {
-  const { signOut, profile } = useAuth();
-  const { data: userOrganizations } = useUserOrganizations();
-  const { getCompanyDisplayName, assets } = useBranding();
-  const primaryOrg = userOrganizations?.[0];
+export const StandardHeader = () => {
+  const branding = useBranding();
 
   return (
-    <header className={cn(
-      "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-      className
-    )}>
-      <div className="flex h-14 items-center justify-between px-4 md:px-6">
-        <div className="flex items-center space-x-4">
-          <SidebarTrigger className="-ml-1" />
-          
-          <div className="flex items-center space-x-3">
-            <img 
-              src={assets.logos.square} 
-              alt={`${getCompanyDisplayName()} Logo`}
-              className="h-8 w-8"
-            />
-            <div className="hidden sm:block">
-              <p className="font-semibold text-sm">{getCompanyDisplayName()}</p>
-              <p className="text-xs text-muted-foreground">WorkOrderPortal</p>
-            </div>
-          </div>
-          
-          {primaryOrg && (
-            <div className="flex items-center gap-2 text-sm border-l pl-4 ml-4">
-              <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">{primaryOrg.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{primaryOrg.organization_type}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-4">
-          {showUserInfo && profile && (
-            <div className="hidden sm:block">
-              <UserProfileDisplay
-                profile={profile}
-                showAvatar={false}
-                showUserType={false}
-                showCompany={!!profile.company_name}
-                layout="vertical"
-                avatarSize="sm"
-                className="text-right"
-              />
-            </div>
-          )}
-          
-          {showSignOut && (
-            <Button variant="outline" size="sm" className="min-h-[44px] sm:min-h-auto" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          )}
+    <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
+      <div className="flex items-center gap-4">
+        <img 
+          src={branding.assets.logos.horizontal} 
+          alt={branding.company.name}
+          className="h-8 w-auto"
+        />
+        <div className="text-lg font-semibold text-foreground">
+          WorkOrderPortal
         </div>
       </div>
-    </header>
+      
+      <UserDropdown />
+    </div>
   );
-}
+};

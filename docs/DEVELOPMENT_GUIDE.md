@@ -1,8 +1,8 @@
-# WorkOrderPro Development Guide
+# WorkOrderPortal Development Guide
 
 ## Overview
 
-This comprehensive guide provides everything developers need for productive WorkOrderPro development, covering setup, incremental workflows, testing strategies, common pitfalls, and Lovable-specific best practices.
+This comprehensive guide provides everything developers need for productive WorkOrderPortal development, covering setup, incremental workflows, testing strategies, common pitfalls, and Lovable-specific best practices.
 
 > **UI/UX Guidelines**: For complete design system, component standards, and accessibility requirements, see [UI Design System](./UI_DESIGN_SYSTEM.md).
 
@@ -156,14 +156,14 @@ const response = await supabase.functions.invoke('create-test-users', {
 ### Test Data Patterns
 
 **Organizations (8 total):**
-- 1 Internal: WorkOrderPro Internal
+- 1 Internal: WorkOrderPortal Internal
 - 3 Partners: ABC Property, XYZ Commercial, Premium Facilities
 - 4 Subcontractors: Pipes & More, Sparks Electric, etc.
 
 **Test Users (5 total):**
 - `partner1@abc.com` / `partner2@xyz.com` - Partner users
 - `sub1@pipes.com` / `sub2@sparks.com` - Subcontractor users
-- `employee1@workorderpro.com` - Internal employee
+- `employee1@workorderportal.com` - Internal employee
 - **Password**: `Test123!` for all users
 
 ## Common Pitfalls & Solutions
@@ -465,4 +465,4 @@ supabase db reset              # Reset local database
 - Performance review quarterly
 - Security review quarterly
 
-This development guide provides the complete workflow for building, testing, and deploying WorkOrderPro features efficiently and reliably.
+This development guide provides the complete workflow for building, testing, and deploying WorkOrderPortal features efficiently and reliably.

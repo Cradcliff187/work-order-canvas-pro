@@ -2,7 +2,7 @@
 
 ## Overview
 
-WorkOrderPro uses **database function-based seeding** for secure, server-side database initialization. This approach provides robust data seeding with proper authentication and RLS bypass capabilities through PostgreSQL SECURITY DEFINER functions.
+WorkOrderPortal uses **database function-based seeding** for secure, server-side database initialization. This approach provides robust data seeding with proper authentication and RLS bypass capabilities through PostgreSQL SECURITY DEFINER functions.
 
 ## Why Database Functions for Seeding?
 
@@ -224,7 +224,7 @@ Edit the organizations section in the `seed_test_data()` function:
 ```sql
 -- Insert Organizations
 INSERT INTO organizations (id, name, contact_email, organization_type, initials, is_active) VALUES
-  (org_internal_id, 'WorkOrderPro Internal', 'admin@workorderpro.com', 'internal', 'WOP', true),
+  (org_internal_id, 'WorkOrderPortal Internal', 'admin@workorderpro.com', 'internal', 'WOP', true),
   (org_abc_id, 'ABC Property Management', 'contact@abc-property.com', 'partner', 'ABC', true),
   -- Add more organizations here
 ```
@@ -309,4 +309,4 @@ const response = await supabase.functions.invoke('create-test-users', {
 3. **Monitoring**: Set up alerts for unexpected data changes
 4. **Access Control**: Limit admin access to seeding functions
 
-This database function approach provides a secure, reliable, and maintainable solution for test data management in WorkOrderPro.
+This database function approach provides a secure, reliable, and maintainable solution for test data management in WorkOrderPortal.

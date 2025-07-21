@@ -1,14 +1,14 @@
-# WorkOrderPro Company Access Guide
+# WorkOrderPortal Company Access Guide
 
 ## Executive Summary
 
-WorkOrderPro provides **company-level access control** that enables teams to collaborate on work orders while maintaining financial privacy between organizations. This guide explains how the system works for business users and provides real-world usage scenarios.
+WorkOrderPortal provides **company-level access control** that enables teams to collaborate on work orders while maintaining financial privacy between organizations. This guide explains how the system works for business users and provides real-world usage scenarios.
 
 ## Business Model Overview
 
-WorkOrderPro facilitates a three-party construction management workflow:
+WorkOrderPortal facilitates a three-party construction management workflow:
 
-**🏢 Partners** submit work orders → **🔧 WorkOrderPro** manages workflow → **⚡ Subcontractors** complete work
+**🏢 Partners** submit work orders → **🔧 WorkOrderPortal** manages workflow → **⚡ Subcontractors** complete work
 
 ### Organization Types
 
@@ -16,7 +16,7 @@ WorkOrderPro facilitates a three-party construction management workflow:
 |------|------|--------------|----------|
 | **🏢 Partner** | Work order submitters | Own organization data + progress tracking | Property management companies, retail chains |
 | **⚡ Subcontractor** | Work performers | Assigned work orders + team reports | Plumbing companies, HVAC contractors, electricians |
-| **🔧 Internal** | Workflow managers | Full system access | General contractor, WorkOrderPro administration |
+| **🔧 Internal** | Workflow managers | Full system access | General contractor, WorkOrderPortal administration |
 
 ## Company Access Features
 
@@ -119,7 +119,7 @@ WorkOrderPro facilitates a three-party construction management workflow:
 
 ### 🔧 Internal Organization Users
 
-**Example**: Jennifer (Project Manager) at WorkOrderPro Internal
+**Example**: Jennifer (Project Manager) at WorkOrderPortal Internal
 
 **Administrative Workflow**:
 1. **Monitor Submissions**: Review incoming partner work orders
@@ -154,7 +154,7 @@ WorkOrderPro facilitates a three-party construction management workflow:
 **Workflow Example**:
 1. Site Manager reports "Store #23 - Broken freezer unit"
 2. Regional Manager creates work order in system
-3. WorkOrderPro assigns to "Cool Air HVAC" organization
+3. WorkOrderPortal assigns to "Cool Air HVAC" organization
 4. Any Cool Air technician can accept and complete work
 5. Facilities Coordinator monitors progress across all stores
 

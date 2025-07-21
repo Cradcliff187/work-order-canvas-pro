@@ -1,19 +1,19 @@
-# WorkOrderPro Test Scenarios & Data Guide
+# WorkOrderPortal Test Scenarios & Data Guide
 
 ## Overview
 
-This document provides a comprehensive guide to the test data structure and scenarios available in the WorkOrderPro database after seeding. The test data is designed to cover all major business workflows, user interactions, and edge cases to provide thorough testing coverage.
+This document provides a comprehensive guide to the test data structure and scenarios available in the WorkOrderPortal database after seeding. The test data is designed to cover all major business workflows, user interactions, and edge cases to provide thorough testing coverage.
 
 ## Test Data Summary
 
 ### Organizations (8 total)
-- **1 Internal**: WorkOrderPro Internal (admin & employee users)
+- **1 Internal**: WorkOrderPortal Internal (admin & employee users)
 - **3 Partners**: ABC Property Management, XYZ Commercial Properties, Premium Facilities Group
 - **4 Subcontractors**: Pipes & More Plumbing, Sparks Electric, Cool Air HVAC, Wood Works Carpentry, Brush Strokes Painting, Fix-It Maintenance, Green Thumb Landscaping
 
 ### Users (14 total)
-- **2 Admins**: admin1@workorderpro.com, admin2@workorderpro.com
-- **3 Employees**: employee1@workorderpro.com, employee2@workorderpro.com, employee3@workorderpro.com
+- **2 Admins**: admin1@workorderportal.com, admin2@workorderportal.com
+- **3 Employees**: employee1@workorderportal.com, employee2@workorderportal.com, employee3@workorderportal.com
 - **3 Partners**: partner1@abc.com, partner2@abc.com, partner3@xyz.com, partner4@premium.com
 - **6 Subcontractors**: Various trade specialists across multiple companies
 
@@ -94,8 +94,8 @@ WHERE i.subcontractor_organization_id = (SELECT id FROM organizations WHERE name
 
 ### 3. Employee Internal Operations
 
-**Organization**: WorkOrderPro Internal
-**Test Users**: employee1@workorderpro.com, employee2@workorderpro.com, employee3@workorderpro.com
+**Organization**: WorkOrderPortal Internal
+**Test Users**: employee1@workorderportal.com, employee2@workorderportal.com, employee3@workorderportal.com
 **Test Scenario**: Internal employees handling maintenance and oversight
 
 #### Test Coverage:
@@ -131,7 +131,7 @@ ORDER BY r.receipt_date DESC;
 
 ### 4. Admin Management & Oversight
 
-**Test Users**: admin1@workorderpro.com, admin2@workorderpro.com
+**Test Users**: admin1@workorderportal.com, admin2@workorderportal.com
 **Test Scenario**: Administrative oversight and system management
 
 #### Test Coverage:
@@ -248,8 +248,8 @@ Employees (3)
 ```typescript
 // Test all user types can log in
 const testCredentials = [
-  { email: 'admin1@workorderpro.com', type: 'admin' },
-  { email: 'employee1@workorderpro.com', type: 'employee' },
+  { email: 'admin1@workorderportal.com', type: 'admin' },
+  { email: 'employee1@workorderportal.com', type: 'employee' },
   { email: 'partner1@abc.com', type: 'partner' },
   { email: 'hvac1@coolairhvac.com', type: 'subcontractor' }
 ];
@@ -309,4 +309,4 @@ SELECT * FROM clear_test_data();
 - **Real-time updates** for dashboard and status changes
 - **Multi-tenant isolation** verification
 
-This comprehensive test data structure ensures thorough coverage of all WorkOrderPro features and workflows while providing realistic business scenarios for development and quality assurance testing.
+This comprehensive test data structure ensures thorough coverage of all WorkOrderPortal features and workflows while providing realistic business scenarios for development and quality assurance testing.

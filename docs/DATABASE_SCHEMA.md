@@ -1,9 +1,8 @@
-
-# WorkOrderPro Database Schema Documentation
+# WorkOrderPortal Database Schema Documentation
 
 ## Overview
 
-WorkOrderPro uses a PostgreSQL database hosted on Supabase with comprehensive Row Level Security (RLS) policies. The system supports multi-organization architecture with role-based access control across Partners, Subcontractors, and Internal Employees.
+WorkOrderPortal uses a PostgreSQL database hosted on Supabase with comprehensive Row Level Security (RLS) policies. The system supports multi-organization architecture with role-based access control across Partners, Subcontractors, and Internal Employees.
 
 ## Core Tables
 
@@ -344,4 +343,4 @@ Auto-generated format: `{ORG_INITIALS}-{LOCATION}-{SEQUENCE}`
 - Comprehensive audit logging
 - Secure file storage integration
 
-This schema supports the complete WorkOrderPro workflow from partner work order submission through subcontractor assignment, completion reporting, and financial management.
+This schema supports the complete WorkOrderPortal workflow from partner work order submission through subcontractor assignment, completion reporting, and financial management.

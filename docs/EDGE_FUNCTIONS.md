@@ -1,9 +1,8 @@
-
-# WorkOrderPro Edge Functions Documentation
+# WorkOrderPortal Edge Functions Documentation
 
 ## Overview
 
-WorkOrderPro uses Supabase Edge Functions for secure server-side operations that require elevated privileges or external API integrations. All email communications use Resend API through unified edge functions, providing complete control over email delivery and bypassing Supabase's unreliable SMTP system.
+WorkOrderPortal uses Supabase Edge Functions for secure server-side operations that require elevated privileges or external API integrations. All email communications use Resend API through unified edge functions, providing complete control over email delivery and bypassing Supabase's unreliable SMTP system.
 
 **Email Architecture**: All emails (transactional + authentication) route through our custom `send-email` edge function using Resend API for 100% reliable delivery.
 
@@ -219,7 +218,7 @@ interface CreateAdminUserRequest {
 | partner2@xyz.com | partner | XYZ Commercial Properties | Test123! |
 | sub1@pipes.com | subcontractor | Pipes & More Plumbing | Test123! |
 | sub2@sparks.com | subcontractor | Sparks Electric | Test123! |
-| employee1@workorderpro.com | employee | WorkOrderPro Internal | Test123! |
+| employee1@workorderportal.com | employee | WorkOrderPortal Internal | Test123! |
 
 **Usage**: Integrated with DevTools UI for easy test environment setup
 

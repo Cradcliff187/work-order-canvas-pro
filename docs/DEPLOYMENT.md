@@ -1,14 +1,14 @@
-# WorkOrderPro Deployment Guide
+# WorkOrderPortal Deployment Guide
 
 ## Overview
 
-WorkOrderPro uses automated Edge Function deployment through Lovable's integration with Supabase. This guide covers production deployment procedures, environment configuration, and maintenance workflows.
+WorkOrderPortal uses automated Edge Function deployment through Lovable's integration with Supabase. This guide covers production deployment procedures, environment configuration, and maintenance workflows.
 
 ## Deployment Architecture
 
 ### Automatic Deployment Process
 
-WorkOrderPro uses **automatic deployment** triggered by code changes:
+WorkOrderPortal uses **automatic deployment** triggered by code changes:
 
 ```mermaid
 graph TD
@@ -399,4 +399,4 @@ REINDEX DATABASE postgres;
 - Review function duration metrics
 - Implement connection pooling
 
-This deployment guide ensures reliable, secure, and maintainable production deployments of WorkOrderPro while providing clear procedures for monitoring, maintenance, and incident response.
+This deployment guide ensures reliable, secure, and maintainable production deployments of WorkOrderPortal while providing clear procedures for monitoring, maintenance, and incident response.
