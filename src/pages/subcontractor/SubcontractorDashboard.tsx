@@ -8,6 +8,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 import { useAuth } from "@/contexts/AuthContext";
 import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
+import { StandardDashboardStats, StatCard } from "@/components/dashboard/StandardDashboardStats";
 import { 
   ClipboardList, 
   FileText, 
@@ -16,7 +17,8 @@ import {
   AlertTriangle,
   Receipt,
   Building2,
-  Users
+  Users,
+  TrendingUp
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -63,6 +65,36 @@ const SubcontractorDashboard = () => {
     wo.status === "in_progress" && 
     !wo.work_order_reports?.some((report: any) => report.status !== "rejected")
   );
+
+  // Map stats data to StatCard format
+  const statsData: StatCard[] = [
+    {
+      icon: Users,
+      label: "Company Active Work Orders",
+      value: stats?.activeAssignments || 0,
+      description: "Assigned & In Progress"
+    },
+    {
+      icon: ClipboardList,
+      label: "Workflow Status",
+      value: `${(stats?.activeAssignments || 0) + (stats?.pendingReports || 0)}`,
+      description: "Active + Pending Reports"
+    },
+    {
+      icon: Receipt,
+      label: "Pending Invoices",
+      value: pendingInvoices.length,
+      description: "Awaiting approval",
+      href: "/subcontractor/invoices",
+      variant: pendingInvoices.length > 0 ? "warning" : "default"
+    },
+    {
+      icon: TrendingUp,
+      label: "This Month Summary",
+      value: `${stats?.completedThisMonth || 0} completed`,
+      description: `$${(stats?.earningsThisMonth || 0).toLocaleString()} earned`
+    }
+  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -164,76 +196,10 @@ const SubcontractorDashboard = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Active Work Orders</span>
-            </div>
-            <p className="text-2xl font-bold mt-2">{stats?.activeAssignments || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Assigned & In Progress
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Reports Pending</span>
-            </div>
-            <p className="text-2xl font-bold mt-2">{stats?.pendingReports || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Team reports to submit
-            </p>
-          </CardContent>
-        </Card>
-
-        <Link to="/subcontractor/invoices">
-          <Card className="hover:bg-muted/50 transition-colors">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Receipt className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Pending Invoices</span>
-              </div>
-              <p className="text-2xl font-bold mt-2 text-warning">{pendingInvoices.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Awaiting approval
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Completed This Month</span>
-            </div>
-            <p className="text-2xl font-bold mt-2">{stats?.completedThisMonth || 0}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Team approved reports
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Company Earnings This Month</span>
-            </div>
-            <p className="text-2xl font-bold mt-2">
-              ${(stats?.earningsThisMonth || 0).toLocaleString()}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total team earnings
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <StandardDashboardStats 
+        stats={statsData} 
+        loading={assignedWorkOrders.isLoading || dashboardStats.isLoading || invoicesLoading}
+      />
 
       {/* Invoice Status Section */}
       {invoices.length > 0 && (
