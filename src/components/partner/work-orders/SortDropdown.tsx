@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
-const sortOptions = [
+const defaultSortOptions = [
   { value: 'date-desc', label: 'Newest First' },
   { value: 'date-asc', label: 'Oldest First' },
   { value: 'number-asc', label: 'Work Order # (A-Z)' },
@@ -21,10 +21,11 @@ const sortOptions = [
 interface SortDropdownProps {
   value: string;
   onValueChange: (value: string) => void;
+  options?: { value: string; label: string }[];
 }
 
-export function SortDropdown({ value, onValueChange }: SortDropdownProps) {
-  const currentOption = sortOptions.find(option => option.value === value);
+export function SortDropdown({ value, onValueChange, options = defaultSortOptions }: SortDropdownProps) {
+  const currentOption = options.find(option => option.value === value);
 
   return (
     <DropdownMenu>
@@ -35,7 +36,7 @@ export function SortDropdown({ value, onValueChange }: SortDropdownProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        {sortOptions.map((option) => (
+        {options.map((option) => (
           <DropdownMenuItem
             key={option.value}
             onClick={() => onValueChange(option.value)}

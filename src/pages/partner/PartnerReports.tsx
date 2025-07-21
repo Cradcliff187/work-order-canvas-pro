@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import {
   useReactTable,
@@ -27,6 +28,9 @@ import {
   Filter,
   X
 } from 'lucide-react';
+import { ViewToggle } from '@/components/partner/work-orders/ViewToggle';
+import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
+import { ReportCard } from '@/components/partner/reports/ReportCard';
 import { usePartnerReports } from '@/hooks/usePartnerReports';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
@@ -41,11 +45,23 @@ interface ReportFilters {
   location_filter?: string;
 }
 
+const reportSortOptions = [
+  { value: 'submitted-desc', label: 'Recently Submitted' },
+  { value: 'submitted-asc', label: 'Oldest First' },
+  { value: 'number-asc', label: 'Work Order # (A-Z)' },
+  { value: 'number-desc', label: 'Work Order # (Z-A)' },
+  { value: 'status-asc', label: 'Status (A-Z)' },
+  { value: 'hours-desc', label: 'Most Hours' },
+  { value: 'hours-asc', label: 'Least Hours' },
+];
+
 export default function PartnerReports() {
   const navigate = useNavigate();
   const { organization } = useUserOrganization();
   const { data: locations = [] } = usePartnerLocations(organization?.id);
   
+  const [view, setView] = useState<'card' | 'table'>('card');
+  const [sortBy, setSortBy] = useState('submitted-desc');
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -181,6 +197,32 @@ export default function PartnerReports() {
     manualSorting: true,
   });
 
+  // Sort reports for card view
+  const sortedReports = useMemo(() => {
+    if (!reportsData?.data || view === 'table') return reportsData?.data || [];
+    
+    const reports = [...reportsData.data];
+    
+    switch (sortBy) {
+      case 'submitted-desc':
+        return reports.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+      case 'submitted-asc':
+        return reports.sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
+      case 'number-asc':
+        return reports.sort((a, b) => (a.work_orders?.work_order_number || '').localeCompare(b.work_orders?.work_order_number || ''));
+      case 'number-desc':
+        return reports.sort((a, b) => (b.work_orders?.work_order_number || '').localeCompare(a.work_orders?.work_order_number || ''));
+      case 'status-asc':
+        return reports.sort((a, b) => a.status.localeCompare(b.status));
+      case 'hours-desc':
+        return reports.sort((a, b) => (b.hours_worked || 0) - (a.hours_worked || 0));
+      case 'hours-asc':
+        return reports.sort((a, b) => (a.hours_worked || 0) - (b.hours_worked || 0));
+      default:
+        return reports;
+    }
+  }, [reportsData?.data, sortBy, view]);
+
   const handleFilterChange = (key: keyof ReportFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
@@ -216,6 +258,25 @@ export default function PartnerReports() {
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-16" />
         </div>
+      ))}
+    </div>
+  );
+
+  const renderCardSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-8 w-full" />
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
@@ -327,108 +388,153 @@ export default function PartnerReports() {
         </CardContent>
       </Card>
 
-      {/* Data Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Reports</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* View Controls */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <ViewToggle view={view} onViewChange={setView} />
+          {view === 'card' && (
+            <SortDropdown 
+              value={sortBy} 
+              onValueChange={setSortBy}
+              options={reportSortOptions}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      {view === 'card' ? (
+        <div>
           {isLoading ? (
-            renderTableSkeleton()
-          ) : reportsData?.data.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground">
-              {filters.search || filters.status || (filters.location_filter && filters.location_filter !== 'all') ? (
-                <div className="space-y-2">
-                  <p>No reports found matching your criteria.</p>
-                  <Button variant="outline" onClick={handleClearFilters}>
-                    Clear filters to see all reports
-                  </Button>
+            renderCardSkeleton()
+          ) : sortedReports.length === 0 ? (
+            <Card>
+              <CardContent className="p-8">
+                <div className="text-center text-muted-foreground">
+                  {filters.search || filters.status || (filters.location_filter && filters.location_filter !== 'all') ? (
+                    <div className="space-y-2">
+                      <p>No reports found matching your criteria.</p>
+                      <Button variant="outline" onClick={handleClearFilters}>
+                        Clear filters to see all reports
+                      </Button>
+                    </div>
+                  ) : (
+                    'No reports found.'
+                  )}
                 </div>
-              ) : (
-                'No reports found.'
-              )}
-            </div>
+              </CardContent>
+            </Card>
           ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id}>
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedReports.map((report) => (
+                <ReportCard key={report.id} report={report} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reports</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              renderTableSkeleton()
+            ) : reportsData?.data.length === 0 ? (
+              <div className="text-center p-8 text-muted-foreground">
+                {filters.search || filters.status || (filters.location_filter && filters.location_filter !== 'all') ? (
+                  <div className="space-y-2">
+                    <p>No reports found matching your criteria.</p>
+                    <Button variant="outline" onClick={handleClearFilters}>
+                      Clear filters to see all reports
+                    </Button>
+                  </div>
+                ) : (
+                  'No reports found.'
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} className="h-12">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
                           ))}
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-24 text-center"
-                        >
-                          No results.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={columns.length}
+                            className="h-24 text-center"
+                          >
+                            No results.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-              {/* Pagination */}
-              <div className="flex items-center justify-between space-x-2 py-4">
-                <div className="flex-1 text-sm text-muted-foreground">
-                  Showing {table.getRowModel().rows.length} of {reportsData?.totalCount || 0} reports
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                    </span>
+                {/* Pagination */}
+                <div className="flex items-center justify-between space-x-2 py-4">
+                  <div className="flex-1 text-sm text-muted-foreground">
+                    Showing {table.getRowModel().rows.length} of {reportsData?.totalCount || 0} reports
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.previousPage()}
+                      disabled={!table.getCanPreviousPage()}
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-muted-foreground">
+                        Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.nextPage()}
+                      disabled={!table.getCanNextPage()}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
