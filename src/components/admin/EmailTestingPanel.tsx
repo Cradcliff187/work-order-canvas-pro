@@ -63,7 +63,6 @@ export function EmailTestingPanel() {
       last_name: 'Demo',
       email: recipientEmail,
       organization_name: 'Test Organization',
-      company_name: 'Test Company',
     };
 
     switch (templateName) {
@@ -117,7 +116,6 @@ export function EmailTestingPanel() {
         return {
           ...baseData,
           login_url: 'https://test.com/login',
-          support_email: 'support@test.com',
         };
       
       default:
@@ -254,7 +252,7 @@ export function EmailTestingPanel() {
           
           <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
             <p><strong>Note:</strong> Test emails include mock data appropriate for each template. 
-            The email will be sent to your specified recipient with realistic test content.</p>
+            The email will be sent to your specified recipient with realistic test content and AKC branding.</p>
           </div>
         </CardContent>
       </Card>
