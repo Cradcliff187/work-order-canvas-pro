@@ -16,6 +16,8 @@ interface AuthFormProps {
 export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { signIn, signUp } = useAuth();
@@ -32,7 +34,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
           setError(error.message);
         }
       } else {
-        const { error } = await signUp(email, password);
+        const { error } = await signUp(email, password, firstName, lastName);
         if (error) {
           setError(error.message);
         }
@@ -59,6 +61,35 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {view === 'sign_up' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <Input
