@@ -25,6 +25,7 @@ import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 
 // Unified form schema with improved error messages
 const workOrderFormSchema = z.object({
@@ -130,6 +131,9 @@ export default function SubmitWorkOrder() {
   // Determine effective organization ID
   const effectiveOrganizationId = userOrganization?.id || selectedOrganizationId;
 
+  // Fetch partner locations for the selected organization
+  const { data: partnerLocations } = usePartnerLocations(effectiveOrganizationId);
+
   // Form setup
   const form = useForm<FormData>({
     resolver: zodResolver(workOrderFormSchema),
@@ -159,10 +163,14 @@ export default function SubmitWorkOrder() {
     }
   });
 
-  // Watch form values for auto-generation
+  // Watch form values for auto-generation and location selection
   const watchedStoreLocation = form.watch('store_location');
   const watchedTradeId = form.watch('trade_id');
   const watchedTitle = form.watch('title');
+  const partnerLocationSelection = form.watch('partner_location_selection');
+
+  // Find selected location from partner locations
+  const selectedLocation = partnerLocations?.find(loc => loc.id === partnerLocationSelection) || null;
 
   // Auto-generate title when store_location and trade are selected
   useEffect(() => {
@@ -680,7 +688,7 @@ export default function SubmitWorkOrder() {
                 isLoadingWorkOrderNumber={isLoadingWorkOrderNumber}
                 organizationName={organizationName}
                 userProfile={profile}
-                selectedLocation={null} // You may need to pass the selected location if available
+                selectedLocation={selectedLocation}
               />
             </div>
           )}
