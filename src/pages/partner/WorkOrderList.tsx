@@ -1,140 +1,92 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, Eye, Plus, MapPin, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { 
+  Search, 
+  Eye, 
+  Calendar, 
+  MapPin, 
+  Building,
+  Plus,
+  ClipboardList,
+  Filter,
+  FileText
+} from 'lucide-react';
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
-import { useTrades } from '@/hooks/useWorkOrders';
-import { format, differenceInDays } from 'date-fns';
-import { AssigneeDisplay } from '@/components/AssigneeDisplay';
-import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { MobileWorkOrderCard } from '@/components/MobileWorkOrderCard';
-import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
-
-const statusColors = {
-  received: 'bg-blue-100 text-blue-800',
-  assigned: 'bg-yellow-100 text-yellow-800',
-  in_progress: 'bg-orange-100 text-orange-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { format } from 'date-fns';
 
 const WorkOrderList = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [tradeFilter, setTradeFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [sortConfig, setSortConfig] = useState<{field: string, direction: 'asc' | 'desc'} | null>(null);
-  
-  const filters = {
-    search: search || undefined,
-    status: statusFilter && statusFilter !== 'all' ? [statusFilter] : undefined,
-    trade_id: tradeFilter && tradeFilter !== 'all' ? tradeFilter : undefined,
-  };
+  const { data: workOrdersData, isLoading } = usePartnerWorkOrders();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const { data: workOrdersData, isLoading, refetch } = usePartnerWorkOrders(filters);
-  const { data: trades } = useTrades();
+  const workOrderList = workOrdersData?.data || [];
 
-  const workOrders = workOrdersData?.data || [];
+  const filteredWorkOrders = workOrderList.filter((workOrder) => {
+    const matchesSearch = 
+      workOrder.work_order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workOrder.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workOrder.store_location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workOrder.city?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || workOrder.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
-  // Extract unique locations
-  const uniqueLocations = React.useMemo(() => {
-    const locationSet = new Set<string>();
-    workOrders.forEach(wo => {
-      const location = formatLocationDisplay(wo);
-      if (location && location !== 'N/A') {
-        locationSet.add(location);
-      }
-    });
-    return Array.from(locationSet).sort();
-  }, [workOrders]);
+  const hasFilters = searchTerm || statusFilter !== 'all';
 
-  // Filter work orders by location
-  const filteredWorkOrders = useMemo(() => {
-    if (locationFilter === 'all') return workOrders;
-    return workOrders.filter(wo => formatLocationDisplay(wo) === locationFilter);
-  }, [workOrders, locationFilter]);
-
-  // Sort work orders
-  const sortedWorkOrders = useMemo(() => {
-    if (!sortConfig) return filteredWorkOrders;
-
-    return [...filteredWorkOrders].sort((a, b) => {
-      let aValue, bValue;
-
-      switch (sortConfig.field) {
-        case 'location':
-          aValue = formatLocationDisplay(a);
-          bValue = formatLocationDisplay(b);
-          break;
-        case 'trade':
-          aValue = a.trades?.name || '';
-          bValue = b.trades?.name || '';
-          break;
-        case 'status':
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case 'daysOld':
-          aValue = differenceInDays(new Date(), new Date(a.date_submitted));
-          bValue = differenceInDays(new Date(), new Date(b.date_submitted));
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [filteredWorkOrders, sortConfig]);
-
-  // Handle column sorting
-  const handleSort = (field: string) => {
-    setSortConfig(current => {
-      if (current?.field === field) {
-        return { field, direction: current.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { field, direction: 'asc' };
-    });
-  };
-
-  // Render sort icon
-  const renderSortIcon = (field: string) => {
-    if (sortConfig?.field === field) {
-      return sortConfig.direction === 'asc' ? 
-        <ChevronUp className="h-4 w-4" /> : 
-        <ChevronDown className="h-4 w-4" />;
-    }
-    return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
-  };
-
-  // Mobile handlers
-  const handleRefresh = async () => {
-    await refetch();
-  };
-
-  const handleWorkOrderTap = (workOrder: any) => {
-    navigate(`/partner/work-orders/${workOrder.id}`);
-  };
-
-  const content = (
-    <div className="container mx-auto px-6 py-8">
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Work Orders</h1>
-          <p className="text-muted-foreground">
-            View and track all your organization's work orders
-          </p>
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-32" />
         </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex gap-4 mb-6">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-48" />
+            </div>
+          </CardContent>
+        </Card>
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="space-y-3">
+                  <div className="h-4 bg-muted rounded animate-pulse" />
+                  <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+                  <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl font-bold">Work Orders</h1>
         <Button onClick={() => navigate('/partner/work-orders/new')}>
           <Plus className="h-4 w-4 mr-2" />
           New Work Order
@@ -142,27 +94,22 @@ const WorkOrderList = () => {
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search work orders..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                <Input
+                  placeholder="Search work orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -171,254 +118,93 @@ const WorkOrderList = () => {
                 <SelectItem value="assigned">Assigned</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={tradeFilter} onValueChange={setTradeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by trade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Trades</SelectItem>
-                {trades?.map((trade) => (
-                  <SelectItem key={trade.id} value={trade.id}>
-                    {trade.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {uniqueLocations.map((location) => (
-                  <SelectItem key={location} value={location}>
-                    {location}
-                  </SelectItem>
-                ))}
               </SelectContent>
             </Select>
           </div>
-
-          {(search || (statusFilter && statusFilter !== 'all') || (tradeFilter && tradeFilter !== 'all') || (locationFilter && locationFilter !== 'all')) && (
-            <div className="mt-4 flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearch('');
-                  setStatusFilter('all');
-                  setTradeFilter('all');
-                  setLocationFilter('all');
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Work Orders - Mobile Cards or Desktop Table */}
-      {isMobile ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Your Work Orders</h2>
-            <p className="text-sm text-muted-foreground">
-              {sortedWorkOrders.length} work order{sortedWorkOrders.length !== 1 ? 's' : ''} found
-            </p>
-          </div>
-          
-          {isLoading ? (
-            <div className="text-center py-8">Loading work orders...</div>
-          ) : sortedWorkOrders.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">No work orders found</p>
-              <Button onClick={() => navigate('/partner/work-orders/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Submit Your First Work Order
-              </Button>
-            </div>
-          ) : (
-            sortedWorkOrders.map((workOrder) => (
-              <MobileWorkOrderCard
-                key={workOrder.id}
-                workOrder={workOrder}
-                onTap={handleWorkOrderTap}
-                showLocationNumber={true}
-                showTrade={true}
-                showDaysOld={true}
-                fieldsToShow={['location', 'trade', 'assignee']}
-                userType="partner"
-              />
-            ))
-          )}
-        </div>
-      ) : (
-        // Desktop Table View (unchanged)
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Work Orders</CardTitle>
-            <CardDescription>
-              {sortedWorkOrders.length} work order{sortedWorkOrders.length !== 1 ? 's' : ''} found
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">Loading work orders...</div>
-            ) : sortedWorkOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No work orders found</p>
-                <Button onClick={() => navigate('/partner/work-orders/new')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Submit Your First Work Order
-                </Button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Work Order #</TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-muted/50 select-none"
-                        onClick={() => handleSort('location')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Location
-                          {renderSortIcon('location')}
+      {/* Work Orders List */}
+      <div className="space-y-4">
+        {filteredWorkOrders.length === 0 ? (
+          <EmptyState
+            icon={hasFilters ? Filter : ClipboardList}
+            title={hasFilters ? "No results match your criteria" : "No work orders submitted yet"}
+            description={hasFilters 
+              ? "Try adjusting your filters or search terms to find what you're looking for."
+              : "Get started by submitting your first work order to track and manage your maintenance requests."
+            }
+            action={hasFilters ? {
+              label: "Clear Filters",
+              onClick: () => {
+                setSearchTerm('');
+                setStatusFilter('all');
+              },
+              icon: Filter
+            } : {
+              label: "Submit Your First Work Order",
+              onClick: () => navigate('/partner/work-orders/new'),
+              icon: Plus
+            }}
+          />
+        ) : (
+          filteredWorkOrders.map((workOrder) => (
+            <Card key={workOrder.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-lg">{workOrder.work_order_number}</h3>
+                      <WorkOrderStatusBadge status={workOrder.status} />
+                    </div>
+
+                    <h4 className="font-medium text-foreground">{workOrder.title}</h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        <span>{workOrder.store_location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>{workOrder.city}, {workOrder.state}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Submitted: {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}</span>
+                      </div>
+                      {workOrder.trades?.name && (
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>{workOrder.trades.name}</span>
                         </div>
-                      </TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-muted/50 select-none"
-                        onClick={() => handleSort('trade')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Trade
-                          {renderSortIcon('trade')}
-                        </div>
-                      </TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-muted/50 select-none"
-                        onClick={() => handleSort('status')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Status
-                          {renderSortIcon('status')}
-                        </div>
-                      </TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-muted/50 select-none"
-                        onClick={() => handleSort('daysOld')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Days Old
-                          {renderSortIcon('daysOld')}
-                        </div>
-                      </TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead>Est. Completion</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedWorkOrders.map((workOrder) => (
-                      <TableRow key={workOrder.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground">
-                              {workOrder.work_order_number || 'Pending'}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate">
-                                      {formatLocationDisplay(workOrder)}
-                                    </div>
-                                  </div>
-                                  {generateMapUrl(workOrder) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(generateMapUrl(workOrder)!, '_blank');
-                                      }}
-                                    >
-                                      <MapPin className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="whitespace-pre-line text-sm max-w-64">
-                                  {formatLocationTooltip(workOrder)}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          {workOrder.trades?.name || 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="secondary" 
-                            className={statusColors[workOrder.status as keyof typeof statusColors]}
-                          >
-                            {workOrder.status.replace('_', ' ')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">
-                            {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell>
-                          {workOrder.estimated_completion_date 
-                            ? format(new Date(workOrder.estimated_completion_date), 'MMM d, yyyy')
-                            : 'TBD'
-                          }
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                      )}
+                    </div>
+
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {workOrder.description}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                      className="min-h-[44px] sm:min-h-auto"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Details
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
-
-  return isMobile ? (
-    <MobilePullToRefresh onRefresh={handleRefresh}>
-      {content}
-    </MobilePullToRefresh>
-  ) : content;
 };
 
 export default WorkOrderList;

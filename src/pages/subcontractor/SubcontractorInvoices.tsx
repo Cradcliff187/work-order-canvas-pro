@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, DollarSign, Paperclip } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Plus, Search, DollarSign, Paperclip, FileText, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -29,6 +30,8 @@ const SubcontractorInvoices = () => {
   const { data: invoicesData, isLoading } = useInvoices(filters);
   const invoices = invoicesData?.data || [];
   const totalCount = invoicesData?.count || 0;
+
+  const hasFilters = statusFilter !== "all" || searchQuery || initialPayment;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -116,26 +119,26 @@ const SubcontractorInvoices = () => {
       {/* Invoices List */}
       <div className="space-y-4">
         {invoices.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No invoices found</h3>
-              <p className="text-muted-foreground mb-4">
-                {statusFilter || searchQuery 
-                  ? "Try adjusting your filters to see more results."
-                  : "You haven't created any invoices yet."
-                }
-              </p>
-              {!statusFilter && !searchQuery && (
-                <Link to="/subcontractor/submit-invoice">
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Invoice
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={hasFilters ? Filter : FileText}
+            title={hasFilters ? "No results match your criteria" : "No invoices found"}
+            description={hasFilters 
+              ? "Try adjusting your filters to see more results."
+              : "You haven't created any invoices yet. Get started by creating your first invoice."
+            }
+            action={hasFilters ? {
+              label: "Clear Filters",
+              onClick: () => {
+                setStatusFilter("all");
+                setSearchQuery("");
+              },
+              icon: Filter
+            } : {
+              label: "Create Your First Invoice",
+              onClick: () => window.location.href = '/subcontractor/submit-invoice',
+              icon: Plus
+            }}
+          />
         ) : (
           invoices.map((invoice) => (
             <Card key={invoice.id}>

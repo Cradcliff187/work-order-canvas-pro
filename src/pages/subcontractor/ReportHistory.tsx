@@ -4,8 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
-import { Search, Eye, FileText, Calendar, DollarSign } from "lucide-react";
+import { 
+  Search, 
+  Eye, 
+  FileText, 
+  Calendar, 
+  DollarSign, 
+  ClipboardList,
+  Filter,
+  Plus
+} from "lucide-react";
 import { format } from "date-fns";
 import {
   Select,
@@ -33,6 +43,8 @@ export default function ReportHistory() {
     
     return matchesSearch && matchesStatus;
   });
+
+  const hasFilters = searchTerm || statusFilter !== "all";
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -161,14 +173,26 @@ export default function ReportHistory() {
       {/* Reports List */}
       <div className="grid gap-4">
         {filteredReports.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-              {searchTerm || statusFilter !== "all" 
-                ? "No reports match your search criteria."
-                : "No reports submitted yet."
-              }
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={hasFilters ? Filter : ClipboardList}
+            title={hasFilters ? "No results match your criteria" : "No reports submitted yet"}
+            description={hasFilters 
+              ? "Try adjusting your filters or search terms to find what you're looking for."
+              : "You haven't submitted any work reports yet. Complete work orders to start submitting reports."
+            }
+            action={hasFilters ? {
+              label: "Clear Filters",
+              onClick: () => {
+                setSearchTerm("");
+                setStatusFilter("all");
+              },
+              icon: Filter
+            } : {
+              label: "View Work Orders",
+              onClick: () => window.location.href = '/subcontractor/work-orders',
+              icon: Eye
+            }}
+          />
         ) : (
           filteredReports.map((report) => (
             <Card key={report.id}>

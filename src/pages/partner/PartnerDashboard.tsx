@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2, ClipboardList } from 'lucide-react';
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
@@ -147,13 +148,17 @@ const PartnerDashboard = () => {
               ))}
             </div>
           ) : recentOrders.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">No work orders submitted yet</p>
-              <Button onClick={() => navigate('/partner/work-orders/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Submit Your First Work Order
-              </Button>
-            </div>
+            <EmptyState
+              icon={ClipboardList}
+              title="No work orders submitted yet"
+              description="Get started by submitting your first work order to track and manage your organization's maintenance requests."
+              action={{
+                label: "Submit Your First Work Order",
+                onClick: () => navigate('/partner/work-orders/new'),
+                icon: Plus
+              }}
+              variant="full"
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
