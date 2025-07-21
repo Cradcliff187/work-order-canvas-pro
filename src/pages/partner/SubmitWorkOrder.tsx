@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -12,8 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check, RefreshCw } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
@@ -182,27 +184,29 @@ export default function SubmitWorkOrder() {
     locationNumber: form.watch('partner_location_number'),
   });
 
-  // Load trades
+  // Load trades with retry functionality
+  const loadTrades = async () => {
+    try {
+      setIsLoadingTrades(true);
+      setTradesError(null);
+      const { data, error } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setTrades(data || []);
+    } catch (error: any) {
+      console.error('Error loading trades:', error);
+      setTradesError(error.message || 'Failed to load trades');
+    } finally {
+      setIsLoadingTrades(false);
+    }
+  };
+
+  // Initial trades load
   useEffect(() => {
-    const loadTrades = async () => {
-      try {
-        setIsLoadingTrades(true);
-        const { data, error } = await supabase
-          .from('trades')
-          .select('*')
-          .eq('is_active', true)
-          .order('name');
-
-        if (error) throw error;
-        setTrades(data || []);
-      } catch (error: any) {
-        console.error('Error loading trades:', error);
-        setTradesError(error.message || 'Failed to load trades');
-      } finally {
-        setIsLoadingTrades(false);
-      }
-    };
-
     loadTrades();
   }, []);
 
@@ -344,62 +348,6 @@ export default function SubmitWorkOrder() {
     }
   };
 
-  // Loading states
-  if (loadingUserOrg || isLoadingTrades || (isAdmin && loadingAllOrganizations)) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/partner/work-orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Work Orders
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Submit Work Order</h1>
-            <p className="text-muted-foreground">Create a new work order request</p>
-          </div>
-        </div>
-        
-        <Card>
-          <CardContent className="p-6 flex items-center justify-center">
-            <div className="flex items-center gap-3">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Loading form data...</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Error states
-  if (tradesError) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/partner/work-orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Work Orders
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Submit Work Order</h1>
-            <p className="text-muted-foreground">Create a new work order request</p>
-          </div>
-        </div>
-        
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Failed to load form data. Please refresh the page and try again.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -429,23 +377,27 @@ export default function SubmitWorkOrder() {
             </p>
           </CardHeader>
           <CardContent>
-            <Select onValueChange={setSelectedOrganizationId} value={selectedOrganizationId}>
-              <SelectTrigger className="h-12 sm:h-11">
-                <SelectValue placeholder="Select a partner organization" />
-              </SelectTrigger>
-              <SelectContent>
-                {partnerOrganizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {org.initials}
-                      </Badge>
-                      <span>{org.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {loadingAllOrganizations ? (
+              <Skeleton className="h-12 w-full" />
+            ) : (
+              <Select onValueChange={setSelectedOrganizationId} value={selectedOrganizationId}>
+                <SelectTrigger className="h-12 sm:h-11">
+                  <SelectValue placeholder="Select a partner organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {partnerOrganizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {org.initials}
+                        </Badge>
+                        <span>{org.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </CardContent>
         </Card>
       )}
@@ -515,20 +467,45 @@ export default function SubmitWorkOrder() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Type of Work *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="h-12 sm:h-11">
-                              <SelectValue placeholder="Select the type of work needed" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {trades.map((trade) => (
-                              <SelectItem key={trade.id} value={trade.id}>
-                                {trade.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {isLoadingTrades ? (
+                          <div className="space-y-2">
+                            <Skeleton className="h-12 w-full" />
+                            <p className="text-sm text-muted-foreground">Loading trade options...</p>
+                          </div>
+                        ) : tradesError ? (
+                          <div className="space-y-2">
+                            <Alert variant="destructive">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                Failed to load trade options. 
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="ml-2"
+                                  onClick={loadTrades}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-1" />
+                                  Retry
+                                </Button>
+                              </AlertDescription>
+                            </Alert>
+                          </div>
+                        ) : (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-12 sm:h-11">
+                                <SelectValue placeholder="Select the type of work needed" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {trades.map((trade) => (
+                                <SelectItem key={trade.id} value={trade.id}>
+                                  {trade.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                         <FormDescription>
                           Choose the category that best describes the work needed
                         </FormDescription>
