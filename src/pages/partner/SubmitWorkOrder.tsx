@@ -187,27 +187,62 @@ export default function SubmitWorkOrder() {
   const validateStep = async (step: number) => {
     switch (step) {
       case 1:
-        // Check for any form of location information
+        // Implement the complex location validation logic from LocationFields
         const storeLocation = form.getValues('store_location');
         const partnerLocationSelection = form.getValues('partner_location_selection');
         const partnerLocationNumber = form.getValues('partner_location_number');
         
-        // Valid if any of these conditions are met:
-        // 1. Store location is filled (manual entry or partner location selected)
-        // 2. Partner location is selected from dropdown
-        // 3. Partner location number is entered (for manual entry)
-        const hasLocationInfo = storeLocation || partnerLocationSelection || partnerLocationNumber;
+        // Check if organization uses partner location numbers
+        const usesPartnerLocationNumbers = userOrganization?.uses_partner_location_numbers;
         
-        if (!hasLocationInfo) {
+        // Scenario 1: Partner location selected from dropdown
+        if (partnerLocationSelection) {
+          return true;
+        }
+        
+        // Scenario 2: Manual entry mode
+        if (storeLocation) {
+          // If organization uses partner location numbers, require location number
+          if (usesPartnerLocationNumbers) {
+            if (!partnerLocationNumber) {
+              toast({
+                variant: "destructive",
+                title: "Location Number Required",
+                description: "This organization requires a location number. Please enter a location number.",
+              });
+              return false;
+            }
+          }
+          // If we have store location (and location number if required), we're good
+          return true;
+        }
+        
+        // Scenario 3: Location number entered but no store location
+        if (partnerLocationNumber && !storeLocation) {
+          toast({
+            variant: "destructive",
+            title: "Location Name Required",
+            description: "Please enter a location name to continue.",
+          });
+          return false;
+        }
+        
+        // Scenario 4: No location information provided
+        if (usesPartnerLocationNumbers) {
+          toast({
+            variant: "destructive",
+            title: "Location Required",
+            description: "Please select a location from the dropdown or enter location details with a location number.",
+          });
+        } else {
           toast({
             variant: "destructive",
             title: "Location Required",
             description: "Please select a location or enter location details to continue.",
           });
-          return false;
         }
+        return false;
         
-        return true;
       case 2:
         const tradeFields: (keyof FormData)[] = ['title', 'trade_id'];
         const tradeValid = await form.trigger(tradeFields);
