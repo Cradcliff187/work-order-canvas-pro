@@ -18,6 +18,7 @@ import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Buildi
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
+import { WorkOrderReviewSummary } from '@/components/WorkOrderReviewSummary';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
@@ -670,55 +671,17 @@ export default function SubmitWorkOrder() {
             </div>
           )}
 
-          {/* Step 3: Confirm Submission */}
+          {/* Step 3: Comprehensive Review */}
           {currentStep === 3 && (
-            <div className="space-y-6 animate-fade-in">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    3. Confirm Submission
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Ready to submit your work order request?
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Confirmation Question */}
-                  <div className="text-center py-4">
-                    <p className="text-lg font-medium">
-                      Submit work order for{' '}
-                      <span className="text-primary font-semibold">
-                        {form.watch('store_location') || 'New Location'}
-                      </span>
-                      {' '}- {' '}
-                      <span className="text-primary font-semibold">
-                        {trades.find(t => t.id === form.watch('trade_id'))?.name || 'Selected Trade'}
-                      </span>?
-                    </p>
-                  </div>
-
-                  {/* Essential Details */}
-                  <div className="space-y-4 border-t pt-4">
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Location</Label>
-                      <p className="text-base font-medium">{form.watch('store_location') || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
-                      <p className="text-base font-medium">
-                        {trades.find(t => t.id === form.watch('trade_id'))?.name || 'Not specified'}
-                      </p>
-                    </div>
-                    {form.watch('description') && (
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Description</Label>
-                        <p className="text-sm">{form.watch('description')}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="animate-fade-in">
+              <WorkOrderReviewSummary
+                trades={trades}
+                workOrderNumber={workOrderNumber}
+                isLoadingWorkOrderNumber={isLoadingWorkOrderNumber}
+                organizationName={organizationName}
+                userProfile={profile}
+                selectedLocation={null} // You may need to pass the selected location if available
+              />
             </div>
           )}
 
