@@ -16,6 +16,7 @@ import { DraftIndicator } from '@/components/DraftIndicator';
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
+import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
   workPerformed: string;
@@ -32,7 +33,7 @@ export default function SubmitReport() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { getWorkOrder } = useSubcontractorWorkOrders();
-  const { saveDraft, getDraft } = useOfflineStorage();
+  const { saveDraft, getDrafts } = useOfflineStorage();
 
   const [formData, setFormData] = useState<FormData>({
     workPerformed: '',
@@ -122,13 +123,48 @@ export default function SubmitReport() {
     }
 
     try {
-      const draftKey = `draft_${workOrderId}`;
-      localStorage.setItem(draftKey, JSON.stringify(formData));
-      setCurrentDraftId(workOrderId);
+      // Convert photos to PhotoAttachment format
+      const photoAttachments: PhotoAttachment[] = await Promise.all(
+        formData.photos.map(async (file, index) => {
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+
+          return {
+            id: `photo_${index}_${Date.now()}`,
+            name: file.name,
+            base64Data: base64,
+            mimeType: file.type,
+            size: file.size,
+            originalFile: {
+              name: file.name,
+              lastModified: file.lastModified,
+            },
+          };
+        })
+      );
+
+      const draftId = await saveDraft(
+        workOrderId,
+        {
+          workPerformed: formData.workPerformed,
+          materialsUsed: formData.materialsUsed,
+          hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+          invoiceAmount: formData.invoiceAmount ? parseFloat(formData.invoiceAmount) : undefined,
+          invoiceNumber: formData.invoiceNumber,
+          notes: formData.notes,
+        },
+        photoAttachments,
+        true // isManual
+      );
+
+      setCurrentDraftId(draftId);
       
       toast({
         title: "Draft Saved",
-        description: "Your progress has been saved locally.",
+        description: "Your progress has been saved.",
       });
     } catch (err: any) {
       toast({
@@ -145,10 +181,10 @@ export default function SubmitReport() {
       workPerformed: draft.workPerformed || '',
       materialsUsed: draft.materialsUsed || '',
       notes: draft.notes || '',
-      hoursWorked: draft.hoursWorked || '',
-      invoiceAmount: draft.invoiceAmount || '',
+      hoursWorked: draft.hoursWorked?.toString() || '',
+      invoiceAmount: draft.invoiceAmount?.toString() || '',
       invoiceNumber: draft.invoiceNumber || '',
-      photos: draft.photos || [],
+      photos: [], // Photos would need to be converted back from base64
     });
     setCurrentDraftId(draft.id);
     toast({
