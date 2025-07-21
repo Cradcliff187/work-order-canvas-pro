@@ -66,20 +66,6 @@ export default function SubmitWorkOrder() {
   // Work order creation hook
   const createWorkOrderMutation = useCreateWorkOrder();
 
-  // Work order number generation
-  const {
-    workOrderNumber,
-    isLoading: isLoadingWorkOrderNumber,
-    error: workOrderNumberError,
-    isFallback,
-    warning: workOrderNumberWarning,
-    requiresInitials,
-    organizationName,
-  } = useWorkOrderNumberGeneration({
-    organizationId: userOrganization?.id,
-    locationNumber: undefined, // Will be updated based on form values
-  });
-
   // Form setup with comprehensive validation
   const form = useForm<FormData>({
     resolver: zodResolver(workOrderFormSchema),
@@ -107,6 +93,20 @@ export default function SubmitWorkOrder() {
       due_date: '',
       estimated_hours: '',
     }
+  });
+
+  // Work order number generation - watch for partner_location_number changes
+  const {
+    workOrderNumber,
+    isLoading: isLoadingWorkOrderNumber,
+    error: workOrderNumberError,
+    isFallback,
+    warning: workOrderNumberWarning,
+    requiresInitials,
+    organizationName,
+  } = useWorkOrderNumberGeneration({
+    organizationId: userOrganization?.id,
+    locationNumber: form.watch('partner_location_number'),
   });
 
   // Load trades
