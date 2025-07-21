@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -65,21 +66,32 @@ export default function AdminWorkOrders() {
 
   const { deleteWorkOrder } = useWorkOrderMutations();
 
-  // Column definitions with action handlers
+  // Column definitions with action handlers - Updated with proper type handling
   const columns = useMemo(() => createWorkOrderColumns({
-    onEdit: (workOrder) => {
+    onEdit: (workOrder: WorkOrder) => {
       navigate(`/admin/work-orders/${workOrder.id}/edit`);
     },
-    onView: (workOrder) => {
+    onView: (workOrder: WorkOrder) => {
       navigate(`/admin/work-orders/${workOrder.id}`);
     },
-    onDelete: (workOrder) => {
+    onDelete: (workOrder: WorkOrder) => {
       if (confirm('Are you sure you want to delete this work order?')) {
         deleteWorkOrder.mutate(workOrder.id);
       }
     },
-    onAssign: (workOrder) => {
-      setAssignmentWorkOrders([workOrder]);
+    onAssign: (workOrder: WorkOrder) => {
+      // Ensure the workOrder has the correct type structure
+      const typedWorkOrder: WorkOrder = {
+        ...workOrder,
+        // Ensure organizations has the correct structure
+        organizations: workOrder.organizations ? {
+          id: workOrder.organizations.id,
+          name: workOrder.organizations.name,
+          contact_email: workOrder.organizations.contact_email,
+          organization_type: workOrder.organizations.organization_type
+        } : null
+      };
+      setAssignmentWorkOrders([typedWorkOrder]);
       setShowAssignModal(true);
     },
   }), [deleteWorkOrder, navigate]);

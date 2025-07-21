@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -8,8 +9,8 @@ type WorkOrderRow = Database['public']['Tables']['work_orders']['Row'];
 type WorkOrderInsert = Database['public']['Tables']['work_orders']['Insert'];
 type WorkOrderUpdate = Database['public']['Tables']['work_orders']['Update'];
 
-// Simplified organization type with all required fields
-interface WorkOrderOrganization {
+// Simplified organization type - EXACT match with what Supabase returns
+export interface WorkOrderOrganization {
   id: string;
   name: string;
   contact_email: string;
@@ -17,20 +18,66 @@ interface WorkOrderOrganization {
 }
 
 // Simplified trade type
-interface WorkOrderTrade {
+export interface WorkOrderTrade {
   id: string;
   name: string;
 }
 
 // Simplified profile type
-interface WorkOrderProfile {
+export interface WorkOrderProfile {
   id: string;
   first_name: string;
   last_name: string;
 }
 
-// Main WorkOrder type - keep original fields AND add joined data
-export interface WorkOrder extends WorkOrderRow {
+// Main WorkOrder type - completely separate from WorkOrderRow to avoid circular references
+export interface WorkOrder {
+  id: string;
+  work_order_number: string | null;
+  title: string;
+  description: string | null;
+  organization_id: string | null;
+  trade_id: string | null;
+  status: 'received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed';
+  assigned_to: string | null;
+  assigned_to_type: 'internal' | 'subcontractor' | null;
+  estimated_hours: number | null;
+  actual_hours: number | null;
+  estimated_completion_date: string | null;
+  actual_completion_date: string | null;
+  completed_at: string | null;
+  date_submitted: string;
+  date_assigned: string | null;
+  date_completed: string | null;
+  store_location: string | null;
+  street_address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  location_street_address: string | null;
+  location_city: string | null;
+  location_state: string | null;
+  location_zip_code: string | null;
+  location_name: string | null;
+  partner_location_number: string | null;
+  partner_po_number: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  assigned_organization_id: string | null;
+  subcontractor_report_submitted: boolean | null;
+  subcontractor_invoice_amount: number | null;
+  admin_completion_notes: string | null;
+  final_completion_date: string | null;
+  due_date: string | null;
+  labor_cost: number | null;
+  materials_cost: number | null;
+  auto_completion_blocked: boolean | null;
+  completion_checked_at: string | null;
+  completion_method: string | null;
+  location_address: string | null;
+  
+  // Joined relations - must match exactly what the query returns
   organizations: WorkOrderOrganization | null;
   trades: WorkOrderTrade | null;
   assigned_user: WorkOrderProfile | null;
@@ -105,8 +152,15 @@ export function useWorkOrders(
       if (error) throw error;
 
       const pageCount = count ? Math.ceil(count / pageSize) : 0;
+      
+      // Transform the data to ensure type safety
+      const transformedData = (data || []) as WorkOrder[];
 
-      return { data: data || [], pageCount, totalCount: count || 0 };
+      return {
+        data: transformedData,
+        pageCount,
+        totalCount: count || 0,
+      };
     },
   });
 }
@@ -127,7 +181,7 @@ export function useWorkOrder(id: string) {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as WorkOrder;
     },
     enabled: !!id,
   });
