@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { FormattedInput } from '@/components/ui/formatted-input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
@@ -31,10 +32,16 @@ const locationSchema = z.object({
   street_address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
-  zip_code: z.string().optional(),
+  zip_code: z.string().optional().refine(
+    (val) => !val || /^\d{5}(-\d{4})?$/.test(val),
+    { message: "ZIP code must be in format 12345 or 12345-6789" }
+  ),
   contact_name: z.string().optional(),
   contact_email: z.string().email('Invalid email').optional().or(z.literal('')),
-  contact_phone: z.string().optional(),
+  contact_phone: z.string().optional().refine(
+    (val) => !val || /^\(\d{3}\) \d{3}-\d{4}$/.test(val),
+    { message: "Phone number must be in format (555) 123-4567" }
+  ),
   is_active: z.boolean().default(true),
 });
 
@@ -146,7 +153,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                 <FormItem>
                   <FormLabel>Street Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="123 Main St" {...field} />
+                    <FormattedInput formatter="streetAddress" placeholder="123 Main St" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,7 +169,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder="New York" {...field} />
+                      <FormattedInput formatter="city" placeholder="New York" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -190,7 +197,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                 <FormItem>
                   <FormLabel>ZIP Code</FormLabel>
                   <FormControl>
-                    <Input placeholder="10001" {...field} />
+                    <FormattedInput formatter="zip" placeholder="10001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -219,7 +226,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                   <FormItem>
                     <FormLabel>Contact Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="(555) 123-4567" {...field} />
+                      <FormattedInput formatter="phone" placeholder="(555) 123-4567" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -234,7 +241,7 @@ export const EditLocationModal: React.FC<EditLocationModalProps> = ({
                 <FormItem>
                   <FormLabel>Contact Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="contact@example.com" {...field} />
+                    <FormattedInput formatter="email" placeholder="contact@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
