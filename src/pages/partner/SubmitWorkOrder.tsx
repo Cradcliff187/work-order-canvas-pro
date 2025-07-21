@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -18,6 +17,7 @@ import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Buildi
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
+import { WorkOrderNumberPreview } from '@/components/WorkOrderNumberPreview';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
@@ -433,6 +433,23 @@ export default function SubmitWorkOrder() {
         </Card>
       )}
 
+      {/* Work Order Number Preview - Show on all steps */}
+      {effectiveOrganizationId && (
+        <WorkOrderNumberPreview
+          workOrderNumber={workOrderNumber}
+          isLoading={isLoadingWorkOrderNumber}
+          error={workOrderNumberError}
+          isFallback={isFallback}
+          warning={workOrderNumberWarning}
+          organizationName={organizationName || userOrganization?.name || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.name}
+          organizationInitials={userOrganization?.initials || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.initials}
+          locationNumber={generatedLocationNumber}
+          usesPartnerLocationNumbers={userOrganization?.uses_partner_location_numbers || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.uses_partner_location_numbers}
+          typedLocationCode={form.watch('partner_location_number')}
+          className="sticky top-4 z-10"
+        />
+      )}
+
       {/* Step Progress Indicator */}
       <StepIndicator currentStep={currentStep} totalSteps={3} />
 
@@ -584,33 +601,6 @@ export default function SubmitWorkOrder() {
           {/* Step 3: Review & Submit */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              {/* Work Order Number Preview */}
-              {workOrderNumber && (
-                <Card className="border-primary/20 bg-primary/5">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-primary" />
-                        <span className="font-medium">Work Order Number:</span>
-                      </div>
-                      <Badge variant="outline" className="font-mono text-sm">
-                        {workOrderNumber}
-                      </Badge>
-                      {isFallback && (
-                        <Badge variant="secondary" className="text-xs">
-                          Fallback
-                        </Badge>
-                      )}
-                    </div>
-                    {workOrderNumberWarning && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {workOrderNumberWarning}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Organization Info */}
               {(userOrganization || selectedOrganizationId) && (
                 <Card>

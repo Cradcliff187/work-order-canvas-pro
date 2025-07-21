@@ -15,6 +15,7 @@ import { useOrganization } from '@/hooks/useOrganizations';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { LocationFields } from '@/components/LocationFields';
+import { WorkOrderNumberPreview } from '@/components/WorkOrderNumberPreview';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
@@ -254,7 +255,6 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
     locationNumber,
   });
 
-
   const onSubmit = async (data: CreateWorkOrderForm) => {
     if (!profile?.id) return;
 
@@ -311,54 +311,21 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Work Order Number */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Work Order Number</label>
-              <div className="relative">
-                <Input
-                  value={workOrderNumber || 'Will be generated automatically...'}
-                  disabled
-                  className="bg-muted"
-                />
-                {isGeneratingNumber && (
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                )}
-              </div>
-              
-              {/* Enhanced error and warning display */}
-              {warning && (
-                <Alert className="mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {warning}
-                    {requiresInitials && organizationName && (
-                      <div className="mt-2 text-xs">
-                        <strong>Action needed:</strong> Contact an admin to add initials for "{organizationName}" to enable smart numbering.
-                      </div>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {/* Fallback number indicator */}
-              {isFallback && workOrderNumber && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Using fallback numbering format
-                </div>
-              )}
-              
-              {/* Hard error fallback */}
-              {numberError && !warning && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {numberError}. A fallback number will be assigned automatically.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
+            {/* Work Order Number Preview */}
+            {organizationId && (
+              <WorkOrderNumberPreview
+                workOrderNumber={workOrderNumber}
+                isLoading={isGeneratingNumber}
+                error={numberError}
+                isFallback={isFallback}
+                warning={warning}
+                organizationName={organizationName || selectedOrganization?.name}
+                organizationInitials={selectedOrganization?.initials}
+                locationNumber={generatedLocationNumber}
+                usesPartnerLocationNumbers={selectedOrganization?.uses_partner_location_numbers}
+                typedLocationCode={form.watch('partner_location_number')}
+              />
+            )}
 
             {/* Basic Information */}
             <div className="grid grid-cols-2 gap-4">
