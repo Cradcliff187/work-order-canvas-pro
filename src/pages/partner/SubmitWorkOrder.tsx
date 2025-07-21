@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check, RefreshCw, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
@@ -289,9 +289,19 @@ export default function SubmitWorkOrder() {
 
     if (isLeftSwipe && currentStep < 3) {
       handleNext();
+      toast({
+        title: "Next step",
+        description: "Swipe right to go back",
+        duration: 1500,
+      });
     }
     if (isRightSwipe && currentStep > 1) {
       handlePrevious();
+      toast({
+        title: "Previous step",
+        description: "Swipe left to continue",
+        duration: 1500,
+      });
     }
   };
 
