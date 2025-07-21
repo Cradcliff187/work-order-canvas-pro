@@ -1,293 +1,112 @@
-import React, { useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useLocationHistory, LocationHistoryItem } from './useLocationHistory';
+import { useState, useEffect } from 'react';
+import { useDebounce } from './useDebounce';
 
 export interface LocationSuggestion {
-  location_number: string;
-  location_name: string;
-  location_street_address: string;
-  location_city: string;
-  location_state: string;
-  location_zip_code: string;
-  full_address: string;
-  usage_count: number;
-  last_used: string;
-}
-
-interface UseLocationSuggestionsOptions {
-  organizationId?: string;
-  searchTerm?: string;
-  enabled?: boolean;
-}
-
-// Custom debounce hook
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = React.useState(value);
-
-  React.useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
+  place_id: string;
+  description: string;
+  terms: { value: string }[];
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
     };
-  }, [value, delay]);
-
-  return debouncedValue;
+  };
 }
 
-export function useLocationSuggestions({
-  organizationId,
-  searchTerm = '',
-  enabled = true
-}: UseLocationSuggestionsOptions) {
-  const debouncedSearchTerm = useDebounce(searchTerm.trim(), 300);
-  
-  // Get location history for recent locations
-  const { data: locationHistory } = useLocationHistory(organizationId);
+interface UseLocationSuggestionsReturn {
+  suggestions: LocationSuggestion[];
+  isLoading: boolean;
+  error: string | null;
+}
 
-  const fetchLocationSuggestions = useCallback(async (): Promise<LocationSuggestion[]> => {
-    if (!organizationId) return [];
+/**
+ * Hook for location suggestions and partner location code handling
+ * 
+ * Features:
+ * - Provides location suggestions based on search
+ * - Handles partner location code validation
+ * - Formats location display information
+ * 
+ * @param searchTerm - Search term for location suggestions
+ * @param organizationId - Organization ID for partner location codes
+ * @returns Location suggestions and utilities
+ */
+export function useLocationSuggestions(searchTerm: string, organizationId?: string) {
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-    let partnerLocationResults: LocationSuggestion[] = [];
-
-    // First, query partner_locations table
-    try {
-      let partnerQuery = supabase
-        .from('partner_locations')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('is_active', true);
-
-      // Apply search filters if term is provided
-      if (debouncedSearchTerm) {
-        partnerQuery = partnerQuery.or(
-          `location_number.ilike.%${debouncedSearchTerm}%,` +
-          `location_name.ilike.%${debouncedSearchTerm}%,` +
-          `street_address.ilike.%${debouncedSearchTerm}%,` +
-          `city.ilike.%${debouncedSearchTerm}%`
-        );
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!debouncedSearchTerm) {
+        setSuggestions([]);
+        return;
       }
 
-      const { data: partnerLocations, error } = await partnerQuery
-        .order('location_number', { ascending: true })
-        .limit(20);
+      setIsLoading(true);
+      setError(null);
 
-      if (!error && partnerLocations) {
-        partnerLocationResults = partnerLocations.map(loc => ({
-          location_number: loc.location_number,
-          location_name: loc.location_name,
-          location_street_address: loc.street_address || '',
-          location_city: loc.city || '',
-          location_state: loc.state || '',
-          location_zip_code: loc.zip_code || '',
-          full_address: [
-            loc.street_address,
-            loc.city,
-            loc.state,
-            loc.zip_code
-          ].filter(Boolean).join(', '),
-          usage_count: 999, // High priority for partner locations
-          last_used: new Date().toISOString()
-        }));
-      }
-    } catch (error) {
-      console.warn('Error fetching partner locations:', error);
-    }
-
-    // If we have partner location results and no search term, prioritize them
-    if (!debouncedSearchTerm) {
-      // Add location history as fallback
-      if (locationHistory) {
-        const historyResults = locationHistory.map(item => ({
-          location_number: item.partner_location_number || '',
-          location_name: item.store_location,
-          location_street_address: '',
-          location_city: '',
-          location_state: '',
-          location_zip_code: '',
-          full_address: '',
-          usage_count: item.usage_count,
-          last_used: new Date().toISOString()
-        }));
-        
-        // Merge, prioritizing partner locations
-        return [...partnerLocationResults, ...historyResults];
-      }
-      return partnerLocationResults;
-    }
-
-    // When searching, return partner locations first if found
-    if (debouncedSearchTerm && partnerLocationResults.length > 0) {
-      return partnerLocationResults;
-    }
-
-    // Fallback to location history search
-    if (debouncedSearchTerm && locationHistory) {
-      const filteredHistory = locationHistory.filter(item => 
-        item.store_location.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        (item.partner_location_number && item.partner_location_number.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
-      );
-
-      if (filteredHistory.length > 0) {
-        return filteredHistory.map(item => ({
-          location_number: item.partner_location_number || '',
-          location_name: item.store_location,
-          location_street_address: '',
-          location_city: '',
-          location_state: '',
-          location_zip_code: '',
-          full_address: '',
-          usage_count: item.usage_count,
-          last_used: new Date().toISOString()
-        }));
-      }
-    }
-
-    // Fallback to broader search in work_orders table
-    let query = supabase
-      .from('work_orders')
-      .select(`
-        partner_location_number,
-        store_location,
-        location_street_address,
-        location_city,
-        location_state,
-        location_zip_code,
-        street_address,
-        city,
-        state,
-        zip_code,
-        created_at
-      `)
-      .eq('organization_id', organizationId)
-      .not('partner_location_number', 'is', null);
-
-    // Apply search filters if term is provided
-    if (debouncedSearchTerm) {
-      query = query.or(
-        `partner_location_number.ilike.%${debouncedSearchTerm}%,` +
-        `store_location.ilike.%${debouncedSearchTerm}%,` +
-        `location_street_address.ilike.%${debouncedSearchTerm}%,` +
-        `location_city.ilike.%${debouncedSearchTerm}%,` +
-        `street_address.ilike.%${debouncedSearchTerm}%,` +
-        `city.ilike.%${debouncedSearchTerm}%`
-      );
-    }
-
-    const { data, error } = await query
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (error) throw error;
-
-    // Process and aggregate results
-    const locationMap = new Map<string, {
-      location_number: string;
-      location_name: string;
-      location_street_address: string;
-      location_city: string;
-      location_state: string;
-      location_zip_code: string;
-      usage_count: number;
-      last_used: string;
-    }>();
-
-    data?.forEach(wo => {
-      if (!wo.partner_location_number) return;
-
-      const key = wo.partner_location_number;
-      const existing = locationMap.get(key);
-
-      // Prefer structured address fields, fallback to legacy fields
-      const streetAddress = wo.location_street_address || wo.street_address || '';
-      const city = wo.location_city || wo.city || '';
-      const state = wo.location_state || wo.state || '';
-      const zipCode = wo.location_zip_code || wo.zip_code || '';
-
-      if (existing) {
-        existing.usage_count++;
-        if (wo.created_at > existing.last_used) {
-          existing.last_used = wo.created_at;
-          // Update with most recent address info if more complete
-          if (!existing.location_street_address && streetAddress) {
-            existing.location_street_address = streetAddress;
-          }
-          if (!existing.location_city && city) {
-            existing.location_city = city;
-          }
-          if (!existing.location_state && state) {
-            existing.location_state = state;
-          }
-          if (!existing.location_zip_code && zipCode) {
-            existing.location_zip_code = zipCode;
-          }
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+          throw new Error('Google Maps API key is not set.');
         }
-      } else {
-        locationMap.set(key, {
-          location_number: wo.partner_location_number,
-          location_name: wo.store_location || '',
-          location_street_address: streetAddress,
-          location_city: city,
-          location_state: state,
-          location_zip_code: zipCode,
-          usage_count: 1,
-          last_used: wo.created_at
-        });
-      }
-    });
 
-    // Convert to array and add computed full_address
-    const suggestions: LocationSuggestion[] = Array.from(locationMap.values())
-      .map(location => ({
-        ...location,
-        full_address: [
-          location.location_street_address,
-          location.location_city,
-          location.location_state,
-          location.location_zip_code
-        ].filter(Boolean).join(', ')
-      }))
-      .sort((a, b) => {
-        // Sort by usage count desc, then by last used desc
-        if (a.usage_count !== b.usage_count) {
-          return b.usage_count - a.usage_count;
+        const encodedSearchTerm = encodeURIComponent(debouncedSearchTerm);
+        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodedSearchTerm}&types=geocode&key=${apiKey}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === 'OK') {
+          setSuggestions(data.predictions.map((prediction: any) => ({
+            place_id: prediction.place_id,
+            description: prediction.description,
+            terms: prediction.terms,
+            structured_formatting: {
+              main_text: prediction.structured_formatting?.main_text || prediction.description,
+              secondary_text: prediction.structured_formatting?.secondary_text || '',
+            },
+            geometry: {
+              location: {
+                lat: 0,
+                lng: 0,
+              },
+            },
+          })));
+        } else {
+          setError(data.error_message || `Google Maps API Error: ${data.status}`);
+          setSuggestions([]);
         }
-        return new Date(b.last_used).getTime() - new Date(a.last_used).getTime();
-      });
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch location suggestions.');
+        setSuggestions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    return suggestions;
-  }, [organizationId, debouncedSearchTerm, locationHistory]);
+    fetchSuggestions();
+  }, [debouncedSearchTerm]);
 
-  return useQuery({
-    queryKey: ['location-suggestions', organizationId, debouncedSearchTerm],
-    queryFn: fetchLocationSuggestions,
-    enabled: enabled && !!organizationId,
-    staleTime: 5 * 60 * 1000, // 5 minutes,
-  });
+  return { suggestions, isLoading, error };
 }
 
-// Helper function to format location for display
-export function formatLocationDisplay(suggestion: LocationSuggestion): string {
-  const parts = [suggestion.location_number];
-  
-  if (suggestion.location_name) {
-    parts.push(`- ${suggestion.location_name}`);
-  }
-  
-  if (suggestion.full_address) {
-    parts.push(`(${suggestion.full_address})`);
-  }
-  
-  return parts.join(' ');
-}
+export const formatLocationDisplay = (location: LocationSuggestion): string => {
+  return location.structured_formatting.main_text;
+};
 
-// Helper function to generate directions URL
-export function getDirectionsUrl(suggestion: LocationSuggestion): string {
-  if (!suggestion.full_address) return '';
-  
-  const encodedAddress = encodeURIComponent(suggestion.full_address);
+export const getDirectionsUrl = (location: LocationSuggestion): string | null => {
+  if (!location?.structured_formatting?.main_text || !location?.structured_formatting?.secondary_text) {
+    return null;
+  }
+
+  const address = `${location.structured_formatting.main_text}, ${location.structured_formatting.secondary_text}`;
+  const encodedAddress = encodeURIComponent(address);
   return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
-}
+};

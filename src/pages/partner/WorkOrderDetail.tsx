@@ -1,253 +1,258 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, MapPin, Calendar, User, Wrench, FileText, Clock, Printer, Phone, Mail } from 'lucide-react';
-import { useWorkOrderById } from '@/hooks/usePartnerWorkOrders';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, CheckCircle2, AlertCircle } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { format } from 'date-fns';
-import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from "@/components/ui/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { capitalize } from '@/lib/utils';
+import type { WorkOrderWithOrganization } from '@/integrations/supabase/types';
 
-const statusColors = {
-  received: 'bg-blue-100 text-blue-800',
-  assigned: 'bg-yellow-100 text-yellow-800',
-  in_progress: 'bg-orange-100 text-orange-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
-
-const statusTimeline = [
-  { status: 'received', label: 'Received', icon: FileText },
-  { status: 'assigned', label: 'Assigned', icon: User },
-  { status: 'in_progress', label: 'In Progress', icon: Clock },
-  { status: 'completed', label: 'Completed', icon: 'check-circle' },
-];
-
-const WorkOrderDetail = () => {
+export default function WorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { data: workOrder, isLoading } = useWorkOrderById(id!);
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  const [workOrder, setWorkOrder] = useState<WorkOrderWithOrganization | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchWorkOrder = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        if (!id) throw new Error("Work Order ID is required");
+
+        const { data, error } = await supabase
+          .from('work_orders')
+          .select(`
+            *,
+            organizations (
+              id,
+              name,
+              initials,
+              contact_email
+            )
+          `)
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+
+        setWorkOrder(data as WorkOrderWithOrganization);
+      } catch (error: any) {
+        console.error("Error fetching work order:", error);
+        setError(error.message || "Failed to load work order details.");
+        toast({
+          variant: "destructive",
+          title: "Woops! Something went wrong.",
+          description: error.message || "Failed to load work order details.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWorkOrder();
+  }, [id, toast]);
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-6 py-8">
-        <div className="text-center">Loading work order details...</div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/partner/work-orders">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Work Orders
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Work Order Details</h1>
+            <p className="text-muted-foreground">View details of a specific work order</p>
+          </div>
+        </div>
+        
+        <Card>
+          <CardContent className="p-6 flex items-center justify-center">
+            <Skeleton className="w-[300px] h-[20px]" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/partner/work-orders">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Work Orders
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Work Order Details</h1>
+            <p className="text-muted-foreground">View details of a specific work order</p>
+          </div>
+        </div>
+        
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (!workOrder) {
     return (
-      <div className="container mx-auto px-6 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Work Order Not Found</h2>
-          <p className="text-muted-foreground mb-4">
-            The work order you're looking for doesn't exist or you don't have permission to view it.
-          </p>
-          <Button onClick={() => navigate('/partner/work-orders')}>
-            Back to Work Orders
-          </Button>
-        </div>
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Work order not found.
+        </AlertDescription>
+      </Alert>
     );
   }
 
-  const getStatusIndex = (status: string) => {
-    return statusTimeline.findIndex(s => s.status === status);
-  };
-
-  const currentStatusIndex = getStatusIndex(workOrder.status);
-
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <div className="container mx-auto px-6 py-8 max-w-4xl">
-      <div className="mb-8 flex justify-between items-start">
-        <div>
-          <Button variant="ghost" onClick={() => navigate('/partner/work-orders')} className="mb-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link to="/partner/work-orders">
+          <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Work Orders
           </Button>
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold">
-              Work Order #{workOrder.work_order_number}
-            </h1>
-            <Badge 
-              variant="secondary"
-              className={statusColors[workOrder.status as keyof typeof statusColors]}
-            >
-              {workOrder.status.replace('_', ' ')}
-            </Badge>
-          </div>
-          <p className="text-muted-foreground mt-2">{workOrder.title}</p>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">Work Order Details</h1>
+          <p className="text-muted-foreground">View details of a specific work order</p>
         </div>
-        <Button variant="outline" onClick={handlePrint} className="print:hidden">
-          <Printer className="h-4 w-4 mr-2" />
-          Print
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Status Timeline */}
+          {/* Work Order Details Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Status Timeline
+                <FileText className="h-5 w-5" />
+                Work Order Details
               </CardTitle>
+              <CardDescription>
+                Details about this specific work order
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {statusTimeline.map((step, index) => {
-                  const isCompleted = index <= currentStatusIndex;
-                  const isCurrent = index === currentStatusIndex;
-                  
-                  return (
-                    <div key={step.status} className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        isCompleted 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        <step.icon className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <p className={`font-medium ${
-                          isCurrent ? 'text-primary' : isCompleted ? 'text-foreground' : 'text-muted-foreground'
-                        }`}>
-                          {step.label}
-                        </p>
-                        {step.status === workOrder.status && (
-                          <p className="text-sm text-muted-foreground">Current status</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Work Order Number</Label>
+                  <p className="text-sm font-bold">{workOrder.work_order_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <Badge variant="secondary">{capitalize(workOrder.status)}</Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Title</Label>
+                  <p className="text-sm">{workOrder.title || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
+                  <p className="text-sm">{workOrder.trade_id || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
+                  <p className="text-sm">
+                    {workOrder.created_at ? format(new Date(workOrder.created_at), 'MMM dd, yyyy - hh:mm a') : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
+                  <p className="text-sm">
+                    {workOrder.due_date ? format(new Date(workOrder.due_date), 'MMM dd, yyyy') : 'Not specified'}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                <p className="text-sm">{workOrder.description || 'No description provided.'}</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Location Details */}
+          {/* Location Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Location Details
+                Location Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {workOrder.store_location && (
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium">Store Location</h4>
-                  <p className="text-muted-foreground">{workOrder.store_location}</p>
+                  <Label className="text-sm font-medium text-muted-foreground">Location Name</Label>
+                  <p className="text-sm">{workOrder.store_location || 'Not specified'}</p>
                 </div>
-              )}
-              {workOrder.partner_location_number && (
                 <div>
-                  <h4 className="font-medium">Location Number</h4>
-                  <p className="text-muted-foreground">{workOrder.partner_location_number}</p>
+                  <Label className="text-sm font-medium text-muted-foreground">Location Code</Label>
+                  <p className="text-sm">{workOrder.partner_location_number || 'Not specified'}</p>
                 </div>
-              )}
-              {hasAddress(workOrder) && (
                 <div>
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Address</h4>
-                    {generateMapUrl(workOrder) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(generateMapUrl(workOrder)!, '_blank')}
-                      >
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Get Directions
-                      </Button>
-                    )}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {formatAddressMultiline(workOrder).map((line, index) => (
-                      <p key={index}>{line}</p>
-                    ))}
-                  </div>
+                  <Label className="text-sm font-medium text-muted-foreground">Street Address</Label>
+                  <p className="text-sm">{workOrder.street_address || 'Not specified'}</p>
                 </div>
-              )}
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">City</Label>
+                  <p className="text-sm">{workOrder.city || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">State</Label>
+                  <p className="text-sm">{workOrder.state || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">ZIP Code</Label>
+                  <p className="text-sm">{workOrder.zip_code || 'Not specified'}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* On-Site Contact */}
-          {(workOrder.location_contact_name || workOrder.location_contact_phone || workOrder.location_contact_email) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  On-Site Contact
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {workOrder.location_contact_name && (
-                  <div className="flex items-center gap-3">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <h4 className="font-medium">Contact Name</h4>
-                      <p className="text-muted-foreground">{workOrder.location_contact_name}</p>
-                    </div>
-                  </div>
-                )}
-                
-                {workOrder.location_contact_phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <h4 className="font-medium">Phone</h4>
-                      <a 
-                        href={`tel:${workOrder.location_contact_phone}`}
-                        className="text-primary hover:underline"
-                      >
-                        {workOrder.location_contact_phone}
-                      </a>
-                    </div>
-                  </div>
-                )}
-                
-                {workOrder.location_contact_email && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <h4 className="font-medium">Email</h4>
-                      <a 
-                        href={`mailto:${workOrder.location_contact_email}`}
-                        className="text-primary hover:underline"
-                      >
-                        {workOrder.location_contact_email}
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Work Details */}
+          {/* Additional Details */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5" />
-                Work Details
+                <Clock className="h-5 w-5" />
+                Additional Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium">Trade Type</h4>
-                <p className="text-muted-foreground">{workOrder.trades?.name}</p>
-              </div>
-              <div>
-                <h4 className="font-medium">Description</h4>
-                <p className="text-muted-foreground whitespace-pre-wrap">{workOrder.description}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Partner PO Number</Label>
+                  <p className="text-sm">{workOrder.partner_po_number || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Partner Location Number</Label>
+                  <p className="text-sm">{workOrder.partner_location_number || 'Not specified'}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -255,106 +260,84 @@ const WorkOrderDetail = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Key Information */}
+          {/* Organization Info */}
+          {workOrder.organizations && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Organization
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={`https://avatar.vercel.sh/${workOrder.organizations.contact_email}.png`} />
+                    <AvatarFallback>{workOrder.organizations.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">{workOrder.organizations.name}</div>
+                    <div className="text-sm text-muted-foreground">{workOrder.organizations.contact_email}</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Activity Log (Example) */}
           <Card>
             <CardHeader>
-              <CardTitle>Key Information</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Activity Log
+              </CardTitle>
+              <CardDescription>Recent activities related to this work order</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground">Organization</h4>
-                <p className="font-medium">{workOrder.organizations?.name}</p>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground">Submitted</h4>
-                <p className="font-medium">
-                  {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(workOrder.date_submitted), 'h:mm a')}
-                </p>
-              </div>
-
-              {workOrder.estimated_completion_date && (
-                <>
-                  <Separator />
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Estimated Completion</h4>
-                    <p className="font-medium">
-                      {format(new Date(workOrder.estimated_completion_date), 'MMM d, yyyy')}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {workOrder.date_completed && (
-                <>
-                  <Separator />
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">Completed</h4>
-                    <p className="font-medium">
-                      {format(new Date(workOrder.date_completed), 'MMM d, yyyy')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(workOrder.date_completed), 'h:mm a')}
-                    </p>
-                  </div>
-                </>
-              )}
-              
-              <Separator />
-              
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground">Created By</h4>
-                <p className="font-medium">
-                  {workOrder.created_user?.first_name} {workOrder.created_user?.last_name}
-                </p>
-              </div>
-
-              {(workOrder.partner_po_number || workOrder.partner_location_number) && (
-                <>
-                  <Separator />
-                  {workOrder.partner_po_number && (
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground">PO Number</h4>
-                      <p className="font-medium">{workOrder.partner_po_number}</p>
-                    </div>
-                  )}
-                  {workOrder.partner_location_number && (
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground">Location Number</h4>
-                      <p className="font-medium">{workOrder.partner_location_number}</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground">Organization Contact</h4>
-                <p className="font-medium">{workOrder.organizations?.contact_email}</p>
-                {workOrder.organizations?.contact_phone && (
-                  <p className="text-sm text-muted-foreground">
-                    {workOrder.organizations.contact_phone}
-                  </p>
-                )}
-              </div>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[300px]">
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger>
+                      <div className="flex items-center justify-between w-full">
+                        <div>
+                          <p className="text-sm font-medium">Work order created</p>
+                          <p className="text-xs text-muted-foreground">
+                            {workOrder.created_at ? format(new Date(workOrder.created_at), 'MMM dd, yyyy - hh:mm a') : 'N/A'}
+                          </p>
+                        </div>
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="text-sm text-muted-foreground">
+                        Work order was created by {profile?.full_name}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-2">
+                    <AccordionTrigger>
+                      <div className="flex items-center justify-between w-full">
+                        <div>
+                          <p className="text-sm font-medium">Status updated</p>
+                          <p className="text-xs text-muted-foreground">
+                            {workOrder.created_at ? format(new Date(workOrder.created_at), 'MMM dd, yyyy - hh:mm a') : 'N/A'}
+                          </p>
+                        </div>
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="text-sm text-muted-foreground">
+                        Status was updated to {workOrder.status}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>
       </div>
     </div>
   );
-};
-
-export default WorkOrderDetail;
+}

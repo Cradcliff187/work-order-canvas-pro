@@ -1,461 +1,594 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useOrganizationsForWorkOrders, useTrades, useWorkOrderMutations } from '@/hooks/useWorkOrders';
-import { useAuth } from '@/contexts/AuthContext';
-import { useOrganization } from '@/hooks/useOrganizations';
-import { useLocationHistory } from '@/hooks/useLocationHistory';
-import { useUserOrganization } from '@/hooks/useUserOrganization';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check } from "lucide-react";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
 import { WorkOrderNumberPreview } from '@/components/WorkOrderNumberPreview';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useCreateWorkOrder } from '@/hooks/useAdminWorkOrders';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
-type CreateWorkOrderForm = {
-  title: string;
-  description?: string;
-  organization_id: string;
-  trade_id: string;
-  store_location?: string;
-  street_address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  location_street_address?: string;
-  location_city?: string;
-  location_state?: string;
-  location_zip_code?: string;
-  partner_po_number?: string;
-  partner_location_number?: string;
-};
+// Form schema with comprehensive validation
+const workOrderFormSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
+  description: z.string().optional(),
+  trade_id: z.string().min(1, 'Trade is required'),
+  organization_id: z.string().min(1, 'Organization is required'),
+  store_location: z.string().min(1, 'Location name is required'),
+  street_address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip_code: z.string().optional(),
+  location_street_address: z.string().optional(),
+  location_city: z.string().optional(),
+  location_state: z.string().optional(),
+  location_zip_code: z.string().optional(),
+  location_name: z.string().optional(),
+  location_contact_name: z.string().optional(),
+  location_contact_phone: z.string().optional(),
+  location_contact_email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  partner_po_number: z.string().optional(),
+  partner_location_number: z.string().optional(),
+  partner_location_selection: z.string().optional(),
+  due_date: z.string().optional(),
+  estimated_hours: z.string().optional(),
+});
+
+type FormData = z.infer<typeof workOrderFormSchema>;
 
 interface CreateWorkOrderModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  organizationId?: string;
+  onWorkOrderCreated?: () => void;
 }
 
-export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalProps) {
-  const { profile } = useAuth();
-  const { data: organizations } = useOrganizationsForWorkOrders();
-  const { data: trades } = useTrades();
-  const { createWorkOrder } = useWorkOrderMutations();
-  const { data: locationHistory } = useLocationHistory();
-  const { organization, loading: organizationLoading } = useUserOrganization();
+export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWorkOrderCreated }: CreateWorkOrderModalProps) {
+  const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [trades, setTrades] = useState<any[]>([]);
+  const [isLoadingTrades, setIsLoadingTrades] = useState(true);
+  const [tradesError, setTradesError] = useState<string | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
+  const [selectedOrganization, setSelectedOrganization] = useState<any | null>(null);
 
-  // Watch form values for work order number generation
-  const [organizationId, setOrganizationId] = useState('');
-  const [locationNumber, setLocationNumber] = useState('');
-  const { data: selectedOrg } = useOrganization(organizationId);
+  // Work order creation hook
+  const createWorkOrderMutation = useCreateWorkOrder();
 
-  // Create dynamic schema with conditional partner_location_number validation
-  const createWorkOrderSchema = useMemo(() => {
-    const baseSchema = z.object({
-      title: z.string().min(1, 'Title is required'),
-      description: z.string().optional(),
-      organization_id: z.string().min(1, 'Organization is required'),
-      trade_id: z.string().min(1, 'Trade is required'),
-      store_location: z.string().optional(),
-      street_address: z.string().optional(),
-      city: z.string().optional(),
-      state: z.string().optional(),
-      zip_code: z.string().optional(),
-      location_street_address: z.string().optional(),
-      location_city: z.string().optional(),
-      location_state: z.string().optional(),
-      location_zip_code: z.string().optional(),
-      partner_po_number: z.string().optional(),
-      partner_location_number: selectedOrg?.uses_partner_location_numbers === true
-        ? z.string().min(1, 'Location number is required')
-        : z.string().optional(),
-    });
-
-    return baseSchema.superRefine((data, ctx) => {
-      // Check if we're in new location mode
-      const hasPartnerLocation = data.partner_location_number && !data.location_street_address;
-      const isNewLocation = !hasPartnerLocation && (data.location_street_address || data.location_city || data.location_state || data.location_zip_code);
-      
-      if (isNewLocation) {
-        if (!data.store_location) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Store/Location Name is required',
-            path: ['store_location'],
-          });
-        }
-        if (!data.location_street_address) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Street Address is required',
-            path: ['location_street_address'],
-          });
-        }
-        if (!data.location_city) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'City is required',
-            path: ['location_city'],
-          });
-        }
-        if (!data.location_state) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'State is required',
-            path: ['location_state'],
-          });
-        }
-        if (!data.location_zip_code) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'ZIP Code is required',
-            path: ['location_zip_code'],
-          });
-        }
-      }
-    });
-  }, [selectedOrg?.uses_partner_location_numbers]);
-
-  // Create dynamic schema based on user type
-  const createWorkOrderSchemaForUser = useMemo(() => {
-    if (profile?.user_type === 'admin') {
-      return createWorkOrderSchema;
-    }
-    
-    const partnerBaseSchema = z.object({
-      title: z.string().min(1, 'Title is required'),
-      description: z.string().optional(),
-      organization_id: z.string().optional(), // Auto-populated for partners
-      trade_id: z.string().min(1, 'Trade is required'),
-      store_location: z.string().optional(),
-      street_address: z.string().optional(),
-      city: z.string().optional(),
-      state: z.string().optional(),
-      zip_code: z.string().optional(),
-      location_street_address: z.string().optional(),
-      location_city: z.string().optional(),
-      location_state: z.string().optional(),
-      location_zip_code: z.string().optional(),
-      partner_po_number: z.string().optional(),
-      partner_location_number: selectedOrg?.uses_partner_location_numbers === true
-        ? z.string().min(1, 'Location number is required')
-        : z.string().optional(),
-    });
-
-    return partnerBaseSchema.superRefine((data, ctx) => {
-      // Same validation logic for partners
-      const hasPartnerLocation = data.partner_location_number && !data.location_street_address;
-      const isNewLocation = !hasPartnerLocation && (data.location_street_address || data.location_city || data.location_state || data.location_zip_code);
-      
-      if (isNewLocation) {
-        if (!data.store_location) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Store/Location Name is required',
-            path: ['store_location'],
-          });
-        }
-        if (!data.location_street_address) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Street Address is required',
-            path: ['location_street_address'],
-          });
-        }
-        if (!data.location_city) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'City is required',
-            path: ['location_city'],
-          });
-        }
-        if (!data.location_state) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'State is required',
-            path: ['location_state'],
-          });
-        }
-        if (!data.location_zip_code) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'ZIP Code is required',
-            path: ['location_zip_code'],
-          });
-        }
-      }
-    });
-  }, [profile?.user_type, createWorkOrderSchema, selectedOrg?.uses_partner_location_numbers]);
-
-  const form = useForm<CreateWorkOrderForm>({
-    resolver: zodResolver(createWorkOrderSchemaForUser),
+  // Form setup with comprehensive validation
+  const form = useForm<FormData>({
+    resolver: zodResolver(workOrderFormSchema),
     defaultValues: {
       title: '',
       description: '',
-      organization_id: profile?.user_type === 'partner' ? (organization?.id || '') : '',
       trade_id: '',
+      organization_id: organizationId || '',
       store_location: '',
       street_address: '',
       city: '',
       state: '',
       zip_code: '',
+      location_street_address: '',
+      location_city: '',
+      location_state: '',
+      location_zip_code: '',
+      location_name: '',
+      location_contact_name: '',
+      location_contact_phone: '',
+      location_contact_email: '',
       partner_po_number: '',
       partner_location_number: '',
-    },
+      partner_location_selection: '',
+      due_date: '',
+      estimated_hours: '',
+    }
   });
 
-  // Auto-set organization for partners when organization data loads
-  useEffect(() => {
-    if (profile?.user_type === 'partner' && organization?.id) {
-      form.setValue('organization_id', organization.id);
-      setOrganizationId(organization.id);
-    }
-  }, [profile?.user_type, organization?.id, form]);
-
-  // Watch for organization and location changes
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      if (values.organization_id !== organizationId) {
-        setOrganizationId(values.organization_id || '');
-      }
-      if (values.partner_location_number !== locationNumber) {
-        setLocationNumber(values.partner_location_number || '');
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, organizationId, locationNumber]);
-
-  // Trigger validation when schema changes
-  useEffect(() => {
-    form.trigger();
-  }, [createWorkOrderSchemaForUser, form]);
-  
-  // Get the organization data with proper type safety
-  const selectedOrganization = profile?.user_type === 'admin' 
-    ? selectedOrg
-    : organization;
-
-  // For organizations that don't have full data, we need to handle safely
-  const organizationForPreview = selectedOrganization || organizations?.find(org => org.id === organizationId);
-  
-  const { 
-    workOrderNumber, 
-    isLoading: isGeneratingNumber, 
-    error: numberError,
+  // Work order number generation - watch for partner_location_number changes
+  const {
+    workOrderNumber,
+    isLoading: isLoadingWorkOrderNumber,
+    error: workOrderNumberError,
     isFallback,
-    warning,
+    warning: workOrderNumberWarning,
     requiresInitials,
     organizationName,
-    locationNumber: generatedLocationNumber
+    locationNumber: generatedLocationNumber,
   } = useWorkOrderNumberGeneration({
-    organizationId,
-    locationNumber,
+    organizationId: organizationId,
+    locationNumber: form.watch('partner_location_number'),
   });
 
-  const onSubmit = async (data: CreateWorkOrderForm) => {
-    if (!profile?.id) return;
+  // Load trades
+  useEffect(() => {
+    const loadTrades = async () => {
+      try {
+        setIsLoadingTrades(true);
+        const { data, error } = await supabase
+          .from('trades')
+          .select('*')
+          .eq('is_active', true)
+          .order('name');
 
-    // For partners, ensure organization is set
-    if (profile.user_type === 'partner' && !data.organization_id) {
-      console.error('Partner user must have an organization');
-      return;
+        if (error) throw error;
+        setTrades(data || []);
+      } catch (error: any) {
+        console.error('Error loading trades:', error);
+        setTradesError(error.message || 'Failed to load trades');
+      } finally {
+        setIsLoadingTrades(false);
+      }
+    };
+
+    loadTrades();
+  }, []);
+
+  // Load organization details when organizationId changes
+  useEffect(() => {
+    const loadOrganization = async () => {
+      if (organizationId) {
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('id', organizationId)
+          .single();
+
+        if (error) {
+          console.error('Error loading organization:', error);
+          toast({
+            variant: "destructive",
+            title: "Error loading organization",
+            description: error.message || "Failed to load organization details.",
+          });
+        } else {
+          setSelectedOrganization(data);
+        }
+      }
+    };
+
+    loadOrganization();
+  }, [organizationId, toast]);
+
+  // Update organization in form when organizationId changes
+  useEffect(() => {
+    if (organizationId && form.getValues('organization_id') !== organizationId) {
+      form.setValue('organization_id', organizationId);
     }
+  }, [organizationId, form]);
 
-    try {
-      await createWorkOrder.mutateAsync({
-        title: data.title,
-        description: data.description,
-        organization_id: data.organization_id,
-        trade_id: data.trade_id,
-        store_location: data.store_location,
-        street_address: data.street_address,
-        city: data.city,
-        state: data.state,
-        zip_code: data.zip_code,
-        location_street_address: data.location_street_address,
-        location_city: data.location_city,
-        location_state: data.location_state,
-        location_zip_code: data.location_zip_code,
-        partner_po_number: data.partner_po_number || null,
-        partner_location_number: data.partner_location_number || generatedLocationNumber || null,
-        work_order_number: workOrderNumber || null,
-        created_by: profile.id,
-        status: 'received',
-        date_submitted: new Date().toISOString(),
-      });
-      
-      form.reset();
-      onClose();
-    } catch (error) {
-      console.error('Error creating work order:', error);
+  const validateStep = async (step: number) => {
+    switch (step) {
+      case 1:
+        // For admin users, organization selection is required first
+        if (!organizationId) {
+          toast({
+            variant: "destructive",
+            title: "Organization Required",
+            description: "Please select an organization first.",
+          });
+          return false;
+        }
+
+        // Work with LocationFields component state - check what it actually sets
+        const storeLocation = form.getValues('store_location');
+        const partnerLocationSelection = form.getValues('partner_location_selection');
+        const partnerLocationNumber = form.getValues('partner_location_number');
+        
+        // Check if organization uses partner location codes
+        const usesPartnerLocationNumbers = selectedOrganization?.uses_partner_location_numbers;
+        
+        // Scenario 1: Partner location selected from dropdown (this is what LocationFields sets)
+        if (partnerLocationSelection && partnerLocationSelection !== 'add_new') {
+          return true;
+        }
+        
+        // Scenario 2: Manual entry mode - store location must be filled
+        if (storeLocation) {
+          // If organization uses partner location codes, require location code
+          if (usesPartnerLocationNumbers && !partnerLocationNumber) {
+            toast({
+              variant: "destructive",
+              title: "Location Code Required",
+              description: "This organization requires a location code. Please enter a location code.",
+            });
+            return false;
+          }
+          // If we have store location (and location code if required), we're good
+          return true;
+        }
+        
+        // Scenario 3: Location code entered but no store location
+        if (partnerLocationNumber && !storeLocation) {
+          toast({
+            variant: "destructive",
+            title: "Location Name Required",
+            description: "Please enter a location name to continue.",
+          });
+          return false;
+        }
+        
+        // Scenario 4: No location information provided at all
+        if (usesPartnerLocationNumbers) {
+          toast({
+            variant: "destructive",
+            title: "Location Required",
+            description: "Please select a location from the dropdown or enter location details with a location code.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Location Required",
+            description: "Please select a location or enter location details to continue.",
+          });
+        }
+        return false;
+        
+      case 2:
+        const tradeFields: (keyof FormData)[] = ['title', 'trade_id'];
+        const tradeValid = await form.trigger(tradeFields);
+        return tradeValid;
+      case 3:
+        return true; // Review step doesn't need validation
+      default:
+        return true;
     }
   };
 
-  const handleClose = () => {
-    form.reset();
-    onClose();
+  // Navigation functions
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid && currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Handle form submission
+  const onSubmit = async (data: FormData) => {
+    try {
+      // Prepare submission data
+      const submissionData = {
+        title: data.title,
+        description: data.description || '',
+        trade_id: data.trade_id,
+        organization_id: organizationId,
+        store_location: data.store_location,
+        street_address: data.street_address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zip_code: data.zip_code || '',
+        location_street_address: data.location_street_address || '',
+        location_city: data.location_city || '',
+        location_state: data.location_state || '',
+        location_zip_code: data.location_zip_code || '',
+        location_name: data.location_name || '',
+        location_contact_name: data.location_contact_name || '',
+        location_contact_phone: data.location_contact_phone || '',
+        location_contact_email: data.location_contact_email || '',
+        partner_po_number: data.partner_po_number || '',
+        partner_location_number: data.partner_location_number || generatedLocationNumber || '',
+      };
+
+      await createWorkOrderMutation.mutateAsync(submissionData);
+      
+      toast({
+        title: "Work order created",
+        description: "The work order has been successfully created.",
+      });
+
+      // Reset form and steps
+      form.reset();
+      setCurrentStep(1);
+      onOpenChange(false);
+
+      // Trigger callback
+      if (onWorkOrderCreated) {
+        onWorkOrderCreated();
+      }
+    } catch (error: any) {
+      console.error('Error submitting work order:', error);
+      toast({
+        variant: "destructive",
+        title: "Submission error",
+        description: error.message || "Failed to submit the work order.",
+      });
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[900px]">
         <DialogHeader>
-          <DialogTitle>Create New Work Order</DialogTitle>
-          <DialogDescription>
-            Fill in the details to create a new work order. A work order number will be automatically generated.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Create New Work Order
+          </DialogTitle>
         </DialogHeader>
 
+        {/* Form */}
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Work Order Number Preview */}
-            {organizationId && (
-              <WorkOrderNumberPreview
-                workOrderNumber={workOrderNumber}
-                isLoading={isGeneratingNumber}
-                error={numberError}
-                isFallback={isFallback}
-                warning={warning}
-                organizationName={organizationName || organizationForPreview?.name}
-                organizationInitials={organizationForPreview?.initials}
-                locationNumber={generatedLocationNumber}
-                usesPartnerLocationNumbers={selectedOrganization?.uses_partner_location_numbers ?? false}
-                typedLocationCode={form.watch('partner_location_number')}
-              />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Step 1: Location Details */}
+            {currentStep === 1 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    Location Details
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Enter the location information for this work order
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <LocationFields
+                    form={form}
+                    organizationId={organizationId}
+                    showPoNumber={true}
+                  />
+                </CardContent>
+              </Card>
             )}
 
-            {/* Basic Information */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem className="col-span-2">
-                    <FormLabel>Title *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter work order title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Organization - Conditional rendering based on user type */}
-              {profile?.user_type === 'admin' ? (
-                <FormField
-                  control={form.control}
-                  name="organization_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Organization *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select organization" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {organizations?.map((org) => (
-                            <SelectItem key={org.id} value={org.id}>
-                              {org.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Organization</label>
-                  {organizationLoading ? (
-                    <div className="bg-muted border rounded-md p-3 flex items-center">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      <span className="text-muted-foreground">Loading organization...</span>
-                    </div>
-                  ) : organization ? (
-                    <div className="bg-muted/50 border rounded-md p-3">
-                      <p className="font-medium">{organization.name}</p>
-                      {organization.initials && (
-                        <p className="text-sm text-muted-foreground">({organization.initials})</p>
+            {/* Step 2: Trade & Description */}
+            {currentStep === 2 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Trade & Description
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Provide details about the work to be performed
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Work Order Title *</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Brief title of the work order"
+                              className="h-11"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </div>
-                  ) : (
-                    <div className="bg-destructive/5 border border-destructive/20 rounded-md p-3">
-                      <p className="text-sm text-destructive">Organization not found</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <FormField
-                control={form.control}
-                name="trade_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Trade *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select trade" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {trades?.map((trade) => (
-                          <SelectItem key={trade.id} value={trade.id}>
-                            {trade.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Location Information - Always show for admin modal */}
-            <LocationFields 
-              form={form}
-              organizationId={form.watch('organization_id')}
-              organizationType={selectedOrganization?.organization_type}
-              showPoNumber={true}
-            />
-
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Describe the work that needs to be done..."
-                      rows={4}
-                      {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancel
+                    <FormField
+                      control={form.control}
+                      name="trade_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Trade *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select a trade" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {trades.map((trade) => (
+                                <SelectItem key={trade.id} value={trade.id}>
+                                  {trade.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Detailed description of the work to be performed..."
+                              className="min-h-[120px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="due_date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Due Date</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="date"
+                                className="h-11"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="estimated_hours"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Estimated Hours</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                placeholder="Estimated hours"
+                                className="h-11"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 3: Review & Submit */}
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                {/* Organization Info */}
+                {organizationId && selectedOrganization && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        <div>
+                          <div className="font-medium">
+                            {selectedOrganization?.name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {selectedOrganization?.contact_email}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Review Summary */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                      Review & Submit
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Please review your work order details before submitting
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Location</Label>
+                        <p className="text-sm">{form.watch('store_location') || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Title</Label>
+                        <p className="text-sm">{form.watch('title') || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
+                        <p className="text-sm">
+                          {trades.find(t => t.id === form.watch('trade_id'))?.name || 'Not specified'}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">PO Number</Label>
+                        <p className="text-sm">{form.watch('partner_po_number') || 'Not specified'}</p>
+                      </div>
+                    </div>
+                    {form.watch('description') && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                        <p className="text-sm">{form.watch('description')}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center justify-between pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 1}
+                className="min-h-[44px]"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Previous
               </Button>
-              <Button type="submit" disabled={createWorkOrder.isPending}>
-                {createWorkOrder.isPending ? 'Creating...' : 'Create Work Order'}
-              </Button>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="min-h-[44px]"
+                >
+                  Cancel
+                </Button>
+
+                {currentStep < 3 ? (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    className="min-h-[44px]"
+                  >
+                    Next
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
+                    className="min-h-[44px]"
+                  >
+                    {createWorkOrderMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Submit Work Order
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </form>
         </Form>

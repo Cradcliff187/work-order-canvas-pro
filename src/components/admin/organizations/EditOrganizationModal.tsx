@@ -1,72 +1,78 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Building2, Mail, Phone, MapPin, Hash } from 'lucide-react';
-import { useOrganizationMutations, UpdateOrganizationData } from '@/hooks/useOrganizations';
-import { Organization } from '@/pages/admin/AdminOrganizations';
+import { z } from 'zod';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { Edit, Loader2 } from "lucide-react";
+import { US_STATES } from '@/constants/states';
+import { useUpdateOrganization } from '@/hooks/useOrganizations';
+import type { Organization } from '@/integrations/supabase/types';
 
 const editOrganizationSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
-  contact_email: z.string().email('Invalid email address'),
+  initials: z.string().min(1, 'Initials are required').max(5, 'Initials must be less than 5 characters'),
+  contact_email: z.string().email('Invalid email format').optional().or(z.literal('')),
   contact_phone: z.string().optional(),
-  address: z.string().optional(),
-  organization_type: z.enum(['partner', 'subcontractor', 'internal']),
-  initials: z.string()
-    .regex(/^[A-Z]{2,4}$/, 'Must be 2-4 uppercase letters')
-    .optional(),
+  street_address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip_code: z.string().optional(),
+  description: z.string().optional(),
+  organization_type: z.string().min(1, 'Organization type is required'),
   uses_partner_location_numbers: z.boolean().default(false),
-}).superRefine((data, ctx) => {
-  if (data.organization_type === 'partner' && !data.initials) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Initials are required for partner organizations',
-      path: ['initials'],
-    });
-  }
 });
 
 type EditOrganizationFormData = z.infer<typeof editOrganizationSchema>;
 
 interface EditOrganizationModalProps {
+  organization: Organization | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organization: Organization | null;
-  onSuccess: () => void;
 }
 
-export function EditOrganizationModal({ open, onOpenChange, organization, onSuccess }: EditOrganizationModalProps) {
-  const { updateOrganization } = useOrganizationMutations();
-  
+export function EditOrganizationModal({ organization, open, onOpenChange }: EditOrganizationModalProps) {
+  const { toast } = useToast();
+  const updateOrganizationMutation = useUpdateOrganization();
+
   const form = useForm<EditOrganizationFormData>({
     resolver: zodResolver(editOrganizationSchema),
     defaultValues: {
       name: organization?.name || '',
+      initials: organization?.initials || '',
       contact_email: organization?.contact_email || '',
       contact_phone: organization?.contact_phone || '',
-      address: organization?.address || '',
-      organization_type: organization?.organization_type || 'partner',
-      initials: organization?.initials || '',
+      street_address: organization?.street_address || '',
+      city: organization?.city || '',
+      state: organization?.state || '',
+      zip_code: organization?.zip_code || '',
+      description: organization?.description || '',
+      organization_type: organization?.organization_type || '',
       uses_partner_location_numbers: organization?.uses_partner_location_numbers || false,
     },
   });
 
+  // Reset form when organization changes
   React.useEffect(() => {
     if (organization) {
       form.reset({
-        name: organization.name,
-        contact_email: organization.contact_email,
-        contact_phone: organization.contact_phone || '',
-        address: organization.address || '',
-        organization_type: organization.organization_type,
+        name: organization.name || '',
         initials: organization.initials || '',
+        contact_email: organization.contact_email || '',
+        contact_phone: organization.contact_phone || '',
+        street_address: organization.street_address || '',
+        city: organization.city || '',
+        state: organization.state || '',
+        zip_code: organization.zip_code || '',
+        description: organization.description || '',
+        organization_type: organization.organization_type || '',
         uses_partner_location_numbers: organization.uses_partner_location_numbers || false,
       });
     }
@@ -74,149 +80,180 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
 
   const onSubmit = async (data: EditOrganizationFormData) => {
     if (!organization) return;
-    
+
     try {
-      await updateOrganization.mutateAsync({
-        organizationId: organization.id,
-        orgData: {
-          name: data.name,
-          contact_email: data.contact_email,
-          contact_phone: data.contact_phone,
-          address: data.address,
-          organization_type: data.organization_type,
-          initials: data.initials,
-          uses_partner_location_numbers: data.uses_partner_location_numbers,
-        },
+      await updateOrganizationMutation.mutateAsync({
+        id: organization.id,
+        ...data,
       });
+      
+      toast({
+        title: "Organization updated",
+        description: "The organization has been successfully updated.",
+      });
+      
       onOpenChange(false);
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to update organization:', error);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update organization",
+      });
     }
   };
 
-  const handleClose = () => {
-    form.reset();
-    onOpenChange(false);
-  };
+  if (!organization) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="shrink-0">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
+            <Edit className="h-5 w-5" />
             Edit Organization
           </DialogTitle>
-          <DialogDescription>
-            Update the organization details below.
-          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <div className="flex-1 overflow-y-auto px-1">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Organization Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="initials"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Initials *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ORG" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contact_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="contact@company.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="contact_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Phone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(555) 123-4567" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="name"
+              name="street_address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Organization Name
-                  </FormLabel>
+                  <FormLabel>Street Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="Acme Property Management" {...field} />
+                    <Input placeholder="123 Main Street" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="contact_email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Contact Email
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="contact@acme.com" type="email" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Primary contact email for this organization
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {US_STATES.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="zip_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ZIP Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="12345" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
-              name="contact_phone"
+              name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    Contact Phone (Optional)
-                  </FormLabel>
+                  <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="+1 (555) 123-4567" {...field} />
+                    <Textarea placeholder="Description of the organization" {...field} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Address (Optional)
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="123 Main St, City, State 12345" 
-                      className="resize-none" 
-                      rows={3}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Physical address or headquarters location
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="initials"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Hash className="h-4 w-4" />
-                    Initials {form.watch('organization_type') === 'partner' && <span className="text-destructive">*</span>}
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="ABC" 
-                      className="uppercase"
-                      maxLength={4}
-                      {...field} 
-                      onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    2-4 letter code for work order numbering (e.g., ABC)
-                    {form.watch('organization_type') === 'partner' && ' - Required for partners'}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -227,22 +264,18 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
               name="organization_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Organization Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel>Organization Type *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select organization type" />
+                        <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="partner">Partner</SelectItem>
                       <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                      <SelectItem value="internal">Internal</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    The type of organization determines their role in the system
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -254,11 +287,9 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Partner Uses Location Numbers
-                    </FormLabel>
+                    <FormLabel className="text-base">Partner Uses Location Codes</FormLabel>
                     <FormDescription>
-                      Enable if partner provides their own location codes
+                      Enable if this partner organization manages their own location codes
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -271,21 +302,32 @@ export function EditOrganizationModal({ open, onOpenChange, organization, onSucc
               )}
             />
 
-            </form>
-          </div>
-          
-          <DialogFooter className="shrink-0 mt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={updateOrganization.isPending}
-              onClick={form.handleSubmit(onSubmit)}
-            >
-              {updateOrganization.isPending ? 'Updating...' : 'Update Organization'}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateOrganizationMutation.isPending}
+              >
+                {updateOrganizationMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update Organization
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </Form>
       </DialogContent>
     </Dialog>

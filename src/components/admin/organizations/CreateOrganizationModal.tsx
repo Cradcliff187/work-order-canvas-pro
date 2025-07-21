@@ -1,35 +1,32 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Building2, Mail, Phone, MapPin, Hash } from 'lucide-react';
-import { useOrganizationMutations, CreateOrganizationData } from '@/hooks/useOrganizations';
+import { z } from 'zod';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/components/ui/use-toast";
+import { Plus, Loader2 } from "lucide-react";
+import { useCreateOrganization } from '@/hooks/useOrganizations';
 
 const createOrganizationSchema = z.object({
-  name: z.string().min(1, 'Organization name is required'),
-  contact_email: z.string().email('Invalid email address'),
-  contact_phone: z.string().optional(),
-  address: z.string().optional(),
+  name: z.string().min(2, {
+    message: "Organization name must be at least 2 characters.",
+  }),
+  initials: z.string().min(2, {
+    message: "Initials must be at least 2 characters.",
+  }).max(4, {
+    message: "Initials must be at most 4 characters.",
+  }),
+  contact_email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
-  initials: z.string()
-    .regex(/^[A-Z]{2,4}$/, 'Must be 2-4 uppercase letters')
-    .optional(),
   uses_partner_location_numbers: z.boolean().default(false),
-}).superRefine((data, ctx) => {
-  if (data.organization_type === 'partner' && !data.initials) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Initials are required for partner organizations',
-      path: ['initials'],
-    });
-  }
 });
 
 type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
@@ -37,165 +34,94 @@ type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
 interface CreateOrganizationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
 }
 
-export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: CreateOrganizationModalProps) {
-  const { createOrganization } = useOrganizationMutations();
-  
+export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizationModalProps) {
+  const { toast } = useToast();
+  const createOrganizationMutation = useCreateOrganization();
+
   const form = useForm<CreateOrganizationFormData>({
     resolver: zodResolver(createOrganizationSchema),
     defaultValues: {
       name: '',
-      contact_email: '',
-      contact_phone: '',
-      address: '',
-      organization_type: 'partner' as const,
       initials: '',
+      contact_email: '',
+      organization_type: 'partner',
       uses_partner_location_numbers: false,
     },
   });
 
   const onSubmit = async (data: CreateOrganizationFormData) => {
     try {
-      await createOrganization.mutateAsync({
-        name: data.name!,
-        contact_email: data.contact_email!,
-        contact_phone: data.contact_phone,
-        address: data.address,
-        organization_type: data.organization_type,
-        initials: data.initials,
-        uses_partner_location_numbers: data.uses_partner_location_numbers,
+      await createOrganizationMutation.mutateAsync(data);
+      
+      toast({
+        title: "Organization created",
+        description: "The organization has been successfully created.",
       });
+      
       form.reset();
       onOpenChange(false);
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to create organization:', error);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to create organization",
+      });
     }
   };
 
-  const handleClose = () => {
-    form.reset();
-    onOpenChange(false);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
             Create New Organization
           </DialogTitle>
-          <DialogDescription>
-            Add a new organization to the system. Users can be assigned to this organization later.
-          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Organization Name
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="Acme Property Management" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Organization Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="initials"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Initials *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ABCD" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
               name="contact_email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Contact Email
-                  </FormLabel>
+                  <FormLabel>Contact Email *</FormLabel>
                   <FormControl>
-                    <Input placeholder="contact@acme.com" type="email" {...field} />
+                    <Input type="email" placeholder="contact@company.com" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    Primary contact email for this organization
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="contact_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    Contact Phone (Optional)
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="+1 (555) 123-4567" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Address (Optional)
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="123 Main St, City, State 12345" 
-                      className="resize-none" 
-                      rows={3}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Physical address or headquarters location
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="initials"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Hash className="h-4 w-4" />
-                    Initials {form.watch('organization_type') === 'partner' && <span className="text-destructive">*</span>}
-                  </FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="ABC" 
-                      className="uppercase"
-                      maxLength={4}
-                      {...field} 
-                      onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    2-4 letter code for work order numbering (e.g., ABC)
-                    {form.watch('organization_type') === 'partner' && ' - Required for partners'}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -206,11 +132,11 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
               name="organization_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Organization Type</FormLabel>
+                  <FormLabel>Organization Type *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select organization type" />
+                        <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -219,45 +145,55 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                       <SelectItem value="internal">Internal</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    The type of organization determines their role in the system
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {form.watch('organization_type') === 'partner' && (
-              <FormField
-                control={form.control}
-                name="uses_partner_location_numbers"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">
-                        Partner Uses Location Numbers
-                      </FormLabel>
-                      <FormDescription>
-                        Enable if partner provides their own location codes
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="uses_partner_location_numbers"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Partner Uses Location Codes</FormLabel>
+                    <FormDescription>
+                      Enable if this partner organization manages their own location codes
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createOrganization.isPending}>
-                {createOrganization.isPending ? 'Creating...' : 'Create Organization'}
+              <Button
+                type="submit"
+                disabled={createOrganizationMutation.isPending}
+              >
+                {createOrganizationMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Organization
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>

@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Building2, MapPin, ExternalLink, Plus, Loader2, User, Phone, Mail, Info, Eye } from 'lucide-react';

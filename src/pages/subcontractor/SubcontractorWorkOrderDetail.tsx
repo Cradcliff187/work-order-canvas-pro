@@ -1,370 +1,250 @@
-
-import { Link, useParams } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
-import { ArrowLeft, FileText, MapPin, Phone, Mail, Clock, Calendar, Plus, User } from "lucide-react";
-import { format } from "date-fns";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
+import { useWorkOrder } from '@/hooks/useWorkOrders';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SubcontractorWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
-  const { getWorkOrder } = useSubcontractorWorkOrders();
-  
-  // Validate ID parameter
-  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/subcontractor/work-orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-        </div>
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            Invalid work order ID provided.
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const { toast } = useToast();
+  const { user, profile } = useAuth();
+  const [workOrder, setWorkOrder] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchWorkOrder = async () => {
+      if (!id) {
+        setError('Work Order ID is required.');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('work_orders')
+          .select(`
+            *,
+            organization:organization_id (
+              name,
+              initials,
+              contact_email
+            ),
+            trade:trade_id (
+              name
+            )
+          `)
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setWorkOrder(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load work order.');
+        toast({
+          variant: "destructive",
+          title: "Woops! Something went wrong.",
+          description: err.message || "Failed to load work order.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWorkOrder();
+  }, [id, toast]);
+
+  if (isLoading) {
+    return <div>Loading work order details...</div>;
   }
 
-  const workOrderQuery = getWorkOrder(id);
-
-  if (workOrderQuery.isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 bg-muted rounded animate-pulse" />
-        <div className="grid gap-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-6 bg-muted rounded animate-pulse" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="h-4 bg-muted rounded animate-pulse" />
-                  <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
+  if (error || !workOrder) {
+    return <div>Error: {error || 'Work order not found.'}</div>;
   }
-
-  if (workOrderQuery.error || !workOrderQuery.data) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/subcontractor/work-orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-        </div>
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            Work order not found or you don't have access to view it.
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const workOrder = workOrderQuery.data;
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "assigned":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "in_progress":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const formatStatus = (status: string) => {
-    return status.split("_").map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(" ");
-  };
-
-  const canSubmitReport = workOrder.status === "assigned" || workOrder.status === "in_progress";
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-        <div className="flex items-center gap-4">
-          <Link to="/subcontractor/work-orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`}
-            </h1>
-            <p className="text-muted-foreground">{workOrder.title}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Badge className={getStatusColor(workOrder.status)}>
-            {formatStatus(workOrder.status)}
-          </Badge>
-          {canSubmitReport && (
-            <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Submit Report
-              </Button>
-            </Link>
-          )}
-          {workOrder.status === 'completed' && (
-            <Link to="/subcontractor/submit-invoice">
-              <Button variant="secondary">
-                <FileText className="h-4 w-4 mr-2" />
-                Submit Invoice
-              </Button>
-            </Link>
-          )}
+      <div className="flex items-center gap-4">
+        <Link to="/subcontractor/work-orders">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Work Orders
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">Work Order Details</h1>
+          <p className="text-muted-foreground">View details of work order</p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Work Order Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Work Order Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium text-sm text-muted-foreground mb-1">Description</h4>
-              <p className="text-sm">{workOrder.description || "No description provided"}</p>
-            </div>
-
-            {workOrder.trades && (
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Trade</h4>
-                <p className="text-sm">{workOrder.trades.name}</p>
-                {workOrder.trades.description && (
-                  <p className="text-xs text-muted-foreground mt-1">{workOrder.trades.description}</p>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Submitted</h4>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4" />
-                  {format(new Date(workOrder.date_submitted), "MMM d, yyyy")}
-                </div>
-              </div>
-              
-              {workOrder.due_date && (
-                <div>
-                  <h4 className="font-medium text-sm text-muted-foreground mb-1">Due Date</h4>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4" />
-                    {format(new Date(workOrder.due_date), "MMM d, yyyy")}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {workOrder.estimated_hours && (
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Estimated Hours</h4>
-                <p className="text-sm">{workOrder.estimated_hours} hours</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Location Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Location Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {workOrder.store_location && (
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Store/Location</h4>
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4" />
-                  {workOrder.store_location}
-                </div>
-              </div>
-            )}
-
-            {(workOrder.street_address || workOrder.city || workOrder.state || workOrder.zip_code) && (
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Address</h4>
-                <div className="text-sm">
-                  {workOrder.street_address && <div>{workOrder.street_address}</div>}
-                  {(workOrder.city || workOrder.state || workOrder.zip_code) && (
-                    <div>
-                      {workOrder.city && `${workOrder.city}, `}
-                      {workOrder.state} {workOrder.zip_code}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {workOrder.organizations && (
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Organization</h4>
-                <p className="text-sm">{workOrder.organizations.name}</p>
-                
-                {workOrder.organizations.contact_email && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                    <Mail className="h-4 w-4" />
-                    <a href={`mailto:${workOrder.organizations.contact_email}`} 
-                       className="hover:text-foreground">
-                      {workOrder.organizations.contact_email}
-                    </a>
-                  </div>
-                )}
-                
-                {workOrder.organizations.contact_phone && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    <Phone className="h-4 w-4" />
-                    <a href={`tel:${workOrder.organizations.contact_phone}`} 
-                       className="hover:text-foreground">
-                      {workOrder.organizations.contact_phone}
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Site Contact */}
-            {(workOrder.location_contact_name || workOrder.location_contact_phone || workOrder.location_contact_email) && (
-              <>
-                <Separator />
-                <div>
-                  <h4 className="font-medium text-sm text-muted-foreground mb-3">Site Contact</h4>
-                  <div className="flex gap-4">
-                    {workOrder.location_contact_name && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{workOrder.location_contact_name}</span>
-                      </div>
-                    )}
-                    
-                    {workOrder.location_contact_phone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={`tel:${workOrder.location_contact_phone}`}
-                          className="text-primary hover:underline"
-                        >
-                          {workOrder.location_contact_phone}
-                        </a>
-                      </div>
-                    )}
-                    
-                    {workOrder.location_contact_email && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={`mailto:${workOrder.location_contact_email}`}
-                          className="text-primary hover:underline"
-                        >
-                          {workOrder.location_contact_email}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Partner References */}
-        {(workOrder.partner_po_number || workOrder.partner_location_number) && (
-          <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Work Order Details Card */}
+          <Card>
             <CardHeader>
-              <CardTitle>Partner References</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Work Order Details
+              </CardTitle>
+              <CardDescription>
+                Details about this work order
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-6">
-                {workOrder.partner_po_number && (
-                  <div>
-                    <h4 className="font-medium text-sm text-muted-foreground mb-1">PO Number</h4>
-                    <p className="text-sm">{workOrder.partner_po_number}</p>
-                  </div>
-                )}
-                {workOrder.partner_location_number && (
-                  <div>
-                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Location Number</h4>
-                    <p className="text-sm">{workOrder.partner_location_number}</p>
-                  </div>
-                )}
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Work Order Number</Label>
+                  <p className="text-sm font-bold">{workOrder.work_order_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <Badge variant="secondary">{workOrder.status || 'N/A'}</Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Title</Label>
+                  <p className="text-sm">{workOrder.title || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
+                  <p className="text-sm">{workOrder.trade?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
+                  <p className="text-sm">
+                    {workOrder.created_at
+                      ? format(new Date(workOrder.created_at), 'MMM dd, yyyy hh:mm a')
+                      : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
+                  <p className="text-sm">
+                    {workOrder.due_date ? format(new Date(workOrder.due_date), 'MMM dd, yyyy') : 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                <p className="text-sm">{workOrder.description || 'No description provided.'}</p>
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Previous Reports */}
-        {workOrder.work_order_reports && workOrder.work_order_reports.length > 0 && (
-          <Card className="lg:col-span-2">
+          {/* Location Information */}
+          <Card>
             <CardHeader>
-              <CardTitle>Previous Reports</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Location Information
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {workOrder.work_order_reports.map((report: any) => (
-                  <div key={report.id} className="border rounded-lg p-4 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">
-                          Report by {report.profiles?.first_name} {report.profiles?.last_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Submitted {format(new Date(report.submitted_at), "MMM d, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                      <Badge 
-                        className={
-                          report.status === "approved" ? "bg-green-100 text-green-800 border-green-200" :
-                          report.status === "rejected" ? "bg-red-100 text-red-800 border-red-200" :
-                          "bg-yellow-100 text-yellow-800 border-yellow-200"
-                        }
-                      >
-                        {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-                      </Badge>
-                    </div>
-                    
-                    <p className="text-sm">{report.work_performed}</p>
-                    
-                    {report.review_notes && (
-                      <div className="bg-muted p-3 rounded">
-                        <p className="text-sm font-medium">Admin Notes:</p>
-                        <p className="text-sm text-muted-foreground">{report.review_notes}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Location Name</Label>
+                  <p className="text-sm">{workOrder.store_location || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Location Code</Label>
+                  <p className="text-sm">{workOrder.partner_location_number || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Street Address</Label>
+                  <p className="text-sm">{workOrder.street_address || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">City</Label>
+                  <p className="text-sm">{workOrder.city || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">State</Label>
+                  <p className="text-sm">{workOrder.state || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">ZIP Code</Label>
+                  <p className="text-sm">{workOrder.zip_code || 'Not specified'}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
+
+          {/* Additional Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Notes</CardTitle>
+              <CardDescription>Any additional notes or comments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>No notes provided.</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Organization Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Organization Info
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarImage src="https://github.com/shadcn.png" alt="Organization Avatar" />
+                  <AvatarFallback>{workOrder.organization?.initials || 'N/A'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{workOrder.organization?.name || 'N/A'}</div>
+                  <div className="text-sm text-muted-foreground">{workOrder.organization?.contact_email || 'N/A'}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Contact Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
+                <p className="text-sm">John Smith</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                <p className="text-sm">555-123-4567</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                <p className="text-sm">john.smith@example.com</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

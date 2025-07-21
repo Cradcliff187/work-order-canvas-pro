@@ -213,7 +213,7 @@ export default function SubmitWorkOrder() {
         const partnerLocationSelection = form.getValues('partner_location_selection');
         const partnerLocationNumber = form.getValues('partner_location_number');
         
-        // Check if organization uses partner location numbers
+        // Check if organization uses partner location codes
         const usesPartnerLocationNumbers = userOrganization?.uses_partner_location_numbers;
         
         // Scenario 1: Partner location selected from dropdown (this is what LocationFields sets)
@@ -223,20 +223,20 @@ export default function SubmitWorkOrder() {
         
         // Scenario 2: Manual entry mode - store location must be filled
         if (storeLocation) {
-          // If organization uses partner location numbers, require location number
+          // If organization uses partner location codes, require location code
           if (usesPartnerLocationNumbers && !partnerLocationNumber) {
             toast({
               variant: "destructive",
-              title: "Location Number Required",
-              description: "This organization requires a location number. Please enter a location number.",
+              title: "Location Code Required",
+              description: "This organization requires a location code. Please enter a location code.",
             });
             return false;
           }
-          // If we have store location (and location number if required), we're good
+          // If we have store location (and location code if required), we're good
           return true;
         }
         
-        // Scenario 3: Location number entered but no store location
+        // Scenario 3: Location code entered but no store location
         if (partnerLocationNumber && !storeLocation) {
           toast({
             variant: "destructive",
@@ -251,7 +251,7 @@ export default function SubmitWorkOrder() {
           toast({
             variant: "destructive",
             title: "Location Required",
-            description: "Please select a location from the dropdown or enter location details with a location number.",
+            description: "Please select a location from the dropdown or enter location details with a location code.",
           });
         } else {
           toast({
