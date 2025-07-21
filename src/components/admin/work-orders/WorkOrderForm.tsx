@@ -23,7 +23,7 @@ const workOrderSchema = z.object({
   zip_code: z.string().optional(),
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
-  status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled', 'estimate_needed']),
   estimated_hours: z.string().optional(),
   due_date: z.string().optional(),
 });
@@ -105,6 +105,7 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="estimate_needed">Estimate Needed</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

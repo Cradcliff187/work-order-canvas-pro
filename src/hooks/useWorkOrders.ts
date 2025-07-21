@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,21 +29,11 @@ interface WorkOrderProfile {
   last_name: string;
 }
 
-// Simplified assignment type
-interface WorkOrderAssignment {
-  id: string;
-  assigned_to: string;
-  assignment_type: string;
-  assignee: WorkOrderProfile;
-  assigned_organization?: WorkOrderOrganization | null;
-}
-
-// Main WorkOrder type - simplified to avoid deep instantiation
-export interface WorkOrder extends Omit<WorkOrderRow, 'organization_id' | 'trade_id' | 'assigned_to'> {
+// Main WorkOrder type - keep original fields AND add joined data
+export interface WorkOrder extends WorkOrderRow {
   organizations: WorkOrderOrganization | null;
   trades: WorkOrderTrade | null;
   assigned_user: WorkOrderProfile | null;
-  assignments?: WorkOrderAssignment[];
 }
 
 interface WorkOrderFilters {

@@ -10,28 +10,17 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { capitalize } from '@/lib/utils';
-import type { Database } from '@/integrations/supabase/types';
-
-type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
-type Organization = Database['public']['Tables']['organizations']['Row'];
-type Trade = Database['public']['Tables']['trades']['Row'];
-type Profile = Database['public']['Tables']['profiles']['Row'];
-
-export type WorkOrderWithOrganization = WorkOrder & {
-  organizations: Organization | null;
-  trades: Trade | null;
-  assigned_user: Profile | null;
-};
+import { WorkOrder } from '@/hooks/useWorkOrders';
 
 // Function to fetch work order details by ID
-const getWorkOrder = async (id: string): Promise<WorkOrderWithOrganization | null> => {
+const getWorkOrder = async (id: string): Promise<WorkOrder | null> => {
   const { data, error } = await supabase
     .from('work_orders')
     .select(`
       *,
-      organizations(*),
-      trades(*),
-      assigned_user:profiles(*)
+      organizations!organization_id(id, name, contact_email, organization_type),
+      trades!trade_id(id, name),
+      assigned_user:profiles!assigned_to(id, first_name, last_name)
     `)
     .eq('id', id)
     .single();
