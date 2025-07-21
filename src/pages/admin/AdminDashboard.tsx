@@ -20,6 +20,8 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import { WorkOrderNumberTest } from '@/components/admin/work-orders/WorkOrderNumberTest';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const COLORS = {
   received: 'hsl(var(--primary))',
@@ -72,6 +74,14 @@ const AdminDashboard = () => {
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
         <p className="text-muted-foreground">Monitor system performance and manage work orders</p>
       </div>
+
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="testing">Work Order Number Testing</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="dashboard" className="space-y-8">
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -503,6 +513,12 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+        
+        <TabsContent value="testing" className="space-y-6">
+          <WorkOrderNumberTest />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

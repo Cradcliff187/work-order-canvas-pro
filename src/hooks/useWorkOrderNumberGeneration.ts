@@ -14,6 +14,7 @@ interface WorkOrderNumberResult {
   warning: string | null;
   requiresInitials: boolean;
   organizationName?: string;
+  locationNumber?: string;
 }
 
 export function useWorkOrderNumberGeneration({ organizationId, locationNumber }: UseWorkOrderNumberGenerationProps): WorkOrderNumberResult {
@@ -24,6 +25,7 @@ export function useWorkOrderNumberGeneration({ organizationId, locationNumber }:
   const [warning, setWarning] = useState<string | null>(null);
   const [requiresInitials, setRequiresInitials] = useState(false);
   const [organizationName, setOrganizationName] = useState<string | undefined>(undefined);
+  const [generatedLocationNumber, setGeneratedLocationNumber] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!organizationId) {
@@ -33,6 +35,7 @@ export function useWorkOrderNumberGeneration({ organizationId, locationNumber }:
       setWarning(null);
       setRequiresInitials(false);
       setOrganizationName(undefined);
+      setGeneratedLocationNumber(undefined);
       return;
     }
 
@@ -63,6 +66,7 @@ export function useWorkOrderNumberGeneration({ organizationId, locationNumber }:
           setIsFallback(true);
           setWarning('Using fallback numbering due to system error');
           setRequiresInitials(false);
+          setGeneratedLocationNumber(undefined);
           return;
         }
 
@@ -73,6 +77,7 @@ export function useWorkOrderNumberGeneration({ organizationId, locationNumber }:
           setWarning(result.warning || null);
           setRequiresInitials(result.requires_initials || false);
           setOrganizationName(result.organization_name);
+          setGeneratedLocationNumber(result.location_number);
           
           // Log for monitoring if using fallback
           if (result.is_fallback) {
@@ -84,6 +89,7 @@ export function useWorkOrderNumberGeneration({ organizationId, locationNumber }:
           setIsFallback(false);
           setWarning(null);
           setRequiresInitials(false);
+          setGeneratedLocationNumber(undefined);
         }
       } catch (err) {
         console.error('Error generating work order number:', err);
@@ -93,6 +99,8 @@ export function useWorkOrderNumberGeneration({ organizationId, locationNumber }:
         setIsFallback(false);
         setWarning(null);
         setRequiresInitials(false);
+        setOrganizationName(undefined);
+        setGeneratedLocationNumber(undefined);
       } finally {
         setIsLoading(false);
       }
@@ -109,5 +117,6 @@ export function useWorkOrderNumberGeneration({ organizationId, locationNumber }:
     warning,
     requiresInitials,
     organizationName,
+    locationNumber: generatedLocationNumber,
   };
 }

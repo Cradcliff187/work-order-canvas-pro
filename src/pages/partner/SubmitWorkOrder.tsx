@@ -157,6 +157,7 @@ export default function SubmitWorkOrder() {
     warning: workOrderNumberWarning,
     requiresInitials,
     organizationName,
+    locationNumber: generatedLocationNumber,
   } = useWorkOrderNumberGeneration({
     organizationId: effectiveOrganizationId,
     locationNumber: form.watch('partner_location_number'),
@@ -309,7 +310,7 @@ export default function SubmitWorkOrder() {
         location_contact_phone: data.location_contact_phone || '',
         location_contact_email: data.location_contact_email || '',
         partner_po_number: data.partner_po_number || '',
-        partner_location_number: data.partner_location_number || '',
+        partner_location_number: data.partner_location_number || generatedLocationNumber || '',
       };
 
       await createWorkOrderMutation.mutateAsync(submissionData);

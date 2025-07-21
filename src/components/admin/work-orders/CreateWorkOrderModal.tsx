@@ -247,7 +247,8 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
     isFallback,
     warning,
     requiresInitials,
-    organizationName
+    organizationName,
+    locationNumber: generatedLocationNumber
   } = useWorkOrderNumberGeneration({
     organizationId,
     locationNumber,
@@ -279,7 +280,7 @@ export function CreateWorkOrderModal({ isOpen, onClose }: CreateWorkOrderModalPr
         location_state: data.location_state,
         location_zip_code: data.location_zip_code,
         partner_po_number: data.partner_po_number || null,
-        partner_location_number: data.partner_location_number || null,
+        partner_location_number: data.partner_location_number || generatedLocationNumber || null,
         work_order_number: workOrderNumber || null,
         created_by: profile.id,
         status: 'received',
