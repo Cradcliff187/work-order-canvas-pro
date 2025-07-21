@@ -113,7 +113,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
             />
           </div>
           
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
             {loading ? 'Please wait...' : (view === 'sign_in' ? 'Sign In' : 'Create Account')}
           </Button>
         </form>

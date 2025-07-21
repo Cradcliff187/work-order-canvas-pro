@@ -93,7 +93,7 @@ export const Auth = () => {
           <img 
             src={branding.assets.logos.horizontal} 
             alt={branding.company.name}
-            className="mx-auto h-30 w-auto mb-6"
+            className="mx-auto h-38 w-auto mb-8"
           />
           <div className="flex items-center justify-center gap-2 mb-2">
             <HardHat className="h-6 w-6 text-primary" />
@@ -112,7 +112,7 @@ export const Auth = () => {
           </p>
         </div>
 
-        <div className="bg-card border border-border rounded-lg shadow-sm p-6">
+        <div className="bg-card border border-border rounded-lg shadow-lg p-6">
           {view === 'password_reset' ? (
             <PasswordResetForm onBack={() => setView('sign_in')} />
           ) : view === 'create_user' ? (
