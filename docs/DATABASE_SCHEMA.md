@@ -298,6 +298,24 @@ Comprehensive audit trail for all system changes.
 
 ## Key Features
 
+### Format Validation Constraints
+The database enforces consistent data formatting through CHECK constraints:
+
+**Phone Number Format:**
+- Pattern: `(555) 123-4567`
+- Regex: `^\(\d{3}\) \d{3}-\d{4}$`
+- Allows NULL and empty strings
+- Applied to: `profiles.phone`, `organizations.contact_phone`, `partner_locations.contact_phone`
+
+**Email Format:**
+- Pattern: lowercase, trimmed, valid email format
+- Regex: `^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$`
+- Ensures email = lower(trim(email))
+- Allows NULL and empty strings
+- Applied to: `profiles.email`, `organizations.contact_email`, `partner_locations.contact_email`
+
+These constraints work with our FormattedInput components to ensure data consistency at both the UI and database levels.
+
 ### Multi-Organization Architecture
 - Organizations are typed (internal, partner, subcontractor)
 - Users belong to exactly one organization (except admins)
