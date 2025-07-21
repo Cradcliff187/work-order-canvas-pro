@@ -1,5 +1,6 @@
+
 import React, { Suspense } from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PartnerLayout from '@/components/PartnerLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -16,6 +17,9 @@ import {
 
 export const PartnerRoutes = () => (
   <>
+    {/* Redirect from /partner to /partner/dashboard */}
+    <Route path="/partner" element={<Navigate to="/partner/dashboard" replace />} />
+    
     <Route path="/partner/dashboard" element={
       <ProtectedRoute requiredUserType="partner">
         <PartnerLayout>

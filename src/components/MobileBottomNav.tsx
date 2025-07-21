@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,7 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
       id: 'dashboard',
       label: 'Dashboard',
       icon: Home,
-      path: '/subcontractor'
+      path: '/subcontractor/dashboard'
     },
     {
       id: 'work-orders',
@@ -40,7 +41,7 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
       id: 'submit',
       label: 'Submit',
       icon: Plus,
-      path: '/subcontractor/work-orders'
+      path: '/subcontractor/submit-invoice'
     },
     {
       id: 'reports',
@@ -53,7 +54,7 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
       id: 'profile',
       label: 'Profile',
       icon: User,
-      path: '/profile'
+      path: '/subcontractor/profile'
     }
   ];
 
@@ -70,16 +71,23 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
   };
 
   const isActive = (path: string) => {
-    // Handle exact match for dashboard routes (both partner and subcontractor)
-    if (path === '/subcontractor' || path === '/partner/dashboard') {
+    // Handle exact match for dashboard routes
+    if (path.endsWith('/dashboard')) {
       return location.pathname === path;
     }
+    
+    // Handle root paths that should match dashboard
+    if (path === '/subcontractor' || path === '/partner') {
+      return location.pathname === `${path}/dashboard`;
+    }
+    
+    // For other paths, check if current path starts with the nav path
     return location.pathname.startsWith(path);
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40 safe-area-pb">
-      <div className="flex items-center justify-around px-2 py-2">
+    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40 pb-safe-area-pb">
+      <div className="flex items-center justify-around px-1 py-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -90,28 +98,28 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
               variant="ghost"
               size="sm"
               onClick={() => handleNavClick(item)}
-              className={`flex flex-col items-center gap-1 h-12 min-w-0 px-2 py-2 relative ${
+              className={`flex flex-col items-center gap-1 h-14 min-w-0 px-2 py-1 relative touch-manipulation ${
                 active 
-                  ? 'text-primary' 
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-primary bg-primary/10' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
               }`}
             >
-              <div className="relative">
-                <Icon className={`h-5 w-5 ${item.id === 'submit' ? 'h-6 w-6' : ''}`} />
+              <div className="relative flex items-center justify-center">
+                <Icon className="h-5 w-5" />
                 {item.badge && item.badge > 0 && (
                   <Badge 
                     variant="destructive" 
-                    className="absolute -top-2 -right-2 h-4 w-4 p-0 text-xs flex items-center justify-center"
+                    className="absolute -top-2 -right-2 h-4 w-4 p-0 text-[10px] flex items-center justify-center min-w-[16px]"
                   >
                     {item.badge > 99 ? '99+' : item.badge}
                   </Badge>
                 )}
               </div>
-              <span className="text-xs font-medium truncate max-w-full">
+              <span className="text-[10px] font-medium truncate max-w-full leading-tight">
                 {item.label}
               </span>
               {item.id === 'submit' && (
-                <div className="absolute inset-0 rounded-lg bg-primary/10 -z-10" />
+                <div className="absolute inset-0 rounded-lg bg-primary/5 -z-10" />
               )}
             </Button>
           );

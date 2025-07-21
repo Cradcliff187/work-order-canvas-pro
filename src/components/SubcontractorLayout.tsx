@@ -43,7 +43,8 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
       id: 'invoices',
       label: 'Invoices',
       icon: Receipt,
-      path: '/subcontractor/invoices'
+      path: '/subcontractor/invoices',
+      badge: draftCount
     },
     {
       id: 'profile',
@@ -69,7 +70,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
           />
 
           {/* Main Content */}
-          <main className={`flex-1 ${isMobile ? 'pb-20' : ''}`}>
+          <main className={`flex-1 ${isMobile ? 'pb-16' : ''}`}>
             <SingleOrganizationGuard userType="subcontractor">
               <div className="p-6">
                 {children}

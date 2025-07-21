@@ -1,5 +1,6 @@
+
 import React, { Suspense } from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { SubcontractorLayout } from '@/components/SubcontractorLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -17,6 +18,9 @@ import {
 
 export const SubcontractorRoutes = () => (
   <>
+    {/* Redirect from /subcontractor to /subcontractor/dashboard */}
+    <Route path="/subcontractor" element={<Navigate to="/subcontractor/dashboard" replace />} />
+    
     <Route path="/subcontractor/dashboard" element={
       <ProtectedRoute requiredUserType="subcontractor">
         <SubcontractorLayout>

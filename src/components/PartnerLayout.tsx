@@ -214,7 +214,7 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
             showSignOut={false}
           />
 
-          <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
+          <main className={`flex-1 overflow-auto ${isMobile ? 'pb-16' : ''}`}>
             <SingleOrganizationGuard userType="partner">
               <div className="p-6">
                 {children}
