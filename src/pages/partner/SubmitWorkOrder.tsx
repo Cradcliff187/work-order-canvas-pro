@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -25,8 +26,8 @@ import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGenerati
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useOrganizations } from '@/hooks/useOrganizations';
 
-// Form schema with comprehensive validation
-const workOrderFormSchema = z.object({
+// Base form schema for all users
+const baseFormSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   description: z.string().optional(),
   trade_id: z.string().min(1, 'Trade is required'),
@@ -47,18 +48,20 @@ const workOrderFormSchema = z.object({
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
   partner_location_selection: z.string().optional(),
+});
+
+// Admin-only fields
+const adminFormSchema = baseFormSchema.extend({
   due_date: z.string().optional(),
   estimated_hours: z.string().optional(),
 });
-
-type FormData = z.infer<typeof workOrderFormSchema>;
 
 // Step component for progress indicator
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
   const steps = [
     { number: 1, title: 'Location Details' },
     { number: 2, title: 'Trade & Description' },
-    { number: 3, title: 'Review & Submit' }
+    { number: 3, title: 'Preview & Submit' }
   ];
 
   return (
@@ -106,6 +109,13 @@ export default function SubmitWorkOrder() {
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
 
+  // Determine if user is admin
+  const isAdmin = profile?.user_type === 'admin';
+
+  // Choose appropriate form schema based on user type
+  const formSchema = isAdmin ? adminFormSchema : baseFormSchema;
+  type FormData = z.infer<typeof formSchema>;
+
   // User organization hook
   const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();
   
@@ -119,9 +129,9 @@ export default function SubmitWorkOrder() {
   // Determine effective organization ID
   const effectiveOrganizationId = userOrganization?.id || selectedOrganizationId;
 
-  // Form setup with comprehensive validation
+  // Form setup with user-type specific validation
   const form = useForm<FormData>({
-    resolver: zodResolver(workOrderFormSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -143,9 +153,11 @@ export default function SubmitWorkOrder() {
       partner_po_number: '',
       partner_location_number: '',
       partner_location_selection: '',
-      due_date: '',
-      estimated_hours: '',
-    }
+      ...(isAdmin && {
+        due_date: '',
+        estimated_hours: '',
+      }),
+    } as FormData
   });
 
   // Work order number generation - watch for partner_location_number changes
@@ -199,7 +211,7 @@ export default function SubmitWorkOrder() {
     switch (step) {
       case 1:
         // For admin users, organization selection is required first
-        if (profile?.user_type === 'admin' && !selectedOrganizationId) {
+        if (isAdmin && !selectedOrganizationId) {
           toast({
             variant: "destructive",
             title: "Organization Required",
@@ -289,7 +301,7 @@ export default function SubmitWorkOrder() {
   // Handle form submission
   const onSubmit = async (data: FormData) => {
     try {
-      // Prepare submission data
+      // Prepare submission data - only include fields that exist in the form
       const submissionData = {
         title: data.title,
         description: data.description || '',
@@ -310,6 +322,9 @@ export default function SubmitWorkOrder() {
         location_contact_email: data.location_contact_email || '',
         partner_po_number: data.partner_po_number || '',
         partner_location_number: data.partner_location_number || generatedLocationNumber || '',
+        // Only include admin fields if user is admin
+        ...(isAdmin && 'due_date' in data && { due_date: data.due_date }),
+        ...(isAdmin && 'estimated_hours' in data && { estimated_hours: data.estimated_hours }),
       };
 
       await createWorkOrderMutation.mutateAsync(submissionData);
@@ -327,7 +342,7 @@ export default function SubmitWorkOrder() {
   };
 
   // Loading states
-  if (loadingUserOrg || isLoadingTrades || (profile?.user_type === 'admin' && loadingAllOrganizations)) {
+  if (loadingUserOrg || isLoadingTrades || (isAdmin && loadingAllOrganizations)) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -399,7 +414,7 @@ export default function SubmitWorkOrder() {
       </div>
 
       {/* Organization Selection for Admin Users */}
-      {profile?.user_type === 'admin' && (
+      {isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -552,54 +567,97 @@ export default function SubmitWorkOrder() {
                     )}
                   />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="due_date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Date</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              className="h-11"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  {/* Admin-only fields */}
+                  {isAdmin && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="due_date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Due Date</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="date"
+                                className="h-11"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="estimated_hours"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estimated Hours</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.5"
-                              min="0"
-                              placeholder="Estimated hours"
-                              className="h-11"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                      <FormField
+                        control={form.control}
+                        name="estimated_hours"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Estimated Hours</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                placeholder="Estimated hours"
+                                className="h-11"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Step 3: Review & Submit */}
+          {/* Step 3: Preview & Submit */}
           {currentStep === 3 && (
             <div className="space-y-6">
+              {/* Enhanced Work Order Number Preview */}
+              <Card className="border-2 border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Work Order Number Preview
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    This is the work order number that will be assigned to your request
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-4">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Your work order number will be:
+                    </div>
+                    <div className="font-mono text-2xl font-bold text-primary mb-2">
+                      {isLoadingWorkOrderNumber ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Generating...</span>
+                        </div>
+                      ) : workOrderNumberError ? (
+                        <div className="flex items-center justify-center gap-2 text-destructive">
+                          <AlertCircle className="h-5 w-5" />
+                          <span>Error generating number</span>
+                        </div>
+                      ) : (
+                        workOrderNumber || 'Will be generated automatically'
+                      )}
+                    </div>
+                    {isFallback && workOrderNumber && (
+                      <Badge variant="outline" className="text-xs">
+                        Fallback format
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Organization Info */}
               {(userOrganization || selectedOrganizationId) && (
                 <Card>
@@ -624,7 +682,7 @@ export default function SubmitWorkOrder() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    Review & Submit
+                    Review Work Order Details
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Please review your work order details before submitting
@@ -650,6 +708,18 @@ export default function SubmitWorkOrder() {
                       <Label className="text-sm font-medium text-muted-foreground">PO Number</Label>
                       <p className="text-sm">{form.watch('partner_po_number') || 'Not specified'}</p>
                     </div>
+                    {isAdmin && (
+                      <>
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
+                          <p className="text-sm">{form.watch('due_date') || 'Not specified'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Estimated Hours</Label>
+                          <p className="text-sm">{form.watch('estimated_hours') || 'Not specified'}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                   {form.watch('description') && (
                     <div>
