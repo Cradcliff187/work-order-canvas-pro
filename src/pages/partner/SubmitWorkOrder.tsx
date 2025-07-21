@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
 // Form schema with comprehensive validation
 const workOrderFormSchema = z.object({
@@ -97,17 +98,27 @@ const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; total
 export default function SubmitWorkOrder() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [trades, setTrades] = useState<any[]>([]);
   const [isLoadingTrades, setIsLoadingTrades] = useState(true);
   const [tradesError, setTradesError] = useState<string | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
 
   // User organization hook
   const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();
+  
+  // For admin users, load all partner organizations
+  const { data: organizations, isLoading: loadingOrganizations } = useOrganizations({
+    enabled: profile?.user_type === 'admin',
+    organizationType: 'partner'
+  });
 
   // Work order creation hook
   const createWorkOrderMutation = useCreateWorkOrder();
+
+  // Determine effective organization ID
+  const effectiveOrganizationId = userOrganization?.id || selectedOrganizationId;
 
   // Form setup with comprehensive validation
   const form = useForm<FormData>({
@@ -116,7 +127,7 @@ export default function SubmitWorkOrder() {
       title: '',
       description: '',
       trade_id: '',
-      organization_id: userOrganization?.id || '',
+      organization_id: effectiveOrganizationId || '',
       store_location: '',
       street_address: '',
       city: '',
@@ -148,7 +159,7 @@ export default function SubmitWorkOrder() {
     requiresInitials,
     organizationName,
   } = useWorkOrderNumberGeneration({
-    organizationId: userOrganization?.id,
+    organizationId: effectiveOrganizationId,
     locationNumber: form.watch('partner_location_number'),
   });
 
@@ -176,17 +187,27 @@ export default function SubmitWorkOrder() {
     loadTrades();
   }, []);
 
-  // Update organization in form when user organization loads
+  // Update organization in form when effective organization changes
   useEffect(() => {
-    if (userOrganization?.id && !form.getValues('organization_id')) {
-      form.setValue('organization_id', userOrganization.id);
+    if (effectiveOrganizationId && form.getValues('organization_id') !== effectiveOrganizationId) {
+      form.setValue('organization_id', effectiveOrganizationId);
     }
-  }, [userOrganization?.id, form]);
+  }, [effectiveOrganizationId, form]);
 
   // Step validation functions
   const validateStep = async (step: number) => {
     switch (step) {
       case 1:
+        // For admin users, organization selection is required first
+        if (profile?.user_type === 'admin' && !selectedOrganizationId) {
+          toast({
+            variant: "destructive",
+            title: "Organization Required",
+            description: "Please select an organization first.",
+          });
+          return false;
+        }
+
         // Work with LocationFields component state - check what it actually sets
         const storeLocation = form.getValues('store_location');
         const partnerLocationSelection = form.getValues('partner_location_selection');
@@ -274,7 +295,7 @@ export default function SubmitWorkOrder() {
         title: data.title,
         description: data.description || '',
         trade_id: data.trade_id,
-        organization_id: data.organization_id,
+        organization_id: effectiveOrganizationId,
         store_location: data.store_location,
         street_address: data.street_address || '',
         city: data.city || '',
@@ -307,7 +328,7 @@ export default function SubmitWorkOrder() {
   };
 
   // Loading states
-  if (loadingUserOrg || isLoadingTrades) {
+  if (loadingUserOrg || isLoadingTrades || (profile?.user_type === 'admin' && loadingOrganizations)) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -378,6 +399,40 @@ export default function SubmitWorkOrder() {
         </div>
       </div>
 
+      {/* Organization Selection for Admin Users */}
+      {profile?.user_type === 'admin' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Select Organization
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Choose which partner organization this work order is for
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Select onValueChange={setSelectedOrganizationId} value={selectedOrganizationId}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Select a partner organization" />
+              </SelectTrigger>
+              <SelectContent>
+                {organizations?.map((org) => (
+                  <SelectItem key={org.id} value={org.id}>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {org.initials}
+                      </Badge>
+                      <span>{org.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Step Progress Indicator */}
       <StepIndicator currentStep={currentStep} totalSteps={3} />
 
@@ -399,8 +454,7 @@ export default function SubmitWorkOrder() {
               <CardContent className="space-y-6">
                 <LocationFields
                   form={form}
-                  organizationId={userOrganization?.id}
-                  organizationType={userOrganization?.organization_type}
+                  organizationId={effectiveOrganizationId}
                   showPoNumber={true}
                 />
               </CardContent>
@@ -558,15 +612,17 @@ export default function SubmitWorkOrder() {
               )}
 
               {/* Organization Info */}
-              {userOrganization && (
+              {(userOrganization || selectedOrganizationId) && (
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <Building2 className="h-5 w-5 text-primary" />
                       <div>
-                        <div className="font-medium">{userOrganization.name}</div>
+                        <div className="font-medium">
+                          {userOrganization?.name || organizations?.find(org => org.id === selectedOrganizationId)?.name}
+                        </div>
                         <div className="text-sm text-muted-foreground">
-                          {userOrganization.contact_email}
+                          {userOrganization?.contact_email || organizations?.find(org => org.id === selectedOrganizationId)?.contact_email}
                         </div>
                       </div>
                     </div>
