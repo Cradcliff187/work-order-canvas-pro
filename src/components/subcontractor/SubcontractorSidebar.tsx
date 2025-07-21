@@ -63,7 +63,7 @@ export function SubcontractorSidebar() {
         <div className="flex items-center gap-2 px-3 py-2">
           {!collapsed && (
             <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">WorkOrderPro</h2>
+              <h2 className="text-lg font-semibold text-sidebar-foreground">AKC Contracting</h2>
               <p className="text-xs text-sidebar-foreground/60">Subcontractor Portal</p>
             </div>
           )}
