@@ -44,6 +44,14 @@ import { createWorkOrderColumns } from '@/components/partner/work-orders/WorkOrd
 import { ViewToggle } from '@/components/partner/work-orders/ViewToggle';
 import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
 
+const workOrderSortOptions = [
+  { value: 'submitted-desc', label: 'Newest First' },
+  { value: 'submitted-asc', label: 'Oldest First' },
+  { value: 'status-asc', label: 'Status (A-Z)' },
+  { value: 'location-asc', label: 'Location (A-Z)' },
+  { value: 'trade-asc', label: 'Trade (A-Z)' },
+];
+
 const WorkOrderList = () => {
   const navigate = useNavigate();
   const { data: workOrdersData, isLoading } = usePartnerWorkOrders();
@@ -53,8 +61,8 @@ const WorkOrderList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
-  const [view, setView] = useState<'card' | 'table'>('card');
-  const [sortOption, setSortOption] = useState('date-desc');
+  const [view, setView] = useState<'card' | 'table'>('table');
+  const [sortOption, setSortOption] = useState('submitted-desc');
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const workOrderList = workOrdersData?.data || [];
@@ -85,21 +93,21 @@ const WorkOrderList = () => {
         let aValue: any, bValue: any;
         
         switch (sortBy) {
-          case 'date':
+          case 'submitted':
             aValue = new Date(a.date_submitted).getTime();
             bValue = new Date(b.date_submitted).getTime();
-            break;
-          case 'number':
-            aValue = a.work_order_number || '';
-            bValue = b.work_order_number || '';
-            break;
-          case 'title':
-            aValue = a.title || '';
-            bValue = b.title || '';
             break;
           case 'status':
             aValue = a.status || '';
             bValue = b.status || '';
+            break;
+          case 'location':
+            aValue = a.store_location || '';
+            bValue = b.store_location || '';
+            break;
+          case 'trade':
+            aValue = a.trades?.name || '';
+            bValue = b.trades?.name || '';
             break;
           default:
             return 0;
@@ -255,7 +263,11 @@ const WorkOrderList = () => {
               </div>
               
               {view === 'card' && (
-                <SortDropdown value={sortOption} onValueChange={setSortOption} />
+                <SortDropdown 
+                  value={sortOption} 
+                  onValueChange={setSortOption}
+                  options={workOrderSortOptions}
+                />
               )}
             </div>
           </div>
