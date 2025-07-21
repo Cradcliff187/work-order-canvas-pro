@@ -5,23 +5,8 @@ import { Button } from '@/components/ui/button';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Eye, Edit, Trash2, UserPlus, MapPin, Copy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Database } from '@/integrations/supabase/types';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
-
-type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
-  organizations: { name: string } | null;
-  trades: { name: string } | null;
-  assigned_user: { first_name: string; last_name: string } | null;
-  assignments?: Array<{
-    id: string;
-    assigned_to: string;
-    assignment_type: string;
-    assignee: {
-      first_name: string;
-      last_name: string;
-    };
-  }>;
-};
+import { WorkOrder } from '@/hooks/useWorkOrders';
 
 const getStatusColor = (status: string) => {
   switch (status) {

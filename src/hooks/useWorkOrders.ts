@@ -81,6 +81,15 @@ export interface WorkOrder {
   organizations: WorkOrderOrganization | null;
   trades: WorkOrderTrade | null;
   assigned_user: WorkOrderProfile | null;
+  assignments?: Array<{
+    id: string;
+    assigned_to: string;
+    assignment_type: string;
+    assignee: {
+      first_name: string;
+      last_name: string;
+    };
+  }>;
 }
 
 interface WorkOrderFilters {
@@ -117,25 +126,24 @@ export function useWorkOrders(
 
       // Apply filters
       if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value) {
-            if (Array.isArray(value)) {
-              if (value.length > 0) {
-                query = query.in(key, value);
-              }
-            } else if (typeof value === 'string') {
-              if (key === 'search') {
-                query = query.ilike('title', `%${value}%`);
-              } else {
-                query = query.eq(key, value);
-              }
-            } else if (key === 'date_from' && filters.date_to) {
-              query = query.gte('created_at', value);
-            } else if (key === 'date_to' && filters.date_from) {
-              query = query.lte('created_at', value);
-            }
-          }
-        });
+        if (filters.status && filters.status.length > 0) {
+          query = query.in('status', filters.status as ('received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed')[]);
+        }
+        if (filters.trade_id) {
+          query = query.eq('trade_id', filters.trade_id);
+        }
+        if (filters.organization_id) {
+          query = query.eq('organization_id', filters.organization_id);
+        }
+        if (filters.search) {
+          query = query.ilike('title', `%${filters.search}%`);
+        }
+        if (filters.date_from) {
+          query = query.gte('created_at', filters.date_from);
+        }
+        if (filters.date_to) {
+          query = query.lte('created_at', filters.date_to);
+        }
       }
 
       // Apply sorting
