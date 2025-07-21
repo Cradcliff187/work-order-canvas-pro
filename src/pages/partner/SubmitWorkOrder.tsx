@@ -188,11 +188,11 @@ export default function SubmitWorkOrder() {
   const validateStep = async (step: number) => {
     switch (step) {
       case 1:
-        const locationFields = ['store_location'];
+        const locationFields: (keyof FormData)[] = ['store_location'];
         const locationValid = await form.trigger(locationFields);
         return locationValid;
       case 2:
-        const tradeFields = ['title', 'trade_id'];
+        const tradeFields: (keyof FormData)[] = ['title', 'trade_id'];
         const tradeValid = await form.trigger(tradeFields);
         return tradeValid;
       case 3:
