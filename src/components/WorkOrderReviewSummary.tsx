@@ -1,10 +1,14 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useFormContext } from 'react-hook-form';
-import { MapPin, FileText, User, Mail, Phone, Building2, Loader2, AlertCircle } from "lucide-react";
+import { MapPin, FileText, User, Mail, Phone, Building2, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { formatDate, formatDateTime } from '@/lib/utils/date';
 import { formatAddress } from '@/lib/utils/addressUtils';
+import { usePartnerLocation } from '@/hooks/usePartnerLocation';
 
 interface WorkOrderReviewSummaryProps {
   trades: any[];
@@ -15,6 +19,9 @@ interface WorkOrderReviewSummaryProps {
   userProfile?: any;
   selectedLocation?: any;
   generatedLocationNumber?: string;
+  isLoadingLocations?: boolean;
+  locationsError?: string | null;
+  partnerLocationSelection?: string;
 }
 
 export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
@@ -24,14 +31,29 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
   workOrderNumberError,
   organizationName,
   selectedLocation,
-  generatedLocationNumber
+  generatedLocationNumber,
+  isLoadingLocations,
+  locationsError,
+  partnerLocationSelection
 }) => {
   const form = useFormContext();
   const formData = form.getValues();
   
   const selectedTrade = trades.find(trade => trade.id === formData.trade_id);
-  const partnerLocationSelection = formData.partner_location_selection;
   const isExistingLocation = partnerLocationSelection && partnerLocationSelection !== 'add_new';
+
+  // Fallback hook to fetch individual location if selectedLocation is not available
+  const { 
+    data: fallbackLocation, 
+    isLoading: isLoadingFallbackLocation, 
+    error: fallbackLocationError,
+    refetch: refetchLocation 
+  } = usePartnerLocation(isExistingLocation && !selectedLocation ? partnerLocationSelection : undefined);
+
+  // Determine which location data to use
+  const locationToUse = selectedLocation || fallbackLocation;
+  const isLocationLoading = isLoadingLocations || isLoadingFallbackLocation;
+  const locationError = locationsError || fallbackLocationError?.message;
 
   // Calculate auto-generated title (same logic as in submission)
   const calculateFinalTitle = () => {
@@ -49,24 +71,24 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
 
   // Get location data (from existing location or manual entry)
   const getLocationData = () => {
-    if (isExistingLocation && selectedLocation) {
-      // Priority: generatedLocationNumber > selectedLocation.location_number
-      const locationNumber = generatedLocationNumber || selectedLocation.location_number;
-      const displayName = selectedLocation.location_name || formData.store_location;
+    if (isExistingLocation && locationToUse) {
+      // Priority: generatedLocationNumber > locationToUse.location_number
+      const locationNumber = generatedLocationNumber || locationToUse.location_number;
+      const displayName = locationToUse.location_name || formData.store_location;
       const formattedName = locationNumber ? `${displayName} (${locationNumber})` : displayName;
       
       return {
         name: formattedName,
         code: locationNumber,
         address: formatAddress({
-          location_street_address: selectedLocation.street_address,
-          location_city: selectedLocation.city,
-          location_state: selectedLocation.state,
-          location_zip_code: selectedLocation.zip_code
+          location_street_address: locationToUse.street_address,
+          location_city: locationToUse.city,
+          location_state: locationToUse.state,
+          location_zip_code: locationToUse.zip_code
         }),
-        contactName: selectedLocation.contact_name,
-        contactEmail: selectedLocation.contact_email,
-        contactPhone: selectedLocation.contact_phone
+        contactName: locationToUse.contact_name,
+        contactEmail: locationToUse.contact_email,
+        contactPhone: locationToUse.contact_phone
       };
     }
     
@@ -104,43 +126,70 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <div className="text-lg font-semibold">
-              {locationData.name || 'Property Name Not Specified'}
+          {/* Show loading state for location data */}
+          {isLocationLoading && isExistingLocation ? (
+            <div className="space-y-3">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
             </div>
-          </div>
-
-          {locationData.address && (
-            <div>
-              <div className="text-sm font-medium text-muted-foreground mb-1">Address</div>
-              <div className="text-base">{locationData.address}</div>
-            </div>
-          )}
-
-          {(locationData.contactName || locationData.contactEmail || locationData.contactPhone) && (
-            <div className="pt-2 border-t">
-              <div className="text-sm font-medium text-muted-foreground mb-3">Site Contact</div>
-              <div className="grid grid-cols-1 gap-3">
-                {locationData.contactName && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{locationData.contactName}</span>
-                  </div>
-                )}
-                {locationData.contactEmail && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{locationData.contactEmail}</span>
-                  </div>
-                )}
-                {locationData.contactPhone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{locationData.contactPhone}</span>
-                  </div>
-                )}
+          ) : locationError && isExistingLocation ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>Failed to load location details: {locationError}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchLocation()}
+                  className="ml-2"
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div>
+                <div className="text-lg font-semibold">
+                  {locationData.name || 'Property Name Not Specified'}
+                </div>
               </div>
-            </div>
+
+              {locationData.address && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Address</div>
+                  <div className="text-base">{locationData.address}</div>
+                </div>
+              )}
+
+              {(locationData.contactName || locationData.contactEmail || locationData.contactPhone) && (
+                <div className="pt-2 border-t">
+                  <div className="text-sm font-medium text-muted-foreground mb-3">Site Contact</div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {locationData.contactName && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{locationData.contactName}</span>
+                      </div>
+                    )}
+                    {locationData.contactEmail && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{locationData.contactEmail}</span>
+                      </div>
+                    )}
+                    {locationData.contactPhone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{locationData.contactPhone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

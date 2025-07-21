@@ -132,7 +132,7 @@ export default function SubmitWorkOrder() {
   const effectiveOrganizationId = userOrganization?.id || selectedOrganizationId;
 
   // Fetch partner locations for the selected organization
-  const { data: partnerLocations } = usePartnerLocations(effectiveOrganizationId);
+  const { data: partnerLocations, isLoading: isLoadingLocations, error: locationsError } = usePartnerLocations(effectiveOrganizationId);
 
   // Form setup
   const form = useForm<FormData>({
@@ -735,6 +735,9 @@ export default function SubmitWorkOrder() {
                 userProfile={profile}
                 selectedLocation={selectedLocation}
                 generatedLocationNumber={generatedLocationNumber}
+                isLoadingLocations={isLoadingLocations}
+                locationsError={locationsError?.message || null}
+                partnerLocationSelection={partnerLocationSelection}
               />
             </div>
           )}
