@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, User } from 'lucide-react';
+import { Loader2, Save, User, Lock } from 'lucide-react';
 
 const SubcontractorProfile = () => {
   const { profile, updateProfile } = useAuth();
@@ -20,7 +20,6 @@ const SubcontractorProfile = () => {
     last_name: profile?.last_name || '',
     email: profile?.email || '',
     phone: profile?.phone || '',
-    company_name: profile?.company_name || '',
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -30,6 +29,7 @@ const SubcontractorProfile = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Exclude company_name from updates - only admins can change organization
       const { error } = await updateProfile(formData);
       
       if (error) {
@@ -144,13 +144,19 @@ const SubcontractorProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company_name">Company/Business Name</Label>
+                  <Label htmlFor="company_name" className="flex items-center gap-2">
+                    Company/Business Name
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  </Label>
                   <Input
                     id="company_name"
-                    value={formData.company_name}
-                    onChange={(e) => handleInputChange('company_name', e.target.value)}
-                    placeholder="Enter your business or company name"
+                    value={profile?.company_name || 'No organization assigned'}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Organization assignment can only be changed by an administrator. Contact your system admin to request changes.
+                  </p>
                 </div>
               </div>
 
