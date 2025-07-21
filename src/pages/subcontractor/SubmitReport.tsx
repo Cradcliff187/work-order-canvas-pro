@@ -11,7 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { useDraftAutoSave } from "@/hooks/useDraftAutoSave";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { FileUpload } from "@/components/FileUpload";
+import { MobileMediaUpload } from "@/components/MobileMediaUpload";
 import { DraftIndicator } from "@/components/DraftIndicator";
 import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
 import { ArrowLeft, FileText, Save } from "lucide-react";
@@ -32,6 +34,7 @@ export default function SubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { getWorkOrder, submitReport } = useSubcontractorWorkOrders();
+  const isMobile = useIsMobile();
   
   // Validate workOrderId parameter
   if (!workOrderId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workOrderId)) {
@@ -402,13 +405,27 @@ export default function SubmitReport() {
                   </p>
                 </div>
                 
-                <FileUpload
-                  onFilesSelected={handleFilesSelected}
-                  maxFiles={10}
-                  maxSizeBytes={10 * 1024 * 1024}
-                  uploadProgress={uploadProgress}
-                  disabled={submitReport.isPending || isUploading}
-                />
+                {isMobile ? (
+                  <MobileMediaUpload
+                    onFilesSelected={handleFilesSelected}
+                    maxFiles={10}
+                    maxSizeBytes={10 * 1024 * 1024}
+                    uploadProgress={uploadProgress}
+                    disabled={submitReport.isPending || isUploading}
+                    showCamera={true}
+                    cameraFacingMode="environment"
+                    showDocumentUpload={false}
+                    compactView={false}
+                  />
+                ) : (
+                  <FileUpload
+                    onFilesSelected={handleFilesSelected}
+                    maxFiles={10}
+                    maxSizeBytes={10 * 1024 * 1024}
+                    uploadProgress={uploadProgress}
+                    disabled={submitReport.isPending || isUploading}
+                  />
+                )}
               </div>
 
               {/* Additional Notes */}
