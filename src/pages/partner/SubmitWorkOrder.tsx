@@ -58,7 +58,7 @@ const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; total
   const steps = [
     { number: 1, title: 'Location Details' },
     { number: 2, title: 'Trade & Description' },
-    { number: 3, title: 'Preview & Submit' }
+    { number: 3, title: 'Confirm Submission' }
   ];
 
   return (
@@ -66,7 +66,7 @@ const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; total
       {steps.map((step, index) => (
         <div key={step.number} className="flex items-center">
           <div className="flex flex-col items-center">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+            <div className={`w-12 h-12 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium ${
               step.number < currentStep 
                 ? 'bg-primary text-primary-foreground' 
                 : step.number === currentStep 
@@ -413,7 +413,7 @@ export default function SubmitWorkOrder() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link to="/partner/work-orders">
-          <Button variant="outline" size="sm" className="min-h-[44px] sm:min-h-auto">
+          <Button variant="outline" size="sm" className="min-h-[48px] sm:min-h-auto">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Work Orders
           </Button>
@@ -438,7 +438,7 @@ export default function SubmitWorkOrder() {
           </CardHeader>
           <CardContent>
             <Select onValueChange={setSelectedOrganizationId} value={selectedOrganizationId}>
-              <SelectTrigger className="h-11">
+              <SelectTrigger className="h-12 sm:h-11">
                 <SelectValue placeholder="Select a partner organization" />
               </SelectTrigger>
               <SelectContent>
@@ -480,7 +480,7 @@ export default function SubmitWorkOrder() {
 
       {/* Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 sm:space-y-6">
           {/* Step 1: Location Details */}
           {currentStep === 1 && (
             <Card>
@@ -516,7 +516,7 @@ export default function SubmitWorkOrder() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="trade_id"
@@ -525,7 +525,7 @@ export default function SubmitWorkOrder() {
                         <FormLabel>Trade *</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger className="h-11">
+                            <SelectTrigger className="h-12 sm:h-11">
                               <SelectValue placeholder="Select a trade" />
                             </SelectTrigger>
                           </FormControl>
@@ -551,7 +551,7 @@ export default function SubmitWorkOrder() {
                         <FormControl>
                           <Textarea
                             placeholder="Detailed description of the work to be performed..."
-                            className="min-h-[120px]"
+                            className="min-h-[140px] sm:min-h-[120px]"
                             {...field}
                           />
                         </FormControl>
@@ -562,7 +562,7 @@ export default function SubmitWorkOrder() {
 
                   {/* Admin-only fields */}
                   {isAdmin && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-4">
                       <FormField
                         control={form.control}
                         name="due_date"
@@ -572,7 +572,7 @@ export default function SubmitWorkOrder() {
                             <FormControl>
                               <Input
                                 type="date"
-                                className="h-11"
+                                className="h-12 sm:h-11"
                                 {...field}
                               />
                             </FormControl>
@@ -593,7 +593,7 @@ export default function SubmitWorkOrder() {
                                 step="0.5"
                                 min="0"
                                 placeholder="Estimated hours"
-                                className="h-11"
+                                className="h-12 sm:h-11"
                                 {...field}
                               />
                             </FormControl>
@@ -608,78 +608,53 @@ export default function SubmitWorkOrder() {
             </Card>
           )}
 
-          {/* Step 3: Preview & Submit */}
+          {/* Step 3: Confirm Submission */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              {/* Organization Info */}
-              {(userOrganization || selectedOrganizationId) && (
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      <div>
-                        <div className="font-medium">
-                          {userOrganization?.name || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.name}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {userOrganization?.contact_email || partnerOrganizations.find(org => org.id === selectedOrganizationId)?.contact_email}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Review Summary */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-primary" />
-                    Review Work Order Details
+                    Confirm Submission
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Please review your work order details before submitting
+                    Ready to submit your work order request?
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="space-y-6">
+                  {/* Confirmation Question */}
+                  <div className="text-center py-4">
+                    <p className="text-lg font-medium">
+                      Submit work order for{' '}
+                      <span className="text-primary font-semibold">
+                        {form.watch('store_location') || 'New Location'}
+                      </span>
+                      {' '}- {' '}
+                      <span className="text-primary font-semibold">
+                        {trades.find(t => t.id === form.watch('trade_id'))?.name || 'Selected Trade'}
+                      </span>?
+                    </p>
+                  </div>
+
+                  {/* Essential Details */}
+                  <div className="space-y-4 border-t pt-4">
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Location</Label>
-                      <p className="text-sm">{form.watch('store_location') || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Title</Label>
-                      <p className="text-sm">{form.watch('title') || `${form.watch('store_location') || 'New Location'} - Work Order`}</p>
+                      <p className="text-base font-medium">{form.watch('store_location') || 'Not specified'}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
-                      <p className="text-sm">
+                      <p className="text-base font-medium">
                         {trades.find(t => t.id === form.watch('trade_id'))?.name || 'Not specified'}
                       </p>
                     </div>
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">PO Number</Label>
-                      <p className="text-sm">{form.watch('partner_po_number') || 'Not specified'}</p>
-                    </div>
-                    {isAdmin && (
-                      <>
-                        <div>
-                          <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-                          <p className="text-sm">{form.watch('due_date') || 'Not specified'}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-medium text-muted-foreground">Estimated Hours</Label>
-                          <p className="text-sm">{form.watch('estimated_hours') || 'Not specified'}</p>
-                        </div>
-                      </>
+                    {form.watch('description') && (
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                        <p className="text-sm">{form.watch('description')}</p>
+                      </div>
                     )}
                   </div>
-                  {form.watch('description') && (
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Description</Label>
-                      <p className="text-sm">{form.watch('description')}</p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </div>
@@ -692,7 +667,7 @@ export default function SubmitWorkOrder() {
               variant="outline"
               onClick={handlePrevious}
               disabled={currentStep === 1}
-              className="min-h-[44px]"
+              className="min-h-[48px] sm:min-h-[44px]"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
@@ -703,7 +678,7 @@ export default function SubmitWorkOrder() {
                 type="button"
                 variant="outline"
                 onClick={() => navigate('/partner/work-orders')}
-                className="min-h-[44px]"
+                className="min-h-[48px] sm:min-h-[44px]"
               >
                 Cancel
               </Button>
@@ -712,7 +687,7 @@ export default function SubmitWorkOrder() {
                 <Button
                   type="button"
                   onClick={handleNext}
-                  className="min-h-[44px]"
+                  className="min-h-[48px] sm:min-h-[44px]"
                 >
                   Next
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -721,7 +696,7 @@ export default function SubmitWorkOrder() {
                 <Button
                   type="submit"
                   disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
-                  className="min-h-[44px]"
+                  className="min-h-[48px] sm:min-h-[44px]"
                 >
                   {createWorkOrderMutation.isPending ? (
                     <>
