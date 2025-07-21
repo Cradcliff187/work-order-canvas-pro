@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
@@ -41,6 +40,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, MapPin, Building2, X, ArrowUpDown } from 'lucide-react';
 import { usePartnerLocations, usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { AddLocationModal } from '@/components/partner/AddLocationModal';
 import { EditLocationModal } from '@/components/partner/EditLocationModal';
 import type { Tables } from '@/integrations/supabase/types';
@@ -61,8 +61,15 @@ const PartnerLocations: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortOption, setSortOption] = useState<string>('name-asc');
 
-  const { data: locations = [], isLoading } = usePartnerLocations();
+  // Get user's organization
+  const { organization, loading: organizationLoading, error: organizationError } = useUserOrganization();
+  
+  // Fetch locations for the user's organization
+  const { data: locations = [], isLoading: locationsLoading } = usePartnerLocations(organization?.id);
   const { deleteLocation } = usePartnerLocationMutations();
+
+  // Combined loading state
+  const isLoading = organizationLoading || locationsLoading;
 
   // Enhanced filtering logic
   const filteredAndSortedLocations = useMemo(() => {
@@ -254,10 +261,25 @@ const PartnerLocations: React.FC = () => {
   const activeLocations = locations.filter(location => location.is_active);
   const isFilteredView = hasActiveFilters && filteredAndSortedLocations.length === 0 && locations.length > 0;
 
+  // Show loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96" aria-busy="true" aria-live="polite">
         <div className="text-muted-foreground">Loading locations...</div>
+      </div>
+    );
+  }
+
+  // Show error state if organization couldn't be loaded
+  if (organizationError || !organization) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="text-destructive mb-2">Unable to load organization</div>
+          <div className="text-sm text-muted-foreground">
+            {organizationError?.message || 'Organization not found'}
+          </div>
+        </div>
       </div>
     );
   }
