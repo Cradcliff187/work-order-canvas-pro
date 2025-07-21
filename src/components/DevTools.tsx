@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Database, Users, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDevTools } from "@/hooks/useDevTools";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DevToolsResponse {
   success: boolean;
@@ -18,12 +18,17 @@ interface DevToolsResponse {
 
 export const DevTools = () => {
   const {
-    seedDatabase,
+    setupSqlData,
+    createAuthUsers,
     clearTestData,
-    createTestUsers,
     loading,
-    lastResult,
-    error
+    setupLoading,
+    authLoading,
+    counts,
+    setupResult,
+    authResult,
+    sqlResult,
+    fetchCounts
   } = useDevTools();
   
   const { user, profile } = useAuth();
@@ -107,13 +112,6 @@ export const DevTools = () => {
           Database management and testing utilities for development environments.
         </p>
 
-        {error && (
-          <Alert className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Database Seeding */}
           <Card>
@@ -128,17 +126,17 @@ export const DevTools = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button 
-                onClick={seedDatabase}
-                disabled={loading}
+                onClick={setupSqlData}
+                disabled={setupLoading}
                 className="w-full"
               >
-                {loading ? (
+                {setupLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Seeding Database...
+                    Setting up Database...
                   </>
                 ) : (
-                  'Seed Database'
+                  'Setup Test Environment'
                 )}
               </Button>
               
@@ -161,7 +159,7 @@ export const DevTools = () => {
               </Button>
               
               <div className="text-sm text-muted-foreground">
-                <p><strong>Seed Database:</strong> Creates organizations, work orders, reports, and invoices with realistic test data.</p>
+                <p><strong>Setup Test Environment:</strong> Creates organizations, work orders, reports, and invoices with realistic test data.</p>
                 <p><strong>Clear Test Data:</strong> Safely removes all test data while preserving real admin accounts.</p>
               </div>
             </CardContent>
@@ -180,11 +178,11 @@ export const DevTools = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button 
-                onClick={createTestUsers}
-                disabled={loading}
+                onClick={createAuthUsers}
+                disabled={authLoading}
                 className="w-full"
               >
-                {loading ? (
+                {authLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating Users...
@@ -195,15 +193,13 @@ export const DevTools = () => {
               </Button>
               
               <div className="text-sm text-muted-foreground">
-                <p><strong>Creates 5 authenticated users:</strong></p>
+                <p><strong>Creates authenticated users:</strong></p>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>partner1@abc.com (ABC Property)</li>
-                  <li>partner2@xyz.com (XYZ Commercial)</li>
-                  <li>sub1@pipes.com (Pipes & More)</li>
-                  <li>sub2@sparks.com (Sparks Electric)</li>
-                  <li>employee1@workorderportal.com (Internal)</li>
+                  <li>partner1@workorderportal.test (Partner)</li>
+                  <li>sub1@workorderportal.test (Subcontractor)</li>
+                  <li>employee1@workorderportal.test (Employee)</li>
                 </ul>
-                <p className="mt-2"><strong>Password:</strong> Test123!</p>
+                <p className="mt-2"><strong>Password:</strong> TestPass123!</p>
               </div>
             </CardContent>
           </Card>
@@ -242,13 +238,13 @@ export const DevTools = () => {
         </Card>
 
         {/* Results Display */}
-        {lastResult && (
+        {(setupResult || authResult || sqlResult) && (
           <Card>
             <CardHeader>
               <CardTitle>Last Operation Result</CardTitle>
             </CardHeader>
             <CardContent>
-              {renderResult(lastResult)}
+              {renderResult(setupResult || authResult || sqlResult)}
             </CardContent>
           </Card>
         )}
@@ -256,3 +252,5 @@ export const DevTools = () => {
     </div>
   );
 };
+
+export default DevTools;

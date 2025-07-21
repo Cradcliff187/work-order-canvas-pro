@@ -1,0 +1,56 @@
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Settings, LogOut, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+
+export function UserDropdown() {
+  const { profile, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const userInitials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="text-xs">
+              {userInitials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col items-start text-xs">
+            <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
+            <span className="text-muted-foreground capitalize">{profile?.user_type}</span>
+          </div>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem>
+          <User className="mr-2 h-4 w-4" />
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <Settings className="mr-2 h-4 w-4" />
+          Settings
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleSignOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}

@@ -1,4 +1,3 @@
-
 import { ReactNode } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,11 +62,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <StandardHeader 
-            variant="subcontractor"
-            showUserInfo={false}
-            showSignOut={false}
-          />
+          <StandardHeader />
 
           {/* Main Content */}
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
