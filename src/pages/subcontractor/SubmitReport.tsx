@@ -16,6 +16,7 @@ import { FileUpload } from "@/components/FileUpload";
 import { MobileMediaUpload } from "@/components/MobileMediaUpload";
 import { DraftIndicator } from "@/components/DraftIndicator";
 import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
+import StandardFormLayout from "@/components/layout/StandardFormLayout";
 import { ArrowLeft, FileText, Save } from "lucide-react";
 import type { PhotoAttachment, ReportDraft } from "@/types/offline";
 
@@ -301,177 +302,190 @@ export default function SubmitReport() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Work Performed */}
-              <FormField
-                control={form.control}
-                name="workPerformed"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Work Performed *</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe in detail the work that was performed..."
-                        className="min-h-[120px] resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Materials Used */}
-              <FormField
-                control={form.control}
-                name="materialsUsed"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Materials Used</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="List any materials or parts used..."
-                        className="min-h-[80px] resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Hours and Invoice */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="hoursWorked"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hours Worked</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="8.5"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="invoiceAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Invoice Amount *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="250.00"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Invoice Number */}
-              <FormField
-                control={form.control}
-                name="invoiceNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Invoice Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="INV-2024-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Photo Upload */}
-              <div className="space-y-4">
-                <div>
-                  <FormLabel>Work Photos</FormLabel>
-                  <p className="text-sm text-muted-foreground">
-                    Upload photos of the completed work (up to 10 photos, max 10MB each)
-                  </p>
-                </div>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <StandardFormLayout variant="single" sectionSpacing="normal">
                 
-                {isMobile ? (
-                  <MobileMediaUpload
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={10}
-                    maxSizeBytes={10 * 1024 * 1024}
-                    uploadProgress={uploadProgress}
-                    disabled={submitReport.isPending || isUploading}
-                    showCamera={true}
-                    cameraFacingMode="environment"
-                    showDocumentUpload={false}
-                    compactView={false}
-                  />
-                ) : (
-                  <FileUpload
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={10}
-                    maxSizeBytes={10 * 1024 * 1024}
-                    uploadProgress={uploadProgress}
-                    disabled={submitReport.isPending || isUploading}
-                  />
-                )}
-              </div>
+                {/* Work Details Section */}
+                <StandardFormLayout.Section title="Work Details">
+                  <StandardFormLayout.FieldGroup>
+                    <FormField
+                      control={form.control}
+                      name="workPerformed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Work Performed *</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Describe in detail the work that was performed..."
+                              className="min-h-[120px] resize-none"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              {/* Additional Notes */}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Additional Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Any additional notes or comments..."
-                        className="min-h-[80px] resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <FormField
+                      control={form.control}
+                      name="materialsUsed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Materials Used</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="List any materials or parts used..."
+                              className="min-h-[80px] resize-none"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </StandardFormLayout.FieldGroup>
+                </StandardFormLayout.Section>
 
-              {/* Submit Button */}
-              <div className="flex justify-end gap-4">
-                <Link to={`/subcontractor/work-orders/${workOrderId}`}>
-                  <Button variant="outline" type="button">
-                    Cancel
+                {/* Time & Invoice Section */}
+                <StandardFormLayout.Section title="Time & Invoice">
+                  <StandardFormLayout.FieldGroup columns={2}>
+                    <FormField
+                      control={form.control}
+                      name="hoursWorked"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hours Worked</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              placeholder="8.5"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="invoiceAmount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Amount *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="250.00"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </StandardFormLayout.FieldGroup>
+
+                  <StandardFormLayout.FieldGroup>
+                    <FormField
+                      control={form.control}
+                      name="invoiceNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invoice Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="INV-2024-001" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </StandardFormLayout.FieldGroup>
+                </StandardFormLayout.Section>
+
+                {/* Documentation Section */}
+                <StandardFormLayout.Section title="Documentation">
+                  <StandardFormLayout.FieldGroup>
+                    <div className="space-y-4">
+                      <div>
+                        <FormLabel>Work Photos</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Upload photos of the completed work (up to 10 photos, max 10MB each)
+                        </p>
+                      </div>
+                      
+                      {isMobile ? (
+                        <MobileMediaUpload
+                          onFilesSelected={handleFilesSelected}
+                          maxFiles={10}
+                          maxSizeBytes={10 * 1024 * 1024}
+                          uploadProgress={uploadProgress}
+                          disabled={submitReport.isPending || isUploading}
+                          showCamera={true}
+                          cameraFacingMode="environment"
+                          showDocumentUpload={false}
+                          compactView={false}
+                        />
+                      ) : (
+                        <FileUpload
+                          onFilesSelected={handleFilesSelected}
+                          maxFiles={10}
+                          maxSizeBytes={10 * 1024 * 1024}
+                          uploadProgress={uploadProgress}
+                          disabled={submitReport.isPending || isUploading}
+                        />
+                      )}
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Additional Notes</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Any additional notes or comments..."
+                              className="min-h-[80px] resize-none"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </StandardFormLayout.FieldGroup>
+                </StandardFormLayout.Section>
+
+                {/* Form Actions */}
+                <StandardFormLayout.Actions align="right">
+                  <Link to={`/subcontractor/work-orders/${workOrderId}`}>
+                    <Button variant="outline" type="button">
+                      Cancel
+                    </Button>
+                  </Link>
+                  <Button 
+                    type="submit" 
+                    disabled={submitReport.isPending || isUploading}
+                    className="min-w-32"
+                  >
+                    {submitReport.isPending || isUploading ? (
+                      <>
+                        <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {isUploading ? "Uploading..." : "Submitting..."}
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Submit Report
+                      </>
+                    )}
                   </Button>
-                </Link>
-                <Button 
-                  type="submit" 
-                  disabled={submitReport.isPending || isUploading}
-                  className="min-w-32"
-                >
-                  {submitReport.isPending || isUploading ? (
-                    <>
-                      <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      {isUploading ? "Uploading..." : "Submitting..."}
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Submit Report
-                    </>
-                  )}
-                </Button>
-              </div>
+                </StandardFormLayout.Actions>
+
+              </StandardFormLayout>
             </form>
           </Form>
         </CardContent>
