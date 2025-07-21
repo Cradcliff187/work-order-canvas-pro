@@ -65,8 +65,8 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
           {/* Header */}
           <StandardHeader 
             variant="subcontractor"
-            showUserInfo={true}
-            showSignOut={true}
+            showUserInfo={false}
+            showSignOut={false}
           />
 
           {/* Main Content */}
