@@ -202,14 +202,48 @@ export function useDeleteUser() {
   });
 }
 
+export function useBulkUpdateUsers() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (updates: { ids: string[]; data: Partial<User> }) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates.data)
+        .in('id', updates.ids)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: 'Success',
+        description: 'Users updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update users',
+      });
+    },
+  });
+}
+
 export function useUserMutations() {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+  const bulkUpdateUsers = useBulkUpdateUsers();
 
   return {
     createUser,
     updateUser,
     deleteUser,
+    bulkUpdateUsers,
   };
 }

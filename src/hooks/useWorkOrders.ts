@@ -36,9 +36,13 @@ interface WorkOrderFilters {
   date_to?: string;
 }
 
-export function useWorkOrders(pagination: any, sorting: any, filters: WorkOrderFilters) {
-  let { pageIndex, pageSize } = pagination;
-  let { sortBy } = sorting;
+export function useWorkOrders(
+  pagination: { pageIndex: number; pageSize: number }, 
+  sorting: { sortBy: Array<{ id: string; desc: boolean }> }, 
+  filters: WorkOrderFilters
+) {
+  const { pageIndex, pageSize } = pagination;
+  const { sortBy } = sorting;
 
   return useQuery({
     queryKey: ['work-orders', pagination, sorting, filters],
@@ -47,9 +51,9 @@ export function useWorkOrders(pagination: any, sorting: any, filters: WorkOrderF
         .from('work_orders')
         .select(`
           *,
-          organization:organizations!work_orders_organization_id_fkey(name, organization_type),
-          trade:trades!work_orders_trade_id_fkey(name),
-          assigned_user:profiles!work_orders_assigned_to_fkey(first_name, last_name),
+          organizations!organization_id(name, organization_type),
+          trades!trade_id(name),
+          assigned_user:profiles!assigned_to(first_name, last_name),
           assignments: work_order_assignments(
             id,
             assigned_to,
@@ -100,14 +104,7 @@ export function useWorkOrders(pagination: any, sorting: any, filters: WorkOrderF
 
       const pageCount = count ? Math.ceil(count / pageSize) : 0;
 
-      // Transform data to match expected structure
-      const transformedData = (data || []).map(item => ({
-        ...item,
-        organizations: item.organization,
-        trades: item.trade,
-      }));
-
-      return { data: transformedData, pageCount, totalCount: count || 0 };
+      return { data: data || [], pageCount, totalCount: count || 0 };
     },
   });
 }
@@ -120,17 +117,15 @@ export function useWorkOrder(id: string) {
         .from('work_orders')
         .select(`
           *,
-          organization:organizations!work_orders_organization_id_fkey(name, contact_email),
-          assigned_user:profiles!work_orders_assigned_to_fkey(first_name, last_name)
+          organizations!organization_id(name, contact_email, organization_type),
+          trades!trade_id(name),
+          assigned_user:profiles!assigned_to(first_name, last_name)
         `)
         .eq('id', id)
         .single();
 
       if (error) throw error;
-      return {
-        ...data,
-        organizations: data.organization,
-      };
+      return data;
     },
     enabled: !!id,
   });

@@ -111,7 +111,7 @@ export default function SubmitWorkOrder() {
   
   // For admin users, load all organizations and filter for partners
   const { data: allOrganizations, isLoading: loadingAllOrganizations } = useOrganizations();
-  const partnerOrganizations = allOrganizations?.organizations?.filter(org => org.organization_type === 'partner') || [];
+  const partnerOrganizations = allOrganizations?.filter(org => org.organization_type === 'partner') || [];
 
   // Work order creation hook
   const createWorkOrderMutation = useCreateWorkOrder();

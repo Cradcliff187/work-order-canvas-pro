@@ -2,33 +2,19 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Edit, 
-  Calendar, 
-  MapPin, 
-  Building, 
-  User, 
-  Clock, 
-  FileText, 
-  Loader2,
-  AlertCircle
-} from 'lucide-react';
-import { useWorkOrder } from '@/hooks/useWorkOrders';
+import { ArrowLeft, Edit, MapPin, Calendar, Clock, User, Building2, Wrench, FileText, Phone, Mail, Loader2 } from 'lucide-react';
+import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
-import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
-import { formatDate, formatDateTime } from '@/lib/utils/date';
+import { formatDate } from '@/lib/utils/date';
 
 export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  
-  const { data: workOrder, isLoading, error } = useWorkOrder(id!);
+  const { data: workOrder, isLoading, error } = useWorkOrderDetail(id!);
 
   if (isLoading) {
     return (
@@ -59,13 +45,9 @@ export default function AdminWorkOrderDetail() {
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
-              <div>
-                <h3 className="text-lg font-semibold">Work Order Not Found</h3>
-                <p className="text-muted-foreground">
-                  {error?.message || 'The work order you are looking for does not exist.'}
-                </p>
-              </div>
+              <p className="text-destructive">
+                {error?.message || 'Work order not found'}
+              </p>
               <Button 
                 onClick={() => navigate('/admin/work-orders')} 
                 variant="outline"
@@ -82,12 +64,35 @@ export default function AdminWorkOrderDetail() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'received': return 'bg-blue-100 text-blue-800';
-      case 'assigned': return 'bg-yellow-100 text-yellow-800';
-      case 'in_progress': return 'bg-purple-100 text-purple-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'received':
+        return 'bg-blue-100 text-blue-800';
+      case 'assigned':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'in_progress':
+        return 'bg-orange-100 text-orange-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'received':
+        return 'Received';
+      case 'assigned':
+        return 'Assigned';
+      case 'in_progress':
+        return 'In Progress';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
     }
   };
 
@@ -98,7 +103,6 @@ export default function AdminWorkOrderDetail() {
         currentPage="Details"
       />
       
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button 
@@ -116,24 +120,16 @@ export default function AdminWorkOrderDetail() {
             </p>
           </div>
         </div>
+        
         <div className="flex items-center gap-2">
           <Badge className={getStatusColor(workOrder.status)}>
-            {workOrder.status.replace('_', ' ')}
+            {getStatusText(workOrder.status)}
           </Badge>
-          <Button 
-            onClick={() => navigate(`/admin/work-orders/${id}/edit`)}
-            size="sm"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button 
-            onClick={() => setShowAssignModal(true)}
-            size="sm"
-            variant="outline"
-          >
-            <User className="h-4 w-4 mr-2" />
-            Assign
+          <Button asChild size="sm">
+            <Link to={`/admin/work-orders/${id}/edit`}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Link>
           </Button>
         </div>
       </div>
@@ -141,252 +137,250 @@ export default function AdminWorkOrderDetail() {
       <Tabs defaultValue="details" className="space-y-6">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="location">Location</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="attachments">Attachments</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Work Order Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Title</label>
-                    <p className="text-sm">{workOrder.title}</p>
+        <TabsContent value="details" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Organization Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="font-medium">{workOrder.organizations?.name || 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {workOrder.organizations?.contact_email || 'N/A'}
+                  </p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <h4 className="font-medium">Trade</h4>
+                  <div className="flex items-center gap-2">
+                    <Wrench className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{workOrder.trades?.name || 'N/A'}</span>
                   </div>
-                  
-                  {workOrder.description && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Description</label>
-                      <p className="text-sm">{workOrder.description}</p>
-                    </div>
-                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Trade</label>
-                      <p className="text-sm">
-                        {workOrder.trades?.name || 'Not specified'}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Status</label>
-                      <Badge className={getStatusColor(workOrder.status)}>
-                        {workOrder.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Estimated Hours</label>
-                      <p className="text-sm">{workOrder.estimated_hours || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Due Date</label>
-                      <p className="text-sm">{workOrder.due_date ? formatDate(workOrder.due_date) : 'Not specified'}</p>
-                    </div>
-                  </div>
-
-                  {workOrder.partner_po_number && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">PO Number</label>
-                      <p className="text-sm">{workOrder.partner_po_number}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building className="h-5 w-5" />
-                    Organization
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-medium">
-                        {workOrder.organizations?.name || 'Not specified'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {workOrder.organizations?.organization_type || 'Unknown type'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {workOrder.assigned_user && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      Assigned To
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium">
-                      {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
-                    </p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Location Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="font-medium">{workOrder.store_location || 'N/A'}</p>
+                  {workOrder.street_address && (
                     <p className="text-sm text-muted-foreground">
-                      {workOrder.assigned_to_type || 'Unknown type'}
+                      {workOrder.street_address}
+                      {workOrder.city && `, ${workOrder.city}`}
+                      {workOrder.state && `, ${workOrder.state}`}
+                      {workOrder.zip_code && ` ${workOrder.zip_code}`}
                     </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Timeline
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm">
-                    <p className="font-medium">Submitted</p>
-                    <p className="text-muted-foreground">
-                      {formatDateTime(workOrder.date_submitted)}
-                    </p>
-                  </div>
-                  
-                  {workOrder.date_assigned && (
-                    <div className="text-sm">
-                      <p className="font-medium">Assigned</p>
-                      <p className="text-muted-foreground">
-                        {formatDateTime(workOrder.date_assigned)}
-                      </p>
-                    </div>
                   )}
-                  
-                  {workOrder.completed_at && (
-                    <div className="text-sm">
-                      <p className="font-medium">Completed</p>
-                      <p className="text-muted-foreground">
-                        {formatDateTime(workOrder.completed_at)}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="location">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Location Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Store Location</label>
-                <p className="text-sm">{workOrder.store_location || 'Not specified'}</p>
-              </div>
-              
-              <Separator />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Street Address</label>
-                  <p className="text-sm">{workOrder.street_address || 'Not specified'}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">City</label>
-                  <p className="text-sm">{workOrder.city || 'Not specified'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">State</label>
-                  <p className="text-sm">{workOrder.state || 'Not specified'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">ZIP Code</label>
-                  <p className="text-sm">{workOrder.zip_code || 'Not specified'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="timeline">
-          <Card>
-            <CardHeader>
-              <CardTitle>Work Order Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                
+                {workOrder.partner_location_number && (
                   <div>
-                    <p className="font-medium">Work Order Submitted</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDateTime(workOrder.date_submitted)}
-                    </p>
+                    <p className="text-sm font-medium">Location Number</p>
+                    <p className="text-sm text-muted-foreground">{workOrder.partner_location_number}</p>
                   </div>
+                )}
+                
+                {workOrder.partner_po_number && (
+                  <div>
+                    <p className="text-sm font-medium">PO Number</p>
+                    <p className="text-sm text-muted-foreground">{workOrder.partner_po_number}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium">Date Submitted</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatDate(workOrder.date_submitted)}
+                  </p>
                 </div>
                 
                 {workOrder.date_assigned && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2" />
-                    <div>
-                      <p className="font-medium">Work Order Assigned</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDateTime(workOrder.date_assigned)}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-sm font-medium">Date Assigned</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(workOrder.date_assigned)}
+                    </p>
+                  </div>
+                )}
+                
+                {workOrder.due_date && (
+                  <div>
+                    <p className="text-sm font-medium">Due Date</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(workOrder.due_date)}
+                    </p>
                   </div>
                 )}
                 
                 {workOrder.completed_at && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2" />
-                    <div>
-                      <p className="font-medium">Work Order Completed</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDateTime(workOrder.completed_at)}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-sm font-medium">Completed</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(workOrder.completed_at)}
+                    </p>
                   </div>
                 )}
-              </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Assignment Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {workOrder.assigned_user ? (
+                  <div>
+                    <p className="text-sm font-medium">Assigned To</p>
+                    <p className="text-sm text-muted-foreground">
+                      {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not assigned</p>
+                )}
+                
+                {workOrder.created_user && (
+                  <div>
+                    <p className="text-sm font-medium">Created By</p>
+                    <p className="text-sm text-muted-foreground">
+                      {workOrder.created_user.first_name} {workOrder.created_user.last_name}
+                    </p>
+                  </div>
+                )}
+                
+                {workOrder.estimated_hours && (
+                  <div>
+                    <p className="text-sm font-medium">Estimated Hours</p>
+                    <p className="text-sm text-muted-foreground">{workOrder.estimated_hours}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {workOrder.description && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Description
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{workOrder.description}</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Work Order Reports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {workOrder.work_order_reports && workOrder.work_order_reports.length > 0 ? (
+                <div className="space-y-4">
+                  {workOrder.work_order_reports.map((report) => (
+                    <div key={report.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">
+                            {report.subcontractor_user.first_name} {report.subcontractor_user.last_name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(report.status)}>
+                            {report.status}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {formatDate(report.submitted_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm">{report.work_performed}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          {report.hours_worked && (
+                            <span>Hours: {report.hours_worked}</span>
+                          )}
+                          <span>Amount: ${report.invoice_amount}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No reports submitted yet.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="reports">
+        <TabsContent value="attachments" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Work Order Reports
-              </CardTitle>
+              <CardTitle>Attachments</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-center text-muted-foreground py-8">
-                No reports submitted yet
-              </p>
+              {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 ? (
+                <div className="space-y-4">
+                  {workOrder.work_order_attachments.map((attachment) => (
+                    <div key={attachment.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{attachment.file_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{attachment.file_type}</Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {formatDate(attachment.uploaded_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Uploaded by: {attachment.uploaded_by_user.first_name} {attachment.uploaded_by_user.last_name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No attachments uploaded yet.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Assignment Modal */}
-      <AssignWorkOrderModal
-        isOpen={showAssignModal}
-        onClose={() => setShowAssignModal(false)}
-        workOrders={workOrder ? [workOrder] : []}
-      />
     </div>
   );
 }
