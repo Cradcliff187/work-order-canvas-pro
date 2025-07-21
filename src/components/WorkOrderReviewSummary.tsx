@@ -69,11 +69,11 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
 
   const finalTitle = calculateFinalTitle();
 
-  // Get location data (from existing location or manual entry)
+  // Get location data with improved location number handling
   const getLocationData = () => {
     if (isExistingLocation && locationToUse) {
-      // Priority: generatedLocationNumber > locationToUse.location_number
-      const locationNumber = generatedLocationNumber || locationToUse.location_number;
+      // Use location from existing selection
+      const locationNumber = locationToUse.location_number;
       const displayName = locationToUse.location_name || formData.store_location;
       const formattedName = locationNumber ? `${displayName} (${locationNumber})` : displayName;
       
@@ -92,10 +92,17 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
       };
     }
     
-    // Manual entry or fallback
-    // Priority: generatedLocationNumber > formData.partner_location_number
-    const locationNumber = generatedLocationNumber || formData.partner_location_number;
+    // Manual entry or auto-generated location
     const displayName = formData.store_location || formData.location_name;
+    let locationNumber = null;
+    
+    // Priority: generatedLocationNumber > manual partner_location_number
+    if (generatedLocationNumber) {
+      locationNumber = generatedLocationNumber;
+    } else if (formData.partner_location_number) {
+      locationNumber = formData.partner_location_number;
+    }
+    
     const formattedName = locationNumber ? `${displayName} (${locationNumber})` : displayName;
     
     return {
@@ -155,6 +162,11 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
                 <div className="text-lg font-semibold">
                   {locationData.name || 'Property Name Not Specified'}
                 </div>
+                {locationData.code && (
+                  <div className="text-sm text-muted-foreground">
+                    Location Code: {locationData.code}
+                  </div>
+                )}
               </div>
 
               {locationData.address && (

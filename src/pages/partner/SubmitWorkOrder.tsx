@@ -512,39 +512,6 @@ export default function SubmitWorkOrder() {
         </Card>
       )}
 
-      {effectiveOrganizationId && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <span className="font-medium">Work Order Number</span>
-            </div>
-            <div className="text-lg font-mono font-bold text-primary">
-              {isLoadingWorkOrderNumber ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Generating...</span>
-                </div>
-              ) : workOrderNumberError ? (
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>Error generating number</span>
-                </div>
-              ) : workOrderNumber ? (
-                workOrderNumber
-              ) : (
-                <span className="text-muted-foreground">Will be generated on submission</span>
-              )}
-            </div>
-            {workOrderNumberWarning && (
-              <div className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-                {workOrderNumberWarning}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Enhanced Step Progress Indicator */}
       <StepIndicator currentStep={currentStep} totalSteps={3} />
 
