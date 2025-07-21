@@ -1,66 +1,42 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-type PartnerLocation = Tables<'partner_locations'>;
-type PartnerLocationInsert = TablesInsert<'partner_locations'>;
-type PartnerLocationUpdate = TablesUpdate<'partner_locations'>;
+type PartnerLocation = Database['public']['Tables']['partner_locations']['Row'];
 
-export const usePartnerLocations = () => {
-  const { profile } = useAuth();
-  
+export function usePartnerLocations(organizationId?: string) {
   return useQuery({
-    queryKey: ['partner-locations', profile?.id],
+    queryKey: ['partner-locations', organizationId],
     queryFn: async () => {
-      if (!profile?.id) throw new Error('No user profile found');
-
-      // Get user's organization
-      const { data: userOrg } = await supabase
-        .from('user_organizations')
-        .select('organization_id')
-        .eq('user_id', profile.id)
-        .single();
-
-      if (!userOrg) throw new Error('No organization found for user');
-
-      const { data, error } = await supabase
+      let query = supabase
         .from('partner_locations')
         .select('*')
-        .eq('organization_id', userOrg.organization_id)
-        .order('location_number');
+        .order('location_name');
+
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.id,
+    enabled: !!organizationId,
   });
-};
+}
 
-export const usePartnerLocationMutations = () => {
+export function useCreatePartnerLocation() {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { toast } = useToast();
 
-  const createLocation = useMutation({
-    mutationFn: async (location: Omit<PartnerLocationInsert, 'organization_id' | 'created_at' | 'updated_at' | 'id'>) => {
-      if (!profile?.id) throw new Error('No user profile found');
-
-      // Get user's organization
-      const { data: userOrg } = await supabase
-        .from('user_organizations')
-        .select('organization_id')
-        .eq('user_id', profile.id)
-        .single();
-
-      if (!userOrg) throw new Error('No organization found for user');
-
+  return useMutation({
+    mutationFn: async (locationData: Omit<PartnerLocation, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('partner_locations')
-        .insert({
-          ...location,
-          organization_id: userOrg.organization_id,
-        })
+        .insert([locationData])
         .select()
         .single();
 
@@ -76,15 +52,20 @@ export const usePartnerLocationMutations = () => {
     },
     onError: (error) => {
       toast({
+        variant: 'destructive',
         title: 'Error',
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
+}
 
-  const updateLocation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: PartnerLocationUpdate }) => {
+export function useUpdatePartnerLocation() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<PartnerLocation> & { id: string }) => {
       const { data, error } = await supabase
         .from('partner_locations')
         .update(updates)
@@ -104,41 +85,10 @@ export const usePartnerLocationMutations = () => {
     },
     onError: (error) => {
       toast({
+        variant: 'destructive',
         title: 'Error',
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
-
-  const deleteLocation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('partner_locations')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['partner-locations'] });
-      toast({
-        title: 'Success',
-        description: 'Location deleted successfully',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  return {
-    createLocation,
-    updateLocation,
-    deleteLocation,
-  };
-};
+}

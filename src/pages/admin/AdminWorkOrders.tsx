@@ -361,8 +361,8 @@ export default function AdminWorkOrders() {
 
       {/* Create Modal */}
       <CreateWorkOrderModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
       />
 
       {/* Assignment Modal */}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -8,9 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
 
 // Function to fetch work order details by ID
-const getWorkOrder = async (id: string) => {
+const getWorkOrder = async (id: string): Promise<WorkOrder> => {
   const { data, error } = await supabase
     .from('work_orders')
     .select('*')
@@ -28,20 +32,18 @@ export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
 
   // Fetch work order details using React Query
-  const { data: workOrder, isLoading, isError, error } = useQuery(
-    ['workOrder', id],
-    () => getWorkOrder(id!),
-    {
-      enabled: !!id, // Only run the query if the ID is available
-    }
-  );
+  const { data: workOrder, isLoading, isError, error } = useQuery({
+    queryKey: ['workOrder', id],
+    queryFn: () => getWorkOrder(id!),
+    enabled: !!id,
+  });
 
   if (isLoading) {
     return <div>Loading work order details...</div>;
   }
 
   if (isError) {
-    return <div>Error: {error.message}</div>;
+    return <div>Error: {(error as Error).message}</div>;
   }
 
   if (!workOrder) {
