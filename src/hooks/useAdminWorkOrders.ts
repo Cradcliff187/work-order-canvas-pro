@@ -4,17 +4,40 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
-type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
+type WorkOrderInsert = Database['public']['Tables']['work_orders']['Insert'];
 
 export function useCreateWorkOrder() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (workOrderData: Omit<WorkOrder, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (workOrderData: Partial<WorkOrderInsert>) => {
       const { data, error } = await supabase
         .from('work_orders')
-        .insert([workOrderData])
+        .insert([{
+          title: workOrderData.title!,
+          description: workOrderData.description || '',
+          organization_id: workOrderData.organization_id!,
+          trade_id: workOrderData.trade_id!,
+          store_location: workOrderData.store_location || '',
+          street_address: workOrderData.street_address || '',
+          city: workOrderData.city || '',
+          state: workOrderData.state || '',
+          zip_code: workOrderData.zip_code || '',
+          location_street_address: workOrderData.location_street_address || '',
+          location_city: workOrderData.location_city || '',
+          location_state: workOrderData.location_state || '',
+          location_zip_code: workOrderData.location_zip_code || '',
+          location_name: workOrderData.location_name || '',
+          location_contact_name: workOrderData.location_contact_name || '',
+          location_contact_phone: workOrderData.location_contact_phone || '',
+          location_contact_email: workOrderData.location_contact_email || '',
+          partner_po_number: workOrderData.partner_po_number || '',
+          partner_location_number: workOrderData.partner_location_number || '',
+          status: 'received',
+          created_by: workOrderData.created_by!,
+          date_submitted: new Date().toISOString(),
+        }])
         .select()
         .single();
 
@@ -28,11 +51,11 @@ export function useCreateWorkOrder() {
         description: 'Work order created successfully',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message,
+        description: error.message || 'Failed to create work order',
       });
     },
   });

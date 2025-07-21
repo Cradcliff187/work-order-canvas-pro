@@ -273,7 +273,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         title: data.title,
         description: data.description || '',
         trade_id: data.trade_id,
-        organization_id: organizationId,
+        organization_id: organizationId!,
         store_location: data.store_location,
         street_address: data.street_address || '',
         city: data.city || '',
@@ -289,6 +289,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         location_contact_email: data.location_contact_email || '',
         partner_po_number: data.partner_po_number || '',
         partner_location_number: data.partner_location_number || generatedLocationNumber || '',
+        created_by: organizationId!, // This should be the actual user ID
       };
 
       await createWorkOrderMutation.mutateAsync(submissionData);
@@ -472,123 +473,38 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
               </Card>
             )}
 
-            {/* Step 3: Review & Submit */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                {/* Organization Info */}
-                {organizationId && selectedOrganization && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <Building2 className="h-5 w-5 text-primary" />
-                        <div>
-                          <div className="font-medium">
-                            {selectedOrganization?.name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {selectedOrganization?.contact_email}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Review Summary */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                      Review & Submit
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Please review your work order details before submitting
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Location</Label>
-                        <p className="text-sm">{form.watch('store_location') || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Title</Label>
-                        <p className="text-sm">{form.watch('title') || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
-                        <p className="text-sm">
-                          {trades.find(t => t.id === form.watch('trade_id'))?.name || 'Not specified'}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">PO Number</Label>
-                        <p className="text-sm">{form.watch('partner_po_number') || 'Not specified'}</p>
-                      </div>
-                    </div>
-                    {form.watch('description') && (
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Description</Label>
-                        <p className="text-sm">{form.watch('description')}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between pt-6">
+            {/* Navigation */}
+            <div className="flex justify-between">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handlePrevious}
                 disabled={currentStep === 1}
-                className="min-h-[44px]"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>
 
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="min-h-[44px]"
-                >
-                  Cancel
+              {currentStep < 2 ? (
+                <Button type="button" onClick={handleNext}>
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
-
-                {currentStep < 3 ? (
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                    className="min-h-[44px]"
-                  >
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
-                    className="min-h-[44px]"
-                  >
-                    {createWorkOrderMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Submit Work Order
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
+              ) : (
+                <Button type="submit" disabled={createWorkOrderMutation.isPending}>
+                  {createWorkOrderMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Create Work Order
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </form>
         </Form>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,7 +59,13 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
   const onSubmit = async (data: CreateOrganizationFormData) => {
     try {
       const organizationData = {
-        ...data,
+        name: data.name,
+        initials: data.initials,
+        contact_email: data.contact_email,
+        contact_phone: data.contact_phone || '',
+        address: data.address || '',
+        organization_type: data.organization_type,
+        uses_partner_location_numbers: data.uses_partner_location_numbers,
         is_active: true,
         next_sequence_number: 1,
         next_location_sequence: 1,

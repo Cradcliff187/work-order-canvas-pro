@@ -92,3 +92,40 @@ export function useUpdatePartnerLocation() {
     },
   });
 }
+
+export function useDeletePartnerLocation() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('partner_locations')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['partner-locations'] });
+      toast({
+        title: 'Success',
+        description: 'Location deleted successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message,
+      });
+    },
+  });
+}
+
+// Individual mutation hooks
+export const usePartnerLocationMutations = () => ({
+  createLocation: useCreatePartnerLocation(),
+  updateLocation: useUpdatePartnerLocation(),
+  deleteLocation: useDeletePartnerLocation(),
+});

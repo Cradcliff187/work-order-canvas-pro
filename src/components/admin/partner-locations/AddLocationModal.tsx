@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -57,7 +56,15 @@ export function AddLocationModal({ organizationId, open, onOpenChange }: AddLoca
   const onSubmit = async (data: AddLocationFormData) => {
     try {
       const locationData = {
-        ...data,
+        location_name: data.location_name,
+        location_number: data.location_number,
+        street_address: data.street_address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zip_code: data.zip_code || '',
+        contact_name: data.contact_name || '',
+        contact_phone: data.contact_phone || '',
+        contact_email: data.contact_email || '',
         organization_id: organizationId,
         is_active: true,
       };

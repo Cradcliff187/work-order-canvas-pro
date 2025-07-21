@@ -88,25 +88,20 @@ export function useUser(userId: string) {
   return useQuery({
     queryKey: ['user', userId],
     queryFn: async () => {
-      const { data: profile, error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select(`
           *,
-          user_organizations(
-            organization:organizations(id, name)
+          user_organizations!inner(
+            organization_id,
+            organization:organizations(*)
           )
         `)
         .eq('id', userId)
         .single();
 
-      if (error) {
-        throw new Error(`Failed to fetch user: ${error.message}`);
-      }
-
-      return {
-        ...profile,
-        organizations: profile.user_organizations?.map((uo: any) => uo.organization) || [],
-      };
+      if (error) throw error;
+      return data;
     },
     enabled: !!userId,
   });
@@ -322,36 +317,42 @@ export function useUserMutations() {
 
   const deleteUser = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete organization relationships first
-      await supabase
+      // First, remove user from organizations
+      const { error: userOrgError } = await supabase
         .from('user_organizations')
         .delete()
         .eq('user_id', userId);
 
-      // Delete the profile
-      const { error } = await supabase
+      if (userOrgError) {
+        throw new Error(`Failed to remove user from organizations: ${userOrgError.message}`);
+      }
+
+      // Then delete the user profile
+      const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', userId);
 
-      if (error) {
-        throw new Error(`Failed to delete user: ${error.message}`);
+      if (profileError) {
+        throw new Error(`Failed to delete user profile: ${profileError.message}`);
       }
 
       return userId;
     },
-    onSuccess: () => {
+    onSuccess: (userId) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', userId] });
+      queryClient.invalidateQueries({ queryKey: ['user-organizations'] });
       toast({
-        title: "User deleted",
-        description: "The user has been deleted successfully.",
+        title: 'Success',
+        description: 'User deleted successfully',
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
-        title: "Error deleting user",
-        description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to delete user',
       });
     },
   });

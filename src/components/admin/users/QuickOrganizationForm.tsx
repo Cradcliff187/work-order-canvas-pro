@@ -1,57 +1,67 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Loader2 } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
 import { useCreateOrganization } from '@/hooks/useOrganizations';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
 
-const quickOrgSchema = z.object({
-  name: z.string().min(1, 'Organization name is required'),
-  initials: z.string().min(1, 'Initials are required'),
-  contact_email: z.string().email('Invalid email format'),
+const quickOrganizationSchema = z.object({
+  name: z.string().min(2, {
+    message: "Organization name must be at least 2 characters.",
+  }),
+  initials: z.string().min(2, {
+    message: "Initials must be at least 2 characters.",
+  }).max(4, {
+    message: "Initials must be at most 4 characters.",
+  }),
+  contact_email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
 });
 
-type QuickOrgFormData = z.infer<typeof quickOrgSchema>;
+type QuickOrganizationFormData = z.infer<typeof quickOrganizationSchema>;
 
 interface QuickOrganizationFormProps {
-  onSuccess?: (organization: any) => void;
-  userType: 'partner' | 'subcontractor' | 'employee';
+  onOrganizationCreated: (organization: any) => void;
 }
 
-export function QuickOrganizationForm({ onSuccess, userType }: QuickOrganizationFormProps) {
+export function QuickOrganizationForm({ onOrganizationCreated }: QuickOrganizationFormProps) {
   const { toast } = useToast();
-  const [isVisible, setIsVisible] = useState(false);
   const createOrganizationMutation = useCreateOrganization();
 
-  const form = useForm<QuickOrgFormData>({
-    resolver: zodResolver(quickOrgSchema),
+  const form = useForm<QuickOrganizationFormData>({
+    resolver: zodResolver(quickOrganizationSchema),
     defaultValues: {
       name: '',
       initials: '',
       contact_email: '',
-      organization_type: userType === 'employee' ? 'internal' : userType,
+      organization_type: 'partner',
     },
   });
 
-  const onSubmit = async (data: QuickOrgFormData) => {
+  const onSubmit = async (data: QuickOrganizationFormData) => {
     try {
       const organizationData = {
-        ...data,
-        is_active: true,
-        address: '',
+        name: data.name,
+        initials: data.initials,
+        contact_email: data.contact_email,
         contact_phone: '',
+        address: '',
+        organization_type: data.organization_type,
+        uses_partner_location_numbers: false,
+        is_active: true,
         next_sequence_number: 1,
         next_location_sequence: 1,
-        uses_partner_location_numbers: false,
       };
       
-      const result = await createOrganizationMutation.mutateAsync(organizationData);
+      const newOrganization = await createOrganizationMutation.mutateAsync(organizationData);
       
       toast({
         title: "Organization created",
@@ -59,8 +69,7 @@ export function QuickOrganizationForm({ onSuccess, userType }: QuickOrganization
       });
       
       form.reset();
-      setIsVisible(false);
-      onSuccess?.(result);
+      onOrganizationCreated(newOrganization);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -70,66 +79,83 @@ export function QuickOrganizationForm({ onSuccess, userType }: QuickOrganization
     }
   };
 
-  if (!isVisible) {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setIsVisible(true)}
-      >
-        Create New Organization
-      </Button>
-    );
-  }
-
   return (
-    <div className="space-y-4 border rounded-lg p-4">
-      <h3 className="font-medium">Create New Organization</h3>
+    <div className="space-y-4">
+      <h4 className="text-sm font-medium">Create New Organization</h4>
       
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Organization Name *</Label>
-            <Input
-              id="name"
-              placeholder="Organization Name"
-              {...form.register('name')}
-            />
-            {form.formState.errors.name && (
-              <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Organization Name *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Organization Name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="initials">Initials *</Label>
-            <Input
-              id="initials"
-              placeholder="ORG"
-              {...form.register('initials')}
-            />
-            {form.formState.errors.initials && (
-              <p className="text-sm text-red-600">{form.formState.errors.initials.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="contact_email">Contact Email *</Label>
-          <Input
-            id="contact_email"
-            type="email"
-            placeholder="contact@company.com"
-            {...form.register('contact_email')}
           />
-          {form.formState.errors.contact_email && (
-            <p className="text-sm text-red-600">{form.formState.errors.contact_email.message}</p>
-          )}
-        </div>
 
-        <div className="flex gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="initials"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Initials *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="ABC" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="organization_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="partner">Partner</SelectItem>
+                      <SelectItem value="subcontractor">Subcontractor</SelectItem>
+                      <SelectItem value="internal">Internal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="contact_email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contact Email *</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="contact@company.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <Button
             type="submit"
             disabled={createOrganizationMutation.isPending}
+            className="w-full"
           >
             {createOrganizationMutation.isPending ? (
               <>
@@ -137,18 +163,14 @@ export function QuickOrganizationForm({ onSuccess, userType }: QuickOrganization
                 Creating...
               </>
             ) : (
-              'Create Organization'
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Organization
+              </>
             )}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsVisible(false)}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+        </form>
+      </Form>
     </div>
   );
 }

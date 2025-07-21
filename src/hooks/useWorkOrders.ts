@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -90,6 +91,38 @@ export function useWorkOrder(id: string) {
       return data;
     },
     enabled: !!id,
+  });
+}
+
+export function useOrganizationsForWorkOrders() {
+  return useQuery({
+    queryKey: ['organizations-for-work-orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name, organization_type')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useTrades() {
+  return useQuery({
+    queryKey: ['trades'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      return data;
+    },
   });
 }
 
