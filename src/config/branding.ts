@@ -78,18 +78,18 @@ export const brandingConfig: BrandingConfig = {
   },
   assets: {
     logos: {
-      main: '/branding/logos/akc-logo-horizontal.png',
-      horizontal: '/branding/logos/akc-logo-horizontal.png',
-      square: '/branding/logos/akc-logo-square.png',
-      compact: '/branding/logos/akc-logo-compact.png',
-      light: '/branding/logos/akc-logo-horizontal.png',
-      dark: '/branding/logos/akc-logo-horizontal.png',
-      icon: '/branding/logos/akc-logo-square.png',
-      favicon: '/branding/favicons/favicon.png'
+      main: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
+      horizontal: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
+      square: '/lovable-uploads/314e86c9-4729-4009-bf22-b4e323c9213a',
+      compact: '/lovable-uploads/385a7f9c-c725-4425-823f-e8f61a153150',
+      light: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
+      dark: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
+      icon: '/lovable-uploads/314e86c9-4729-4009-bf22-b4e323c9213a',
+      favicon: '/lovable-uploads/385a7f9c-c725-4425-823f-e8f61a153150'
     },
     social: {
-      ogImage: '/branding/social/og-image.png',
-      twitterImage: '/branding/social/twitter-image.png'
+      ogImage: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
+      twitterImage: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8'
     }
   },
   theme: {
