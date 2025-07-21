@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -310,9 +311,12 @@ export default function SubmitWorkOrder() {
   // Handle form submission
   const onSubmit = async (data: FormData) => {
     try {
+      // Ensure title exists before submission
+      const finalTitle = data.title || `${data.store_location || 'New Location'} - Work Order`;
+
       // Prepare submission data - only include fields that should be submitted
       const submissionData = {
-        title: data.title,
+        title: finalTitle,
         description: data.description || '',
         trade_id: data.trade_id,
         organization_id: effectiveOrganizationId,

@@ -285,9 +285,12 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
   // Handle form submission
   const onSubmit = async (data: FormData) => {
     try {
+      // Ensure title exists before submission
+      const finalTitle = data.title || `${data.store_location || 'New Location'} - Work Order`;
+
       // Prepare submission data
       const submissionData = {
-        title: data.title,
+        title: finalTitle,
         description: data.description || '',
         trade_id: data.trade_id,
         organization_id: organizationId!,
