@@ -1,5 +1,7 @@
-import { Organization } from '@/pages/admin/AdminOrganizations';
 
+import type { Database } from '@/integrations/supabase/types';
+
+type Organization = Database['public']['Tables']['organizations']['Row'];
 type UserType = 'admin' | 'partner' | 'subcontractor' | 'employee';
 type OrganizationType = 'partner' | 'subcontractor' | 'internal';
 

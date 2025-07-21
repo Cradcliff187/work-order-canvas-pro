@@ -29,9 +29,6 @@ export function useCreateWorkOrder() {
           location_state: workOrderData.location_state || '',
           location_zip_code: workOrderData.location_zip_code || '',
           location_name: workOrderData.location_name || '',
-          location_contact_name: workOrderData.location_contact_name || '',
-          location_contact_phone: workOrderData.location_contact_phone || '',
-          location_contact_email: workOrderData.location_contact_email || '',
           partner_po_number: workOrderData.partner_po_number || '',
           partner_location_number: workOrderData.partner_location_number || '',
           status: 'received',
@@ -56,6 +53,40 @@ export function useCreateWorkOrder() {
         variant: 'destructive',
         title: 'Error',
         description: error.message || 'Failed to create work order',
+      });
+    },
+  });
+}
+
+export function useUpdateWorkOrder() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<WorkOrderInsert>) => {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order'] });
+      toast({
+        title: 'Success',
+        description: 'Work order updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update work order',
       });
     },
   });

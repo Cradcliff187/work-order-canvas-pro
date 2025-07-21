@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -97,7 +98,7 @@ export default function AdminWorkOrders() {
       setAssignmentWorkOrders([workOrder]);
       setShowAssignModal(true);
     },
-  }), [deleteWorkOrder]);
+  }), [deleteWorkOrder, navigate]);
 
   // React Table configuration
   const table = useReactTable({
@@ -149,7 +150,8 @@ export default function AdminWorkOrders() {
     }
   };
 
-  const handleBulkAssign = (workOrders: WorkOrder[]) => {
+  const handleBulkAssign = (ids: string[]) => {
+    const workOrders = workOrdersData?.data.filter(wo => ids.includes(wo.id)) || [];
     setAssignmentWorkOrders(workOrders);
     setShowAssignModal(true);
   };

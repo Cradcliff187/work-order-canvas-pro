@@ -1,369 +1,142 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, SortingState, ColumnFiltersState, VisibilityState } from '@tanstack/react-table';
-import { Plus, Search, Filter, Download, Edit, Trash2, Power, Eye, Mail, X, Users } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  ColumnDef,
+  flexRender,
+  PaginationState,
+  SortingState,
+  RowSelectionState,
+} from '@tanstack/react-table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useUsers, useUserMutations } from '@/hooks/useUsers';
-import { UserFilters } from '@/components/admin/users/UserFilters';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Download, RotateCcw, Users } from 'lucide-react';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { useUsers, type User } from '@/hooks/useUsers';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { EditUserModal } from '@/components/admin/users/EditUserModal';
-import { ViewUserModal } from '@/components/admin/users/ViewUserModal';
+import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
+import { UserFilters } from '@/components/admin/users/UserFilters';
+import { createUserColumns } from '@/components/admin/users/UserColumns';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
-import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
-import { EmptyTableState } from '@/components/ui/empty-table-state';
-import { supabase } from '@/integrations/supabase/client';
-import { useOrganizations } from '@/hooks/useOrganizations';
-import { exportUsers } from '@/lib/utils/export';
 
-export interface User {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
-  is_active: boolean;
-  phone?: string;
-  company_name?: string;
-  created_at: string;
-  updated_at: string;
-  organizations?: Array<{ id: string; name: string }>;
-  last_sign_in_at?: string;
+interface UserFilters {
+  user_type?: string;
+  is_active?: boolean;
+  search?: string;
 }
 
-const AdminUsers = () => {
+export default function AdminUsers() {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 25,
+  });
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
-  const [globalFilter, setGlobalFilter] = useState('');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [filters, setFilters] = useState<UserFilters>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [viewingUser, setViewingUser] = useState<User | null>(null);
-  const [deletingUser, setDeletingUser] = useState<User | null>(null);
-  const [resettingPasswordFor, setResettingPasswordFor] = useState<string | null>(null);
-  
-  const [searchParams, setSearchParams] = useSearchParams();
-  const orgFilter = searchParams.get('org');
-  
-  const { toast } = useToast();
-  const { data: usersData, isLoading, refetch } = useUsers();
-  const { deleteUser, toggleUserStatus } = useUserMutations();
-  const { data: organizationsData } = useOrganizations();
-  
-  // Find the filtered organization name
-  const filteredOrganization = orgFilter ? 
-    organizationsData?.organizations?.find(org => org.id === orgFilter) : null;
 
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setShowEditModal(true);
-  };
+  // Fetch data
+  const { data: users, isLoading, error, refetch } = useUsers();
 
-  const handleDeleteUser = (user: User) => {
-    setDeletingUser(user);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deletingUser) return;
-    
-    try {
-      await deleteUser.mutateAsync(deletingUser.id);
-      refetch();
-      setDeletingUser(null);
-    } catch (error) {
-      console.error('Failed to delete user:', error);
-    }
-  };
-
-  const handleToggleStatus = async (user: User) => {
-    try {
-      await toggleUserStatus.mutateAsync({ userId: user.id, isActive: !user.is_active });
-      refetch();
-    } catch (error) {
-      console.error('Failed to toggle user status:', error);
-    }
-  };
-
-  const handleResetPassword = async (user: User) => {
-    setResettingPasswordFor(user.id);
-    
-    try {
-      const { error } = await supabase.functions.invoke('password-reset-email', {
-        body: { email: user.email }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "Password reset email sent",
-        description: `If an account exists for ${user.email}, a password reset link has been sent.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error sending password reset",
-        description: error.message || "Failed to send password reset email",
-        variant: "destructive",
-      });
-    } finally {
-      setResettingPasswordFor(null);
-    }
-  };
-
-  const handleExport = () => {
-    try {
-      const selectedRows = table.getFilteredSelectedRowModel().rows;
-      const dataToExport = selectedRows.length > 0 
-        ? selectedRows.map(row => row.original)
-        : filteredUsers;
-
-      if (!dataToExport || dataToExport.length === 0) {
-        toast({ 
-          title: 'No data to export', 
-          description: 'No users available to export.',
-          variant: 'destructive' 
-        });
-        return;
-      }
-      
-      exportUsers(dataToExport);
-      toast({ 
-        title: 'Export completed',
-        description: `Successfully exported ${dataToExport.length} user(s) to CSV.`
-      });
-    } catch (error) {
-      toast({ 
-        title: 'Export failed', 
-        description: 'Failed to export users. Please try again.',
-        variant: 'destructive' 
-      });
-    }
-  };
-
-  const columns: ColumnDef<User>[] = useMemo(() => [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() ? "indeterminate" : false)}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: 'full_name',
-      header: 'Name',
-      cell: ({ row }) => {
-        const user = row.original;
-        return (
-          <div className="font-medium">
-            {user.first_name} {user.last_name}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ row }) => (
-        <div className="font-mono text-sm">{row.original.email}</div>
-      ),
-    },
-    {
-      accessorKey: 'user_type',
-      header: 'Type',
-      cell: ({ row }) => {
-        const type = row.original.user_type;
-        const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-          admin: "destructive",
-          employee: "outline",
-          partner: "default",
-          subcontractor: "secondary"
-        };
-        return (
-          <Badge variant={variants[type] || "outline"}>
-            {type.charAt(0).toUpperCase() + type.slice(1)}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'organizations',
-      header: 'Organizations',
-      cell: ({ row }) => {
-        const orgs = row.original.organizations || [];
-        if (orgs.length === 0) return <span className="text-muted-foreground">None</span>;
-        if (orgs.length === 1) return orgs[0].name;
-        return (
-          <span className="text-sm">
-            {orgs[0].name} {orgs.length > 1 && `+${orgs.length - 1} more`}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'is_active',
-      header: 'Status',
-      cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? "default" : "secondary"}>
-          {row.original.is_active ? 'Active' : 'Inactive'}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: 'last_sign_in_at',
-      header: 'Last Login',
-      cell: ({ row }) => {
-        const lastLogin = row.original.last_sign_in_at;
-        if (!lastLogin) return <span className="text-muted-foreground">Never</span>;
-        return (
-          <span className="text-sm">
-            {new Date(lastLogin).toLocaleDateString()}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'created_at',
-      header: 'Created',
-      cell: ({ row }) => (
-        <span className="text-sm">
-          {new Date(row.original.created_at).toLocaleDateString()}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const user = row.original;
-        const userName = `${user.first_name} ${user.last_name}`;
-        
-        const actions = [
-          {
-            label: 'View Details',
-            icon: Eye,
-            onClick: () => setViewingUser(user)
-          },
-          {
-            label: 'Edit User',
-            icon: Edit,
-            onClick: () => handleEditUser(user)
-          },
-          {
-            label: resettingPasswordFor === user.id ? "Sending..." : "Reset Password",
-            icon: Mail,
-            onClick: () => handleResetPassword(user),
-            disabled: resettingPasswordFor === user.id
-          },
-          {
-            label: user.is_active ? 'Deactivate' : 'Activate',
-            icon: Power,
-            onClick: () => handleToggleStatus(user)
-          },
-          {
-            label: 'Delete User',
-            icon: Trash2,
-            onClick: () => handleDeleteUser(user),
-            variant: 'destructive' as const
-          }
-        ];
-
-        return (
-          <TableActionsDropdown 
-            actions={actions} 
-            itemName={userName}
-            align="end"
-          />
-        );
-      },
-      enableSorting: false,
-      enableHiding: false,
-    },
-  ], [resettingPasswordFor]);
-
-  // Filter users by organization if filter is present
+  // Filter data based on filters
   const filteredUsers = useMemo(() => {
-    if (!orgFilter || !usersData?.users) return usersData?.users || [];
+    if (!users) return [];
     
-    return usersData.users.filter(user => 
-      user.organizations?.some(org => org.id === orgFilter)
-    );
-  }, [usersData?.users, orgFilter]);
+    return users.filter(user => {
+      if (filters.user_type && user.user_type !== filters.user_type) return false;
+      if (filters.is_active !== undefined && user.is_active !== filters.is_active) return false;
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+        const email = user.email.toLowerCase();
+        if (!fullName.includes(searchLower) && !email.includes(searchLower)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [users, filters]);
 
+  // Column definitions with action handlers
+  const columns = useMemo(() => createUserColumns({
+    onEdit: (user) => {
+      setSelectedUser(user);
+      setShowEditModal(true);
+    },
+    onView: (user) => {
+      navigate(`/admin/users/${user.id}`);
+    },
+  }), [navigate]);
+
+  // React Table configuration
   const table = useReactTable({
     data: filteredUsers,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
+    pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
+    state: {
+      pagination,
+      sorting,
+      rowSelection,
+    },
+    enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-      globalFilter,
-    },
   });
 
-  const selectedRowCount = table.getFilteredSelectedRowModel().rows.length;
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-96 mt-2" />
-          </div>
-          <Skeleton className="h-10 w-32" />
+  const handleClearFilters = () => {
+    setFilters({});
+  };
+
+  const handleClearSelection = () => {
+    setRowSelection({});
+  };
+
+  const renderTableSkeleton = () => (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex space-x-4">
+          <Skeleton className="h-4 w-8" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-16" />
         </div>
+      ))}
+    </div>
+  );
+
+  if (error) {
+    return (
+      <div className="p-6">
         <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <Skeleton className="h-6 w-32" />
-              <div className="flex gap-2">
-                <Skeleton className="h-10 w-72" />
-                <Skeleton className="h-10 w-24" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              ))}
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <p className="text-destructive">Error loading users: {error.message}</p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -372,252 +145,161 @@ const AdminUsers = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Live region for status updates */}
-      <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {isLoading ? 'Loading users...' : `Showing ${table.getFilteredRowModel().rows.length} users`}
-        {selectedRowCount > 0 && `, ${selectedRowCount} selected`}
-      </div>
+    <div className="p-6 space-y-6">
+      {/* Breadcrumb */}
+      <UserBreadcrumb />
+      
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            User Management
-            {filteredOrganization && ` - ${filteredOrganization.name}`}
-          </h1>
+          <h1 className="text-2xl font-bold">User Management</h1>
           <p className="text-muted-foreground">
-            {orgFilter && filteredOrganization ? (
-              <span className="flex items-center gap-2">
-                Showing users for {filteredOrganization.name}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setSearchParams({})}
-                  className="h-6 px-2 text-xs"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear filter
-                </Button>
-              </span>
-            ) : (
-              usersData?.totalCount ? `${usersData.totalCount} total users` : 'Manage system users and their permissions'
-            )}
+            {filteredUsers.length ? `${filteredUsers.length} total users` : 'Manage system users and their access'}
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} aria-label="Add new user">
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Add User
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          New User
         </Button>
       </div>
 
+      {/* Filters */}
+      <UserFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        onClearFilters={handleClearFilters}
+      />
 
+      {/* Data Table */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Users</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <Input
-                  placeholder="Search users..."
-                  value={globalFilter}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-8 w-72"
-                  aria-label="Search users by name, email, or type"
-                />
-              </div>
-              <UserFilters table={table} />
-              <Button variant="outline" size="sm" onClick={handleExport} aria-label="Export users to CSV">
-                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                Export
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Users</CardTitle>
+          <div className="flex items-center gap-2">
+            {selectedRows.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleClearSelection}>
+                Clear Selection ({selectedRows.length})
               </Button>
-            </div>
+            )}
+            <Button variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table aria-busy={isLoading} aria-label="Users table">
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="px-4">
-                        {header.isPlaceholder
-                          ? null
-                          : header.column.getCanSort()
-                          ? (
-                            <Button
-                              variant="ghost"
-                              onClick={() => header.column.toggleSorting(header.column.getIsSorted() === "asc")}
-                              className="-ml-3 h-8 data-[state=open]:bg-accent"
-                              aria-label={`Sort by ${header.column.columnDef.header} ${
-                                header.column.getIsSorted() === 'asc' ? 'descending' : 'ascending'
-                              }`}
-                              aria-sort={
-                                header.column.getIsSorted() === 'asc' ? 'ascending' :
-                                header.column.getIsSorted() === 'desc' ? 'descending' : 'none'
-                              }
-                            >
-                              {typeof header.column.columnDef.header === 'function'
-                                ? header.column.columnDef.header(header.getContext())
-                                : header.column.columnDef.header}
-                              {header.column.getIsSorted() === "asc" ? " ↑" : header.column.getIsSorted() === "desc" ? " ↓" : ""}
-                            </Button>
-                          )
-                          : (typeof header.column.columnDef.header === 'function'
-                              ? header.column.columnDef.header(header.getContext())
-                              : header.column.columnDef.header)}
-                      </TableHead>
+          {isLoading ? (
+            renderTableSkeleton()
+          ) : filteredUsers.length === 0 ? (
+            <EmptyTableState
+              icon={Users}
+              title="No users found"
+              description={Object.values(filters).some(val => val !== undefined && val !== '') ? "Try adjusting your filters or search criteria" : "Get started by creating your first user"}
+              action={{
+                label: "Create User",
+                onClick: () => setShowCreateModal(true),
+                icon: Plus
+              }}
+              colSpan={columns.length}
+            />
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
                     ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                      className="cursor-pointer hover:bg-muted/50"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-4">
-                          {typeof cell.column.columnDef.cell === 'function'
-                            ? cell.column.columnDef.cell(cell.getContext())
-                            : cell.getValue() as React.ReactNode}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <EmptyTableState
-                    icon={Users}
-                    title={globalFilter || orgFilter ? "No users found matching your criteria" : "No users found"}
-                    description={!globalFilter && !orgFilter ? "Get started by creating your first user" : "Try adjusting your search criteria"}
-                    action={{
-                      label: "Create User",
-                      onClick: () => setShowCreateModal(true),
-                      icon: Plus
-                    }}
-                    colSpan={columns.length}
-                  />
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="flex items-center justify-between px-2 py-4">
-            <div className="text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
-            </div>
-            <div className="flex items-center space-x-6 lg:space-x-8">
-              <div className="flex items-center space-x-2">
-                <p className="text-sm font-medium">Rows per page</p>
-                <select
-                  value={table.getState().pagination.pageSize}
-                  onChange={(e) => table.setPageSize(Number(e.target.value))}
-                  className="h-8 w-16 rounded border border-input bg-background px-2 text-sm"
-                  aria-label="Select page size"
-                >
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      {pageSize}
-                    </option>
-                  ))}
-                </select>
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() && "selected"}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <EmptyTableState
+                        icon={Users}
+                        title="No users found"
+                        description="Try adjusting your filters or search criteria"
+                        colSpan={columns.length}
+                      />
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-              <div className="flex w-24 items-center justify-center text-sm font-medium">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between space-x-2 py-4">
+                <div className="flex-1 text-sm text-muted-foreground">
+                  {selectedRows.length > 0 && (
+                    <span>
+                      {selectedRows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <span className="sr-only">Go to first page</span>
-                  ⟪
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <span className="sr-only">Go to previous page</span>
-                  ⟨
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <span className="sr-only">Go to next page</span>
-                  ⟩
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <span className="sr-only">Go to last page</span>
-                  ⟫
-                </Button>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
+      {/* Create Modal */}
       <CreateUserModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
-        onSuccess={() => {
-          refetch();
-          toast({
-            title: "User created",
-            description: "The new user has been created successfully.",
-          });
-        }}
       />
 
+      {/* Edit Modal */}
       <EditUserModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
         user={selectedUser}
-        onSuccess={() => {
-          refetch();
-          toast({
-            title: "User updated",
-            description: "The user has been updated successfully.",
-          });
-        }}
-      />
-
-      <ViewUserModal
-        open={!!viewingUser}
-        onOpenChange={(open) => !open && setViewingUser(null)}
-        user={viewingUser}
-        onEdit={() => {
-          setSelectedUser(viewingUser);
-          setShowEditModal(true);
-          setViewingUser(null);
-        }}
-      />
-
-      <DeleteConfirmationDialog
-        open={!!deletingUser}
-        onOpenChange={(open) => !open && setDeletingUser(null)}
-        onConfirm={handleConfirmDelete}
-        itemName={deletingUser ? `${deletingUser.first_name} ${deletingUser.last_name}` : ''}
-        itemType="user"
-        isLoading={deleteUser.isPending}
       />
     </div>
   );
-};
-
-export default AdminUsers;
+}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { useFocusManagement } from '@/hooks/useFocusManagement';
+import { useProfile } from '@/hooks/useProfile';
 
 const locationSchema = z.object({
   location_number: z.string().min(1, 'Location number is required'),
@@ -53,6 +55,7 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
   onOpenChange,
 }) => {
   const { createLocation } = usePartnerLocationMutations();
+  const { data: profile } = useProfile();
   const modalRef = useFocusManagement({ isOpen: open });
 
   const form = useForm<LocationFormData>({
@@ -72,8 +75,14 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
   });
 
   const onSubmit = async (data: LocationFormData) => {
-    // Ensure required fields are present
+    if (!profile?.organization_id) {
+      console.error('No organization ID found for user');
+      return;
+    }
+
+    // Ensure required fields are present with organization_id
     const submitData = {
+      organization_id: profile.organization_id,
       location_number: data.location_number,
       location_name: data.location_name,
       street_address: data.street_address || null,
@@ -85,6 +94,7 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
       contact_phone: data.contact_phone || null,
       is_active: data.is_active,
     };
+    
     await createLocation.mutateAsync(submitData);
     form.reset();
     onOpenChange(false);

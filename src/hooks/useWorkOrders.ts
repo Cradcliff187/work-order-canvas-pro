@@ -130,8 +130,8 @@ export function useWorkOrderMutations() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const deleteWorkOrder = useMutation(
-    async (id: string) => {
+  const deleteWorkOrder = useMutation({
+    mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from('work_orders')
         .delete()
@@ -140,23 +140,21 @@ export function useWorkOrderMutations() {
       if (error) throw new Error(error.message);
       return data;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['work-orders'] });
-        toast({
-          title: 'Success',
-          description: 'Work order deleted successfully',
-        });
-      },
-      onError: (error: any) => {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: error.message,
-        });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      toast({
+        title: 'Success',
+        description: 'Work order deleted successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message,
+      });
+    },
+  });
 
   return { deleteWorkOrder };
 }
