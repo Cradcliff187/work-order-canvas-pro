@@ -58,8 +58,8 @@ serve(async (req) => {
 
     // Generate password reset link
     try {
-      // Debug: Use hardcoded URL temporarily
-      const redirectUrl = 'https://workorderportal.com/reset-password';
+      // More robust with fallback
+      const redirectUrl = `${Deno.env.get('PUBLIC_SITE_URL') || 'https://workorderportal.com'}/reset-password`;
       console.log('🔗 Using redirect URL:', redirectUrl);
 
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
