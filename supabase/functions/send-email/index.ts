@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
-import { Resend } from "resend";
-import { serve } from 'std/server';
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from "https://esm.sh/resend@2.0.0";
 import { corsHeaders } from '../_shared/cors.ts';
 
 // Initialize Supabase client
@@ -22,8 +22,8 @@ const BRANDING_VARIABLES = {
 
 // Utility function to generate URLs
 const generateUrl = (path: string) => {
-  const siteUrl = Deno.env.get('PUBLIC_SITE_URL') ?? 'http://localhost:3000';
-  return `${siteUrl}${path}`;
+  const baseUrl = 'https://inudoymofztrvxhrlrek.supabase.co';
+  return `${baseUrl}${path}`;
 };
 
 // Handle CORS preflight requests
