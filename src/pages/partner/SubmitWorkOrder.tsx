@@ -26,8 +26,8 @@ import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGenerati
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useOrganizations } from '@/hooks/useOrganizations';
 
-// Base form schema for all users
-const baseFormSchema = z.object({
+// Unified form schema that includes all fields
+const workOrderFormSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   description: z.string().optional(),
   trade_id: z.string().min(1, 'Trade is required'),
@@ -48,13 +48,12 @@ const baseFormSchema = z.object({
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
   partner_location_selection: z.string().optional(),
-});
-
-// Admin-only fields
-const adminFormSchema = baseFormSchema.extend({
+  // Admin-only fields - always included in schema but conditionally validated
   due_date: z.string().optional(),
   estimated_hours: z.string().optional(),
 });
+
+type FormData = z.infer<typeof workOrderFormSchema>;
 
 // Step component for progress indicator
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
@@ -112,10 +111,6 @@ export default function SubmitWorkOrder() {
   // Determine if user is admin
   const isAdmin = profile?.user_type === 'admin';
 
-  // Choose appropriate form schema based on user type
-  const formSchema = isAdmin ? adminFormSchema : baseFormSchema;
-  type FormData = z.infer<typeof formSchema>;
-
   // User organization hook
   const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();
   
@@ -129,9 +124,9 @@ export default function SubmitWorkOrder() {
   // Determine effective organization ID
   const effectiveOrganizationId = userOrganization?.id || selectedOrganizationId;
 
-  // Form setup with user-type specific validation
+  // Form setup
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(workOrderFormSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -153,11 +148,9 @@ export default function SubmitWorkOrder() {
       partner_po_number: '',
       partner_location_number: '',
       partner_location_selection: '',
-      ...(isAdmin && {
-        due_date: '',
-        estimated_hours: '',
-      }),
-    } as FormData
+      due_date: '',
+      estimated_hours: '',
+    }
   });
 
   // Work order number generation - watch for partner_location_number changes
@@ -301,7 +294,7 @@ export default function SubmitWorkOrder() {
   // Handle form submission
   const onSubmit = async (data: FormData) => {
     try {
-      // Prepare submission data - only include fields that exist in the form
+      // Prepare submission data - only include fields that should be submitted
       const submissionData = {
         title: data.title,
         description: data.description || '',
@@ -323,8 +316,8 @@ export default function SubmitWorkOrder() {
         partner_po_number: data.partner_po_number || '',
         partner_location_number: data.partner_location_number || generatedLocationNumber || '',
         // Only include admin fields if user is admin
-        ...(isAdmin && 'due_date' in data && { due_date: data.due_date }),
-        ...(isAdmin && 'estimated_hours' in data && { estimated_hours: data.estimated_hours }),
+        ...(isAdmin && { due_date: data.due_date }),
+        ...(isAdmin && { estimated_hours: data.estimated_hours }),
       };
 
       await createWorkOrderMutation.mutateAsync(submissionData);
@@ -619,7 +612,7 @@ export default function SubmitWorkOrder() {
           {currentStep === 3 && (
             <div className="space-y-6">
               {/* Enhanced Work Order Number Preview */}
-              <Card className="border-2 border-primary/20 bg-primary/5">
+              <Card className="border-2 border-primary/30 bg-primary/5">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
@@ -630,20 +623,20 @@ export default function SubmitWorkOrder() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-4">
-                    <div className="text-sm text-muted-foreground mb-2">
+                  <div className="text-center py-6">
+                    <div className="text-sm text-muted-foreground mb-3">
                       Your work order number will be:
                     </div>
-                    <div className="font-mono text-2xl font-bold text-primary mb-2">
+                    <div className="font-mono text-3xl font-bold text-primary mb-4 p-4 bg-background rounded-lg border-2 border-primary/20">
                       {isLoadingWorkOrderNumber ? (
                         <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          <span>Generating...</span>
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                          <span className="text-lg">Generating...</span>
                         </div>
                       ) : workOrderNumberError ? (
                         <div className="flex items-center justify-center gap-2 text-destructive">
-                          <AlertCircle className="h-5 w-5" />
-                          <span>Error generating number</span>
+                          <AlertCircle className="h-6 w-6" />
+                          <span className="text-lg">Error generating number</span>
                         </div>
                       ) : (
                         workOrderNumber || 'Will be generated automatically'
@@ -654,6 +647,9 @@ export default function SubmitWorkOrder() {
                         Fallback format
                       </Badge>
                     )}
+                    <div className="text-xs text-muted-foreground mt-2">
+                      This number will be used for tracking and reference
+                    </div>
                   </div>
                 </CardContent>
               </Card>
