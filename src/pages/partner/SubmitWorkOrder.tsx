@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -398,8 +397,20 @@ export default function SubmitWorkOrder() {
   // Handle form submission
   const onSubmit = async (data: FormData) => {
     try {
-      // Ensure title exists before submission
-      const finalTitle = data.title || `${data.store_location || 'New Location'} - Work Order`;
+      // Ensure title exists before submission - use same logic as review
+      let finalTitle = data.title;
+      if (!finalTitle || !finalTitle.trim()) {
+        if (data.store_location && watchedTradeId) {
+          const selectedTrade = trades.find(trade => trade.id === watchedTradeId);
+          if (selectedTrade) {
+            finalTitle = `${data.store_location} - ${selectedTrade.name} Work`;
+          } else {
+            finalTitle = `${data.store_location} - Work Order`;
+          }
+        } else {
+          finalTitle = `${data.store_location || 'New Location'} - Work Order`;
+        }
+      }
 
       // Prepare submission data - only include fields that should be submitted
       const submissionData = {
@@ -720,6 +731,7 @@ export default function SubmitWorkOrder() {
                 trades={trades}
                 workOrderNumber={workOrderNumber}
                 isLoadingWorkOrderNumber={isLoadingWorkOrderNumber}
+                workOrderNumberError={workOrderNumberError}
                 organizationName={organizationName}
                 userProfile={profile}
                 selectedLocation={selectedLocation}

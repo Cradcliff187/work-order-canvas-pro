@@ -2,14 +2,15 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormContext } from 'react-hook-form';
-import { MapPin, FileText, User, Mail, Phone, Building2 } from "lucide-react";
-import { formatDate } from '@/lib/utils/date';
+import { MapPin, FileText, User, Mail, Phone, Building2, Loader2, AlertCircle } from "lucide-react";
+import { formatDate, formatDateTime } from '@/lib/utils/date';
 import { formatAddress } from '@/lib/utils/addressUtils';
 
 interface WorkOrderReviewSummaryProps {
   trades: any[];
   workOrderNumber?: string;
   isLoadingWorkOrderNumber?: boolean;
+  workOrderNumberError?: string | null;
   organizationName?: string;
   userProfile?: any;
   selectedLocation?: any;
@@ -19,6 +20,8 @@ interface WorkOrderReviewSummaryProps {
 export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
   trades,
   workOrderNumber,
+  isLoadingWorkOrderNumber,
+  workOrderNumberError,
   organizationName,
   selectedLocation,
   generatedLocationNumber
@@ -29,6 +32,20 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
   const selectedTrade = trades.find(trade => trade.id === formData.trade_id);
   const partnerLocationSelection = formData.partner_location_selection;
   const isExistingLocation = partnerLocationSelection && partnerLocationSelection !== 'add_new';
+
+  // Calculate auto-generated title (same logic as in submission)
+  const calculateFinalTitle = () => {
+    if (formData.title && formData.title.trim()) {
+      return formData.title;
+    }
+    // Auto-generate title when store_location and trade are selected
+    if (formData.store_location && selectedTrade) {
+      return `${formData.store_location} - ${selectedTrade.name} Work`;
+    }
+    return `${formData.store_location || 'New Location'} - Work Order`;
+  };
+
+  const finalTitle = calculateFinalTitle();
 
   // Get location data (from existing location or manual entry)
   const getLocationData = () => {
@@ -137,13 +154,35 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Auto-generated title display */}
+          <div>
+            <div className="text-sm font-medium text-muted-foreground mb-1">Title</div>
+            <div className="text-lg font-semibold">{finalTitle}</div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {workOrderNumber && (
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Service Request Number</div>
-                <div className="text-lg font-semibold">{workOrderNumber}</div>
+            {/* Service Request Number with loading/error states */}
+            <div>
+              <div className="text-sm font-medium text-muted-foreground">Service Request Number</div>
+              <div className="text-lg font-semibold">
+                {isLoadingWorkOrderNumber ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Generating...</span>
+                  </div>
+                ) : workOrderNumberError ? (
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Will be assigned</span>
+                  </div>
+                ) : workOrderNumber ? (
+                  workOrderNumber
+                ) : (
+                  <span className="text-muted-foreground">Will be assigned</span>
+                )}
               </div>
-            )}
+            </div>
+            
             <div>
               <div className="text-sm font-medium text-muted-foreground">Work Type</div>
               <div className="text-lg font-semibold">{selectedTrade?.name || 'Not specified'}</div>
@@ -178,9 +217,15 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
             )}
           </div>
 
+          {/* Submission information with current date/time */}
           <div className="pt-4 border-t">
-            <div className="text-sm text-muted-foreground">
-              Submitting service request for {organizationName || 'your organization'}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+              <div>
+                Submitting service request for {organizationName || 'your organization'}
+              </div>
+              <div className="text-right md:text-left">
+                Submission time: {formatDateTime(new Date())}
+              </div>
             </div>
           </div>
         </CardContent>
