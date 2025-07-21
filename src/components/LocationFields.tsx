@@ -16,6 +16,9 @@ interface LocationFieldsProps {
 export function LocationFields({ form, organizationId, showPoNumber = false }: LocationFieldsProps) {
   const { data: partnerLocations } = usePartnerLocations(organizationId);
 
+  const partnerLocationSelection = form.watch('partner_location_selection');
+  const showManualEntry = !partnerLocationSelection || partnerLocationSelection === 'add_new';
+
   return (
     <div className="space-y-4">
       {/* Partner Location Selection */}
@@ -48,105 +51,154 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
       )}
 
       {/* Manual Location Entry */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="store_location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location Name *</FormLabel>
-              <FormControl>
-                <Input placeholder="Downtown Office" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      {showManualEntry && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="store_location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Downtown Office" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="partner_location_number"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location Code</FormLabel>
-              <FormControl>
-                <Input placeholder="001" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+            <FormField
+              control={form.control}
+              name="partner_location_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-      {/* Address Fields */}
-      <FormField
-        control={form.control}
-        name="street_address"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Street Address</FormLabel>
-            <FormControl>
-              <Input placeholder="123 Main Street" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormField
-          control={form.control}
-          name="city"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>City</FormLabel>
-              <FormControl>
-                <Input placeholder="City" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="state"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>State</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+          {/* Address Fields */}
+          <FormField
+            control={form.control}
+            name="street_address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Street Address</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
+                  <Input placeholder="123 Main Street" {...field} />
                 </FormControl>
-                <SelectContent>
-                  {US_STATES.map((state) => (
-                    <SelectItem key={state.value} value={state.value}>
-                      {state.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="zip_code"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>ZIP Code</FormLabel>
-              <FormControl>
-                <Input placeholder="12345" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input placeholder="City" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {US_STATES.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="zip_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ZIP Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="12345" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Location Contact Fields */}
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="location_contact_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location Contact Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Site Manager Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="location_contact_email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location Contact Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="site@company.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="location_contact_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location Contact Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="(555) 123-4567" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </>
+      )}
 
       {/* PO Number */}
       {showPoNumber && (
