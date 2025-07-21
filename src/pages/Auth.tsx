@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { HardHat } from "lucide-react";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
 import { CreateUserForm } from "@/components/auth/CreateUserForm";
@@ -90,16 +91,22 @@ export const Auth = () => {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <img 
-            src={branding.assets.logos.main} 
+            src={branding.assets.logos.horizontal} 
             alt={branding.company.name}
-            className="mx-auto h-12 w-auto mb-6"
+            className="mx-auto h-30 w-auto mb-6"
           />
-          <h1 className="text-3xl font-bold text-foreground">
-            WorkOrderPortal
-          </h1>
-          <h2 className="text-xl font-semibold text-foreground mt-2">
-            {getTitle()}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <HardHat className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold text-foreground">
+              WorkOrderPortal
+            </h1>
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            AKC Contracting Portal
           </h2>
+          <h3 className="text-lg font-medium text-foreground">
+            {getTitle()}
+          </h3>
           <p className="text-muted-foreground mt-2">
             {getSubtitle()}
           </p>
@@ -120,7 +127,7 @@ export const Auth = () => {
 
         <div className="text-center text-sm text-muted-foreground">
           <p>
-            Powered by {branding.company.name}
+            Powered by WorkOrderPortal
           </p>
         </div>
       </div>
