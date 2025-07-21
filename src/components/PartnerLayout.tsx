@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -182,7 +183,7 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
             showSignOut={false}
           />
 
-          <main className={`flex-1 overflow-auto ${isMobile ? 'pb-16' : ''}`}>
+          <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
             <SingleOrganizationGuard userType="partner">
               <div className="p-6">
                 {children}
