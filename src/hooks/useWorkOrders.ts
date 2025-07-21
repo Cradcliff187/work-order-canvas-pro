@@ -9,38 +9,42 @@ type WorkOrderRow = Database['public']['Tables']['work_orders']['Row'];
 type WorkOrderInsert = Database['public']['Tables']['work_orders']['Insert'];
 type WorkOrderUpdate = Database['public']['Tables']['work_orders']['Update'];
 
-// Simplified types to avoid deep instantiation
-interface SimpleOrganization {
+// Simplified organization type with all required fields
+interface WorkOrderOrganization {
   id: string;
   name: string;
+  contact_email: string;
   organization_type?: 'partner' | 'subcontractor' | 'internal';
 }
 
-interface SimpleTrade {
+// Simplified trade type
+interface WorkOrderTrade {
   id: string;
   name: string;
 }
 
-interface SimpleProfile {
+// Simplified profile type
+interface WorkOrderProfile {
   id: string;
   first_name: string;
   last_name: string;
 }
 
-interface SimpleAssignment {
+// Simplified assignment type
+interface WorkOrderAssignment {
   id: string;
   assigned_to: string;
   assignment_type: string;
-  assignee: SimpleProfile;
-  assigned_organization?: SimpleOrganization | null;
+  assignee: WorkOrderProfile;
+  assigned_organization?: WorkOrderOrganization | null;
 }
 
-// Main WorkOrder type with simplified related data
-export interface WorkOrder extends WorkOrderRow {
-  organizations: SimpleOrganization | null;
-  trades: SimpleTrade | null;
-  assigned_user: SimpleProfile | null;
-  assignments?: SimpleAssignment[];
+// Main WorkOrder type - simplified to avoid deep instantiation
+export interface WorkOrder extends Omit<WorkOrderRow, 'organization_id' | 'trade_id' | 'assigned_to'> {
+  organizations: WorkOrderOrganization | null;
+  trades: WorkOrderTrade | null;
+  assigned_user: WorkOrderProfile | null;
+  assignments?: WorkOrderAssignment[];
 }
 
 interface WorkOrderFilters {
@@ -67,16 +71,9 @@ export function useWorkOrders(
         .from('work_orders')
         .select(`
           *,
-          organizations!organization_id(id, name, organization_type),
+          organizations!organization_id(id, name, contact_email, organization_type),
           trades!trade_id(id, name),
-          assigned_user:profiles!assigned_to(id, first_name, last_name),
-          assignments: work_order_assignments(
-            id,
-            assigned_to,
-            assignment_type,
-            assignee: profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
-            assigned_organization: organizations!work_order_assignments_assigned_organization_id_fkey(id, name, organization_type)
-          )
+          assigned_user:profiles!assigned_to(id, first_name, last_name)
         `,
           { count: 'exact' }
         )
