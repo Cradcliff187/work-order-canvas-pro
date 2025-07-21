@@ -28,6 +28,8 @@ import {
   X
 } from 'lucide-react';
 import { usePartnerReports } from '@/hooks/usePartnerReports';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
+import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,16 +38,22 @@ interface ReportFilters {
   date_from?: string;
   date_to?: string;
   search?: string;
+  location_filter?: string;
 }
 
 export default function PartnerReports() {
   const navigate = useNavigate();
+  const { organization } = useUserOrganization();
+  const { data: locations = [] } = usePartnerLocations(organization?.id);
+  
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
   });
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [filters, setFilters] = useState<ReportFilters>({});
+  const [filters, setFilters] = useState<ReportFilters>({
+    location_filter: 'all'
+  });
 
   const { data: reportsData, isLoading, error, refetch } = usePartnerReports(
     pagination,
@@ -179,8 +187,21 @@ export default function PartnerReports() {
   };
 
   const handleClearFilters = () => {
-    setFilters({});
+    setFilters({ location_filter: 'all' });
   };
+
+  const getSelectedLocationName = () => {
+    if (!filters.location_filter || filters.location_filter === 'all') {
+      return null;
+    }
+    if (filters.location_filter === 'manual') {
+      return 'Manual Locations';
+    }
+    const location = locations.find(loc => loc.location_number === filters.location_filter);
+    return location ? location.location_name : null;
+  };
+
+  const selectedLocationName = getSelectedLocationName();
 
   const renderTableSkeleton = () => (
     <div className="space-y-3">
@@ -222,7 +243,9 @@ export default function PartnerReports() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Work Reports</h1>
+          <h1 className="text-2xl font-bold">
+            Work Reports{selectedLocationName ? ` - ${selectedLocationName}` : ''}
+          </h1>
           <p className="text-muted-foreground">
             {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'View work reports for your organization'}
           </p>
@@ -273,6 +296,27 @@ export default function PartnerReports() {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Location</label>
+              <Select
+                value={filters.location_filter || 'all'}
+                onValueChange={(value) => handleFilterChange('location_filter', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={location.location_number}>
+                      {location.location_name} ({location.location_number})
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="manual">Manual Locations</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-end">
               <Button variant="outline" onClick={handleClearFilters}>
                 <X className="w-4 h-4 mr-2" />
@@ -293,7 +337,16 @@ export default function PartnerReports() {
             renderTableSkeleton()
           ) : reportsData?.data.length === 0 ? (
             <div className="text-center p-8 text-muted-foreground">
-              No reports found matching your criteria.
+              {filters.search || filters.status || (filters.location_filter && filters.location_filter !== 'all') ? (
+                <div className="space-y-2">
+                  <p>No reports found matching your criteria.</p>
+                  <Button variant="outline" onClick={handleClearFilters}>
+                    Clear filters to see all reports
+                  </Button>
+                </div>
+              ) : (
+                'No reports found.'
+              )}
             </div>
           ) : (
             <>

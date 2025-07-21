@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
@@ -14,6 +15,7 @@ type WorkOrderReport = Database['public']['Tables']['work_order_reports']['Row']
     state: string | null;
     zip_code: string | null;
     description: string | null;
+    partner_location_number: string | null;
   } | null;
   subcontractor: {
     first_name: string;
@@ -30,6 +32,7 @@ interface ReportFilters {
   date_from?: string;
   date_to?: string;
   search?: string;
+  location_filter?: string;
 }
 
 interface PaginationState {
@@ -63,6 +66,7 @@ export function usePartnerReports(
             state,
             zip_code,
             description,
+            partner_location_number,
             organizations!organization_id(name),
             trades!trade_id(name)
           ),
@@ -78,6 +82,17 @@ export function usePartnerReports(
 
       // Filter to only include reports for work orders in partner's organizations
       query = query.not('work_orders.organization_id', 'is', null);
+
+      // Apply location filter
+      if (filters.location_filter && filters.location_filter !== 'all') {
+        if (filters.location_filter === 'manual') {
+          // Filter for work orders without partner location numbers (manual locations)
+          query = query.is('work_orders.partner_location_number', null);
+        } else {
+          // Filter for specific partner location number
+          query = query.eq('work_orders.partner_location_number', filters.location_filter);
+        }
+      }
 
       // Apply additional filters
       if (filters.status?.length) {

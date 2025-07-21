@@ -1,3 +1,4 @@
+
 import { Database } from '@/integrations/supabase/types';
 
 export type WorkOrderReport = Database['public']['Tables']['work_order_reports']['Row'] & {
@@ -12,6 +13,7 @@ export type WorkOrderReport = Database['public']['Tables']['work_order_reports']
     state: string | null;
     zip_code: string | null;
     description: string | null;
+    partner_location_number: string | null;
   } | null;
   subcontractor: {
     first_name: string;
@@ -31,6 +33,7 @@ export interface ReportFilters {
   date_from?: string;
   date_to?: string;
   search?: string;
+  location_filter?: string;
 }
 
 export interface PaginationState {
