@@ -19,18 +19,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Download, RotateCcw, Users } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
-import { useUsers, type User } from '@/hooks/useUsers';
-import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
-import { EditUserModal } from '@/components/admin/users/EditUserModal';
-import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
-import { UserFilters } from '@/components/admin/users/UserFilters';
+import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
 import { createUserColumns } from '@/components/admin/users/UserColumns';
+import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserFilters {
-  user_type?: string;
-  is_active?: boolean;
   search?: string;
+  userType?: string;
+  organizationId?: string;
+  status?: string;
 }
 
 export default function AdminUsers() {
@@ -42,49 +40,37 @@ export default function AdminUsers() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [filters, setFilters] = useState<UserFilters>({});
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [filters, setFilters] = useState<UserFilters>({
+    search: '',
+    userType: '',
+    organizationId: '',
+    status: '',
+  });
 
   // Fetch data
   const { data: users, isLoading, error, refetch } = useUsers();
-
-  // Filter data based on filters
-  const filteredUsers = useMemo(() => {
-    if (!users) return [];
-    
-    return users.filter(user => {
-      if (filters.user_type && user.user_type !== filters.user_type) return false;
-      if (filters.is_active !== undefined && user.is_active !== filters.is_active) return false;
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
-        const email = user.email.toLowerCase();
-        if (!fullName.includes(searchLower) && !email.includes(searchLower)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [users, filters]);
+  const { deleteUser } = useUserMutations();
 
   // Column definitions with action handlers
   const columns = useMemo(() => createUserColumns({
-    onEdit: (user) => {
-      setSelectedUser(user);
-      setShowEditModal(true);
-    },
     onView: (user) => {
       navigate(`/admin/users/${user.id}`);
     },
-  }), [navigate]);
+    onEdit: (user) => {
+      navigate(`/admin/users/${user.id}/edit`);
+    },
+    onDelete: (user) => {
+      if (confirm('Are you sure you want to delete this user?')) {
+        deleteUser.mutate(user.id);
+      }
+    },
+  }), [deleteUser, navigate]);
 
   // React Table configuration
   const table = useReactTable({
-    data: filteredUsers,
+    data: users || [],
     columns,
-    pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
+    pageCount: Math.ceil((users?.length || 0) / pagination.pageSize),
     state: {
       pagination,
       sorting,
@@ -98,12 +84,20 @@ export default function AdminUsers() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: false,
+    manualSorting: false,
   });
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedIds = selectedRows.map(row => row.original.id);
 
   const handleClearFilters = () => {
-    setFilters({});
+    setFilters({
+      search: '',
+      userType: '',
+      organizationId: '',
+      status: '',
+    });
   };
 
   const handleClearSelection = () => {
@@ -116,10 +110,10 @@ export default function AdminUsers() {
         <div key={i} className="flex space-x-4">
           <Skeleton className="h-4 w-8" />
           <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-16" />
         </div>
       ))}
@@ -154,21 +148,14 @@ export default function AdminUsers() {
         <div>
           <h1 className="text-2xl font-bold">User Management</h1>
           <p className="text-muted-foreground">
-            {filteredUsers.length ? `${filteredUsers.length} total users` : 'Manage system users and their access'}
+            {users?.length ? `${users.length} total users` : 'Manage system users and their access'}
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => navigate('/admin/users/new')}>
           <Plus className="w-4 h-4 mr-2" />
           New User
         </Button>
       </div>
-
-      {/* Filters */}
-      <UserFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        onClearFilters={handleClearFilters}
-      />
 
       {/* Data Table */}
       <Card>
@@ -180,23 +167,22 @@ export default function AdminUsers() {
                 Clear Selection ({selectedRows.length})
               </Button>
             )}
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export
+            <Button variant="outline" size="sm" onClick={handleClearFilters}>
+              Clear Filters
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             renderTableSkeleton()
-          ) : filteredUsers.length === 0 ? (
+          ) : !users || users.length === 0 ? (
             <EmptyTableState
               icon={Users}
               title="No users found"
-              description={Object.values(filters).some(val => val !== undefined && val !== '') ? "Try adjusting your filters or search criteria" : "Get started by creating your first user"}
+              description="Get started by creating your first user"
               action={{
                 label: "Create User",
-                onClick: () => setShowCreateModal(true),
+                onClick: () => navigate('/admin/users/new'),
                 icon: Plus
               }}
               colSpan={columns.length}
@@ -287,19 +273,6 @@ export default function AdminUsers() {
           )}
         </CardContent>
       </Card>
-
-      {/* Create Modal */}
-      <CreateUserModal
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
-      />
-
-      {/* Edit Modal */}
-      <EditUserModal
-        open={showEditModal}
-        onOpenChange={setShowEditModal}
-        user={selectedUser}
-      />
     </div>
   );
 }

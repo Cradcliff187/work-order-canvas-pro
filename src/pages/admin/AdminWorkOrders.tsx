@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Download, RotateCcw, ClipboardList } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
-import { useWorkOrders, useWorkOrderMutations } from '@/hooks/useWorkOrders';
+import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
@@ -27,29 +27,9 @@ import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkO
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { Database } from '@/integrations/supabase/types';
 import { exportWorkOrders } from '@/lib/utils/export';
 
-type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
-  organizations: { name: string; organization_type?: string } | null;
-  trades: { name: string } | null;
-  assigned_user: { first_name: string; last_name: string } | null;
-  assignments?: Array<{
-    id: string;
-    assigned_to: string;
-    assignment_type: string;
-    assignee: {
-      first_name: string;
-      last_name: string;
-    };
-    assigned_organization?: {
-      name: string;
-      organization_type?: 'partner' | 'subcontractor' | 'internal';
-    } | null;
-  }>;
-};
-
-interface WorkOrderFilters {
+interface WorkOrderFiltersState {
   status?: string[];
   trade_id?: string;
   organization_id?: string;
@@ -67,7 +47,7 @@ export default function AdminWorkOrders() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [filters, setFilters] = useState<WorkOrderFilters>({});
+  const [filters, setFilters] = useState<WorkOrderFiltersState>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
@@ -121,7 +101,6 @@ export default function AdminWorkOrders() {
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map(row => row.original.id);
-  const selectedWorkOrders = selectedRows.map(row => row.original);
 
   const handleClearFilters = () => {
     setFilters({});
@@ -355,7 +334,6 @@ export default function AdminWorkOrders() {
       <BulkActionsBar
         selectedCount={selectedRows.length}
         selectedIds={selectedIds}
-        selectedWorkOrders={selectedWorkOrders}
         onClearSelection={handleClearSelection}
         onExport={handleExport}
         onBulkAssign={handleBulkAssign}

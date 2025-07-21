@@ -208,15 +208,15 @@ export default function SubmitWorkOrder() {
           return false;
         }
 
-        // Work with LocationFields component state - check what it actually sets
         const storeLocation = form.getValues('store_location');
         const partnerLocationSelection = form.getValues('partner_location_selection');
         const partnerLocationNumber = form.getValues('partner_location_number');
         
         // Check if organization uses partner location codes
-        const usesPartnerLocationNumbers = userOrganization?.uses_partner_location_numbers;
+        const selectedOrg = partnerOrganizations.find(org => org.id === selectedOrganizationId);
+        const usesPartnerLocationNumbers = userOrganization?.uses_partner_location_numbers || selectedOrg?.uses_partner_location_numbers;
         
-        // Scenario 1: Partner location selected from dropdown (this is what LocationFields sets)
+        // Scenario 1: Partner location selected from dropdown
         if (partnerLocationSelection && partnerLocationSelection !== 'add_new') {
           return true;
         }
@@ -232,7 +232,6 @@ export default function SubmitWorkOrder() {
             });
             return false;
           }
-          // If we have store location (and location code if required), we're good
           return true;
         }
         
@@ -267,7 +266,7 @@ export default function SubmitWorkOrder() {
         const tradeValid = await form.trigger(tradeFields);
         return tradeValid;
       case 3:
-        return true; // Review step doesn't need validation
+        return true;
       default:
         return true;
     }

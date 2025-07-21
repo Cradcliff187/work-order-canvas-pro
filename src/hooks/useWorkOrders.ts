@@ -4,7 +4,39 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
-export function useWorkOrders(pagination: any, sorting: any, filters: any) {
+type WorkOrderRow = Database['public']['Tables']['work_orders']['Row'];
+type WorkOrderInsert = Database['public']['Tables']['work_orders']['Insert'];
+type WorkOrderUpdate = Database['public']['Tables']['work_orders']['Update'];
+
+export type WorkOrder = WorkOrderRow & {
+  organizations: { name: string; organization_type?: string } | null;
+  trades: { name: string } | null;
+  assigned_user: { first_name: string; last_name: string } | null;
+  assignments?: Array<{
+    id: string;
+    assigned_to: string;
+    assignment_type: string;
+    assignee: {
+      first_name: string;
+      last_name: string;
+    };
+    assigned_organization?: {
+      name: string;
+      organization_type?: 'partner' | 'subcontractor' | 'internal';
+    } | null;
+  }>;
+};
+
+interface WorkOrderFilters {
+  status?: string[];
+  trade_id?: string;
+  organization_id?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export function useWorkOrders(pagination: any, sorting: any, filters: WorkOrderFilters) {
   let { pageIndex, pageSize } = pagination;
   let { sortBy } = sorting;
 
@@ -15,15 +47,15 @@ export function useWorkOrders(pagination: any, sorting: any, filters: any) {
         .from('work_orders')
         .select(`
           *,
-          organizations(name, organization_type),
-          trades(name),
-          assigned_user:profiles(first_name, last_name),
+          organization:organizations!work_orders_organization_id_fkey(name, organization_type),
+          trade:trades!work_orders_trade_id_fkey(name),
+          assigned_user:profiles!work_orders_assigned_to_fkey(first_name, last_name),
           assignments: work_order_assignments(
             id,
             assigned_to,
             assignment_type,
-            assignee: profiles(first_name, last_name),
-            assigned_organization: organizations(name, organization_type)
+            assignee: profiles!work_order_assignments_assigned_to_fkey(first_name, last_name),
+            assigned_organization: organizations!work_order_assignments_assigned_organization_id_fkey(name, organization_type)
           )
         `,
           { count: 'exact' }
@@ -68,7 +100,14 @@ export function useWorkOrders(pagination: any, sorting: any, filters: any) {
 
       const pageCount = count ? Math.ceil(count / pageSize) : 0;
 
-      return { data, pageCount, totalCount: count || 0 };
+      // Transform data to match expected structure
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        organizations: item.organization,
+        trades: item.trade,
+      }));
+
+      return { data: transformedData, pageCount, totalCount: count || 0 };
     },
   });
 }
@@ -81,14 +120,17 @@ export function useWorkOrder(id: string) {
         .from('work_orders')
         .select(`
           *,
-          organizations(name, contact_email),
-          assigned_user:profiles(first_name, last_name)
+          organization:organizations!work_orders_organization_id_fkey(name, contact_email),
+          assigned_user:profiles!work_orders_assigned_to_fkey(first_name, last_name)
         `)
         .eq('id', id)
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        organizations: data.organization,
+      };
     },
     enabled: !!id,
   });
@@ -122,6 +164,87 @@ export function useTrades() {
 
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+export function useCreateWorkOrder() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (workOrderData: Partial<WorkOrderInsert>) => {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .insert([{
+          title: workOrderData.title!,
+          description: workOrderData.description || '',
+          organization_id: workOrderData.organization_id!,
+          trade_id: workOrderData.trade_id!,
+          store_location: workOrderData.store_location || '',
+          street_address: workOrderData.street_address || '',
+          city: workOrderData.city || '',
+          state: workOrderData.state || '',
+          zip_code: workOrderData.zip_code || '',
+          partner_po_number: workOrderData.partner_po_number || '',
+          partner_location_number: workOrderData.partner_location_number || '',
+          status: 'received',
+          created_by: workOrderData.created_by!,
+          date_submitted: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      toast({
+        title: 'Success',
+        description: 'Work order created successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to create work order',
+      });
+    },
+  });
+}
+
+export function useUpdateWorkOrder() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<WorkOrderUpdate>) => {
+      const { data, error } = await supabase
+        .from('work_orders')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order'] });
+      toast({
+        title: 'Success',
+        description: 'Work order updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update work order',
+      });
     },
   });
 }

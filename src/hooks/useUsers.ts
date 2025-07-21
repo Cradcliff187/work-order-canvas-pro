@@ -201,3 +201,15 @@ export function useDeleteUser() {
     },
   });
 }
+
+export function useUserMutations() {
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const deleteUser = useDeleteUser();
+
+  return {
+    createUser,
+    updateUser,
+    deleteUser,
+  };
+}

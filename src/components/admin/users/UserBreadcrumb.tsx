@@ -2,12 +2,12 @@
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Link } from 'react-router-dom';
 
-export interface WorkOrderBreadcrumbProps {
-  workOrderId?: string;
+interface UserBreadcrumbProps {
+  userName?: string;
   currentPage?: string;
 }
 
-export function WorkOrderBreadcrumb({ workOrderId, currentPage }: WorkOrderBreadcrumbProps) {
+export function UserBreadcrumb({ userName, currentPage }: UserBreadcrumbProps) {
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -19,18 +19,14 @@ export function WorkOrderBreadcrumb({ workOrderId, currentPage }: WorkOrderBread
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link to="/admin/work-orders">Work Orders</Link>
+            <Link to="/admin/users">Users</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {workOrderId && (
+        {userName && (
           <>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to={`/admin/work-orders/${workOrderId}`}>
-                  {workOrderId.slice(0, 8)}...
-                </Link>
-              </BreadcrumbLink>
+              <BreadcrumbPage>{userName}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}
