@@ -39,7 +39,7 @@ async function rateLimitedSend(emailData: any): Promise<any> {
 
 // URL generation helper
 function generateUrls(workOrderId: string, reportId?: string) {
-  const baseUrl = 'https://workorderportal.com'; // Production URL
+  const baseUrl = 'https://inudoymofztrvxhrlrek.supabase.co'; // Fixed: Use Supabase app URL for functional links
   return {
     work_order_url: `${baseUrl}/work-orders/${workOrderId}`,
     admin_dashboard_url: `${baseUrl}/admin/dashboard`,
