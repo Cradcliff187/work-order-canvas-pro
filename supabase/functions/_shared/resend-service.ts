@@ -1,6 +1,6 @@
 
 /**
- * Resend email service for WorkOrderPro
+ * Resend email service for WorkOrderPortal
  * Provides a simple interface to send emails using the Resend API
  */
 
@@ -26,7 +26,7 @@ export async function sendEmail({
   subject,
   html,
   replyTo,
-  from = "WorkOrderPro <support@workorderportal.com>"
+  from = "AKC Contracting <support@akcllc.com>"
 }: SendEmailParams): Promise<SendEmailResponse> {
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");

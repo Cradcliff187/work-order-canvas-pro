@@ -6,7 +6,7 @@ import { sendEmail } from "../_shared/resend-service.ts";
 // Branding constants - hardcoded as we cannot import from src/
 const BRANDING_VARIABLES = {
   company_name: "AKC Contracting",
-  logo_url: "https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12/branding/logos/akc-logo-horizontal.png",
+  logo_url: "https://workorderportal.com/branding/logos/akc-logo-horizontal.png",
   support_email: "support@akcllc.com",
   powered_by: "Powered by WorkOrderPortal"
 };
@@ -39,7 +39,7 @@ async function rateLimitedSend(emailData: any): Promise<any> {
 
 // URL generation helper
 function generateUrls(workOrderId: string, reportId?: string) {
-  const baseUrl = 'https://inudoymofztrvxhrlrek.supabase.co'; // Production Supabase URL
+  const baseUrl = 'https://workorderportal.com'; // Production URL
   return {
     work_order_url: `${baseUrl}/work-orders/${workOrderId}`,
     admin_dashboard_url: `${baseUrl}/admin/dashboard`,
@@ -670,7 +670,7 @@ serve(async (req) => {
         
         // System Details
         current_date: formatDate(new Date().toISOString()),
-        system_url: 'https://workorderpro.com'
+        system_url: 'https://workorderportal.com'
       };
 
       const variables = mergeTemplateVariables(databaseData, custom_data);
@@ -802,7 +802,7 @@ serve(async (req) => {
         
         // System Details
         current_date: formatDate(new Date().toISOString()),
-        system_url: 'https://workorderpro.com'
+        system_url: 'https://workorderportal.com'
       };
 
       const variables = mergeTemplateVariables(databaseData, custom_data);
@@ -931,7 +931,7 @@ serve(async (req) => {
         
         // System Details
         current_date: formatDate(new Date().toISOString()),
-        system_url: 'https://workorderpro.com'
+        system_url: 'https://workorderportal.com'
       };
 
       const variables = mergeTemplateVariables(databaseData, custom_data);
@@ -1049,7 +1049,7 @@ serve(async (req) => {
         
         // System Details
         current_date: formatDate(new Date().toISOString()),
-        system_url: 'https://workorderpro.com'
+        system_url: 'https://workorderportal.com'
       };
 
       const variables = mergeTemplateVariables(databaseData, custom_data);
