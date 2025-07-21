@@ -12,9 +12,9 @@ import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartn
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
+import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
 import { format, differenceInDays } from 'date-fns';
-
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
@@ -83,7 +83,18 @@ const PartnerDashboard = () => {
             <Building2 className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-semibold">{primaryOrganization.name}</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg font-semibold">{primaryOrganization.name}</h2>
+              <OrganizationBadge 
+                organization={{ 
+                  name: primaryOrganization.name, 
+                  organization_type: 'partner' 
+                }} 
+                size="sm"
+                showIcon={false}
+                showType={false}
+              />
+            </div>
             <p className="text-sm text-muted-foreground">
               Organization ID: {primaryOrganization.initials || 'Not configured'} • {primaryOrganization.contact_email}
             </p>

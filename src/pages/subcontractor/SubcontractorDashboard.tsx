@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 import { useAuth } from "@/contexts/AuthContext";
 import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
+import { OrganizationBadge } from "@/components/OrganizationBadge";
 import { StandardDashboardStats, StatCard } from "@/components/dashboard/StandardDashboardStats";
 import { 
   ClipboardList, 
@@ -151,11 +153,15 @@ const SubcontractorDashboard = () => {
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Building2 className="h-4 w-4" />
                 <span className="text-sm font-medium">{primaryOrganization.name}</span>
-                {primaryOrganization.initials && (
-                  <Badge variant="outline" className="text-xs">
-                    {primaryOrganization.initials}
-                  </Badge>
-                )}
+                <OrganizationBadge 
+                  organization={{ 
+                    name: primaryOrganization.name, 
+                    organization_type: 'subcontractor' 
+                  }} 
+                  size="sm"
+                  showIcon={false}
+                  showType={false}
+                />
               </div>
             ) : (
               <div className="flex items-center gap-2 text-muted-foreground">
