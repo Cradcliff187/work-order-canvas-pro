@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormattedInput } from "@/components/ui/formatted-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,9 +21,15 @@ const addLocationSchema = z.object({
   street_address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
-  zip_code: z.string().optional(),
+  zip_code: z.string().optional().refine(
+    (val) => !val || /^\d{5}(-\d{4})?$/.test(val),
+    { message: "ZIP code must be in format 12345 or 12345-6789" }
+  ),
   contact_name: z.string().optional(),
-  contact_phone: z.string().optional(),
+  contact_phone: z.string().optional().refine(
+    (val) => !val || /^\(\d{3}\) \d{3}-\d{4}$/.test(val),
+    { message: "Phone number must be in format (555) 123-4567" }
+  ),
   contact_email: z.string().email('Invalid email format').optional().or(z.literal('')),
 });
 
@@ -136,7 +143,7 @@ export function AddLocationModal({ organizationId, open, onOpenChange }: AddLoca
                 <FormItem>
                   <FormLabel>Street Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="123 Main Street" {...field} />
+                    <FormattedInput formatter="streetAddress" placeholder="123 Main Street" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -151,7 +158,7 @@ export function AddLocationModal({ organizationId, open, onOpenChange }: AddLoca
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder="City" {...field} />
+                      <FormattedInput formatter="city" placeholder="City" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -190,7 +197,7 @@ export function AddLocationModal({ organizationId, open, onOpenChange }: AddLoca
                   <FormItem>
                     <FormLabel>ZIP Code</FormLabel>
                     <FormControl>
-                      <Input placeholder="12345" {...field} />
+                      <FormattedInput formatter="zip" placeholder="12345" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -223,7 +230,7 @@ export function AddLocationModal({ organizationId, open, onOpenChange }: AddLoca
                     <FormItem>
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
-                        <Input placeholder="(555) 123-4567" {...field} />
+                        <FormattedInput formatter="phone" placeholder="(555) 123-4567" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -237,11 +244,7 @@ export function AddLocationModal({ organizationId, open, onOpenChange }: AddLoca
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="contact@company.com" 
-                          {...field} 
-                        />
+                        <FormattedInput formatter="email" placeholder="contact@company.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
