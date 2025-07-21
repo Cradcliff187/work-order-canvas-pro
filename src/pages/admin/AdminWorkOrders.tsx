@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -52,10 +51,15 @@ export default function AdminWorkOrders() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
 
+  // Transform sorting state to match the hook's expected format
+  const sortingFormatted = useMemo(() => ({
+    sortBy: sorting.map(sort => ({ id: sort.id, desc: sort.desc }))
+  }), [sorting]);
+
   // Fetch data with server-side pagination and filtering
   const { data: workOrdersData, isLoading, error, refetch } = useWorkOrders(
     pagination,
-    sorting,
+    sortingFormatted,
     filters
   );
 

@@ -4,28 +4,44 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
+// Base types from database
 type WorkOrderRow = Database['public']['Tables']['work_orders']['Row'];
 type WorkOrderInsert = Database['public']['Tables']['work_orders']['Insert'];
 type WorkOrderUpdate = Database['public']['Tables']['work_orders']['Update'];
 
-export type WorkOrder = WorkOrderRow & {
-  organizations: { name: string; organization_type?: string } | null;
-  trades: { name: string } | null;
-  assigned_user: { first_name: string; last_name: string } | null;
-  assignments?: Array<{
-    id: string;
-    assigned_to: string;
-    assignment_type: string;
-    assignee: {
-      first_name: string;
-      last_name: string;
-    };
-    assigned_organization?: {
-      name: string;
-      organization_type?: 'partner' | 'subcontractor' | 'internal';
-    } | null;
-  }>;
-};
+// Simplified types to avoid deep instantiation
+interface SimpleOrganization {
+  id: string;
+  name: string;
+  organization_type?: 'partner' | 'subcontractor' | 'internal';
+}
+
+interface SimpleTrade {
+  id: string;
+  name: string;
+}
+
+interface SimpleProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface SimpleAssignment {
+  id: string;
+  assigned_to: string;
+  assignment_type: string;
+  assignee: SimpleProfile;
+  assigned_organization?: SimpleOrganization | null;
+}
+
+// Main WorkOrder type with simplified related data
+export interface WorkOrder extends WorkOrderRow {
+  organizations: SimpleOrganization | null;
+  trades: SimpleTrade | null;
+  assigned_user: SimpleProfile | null;
+  assignments?: SimpleAssignment[];
+}
 
 interface WorkOrderFilters {
   status?: string[];
@@ -51,15 +67,15 @@ export function useWorkOrders(
         .from('work_orders')
         .select(`
           *,
-          organizations!organization_id(name, organization_type),
-          trades!trade_id(name),
-          assigned_user:profiles!assigned_to(first_name, last_name),
+          organizations!organization_id(id, name, organization_type),
+          trades!trade_id(id, name),
+          assigned_user:profiles!assigned_to(id, first_name, last_name),
           assignments: work_order_assignments(
             id,
             assigned_to,
             assignment_type,
-            assignee: profiles!work_order_assignments_assigned_to_fkey(first_name, last_name),
-            assigned_organization: organizations!work_order_assignments_assigned_organization_id_fkey(name, organization_type)
+            assignee: profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
+            assigned_organization: organizations!work_order_assignments_assigned_organization_id_fkey(id, name, organization_type)
           )
         `,
           { count: 'exact' }
@@ -117,9 +133,9 @@ export function useWorkOrder(id: string) {
         .from('work_orders')
         .select(`
           *,
-          organizations!organization_id(name, contact_email, organization_type),
-          trades!trade_id(name),
-          assigned_user:profiles!assigned_to(first_name, last_name)
+          organizations!organization_id(id, name, contact_email, organization_type),
+          trades!trade_id(id, name),
+          assigned_user:profiles!assigned_to(id, first_name, last_name)
         `)
         .eq('id', id)
         .single();

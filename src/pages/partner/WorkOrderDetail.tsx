@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -13,10 +14,12 @@ import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'];
 type Organization = Database['public']['Tables']['organizations']['Row'];
+type Trade = Database['public']['Tables']['trades']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 export type WorkOrderWithOrganization = WorkOrder & {
   organizations: Organization | null;
+  trades: Trade | null;
   assigned_user: Profile | null;
 };
 
@@ -27,6 +30,7 @@ const getWorkOrder = async (id: string): Promise<WorkOrderWithOrganization | nul
     .select(`
       *,
       organizations(*),
+      trades(*),
       assigned_user:profiles(*)
     `)
     .eq('id', id)
@@ -78,7 +82,6 @@ export default function WorkOrderDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
-
         <div className="lg:col-span-2 space-y-6">
           {/* Organization Info */}
           {workOrder.organizations && (
@@ -119,7 +122,7 @@ export default function WorkOrderDetail() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
-                  <p className="text-sm">{workOrder.trade_id || 'Not specified'}</p>
+                  <p className="text-sm">{workOrder.trades?.name || 'Not specified'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
@@ -147,7 +150,7 @@ export default function WorkOrderDetail() {
                   <Label className="text-sm font-medium text-muted-foreground">Location Name</Label>
                   <p className="text-sm">{workOrder.store_location || 'Not specified'}</p>
                 </div>
-                 <div>
+                <div>
                   <Label className="text-sm font-medium text-muted-foreground">Location Code</Label>
                   <p className="text-sm">{workOrder.partner_location_number || 'Not specified'}</p>
                 </div>
@@ -170,32 +173,6 @@ export default function WorkOrderDetail() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Contact Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
-                  <p className="text-sm">{workOrder.location_contact_name || 'Not specified'}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Contact Phone</Label>
-                  <p className="text-sm">{workOrder.location_contact_phone || 'Not specified'}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Contact Email</Label>
-                  <p className="text-sm">{workOrder.location_contact_email || 'Not specified'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Sidebar */}
@@ -209,9 +186,26 @@ export default function WorkOrderDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">{workOrder.status || 'Not specified'}</p>
+              <Badge variant="secondary">{workOrder.status || 'Not specified'}</Badge>
             </CardContent>
           </Card>
+
+          {/* Assigned User */}
+          {workOrder.assigned_user && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Assigned To
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">
+                  {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
