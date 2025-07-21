@@ -1,9 +1,9 @@
 
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
+import { useBranding } from '@/hooks/useBranding';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SingleOrganizationGuard } from '@/components/SingleOrganizationGuard';
@@ -53,6 +53,7 @@ function PartnerSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { profile, signOut } = useAuth();
+  const { getProductDisplayName } = useBranding();
   const collapsed = state === 'collapsed';
 
   const isActive = (path: string) => location.pathname === path;
@@ -67,7 +68,7 @@ function PartnerSidebar() {
         <div className="flex items-center gap-2 px-3 py-2">
           {!collapsed && (
             <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">WorkOrderPro</h2>
+              <h2 className="text-lg font-semibold text-sidebar-foreground">{getProductDisplayName()}</h2>
               <p className="text-xs text-sidebar-foreground/60">Partner Portal</p>
             </div>
           )}

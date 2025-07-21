@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -14,6 +15,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/hooks/useBranding';
 import { sidebarItems, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
 import { UserProfileDropdown } from './UserProfileDropdown';
 
@@ -21,6 +23,7 @@ export function AdminSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { profile } = useAuth();
+  const { getProductDisplayName } = useBranding();
   const collapsed = state === 'collapsed';
   
   const isAdmin = profile?.user_type === 'admin';
@@ -34,7 +37,7 @@ export function AdminSidebar() {
         <div className="flex items-center gap-2 px-3 py-2">
           {!collapsed && (
             <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">WorkOrderPro</h2>
+              <h2 className="text-lg font-semibold text-sidebar-foreground">{getProductDisplayName()}</h2>
               <p className="text-xs text-sidebar-foreground/60">Admin Portal</p>
             </div>
           )}

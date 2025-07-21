@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/hooks/useBranding';
 import { HardHat, LogOut, Settings, User } from 'lucide-react';
 
 const Navbar = () => {
   const { profile, signOut } = useAuth();
+  const { getProductDisplayName, getCompanyDisplayName } = useBranding();
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,7 +59,10 @@ const Navbar = () => {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <HardHat className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-bold text-xl">WorkOrderPro</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-xl">{getProductDisplayName()}</span>
+            <span className="text-xs text-muted-foreground">{getCompanyDisplayName()}</span>
+          </div>
         </div>
 
         {/* Spacer */}

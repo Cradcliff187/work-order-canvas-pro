@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { UserProfileDisplay } from '@/components/shared/UserProfileDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
+import { useBranding } from '@/hooks/useBranding';
 import { Building2, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +24,7 @@ export function StandardHeader({
 }: StandardHeaderProps) {
   const { signOut, profile } = useAuth();
   const { data: userOrganizations } = useUserOrganizations();
+  const { getCompanyDisplayName } = useBranding();
   const primaryOrg = userOrganizations?.[0];
 
   return (
