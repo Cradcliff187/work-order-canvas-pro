@@ -187,7 +187,7 @@ export default function SubmitWorkOrder() {
   const validateStep = async (step: number) => {
     switch (step) {
       case 1:
-        // Implement the complex location validation logic from LocationFields
+        // Work with LocationFields component state - check what it actually sets
         const storeLocation = form.getValues('store_location');
         const partnerLocationSelection = form.getValues('partner_location_selection');
         const partnerLocationNumber = form.getValues('partner_location_number');
@@ -195,23 +195,21 @@ export default function SubmitWorkOrder() {
         // Check if organization uses partner location numbers
         const usesPartnerLocationNumbers = userOrganization?.uses_partner_location_numbers;
         
-        // Scenario 1: Partner location selected from dropdown
-        if (partnerLocationSelection) {
+        // Scenario 1: Partner location selected from dropdown (this is what LocationFields sets)
+        if (partnerLocationSelection && partnerLocationSelection !== 'add_new') {
           return true;
         }
         
-        // Scenario 2: Manual entry mode
+        // Scenario 2: Manual entry mode - store location must be filled
         if (storeLocation) {
           // If organization uses partner location numbers, require location number
-          if (usesPartnerLocationNumbers) {
-            if (!partnerLocationNumber) {
-              toast({
-                variant: "destructive",
-                title: "Location Number Required",
-                description: "This organization requires a location number. Please enter a location number.",
-              });
-              return false;
-            }
+          if (usesPartnerLocationNumbers && !partnerLocationNumber) {
+            toast({
+              variant: "destructive",
+              title: "Location Number Required",
+              description: "This organization requires a location number. Please enter a location number.",
+            });
+            return false;
           }
           // If we have store location (and location number if required), we're good
           return true;
@@ -227,7 +225,7 @@ export default function SubmitWorkOrder() {
           return false;
         }
         
-        // Scenario 4: No location information provided
+        // Scenario 4: No location information provided at all
         if (usesPartnerLocationNumbers) {
           toast({
             variant: "destructive",
