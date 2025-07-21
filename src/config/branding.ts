@@ -78,18 +78,18 @@ export const brandingConfig: BrandingConfig = {
   },
   assets: {
     logos: {
-      main: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
-      horizontal: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
-      square: '/lovable-uploads/314e86c9-4729-4009-bf22-b4e323c9213a',
-      compact: '/lovable-uploads/385a7f9c-c725-4425-823f-e8f61a153150',
-      light: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
-      dark: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
-      icon: '/lovable-uploads/314e86c9-4729-4009-bf22-b4e323c9213a',
-      favicon: '/lovable-uploads/385a7f9c-c725-4425-823f-e8f61a153150'
+      main: '/branding/logos/AKC_logo_fixed_header.png',
+      horizontal: '/branding/logos/AKC_logo_fixed_header.png',
+      square: '/branding/logos/AKC_logo_fixed_square_512.png',
+      compact: '/branding/logos/AKC_logo_fixed_square_512.png',
+      light: '/branding/logos/AKC_logo_fixed_header.png',
+      dark: '/branding/logos/AKC_logo_fixed_header.png',
+      icon: '/branding/logos/AKC_logo_fixed_square_512.png',
+      favicon: '/branding/logos/AKC_logo_fixed_square_512.png'
     },
     social: {
-      ogImage: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8',
-      twitterImage: '/lovable-uploads/8ce5b7da-7981-441d-95b5-e8c5858841e8'
+      ogImage: '/branding/logos/AKC_logo_fixed_header.png',
+      twitterImage: '/branding/logos/AKC_logo_fixed_header.png'
     }
   },
   theme: {
