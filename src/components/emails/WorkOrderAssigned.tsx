@@ -27,6 +27,10 @@ interface WorkOrderAssignedProps {
   description: string;
   estimatedCompletionDate?: string;
   workOrderUrl: string;
+  logoUrl?: string;
+  companyName?: string;
+  supportEmail?: string;
+  poweredBy?: string;
 }
 
 export const WorkOrderAssigned = ({
@@ -42,13 +46,24 @@ export const WorkOrderAssigned = ({
   description,
   estimatedCompletionDate,
   workOrderUrl,
+  logoUrl = '',
+  companyName = 'AKC Contracting',
+  supportEmail = 'support@akcllc.com',
+  poweredBy = 'Powered by WorkOrderPortal'
 }: WorkOrderAssignedProps) => (
   <Html>
     <Head />
     <Preview>Work order #{workOrderNumber} has been assigned to you</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Work Order Assignment</Heading>
+        <Section style={header}>
+          {logoUrl && (
+            <img src={logoUrl} height="60" alt={`${companyName} Logo`} style={logo} />
+          )}
+          <Heading style={h1}>{companyName} Work Order Portal</Heading>
+        </Section>
+
+        <Heading style={h2}>Work Order Assignment</Heading>
         
         <Text style={text}>
           Hello {subcontractorName},
@@ -101,7 +116,8 @@ export const WorkOrderAssigned = ({
         <Hr style={hr} />
 
         <Text style={footer}>
-          This email was sent by WorkOrderPro - Work Order Management System
+          {poweredBy}<br/>
+          For support, contact us at <Link href={`mailto:${supportEmail}`} style={footerLink}>{supportEmail}</Link>
         </Text>
       </Container>
     </Body>
@@ -119,11 +135,31 @@ const container = {
   maxWidth: '580px',
 };
 
+const header = {
+  textAlign: 'center' as const,
+  marginBottom: '32px',
+  backgroundColor: '#1e40af',
+  padding: '20px',
+  borderRadius: '8px 8px 0 0',
+};
+
+const logo = {
+  margin: '0 auto 10px',
+};
+
 const h1 = {
-  color: '#1f2937',
+  color: '#ffffff',
   fontSize: '24px',
   fontWeight: 'bold',
-  margin: '40px 0',
+  margin: '0',
+  padding: '0',
+};
+
+const h2 = {
+  color: '#1f2937',
+  fontSize: '20px',
+  fontWeight: 'bold',
+  margin: '0 0 24px 0',
   padding: '0',
 };
 
@@ -183,6 +219,11 @@ const footer = {
   color: '#6b7280',
   fontSize: '12px',
   textAlign: 'center' as const,
+};
+
+const footerLink = {
+  color: '#2563eb',
+  textDecoration: 'none',
 };
 
 export default WorkOrderAssigned;
