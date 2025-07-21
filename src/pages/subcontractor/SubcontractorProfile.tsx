@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FormattedInput } from '@/components/ui/formatted-input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
@@ -121,9 +123,9 @@ const SubcontractorProfile = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input
+                  <FormattedInput
                     id="email"
-                    type="email"
+                    formatter="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter email address"
@@ -132,12 +134,12 @@ const SubcontractorProfile = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input
+                  <FormattedInput
                     id="phone"
-                    type="tel"
+                    formatter="phone"
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="Enter phone number"
+                    placeholder="(555) 123-4567"
                   />
                 </div>
 
