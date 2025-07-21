@@ -17,10 +17,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 20%;
 
-    /* Primary: AKC Blue #1E90FF extracted from logos */
-    --primary: 210 100% 56%;
+    /* Primary: AKC Blue #0080FF */
+    --primary: 210 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 210 100% 66%;
+    --primary-glow: 210 100% 60%;
 
     /* Secondary: Clean Gray for professional look */
     --secondary: 210 10% 96%;
@@ -44,7 +44,7 @@
 
     --border: 210 20% 90%;
     --input: 210 20% 95%;
-    --ring: 210 100% 56%;
+    --ring: 210 100% 50%;
 
     --radius: 0.5rem;
 
@@ -66,7 +66,7 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 210 100% 56%;
+    --sidebar-ring: 210 100% 50%;
   }
 
   .dark {
