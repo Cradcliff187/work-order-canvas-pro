@@ -27,7 +27,7 @@ interface UseWorkOrderNumberGenerationReturn {
  * - If organization doesn't use partner location codes, generates auto location code
  * - Generates final work order number with format: {initials}-{locationCode}-{sequence}
  * 
- * @param organizationId - Organization ID
+ * @param organizationId - Organization ID (undefined = no generation)
  * @param locationNumber - Manual location code (for orgs that use partner location codes)
  * @returns Work order number generation data
  */
@@ -47,9 +47,17 @@ export function useWorkOrderNumberGeneration({
 
   useEffect(() => {
     const generateWorkOrderNumber = async () => {
+      // Don't do anything if organizationId is not provided
       if (!organizationId) {
         setWorkOrderNumber('');
         setIsLoading(false);
+        setError(null);
+        setIsFallback(false);
+        setWarning(null);
+        setRequiresInitials(false);
+        setOrganizationName(undefined);
+        setOrganizationInitials(undefined);
+        setGeneratedLocationNumber(undefined);
         return;
       }
 

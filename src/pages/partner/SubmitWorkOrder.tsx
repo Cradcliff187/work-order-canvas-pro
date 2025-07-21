@@ -188,7 +188,7 @@ export default function SubmitWorkOrder() {
 
   const effectiveLocationNumber = getEffectiveLocationNumber();
 
-  // Work order number generation - now uses computed effective location number
+  // Work order number generation - ONLY on step 3 (review step)
   const {
     workOrderNumber,
     isLoading: isLoadingWorkOrderNumber,
@@ -199,8 +199,8 @@ export default function SubmitWorkOrder() {
     organizationName,
     locationNumber: generatedLocationNumber,
   } = useWorkOrderNumberGeneration({
-    organizationId: effectiveOrganizationId,
-    locationNumber: effectiveLocationNumber,
+    organizationId: currentStep === 3 ? effectiveOrganizationId : undefined,
+    locationNumber: currentStep === 3 ? effectiveLocationNumber : undefined,
   });
 
   // Auto-generate title when store_location and trade are selected
@@ -512,7 +512,6 @@ export default function SubmitWorkOrder() {
         </Card>
       )}
 
-      {/* Enhanced Work Order Number Preview */}
       {effectiveOrganizationId && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="p-4">
