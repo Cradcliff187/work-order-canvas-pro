@@ -1,8 +1,23 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/resend-service.ts";
+
+// Branding constants - hardcoded as we cannot import from src/
+const BRANDING_VARIABLES = {
+  company_name: "AKC Contracting",
+  logo_url: "https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12/branding/logos/akc-logo-horizontal.png",
+  support_email: "support@akcllc.com",
+  powered_by: "Powered by WorkOrderPortal"
+};
+
+// Helper function to add branding variables to any data object
+function addBrandingVariables(data: Record<string, any>): Record<string, any> {
+  return {
+    ...data,
+    ...BRANDING_VARIABLES
+  };
+}
 
 // Rate limiting helper
 let lastEmailTime = 0;
@@ -83,10 +98,10 @@ function replaceTemplateVariables(content: string, variables: Record<string, any
   return processedContent;
 }
 
-// Enhanced helper function to merge custom_data with database data
+// Enhanced helper function to merge custom_data with database data and add branding
 function mergeTemplateVariables(databaseData: Record<string, any> = {}, customData: Record<string, any> = {}): Record<string, any> {
-  // Custom data takes priority over database data
-  const merged = { ...databaseData, ...customData };
+  // Add branding variables first, then database data, then custom data (priority order)
+  const merged = { ...BRANDING_VARIABLES, ...databaseData, ...customData };
   
   // Ensure all values are properly converted to strings for template replacement
   const processed: Record<string, any> = {};
@@ -370,8 +385,8 @@ serve(async (req) => {
     if (test_mode && test_recipient) {
       console.log('🧪 Test mode enabled with custom recipient:', test_recipient);
       
-      // Create mock data for testing
-      const mockData = {
+      // Create mock data for testing with branding variables
+      const mockData = addBrandingVariables({
         work_order_number: 'TEST-001',
         organization_name: 'Test Organization',
         first_name: 'Test',
@@ -379,7 +394,7 @@ serve(async (req) => {
         status: 'approved',
         title: 'Test Work Order',
         review_notes: 'This is a test email'
-      };
+      });
       
       // Get template
       const { data: template, error: templateError } = await supabase
@@ -394,7 +409,7 @@ serve(async (req) => {
         return createCorsErrorResponse('Template not found', 404);
       }
       
-      // Merge mock data with custom_data
+      // Merge mock data with custom_data and branding
       const variables = mergeTemplateVariables(mockData, custom_data);
       
       // Replace all variables
@@ -459,7 +474,7 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Prepare template variables using enhanced merging
+      // Prepare template variables with branding
       const databaseData = {};
       const variables = mergeTemplateVariables(databaseData, custom_data);
 
@@ -525,7 +540,7 @@ serve(async (req) => {
         return createCorsErrorResponse('Email template not found', 500);
       }
 
-      // Prepare template variables using enhanced merging
+      // Prepare template variables with branding
       const databaseData = {};
       const variables = mergeTemplateVariables(databaseData, custom_data);
 
@@ -619,7 +634,7 @@ serve(async (req) => {
       // Generate URLs
       const urls = generateUrls(workOrder.id);
 
-      // Prepare comprehensive template variables
+      // Prepare comprehensive template variables with branding
       const databaseData = {
         // Work Order Details
         work_order_number: workOrder.work_order_number || 'N/A',
@@ -747,7 +762,7 @@ serve(async (req) => {
       // Generate URLs
       const urls = generateUrls(workOrder.id);
 
-      // Prepare comprehensive template variables
+      // Prepare comprehensive template variables with branding
       const databaseData = {
         // Subcontractor Details
         subcontractor_name: `${workOrder.profiles.first_name || ''} ${workOrder.profiles.last_name || ''}`.trim(),
@@ -855,7 +870,7 @@ serve(async (req) => {
         .eq('id', record_id)
         .single();
 
-      if (reportError || !reportData) {
+      if (reportError || !reportData || !reportData.profiles?.email) {
         console.error('❌ Report fetch error:', reportError);
         return createCorsErrorResponse('Report not found', 404);
       }
@@ -889,7 +904,7 @@ serve(async (req) => {
       // Generate URLs
       const urls = generateUrls(report.work_order_id, report.id);
 
-      // Prepare comprehensive template variables
+      // Prepare comprehensive template variables with branding
       const databaseData = {
         // Work Order Details
         work_order_number: report.work_orders?.work_order_number || 'N/A',
@@ -986,8 +1001,8 @@ serve(async (req) => {
         .single();
 
       if (reportError || !reportData || !reportData.profiles?.email) {
-        console.error('❌ Report reviewed fetch error:', reportError);
-        return createCorsErrorResponse('Report or recipient not found', 404);
+        console.error('❌ Report fetch error:', reportError);
+        return createCorsErrorResponse('Report not found', 404);
       }
 
       const report = reportData;
@@ -1008,7 +1023,7 @@ serve(async (req) => {
       // Generate URLs
       const urls = generateUrls(report.work_order_id, report.id);
 
-      // Prepare comprehensive template variables
+      // Prepare comprehensive template variables with branding
       const databaseData = {
         // Subcontractor Details
         subcontractor_name: `${report.profiles?.first_name || ''} ${report.profiles?.last_name || ''}`.trim(),
@@ -1095,7 +1110,7 @@ serve(async (req) => {
 
     console.log(`📄 Found generic email template: ${template.template_name}`);
 
-    // For generic templates, use custom_data or create default variables
+    // For generic templates, use custom_data with branding
     const variables = mergeTemplateVariables({}, custom_data || {});
     
     // Add default system variables if not provided
