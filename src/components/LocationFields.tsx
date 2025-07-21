@@ -3,6 +3,7 @@ import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { FormattedInput } from "@/components/ui/formatted-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { US_STATES } from '@/constants/states';
@@ -91,7 +92,11 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
               <FormItem>
                 <FormLabel>Street Address</FormLabel>
                 <FormControl>
-                  <Input placeholder="123 Main Street" {...field} />
+                  <FormattedInput 
+                    formatter="streetAddress"
+                    placeholder="123 Main Street" 
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -106,7 +111,11 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
                 <FormItem>
                   <FormLabel>City</FormLabel>
                   <FormControl>
-                    <Input placeholder="City" {...field} />
+                    <FormattedInput 
+                      formatter="city"
+                      placeholder="City" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -145,7 +154,11 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
                 <FormItem>
                   <FormLabel>ZIP Code</FormLabel>
                   <FormControl>
-                    <Input placeholder="12345" {...field} />
+                    <FormattedInput 
+                      formatter="zip"
+                      placeholder="12345 or 12345-6789" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -176,7 +189,11 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
                 <FormItem>
                   <FormLabel>Location Contact Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="site@company.com" {...field} />
+                    <FormattedInput 
+                      formatter="email"
+                      placeholder="site@company.com" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -190,7 +207,11 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
                 <FormItem>
                   <FormLabel>Location Contact Phone</FormLabel>
                   <FormControl>
-                    <Input placeholder="(555) 123-4567" {...field} />
+                    <FormattedInput 
+                      formatter="phone"
+                      placeholder="(555) 123-4567" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
