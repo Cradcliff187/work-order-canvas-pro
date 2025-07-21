@@ -72,7 +72,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
           {/* Main Content */}
           <main className={`flex-1 ${isMobile ? 'pb-16' : ''}`}>
             <SingleOrganizationGuard userType="subcontractor">
-              <div className="p-6">
+              <div className="container mx-auto p-4 md:p-6 max-w-7xl">
                 {children}
               </div>
             </SingleOrganizationGuard>
