@@ -1,10 +1,12 @@
 
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormattedInput } from "@/components/ui/formatted-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,7 +22,10 @@ const editOrganizationSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
   initials: z.string().min(1, 'Initials are required').max(5, 'Initials must be less than 5 characters'),
   contact_email: z.string().email('Invalid email format'),
-  contact_phone: z.string().optional(),
+  contact_phone: z.string().optional().refine(
+    (val) => !val || /^\(\d{3}\) \d{3}-\d{4}$/.test(val),
+    { message: "Phone number must be in format (555) 123-4567" }
+  ),
   address: z.string().optional(),
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
   uses_partner_location_numbers: z.boolean().default(false),
@@ -141,7 +146,7 @@ export function EditOrganizationModal({ organization, open, onOpenChange }: Edit
                 <FormItem>
                   <FormLabel>Contact Email *</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="contact@company.com" {...field} />
+                    <FormattedInput formatter="email" placeholder="contact@company.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,7 +160,7 @@ export function EditOrganizationModal({ organization, open, onOpenChange }: Edit
                 <FormItem>
                   <FormLabel>Contact Phone</FormLabel>
                   <FormControl>
-                    <Input placeholder="(555) 123-4567" {...field} />
+                    <FormattedInput formatter="phone" placeholder="(555) 123-4567" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -251,3 +256,4 @@ export function EditOrganizationModal({ organization, open, onOpenChange }: Edit
     </Dialog>
   );
 }
+
