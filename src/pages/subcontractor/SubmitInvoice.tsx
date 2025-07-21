@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,10 +18,12 @@ import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
 import { useInvoiceDrafts, type InvoiceDraftData } from '@/hooks/useInvoiceDrafts';
 import { useInvoiceFileUpload } from '@/hooks/useInvoiceFileUpload';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Save, FileText, Trash2, Clock, TrendingUp } from 'lucide-react';
 import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
 import { FileUpload } from '@/components/FileUpload';
+import { MobileMediaUpload } from '@/components/MobileMediaUpload';
 import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
 
 // Relaxed schema for drafts
@@ -58,6 +61,7 @@ const SubmitInvoice = () => {
   const { completedWorkOrdersForInvoicing } = useSubcontractorWorkOrders();
   const invoiceSubmission = useInvoiceSubmission();
   const invoiceDrafts = useInvoiceDrafts();
+  const isMobile = useIsMobile();
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [isSubmissionMode, setIsSubmissionMode] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -513,14 +517,28 @@ const SubmitInvoice = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <FileUpload
-                    onFilesSelected={setSelectedFiles}
-                    maxFiles={5}
-                    maxSizeBytes={10 * 1024 * 1024}
-                    uploadProgress={uploadProgress}
-                    disabled={invoiceSubmission.isSubmitting || isUploading || invoiceDrafts.isSaving}
-                    acceptedTypes={['.pdf', '.xlsx', '.xls', '.csv', '.doc', '.docx', 'image/*']}
-                  />
+                  {isMobile ? (
+                    <MobileMediaUpload
+                      onFilesSelected={setSelectedFiles}
+                      maxFiles={5}
+                      maxSizeBytes={10 * 1024 * 1024}
+                      uploadProgress={uploadProgress}
+                      disabled={invoiceSubmission.isSubmitting || isUploading || invoiceDrafts.isSaving}
+                      showCamera={false}
+                      showDocumentUpload={true}
+                      compactView={true}
+                      acceptedTypes={['.pdf', '.xlsx', '.xls', '.csv', '.doc', '.docx', 'image/*']}
+                    />
+                  ) : (
+                    <FileUpload
+                      onFilesSelected={setSelectedFiles}
+                      maxFiles={5}
+                      maxSizeBytes={10 * 1024 * 1024}
+                      uploadProgress={uploadProgress}
+                      disabled={invoiceSubmission.isSubmitting || isUploading || invoiceDrafts.isSaving}
+                      acceptedTypes={['.pdf', '.xlsx', '.xls', '.csv', '.doc', '.docx', 'image/*']}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
