@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -188,9 +187,27 @@ export default function SubmitWorkOrder() {
   const validateStep = async (step: number) => {
     switch (step) {
       case 1:
-        const locationFields: (keyof FormData)[] = ['store_location'];
-        const locationValid = await form.trigger(locationFields);
-        return locationValid;
+        // Check for any form of location information
+        const storeLocation = form.getValues('store_location');
+        const partnerLocationSelection = form.getValues('partner_location_selection');
+        const partnerLocationNumber = form.getValues('partner_location_number');
+        
+        // Valid if any of these conditions are met:
+        // 1. Store location is filled (manual entry or partner location selected)
+        // 2. Partner location is selected from dropdown
+        // 3. Partner location number is entered (for manual entry)
+        const hasLocationInfo = storeLocation || partnerLocationSelection || partnerLocationNumber;
+        
+        if (!hasLocationInfo) {
+          toast({
+            variant: "destructive",
+            title: "Location Required",
+            description: "Please select a location or enter location details to continue.",
+          });
+          return false;
+        }
+        
+        return true;
       case 2:
         const tradeFields: (keyof FormData)[] = ['title', 'trade_id'];
         const tradeValid = await form.trigger(tradeFields);
