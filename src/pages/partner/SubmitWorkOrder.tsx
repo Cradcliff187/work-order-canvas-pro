@@ -24,13 +24,13 @@ import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGenerati
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useOrganizations } from '@/hooks/useOrganizations';
 
-// Unified form schema that includes all fields
+// Unified form schema with improved error messages
 const workOrderFormSchema = z.object({
   title: z.string().max(200, 'Title must be less than 200 characters').optional(),
   description: z.string().optional(),
-  trade_id: z.string().min(1, 'Trade is required'),
-  organization_id: z.string().min(1, 'Organization is required'),
-  store_location: z.string().min(1, 'Location name is required'),
+  trade_id: z.string().min(1, 'Please select the type of work needed'),
+  organization_id: z.string().min(1, 'Please choose an organization'),
+  store_location: z.string().min(1, 'Please enter a location name'),
   street_address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -42,7 +42,7 @@ const workOrderFormSchema = z.object({
   location_name: z.string().optional(),
   location_contact_name: z.string().optional(),
   location_contact_phone: z.string().optional(),
-  location_contact_email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  location_contact_email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
   partner_location_selection: z.string().optional(),
@@ -213,7 +213,7 @@ export default function SubmitWorkOrder() {
     }
   }, [effectiveOrganizationId, form]);
 
-  // Step validation functions
+  // Step validation functions with improved error messages
   const validateStep = async (step: number) => {
     switch (step) {
       case 1:
@@ -222,7 +222,7 @@ export default function SubmitWorkOrder() {
           toast({
             variant: "destructive",
             title: "Organization Required",
-            description: "Please select an organization first.",
+            description: "Please choose an organization first.",
           });
           return false;
         }
@@ -247,7 +247,7 @@ export default function SubmitWorkOrder() {
             toast({
               variant: "destructive",
               title: "Location Code Required",
-              description: "This organization requires a location code. Please enter a location code.",
+              description: "Please enter a location code for this location.",
             });
             return false;
           }
@@ -259,25 +259,17 @@ export default function SubmitWorkOrder() {
           toast({
             variant: "destructive",
             title: "Location Name Required",
-            description: "Please enter a location name to continue.",
+            description: "Please enter a location name.",
           });
           return false;
         }
         
         // Scenario 4: No location information provided at all
-        if (usesPartnerLocationNumbers) {
-          toast({
-            variant: "destructive",
-            title: "Location Required",
-            description: "Please select a location from the dropdown or enter location details with a location code.",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Location Required",
-            description: "Please select a location or enter location details to continue.",
-          });
-        }
+        toast({
+          variant: "destructive",
+          title: "Location Required",
+          description: "Please choose a location.",
+        });
         return false;
         
       case 2:
@@ -503,7 +495,7 @@ export default function SubmitWorkOrder() {
             </Card>
           )}
 
-          {/* Step 2: Trade & Description - Title field removed for partners */}
+          {/* Step 2: Trade & Description */}
           {currentStep === 2 && (
             <Card>
               <CardHeader>
@@ -522,11 +514,11 @@ export default function SubmitWorkOrder() {
                     name="trade_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Trade *</FormLabel>
+                        <FormLabel>Type of Work *</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-12 sm:h-11">
-                              <SelectValue placeholder="Select a trade" />
+                              <SelectValue placeholder="Select the type of work needed" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -537,6 +529,9 @@ export default function SubmitWorkOrder() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Choose the category that best describes the work needed
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -547,14 +542,17 @@ export default function SubmitWorkOrder() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Work Description</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Detailed description of the work to be performed..."
+                            placeholder="Describe what needs to be done..."
                             className="min-h-[140px] sm:min-h-[120px]"
                             {...field}
                           />
                         </FormControl>
+                        <FormDescription>
+                          The more details you provide, the better we can help you
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
