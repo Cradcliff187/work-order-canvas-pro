@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -722,6 +723,7 @@ export default function SubmitWorkOrder() {
                 organizationName={organizationName}
                 userProfile={profile}
                 selectedLocation={selectedLocation}
+                generatedLocationNumber={generatedLocationNumber}
               />
             </div>
           )}

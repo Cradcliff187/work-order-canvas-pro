@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +14,7 @@ interface WorkOrderReviewSummaryProps {
   organizationName?: string;
   userProfile?: any;
   selectedLocation?: any;
+  generatedLocationNumber?: string;
 }
 
 export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
@@ -23,7 +23,8 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
   isLoadingWorkOrderNumber,
   organizationName,
   userProfile,
-  selectedLocation
+  selectedLocation,
+  generatedLocationNumber
 }) => {
   const form = useFormContext();
   const formData = form.getValues();
@@ -43,9 +44,14 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
   // Get location data (from existing location or manual entry)
   const getLocationData = () => {
     if (isExistingLocation && selectedLocation) {
+      // Priority: generatedLocationNumber > selectedLocation.location_number
+      const locationNumber = generatedLocationNumber || selectedLocation.location_number;
+      const displayName = selectedLocation.location_name || formData.store_location;
+      const formattedName = locationNumber ? `${displayName} (${locationNumber})` : displayName;
+      
       return {
-        name: selectedLocation.location_name || formData.store_location,
-        code: selectedLocation.location_number || formData.partner_location_number,
+        name: formattedName,
+        code: locationNumber,
         address: formatAddress({
           location_street_address: selectedLocation.street_address,
           location_city: selectedLocation.city,
@@ -59,9 +65,14 @@ export const WorkOrderReviewSummary: React.FC<WorkOrderReviewSummaryProps> = ({
     }
     
     // Manual entry or fallback
+    // Priority: generatedLocationNumber > formData.partner_location_number
+    const locationNumber = generatedLocationNumber || formData.partner_location_number;
+    const displayName = formData.store_location || formData.location_name;
+    const formattedName = locationNumber ? `${displayName} (${locationNumber})` : displayName;
+    
     return {
-      name: formData.store_location || formData.location_name,
-      code: formData.partner_location_number,
+      name: formattedName,
+      code: locationNumber,
       address: formatAddress({
         location_street_address: formData.location_street_address || formData.street_address,
         location_city: formData.location_city || formData.city,
