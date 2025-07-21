@@ -34,7 +34,7 @@ import { format } from 'date-fns';
 const WorkOrderList = () => {
   const navigate = useNavigate();
   const { data: workOrdersData, isLoading } = usePartnerWorkOrders();
-  const { data: userOrganization } = useUserOrganization();
+  const { organization: userOrganization } = useUserOrganization();
   const { data: locations } = usePartnerLocations(userOrganization?.id);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,6 +78,7 @@ const WorkOrderList = () => {
           <CardContent className="p-6">
             <div className="flex gap-4 mb-6">
               <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-48" />
               <Skeleton className="h-10 w-48" />
               <Skeleton className="h-10 w-48" />
             </div>
