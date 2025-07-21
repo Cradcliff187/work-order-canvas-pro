@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -283,7 +282,7 @@ export default function SubmitWorkOrder() {
         return false;
         
       case 2:
-        // Only require trade_id for step 2 since title is now optional
+        // Only require trade_id for step 2 since title is no longer shown to partners
         const tradeFields: (keyof FormData)[] = ['trade_id'];
         const tradeValid = await form.trigger(tradeFields);
         return tradeValid;
@@ -505,7 +504,7 @@ export default function SubmitWorkOrder() {
             </Card>
           )}
 
-          {/* Step 2: Trade & Description */}
+          {/* Step 2: Trade & Description - Title field removed for partners */}
           {currentStep === 2 && (
             <Card>
               <CardHeader>
@@ -519,27 +518,6 @@ export default function SubmitWorkOrder() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Work Order Title</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Auto-generated from location and trade selection"
-                            className="h-11"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Title will be auto-generated when you select a location and trade. You can edit it if needed.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <FormField
                     control={form.control}
                     name="trade_id"
@@ -715,7 +693,7 @@ export default function SubmitWorkOrder() {
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Title</Label>
-                      <p className="text-sm">{form.watch('title') || 'Not specified'}</p>
+                      <p className="text-sm">{form.watch('title') || `${form.watch('store_location') || 'New Location'} - Work Order`}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
