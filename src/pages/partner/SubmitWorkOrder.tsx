@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, ArrowLeft, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
@@ -52,10 +52,54 @@ const workOrderFormSchema = z.object({
 
 type FormData = z.infer<typeof workOrderFormSchema>;
 
+// Step component for progress indicator
+const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
+  const steps = [
+    { number: 1, title: 'Location Details' },
+    { number: 2, title: 'Trade & Description' },
+    { number: 3, title: 'Review & Submit' }
+  ];
+
+  return (
+    <div className="flex items-center justify-center space-x-8 mb-8">
+      {steps.map((step, index) => (
+        <div key={step.number} className="flex items-center">
+          <div className="flex flex-col items-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+              step.number < currentStep 
+                ? 'bg-primary text-primary-foreground' 
+                : step.number === currentStep 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'
+            }`}>
+              {step.number < currentStep ? (
+                <Check className="h-5 w-5" />
+              ) : (
+                step.number
+              )}
+            </div>
+            <span className={`mt-2 text-xs font-medium ${
+              step.number === currentStep ? 'text-foreground' : 'text-muted-foreground'
+            }`}>
+              {step.title}
+            </span>
+          </div>
+          {index < steps.length - 1 && (
+            <div className={`w-16 h-0.5 mx-4 ${
+              step.number < currentStep ? 'bg-primary' : 'bg-muted'
+            }`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function SubmitWorkOrder() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState(1);
   const [trades, setTrades] = useState<any[]>([]);
   const [isLoadingTrades, setIsLoadingTrades] = useState(true);
   const [tradesError, setTradesError] = useState<string | null>(null);
@@ -139,6 +183,38 @@ export default function SubmitWorkOrder() {
       form.setValue('organization_id', userOrganization.id);
     }
   }, [userOrganization?.id, form]);
+
+  // Step validation functions
+  const validateStep = async (step: number) => {
+    switch (step) {
+      case 1:
+        const locationFields = ['store_location'];
+        const locationValid = await form.trigger(locationFields);
+        return locationValid;
+      case 2:
+        const tradeFields = ['title', 'trade_id'];
+        const tradeValid = await form.trigger(tradeFields);
+        return tradeValid;
+      case 3:
+        return true; // Review step doesn't need validation
+      default:
+        return true;
+    }
+  };
+
+  // Navigation functions
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid && currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
   // Handle form submission
   const onSubmit = async (data: FormData) => {
@@ -252,207 +328,298 @@ export default function SubmitWorkOrder() {
         </div>
       </div>
 
-      {/* Work Order Number Preview */}
-      {workOrderNumber && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <span className="font-medium">Work Order Number:</span>
-              </div>
-              <Badge variant="outline" className="font-mono text-sm">
-                {workOrderNumber}
-              </Badge>
-              {isFallback && (
-                <Badge variant="secondary" className="text-xs">
-                  Fallback
-                </Badge>
-              )}
-            </div>
-            {workOrderNumberWarning && (
-              <p className="text-sm text-muted-foreground mt-2">
-                {workOrderNumberWarning}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Organization Info */}
-      {userOrganization && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Building2 className="h-5 w-5 text-primary" />
-              <div>
-                <div className="font-medium">{userOrganization.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {userOrganization.contact_email}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Step Progress Indicator */}
+      <StepIndicator currentStep={currentStep} totalSteps={3} />
 
       {/* Form */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <StandardFormLayout>
-            <StandardFormLayout.Section
-              title="Work Order Details"
-              description="Provide detailed information about the work order"
-            >
-              <StandardFormLayout.FieldGroup>
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Brief title of the work order"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          {/* Step 1: Location Details */}
+          {currentStep === 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Location Details
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Enter the location information for this work order
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <LocationFields
+                  form={form}
+                  organizationId={userOrganization?.id}
+                  organizationType={userOrganization?.organization_type}
+                  showPoNumber={true}
                 />
+              </CardContent>
+            </Card>
+          )}
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Detailed description of the work to be performed..."
-                          className="min-h-[120px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="trade_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Trade *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+          {/* Step 2: Trade & Description */}
+          {currentStep === 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Trade & Description
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Provide details about the work to be performed
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Work Order Title *</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a trade" />
-                          </SelectTrigger>
+                          <Input
+                            placeholder="Brief title of the work order"
+                            className="h-11"
+                            {...field}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          {trades.map((trade) => (
-                            <SelectItem key={trade.id} value={trade.id}>
-                              {trade.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </StandardFormLayout.FieldGroup>
-            </StandardFormLayout.Section>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            {/* Location Fields Integration */}
-            <StandardFormLayout.Section
-              title="Location Information"
-              description="Enter the location details for the work order"
+                  <FormField
+                    control={form.control}
+                    name="trade_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Trade *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select a trade" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {trades.map((trade) => (
+                              <SelectItem key={trade.id} value={trade.id}>
+                                {trade.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Detailed description of the work to be performed..."
+                            className="min-h-[120px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="due_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Due Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              className="h-11"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="estimated_hours"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estimated Hours</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              min="0"
+                              placeholder="Estimated hours"
+                              className="h-11"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Review & Submit */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              {/* Work Order Number Preview */}
+              {workOrderNumber && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <span className="font-medium">Work Order Number:</span>
+                      </div>
+                      <Badge variant="outline" className="font-mono text-sm">
+                        {workOrderNumber}
+                      </Badge>
+                      {isFallback && (
+                        <Badge variant="secondary" className="text-xs">
+                          Fallback
+                        </Badge>
+                      )}
+                    </div>
+                    {workOrderNumberWarning && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {workOrderNumberWarning}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Organization Info */}
+              {userOrganization && (
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <div>
+                        <div className="font-medium">{userOrganization.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {userOrganization.contact_email}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Review Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    Review & Submit
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Please review your work order details before submitting
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Location</Label>
+                      <p className="text-sm">{form.watch('store_location') || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Title</Label>
+                      <p className="text-sm">{form.watch('title') || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
+                      <p className="text-sm">
+                        {trades.find(t => t.id === form.watch('trade_id'))?.name || 'Not specified'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">PO Number</Label>
+                      <p className="text-sm">{form.watch('partner_po_number') || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  {form.watch('description') && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                      <p className="text-sm">{form.watch('description')}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex items-center justify-between pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="min-h-[44px]"
             >
-              <LocationFields
-                form={form}
-                organizationId={userOrganization?.id}
-                organizationType={userOrganization?.organization_type}
-                showPoNumber={true}
-              />
-            </StandardFormLayout.Section>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
 
-            {/* Scheduling Section */}
-            <StandardFormLayout.Section
-              title="Scheduling"
-              description="Enter scheduling details for the work order"
-            >
-              <StandardFormLayout.FieldGroup>
-                <FormField
-                  control={form.control}
-                  name="due_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Due Date</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="estimated_hours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Hours</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          placeholder="Estimated hours for the work order"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </StandardFormLayout.FieldGroup>
-            </StandardFormLayout.Section>
-
-            <StandardFormLayout.Actions>
-              <Button 
-                type="button" 
-                variant="outline" 
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => navigate('/partner/work-orders')}
                 className="min-h-[44px]"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
-                className="min-h-[44px]"
-              >
-                {createWorkOrderMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Submit Work Order
-                  </>
-                )}
-              </Button>
-            </StandardFormLayout.Actions>
-          </StandardFormLayout>
+
+              {currentStep < 3 ? (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  className="min-h-[44px]"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
+                  className="min-h-[44px]"
+                >
+                  {createWorkOrderMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Submit Work Order
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
         </form>
       </Form>
     </div>
