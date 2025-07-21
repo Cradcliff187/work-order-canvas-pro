@@ -28,16 +28,7 @@ export function createWorkOrderColumns({ onView }: WorkOrderColumnProps): Column
   return [
     {
       accessorKey: 'work_order_number',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="h-auto p-0 font-medium"
-        >
-          Work Order #
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
+      header: 'Work Order #',
       cell: ({ row }) => (
         <div className="font-medium">
           {row.getValue('work_order_number') || 'N/A'}
@@ -46,16 +37,7 @@ export function createWorkOrderColumns({ onView }: WorkOrderColumnProps): Column
     },
     {
       accessorKey: 'title',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="h-auto p-0 font-medium"
-        >
-          Title
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
+      header: 'Title',
       cell: ({ row }) => (
         <div className="max-w-[200px] truncate">
           {row.getValue('title')}
@@ -64,14 +46,32 @@ export function createWorkOrderColumns({ onView }: WorkOrderColumnProps): Column
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto p-0 font-medium"
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => (
         <WorkOrderStatusBadge status={row.getValue('status')} />
       ),
     },
     {
-      id: 'location',
-      header: 'Location',
+      accessorKey: 'store_location',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto p-0 font-medium"
+        >
+          Location
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const storeLocation = row.original.store_location;
         const city = row.original.city;
@@ -90,8 +90,18 @@ export function createWorkOrderColumns({ onView }: WorkOrderColumnProps): Column
       },
     },
     {
+      accessorFn: (row) => row.trades?.name,
       id: 'trade',
-      header: 'Trade',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto p-0 font-medium"
+        >
+          Trade
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="text-sm">
           {row.original.trades?.name || 'N/A'}
