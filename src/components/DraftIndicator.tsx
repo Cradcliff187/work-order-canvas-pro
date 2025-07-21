@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -109,7 +110,7 @@ export function DraftIndicator({
       {totalDrafts > 0 && (
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 px-2">
+            <Button variant="outline" size="sm" className="min-h-[44px] px-2">
               <FileText className="h-3 w-3 mr-1" />
               <Badge variant="secondary" className="h-5 px-1 text-xs">
                 {totalDrafts}
@@ -146,7 +147,7 @@ export function DraftIndicator({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleLoadDraft(draft)}
-                          className="h-6 px-2"
+                          className="min-h-[44px] px-2"
                         >
                           Load
                         </Button>
@@ -154,7 +155,7 @@ export function DraftIndicator({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteDraft(draft.id)}
-                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          className="min-h-[44px] w-10 p-0 text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -185,7 +186,7 @@ export function DraftIndicator({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleLoadDraft(draft)}
-                        className="h-6 px-2"
+                        className="min-h-[44px] px-2"
                       >
                         Load
                       </Button>
@@ -210,7 +211,7 @@ export function DraftIndicator({
           size="sm"
           onClick={handleSync}
           disabled={!isOnline || isLoading}
-          className="h-8 px-2"
+          className="min-h-[44px] px-2"
         >
           <Upload className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
           <Badge variant="secondary" className="h-5 px-1 text-xs">

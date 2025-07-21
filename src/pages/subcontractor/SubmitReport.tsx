@@ -1,206 +1,213 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
-import { useFileUpload } from "@/hooks/useFileUpload";
-import { useDraftAutoSave } from "@/hooks/useDraftAutoSave";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { FileUpload } from "@/components/FileUpload";
-import { MobileMediaUpload } from "@/components/MobileMediaUpload";
-import { DraftIndicator } from "@/components/DraftIndicator";
-import { OrganizationValidationAlert } from "@/components/OrganizationValidationAlert";
-import StandardFormLayout from "@/components/layout/StandardFormLayout";
-import { ArrowLeft, FileText, Save } from "lucide-react";
-import type { PhotoAttachment, ReportDraft } from "@/types/offline";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Save, ArrowLeft, Upload, FileText, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+import { DraftIndicator } from '@/components/DraftIndicator';
+import StandardFormLayout from '@/components/layout/StandardFormLayout';
+import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 
-const reportSchema = z.object({
-  workPerformed: z.string().min(10, "Please provide at least 10 characters describing the work performed"),
-  materialsUsed: z.string().optional(),
-  hoursWorked: z.coerce.number().min(0.1, "Hours worked must be greater than 0").optional(),
-  invoiceAmount: z.coerce.number().min(0.01, "Invoice amount must be greater than 0"),
-  invoiceNumber: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-type ReportFormData = z.infer<typeof reportSchema>;
+interface FormData {
+  workPerformed: string;
+  materialsUsed: string;
+  notes: string;
+  hoursWorked: string;
+  invoiceAmount: string;
+  invoiceNumber: string;
+  photos: File[];
+}
 
 export default function SubmitReport() {
-  const { workOrderId } = useParams<{ workOrderId: string }>();
+  const { id: workOrderId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getWorkOrder, submitReport } = useSubcontractorWorkOrders();
-  const isMobile = useIsMobile();
-  
-  // Validate workOrderId parameter
-  if (!workOrderId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workOrderId)) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/subcontractor/work-orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-        </div>
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            Invalid work order ID provided.
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const { toast } = useToast();
+  const { getWorkOrder } = useSubcontractorWorkOrders();
+  const { saveDraft, submitReport } = useOfflineStorage();
 
-  const workOrderQuery = getWorkOrder(workOrderId);
-  
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [photoAttachments, setPhotoAttachments] = useState<PhotoAttachment[]>([]);
-  
-  const { uploadFiles, uploadProgress, isUploading } = useFileUpload({
-    maxFiles: 10,
-    maxSizeBytes: 10 * 1024 * 1024, // 10MB
+  const [formData, setFormData] = useState<FormData>({
+    workPerformed: '',
+    materialsUsed: '',
+    notes: '',
+    hoursWorked: '',
+    invoiceAmount: '',
+    invoiceNumber: '',
+    photos: [],
   });
+  const [workOrder, setWorkOrder] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
-  const form = useForm<ReportFormData>({
-    resolver: zodResolver(reportSchema),
-    defaultValues: {
-      workPerformed: "",
-      materialsUsed: "",
-      hoursWorked: undefined,
-      invoiceAmount: undefined,
-      invoiceNumber: "",
-      notes: "",
-    },
-  });
+  useEffect(() => {
+    if (!workOrderId) {
+      setError('Work Order ID is required.');
+      setIsLoading(false);
+      return;
+    }
 
-  // Auto-save functionality
-  const { manualSave, lastSavedDraftId, isAutoSaveEnabled } = useDraftAutoSave({
-    workOrderId: workOrderId!,
-    watch: form.watch,
-    getValues: form.getValues,
-    photos: photoAttachments,
-    enabled: !!workOrderId,
-  });
-
-  // Convert files to photo attachments
-  const convertFilesToAttachments = useCallback(async (files: File[]): Promise<PhotoAttachment[]> => {
-    const attachments: PhotoAttachment[] = [];
-    
-    for (const file of files) {
+    const fetchWorkOrder = async () => {
       try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        attachments.push({
-          id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: file.name,
-          base64Data: base64,
-          mimeType: file.type,
-          size: file.size,
-          originalFile: {
-            name: file.name,
-            lastModified: file.lastModified,
-          },
-        });
-      } catch (error) {
-        console.error('Failed to convert file to attachment:', error);
+        const fetchedWorkOrder = await getWorkOrder(workOrderId).refetch();
+        setWorkOrder(fetchedWorkOrder.data);
+        setIsLoading(false);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load work order.');
+        setIsLoading(false);
       }
+    };
+
+    fetchWorkOrder();
+  }, [workOrderId, getWorkOrder]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!workOrderId) {
+      toast({
+        title: "Missing Work Order ID",
+        description: "Please ensure you are accessing this form from a valid work order.",
+        variant: "destructive",
+      });
+      return;
     }
-    
-    return attachments;
-  }, []);
 
-  const handleFilesSelected = useCallback(async (files: File[]) => {
-    setSelectedFiles(files);
-    const attachments = await convertFilesToAttachments(files);
-    setPhotoAttachments(attachments);
-  }, [convertFilesToAttachments]);
-
-  const handleLoadDraft = useCallback((draft: ReportDraft) => {
-    // Load draft data into form
-    form.reset({
-      workPerformed: draft.workPerformed,
-      materialsUsed: draft.materialsUsed,
-      hoursWorked: draft.hoursWorked,
-      invoiceAmount: draft.invoiceAmount,
-      invoiceNumber: draft.invoiceNumber,
-      notes: draft.notes,
-    });
-
-    // Load photos
-    setPhotoAttachments(draft.photos);
-    
-    // Convert back to File objects for display
-    const files = draft.photos.map(photo => {
-      // Create a mock file for display purposes
-      const dataUrl = photo.base64Data;
-      const byteString = atob(dataUrl.split(',')[1]);
-      const arrayBuffer = new ArrayBuffer(byteString.length);
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      for (let i = 0; i < byteString.length; i++) {
-        uint8Array[i] = byteString.charCodeAt(i);
-      }
-      
-      return new File([arrayBuffer], photo.name, { type: photo.mimeType });
-    });
-    
-    setSelectedFiles(files);
-  }, [form]);
-
-  const handleManualSave = useCallback(async () => {
+    setIsSubmitting(true);
     try {
-      await manualSave();
-    } catch (error) {
-      console.error('Manual save failed:', error);
-    }
-  }, [manualSave]);
+      // Prepare the data for submission
+      const reportData = {
+        ...formData,
+        workOrderId: workOrderId,
+      };
 
-  const onSubmit = async (data: ReportFormData) => {
-    if (!workOrderId) return;
+      // Submit the report
+      await submitReport(reportData);
 
-    try {
-      await submitReport.mutateAsync({
-        workOrderId,
-        workPerformed: data.workPerformed,
-        materialsUsed: data.materialsUsed,
-        hoursWorked: data.hoursWorked,
-        invoiceAmount: data.invoiceAmount,
-        invoiceNumber: data.invoiceNumber,
-        notes: data.notes,
-        photos: selectedFiles,
+      toast({
+        title: "Report Submitted",
+        description: "Your report has been successfully submitted.",
       });
 
-      navigate("/subcontractor/work-orders");
-    } catch (error) {
-      console.error("Error submitting report:", error);
+      // Redirect or reset form
+      navigate('/subcontractor/reports');
+    } catch (err: any) {
+      toast({
+        title: "Submission Error",
+        description: err.message || "Failed to submit the report. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Submit failed:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (workOrderQuery.isLoading) {
+  const handleSaveDraft = async () => {
+    if (!workOrderId) {
+      toast({
+        title: "Missing Work Order ID",
+        description: "Cannot save draft without a valid work order ID.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const draftData = {
+        ...formData,
+        workOrderId: workOrderId,
+      };
+      const draftId = await saveDraft(draftData, true);
+      setCurrentDraftId(draftId);
+      toast({
+        title: "Draft Saved",
+        description: "Your progress has been saved as a draft.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Draft Save Error",
+        description: err.message || "Failed to save draft. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Draft save failed:", err);
+    }
+  };
+
+  const handleLoadDraft = (draft: any) => {
+    setFormData({
+      workPerformed: draft.workPerformed || '',
+      materialsUsed: draft.materialsUsed || '',
+      notes: draft.notes || '',
+      hoursWorked: draft.hoursWorked || '',
+      invoiceAmount: draft.invoiceAmount || '',
+      invoiceNumber: draft.invoiceNumber || '',
+      photos: draft.photos || [],
+    });
+    setCurrentDraftId(draft.id);
+    toast({
+      title: "Draft Loaded",
+      description: "Draft loaded successfully.",
+    });
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...acceptedFiles],
+    }));
+  }, []);
+
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop, accept: 'image/*'});
+
+  const handleRemovePhoto = (index: number) => {
+    setFormData(prev => {
+      const newPhotos = [...prev.photos];
+      newPhotos.splice(index, 1);
+      return { ...prev, photos: newPhotos };
+    });
+  };
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 bg-muted rounded animate-pulse" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-24 rounded-md" />
+            <div>
+              <Skeleton className="h-6 w-48 rounded-md" />
+              <Skeleton className="h-4 w-32 rounded-md mt-1" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-32 rounded-md" />
+        </div>
         <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="h-4 bg-muted rounded animate-pulse w-1/4" />
-                  <div className="h-10 bg-muted rounded animate-pulse" />
-                </div>
-              ))}
+          <CardHeader>
+            <CardTitle>
+              <Skeleton className="h-6 w-32 rounded-md" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full rounded-md" />
+              <Skeleton className="h-4 w-3/4 rounded-md" />
+              <Skeleton className="h-4 w-1/2 rounded-md" />
             </div>
           </CardContent>
         </Card>
@@ -208,288 +215,210 @@ export default function SubmitReport() {
     );
   }
 
-  if (workOrderQuery.error || !workOrderQuery.data) {
+  if (!workOrder) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/subcontractor/work-orders">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-        </div>
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            Work order not found or you don't have access to submit a report for it.
-          </CardContent>
-        </Card>
-      </div>
+      <Alert variant="destructive">
+        <AlertDescription>
+          Failed to load work order details.
+        </AlertDescription>
+      </Alert>
     );
   }
-
-  const workOrder = workOrderQuery.data;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to={`/subcontractor/work-orders/${workOrderId}`}>
-            <Button variant="outline" size="sm">
+          <Link to="/subcontractor/work-orders">
+            <Button variant="outline" size="sm" className="min-h-[44px] sm:min-h-auto">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              Back to Work Orders
             </Button>
           </Link>
           <div>
             <h1 className="text-2xl font-bold">Submit Work Report</h1>
             <p className="text-muted-foreground">
-              {workOrder.work_order_number || `WO-${workOrder.id.slice(0, 8)}`} - {workOrder.title}
+              {workOrder?.work_order_number || 'Loading...'}
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-4">
-          <DraftIndicator
-            workOrderId={workOrderId!}
-            onLoadDraft={handleLoadDraft}
-            currentDraftId={lastSavedDraftId}
-          />
-          {isAutoSaveEnabled && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualSave}
-              className="h-8"
-            >
-              <Save className="h-3 w-3 mr-1" />
-              Save Draft
-            </Button>
-          )}
-        </div>
+        
+        <DraftIndicator 
+          workOrderId={workOrderId} 
+          onLoadDraft={handleLoadDraft}
+          currentDraftId={currentDraftId}
+        />
       </div>
 
-      {/* Organization Validation Alert */}
-      <OrganizationValidationAlert className="mb-6" />
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <StandardFormLayout>
+          <StandardFormLayout.Section 
+            title="Work Details"
+            description="Provide detailed information about the work performed"
+          >
+            <StandardFormLayout.FieldGroup>
+              <div className="space-y-2">
+                <Label htmlFor="workPerformed">Work Performed *</Label>
+                <Textarea
+                  id="workPerformed"
+                  placeholder="Describe the work you performed in detail..."
+                  value={formData.workPerformed}
+                  onChange={(e) => setFormData(prev => ({ ...prev, workPerformed: e.target.value }))}
+                  className="min-h-[120px]"
+                  required
+                />
+              </div>
 
-      {/* Work Order Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Work Order Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <h4 className="font-medium text-sm text-muted-foreground mb-1">Location</h4>
-              <p className="text-sm">{workOrder.store_location}</p>
-            </div>
-            <div>
-              <h4 className="font-medium text-sm text-muted-foreground mb-1">Trade</h4>
-              <p className="text-sm">{workOrder.trades?.name}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <h4 className="font-medium text-sm text-muted-foreground mb-1">Description</h4>
-              <p className="text-sm">{workOrder.description}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label htmlFor="materialsUsed">Materials Used</Label>
+                <Textarea
+                  id="materialsUsed"
+                  placeholder="List materials, parts, or supplies used..."
+                  value={formData.materialsUsed}
+                  onChange={(e) => setFormData(prev => ({ ...prev, materialsUsed: e.target.value }))}
+                  className="min-h-[80px]"
+                />
+              </div>
 
-      {/* Report Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Work Report Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <StandardFormLayout variant="single" sectionSpacing="normal">
-                
-                {/* Work Details Section */}
-                <StandardFormLayout.Section title="Work Details">
-                  <StandardFormLayout.FieldGroup>
-                    <FormField
-                      control={form.control}
-                      name="workPerformed"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Work Performed *</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Describe in detail the work that was performed..."
-                              className="min-h-[120px] resize-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Any additional information or observations..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="min-h-[80px]"
+                />
+              </div>
+            </StandardFormLayout.FieldGroup>
+          </StandardFormLayout.Section>
 
-                    <FormField
-                      control={form.control}
-                      name="materialsUsed"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Materials Used</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="List any materials or parts used..."
-                              className="min-h-[80px] resize-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </StandardFormLayout.FieldGroup>
-                </StandardFormLayout.Section>
+          <StandardFormLayout.Section 
+            title="Time & Billing"
+            description="Enter time spent and billing information"
+          >
+            <StandardFormLayout.FieldGroup columns={2}>
+              <div className="space-y-2">
+                <Label htmlFor="hoursWorked">Hours Worked</Label>
+                <Input
+                  id="hoursWorked"
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  placeholder="8.5"
+                  value={formData.hoursWorked}
+                  onChange={(e) => setFormData(prev => ({ ...prev, hoursWorked: e.target.value }))}
+                />
+              </div>
 
-                {/* Time & Invoice Section */}
-                <StandardFormLayout.Section title="Time & Invoice">
-                  <StandardFormLayout.FieldGroup columns={2}>
-                    <FormField
-                      control={form.control}
-                      name="hoursWorked"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hours Worked</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.5"
-                              placeholder="8.5"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <div className="space-y-2">
+                <Label htmlFor="invoiceAmount">Invoice Amount *</Label>
+                <Input
+                  id="invoiceAmount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData.invoiceAmount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceAmount: e.target.value }))}
+                  required
+                />
+              </div>
 
-                    <FormField
-                      control={form.control}
-                      name="invoiceAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invoice Amount *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              placeholder="250.00"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </StandardFormLayout.FieldGroup>
+              <div className="space-y-2">
+                <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                <Input
+                  id="invoiceNumber"
+                  placeholder="INV-2024-001"
+                  value={formData.invoiceNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                />
+              </div>
+            </StandardFormLayout.FieldGroup>
+          </StandardFormLayout.Section>
 
-                  <StandardFormLayout.FieldGroup>
-                    <FormField
-                      control={form.control}
-                      name="invoiceNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invoice Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="INV-2024-001" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </StandardFormLayout.FieldGroup>
-                </StandardFormLayout.Section>
+          <StandardFormLayout.Section 
+            title="Photos & Documentation"
+            description="Upload photos or documents related to the work"
+          >
+            <StandardFormLayout.FieldGroup>
+              <div className="space-y-2">
+                <Label>Upload Photos</Label>
+                <div 
+                  {...getRootProps()} 
+                  className={cn(
+                    "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+                    isDragActive ? "border-primary bg-primary/10" : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                  )}
+                >
+                  <input {...getInputProps()} />
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    {isDragActive ? "Drop files here..." : "Drag & drop photos here, or click to select"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG, GIF up to 10MB each
+                  </p>
+                </div>
+              </div>
 
-                {/* Documentation Section */}
-                <StandardFormLayout.Section title="Documentation">
-                  <StandardFormLayout.FieldGroup>
-                    <div className="space-y-4">
-                      <div>
-                        <FormLabel>Work Photos</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Upload photos of the completed work (up to 10 photos, max 10MB each)
-                        </p>
-                      </div>
-                      
-                      {isMobile ? (
-                        <MobileMediaUpload
-                          onFilesSelected={handleFilesSelected}
-                          maxFiles={10}
-                          maxSizeBytes={10 * 1024 * 1024}
-                          uploadProgress={uploadProgress}
-                          disabled={submitReport.isPending || isUploading}
-                          showCamera={true}
-                          cameraFacingMode="environment"
-                          showDocumentUpload={false}
-                          compactView={false}
-                        />
-                      ) : (
-                        <FileUpload
-                          onFilesSelected={handleFilesSelected}
-                          maxFiles={10}
-                          maxSizeBytes={10 * 1024 * 1024}
-                          uploadProgress={uploadProgress}
-                          disabled={submitReport.isPending || isUploading}
-                        />
-                      )}
+              {formData.photos.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {formData.photos.map((file, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Uploaded ${index + 1}`}
+                        className="rounded-md w-full h-32 object-cover"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        onClick={() => handleRemovePhoto(index)}
+                      >
+                        <Upload className="h-3 w-3 rotate-90" />
+                      </Button>
                     </div>
+                  ))}
+                </div>
+              )}
+            </StandardFormLayout.FieldGroup>
+          </StandardFormLayout.Section>
 
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Additional Notes</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Any additional notes or comments..."
-                              className="min-h-[80px] resize-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </StandardFormLayout.FieldGroup>
-                </StandardFormLayout.Section>
-
-                {/* Form Actions */}
-                <StandardFormLayout.Actions align="right">
-                  <Link to={`/subcontractor/work-orders/${workOrderId}`}>
-                    <Button variant="outline" type="button">
-                      Cancel
-                    </Button>
-                  </Link>
-                  <Button 
-                    type="submit" 
-                    disabled={submitReport.isPending || isUploading}
-                    className="min-w-32"
-                  >
-                    {submitReport.isPending || isUploading ? (
-                      <>
-                        <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {isUploading ? "Uploading..." : "Submitting..."}
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Submit Report
-                      </>
-                    )}
-                  </Button>
-                </StandardFormLayout.Actions>
-
-              </StandardFormLayout>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+          <StandardFormLayout.Actions>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleSaveDraft}
+              disabled={isSubmitting}
+              className="min-h-[44px]"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Draft
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="min-h-[44px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Submit Report
+                </>
+              )}
+            </Button>
+          </StandardFormLayout.Actions>
+        </StandardFormLayout>
+      </form>
     </div>
   );
 }

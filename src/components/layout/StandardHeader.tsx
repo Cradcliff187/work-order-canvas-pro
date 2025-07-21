@@ -63,7 +63,7 @@ export function StandardHeader({
           )}
           
           {showSignOut && (
-            <Button variant="outline" size="sm" onClick={signOut}>
+            <Button variant="outline" size="sm" className="min-h-[44px] sm:min-h-auto" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
