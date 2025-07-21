@@ -58,11 +58,15 @@ serve(async (req) => {
 
     // Generate password reset link
     try {
+      // Debug: Use hardcoded URL temporarily
+      const redirectUrl = 'https://workorderportal.com/reset-password';
+      console.log('🔗 Using redirect URL:', redirectUrl);
+
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
         email: email,
         options: {
-          redirectTo: (Deno.env.get('PUBLIC_SITE_URL') || 'https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12') + '/reset-password'
+          redirectTo: redirectUrl
         }
       });
 
