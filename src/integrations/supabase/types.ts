@@ -64,33 +64,51 @@ export type Database = {
       }
       email_logs: {
         Row: {
+          created_at: string | null
           delivered_at: string | null
           error_message: string | null
           id: string
           recipient_email: string
+          record_id: string | null
+          record_type: string | null
+          resend_id: string | null
           sent_at: string
           status: Database["public"]["Enums"]["email_status"]
+          subject: string | null
           template_used: string | null
+          test_mode: boolean | null
           work_order_id: string | null
         }
         Insert: {
+          created_at?: string | null
           delivered_at?: string | null
           error_message?: string | null
           id?: string
           recipient_email: string
+          record_id?: string | null
+          record_type?: string | null
+          resend_id?: string | null
           sent_at?: string
           status?: Database["public"]["Enums"]["email_status"]
+          subject?: string | null
           template_used?: string | null
+          test_mode?: boolean | null
           work_order_id?: string | null
         }
         Update: {
+          created_at?: string | null
           delivered_at?: string | null
           error_message?: string | null
           id?: string
           recipient_email?: string
+          record_id?: string | null
+          record_type?: string | null
+          resend_id?: string | null
           sent_at?: string
           status?: Database["public"]["Enums"]["email_status"]
+          subject?: string | null
           template_used?: string | null
+          test_mode?: boolean | null
           work_order_id?: string | null
         }
         Relationships: [
