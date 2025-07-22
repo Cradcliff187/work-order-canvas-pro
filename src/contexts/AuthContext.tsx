@@ -23,6 +23,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  realProfile: Profile | null;
+  viewingProfile: Profile | null;
   userOrganization: UserOrganization | null;
   loading: boolean;
   organizationLoading: boolean;
@@ -449,6 +451,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     profile: impersonatedProfile || profile, // Return impersonated profile if active
+    realProfile: profile,
+    viewingProfile: impersonatedProfile || profile,
     userOrganization,
     loading: loading || initializing,
     organizationLoading,
