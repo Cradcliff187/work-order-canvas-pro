@@ -309,16 +309,23 @@ serve(async (req) => {
       }
       // Auto-assign employees to internal organization for visibility
       if (userData.user_type === 'employee') {
-        const { data: internalOrg } = await supabaseAdmin
-          .from('organizations')
-          .select('id')
-          .eq('organization_type', 'internal')
-          .eq('is_active', true)
-          .single();
-          
-        if (internalOrg) {
-          finalOrganizationIds = [internalOrg.id];
-          console.log('Auto-assigned employee to internal organization');
+        try {
+          const { data: internalOrgs } = await supabaseAdmin
+            .from('organizations')
+            .select('id')
+            .eq('organization_type', 'internal')
+            .eq('is_active', true)
+            .limit(1);
+            
+          if (internalOrgs && internalOrgs.length > 0) {
+            finalOrganizationIds = [internalOrgs[0].id];
+            console.log('Auto-assigned employee to internal organization');
+          } else {
+            console.log('No internal organization found for employee auto-assignment');
+          }
+        } catch (error) {
+          console.error('Error auto-assigning employee to organization:', error);
+          // Continue without organization assignment
         }
       }
       // Admins can be created without organization (optional)
@@ -364,4 +371,4 @@ serve(async (req) => {
     console.error('Create user error:', error);
     return createCorsErrorResponse(error.message || 'Internal error', 400);
   }
-});
+}); 
