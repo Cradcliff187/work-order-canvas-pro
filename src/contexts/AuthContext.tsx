@@ -316,16 +316,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setImpersonation = (profile: Profile | null) => {
     setImpersonatedProfile(profile);
-    if (profile) {
-      sessionStorage.setItem('impersonatedProfile', JSON.stringify(profile));
-    } else {
-      sessionStorage.removeItem('impersonatedProfile');
-    }
   };
 
   const clearImpersonation = () => {
     setImpersonatedProfile(null);
-    sessionStorage.removeItem('impersonatedProfile');
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
