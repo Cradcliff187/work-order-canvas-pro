@@ -71,6 +71,9 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
         organization_ids: hasOrganization ? [data.organization_id] : [],
       });
       
+      // Debug: Log the exact user type being sent
+      console.log('User type being sent:', data.user_type);
+      
       // Use the existing edge function to create user properly
       const { data: result, error } = await supabase.functions.invoke('create-admin-user', {
         body: {
@@ -223,7 +226,11 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>User Type *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      key={`user-type-${field.value}`}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select user type" />
@@ -280,7 +287,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                         </SelectContent>
                       </Select>
                       <FormMessage />
-                      {watchedUserType !== 'admin' && (!field.value || field.value === '' || field.value === 'none') && (
+                      {(!field.value || field.value === '' || field.value === 'none') && (
                         <p className="text-sm text-yellow-600 mt-1">
                           Note: {watchedUserType === 'partner' ? 'Partners' : 
                                  watchedUserType === 'subcontractor' ? 'Subcontractors' : 
