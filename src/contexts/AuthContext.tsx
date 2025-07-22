@@ -450,7 +450,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     session,
-    profile: impersonatedProfile || profile, // Return impersonated profile if active
+    profile: profile,
     realProfile: profile,
     viewingProfile: impersonatedProfile || profile,
     userOrganization,
