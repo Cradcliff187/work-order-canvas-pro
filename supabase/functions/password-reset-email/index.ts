@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 // Create Supabase admin client with service role
@@ -57,7 +58,7 @@ serve(async (req) => {
       return createCorsErrorResponse('Email is required', 400);
     }
 
-    console.log('Processing password reset request for:', email);
+    console.log('🔑 Processing password reset request for:', email);
 
     let firstName = 'User'; // Default fallback
     let profileId = crypto.randomUUID(); // Generate UUID as fallback
@@ -74,17 +75,16 @@ serve(async (req) => {
       if (profile) {
         firstName = profile.first_name || 'User';
         profileId = profile.id;
-        console.log('Found user profile for password reset');
+        console.log('✅ Found user profile for password reset');
       } else {
-        console.log('No user profile found, but still proceeding for security');
+        console.log('ℹ️ No user profile found, but still proceeding for security');
       }
     } catch (error) {
-      console.log('Profile lookup failed, proceeding with defaults for security');
+      console.log('ℹ️ Profile lookup failed, proceeding with defaults for security');
     }
 
     // Generate password reset link
     try {
-      // More robust with fallback
       const redirectUrl = `${Deno.env.get('PUBLIC_SITE_URL') || 'https://workorderportal.com'}/reset-password`;
       console.log('🔗 Using redirect URL:', redirectUrl);
 
@@ -115,18 +115,18 @@ serve(async (req) => {
           });
           
           if (emailError) {
-            console.error('Password reset email sending failed:', emailError);
+            console.error('❌ Password reset email sending failed:', emailError);
           } else {
             console.log('✅ Password reset email sent successfully');
           }
         } catch (emailSendError) {
-          console.error('Password reset email send error:', emailSendError);
+          console.error('❌ Password reset email send error:', emailSendError);
         }
       } else {
-        console.error('Password reset link generation failed:', linkError);
+        console.error('❌ Password reset link generation failed:', linkError);
       }
     } catch (linkGenerationError) {
-      console.error('Password reset link generation error:', linkGenerationError);
+      console.error('❌ Password reset link generation error:', linkGenerationError);
     }
 
     // Always return success for security (never reveal user existence)
@@ -136,7 +136,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Password reset function error:', error);
+    console.error('❌ Password reset function error:', error);
     
     // Even on error, return success for security
     return createCorsResponse({
