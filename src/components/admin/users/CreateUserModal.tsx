@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -44,14 +44,32 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       last_name: '',
       email: '',
       user_type: 'subcontractor',
-      organization_id: undefined,
+      organization_id: '',  // FIXED: Changed from undefined to empty string
       phone: '',
     },
   });
 
+  const watchedUserType = form.watch('user_type');
+
+  // FIXED: Reset organization when user type changes
+  useEffect(() => {
+    // Don't reset on initial load
+    if (form.formState.isDirty) {
+      form.setValue('organization_id', '');
+    }
+  }, [watchedUserType]);
+
   const onSubmit = async (data: CreateUserFormData) => {
     try {
       setIsLoading(true);
+      
+      // FIXED: Properly check for organization selection
+      const hasOrganization = data.organization_id && data.organization_id !== '' && data.organization_id !== 'none';
+      
+      console.log('Submitting user with data:', {
+        ...data,
+        organization_ids: hasOrganization ? [data.organization_id] : [],
+      });
       
       // Use the existing edge function to create user properly
       const { data: result, error } = await supabase.functions.invoke('create-admin-user', {
@@ -62,7 +80,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
             last_name: data.last_name,
             user_type: data.user_type,
             phone: data.phone || '',
-            organization_ids: data.organization_id && data.organization_id !== 'none' ? [data.organization_id] : [],
+            organization_ids: hasOrganization ? [data.organization_id] : [],
           },
           send_welcome_email: true, // Always send welcome email
         },
@@ -100,7 +118,6 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
     }
   };
 
-  const watchedUserType = form.watch('user_type');
   const filteredOrganizations = organizations?.filter(org => {
     switch (watchedUserType) {
       case 'partner':
@@ -230,23 +247,46 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                   name="organization_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Organization</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormLabel>
+                        Organization 
+                        {(watchedUserType === 'partner' || watchedUserType === 'subcontractor' || watchedUserType === 'employee') && ' *'}
+                      </FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || ''}  // FIXED: Ensure value is never undefined
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select organization (optional)" />
+                            <SelectValue placeholder="Select organization" />
                           </SelectTrigger>
                         </FormControl>
-                                              <SelectContent>
-                        <SelectItem value="none">No organization</SelectItem>
-                        {filteredOrganizations?.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
-                            {org.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                        <SelectContent>
+                          {!filteredOrganizations || filteredOrganizations.length === 0 ? (
+                            <SelectItem value="none" disabled>
+                              No {watchedUserType === 'partner' ? 'partner' : 
+                                   watchedUserType === 'subcontractor' ? 'subcontractor' : 
+                                   'internal'} organizations available
+                            </SelectItem>
+                          ) : (
+                            <>
+                              <SelectItem value="none">No organization</SelectItem>
+                              {filteredOrganizations.map((org) => (
+                                <SelectItem key={org.id} value={org.id}>
+                                  {org.name}
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
+                        </SelectContent>
                       </Select>
                       <FormMessage />
+                      {watchedUserType !== 'admin' && (!field.value || field.value === '' || field.value === 'none') && (
+                        <p className="text-sm text-yellow-600 mt-1">
+                          Note: {watchedUserType === 'partner' ? 'Partners' : 
+                                 watchedUserType === 'subcontractor' ? 'Subcontractors' : 
+                                 'Employees'} typically should be assigned to an organization.
+                        </p>
+                      )}
                     </FormItem>
                   )}
                 />
