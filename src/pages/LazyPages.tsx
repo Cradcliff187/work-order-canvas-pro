@@ -30,9 +30,6 @@ export const DevTools = import.meta.env.DEV
 
 // Partner pages
 export const PartnerDashboard = lazy(() => import('./partner/PartnerDashboard'));
-export const PartnerWorkOrders = lazy(() => import('./partner/PartnerWorkOrders'));
-export const PartnerWorkOrderDetail = lazy(() => import('./partner/PartnerWorkOrderDetail'));
-export const PartnerWorkOrderForm = lazy(() => import('./partner/PartnerWorkOrderForm'));
 export const PartnerProfile = lazy(() => import('./partner/PartnerProfile'));
 
 // Additional partner pages needed by routes
@@ -47,8 +44,6 @@ export const PartnerReportDetail = lazy(() => import('./partner/PartnerReportDet
 export const SubcontractorDashboard = lazy(() => import('./subcontractor/SubcontractorDashboard'));
 export const SubcontractorWorkOrders = lazy(() => import('./subcontractor/SubcontractorWorkOrders'));
 export const SubcontractorWorkOrderDetail = lazy(() => import('./subcontractor/SubcontractorWorkOrderDetail'));
-export const SubcontractorReports = lazy(() => import('./subcontractor/SubcontractorReports'));
-export const SubcontractorReportForm = lazy(() => import('./subcontractor/SubcontractorReportForm'));
 export const SubcontractorProfile = lazy(() => import('./subcontractor/SubcontractorProfile'));
 
 // Additional subcontractor pages needed by routes
@@ -60,7 +55,4 @@ export const SubcontractorInvoices = lazy(() => import('./subcontractor/Subcontr
 
 // Auth pages
 export const Auth = lazy(() => import('./Auth'));
-export const Login = lazy(() => import('./Login'));
-export const Register = lazy(() => import('./Register'));
-export const ForgotPassword = lazy(() => import('./ForgotPassword'));
 export const ResetPassword = lazy(() => import('./ResetPassword'));
