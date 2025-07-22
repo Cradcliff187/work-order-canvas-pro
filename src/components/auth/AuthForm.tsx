@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,18 +31,21 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
         const { error } = await signIn(email, password);
         if (error) {
           setError(error.message);
+          setLoading(false); // Only set loading false on error
         }
+        // Don't set loading false on success - let navigation handle it
       } else {
         const { error } = await signUp(email, password, firstName, lastName);
         if (error) {
           setError(error.message);
+          setLoading(false); // Only set loading false on error
         }
+        // Don't set loading false on success - let navigation handle it
       }
     } catch (err) {
       setError('An unexpected error occurred');
+      setLoading(false); // Set loading false on exception
     }
-    
-    setLoading(false);
   };
 
   return (
@@ -73,6 +75,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -84,6 +87,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -99,6 +103,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           
@@ -110,10 +115,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
+            disabled={loading}
+          >
             {loading ? 'Please wait...' : (view === 'sign_in' ? 'Sign In' : 'Create Account')}
           </Button>
         </form>
@@ -132,6 +142,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
                 variant="link"
                 onClick={() => onViewChange('password_reset')}
                 className="text-sm"
+                disabled={loading}
               >
                 Forgot your password?
               </Button>
@@ -141,6 +152,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
                   variant="link"
                   onClick={() => onViewChange('sign_up')}
                   className="text-sm p-0 h-auto"
+                  disabled={loading}
                 >
                   Sign up
                 </Button>
@@ -153,6 +165,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
                 variant="link"
                 onClick={() => onViewChange('sign_in')}
                 className="text-sm p-0 h-auto"
+                disabled={loading}
               >
                 Sign in
               </Button>
