@@ -1,7 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { corsHeaders } from '../_shared/cors.ts';
 
 // Initialize Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -11,6 +10,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Initialize Resend client
 const resendApiKey = Deno.env.get('RESEND_API_KEY') ?? '';
 const resend = new Resend(resendApiKey);
+
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 // Enhanced branding variables for consistent email branding
 const BRANDING_VARIABLES = {
@@ -22,7 +27,7 @@ const BRANDING_VARIABLES = {
 
 // Utility function to generate URLs
 const generateUrl = (path: string) => {
-  const baseUrl = 'https://inudoymofztrvxhrlrek.supabase.co';
+  const baseUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://workorderportal.com';
   return `${baseUrl}${path}`;
 };
 
@@ -120,6 +125,9 @@ Deno.serve(async (req) => {
               .single();
             email = profile?.email;
           }
+      } else if (record_type === 'password_reset') {
+        // For password reset, email is provided in custom_data
+        email = custom_data.email;
       }
 
       if (!email) {

@@ -1,7 +1,12 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
+
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 // Create Supabase admin client with service role
 const supabaseAdmin = createClient(
@@ -11,6 +16,27 @@ const supabaseAdmin = createClient(
 
 interface PasswordResetRequest {
   email: string;
+}
+
+function handleCors(req: Request) {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  return null;
+}
+
+function createCorsResponse(body: any, statusCode: number = 200) {
+  return new Response(JSON.stringify(body), {
+    status: statusCode,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+function createCorsErrorResponse(message: string, statusCode: number) {
+  return createCorsResponse({ success: false, error: message }, statusCode);
 }
 
 serve(async (req) => {
