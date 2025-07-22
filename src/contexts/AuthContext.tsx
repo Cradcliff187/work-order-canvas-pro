@@ -318,10 +318,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    // Clear impersonation on logout
-    clearImpersonation();
-    await supabase.auth.signOut();
-    navigate('/', { replace: true });
+    try {
+      // Clear impersonation on logout
+      clearImpersonation();
+      
+      // Attempt normal logout
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.warn('Logout failed, forcing local cleanup:', error);
+        // Fallback: Force clear all auth data
+        localStorage.clear();
+        sessionStorage.clear();
+        // Reset auth state manually
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        setUserOrganization(null);
+      }
+      
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Logout error, forcing cleanup:', error);
+      // Force clear all auth data as fallback
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setUserOrganization(null);
+      navigate('/', { replace: true });
+    }
   };
 
   const setImpersonation = (profile: Profile | null) => {
