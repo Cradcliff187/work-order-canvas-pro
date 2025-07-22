@@ -1,64 +1,14 @@
 
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { HardHat } from "lucide-react";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
 import { CreateUserForm } from "@/components/auth/CreateUserForm";
 import { useBranding } from "@/hooks/useBranding";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 export const Auth = () => {
   const [view, setView] = useState<'sign_in' | 'sign_up' | 'password_reset' | 'create_user'>('sign_in');
-  const navigate = useNavigate();
-  const { toast } = useToast();
   const branding = useBranding();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // Get user profile to determine redirect
-        supabase
-          .from('profiles')
-          .select('user_type')
-          .eq('user_id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              const userType = profile.user_type;
-              switch (userType) {
-                case 'admin':
-                  navigate('/admin/dashboard');
-                  break;
-                case 'partner':
-                  navigate('/partner/dashboard');
-                  break;
-                case 'subcontractor':
-                  navigate('/subcontractor/dashboard');
-                  break;
-                case 'employee':
-                  navigate('/employee/dashboard');
-                  break;
-                default:
-                  navigate('/admin/dashboard');
-              }
-            } else {
-              navigate('/admin/dashboard');
-            }
-          });
-      }
-      
-      if (event === 'PASSWORD_RECOVERY') {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a password reset link.",
-        });
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate, toast]);
 
   const getTitle = () => {
     switch (view) {

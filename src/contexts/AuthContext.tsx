@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 // Define the profile type based on the database schema
 interface UserProfile {
@@ -73,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [originalProfile, setOriginalProfile] = useState<UserProfile | null>(null);
   const [recoveryFlow, setRecoveryFlow] = useState<string>('');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Fetch user profile from database
   const fetchProfile = async (userId: string) => {
@@ -115,17 +117,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Handle navigation after successful authentication
+  const handleAuthNavigation = (userProfile: UserProfile) => {
+    if (!userProfile) return;
+
+    const userType = userProfile.user_type;
+    switch (userType) {
+      case 'admin':
+        navigate('/admin/dashboard');
+        break;
+      case 'partner':
+        navigate('/partner/dashboard');
+        break;
+      case 'subcontractor':
+        navigate('/subcontractor/dashboard');
+        break;
+      case 'employee':
+        navigate('/employee/dashboard');
+        break;
+      default:
+        navigate('/admin/dashboard');
+    }
+  };
+
   // Initialize auth state
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           const userProfile = await fetchProfile(session.user.id);
           setProfile(userProfile);
+          
+          // Handle navigation for sign-in events
+          if (event === 'SIGNED_IN' && userProfile) {
+            handleAuthNavigation(userProfile);
+          }
         } else {
           setProfile(null);
           setUserOrganization(null);
@@ -197,6 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOriginalProfile(null);
     
     await supabase.auth.signOut();
+    navigate('/auth');
   };
 
   // Update profile function
