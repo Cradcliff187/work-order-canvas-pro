@@ -120,8 +120,8 @@ const AdminAnalytics: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <DateRangeSelector
-            value={dateRange}
-            onChange={setDateRange}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
           />
           <Button
             variant="outline"
@@ -140,27 +140,29 @@ const AdminAnalytics: React.FC = () => {
           title="Total Work Orders"
           value={kpiMetrics?.totalWorkOrders || 0}
           icon={FileText}
-          trend={kpiMetrics?.monthOverMonth || 0}
-          loading={isLoading}
+          change={kpiMetrics?.monthOverMonth || 0}
+          trend={kpiMetrics?.monthOverMonth && kpiMetrics.monthOverMonth > 0 ? 'up' : kpiMetrics?.monthOverMonth && kpiMetrics.monthOverMonth < 0 ? 'down' : 'neutral'}
+          isLoading={isLoading}
         />
         <KPICard
           title="Avg Completion Time"
           value={kpiMetrics?.avgCompletionTime ? `${Math.round(kpiMetrics.avgCompletionTime)} hrs` : 'N/A'}
           icon={Clock}
-          trend={kpiMetrics?.completionTimeTrend || 0}
-          loading={isLoading}
+          change={kpiMetrics?.completionTimeTrend || 0}
+          trend={kpiMetrics?.completionTimeTrend && kpiMetrics.completionTimeTrend > 0 ? 'up' : kpiMetrics?.completionTimeTrend && kpiMetrics.completionTimeTrend < 0 ? 'down' : 'neutral'}
+          isLoading={isLoading}
         />
         <KPICard
           title="First-Time Fix Rate"
           value={kpiMetrics?.firstTimeFixRate ? `${Math.round(kpiMetrics.firstTimeFixRate)}%` : 'N/A'}
           icon={CheckCircle}
-          loading={isLoading}
+          isLoading={isLoading}
         />
         <KPICard
           title="Total Invoice Value"
           value={kpiMetrics?.totalInvoiceValue ? `$${kpiMetrics.totalInvoiceValue.toLocaleString()}` : '$0'}
           icon={DollarSign}
-          loading={isLoading}
+          isLoading={isLoading}
         />
       </div>
 
@@ -170,13 +172,13 @@ const AdminAnalytics: React.FC = () => {
           title="Active Subcontractors"
           value={kpiMetrics?.activeSubcontractors || 0}
           icon={Users}
-          loading={isLoading}
+          isLoading={isLoading}
         />
         <KPICard
           title="Customer Satisfaction"
           value={kpiMetrics?.customerSatisfaction ? `${Math.round(kpiMetrics.customerSatisfaction)}%` : 'N/A'}
           icon={TrendingUp}
-          loading={isLoading}
+          isLoading={isLoading}
         />
         <div className="flex items-center gap-2">
           <Button onClick={handleExportKPIs} variant="outline" className="flex-1">
@@ -451,4 +453,4 @@ const AdminAnalytics: React.FC = () => {
   );
 };
 
-export default AdminAnalytics;
+export default AdminAnalytics; 
