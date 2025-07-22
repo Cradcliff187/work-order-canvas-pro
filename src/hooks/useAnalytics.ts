@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { subDays, format } from 'date-fns';
@@ -103,6 +102,7 @@ export const useAnalytics = (dateRange: DateRange) => {
       const previousTotal = previousPeriod?.length || 0;
       const monthOverMonth = previousTotal > 0 ? ((totalWorkOrders - previousTotal) / previousTotal) * 100 : 0;
 
+      // Calculate average completion time for current period
       const completedOrders = currentPeriod?.filter(wo => wo.completed_at && wo.date_assigned) || [];
       const avgCompletionTime = completedOrders.length > 0 
         ? completedOrders.reduce((acc, wo) => {
@@ -111,17 +111,64 @@ export const useAnalytics = (dateRange: DateRange) => {
           }, 0) / completedOrders.length
         : 0;
 
+      // Calculate average completion time for previous period
+      const prevCompletedOrders = previousPeriod?.filter(wo => wo.completed_at && wo.date_assigned) || [];
+      const prevAvgCompletionTime = prevCompletedOrders.length > 0 
+        ? prevCompletedOrders.reduce((acc, wo) => {
+            const hours = (new Date(wo.completed_at!).getTime() - new Date(wo.date_assigned!).getTime()) / (1000 * 60 * 60);
+            return acc + hours;
+          }, 0) / prevCompletedOrders.length
+        : 0;
+
+      // Calculate completion time trend (percentage change)
+      const completionTimeTrend = prevAvgCompletionTime > 0 
+        ? ((avgCompletionTime - prevAvgCompletionTime) / prevAvgCompletionTime) * 100 
+        : 0;
+
       const totalInvoiceValue = currentPeriod?.reduce((sum, wo) => sum + (wo.subcontractor_invoice_amount || 0), 0) || 0;
+
+      // Calculate customer satisfaction based on report approvals
+      const { data: reportData } = await supabase
+        .from('work_order_reports')
+        .select('status, approved_at, submitted_at')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      let customerSatisfaction = 0;
+      if (reportData && reportData.length > 0) {
+        // Calculate based on approval rate and speed
+        const approvedReports = reportData.filter(r => r.status === 'approved');
+        const approvalRate = (approvedReports.length / reportData.length) * 100;
+        
+        // Calculate average approval time (faster approval = higher satisfaction)
+        const avgApprovalHours = approvedReports.length > 0
+          ? approvedReports.reduce((acc, report) => {
+              if (report.approved_at && report.submitted_at) {
+                const hours = (new Date(report.approved_at).getTime() - new Date(report.submitted_at).getTime()) / (1000 * 60 * 60);
+                return acc + hours;
+              }
+              return acc;
+            }, 0) / approvedReports.length
+          : 24; // Default to 24 hours if no data
+
+        // Score: 70% weight on approval rate, 30% on speed
+        // Speed score: 100% if approved within 4 hours, decreasing linearly
+        const speedScore = Math.max(0, Math.min(100, 100 - ((avgApprovalHours - 4) * 5)));
+        customerSatisfaction = (approvalRate * 0.7) + (speedScore * 0.3);
+      } else {
+        // No reports in period, default to neutral
+        customerSatisfaction = 75;
+      }
 
       return {
         totalWorkOrders,
         monthOverMonth,
         avgCompletionTime,
-        completionTimeTrend: 0, // TODO: Calculate trend
+        completionTimeTrend,
         firstTimeFixRate: fixRateData || 0,
         totalInvoiceValue,
         activeSubcontractors: activeSubcontractors?.length || 0,
-        customerSatisfaction: 85, // Placeholder - can be calculated from report approvals
+        customerSatisfaction: Math.round(customerSatisfaction),
       };
     },
   });
@@ -255,4 +302,4 @@ export const useRefreshAnalytics = () => {
     },
     enabled: false, // Only run when manually triggered
   });
-};
+}; 
