@@ -1,4 +1,3 @@
-
 import {
   BarChart3,
   FileText,
@@ -19,8 +18,7 @@ export interface SidebarItem {
   icon: typeof BarChart3;
 }
 
-// Base sidebar items that are always available
-const baseSidebarItems: SidebarItem[] = [
+export const sidebarItems: SidebarItem[] = [
   { title: 'Admin Dashboard', url: '/admin/dashboard', icon: BarChart3 },
   { title: 'Employee Dashboard', url: '/admin/employee-dashboard', icon: BarChart3 },
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
@@ -37,31 +35,8 @@ const baseSidebarItems: SidebarItem[] = [
   { title: 'System Health', url: '/admin/system-health', icon: Activity },
   { title: 'Organization Diagnostics', url: '/admin/organization-diagnostics', icon: Activity },
   { title: 'Email Testing', url: '/admin/test-email', icon: Mail },
+  { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
-// Conditionally add DevTools only in development
-export const sidebarItems: SidebarItem[] = [
-  ...baseSidebarItems,
-  ...(import.meta.env.DEV ? [{ title: 'Dev Tools', url: '/dev-tools', icon: Wrench }] : []),
-];
-
-// Base admin-only items
-const baseAdminOnlyItems = [
-  'Admin Dashboard', 
-  'Users', 
-  'Organizations', 
-  'Employees', 
-  'Invoices', 
-  'Settings', 
-  'System Health', 
-  'Organization Diagnostics', 
-  'Email Testing'
-];
-
-// Conditionally add DevTools to admin-only items in development
-export const adminOnlyItems = [
-  ...baseAdminOnlyItems,
-  ...(import.meta.env.DEV ? ['Dev Tools'] : []),
-];
-
+export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Organization Diagnostics', 'Email Testing', 'Dev Tools'];
 export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];

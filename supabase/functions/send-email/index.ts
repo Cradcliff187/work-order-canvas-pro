@@ -53,16 +53,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const requestBody = await req.json();
     const { 
       template_name, 
       record_id, 
       record_type = 'work_order',
       test_mode = false,
       test_recipient,
-      recipient_email, // Support direct recipient_email parameter
       custom_data = {}
-    } = requestBody;
+    } = await req.json();
 
     // Validate required fields
     if (!template_name) {
@@ -85,26 +83,6 @@ Deno.serve(async (req) => {
           .eq('id', record_id)
           .single();
         email = user?.email;
-      } else if (record_type === 'profile') {
-        // FIXED: Handle profile record type
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', record_id)
-          .single();
-        email = profile?.email;
-      } else if (record_type === 'auth_user') {
-        // FIXED: Handle auth_user record type - email should be in custom_data
-        email = custom_data.email;
-        if (!email && record_id) {
-          // Fallback: try to get from auth.users if we have the ID
-          try {
-            const { data: { user } } = await supabase.auth.admin.getUserById(record_id);
-            email = user?.email || null;
-          } catch (authError) {
-            console.error('Failed to fetch auth user:', authError);
-          }
-        }
       } else if (record_type === 'work_order') {
         const { data: workOrder } = await supabase
           .from('work_orders')
@@ -154,11 +132,6 @@ Deno.serve(async (req) => {
       } else if (record_type === 'password_reset' || record_type === 'auth_confirmation') {
         // For auth emails, email is provided in custom_data
         email = custom_data.email;
-      }
-
-      // FIXED: Support direct recipient_email parameter
-      if (!email && recipient_email) {
-        email = recipient_email;
       }
 
       if (!email) {
@@ -212,17 +185,13 @@ Deno.serve(async (req) => {
           work_order_number: report.work_orders?.work_order_number || 'N/A'
         };
       }
-    } else if (template_name === 'auth_confirmation' || template_name === 'password_reset' || template_name === 'welcome_email' || template_name === 'new_user_invite') {
+    } else if (template_name === 'auth_confirmation' || template_name === 'password_reset') {
       // Auth emails use custom_data
       variables = {
         first_name: custom_data.first_name || 'User',
-        last_name: custom_data.last_name || '',
         email: custom_data.email || recipient,
         confirmation_link: custom_data.confirmation_link || '',
-        reset_link: custom_data.reset_link || '',
-        temporary_password: custom_data.temporary_password || '',
-        dashboard_url: generateUrl('/'),
-        ...custom_data // Include all custom data
+        reset_link: custom_data.reset_link || ''
       };
     } else if (template_name.includes('invoice')) {
       const { data: invoice } = await supabase
@@ -292,17 +261,11 @@ Deno.serve(async (req) => {
         work_order_id: record_type === 'work_order' ? record_id : null,
         status: resendResponse.error ? 'failed' : 'sent',
         error_message: resendResponse.error?.message,
-        resend_id: resendResponse.data?.id, // FIXED: Store the resend ID
-        record_id: record_id,              // Store for reference
-        record_type: record_type,          // Store for debugging
-        test_mode: test_mode,              // Store test mode flag
-        subject: processedSubject,         // Store subject for reference
-        // Note: These columns may need to be added to your email_logs table
+        // Note: resend_id, record_type, test_mode columns don't exist in current schema
       });
 
     if (logError) {
       console.error('Failed to log email event:', logError);
-      // Don't fail the request if logging fails
     }
 
     if (resendResponse.error) {
@@ -337,4 +300,4 @@ Deno.serve(async (req) => {
       error: error.message 
     }, 500);
   }
-}); 
+});

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
@@ -281,8 +282,9 @@ serve(async (req) => {
       // Continue anyway, this is not critical
     }
 
-    // Handle organization relationships - NO AUTO ASSIGNMENT
+    // Handle organization relationships with validation and auto-assignment
     let finalOrganizationIds: string[] = [];
+    let autoAssignedOrganizations: any[] = [];
     
     if (userData.organization_ids && userData.organization_ids.length > 0) {
       // Validate provided organizations
@@ -301,34 +303,22 @@ serve(async (req) => {
       finalOrganizationIds = validOrganizations.map(org => org.id);
       console.log('Validated organizations:', validOrganizations.map(org => org.name));
     } else {
-      // CRITICAL CHANGE: Partners and Subcontractors MUST have organization
-      if (userData.user_type === 'partner' || userData.user_type === 'subcontractor') {
-        throw new Error(
-          `${userData.user_type.charAt(0).toUpperCase() + userData.user_type.slice(1)} users MUST be assigned to an organization. Please select one.`
-        );
-      }
-      // Auto-assign employees to internal organization for visibility
-      if (userData.user_type === 'employee') {
-        try {
-          const { data: internalOrgs } = await supabaseAdmin
-            .from('organizations')
-            .select('id')
-            .eq('organization_type', 'internal')
-            .eq('is_active', true)
-            .limit(1);
-            
-          if (internalOrgs && internalOrgs.length > 0) {
-            finalOrganizationIds = [internalOrgs[0].id];
-            console.log('Auto-assigned employee to internal organization');
-          } else {
-            console.log('No internal organization found for employee auto-assignment');
-          }
-        } catch (error) {
-          console.error('Error auto-assigning employee to organization:', error);
-          // Continue without organization assignment
+      // Auto-assign organizations for partner, subcontractor, and employee users
+      if (userData.user_type !== 'admin') {
+        console.log('Auto-assigning organizations for user type:', userData.user_type);
+        const availableOrganizations = await getOrganizationsForAutoAssignment(supabaseAdmin, userData.user_type);
+        
+        if (availableOrganizations.length === 0) {
+          const expectedType = getUserExpectedOrganizationType(userData.user_type);
+          throw new Error(`No ${expectedType} organizations available for auto-assignment. Please create a ${expectedType} organization first.`);
         }
+        
+        // Auto-assign to the first available organization
+        const selectedOrg = availableOrganizations[0];
+        finalOrganizationIds = [selectedOrg.id];
+        autoAssignedOrganizations = [selectedOrg];
+        console.log('Auto-assigned to organization:', selectedOrg.name);
       }
-      // Admins can be created without organization (optional)
     }
 
     // Create organization relationships
@@ -344,7 +334,10 @@ serve(async (req) => {
 
       if (orgError) {
         console.error('Organization relationship creation failed:', orgError);
-        throw new Error(`Failed to assign user to organization: ${orgError.message}`);
+        // For auto-assignment, this is more critical
+        if (autoAssignedOrganizations.length > 0) {
+          throw new Error(`Failed to assign user to organization: ${orgError.message}`);
+        }
       } else {
         console.log('Organization relationships created successfully');
       }
@@ -371,4 +364,4 @@ serve(async (req) => {
     console.error('Create user error:', error);
     return createCorsErrorResponse(error.message || 'Internal error', 400);
   }
-}); 
+});

@@ -1,4 +1,3 @@
-
 import React, { Suspense } from 'react';
 import { Route } from 'react-router-dom';
 import { LazyWrapper } from '@/components/LazyWrapper';
@@ -28,6 +27,7 @@ import {
   TestEmailPage,
   AdminOrganizationDiagnostics,
   DevTools,
+  
 } from '@/pages/LazyPages';
 
 export const AdminRoutes = () => (
@@ -242,17 +242,15 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    {/* Conditionally include DevTools route only in development */}
-    {DevTools && (
-      <Route path="/dev-tools" element={
-        <ProtectedRoute requiredUserType="admin">
-          <AdminLayout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <DevTools />
-            </Suspense>
-          </AdminLayout>
-        </ProtectedRoute>
-      } />
-    )}
+    <Route path="/dev-tools" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DevTools />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
   </>
 );

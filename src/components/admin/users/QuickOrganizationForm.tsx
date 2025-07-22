@@ -30,10 +30,9 @@ type QuickOrganizationFormData = z.infer<typeof quickOrganizationSchema>;
 
 interface QuickOrganizationFormProps {
   onOrganizationCreated: (organization: any) => void;
-  organizationType?: 'partner' | 'subcontractor' | 'internal';
 }
 
-export function QuickOrganizationForm({ onOrganizationCreated, organizationType }: QuickOrganizationFormProps) {
+export function QuickOrganizationForm({ onOrganizationCreated }: QuickOrganizationFormProps) {
   const { toast } = useToast();
   const createOrganizationMutation = useCreateOrganization();
 
@@ -43,7 +42,7 @@ export function QuickOrganizationForm({ onOrganizationCreated, organizationType 
       name: '',
       initials: '',
       contact_email: '',
-      organization_type: organizationType || 'partner',
+      organization_type: 'partner',
     },
   });
 
@@ -121,11 +120,7 @@ export function QuickOrganizationForm({ onOrganizationCreated, organizationType 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type *</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                    disabled={!!organizationType}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -138,11 +133,6 @@ export function QuickOrganizationForm({ onOrganizationCreated, organizationType 
                     </SelectContent>
                   </Select>
                   <FormMessage />
-                  {organizationType && (
-                    <p className="text-sm text-muted-foreground">
-                      Type is fixed based on user type being created
-                    </p>
-                  )}
                 </FormItem>
               )}
             />

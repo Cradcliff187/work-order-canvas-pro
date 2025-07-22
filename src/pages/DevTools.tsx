@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, flexRender, SortingState, ColumnFiltersState } from '@tanstack/react-table';
-import { useDevTools } from '@/hooks/dev/useDevTools';
+import { useDevTools } from '@/hooks/useDevTools';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,11 +36,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-// Development-only guard
-if (!import.meta.env.DEV) {
-  throw new Error('DevTools should not be imported in production');
-}
 
 interface ImpersonationUser {
   id: string;
@@ -80,7 +76,7 @@ const DevTools = () => {
   } = useDevTools();
 
   // Check if we're in development
-  const isDevelopment = import.meta.env.DEV;
+  const isDevelopment = import.meta.env.MODE === 'development';
   const isAdmin = profile?.user_type === 'admin';
 
   useEffect(() => {
@@ -317,6 +313,7 @@ const DevTools = () => {
         </TabsList>
         
         <TabsContent value="setup" className="space-y-6">
+          {/* STREAMLINED SETUP */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">

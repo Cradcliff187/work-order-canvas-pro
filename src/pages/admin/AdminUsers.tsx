@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -23,7 +23,6 @@ import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
 import { createUserColumns } from '@/components/admin/users/UserColumns';
 import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
-import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserFilters {
@@ -37,8 +36,6 @@ export default function AdminUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
-  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -62,9 +59,7 @@ export default function AdminUsers() {
       navigate(`/admin/users/${user.id}`);
     },
     onEdit: (user) => {
-      // Open the modal instead of navigating
-      setSelectedUser(user);
-      setEditUserModalOpen(true);
+      navigate(`/admin/users/${user.id}/edit`);
     },
     onDelete: (user) => {
       if (confirm('Are you sure you want to delete this user?')) {
@@ -244,7 +239,7 @@ export default function AdminUsers() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between py-4">
+              <div className="flex items-center justify-between space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
                   {selectedRows.length > 0 && (
                     <span>
@@ -285,18 +280,6 @@ export default function AdminUsers() {
       <CreateUserModal 
         open={createUserModalOpen}
         onOpenChange={setCreateUserModalOpen}
-      />
-
-      {/* Edit User Modal */}
-      <EditUserModal 
-        open={editUserModalOpen}
-        onOpenChange={(open) => {
-          setEditUserModalOpen(open);
-          if (!open) {
-            setSelectedUser(null);
-          }
-        }}
-        user={selectedUser}
       />
     </div>
   );

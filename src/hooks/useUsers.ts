@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +23,7 @@ export function useUsers() {
         .from('profiles')
         .select(`
           *,
-          user_organizations(
+          user_organizations!inner(
             organization_id,
             organization:organizations(
               id,
@@ -245,4 +246,4 @@ export function useUserMutations() {
     deleteUser,
     bulkUpdateUsers,
   };
-} 
+}
