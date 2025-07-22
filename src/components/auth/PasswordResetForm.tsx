@@ -17,7 +17,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onBack }) 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-  const { resetPassword } = useAuth();
+  const { forgotPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +25,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onBack }) 
     setError('');
 
     try {
-      const { error } = await resetPassword(email);
+      const { error } = await forgotPassword(email);
       
       if (error) {
         setError(error.message);
