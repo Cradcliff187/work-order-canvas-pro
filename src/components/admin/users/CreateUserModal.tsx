@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,17 +8,20 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, CheckCircle } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { supabase } from '@/integrations/supabase/client';
 
+// Remove password from schema - system will handle it
 const createUserSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
   user_type: z.enum(['admin', 'partner', 'subcontractor', 'employee']),
   organization_id: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 type CreateUserFormData = z.infer<typeof createUserSchema>;
@@ -32,6 +34,7 @@ interface CreateUserModalProps {
 export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const { data: organizations } = useOrganizations();
 
   const form = useForm<CreateUserFormData>({
@@ -40,9 +43,9 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       first_name: '',
       last_name: '',
       email: '',
-      password: '',
       user_type: 'subcontractor',
       organization_id: '',
+      phone: '',
     },
   });
 
@@ -50,23 +53,49 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
     try {
       setIsLoading(true);
       
-      // Create user logic would go here
-      console.log('Creating user:', data);
-      
-      toast({
-        title: "User created",
-        description: "The user has been successfully created.",
+      // Use the existing edge function to create user properly
+      const { data: result, error } = await supabase.functions.invoke('create-admin-user', {
+        body: {
+          userData: {
+            email: data.email,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            user_type: data.user_type,
+            phone: data.phone || '',
+            organization_ids: data.organization_id ? [data.organization_id] : [],
+          },
+          send_welcome_email: true, // Always send welcome email
+        },
       });
+
+      if (error) throw error;
       
-      form.reset();
-      onOpenChange(false);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to create user');
+      }
+
+      // Show success state
+      setShowSuccess(true);
+      
+      // Close modal after showing success
+      setTimeout(() => {
+        form.reset();
+        setShowSuccess(false);
+        onOpenChange(false);
+        
+        // Show toast after modal closes
+        toast({
+          title: "User created successfully",
+          description: `Welcome email sent to ${data.email}`,
+        });
+      }, 2000);
+      
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to create user",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -85,6 +114,9 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
     }
   });
 
+  // Show organization field for non-admin users
+  const showOrganizationField = watchedUserType !== 'admin';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -95,144 +127,166 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="first_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="last_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        {showSuccess ? (
+          <div className="py-8 text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">User Created Successfully!</h3>
+              <p className="text-sm text-muted-foreground">
+                A welcome email has been sent with login instructions.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="first_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email *</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="john@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="last_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password *</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="user_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>User Type *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select user type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="partner">Partner</SelectItem>
-                      <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                      <SelectItem value="employee">Employee</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {watchedUserType !== 'admin' && (
               <FormField
                 control={form.control}
-                name="organization_id"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Organization</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="john@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="(555) 123-4567" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="user_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User Type *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select organization" />
+                          <SelectValue placeholder="Select user type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {filteredOrganizations?.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
-                            {org.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="partner">Partner</SelectItem>
+                        <SelectItem value="subcontractor">Subcontractor</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create User
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              {showOrganizationField && (
+                <FormField
+                  control={form.control}
+                  name="organization_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Organization</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select organization (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No organization</SelectItem>
+                          {filteredOrganizations?.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              {org.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <Alert>
+                <AlertDescription>
+                  The new user will receive an email with instructions to set up their password and access the system.
+                </AlertDescription>
+              </Alert>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create User
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
