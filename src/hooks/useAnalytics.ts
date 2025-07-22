@@ -130,7 +130,7 @@ export const useAnalytics = (dateRange: DateRange) => {
       // Calculate customer satisfaction based on report approvals
       const { data: reportData } = await supabase
         .from('work_order_reports')
-        .select('status, approved_at, submitted_at')
+        .select('status, reviewed_at, submitted_at')
         .gte('submitted_at', startDate)
         .lte('submitted_at', endDate);
 
@@ -143,8 +143,8 @@ export const useAnalytics = (dateRange: DateRange) => {
         // Calculate average approval time (faster approval = higher satisfaction)
         const avgApprovalHours = approvedReports.length > 0
           ? approvedReports.reduce((acc, report) => {
-              if (report.approved_at && report.submitted_at) {
-                const hours = (new Date(report.approved_at).getTime() - new Date(report.submitted_at).getTime()) / (1000 * 60 * 60);
+              if (report.reviewed_at && report.submitted_at) {
+                const hours = (new Date(report.reviewed_at).getTime() - new Date(report.submitted_at).getTime()) / (1000 * 60 * 60);
                 return acc + hours;
               }
               return acc;
