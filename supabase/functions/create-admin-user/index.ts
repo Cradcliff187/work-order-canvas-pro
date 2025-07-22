@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
@@ -40,6 +39,27 @@ function getUserExpectedOrganizationType(userType: UserType): OrganizationType |
 function validateUserOrganizationType(userType: UserType, organizationType: OrganizationType): boolean {
   const allowedTypes = getUserTypeOrganizationTypes(userType);
   return allowedTypes.includes(organizationType);
+}
+
+async function getOrganizationsForAutoAssignment(supabaseAdmin: any, userType: UserType): Promise<any[]> {
+  const expectedOrgType = getUserExpectedOrganizationType(userType);
+  if (!expectedOrgType) {
+    return [];
+  }
+
+  const { data: organizations, error } = await supabaseAdmin
+    .from('organizations')
+    .select('*')
+    .eq('organization_type', expectedOrgType)
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Failed to fetch organizations for auto-assignment:', error);
+    return [];
+  }
+
+  return organizations || [];
 }
 
 async function validateAndProcessOrganizations(
@@ -100,7 +120,8 @@ serve(async (req) => {
       return createCorsErrorResponse('Only admins can create users', 403);
     }
 
-    // Get request body
+    // Get request body - default to false to prevent duplicate emails
+    // Our database trigger will handle the welcome email via Resend
     const { userData, send_welcome_email = false } = await req.json();
 
     console.log('Creating user:', { 
@@ -118,13 +139,18 @@ serve(async (req) => {
     // Generate a secure temporary password for initial creation
     const temporaryPassword = crypto.randomUUID() + crypto.randomUUID();
 
-    console.log('✅ Creating auth user with app_metadata user_type:', userData.user_type);
+    // Log email configuration
+    if (send_welcome_email) {
+      console.log('✅ Welcome email will be queued by Supabase (email_confirm: true)');
+    } else {
+      console.log('⚠️ Welcome email disabled by request (email_confirm: false)');
+    }
 
-    // Create auth user with email confirmation disabled (we'll handle manually)
+    // Create auth user with conditional email confirmation
     const { data: authUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: temporaryPassword,
-      email_confirm: false, // We'll handle email confirmation manually
+      email_confirm: send_welcome_email, // Use parameter to control email sending
       app_metadata: {  // Security data (admin-only)
         user_type: userData.user_type
       },
@@ -139,86 +165,9 @@ serve(async (req) => {
       throw createError;
     }
 
-    console.log('✅ Auth user created:', authUser.user.id);
+    console.log('Auth user created:', authUser.user.id);
     
-    // CRITICAL FIX: Create profile directly instead of waiting for trigger
-    console.log('🔧 Creating profile directly with user_type:', userData.user_type);
-    
-    const { data: newProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: authUser.user.id,
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        user_type: userData.user_type, // Use the correct user_type from input
-        phone: userData.phone,
-        is_employee: userData.user_type === 'employee',
-      })
-      .select()
-      .single();
-
-    if (profileError) {
-      console.error('Profile creation failed:', profileError);
-      // Clean up auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      throw new Error(`Profile creation failed: ${profileError.message}`);
-    }
-
-    console.log('✅ Profile created directly:', { 
-      profileId: newProfile.id, 
-      userType: newProfile.user_type,
-      email: newProfile.email 
-    });
-
-    // Handle organization relationships
-    let finalOrganizationIds: string[] = [];
-    
-    if (userData.organization_ids && userData.organization_ids.length > 0) {
-      // Validate provided organizations
-      console.log('Validating provided organizations:', userData.organization_ids);
-      const { validOrganizations, errors } = await validateAndProcessOrganizations(
-        supabaseAdmin,
-        userData.user_type,
-        userData.organization_ids
-      );
-
-      if (errors.length > 0) {
-        console.error('Organization validation failed:', errors);
-        throw new Error(`Organization validation failed: ${errors.join(', ')}`);
-      }
-
-      finalOrganizationIds = validOrganizations.map(org => org.id);
-      console.log('✅ Validated organizations:', validOrganizations.map(org => org.name));
-    } else {
-      // Partners and Subcontractors MUST have organization
-      if (userData.user_type === 'partner' || userData.user_type === 'subcontractor') {
-        throw new Error(
-          `${userData.user_type.charAt(0).toUpperCase() + userData.user_type.slice(1)} users MUST be assigned to an organization. Please select one.`
-        );
-      }
-    }
-
-    // Create organization relationships
-    if (finalOrganizationIds.length > 0) {
-      const orgRelationships = finalOrganizationIds.map((orgId: string) => ({
-        user_id: newProfile.id,
-        organization_id: orgId,
-      }));
-
-      const { error: orgError } = await supabaseAdmin
-        .from('user_organizations')
-        .insert(orgRelationships);
-
-      if (orgError) {
-        console.error('Organization relationship creation failed:', orgError);
-        throw new Error(`Failed to assign user to organization: ${orgError.message}`);
-      } else {
-        console.log('✅ Organization relationships created successfully');
-      }
-    }
-
-    // Handle welcome email if requested
+    // Manual confirmation email sending via Resend
     if (send_welcome_email) {
       try {
         console.log('🔗 Generating magic link for confirmation email...');
@@ -232,10 +181,10 @@ serve(async (req) => {
         });
 
         if (linkData?.properties?.action_link) {
-          console.log('📧 Sending confirmation email with link');
+          console.log('📧 Sending confirmation email with link:', linkData.properties.action_link);
           
           try {
-            const { error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
+            const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
               body: {
                 template_name: 'auth_confirmation',
                 record_id: authUser.user.id,
@@ -265,6 +214,11 @@ serve(async (req) => {
         console.error('Email process error:', error);
         // Don't fail user creation if email fails
       }
+    }
+    
+    // Log email queueing status
+    if (send_welcome_email) {
+      console.log('📧 Confirmation email process completed');
       
       // Log to email_logs table for audit trail
       try {
@@ -279,18 +233,124 @@ serve(async (req) => {
         console.log('✅ Email event logged to database');
       } catch (logError) {
         console.warn('Failed to log email event:', logError);
+        // Don't fail user creation for logging issues
+      }
+    }
+
+    // Wait for profile creation and verify with retry logic
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    console.log('Starting profile verification process for user:', authUser.user.id);
+
+    let retries = 0;
+    let newProfile = null;
+    while (retries < 3 && !newProfile) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log(`Profile verification attempt ${retries + 1}/3 for user:`, authUser.user.id);
+      
+      const { data } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authUser.user.id)
+        .single();
+      newProfile = data;
+      retries++;
+    }
+
+    if (!newProfile) {
+      console.error('Profile creation failed after retries');
+      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      throw new Error('Profile creation failed');
+    }
+
+    console.log('Profile verification successful:', { profileId: newProfile.id, retries });
+
+    console.log('Profile created:', newProfile.id);
+
+    // Update profile with additional data
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({
+        phone: userData.phone,
+        is_employee: userData.user_type === 'employee',
+      })
+      .eq('id', newProfile.id);
+
+    if (updateError) {
+      console.error('Profile update failed:', updateError);
+      // Continue anyway, this is not critical
+    }
+
+    // Handle organization relationships - NO AUTO ASSIGNMENT
+    let finalOrganizationIds: string[] = [];
+    
+    if (userData.organization_ids && userData.organization_ids.length > 0) {
+      // Validate provided organizations
+      console.log('Validating provided organizations:', userData.organization_ids);
+      const { validOrganizations, errors } = await validateAndProcessOrganizations(
+        supabaseAdmin,
+        userData.user_type,
+        userData.organization_ids
+      );
+
+      if (errors.length > 0) {
+        console.error('Organization validation failed:', errors);
+        throw new Error(`Organization validation failed: ${errors.join(', ')}`);
+      }
+
+      finalOrganizationIds = validOrganizations.map(org => org.id);
+      console.log('Validated organizations:', validOrganizations.map(org => org.name));
+    } else {
+      // CRITICAL CHANGE: Partners and Subcontractors MUST have organization
+      if (userData.user_type === 'partner' || userData.user_type === 'subcontractor') {
+        throw new Error(
+          `${userData.user_type.charAt(0).toUpperCase() + userData.user_type.slice(1)} users MUST be assigned to an organization. Please select one.`
+        );
+      }
+      // Auto-assign employees to internal organization for visibility
+      if (userData.user_type === 'employee') {
+        const { data: internalOrg } = await supabaseAdmin
+          .from('organizations')
+          .select('id')
+          .eq('organization_type', 'internal')
+          .eq('is_active', true)
+          .single();
+          
+        if (internalOrg) {
+          finalOrganizationIds = [internalOrg.id];
+          console.log('Auto-assigned employee to internal organization');
+        }
+      }
+      // Admins can be created without organization (optional)
+    }
+
+    // Create organization relationships
+    if (finalOrganizationIds.length > 0) {
+      const orgRelationships = finalOrganizationIds.map((orgId: string) => ({
+        user_id: newProfile.id,
+        organization_id: orgId,
+      }));
+
+      const { error: orgError } = await supabaseAdmin
+        .from('user_organizations')
+        .insert(orgRelationships);
+
+      if (orgError) {
+        console.error('Organization relationship creation failed:', orgError);
+        throw new Error(`Failed to assign user to organization: ${orgError.message}`);
+      } else {
+        console.log('Organization relationships created successfully');
       }
     }
 
     // Return success response
     const message = send_welcome_email 
       ? 'User created successfully. They will receive a confirmation email to set up their account.'
-      : 'User created successfully without sending welcome email.';
+      : 'User created successfully. A welcome email has been sent via our custom email system.';
 
     console.log('✅ User creation process completed:', { 
       userId: newProfile.id, 
       email: userData.email,
-      userType: newProfile.user_type,
       emailSent: send_welcome_email 
     });
 
@@ -304,4 +364,4 @@ serve(async (req) => {
     console.error('Create user error:', error);
     return createCorsErrorResponse(error.message || 'Internal error', 400);
   }
-}); 
+});
