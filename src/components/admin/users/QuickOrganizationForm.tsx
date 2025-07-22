@@ -33,7 +33,7 @@ interface QuickOrganizationFormProps {
   organizationType?: 'partner' | 'subcontractor' | 'internal';
 }
 
-export function QuickOrganizationForm({ onOrganizationCreated, organizationType = 'partner' }: QuickOrganizationFormProps) {
+export function QuickOrganizationForm({ onOrganizationCreated, organizationType }: QuickOrganizationFormProps) {
   const { toast } = useToast();
   const createOrganizationMutation = useCreateOrganization();
 
@@ -43,7 +43,7 @@ export function QuickOrganizationForm({ onOrganizationCreated, organizationType 
       name: '',
       initials: '',
       contact_email: '',
-      organization_type: organizationType,
+      organization_type: organizationType || 'partner',
     },
   });
 
@@ -121,7 +121,11 @@ export function QuickOrganizationForm({ onOrganizationCreated, organizationType 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={!!organizationType}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -134,6 +138,11 @@ export function QuickOrganizationForm({ onOrganizationCreated, organizationType 
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                  {organizationType && (
+                    <p className="text-sm text-muted-foreground">
+                      Type is fixed based on user type being created
+                    </p>
+                  )}
                 </FormItem>
               )}
             />
