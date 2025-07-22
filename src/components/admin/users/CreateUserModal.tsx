@@ -44,7 +44,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       last_name: '',
       email: '',
       user_type: 'subcontractor',
-      organization_id: '',
+      organization_id: undefined,
       phone: '',
     },
   });
@@ -62,7 +62,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
             last_name: data.last_name,
             user_type: data.user_type,
             phone: data.phone || '',
-            organization_ids: data.organization_id ? [data.organization_id] : [],
+            organization_ids: data.organization_id && data.organization_id !== 'none' ? [data.organization_id] : [],
           },
           send_welcome_email: true, // Always send welcome email
         },
@@ -237,14 +237,14 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                             <SelectValue placeholder="Select organization (optional)" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="">No organization</SelectItem>
-                          {filteredOrganizations?.map((org) => (
-                            <SelectItem key={org.id} value={org.id}>
-                              {org.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                                              <SelectContent>
+                        <SelectItem value="none">No organization</SelectItem>
+                        {filteredOrganizations?.map((org) => (
+                          <SelectItem key={org.id} value={org.id}>
+                            {org.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -290,4 +290,4 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       </DialogContent>
     </Dialog>
   );
-}
+} 
