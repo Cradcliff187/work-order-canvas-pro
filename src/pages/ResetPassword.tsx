@@ -274,7 +274,7 @@ const ResetPassword = () => {
         // Verify this is actually a recovery session and set recovery flow
         if (sessionData.user && sessionData.session) {
           console.log('Recovery session established successfully from URL');
-          setRecoveryFlow(true);
+          setRecoveryFlow('recovery');
         } else {
           console.error('Session verification failed - no user or session data');
           setResetError(categorizeError('Session verification failed', 'session_error'));
@@ -302,7 +302,7 @@ const ResetPassword = () => {
         const isValidRecoverySession = validateRecoverySession(session);
         if (isValidRecoverySession) {
           console.log('Found existing valid recovery session');
-          setRecoveryFlow(true);
+          setRecoveryFlow('recovery');
           return; // Success - no need to process URL parameters
         } else {
           console.log('Existing session is not a valid recovery session');
