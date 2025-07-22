@@ -68,18 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isInRecoveryFlow, setIsInRecoveryFlow] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const storedImpersonation = sessionStorage.getItem('impersonatedProfile');
-    if (storedImpersonation) {
-      try {
-        setImpersonatedProfile(JSON.parse(storedImpersonation));
-      } catch (error) {
-        console.error('Error parsing stored impersonation:', error);
-        sessionStorage.removeItem('impersonatedProfile');
-      }
-    }
-  }, []);
-
   const fetchProfile = async (userId: string, retryCount = 0): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
