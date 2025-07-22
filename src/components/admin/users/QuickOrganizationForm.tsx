@@ -30,9 +30,10 @@ type QuickOrganizationFormData = z.infer<typeof quickOrganizationSchema>;
 
 interface QuickOrganizationFormProps {
   onOrganizationCreated: (organization: any) => void;
+  organizationType?: 'partner' | 'subcontractor' | 'internal';
 }
 
-export function QuickOrganizationForm({ onOrganizationCreated }: QuickOrganizationFormProps) {
+export function QuickOrganizationForm({ onOrganizationCreated, organizationType = 'partner' }: QuickOrganizationFormProps) {
   const { toast } = useToast();
   const createOrganizationMutation = useCreateOrganization();
 
@@ -42,7 +43,7 @@ export function QuickOrganizationForm({ onOrganizationCreated }: QuickOrganizati
       name: '',
       initials: '',
       contact_email: '',
-      organization_type: 'partner',
+      organization_type: organizationType,
     },
   });
 
