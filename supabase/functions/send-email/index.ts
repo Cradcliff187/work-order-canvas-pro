@@ -15,7 +15,6 @@ const resend = new Resend(resendApiKey);
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 };
 
 // Enhanced branding variables for consistent email branding
@@ -44,7 +43,7 @@ function createCorsResponse(body: any, statusCode: number = 200) {
 }
 
 Deno.serve(async (req) => {
-  console.log('📧 Processing email request');
+  console.log('📧 Processing email request:', await req.clone().json());
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -64,7 +63,78 @@ Deno.serve(async (req) => {
       custom_data = {}
     } = await req.json();
 
-    console.log(`📧 Processing email: ${template_name} for ${record_id}`);
+    // Determine recipient based on test mode
+    let recipient: string;
+    if (test_mode) {
+      recipient = test_recipient || 'test@example.com';
+      console.log('⚠️  Test mode enabled. Sending to test recipient:', recipient);
+    } else {
+      // Fetch recipient email from the database based on record type
+      let email: string | null = null;
+
+      if (record_type === 'user') {
+        const { data: user } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', record_id)
+          .single();
+        email = user?.email;
+      } else if (record_type === 'work_order') {
+        const { data: workOrder } = await supabase
+          .from('work_orders')
+          .select('submitted_by')
+          .eq('id', record_id)
+          .single();
+
+        if (workOrder?.submitted_by) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', workOrder.submitted_by)
+            .single();
+          email = profile?.email;
+        }
+      } else if (record_type === 'report') {
+        // Fetch the report and then the associated user's email
+        const { data: report } = await supabase
+          .from('reports')
+          .select('submitted_by')
+          .eq('id', record_id)
+          .single();
+
+        if (report?.submitted_by) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', report.submitted_by)
+            .single();
+          email = profile?.email;
+        }
+      } else if (record_type === 'invoice') {
+          const { data: invoice } = await supabase
+            .from('invoices')
+            .select('subcontractor_id')
+            .eq('id', record_id)
+            .single();
+
+          if (invoice?.subcontractor_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('id', invoice.subcontractor_id)
+              .single();
+            email = profile?.email;
+          }
+      } else if (record_type === 'password_reset') {
+        // For password reset, email is provided in custom_data
+        email = custom_data.email;
+      }
+
+      if (!email) {
+        throw new Error(`Recipient email not found for record_id: ${record_id} and record_type: ${record_type}`);
+      }
+      recipient = email;
+    }
 
     // Get email template
     const { data: template } = await supabase
@@ -78,100 +148,69 @@ Deno.serve(async (req) => {
       throw new Error(`Template not found: ${template_name}`);
     }
 
-    let recipient: string;
+    // Fetch additional data based on template requirements
     let variables: { [key: string]: any } = {};
 
-    // Handle work_order_created emails
-    if (template_name === 'work_order_created') {
-      console.log('📋 Processing work_order_created email for:', record_id);
-
-      // Fetch work order with proper JOINs
-      const { data: workOrder, error: workOrderError } = await supabase
+    if (template_name === 'work_order_assigned') {
+      const { data: workOrder } = await supabase
         .from('work_orders')
-        .select(`
-          *,
-          organizations!organization_id(name, contact_email),
-          trades(name)
-        `)
+        .select('*')
         .eq('id', record_id)
         .single();
 
-      if (workOrderError || !workOrder) {
-        console.error('❌ Work order fetch error:', workOrderError);
-        throw new Error('Work order not found');
+      if (workOrder) {
+        const workOrderUrl = generateUrl(`/work-orders/${workOrder.id}`);
+        variables = { ...workOrder, workOrderUrl };
       }
+    } else if (template_name === 'report_submitted') {
+      const { data: report } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('id', record_id)
+        .single();
 
-      // Get admin email addresses for recipients
-      const { data: adminProfiles, error: adminError } = await supabase
-        .from('profiles')
-        .select('email, first_name, last_name')
-        .eq('user_type', 'admin')
-        .eq('is_active', true);
-
-      if (adminError || !adminProfiles || adminProfiles.length === 0) {
-        console.error('❌ Admin profiles fetch error:', adminError);
-        throw new Error('No admin recipients found');
+      if (report) {
+        const reviewUrl = generateUrl(`/admin/reports/${report.id}`);
+        variables = { ...report, reviewUrl };
       }
+    } else if (template_name === 'report_reviewed') {
+      const { data: report } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('id', record_id)
+        .single();
 
-      // Set recipient (first admin for single email, or test recipient)
-      recipient = test_mode && test_recipient ? test_recipient : adminProfiles[0].email;
-
-      // Prepare template variables with proper data mapping
-      const workOrderUrl = generateUrl(`/admin/work-orders/${workOrder.id}`);
-      variables = {
-        work_order_number: workOrder.work_order_number || 'Unknown',
-        organization_name: workOrder.organizations?.name || 'Unknown Organization',
-        store_location: workOrder.store_location || 'Unknown Location',
-        trade_name: workOrder.trades?.name || 'General Maintenance',
-        description: workOrder.description || 'No description provided',
-        submitted_date: new Date(workOrder.date_submitted).toLocaleDateString(),
-        admin_dashboard_url: workOrderUrl,
-        ...custom_data
-      };
-
-      console.log('📧 Work order variables prepared:', variables);
-
-    } else if (template_name === 'password_reset') {
-      // Handle password reset emails
-      console.log('🔑 Processing password_reset email');
-      
-      recipient = test_mode && test_recipient ? test_recipient : custom_data.email;
-      
-      if (!recipient) {
-        throw new Error('No recipient email provided for password reset');
+      if (report) {
+        const reportUrl = generateUrl(`/admin/reports/${report.id}`);
+          variables = { ...report, reportUrl };
       }
-
-      variables = {
-        first_name: custom_data.first_name || 'User',
-        email: custom_data.email || '',
-        reset_link: custom_data.reset_link || ''
-      };
-
-      console.log('🔑 Password reset variables prepared for:', recipient);
-
-    } else {
-      // Handle other email types as before
-      if (record_type === 'user') {
-        const { data: user } = await supabase
-          .from('profiles')
-          .select('email')
+    } else if (template_name === 'auth_confirmation' || template_name === 'password_reset') {
+      const customData = custom_data || {};
+        variables = {
+          ...variables,
+          first_name: customData.first_name || 'User',
+          email: customData.email || '',
+          confirmation_link: customData.confirmation_link || '',
+          reset_link: customData.reset_link || ''
+        };
+    } else if (template_name === 'invoice_submitted' || template_name === 'invoice_approved' || template_name === 'invoice_rejected' || template_name === 'invoice_paid') {
+        const { data: invoice } = await supabase
+          .from('invoices')
+          .select('*')
           .eq('id', record_id)
           .single();
-        recipient = user?.email || '';
-      } else {
-        throw new Error(`Unsupported template: ${template_name}`);
-      }
-    }
 
-    if (!recipient) {
-      throw new Error('No recipient email found');
+        if (invoice) {
+          const dashboard_url = generateUrl(`/admin/invoices/${invoice.id}`);
+          variables = { ...invoice, dashboard_url };
+        }
     }
 
     // Merge variables with branding
     const allVariables = {
       ...variables,
       ...BRANDING_VARIABLES,
-      ...custom_data
+      ...custom_data // Custom data can override defaults
     };
 
     // Process template with variables
@@ -198,16 +237,19 @@ Deno.serve(async (req) => {
 
     const resendResponse = await resend.emails.send(emailData);
 
-    // Log email event with correct schema
+    // Log email event
     const { error: logError } = await supabase
       .from('email_logs')
       .insert({
-        template_used: template_name,
-        recipient_email: recipient,
-        work_order_id: record_type === 'work_order' ? record_id : null,
+        template_name: template_name,
+        recipient: recipient,
+        record_id: record_id,
+        record_type: record_type,
+        subject: processedSubject,
         status: resendResponse.error ? 'failed' : 'sent',
-        error_message: resendResponse.error?.message || null,
-        sent_at: new Date().toISOString(),
+        resend_id: resendResponse.data?.id,
+        error_message: resendResponse.error?.message,
+        test_mode: test_mode,
       });
 
     if (logError) {
@@ -218,8 +260,6 @@ Deno.serve(async (req) => {
       throw new Error(`Resend error: ${resendResponse.error.message}`);
     }
 
-    console.log('✅ Email sent successfully, ID:', resendResponse.data?.id);
-
     return createCorsResponse({
       success: true,
       message: 'Email sent successfully',
@@ -227,7 +267,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('❌ Email sending failed:', error);
+    console.error('Email sending failed:', error);
     return createCorsResponse({ success: false, error: error.message }, 500);
   }
 });

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -133,7 +134,15 @@ const DevTools = () => {
   };
 
   const handleImpersonate = (user: ImpersonationUser) => {
-    setImpersonation(user.id);
+    setImpersonation({
+      id: user.id,
+      user_id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      user_type: user.user_type,
+      is_active: true
+    });
     
     toast({
       title: "Impersonation Started",
