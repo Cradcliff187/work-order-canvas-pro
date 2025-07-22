@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Database, Users, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useDevTools } from "@/hooks/useDevTools";
+import { useDevTools } from "@/hooks/dev/useDevTools";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Development-only guard
+if (!import.meta.env.DEV) {
+  throw new Error('DevTools should not be imported in production');
+}
 
 interface DevToolsResponse {
   success: boolean;

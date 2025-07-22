@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -35,6 +36,18 @@ export default defineConfig(({ mode }) => ({
       include: [/node_modules/],
     },
     rollupOptions: {
+      external: (id) => {
+        // Exclude development-only files from production builds
+        if (mode === 'production' && (
+          id.includes('/dev/') || 
+          id.includes('/admin/dev/') ||
+          id.includes('useDevTools') ||
+          id.includes('DevTools')
+        )) {
+          return true;
+        }
+        return false;
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],

@@ -1,53 +1,50 @@
+
 import { lazy } from 'react';
 
-// Admin Pages
-export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
-export const EmployeeDashboard = lazy(() => import('@/pages/admin/EmployeeDashboard'));
-export const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
-export const AdminOrganizations = lazy(() => import('@/pages/admin/AdminOrganizations'));
-export const AdminWorkOrders = lazy(() => import('@/pages/admin/AdminWorkOrders'));
-export const AdminWorkOrderDetail = lazy(() => import('@/pages/admin/AdminWorkOrderDetail'));
-export const AdminWorkOrderEdit = lazy(() => import('@/pages/admin/AdminWorkOrderEdit'));
-export const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'));
-export const AdminEmailTemplates = lazy(() => import('@/pages/admin/AdminEmailTemplates'));
-export const AdminProfile = lazy(() => import('@/pages/admin/AdminProfile'));
-export const AdminEmployees = lazy(() => import('@/pages/admin/AdminEmployees'));
-export const AdminInvoices = lazy(() => import('@/pages/admin/AdminInvoices'));
-export const EmployeeTimeReports = lazy(() => import('@/pages/admin/EmployeeTimeReports'));
-export const EmployeeTimeReport = lazy(() => import('@/pages/admin/EmployeeTimeReport'));
-export const ReceiptHistory = lazy(() => import('@/pages/admin/ReceiptHistory'));
+// Admin pages
+export const AdminDashboard = lazy(() => import('./AdminDashboard'));
+export const EmployeeDashboard = lazy(() => import('./EmployeeDashboard'));
+export const AdminUsers = lazy(() => import('./AdminUsers'));
+export const AdminOrganizations = lazy(() => import('./AdminOrganizations'));
+export const AdminWorkOrders = lazy(() => import('./AdminWorkOrders'));
+export const AdminWorkOrderDetail = lazy(() => import('./AdminWorkOrderDetail'));
+export const AdminWorkOrderEdit = lazy(() => import('./AdminWorkOrderEdit'));
+export const AdminAnalytics = lazy(() => import('./AdminAnalytics'));
+export const AdminEmailTemplates = lazy(() => import('./AdminEmailTemplates'));
+export const AdminReports = lazy(() => import('./AdminReports'));
+export const AdminReportDetail = lazy(() => import('./AdminReportDetail'));
+export const AdminProfile = lazy(() => import('./AdminProfile'));
+export const AdminEmployees = lazy(() => import('./AdminEmployees'));
+export const AdminInvoices = lazy(() => import('./AdminInvoices'));
+export const EmployeeTimeReports = lazy(() => import('./EmployeeTimeReports'));
+export const EmployeeTimeReport = lazy(() => import('./EmployeeTimeReport'));
+export const ReceiptHistory = lazy(() => import('./ReceiptHistory'));
+export const SystemHealthCheck = lazy(() => import('./SystemHealthCheck'));
+export const TestEmailPage = lazy(() => import('./TestEmailPage'));
+export const AdminOrganizationDiagnostics = lazy(() => import('./AdminOrganizationDiagnostics'));
 
-// Partner Pages
-export const PartnerDashboard = lazy(() => import('@/pages/partner/PartnerDashboard'));
-export const SubmitWorkOrder = lazy(() => import('@/pages/partner/SubmitWorkOrder'));
-export const WorkOrderList = lazy(() => import('@/pages/partner/WorkOrderList'));
-export const WorkOrderDetail = lazy(() => import('@/pages/partner/WorkOrderDetail'));
-export const PartnerLocations = lazy(() => import('@/pages/partner/PartnerLocations'));
-export const PartnerProfile = lazy(() => import('@/pages/partner/PartnerProfile'));
+// Conditionally export DevTools only in development
+export const DevTools = import.meta.env.DEV 
+  ? lazy(() => import('./admin/dev/DevTools'))
+  : null;
 
-// Subcontractor Pages
-export const SubcontractorDashboard = lazy(() => import('@/pages/subcontractor/SubcontractorDashboard'));
-export const SubcontractorWorkOrders = lazy(() => import('@/pages/subcontractor/SubcontractorWorkOrders'));
-export const SubcontractorWorkOrderDetail = lazy(() => import('@/pages/subcontractor/SubcontractorWorkOrderDetail'));
-export const SubmitReport = lazy(() => import('@/pages/subcontractor/SubmitReport'));
-export const ReportHistory = lazy(() => import('@/pages/subcontractor/ReportHistory'));
-export const ReportDetail = lazy(() => import('@/pages/subcontractor/ReportDetail'));
-export const SubcontractorProfile = lazy(() => import('@/pages/subcontractor/SubcontractorProfile'));
-export const SubmitInvoice = lazy(() => import('@/pages/subcontractor/SubmitInvoice'));
-export const SubcontractorInvoices = lazy(() => import('@/pages/subcontractor/SubcontractorInvoices'));
+// Partner pages
+export const PartnerDashboard = lazy(() => import('./PartnerDashboard'));
+export const PartnerWorkOrders = lazy(() => import('./PartnerWorkOrders'));
+export const PartnerWorkOrderDetail = lazy(() => import('./PartnerWorkOrderDetail'));
+export const PartnerWorkOrderForm = lazy(() => import('./PartnerWorkOrderForm'));
+export const PartnerProfile = lazy(() => import('./PartnerProfile'));
 
-// Other Pages
-export const Auth = lazy(() => import('@/pages/Auth'));
-export const DevTools = lazy(() => import('@/pages/DevTools'));
+// Subcontractor pages
+export const SubcontractorDashboard = lazy(() => import('./SubcontractorDashboard'));
+export const SubcontractorWorkOrders = lazy(() => import('./SubcontractorWorkOrders'));
+export const SubcontractorWorkOrderDetail = lazy(() => import('./SubcontractorWorkOrderDetail'));
+export const SubcontractorReports = lazy(() => import('./SubcontractorReports'));
+export const SubcontractorReportForm = lazy(() => import('./SubcontractorReportForm'));
+export const SubcontractorProfile = lazy(() => import('./SubcontractorProfile'));
 
-
-// Report Pages
-export const AdminReports = lazy(() => import('@/pages/admin/AdminReports'));
-export const AdminReportDetail = lazy(() => import('@/pages/admin/AdminReportDetail'));
-export const PartnerReports = lazy(() => import('@/pages/partner/PartnerReports'));
-export const PartnerReportDetail = lazy(() => import('@/pages/partner/PartnerReportDetail'));
-
-// System Pages
-export const SystemHealthCheck = lazy(() => import('@/pages/admin/SystemHealthCheck'));
-export const TestEmailPage = lazy(() => import('@/pages/admin/TestEmailPage'));
-export const AdminOrganizationDiagnostics = lazy(() => import('@/pages/admin/AdminOrganizationDiagnostics'));
+// Auth pages
+export const Login = lazy(() => import('./Login'));
+export const Register = lazy(() => import('./Register'));
+export const ForgotPassword = lazy(() => import('./ForgotPassword'));
+export const ResetPassword = lazy(() => import('./ResetPassword'));
