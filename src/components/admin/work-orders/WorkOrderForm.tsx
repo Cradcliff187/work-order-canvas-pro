@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { FormattedInput } from '@/components/ui/formatted-input';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { Loader2 } from 'lucide-react';
 import { WorkOrder } from '@/hooks/useWorkOrders';
+import { US_STATES } from '@/constants/states';
 
 const workOrderSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -17,10 +19,14 @@ const workOrderSchema = z.object({
   organization_id: z.string().min(1, 'Organization is required'),
   trade_id: z.string().min(1, 'Trade is required'),
   store_location: z.string().optional(),
-  street_address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional(),
+  location_street_address: z.string().optional(),
+  location_city: z.string().optional(),
+  location_state: z.string().optional().refine((val) => !val || /^[A-Z]{2}$/.test(val), {
+    message: 'State must be a valid 2-character code'
+  }),
+  location_zip_code: z.string().optional().refine((val) => !val || /^\d{5}(-\d{4})?$/.test(val), {
+    message: 'ZIP code must be in format 12345 or 12345-6789'
+  }),
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
   status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled', 'estimate_needed']),
@@ -49,10 +55,10 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
       organization_id: workOrder?.organization_id || '',
       trade_id: workOrder?.trade_id || '',
       store_location: workOrder?.store_location || '',
-      street_address: workOrder?.street_address || '',
-      city: workOrder?.city || '',
-      state: workOrder?.state || '',
-      zip_code: workOrder?.zip_code || '',
+      location_street_address: workOrder?.location_street_address || '',
+      location_city: workOrder?.location_city || '',
+      location_state: workOrder?.location_state || '',
+      location_zip_code: workOrder?.location_zip_code || '',
       partner_po_number: workOrder?.partner_po_number || '',
       partner_location_number: workOrder?.partner_location_number || '',
       status: workOrder?.status || 'received',
@@ -236,62 +242,87 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
 
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Address Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <FormField
               control={form.control}
-              name="street_address"
+              name="location_street_address"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Street Address</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <FormattedInput 
+                      {...field} 
+                      formatter="streetAddress" 
+                      placeholder="123 Main Street" 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="location_city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <FormattedInput 
+                        {...field} 
+                        formatter="city" 
+                        placeholder="City" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="location_state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {US_STATES.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="zip_code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ZIP Code</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="location_zip_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ZIP Code</FormLabel>
+                    <FormControl>
+                      <FormattedInput 
+                        {...field} 
+                        formatter="zip" 
+                        placeholder="12345 or 12345-6789" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
         </div>
 
