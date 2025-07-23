@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, CheckCircle } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { supabase } from '@/integrations/supabase/client';
+import { filterOrganizationsByUserType } from '@/lib/utils/userOrgMapping';
 
 // Remove password from schema - system will handle it
 const createUserSchema = z.object({
@@ -44,11 +45,21 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       first_name: '',
       last_name: '',
       email: '',
-      user_type: 'subcontractor',
+      user_type: undefined,
       organization_id: undefined,
       phone: '',
     },
   });
+
+  // Reset organization when user type changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'user_type') {
+        form.setValue('organization_id', undefined);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const onSubmit = async (data: CreateUserFormData) => {
     try {
@@ -102,18 +113,9 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
   };
 
   const watchedUserType = form.watch('user_type');
-  const filteredOrganizations = organizations?.filter(org => {
-    switch (watchedUserType) {
-      case 'partner':
-        return org.organization_type === 'partner';
-      case 'subcontractor':
-        return org.organization_type === 'subcontractor';
-      case 'employee':
-        return org.organization_type === 'internal';
-      default:
-        return true;
-    }
-  });
+  const filteredOrganizations = watchedUserType && organizations 
+    ? filterOrganizationsByUserType(organizations, watchedUserType)
+    : [];
 
   // Show organization field for non-admin users
   const showOrganizationField = watchedUserType !== 'admin';
@@ -209,7 +211,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>User Type *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select user type" />
