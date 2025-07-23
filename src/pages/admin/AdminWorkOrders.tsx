@@ -359,6 +359,7 @@ export default function AdminWorkOrders() {
       <CreateWorkOrderModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
+        onWorkOrderCreated={() => refetch()}
       />
 
       {/* Assignment Modal */}

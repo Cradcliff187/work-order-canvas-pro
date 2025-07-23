@@ -62,6 +62,7 @@ interface CreateWorkOrderModalProps {
 
 export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWorkOrderCreated }: CreateWorkOrderModalProps) {
   const { toast } = useToast();
+  const { viewingProfile } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [trades, setTrades] = useState<any[]>([]);
   const [isLoadingTrades, setIsLoadingTrades] = useState(true);
@@ -71,6 +72,12 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
 
   // Work order creation hook
   const createWorkOrderMutation = useCreateWorkOrder();
+  
+  // Load organizations for admin users
+  const { data: organizations, isLoading: isLoadingOrganizations } = useOrganizations();
+  
+  // Check if user is admin to show organization selection
+  const isAdmin = viewingProfile?.user_type === 'admin';
 
   // Form setup with comprehensive validation
   const form = useForm<FormData>({
@@ -101,6 +108,17 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     }
   });
 
+  // Reset to appropriate step when modal opens
+  useEffect(() => {
+    if (open) {
+      setCurrentStep(isAdmin ? 0 : 1);
+      if (!organizationId) {
+        setSelectedOrganizationId('');
+        setSelectedOrganization(null);
+      }
+    }
+  }, [open, isAdmin, organizationId]);
+
   // Watch form values for auto-generation
   const watchedStoreLocation = form.watch('store_location');
   const watchedTradeId = form.watch('trade_id');
@@ -128,7 +146,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     organizationName,
     locationNumber: generatedLocationNumber,
   } = useWorkOrderNumberGeneration({
-    organizationId: organizationId,
+    organizationId: organizationId || selectedOrganizationId,
     locationNumber: form.watch('partner_location_number'),
   });
 
@@ -156,14 +174,15 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     loadTrades();
   }, []);
 
-  // Load organization details when organizationId changes
+  // Load organization details when organizationId or selectedOrganizationId changes
   useEffect(() => {
     const loadOrganization = async () => {
-      if (organizationId) {
+      const targetOrgId = organizationId || selectedOrganizationId;
+      if (targetOrgId) {
         const { data, error } = await supabase
           .from('organizations')
           .select('*')
-          .eq('id', organizationId)
+          .eq('id', targetOrgId)
           .single();
 
         if (error) {
@@ -180,20 +199,33 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     };
 
     loadOrganization();
-  }, [organizationId, toast]);
+  }, [organizationId, selectedOrganizationId, toast]);
 
-  // Update organization in form when organizationId changes
+  // Update organization in form when organizationId or selectedOrganizationId changes
   useEffect(() => {
-    if (organizationId && form.getValues('organization_id') !== organizationId) {
-      form.setValue('organization_id', organizationId);
+    const targetOrgId = organizationId || selectedOrganizationId;
+    if (targetOrgId && form.getValues('organization_id') !== targetOrgId) {
+      form.setValue('organization_id', targetOrgId);
     }
-  }, [organizationId, form]);
+  }, [organizationId, selectedOrganizationId, form]);
 
   const validateStep = async (step: number) => {
     switch (step) {
+      case 0:
+        // Organization selection step (admin only)
+        if (!selectedOrganizationId) {
+          toast({
+            variant: "destructive",
+            title: "Organization Required",
+            description: "Please select an organization to continue.",
+          });
+          return false;
+        }
+        return true;
       case 1:
-        // For admin users, organization selection is required first
-        if (!organizationId) {
+        // For admin users, check if organization is selected
+        const targetOrgId = organizationId || selectedOrganizationId;
+        if (isAdmin && !targetOrgId) {
           toast({
             variant: "destructive",
             title: "Organization Required",
@@ -271,13 +303,15 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
   // Navigation functions
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
-    if (isValid && currentStep < 3) {
+    const maxStep = isAdmin ? 3 : 3; // Same max step for now
+    if (isValid && currentStep < maxStep) {
       setCurrentStep(currentStep + 1);
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
+    const minStep = isAdmin ? 0 : 1;
+    if (currentStep > minStep) {
       setCurrentStep(currentStep - 1);
     }
   };
@@ -293,7 +327,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         title: finalTitle,
         description: data.description || '',
         trade_id: data.trade_id,
-        organization_id: organizationId!,
+        organization_id: organizationId || selectedOrganizationId,
         store_location: data.store_location,
         street_address: data.street_address || '',
         city: data.city || '',
@@ -309,7 +343,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         location_contact_email: data.location_contact_email || '',
         partner_po_number: data.partner_po_number || '',
         partner_location_number: data.partner_location_number || generatedLocationNumber || '',
-        created_by: organizationId!, // This should be the actual user ID
+        created_by: viewingProfile?.id!, // Use the actual user's profile ID
       };
 
       await createWorkOrderMutation.mutateAsync(submissionData);
@@ -321,7 +355,9 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
 
       // Reset form and steps
       form.reset();
-      setCurrentStep(1);
+      setCurrentStep(isAdmin ? 0 : 1);
+      setSelectedOrganizationId('');
+      setSelectedOrganization(null);
       onOpenChange(false);
 
       // Trigger callback
@@ -351,6 +387,67 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         {/* Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Step 0: Organization Selection (Admin Only) */}
+            {isAdmin && currentStep === 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    Select Organization
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Choose the organization for this work order
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isLoadingOrganizations ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Loading organizations...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Label>Organization *</Label>
+                      <Select onValueChange={(value) => {
+                        setSelectedOrganizationId(value);
+                        const org = organizations?.find(o => o.id === value);
+                        setSelectedOrganization(org);
+                      }} value={selectedOrganizationId}>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select an organization" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizations?.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              <div className="flex items-center gap-2">
+                                <span>{org.name}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {org.organization_type}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {selectedOrganization && (
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                          <h4 className="font-medium mb-2">{selectedOrganization.name}</h4>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>Type: {selectedOrganization.organization_type}</p>
+                            <p>Contact: {selectedOrganization.contact_email}</p>
+                            {selectedOrganization.address && (
+                              <p>Address: {selectedOrganization.address}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Step 1: Location Details */}
             {currentStep === 1 && (
               <Card>
@@ -366,7 +463,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                 <CardContent className="space-y-6">
                   <LocationFields
                     form={form}
-                    organizationId={organizationId}
+                    organizationId={organizationId || selectedOrganizationId}
                     showPoNumber={true}
                   />
                 </CardContent>
@@ -502,7 +599,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                 type="button"
                 variant="outline"
                 onClick={handlePrevious}
-                disabled={currentStep === 1}
+                disabled={currentStep === (isAdmin ? 0 : 1)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
