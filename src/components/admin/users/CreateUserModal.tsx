@@ -122,7 +122,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[500px] h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -145,7 +145,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-              <ScrollArea className="flex-1 pr-6">
+              <ScrollArea className="flex-1 pr-6 h-[calc(90vh-200px)]">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
