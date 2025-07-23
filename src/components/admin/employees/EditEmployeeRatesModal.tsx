@@ -54,7 +54,7 @@ export function EditEmployeeRatesModal({ open, onOpenChange, employee }: EditEmp
     try {
       await updateEmployeeRates.mutateAsync({
         employeeId: employee.id,
-        ratesData,
+        ...ratesData,
       });
       onOpenChange(false);
     } catch (error) {
