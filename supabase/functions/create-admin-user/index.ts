@@ -323,23 +323,36 @@ serve(async (req) => {
 
     // Create organization relationships
     if (finalOrganizationIds.length > 0) {
+      console.log('Creating organization relationships for user:', newProfile.id);
+      console.log('Organization IDs:', finalOrganizationIds);
+      
       const orgRelationships = finalOrganizationIds.map((orgId: string) => ({
         user_id: newProfile.id,
         organization_id: orgId,
       }));
 
-      const { error: orgError } = await supabaseAdmin
+      console.log('Inserting organization relationships:', orgRelationships);
+
+      const { data: insertedRelationships, error: orgError } = await supabaseAdmin
         .from('user_organizations')
-        .insert(orgRelationships);
+        .insert(orgRelationships)
+        .select();
 
       if (orgError) {
         console.error('Organization relationship creation failed:', orgError);
+        console.error('Error details:', {
+          message: orgError.message,
+          details: orgError.details,
+          hint: orgError.hint,
+          code: orgError.code
+        });
+        
         // For auto-assignment, this is more critical
         if (autoAssignedOrganizations.length > 0) {
           throw new Error(`Failed to assign user to organization: ${orgError.message}`);
         }
       } else {
-        console.log('Organization relationships created successfully');
+        console.log('Organization relationships created successfully:', insertedRelationships);
       }
     }
 
