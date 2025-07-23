@@ -1,131 +1,77 @@
--- Fix Critical Database Schema Issues for User Creation
--- This migration addresses missing tables and columns that are breaking user creation
+-- CORRECTED User Creation Fix
+-- Only adds what's missing, doesn't duplicate existing functionality
 
--- Step 1: Create user_organizations table if it doesn't exist
-CREATE TABLE IF NOT EXISTS public.user_organizations (
-  id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid NOT NULL,
-  organization_id uuid NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  UNIQUE(user_id, organization_id)
-);
+-- ============================================
+-- PART 1: Fix Missing auth_user_id Function
+-- ============================================
+-- This is the ONLY missing function causing user creation failures
+CREATE OR REPLACE FUNCTION public.auth_user_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT auth.uid()
+$$;
 
--- Add RLS to user_organizations table
-ALTER TABLE public.user_organizations ENABLE ROW LEVEL SECURITY;
+-- Grant necessary permissions
+GRANT EXECUTE ON FUNCTION public.auth_user_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.auth_user_id() TO service_role;
 
--- Create policies for user_organizations
-CREATE POLICY "Admins can manage all user organizations" ON public.user_organizations
-FOR ALL TO authenticated
-USING (jwt_is_admin())
-WITH CHECK (jwt_is_admin());
-
-CREATE POLICY "Users can view their own organization relationships" ON public.user_organizations
-FOR SELECT TO authenticated
-USING (user_id = jwt_profile_id());
-
--- Step 2: Fix audit_logs table - add missing 'operation' column
--- Check if column exists and add it if missing
+-- ============================================
+-- PART 2: Verify jwt_organization_ids exists
+-- ============================================
+-- Just verify it exists, don't recreate it
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'audit_logs' 
-    AND column_name = 'operation'
-    AND table_schema = 'public'
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' AND p.proname = 'jwt_organization_ids'
   ) THEN
-    ALTER TABLE public.audit_logs ADD COLUMN operation text;
+    RAISE EXCEPTION 'jwt_organization_ids function is missing - this migration needs updating';
   END IF;
-END $$;
+END$$;
 
--- Step 3: Update audit_logs constraint to include 'operation' 
-DROP CONSTRAINT IF EXISTS audit_logs_action_check ON public.audit_logs;
-ALTER TABLE public.audit_logs 
-ADD CONSTRAINT audit_logs_action_check 
-CHECK (action IN ('INSERT', 'UPDATE', 'DELETE', 'STATUS_CHANGE', 'OPERATION'));
+-- ============================================
+-- PART 3: Email Trigger Cleanup
+-- ============================================
+-- Remove duplicate triggers as discussed
+DROP TRIGGER IF EXISTS trigger_auto_report_status ON work_order_reports;
+DROP TRIGGER IF EXISTS trigger_work_order_created ON work_orders;
+DROP TRIGGER IF EXISTS trigger_work_order_assigned ON work_orders;
+DROP TRIGGER IF EXISTS trigger_report_submitted ON work_order_reports;
+DROP TRIGGER IF EXISTS trigger_report_reviewed ON work_order_reports;
 
--- Step 4: Create missing JWT helper functions if they don't exist
-CREATE OR REPLACE FUNCTION public.jwt_organization_ids()
-RETURNS uuid[]
-LANGUAGE plpgsql
-STABLE SECURITY DEFINER
-AS $$
-DECLARE
-  org_ids uuid[];
-  jwt_org_ids uuid[];
-BEGIN
-  -- First try to get from JWT app_metadata
-  SELECT (auth.jwt() -> 'app_metadata' -> 'organization_ids')::text::uuid[] INTO jwt_org_ids;
-  
-  -- If not in JWT or empty, query user_organizations table directly
-  IF jwt_org_ids IS NULL OR array_length(jwt_org_ids, 1) IS NULL THEN
-    SELECT array_agg(uo.organization_id) INTO org_ids
-    FROM user_organizations uo
-    WHERE uo.user_id = jwt_profile_id();
-    
-    -- Return empty array if no organizations found
-    RETURN COALESCE(org_ids, '{}');
-  END IF;
-  
-  RETURN jwt_org_ids;
-END;
-$$;
+-- Remove deprecated trigger functions
+DROP FUNCTION IF EXISTS public.notify_work_order_created();
+DROP FUNCTION IF EXISTS public.notify_work_order_assigned(); 
+DROP FUNCTION IF EXISTS public.notify_report_submitted();
+DROP FUNCTION IF EXISTS public.notify_report_reviewed();
+DROP FUNCTION IF EXISTS public.notify_user_welcome();
 
--- Step 5: Create auth_user_id helper function
-CREATE OR REPLACE FUNCTION public.auth_user_id()
-RETURNS uuid
-LANGUAGE plpgsql
-STABLE SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN auth.uid();
-END;
-$$;
+-- ============================================
+-- VERIFICATION QUERIES
+-- ============================================
+-- Run these after migration to verify success:
 
--- Step 6: Fix sync functions for JWT metadata
-CREATE OR REPLACE FUNCTION public.sync_auth_user_metadata()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_organization_ids uuid[];
-BEGIN
-  -- Get organization IDs for the user
-  SELECT array_agg(uo.organization_id) INTO v_organization_ids
-  FROM user_organizations uo
-  WHERE uo.user_id = NEW.id;
-  
-  -- Handle case where no organizations exist
-  IF v_organization_ids IS NULL THEN
-    v_organization_ids := '{}';
-  END IF;
-  
-  -- Update auth.users app_metadata
-  UPDATE auth.users
-  SET raw_app_meta_data = 
-    COALESCE(raw_app_meta_data, '{}'::jsonb) || 
-    jsonb_build_object(
-      'user_type', NEW.user_type,
-      'profile_id', NEW.id,
-      'organization_ids', v_organization_ids,
-      'is_active', NEW.is_active
-    )
-  WHERE id = NEW.user_id;
-  
-  RETURN NEW;
-END;
-$$;
+-- 1. Check auth_user_id exists
+-- SELECT proname FROM pg_proc WHERE proname = 'auth_user_id';
 
--- Step 7: Create trigger for profile metadata sync
-DROP TRIGGER IF EXISTS sync_user_type_to_auth ON public.profiles;
-CREATE TRIGGER sync_user_type_to_auth
-  AFTER INSERT OR UPDATE ON public.profiles
-  FOR EACH ROW 
-  EXECUTE FUNCTION public.sync_auth_user_metadata();
+-- 2. Test user creation
+-- Try creating a user through the UI
 
--- Step 8: Grant necessary permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_organizations TO authenticated;
-GRANT ALL ON public.user_organizations TO service_role;
+-- 3. Check for duplicate email triggers
+-- SELECT trigger_name, event_object_table 
+-- FROM information_schema.triggers 
+-- WHERE trigger_schema = 'public' 
+-- AND trigger_name LIKE '%email%' OR trigger_name LIKE '%report%'
+-- ORDER BY event_object_table, trigger_name;
 
-GRANT EXECUTE ON FUNCTION public.jwt_organization_ids() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.auth_user_id() TO authenticated, service_role;
+-- ============================================
+-- IMPORTANT NOTES
+-- ============================================
+-- DO NOT create sync_user_type_to_auth trigger - use existing sync-jwt-metadata edge function
+-- DO NOT recreate jwt_organization_ids - it already exists
+-- DO NOT add complex sync logic - keep it simple
