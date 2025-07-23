@@ -2,6 +2,7 @@
 import React from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { EmailTestingPanel } from '@/components/admin/EmailTestingPanel';
+import { EmailSystemTest } from '@/components/admin/EmailSystemTest';
 
 export default function TestEmailPage() {
   return (
@@ -14,6 +15,7 @@ export default function TestEmailPage() {
           </p>
         </div>
         
+        <EmailSystemTest />
         <EmailTestingPanel />
       </div>
     </AdminLayout>
