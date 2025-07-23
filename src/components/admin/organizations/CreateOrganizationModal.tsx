@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2 } from "lucide-react";
 import { useCreateOrganization } from '@/hooks/useOrganizations';
 import { US_STATES } from '@/constants/states';
+import { formatAddress } from '@/lib/utils/addressUtils';
 
 const createOrganizationSchema = z.object({
   name: z.string().min(2, {
@@ -73,12 +74,12 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
   const onSubmit = async (data: CreateOrganizationFormData) => {
     try {
       // Combine structured address fields into single address string
-      const addressParts = [
-        data.street_address,
-        data.city,
-        data.state && data.zip_code ? `${data.state} ${data.zip_code}` : data.state || data.zip_code
-      ].filter(Boolean);
-      const fullAddress = addressParts.join(', ');
+      const fullAddress = formatAddress({
+        street_address: data.street_address,
+        city: data.city,
+        state: data.state,
+        zip_code: data.zip_code
+      });
 
       const organizationData = {
         name: data.name,
