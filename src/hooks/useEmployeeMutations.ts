@@ -1,50 +1,60 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { UpdateEmployeeRatesData, CreateEmployeeData } from '@/types/employee';
+import { onOrganizationChange } from '@/lib/auth/jwtSync';
 
 export function useEmployeeMutations() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const updateEmployeeRates = useMutation({
-    mutationFn: async ({ employeeId, ratesData }: { employeeId: string; ratesData: UpdateEmployeeRatesData }) => {
-      const { data: profile, error } = await supabase
+  interface UpdateEmployeeData {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    hourly_cost_rate?: number;
+    hourly_billable_rate?: number;
+    organization_id?: string;
+  }
+
+  const updateEmployee = useMutation({
+    mutationFn: async ({ id, ...updates }: UpdateEmployeeData) => {
+      const { data, error } = await supabase
         .from('profiles')
-        .update({
-          hourly_cost_rate: ratesData.hourly_cost_rate,
-          hourly_billable_rate: ratesData.hourly_billable_rate,
-        })
-        .eq('id', employeeId)
+        .update(updates)
+        .eq('id', id)
         .select()
-        .maybeSingle();
+        .single();
 
-      if (error) {
-        throw new Error(`Failed to update employee rates: ${error.message}`);
-      }
-
-      if (!profile) {
-        throw new Error('Employee not found');
-      }
-
-      return profile;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['employee'] });
       toast({
-        title: "Rates updated",
-        description: "Employee billing rates have been updated successfully.",
+        title: "Employee updated",
+        description: "The employee has been updated successfully.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error updating rates",
+        title: "Error updating employee",
         description: error.message,
         variant: "destructive",
       });
     },
   });
+
+  interface CreateEmployeeData {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    hourly_cost_rate?: number;
+    hourly_billable_rate?: number;
+    organization_id?: string;
+  }
 
   const createEmployee = useMutation({
     mutationFn: async (employeeData: CreateEmployeeData) => {
@@ -86,6 +96,9 @@ export function useEmployeeMutations() {
           await supabase.from('profiles').delete().eq('id', profile.id);
           throw new Error(`Failed to assign organization: ${orgError.message}`);
         }
+
+        // Sync JWT metadata after organization assignment
+        await onOrganizationChange(tempUserId);
       }
 
       return profile;
@@ -106,31 +119,73 @@ export function useEmployeeMutations() {
     },
   });
 
-  const toggleEmployeeStatus = useMutation({
-    mutationFn: async ({ employeeId, isActive }: { employeeId: string; isActive: boolean }) => {
+  const deleteEmployee = useMutation({
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: isActive })
-        .eq('id', employeeId)
-        .eq('is_employee', true);
+        .delete()
+        .eq('id', id);
 
-      if (error) {
-        throw new Error(`Failed to update employee status: ${error.message}`);
-      }
-
-      return { employeeId, isActive };
+      if (error) throw error;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['employee', data.employeeId] });
       toast({
-        title: "Employee status updated",
-        description: `Employee has been ${data.isActive ? 'activated' : 'deactivated'}.`,
+        title: "Employee deleted",
+        description: "The employee has been deleted successfully.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error updating employee status",
+        title: "Error deleting employee",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEmployeeOrganization = useMutation({
+    mutationFn: async ({ employeeId, userId, organizationId }: { 
+      employeeId: string; 
+      userId: string;
+      organizationId: string | null;
+    }) => {
+      // First, remove any existing organizations
+      const { error: deleteError } = await supabase
+        .from('user_organizations')
+        .delete()
+        .eq('user_id', employeeId);
+
+      if (deleteError) throw deleteError;
+
+      // Then add the new organization if provided
+      if (organizationId) {
+        const { error: insertError } = await supabase
+          .from('user_organizations')
+          .insert({
+            user_id: employeeId,
+            organization_id: organizationId,
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Sync JWT metadata after organization change
+      await onOrganizationChange(userId);
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['user-organizations'] });
+      toast({
+        title: "Organization updated",
+        description: "Employee organization has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating organization",
         description: error.message,
         variant: "destructive",
       });
@@ -138,8 +193,9 @@ export function useEmployeeMutations() {
   });
 
   return {
-    updateEmployeeRates,
+    updateEmployee,
     createEmployee,
-    toggleEmployeeStatus,
+    deleteEmployee,
+    updateEmployeeOrganization,
   };
 }

@@ -1,7 +1,7 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { onOrganizationChange } from '@/lib/auth/jwtSync';
 import type { Database } from '@/integrations/supabase/types';
 
 export type User = Database['public']['Tables']['profiles']['Row'] & {
@@ -118,6 +118,9 @@ export function useCreateUser() {
           });
 
         if (orgError) throw orgError;
+
+        // Sync JWT metadata after organization assignment
+        await onOrganizationChange(authData.user.id);
       }
 
       return profileData;
@@ -234,16 +237,72 @@ export function useBulkUpdateUsers() {
   });
 }
 
+// New hook for updating user organizations with JWT sync
+export function useUpdateUserOrganization() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ userId, profileId, organizationId }: { 
+      userId: string; 
+      profileId: string;
+      organizationId: string | null;
+    }) => {
+      // First, remove any existing organizations
+      const { error: deleteError } = await supabase
+        .from('user_organizations')
+        .delete()
+        .eq('user_id', profileId);
+
+      if (deleteError) throw deleteError;
+
+      // Then add the new organization if provided
+      if (organizationId) {
+        const { error: insertError } = await supabase
+          .from('user_organizations')
+          .insert({
+            user_id: profileId,
+            organization_id: organizationId,
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Sync JWT metadata after organization change
+      await onOrganizationChange(userId);
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user-organizations'] });
+      toast({
+        title: 'Success',
+        description: 'User organization updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to update user organization',
+      });
+    },
+  });
+}
+
 export function useUserMutations() {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
   const bulkUpdateUsers = useBulkUpdateUsers();
+  const updateUserOrganization = useUpdateUserOrganization();
 
   return {
     createUser,
     updateUser,
     deleteUser,
     bulkUpdateUsers,
+    updateUserOrganization,
   };
 }
