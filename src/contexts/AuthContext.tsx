@@ -280,6 +280,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [navigate]);
 
+  // Auto-clear impersonation after 30 minutes
+  useEffect(() => {
+    if (impersonatedProfile) {
+      const timer = setTimeout(() => {
+        setImpersonatedProfile(null);
+      }, 1800000); // 30 minutes in milliseconds
+      return () => clearTimeout(timer);
+    }
+  }, [impersonatedProfile]);
+
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
