@@ -22,7 +22,17 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
   const { data: partnerLocations, isLoading: loadingLocations, error: locationsError, refetch: refetchLocations } = usePartnerLocations(organizationId);
 
   const partnerLocationSelection = form.watch('partner_location_selection');
-  const showManualEntry = partnerLocationSelection === 'add_new';
+  
+  // Auto-enable manual entry when no locations exist and loading is complete
+  const hasNoLocations = !loadingLocations && !locationsError && partnerLocations?.length === 0;
+  const showManualEntry = partnerLocationSelection === 'add_new' || hasNoLocations;
+  
+  // Auto-set to 'add_new' when no locations exist
+  React.useEffect(() => {
+    if (hasNoLocations && !partnerLocationSelection && organizationId) {
+      form.setValue('partner_location_selection', 'add_new');
+    }
+  }, [hasNoLocations, partnerLocationSelection, organizationId, form]);
 
   return (
     <div className="space-y-4">
