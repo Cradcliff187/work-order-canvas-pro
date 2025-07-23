@@ -1459,6 +1459,10 @@ export type Database = {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_type"]
       }
+      initialize_all_user_jwt_metadata: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -1507,6 +1511,10 @@ export type Database = {
           user_id?: string
         }
         Returns: boolean
+      }
+      trigger_jwt_metadata_sync: {
+        Args: { p_user_id?: string }
+        Returns: Json
       }
       trigger_send_email: {
         Args: { template_name: string; record_id: string; record_type: string }

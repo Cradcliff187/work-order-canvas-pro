@@ -54,49 +54,13 @@ const SystemHealthCheck = () => {
     const tests: HelperFunctionTest[] = [];
     
     try {
-      // Test auth_user_id()
-      const { data: userIdResult } = await supabase.rpc('auth_user_id');
+      // Test JWT metadata sync function
+      const { data: syncResult } = await supabase.rpc('trigger_jwt_metadata_sync');
       tests.push({
-        function: 'auth_user_id()',
-        expected: 'Current auth UUID',
-        actual: userIdResult,
-        status: userIdResult ? 'success' : 'error'
-      });
-
-      // Test auth_profile_id()
-      const { data: profileIdResult } = await supabase.rpc('auth_profile_id');
-      tests.push({
-        function: 'auth_profile_id()',
-        expected: 'Current profile UUID',
-        actual: profileIdResult,
-        status: profileIdResult ? 'success' : 'error'
-      });
-
-      // Test auth_user_type()
-      const { data: userTypeResult } = await supabase.rpc('auth_user_type');
-      tests.push({
-        function: 'auth_user_type()',
-        expected: 'admin/partner/subcontractor',
-        actual: userTypeResult,
-        status: userTypeResult ? 'success' : 'error'
-      });
-
-      // Test auth_is_admin()
-      const { data: isAdminResult } = await supabase.rpc('auth_is_admin');
-      tests.push({
-        function: 'auth_is_admin()',
-        expected: 'boolean',
-        actual: isAdminResult,
-        status: typeof isAdminResult === 'boolean' ? 'success' : 'error'
-      });
-
-      // Test auth_user_organizations()
-      const { data: userOrgsResult } = await supabase.rpc('auth_user_organizations');
-      tests.push({
-        function: 'auth_user_organizations()',
-        expected: 'Array of org IDs',
-        actual: userOrgsResult,
-        status: Array.isArray(userOrgsResult) ? 'success' : 'error'
+        function: 'trigger_jwt_metadata_sync()',
+        expected: 'JWT metadata sync success',
+        actual: syncResult,
+        status: (syncResult as any)?.success ? 'success' : 'error'
       });
 
     } catch (error) {

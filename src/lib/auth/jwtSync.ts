@@ -1,53 +1,41 @@
 import { supabase } from '@/integrations/supabase/client';
 
+interface JWTSyncResponse {
+  success: boolean;
+  error?: string;
+  metadata?: {
+    user_type: string;
+    profile_id: string;
+    organization_ids: string[];
+    is_active: boolean;
+  };
+}
+
 /**
  * Sync user metadata to JWT after profile or organization changes
- * This ensures RLS policies have access to current user context
+ * This triggers the server-side function that updates auth.users.raw_app_meta_data
  */
-export async function syncUserMetadataToJWT(userId: string) {
+export async function syncUserMetadataToJWT(userId?: string) {
   try {
-    // Get current profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, user_type, is_active')
-      .eq('user_id', userId)
-      .single();
+    // Call the server-side function that properly updates JWT metadata
+    const { data, error } = await supabase.rpc('trigger_jwt_metadata_sync', {
+      p_user_id: userId || undefined // Let it default to auth.uid() if not provided
+    });
 
-    if (profileError || !profile) {
-      console.error('Failed to fetch profile for JWT sync:', profileError);
-      return { error: profileError };
+    if (error) {
+      console.error('Failed to trigger JWT metadata sync:', error);
+      return { error };
     }
 
-    // Get user organizations
-    const { data: orgs, error: orgsError } = await supabase
-      .from('user_organizations')
-      .select('organization_id')
-      .eq('user_id', profile.id);
-
-    if (orgsError) {
-      console.error('Failed to fetch organizations for JWT sync:', orgsError);
-      return { error: orgsError };
-    }
-
-    // Update user metadata
-    const metadata = {
-      profile_id: profile.id,
-      user_type: profile.user_type,
-      organization_ids: orgs?.map(o => o.organization_id) || [],
-      is_active: profile.is_active
-    };
-
-    // Note: In production, this would be done server-side
-    // For now, we'll trigger a refresh to get updated JWT
-    const { error: refreshError } = await supabase.auth.refreshSession();
+    const response = data as unknown as JWTSyncResponse;
     
-    if (refreshError) {
-      console.error('Failed to refresh session:', refreshError);
-      return { error: refreshError };
+    if (!response?.success) {
+      console.error('JWT metadata sync failed:', response?.error);
+      return { error: new Error(response?.error || 'JWT sync failed') };
     }
 
-    console.log('JWT metadata sync completed:', metadata);
-    return { success: true, metadata };
+    console.log('JWT metadata sync completed:', response.metadata);
+    return { success: true, metadata: response.metadata };
 
   } catch (error) {
     console.error('Unexpected error in JWT sync:', error);

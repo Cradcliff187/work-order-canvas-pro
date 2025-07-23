@@ -177,15 +177,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if JWT has metadata
+          // Check if JWT has metadata and attempt to sync ONCE (with timeout)
           if (!hasJWTMetadata(session)) {
             console.log('Session missing JWT metadata, syncing...');
-            await syncUserMetadataToJWT(session.user.id);
-            // Refresh session to get updated JWT
-            const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
-            if (refreshedSession) {
-              setSession(refreshedSession);
-            }
+            // Use setTimeout to avoid blocking the auth state change callback
+            setTimeout(async () => {
+              try {
+                await syncUserMetadataToJWT(session.user.id);
+                console.log('JWT metadata sync completed');
+              } catch (error) {
+                console.error('JWT metadata sync failed:', error);
+              }
+            }, 0);
           }
           
           // Fetch profile data asynchronously
