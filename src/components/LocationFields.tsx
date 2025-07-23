@@ -140,7 +140,7 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
           {/* Address Fields */}
           <FormField
             control={form.control}
-            name="street_address"
+            name="location_street_address"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Street Address</FormLabel>
@@ -162,7 +162,7 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
-              name="city"
+              name="location_city"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>City</FormLabel>
@@ -180,7 +180,7 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
 
             <FormField
               control={form.control}
-              name="state"
+              name="location_state"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>State</FormLabel>
@@ -205,7 +205,7 @@ export function LocationFields({ form, organizationId, showPoNumber = false }: L
 
             <FormField
               control={form.control}
-              name="zip_code"
+              name="location_zip_code"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>ZIP Code</FormLabel>
