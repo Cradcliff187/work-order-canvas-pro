@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserSingleOrganization } from '@/lib/utils/organizationValidation';
+import { hasJWTMetadata, syncUserMetadataToJWT, onProfileUpdate, onOrganizationChange } from '@/lib/auth/jwtSync';
 import type { UserOrganization } from '@/hooks/useUserOrganization';
 
 interface Profile {
@@ -169,13 +170,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (!mounted) return;
 
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Check if JWT has metadata
+          if (!hasJWTMetadata(session)) {
+            console.log('Session missing JWT metadata, syncing...');
+            await syncUserMetadataToJWT(session.user.id);
+            // Refresh session to get updated JWT
+            const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+            if (refreshedSession) {
+              setSession(refreshedSession);
+            }
+          }
+          
           // Fetch profile data asynchronously
           fetchProfile(session.user.id).then(async (profileData) => {
             if (!mounted) return;
@@ -238,13 +250,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
       
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Check JWT metadata for existing session
+        if (!hasJWTMetadata(session)) {
+          console.log('Existing session missing JWT metadata, syncing...');
+          await syncUserMetadataToJWT(session.user.id);
+          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+          if (refreshedSession) {
+            setSession(refreshedSession);
+          }
+        }
+        
         fetchProfile(session.user.id).then(async (profileData) => {
           if (!mounted) return;
           setProfile(profileData);
@@ -293,7 +315,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -305,14 +327,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
     
+    if (!error && data.user) {
+      // Wait for profile to be created by trigger, then sync JWT
+      setTimeout(async () => {
+        await syncUserMetadataToJWT(data.user!.id);
+      }, 2000);
+    }
+    
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    if (!error && data.user) {
+      // Check if JWT has required metadata
+      if (!hasJWTMetadata(data.session)) {
+        console.log('JWT missing metadata, syncing...');
+        await syncUserMetadataToJWT(data.user.id);
+        // Refresh session to get updated JWT
+        await supabase.auth.refreshSession();
+      }
+    }
     
     return { error };
   };
@@ -340,8 +379,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .update(updates)
       .eq('user_id', user.id);
 
-    if (!error && profile) {
-      setProfile({ ...profile, ...updates });
+    if (!error) {
+      // Sync JWT metadata after profile update
+      await onProfileUpdate(user.id);
+      
+      if (profile) {
+        setProfile({ ...profile, ...updates });
+      }
     }
 
     return { error };
