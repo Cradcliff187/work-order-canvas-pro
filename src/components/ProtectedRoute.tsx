@@ -9,9 +9,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
-  const { user, profile, loading, isImpersonating } = useAuth();
+  const { user, profile, realProfile, viewingProfile, loading, isImpersonating } = useAuth();
 
-  console.log('ProtectedRoute - Profile:', profile);
+  console.log('ProtectedRoute - Real Profile:', realProfile);
+  console.log('ProtectedRoute - Viewing Profile:', viewingProfile);
   console.log('ProtectedRoute - Required Type:', requiredUserType);
   console.log('ProtectedRoute - Is Impersonating:', isImpersonating);
 
@@ -30,21 +31,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredUserType && profile?.user_type !== requiredUserType) {
-    console.log('ProtectedRoute - User type mismatch. Profile type:', profile?.user_type, 'Required:', requiredUserType);
+  // No required user type - allow access
+  if (!requiredUserType) {
+    return <>{children}</>;
+  }
+
+  // FIXED: When impersonating, use the REAL profile for permission checks
+  // This allows admins to maintain their elevated access while viewing as other users
+  const profileForPermissionCheck = isImpersonating ? realProfile : profile;
+
+  if (profileForPermissionCheck?.user_type !== requiredUserType) {
+    console.log('ProtectedRoute - User type mismatch. Profile type:', profileForPermissionCheck?.user_type, 'Required:', requiredUserType);
     
-    // When impersonating, require exact user type match for better UX
-    if (isImpersonating) {
-      console.log('ProtectedRoute - ACCESS DENIED - Impersonating user must have exact user type match');
-      const redirectPath = profile?.user_type === 'admin' ? '/admin/dashboard' :
-                           profile?.user_type === 'partner' ? '/partner/dashboard' :
-                           profile?.user_type === 'subcontractor' ? '/subcontractor/dashboard' :
-                           profile?.user_type === 'employee' ? '/admin/employee-dashboard' :
-                           '/auth';
-      return <Navigate to={redirectPath} replace />;
-    }
-    
-    // For non-impersonated access, check hierarchy
+    // Check hierarchy for permission escalation
     const userTypeHierarchy = {
       'admin': 4,
       'employee': 3,
@@ -52,17 +51,26 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
       'subcontractor': 1
     };
 
-    const userLevel = userTypeHierarchy[profile?.user_type || 'subcontractor'];
+    const userLevel = userTypeHierarchy[profileForPermissionCheck?.user_type || 'subcontractor'];
     const requiredLevel = userTypeHierarchy[requiredUserType];
     
     console.log('ProtectedRoute - User level:', userLevel, 'Required level:', requiredLevel);
 
     if (userLevel < requiredLevel) {
       console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
-      const redirectPath = profile?.user_type === 'admin' ? '/admin/dashboard' :
-                           profile?.user_type === 'partner' ? '/partner/dashboard' :
-                           profile?.user_type === 'subcontractor' ? '/subcontractor/dashboard' :
-                           profile?.user_type === 'employee' ? '/admin/employee-dashboard' :
+      
+      // When impersonating, allow admins to stay on restricted pages
+      if (isImpersonating && realProfile?.user_type === 'admin') {
+        console.log('ProtectedRoute - Admin impersonating - allowing access');
+        return <>{children}</>;
+      }
+      
+      // Redirect based on the viewing profile (what they're impersonating as)
+      const redirectProfile = viewingProfile || profile;
+      const redirectPath = redirectProfile?.user_type === 'admin' ? '/admin/dashboard' :
+                           redirectProfile?.user_type === 'partner' ? '/partner/dashboard' :
+                           redirectProfile?.user_type === 'subcontractor' ? '/subcontractor/dashboard' :
+                           redirectProfile?.user_type === 'employee' ? '/admin/employee-dashboard' :
                            '/auth';
       return <Navigate to={redirectPath} replace />;
     } else {
