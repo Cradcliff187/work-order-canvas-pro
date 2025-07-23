@@ -16,7 +16,7 @@ import { useBranding } from '@/hooks/useBranding';
 import { LogOut, Settings, User } from 'lucide-react';
 
 const Navbar = () => {
-  const { profile, signOut } = useAuth();
+  const { viewingProfile, signOut } = useAuth();
   const { getProductDisplayName, getCompanyDisplayName, assets } = useBranding();
 
   const handleSignOut = async () => {
@@ -42,7 +42,7 @@ const Navbar = () => {
   };
 
   const getProfilePath = () => {
-    switch (profile?.user_type) {
+    switch (viewingProfile?.user_type) {
       case 'admin': return '/admin/profile';
       case 'employee': return '/admin/profile';
       case 'partner': return '/partner/profile';
@@ -75,9 +75,9 @@ const Navbar = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={profile?.avatar_url} alt={profile?.first_name} />
+                <AvatarImage src={viewingProfile?.avatar_url} alt={viewingProfile?.first_name} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {profile ? getInitials(profile.first_name, profile.last_name) : 'U'}
+                  {viewingProfile ? getInitials(viewingProfile.first_name, viewingProfile.last_name) : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -86,13 +86,13 @@ const Navbar = () => {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">
-                  {profile?.first_name} {profile?.last_name}
+                  {viewingProfile?.first_name} {viewingProfile?.last_name}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {profile?.email}
+                  {viewingProfile?.email}
                 </p>
-                <p className={`text-xs leading-none font-medium ${getUserTypeColor(profile?.user_type || '')}`}>
-                  {formatUserType(profile?.user_type || '')}
+                <p className={`text-xs leading-none font-medium ${getUserTypeColor(viewingProfile?.user_type || '')}`}>
+                  {formatUserType(viewingProfile?.user_type || '')}
                 </p>
               </div>
             </DropdownMenuLabel>
