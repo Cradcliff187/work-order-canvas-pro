@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormattedInput } from "@/components/ui/formatted-input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -15,6 +14,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2 } from "lucide-react";
 import { useCreateOrganization } from '@/hooks/useOrganizations';
+import { US_STATES } from '@/constants/states';
 
 const createOrganizationSchema = z.object({
   name: z.string().min(2, {
@@ -32,7 +32,13 @@ const createOrganizationSchema = z.object({
     (val) => !val || /^\(\d{3}\) \d{3}-\d{4}$/.test(val),
     { message: "Phone number must be in format (555) 123-4567" }
   ),
-  address: z.string().optional(),
+  street_address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip_code: z.string().optional().refine(
+    (val) => !val || /^\d{5}(-\d{4})?$/.test(val),
+    { message: "ZIP code must be in format 12345 or 12345-6789" }
+  ),
   organization_type: z.enum(['partner', 'subcontractor', 'internal']),
   uses_partner_location_numbers: z.boolean().default(false),
 });
@@ -55,7 +61,10 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
       initials: '',
       contact_email: '',
       contact_phone: '',
-      address: '',
+      street_address: '',
+      city: '',
+      state: '',
+      zip_code: '',
       organization_type: 'partner',
       uses_partner_location_numbers: false,
     },
@@ -63,12 +72,20 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
 
   const onSubmit = async (data: CreateOrganizationFormData) => {
     try {
+      // Combine structured address fields into single address string
+      const addressParts = [
+        data.street_address,
+        data.city,
+        data.state && data.zip_code ? `${data.state} ${data.zip_code}` : data.state || data.zip_code
+      ].filter(Boolean);
+      const fullAddress = addressParts.join(', ');
+
       const organizationData = {
         name: data.name,
         initials: data.initials,
         contact_email: data.contact_email,
         contact_phone: data.contact_phone || '',
-        address: data.address || '',
+        address: fullAddress,
         organization_type: data.organization_type,
         uses_partner_location_numbers: data.uses_partner_location_numbers,
         is_active: true,
@@ -166,12 +183,67 @@ export function CreateOrganizationModal({ open, onOpenChange }: CreateOrganizati
 
             <FormField
               control={form.control}
-              name="address"
+              name="street_address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Street Address</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="123 Main Street, City, State 12345" {...field} />
+                    <FormattedInput formatter="streetAddress" placeholder="123 Main Street" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <FormattedInput formatter="city" placeholder="City" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {US_STATES.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="zip_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ZIP Code</FormLabel>
+                  <FormControl>
+                    <FormattedInput formatter="zip" placeholder="12345 or 12345-6789" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
