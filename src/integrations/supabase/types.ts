@@ -64,33 +64,51 @@ export type Database = {
       }
       email_logs: {
         Row: {
+          created_at: string | null
           delivered_at: string | null
           error_message: string | null
           id: string
           recipient_email: string
+          record_id: string | null
+          record_type: string | null
+          resend_id: string | null
           sent_at: string
           status: Database["public"]["Enums"]["email_status"]
+          subject: string | null
           template_used: string | null
+          test_mode: boolean | null
           work_order_id: string | null
         }
         Insert: {
+          created_at?: string | null
           delivered_at?: string | null
           error_message?: string | null
           id?: string
           recipient_email: string
+          record_id?: string | null
+          record_type?: string | null
+          resend_id?: string | null
           sent_at?: string
           status?: Database["public"]["Enums"]["email_status"]
+          subject?: string | null
           template_used?: string | null
+          test_mode?: boolean | null
           work_order_id?: string | null
         }
         Update: {
+          created_at?: string | null
           delivered_at?: string | null
           error_message?: string | null
           id?: string
           recipient_email?: string
+          record_id?: string | null
+          record_type?: string | null
+          resend_id?: string | null
           sent_at?: string
           status?: Database["public"]["Enums"]["email_status"]
+          subject?: string | null
           template_used?: string | null
+          test_mode?: boolean | null
           work_order_id?: string | null
         }
         Relationships: [
@@ -1337,45 +1355,15 @@ export type Database = {
       }
     }
     Functions: {
-      auth_is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      auth_profile_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      auth_user_assigned_to_work_order: {
-        Args: { wo_id: string }
-        Returns: boolean
-      }
-      auth_user_belongs_to_organization: {
-        Args: { org_id: string }
-        Returns: boolean
-      }
       auth_user_can_view_assignment: {
         Args: { assignment_id: string }
         Returns: boolean
-      }
-      auth_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
       }
       auth_user_organization_assignments: {
         Args: Record<PropertyKey, never>
         Returns: {
           work_order_id: string
         }[]
-      }
-      auth_user_organizations: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          organization_id: string
-        }[]
-      }
-      auth_user_type: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["user_type"]
       }
       calculate_completion_time_by_trade: {
         Args: { start_date?: string; end_date?: string }
@@ -1475,6 +1463,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      jwt_is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      jwt_organization_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      jwt_profile_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      jwt_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_type"]
+      }
       refresh_analytics_views: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1489,6 +1493,10 @@ export type Database = {
       }
       setup_bulletproof_test_data: {
         Args: Record<PropertyKey, never> | { admin_user_id?: string }
+        Returns: Json
+      }
+      test_user_creation: {
+        Args: { test_email?: string }
         Returns: Json
       }
       transition_work_order_status: {
