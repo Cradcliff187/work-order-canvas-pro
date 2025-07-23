@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Download, RotateCcw, Users } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
 import { createUserColumns } from '@/components/admin/users/UserColumns';
 import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
@@ -178,7 +179,7 @@ export default function AdminUsers() {
           {isLoading ? (
             renderTableSkeleton()
           ) : !users || users.length === 0 ? (
-            <EmptyTableState
+            <EmptyState
               icon={Users}
               title="No users found"
               description="Get started by creating your first user"
@@ -187,7 +188,6 @@ export default function AdminUsers() {
                 onClick: () => setCreateUserModalOpen(true),
                 icon: Plus
               }}
-              colSpan={columns.length}
             />
           ) : (
             <>
