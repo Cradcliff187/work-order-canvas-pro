@@ -121,14 +121,12 @@ serve(async (req) => {
       return createCorsErrorResponse('Only admins can create users', 403);
     }
 
-    // Get request body - default to false to prevent duplicate emails
-    // Our database trigger will handle the welcome email via Resend
-    const { userData, send_welcome_email = false } = await req.json();
+    // Get request body - database trigger will handle welcome email automatically
+    const { userData } = await req.json();
 
     console.log('Creating user:', { 
       email: userData.email, 
-      userType: userData.user_type, 
-      sendWelcomeEmail: send_welcome_email 
+      userType: userData.user_type
     });
 
     // Create admin client
@@ -140,18 +138,13 @@ serve(async (req) => {
     // Generate a secure temporary password for initial creation
     const temporaryPassword = crypto.randomUUID() + crypto.randomUUID();
 
-    // Log email configuration
-    if (send_welcome_email) {
-      console.log('✅ Welcome email will be queued by Supabase (email_confirm: true)');
-    } else {
-      console.log('⚠️ Welcome email disabled by request (email_confirm: false)');
-    }
+    // Create auth user - database trigger will handle profile creation and welcome email
+    console.log('✅ Database trigger will handle profile creation and welcome email automatically');
 
-    // Create auth user with conditional email confirmation
     const { data: authUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: temporaryPassword,
-      email_confirm: send_welcome_email, // Use parameter to control email sending
+      email_confirm: false, // No built-in emails - our trigger handles it
       app_metadata: {  // Security data (admin-only)
         user_type: userData.user_type
       },
@@ -167,76 +160,7 @@ serve(async (req) => {
     }
 
     console.log('Auth user created:', authUser.user.id);
-    
-    // Manual confirmation email sending via Resend
-    if (send_welcome_email) {
-      try {
-        console.log('🔗 Generating magic link for confirmation email...');
-        
-        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'magiclink',
-          email: userData.email,
-          options: {
-            redirectTo: Deno.env.get('PUBLIC_SITE_URL') || 'https://lovable.dev/projects/9dd2f336-2e89-40cc-b621-dbdacc6b4b12'
-          }
-        });
-
-        if (linkData?.properties?.action_link) {
-          console.log('📧 Sending confirmation email with link:', linkData.properties.action_link);
-          
-          try {
-            const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
-              body: {
-                template_name: 'auth_confirmation',
-                record_id: authUser.user.id,
-                record_type: 'auth_user',
-                custom_data: {
-                  email: userData.email,
-                  first_name: userData.first_name,
-                  last_name: userData.last_name,
-                  confirmation_link: linkData.properties.action_link
-                }
-              }
-            });
-            
-            if (emailError) {
-              console.error('Email sending failed:', emailError);
-            } else {
-              console.log('✅ Confirmation email sent successfully');
-            }
-          } catch (emailSendError) {
-            console.error('Email send error:', emailSendError);
-            console.log('📧 Email sending failed, but user creation succeeded');
-          }
-        } else {
-          console.error('Magic link generation failed:', linkError);
-        }
-      } catch (error) {
-        console.error('Email process error:', error);
-        // Don't fail user creation if email fails
-      }
-    }
-    
-    // Log email queueing status
-    if (send_welcome_email) {
-      console.log('📧 Confirmation email process completed');
-      
-      // Log to email_logs table for audit trail
-      try {
-        await supabaseAdmin
-          .from('email_logs')
-          .insert({
-            recipient_email: userData.email,
-            template_used: 'auth_confirmation',
-            status: 'sent',
-            work_order_id: null
-          });
-        console.log('✅ Email event logged to database');
-      } catch (logError) {
-        console.warn('Failed to log email event:', logError);
-        // Don't fail user creation for logging issues
-      }
-    }
+    console.log('✅ Database trigger will automatically create profile and send welcome email');
 
     // Wait for profile creation and verify with retry logic
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -357,14 +281,11 @@ serve(async (req) => {
     }
 
     // Return success response
-    const message = send_welcome_email 
-      ? 'User created successfully. They will receive a confirmation email to set up their account.'
-      : 'User created successfully. A welcome email has been sent via our custom email system.';
+    const message = 'User created successfully. They will receive a welcome email with login instructions.';
 
     console.log('✅ User creation process completed:', { 
       userId: newProfile.id, 
-      email: userData.email,
-      emailSent: send_welcome_email 
+      email: userData.email
     });
 
     return createCorsResponse({

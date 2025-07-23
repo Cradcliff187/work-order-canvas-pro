@@ -66,6 +66,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       setIsLoading(true);
       
       // Use the existing edge function to create user properly
+      // Database trigger will automatically handle profile creation and welcome email
       const { data: result, error } = await supabase.functions.invoke('create-admin-user', {
         body: {
           userData: {
@@ -76,7 +77,6 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
             phone: data.phone || '',
             organization_ids: data.organization_id && data.organization_id !== 'none' ? [data.organization_id] : [],
           },
-          send_welcome_email: true, // Always send welcome email
         },
       });
 
