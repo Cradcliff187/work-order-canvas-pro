@@ -415,7 +415,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               </div>
             </div>
 
-            {(isLoading || isLoadingOrgs) ? (
+            {/* Loading State */}
+            {(isLoading || isLoadingOrgs) && (
               <div className="py-8">
                 <LoadingSpinner />
                 <div className="text-center mt-4">
@@ -425,10 +426,27 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   </p>
                 </div>
               </div>
-            ) : (
+            )}
+
+            {/* Data Error State */}
+            {hasDataError && (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">No Data Available</span>
+                </div>
+                <p className="text-sm text-destructive mt-1">
+                  No employees or subcontractor organizations found for assignment.
+                </p>
+              </div>
+            )}
+
+            {/* Content - Show when data is ready */}
+            {isDataReady && (
               <div className="space-y-4">
                 {/* Employees Section */}
-                <Card>
+                {employees.length > 0 && (
+                  <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-2">
                         <UserCheck className="h-4 w-4" />
@@ -471,17 +489,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                             </div>
                           </div>
                         ))}
-                        {employees.length === 0 && (
-                          <div className="text-center py-4 text-sm text-muted-foreground">
-                            No employees available
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
+                )}
 
                 {/* Subcontractor Organizations Section */}
-                <Card>
+                {subcontractorOrgs.length > 0 && (
+                  <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4" />
@@ -519,14 +534,18 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                              </Badge>
                            </div>
                          ))}
-                        {subcontractorOrgs.length === 0 && (
-                          <div className="text-center py-4 text-sm text-muted-foreground">
-                            No subcontractor organizations available
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
+                )}
+
+                {/* Show message if both sections are empty but data loaded */}
+                {employees.length === 0 && subcontractorOrgs.length === 0 && (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No employees or subcontractor organizations available for assignment.</p>
+                  </div>
+                )}
               </div>
             )}
 
