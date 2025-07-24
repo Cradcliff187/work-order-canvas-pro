@@ -46,7 +46,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const tradeName = hasValidWorkOrders ? workOrders[0]?.trades?.name : undefined;
   
   // Add debugging for data flow
-  console.log('AssignWorkOrderModal Debug:', {
+  console.log('🚀 AssignWorkOrderModal Debug:', {
     isOpen,
     workOrdersCount: workOrders?.length,
     tradeId,
@@ -58,12 +58,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const { employees, subcontractors, isLoading } = useAllAssignees(tradeId, showAllSubcontractors);
   
   // Add more debugging for assignment data
-  console.log('📊 Assignment Data:', {
+  console.log('📊 Assignment Data Updated:', {
     employeesCount: employees.length,
     subcontractorsCount: subcontractors.length,
     isLoading,
     employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
-    subcontractors: subcontractors.map(s => ({ id: s.id, name: s.organization }))
+    subcontractors: subcontractors.map(s => ({ id: s.id, name: s.organization, org_id: s.organization_id }))
   });
 
   useEffect(() => {

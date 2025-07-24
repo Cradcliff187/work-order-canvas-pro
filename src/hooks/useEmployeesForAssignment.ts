@@ -66,42 +66,49 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
   const { data: subcontractors = [], isLoading: isLoadingSubcontractors } = useQuery({
     queryKey: ['subcontractor-organizations-for-assignment', tradeId, showAllSubcontractors],
     queryFn: async (): Promise<AssigneeData[]> => {
-      console.log('🔍 Subcontractor Organizations Query Debug - simplified key');
+      console.log('🔍 Subcontractor Organizations Query Debug:', { tradeId, showAllSubcontractors });
       
       // Fetch subcontractor organizations with optional trade filtering
-      let query = supabase
+      const { data: orgs, error } = await supabase
         .from('organizations')
         .select('*')
         .eq('organization_type', 'subcontractor')
         .eq('is_active', true)
         .order('name');
 
-      // TODO: Add trade filtering when organization_trades table is available
-      // For now, fetch all subcontractors
-      const { data: orgs, error } = await query;
-
       console.log('📊 Raw subcontractor organization query result:', { orgs, error, count: orgs?.length });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Subcontractor query error:', error);
+        throw error;
+      }
+
+      if (!orgs || orgs.length === 0) {
+        console.warn('⚠️ No subcontractor organizations found');
+        return [];
+      }
 
       // Get workload for subcontractor organizations (count work orders assigned to their organization)
       const { data: workOrders, error: workOrderError } = await supabase
         .from('work_order_assignments')
         .select('assigned_organization_id')
         .not('assigned_organization_id', 'is', null)
-        .in('assigned_organization_id', orgs?.map(org => org.id) || []);
+        .in('assigned_organization_id', orgs.map(org => org.id));
 
-      if (workOrderError) throw workOrderError;
+      if (workOrderError) {
+        console.error('❌ Workload query error:', workOrderError);
+        throw workOrderError;
+      }
 
       // Calculate workload per organization
-      const workloadMap = workOrders.reduce((acc, woa) => {
+      const workloadMap = (workOrders || []).reduce((acc, woa) => {
         if (woa.assigned_organization_id) {
           acc[woa.assigned_organization_id] = (acc[woa.assigned_organization_id] || 0) + 1;
         }
         return acc;
       }, {} as Record<string, number>);
 
-      const result = (orgs || []).map(org => ({
+      const result = orgs.map(org => ({
         id: org.id, // Use organization ID as the assignee ID
         first_name: org.name,
         last_name: '', // Empty for organizations
@@ -110,7 +117,7 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
         organization_id: org.id,
         workload: workloadMap[org.id] || 0,
         is_active: org.is_active,
-        email: org.contact_email
+        email: org.contact_email || ''
       }));
       
       console.log('✅ Final subcontractor organization result:', result);
@@ -118,6 +125,7 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: true, // Always enabled
   });
 
   return {
