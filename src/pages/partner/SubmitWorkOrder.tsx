@@ -837,11 +837,31 @@ export default function SubmitWorkOrder() {
                   )}
                 </Button>
               ) : (
+                <>
+                  {/* DEBUG: Submit Button State */}
+                  <div className="text-xs text-muted-foreground mb-2 p-2 bg-muted rounded">
+                    <strong>🔍 DEBUG INFO:</strong><br/>
+                    Current Step: {currentStep}/3<br/>
+                    Organization ID: {effectiveOrganizationId || 'MISSING'}<br/>
+                    Trade ID: {form.getValues('trade_id') || 'MISSING'}<br/>
+                    Is Pending: {String(createWorkOrderMutation.isPending)}<br/>
+                    Button Disabled: {String(createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.getValues('trade_id'))}<br/>
+                  </div>
+                  
                   <Button
                     type="submit"
                     size="lg"
                     disabled={createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.getValues('trade_id')}
                     className="min-h-[56px] px-6 sm:min-h-[48px] bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
+                    onClick={(e) => {
+                      console.log('🚀 SUBMIT BUTTON CLICKED!');
+                      console.log('Event type:', e.type);
+                      console.log('Current step:', currentStep);
+                      console.log('Form values:', form.getValues());
+                      console.log('Organization ID:', effectiveOrganizationId);
+                      console.log('Is button disabled:', createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.getValues('trade_id'));
+                      console.log('Mutation pending:', createWorkOrderMutation.isPending);
+                    }}
                   >
                     {createWorkOrderMutation.isPending ? (
                       <>
@@ -854,7 +874,8 @@ export default function SubmitWorkOrder() {
                         Submit Work Order
                       </>
                     )}
-                   </Button>
+                  </Button>
+                </>
               )}
             </div>
           </div>
