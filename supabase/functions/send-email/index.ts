@@ -1,42 +1,50 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.4';
+import { Resend } from 'npm:resend@4.0.0';
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Initialize Supabase and Resend clients
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
 
-// Initialize Resend client
-const resendApiKey = Deno.env.get('RESEND_API_KEY') ?? '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const resend = new Resend(resendApiKey);
 
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
-// Enhanced branding variables for consistent email branding
+// Branding variables for all emails
 const BRANDING_VARIABLES = {
-  logo_url: 'https://inudoymofztrvxhrlrek.supabase.co/storage/v1/object/public/work-order-attachments/branding/AKC_logo_fixed_header.png',
-  company_name: 'AKC Contracting',
-  support_email: 'support@workorderportal.com', // Changed to match domain
-  powered_by: 'Powered by WorkOrderPortal'
+  company_name: 'WorkOrderPro',
+  support_email: 'support@workorderportal.com',
+  company_address: 'Austin, TX',
+  company_logo_url: 'https://workorderportal.com/logo.png',
+  company_website: 'https://workorderportal.com',
+  primary_color: '#2563eb',
+  secondary_color: '#1e40af'
 };
 
-// Utility function to generate URLs
-const generateUrl = (path: string) => {
+/**
+ * Generate a full URL from a path
+ */
+function generateUrl(path: string): string {
   const baseUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://workorderportal.com';
   return `${baseUrl}${path}`;
-};
+}
 
-// Handle CORS preflight requests
-function createCorsResponse(body: any, statusCode: number = 200) {
+/**
+ * Create a JSON response with CORS headers
+ */
+function createCorsResponse(body: any, statusCode: number = 200): Response {
   return new Response(JSON.stringify(body), {
     status: statusCode,
     headers: {
+      'Content-Type': 'application/json',
       ...corsHeaders,
-      "Content-Type": "application/json",
     },
   });
 }
@@ -106,6 +114,17 @@ Deno.serve(async (req) => {
             .single();
           email = profile?.email;
         }
+      } else if (record_type === 'work_order_assignment') {
+        // For assignment emails, get assignee email from custom_data
+        const assignedToId = custom_data.assigned_to;
+        if (assignedToId) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', assignedToId)
+            .single();
+          email = profile?.email;
+        }
       } else if (record_type === 'work_order_report') {
         // Fixed: use work_order_reports table instead of 'reports'
         const { data: report } = await supabase
@@ -164,19 +183,69 @@ Deno.serve(async (req) => {
     let variables: { [key: string]: any } = {};
 
     if (template_name === 'work_order_assigned' || template_name === 'work_order_created' || template_name === 'work_order_completed') {
-      const { data: workOrder } = await supabase
-        .from('work_orders')
-        .select('*')
-        .eq('id', record_id)
-        .single();
+      if (record_type === 'work_order_assignment') {
+        // For assignment emails, fetch comprehensive data including assignee and work order details
+        const { data: workOrder } = await supabase
+          .from('work_orders')
+          .select(`
+            *,
+            organizations!inner(name),
+            trades!inner(name),
+            partner_locations(location_name)
+          `)
+          .eq('id', record_id)
+          .single();
 
-      if (workOrder) {
-        const workOrderUrl = generateUrl(`/work-orders/${workOrder.id}`);
-        variables = { 
-          ...workOrder, 
-          workOrderUrl,
-          work_order_number: workOrder.work_order_number || 'N/A'
-        };
+        if (workOrder) {
+          // Get assignee information from custom_data
+          const assignedToId = custom_data.assigned_to;
+          let assigneeData = {};
+          
+          if (assignedToId) {
+            const { data: assignee } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('id', assignedToId)
+              .single();
+            
+            if (assignee) {
+              assigneeData = {
+                first_name: assignee.first_name,
+                last_name: assignee.last_name,
+                assignee_name: `${assignee.first_name} ${assignee.last_name}`,
+                assignee_email: assignee.email
+              };
+            }
+          }
+
+          const workOrderUrl = generateUrl(`/subcontractor/work-orders/${workOrder.id}`);
+          variables = { 
+            ...workOrder, 
+            ...assigneeData,
+            workOrderUrl,
+            work_order_number: workOrder.work_order_number || 'N/A',
+            organization_name: workOrder.organizations?.name || 'N/A',
+            trade_name: workOrder.trades?.name || 'N/A',
+            location_name: workOrder.partner_locations?.location_name || workOrder.store_location || 'N/A',
+            description: workOrder.description || 'No description provided'
+          };
+        }
+      } else {
+        // Regular work order emails
+        const { data: workOrder } = await supabase
+          .from('work_orders')
+          .select('*')
+          .eq('id', record_id)
+          .single();
+
+        if (workOrder) {
+          const workOrderUrl = generateUrl(`/work-orders/${workOrder.id}`);
+          variables = { 
+            ...workOrder, 
+            workOrderUrl,
+            work_order_number: workOrder.work_order_number || 'N/A'
+          };
+        }
       }
     } else if (template_name === 'report_submitted' || template_name === 'report_reviewed') {
       const { data: report } = await supabase
@@ -266,10 +335,12 @@ Deno.serve(async (req) => {
       .insert({
         template_used: template_name,  // Changed from template_name
         recipient_email: recipient,     // Changed from recipient
-        work_order_id: record_type === 'work_order' ? record_id : null,
+        work_order_id: record_type === 'work_order' || record_type === 'work_order_assignment' ? record_id : null,
         status: resendResponse.error ? 'failed' : 'sent',
         error_message: resendResponse.error?.message,
-        // Note: resend_id, record_type, test_mode columns don't exist in current schema
+        record_id: record_id,
+        record_type: record_type,
+        test_mode: test_mode
       });
 
     if (logError) {
@@ -280,32 +351,22 @@ Deno.serve(async (req) => {
       throw new Error(`Resend error: ${resendResponse.error.message}`);
     }
 
+    console.log('✅ Email sent successfully');
+    
     return createCorsResponse({
       success: true,
       message: 'Email sent successfully',
-      resendId: resendResponse.data?.id,
+      recipient,
+      template_name,
+      email_id: resendResponse.data?.id
     });
 
   } catch (error) {
-    console.error('Email sending failed:', error);
+    console.error('❌ Error sending email:', error);
     
-    // Log the failure
-    try {
-      await supabase
-        .from('email_logs')
-        .insert({
-          template_used: 'error',
-          recipient_email: 'unknown',
-          status: 'failed',
-          error_message: error.message || 'Unknown error'
-        });
-    } catch (logError) {
-      console.error('Failed to log error:', logError);
-    }
-
-    return createCorsResponse({ 
-      success: false, 
-      error: error.message 
+    return createCorsResponse({
+      success: false,
+      error: error.message
     }, 500);
   }
 });
