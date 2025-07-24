@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface Organization {
   name: string;
-  organization_type?: 'partner' | 'subcontractor' | 'internal';
+  organization_type?: string;
 }
 
 interface OrganizationBadgeProps {

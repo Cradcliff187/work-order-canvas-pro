@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import {
   Select,
   SelectContent,
@@ -176,6 +177,18 @@ const SubcontractorWorkOrders = () => {
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {workOrder.description}
                     </p>
+
+                    {/* Assignment Info */}
+                    {workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <AssigneeDisplay 
+                          assignments={workOrder.work_order_assignments}
+                          className="text-xs"
+                          showIcons={false}
+                          showOrganization={true}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-2 sm:items-end">

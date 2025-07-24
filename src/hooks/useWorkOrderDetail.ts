@@ -47,6 +47,24 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
       last_name: string;
     };
   }>;
+  work_order_assignments?: Array<{
+    id: string;
+    assigned_to: string;
+    assigned_organization_id: string | null;
+    assignment_type: string;
+    notes: string | null;
+    assigned_at: string;
+    assignee_profile: {
+      first_name: string;
+      last_name: string;
+      email: string;
+      user_type: string;
+    } | null;
+    assigned_organization: {
+      name: string;
+      organization_type: string;
+    } | null;
+  }>;
   location_contact_name?: string | null;
   location_contact_phone?: string | null;
   location_contact_email?: string | null;
@@ -105,6 +123,24 @@ export function useWorkOrderDetail(id: string) {
             uploaded_by_user:profiles!uploaded_by_user_id(
               first_name,
               last_name
+            )
+          ),
+          work_order_assignments(
+            id,
+            assigned_to,
+            assigned_organization_id,
+            assignment_type,
+            notes,
+            assigned_at,
+            assignee_profile:profiles!assigned_to(
+              first_name,
+              last_name,
+              email,
+              user_type
+            ),
+            assigned_organization:organizations!assigned_organization_id(
+              name,
+              organization_type
             )
           )
         `)

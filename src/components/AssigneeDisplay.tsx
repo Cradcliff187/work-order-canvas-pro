@@ -12,7 +12,7 @@ interface Assignment {
   } | null;
   assigned_organization?: {
     name: string;
-    organization_type?: 'partner' | 'subcontractor' | 'internal';
+    organization_type?: string;
   } | null;
 }
 
@@ -27,7 +27,7 @@ interface AssigneeDisplayProps {
   assignedUser?: AssigneeUser | null;
   assignedOrganization?: {
     name: string;
-    organization_type?: 'partner' | 'subcontractor' | 'internal';
+    organization_type?: string;
   } | null;
   className?: string;
   showIcons?: boolean;

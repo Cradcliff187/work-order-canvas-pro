@@ -8,73 +8,27 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, Users } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
-import { useWorkOrder } from '@/hooks/useWorkOrders';
+import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function SubcontractorWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const { user, profile } = useAuth();
-  const [workOrder, setWorkOrder] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchWorkOrder = async () => {
-      if (!id) {
-        setError('Work Order ID is required.');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from('work_orders')
-          .select(`
-            *,
-            organization:organization_id (
-              name,
-              initials,
-              contact_email
-            ),
-            trade:trade_id (
-              name
-            )
-          `)
-          .eq('id', id)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setWorkOrder(data);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load work order.');
-        toast({
-          variant: "destructive",
-          title: "Woops! Something went wrong.",
-          description: err.message || "Failed to load work order.",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchWorkOrder();
-  }, [id, toast]);
+  
+  const { data: workOrder, isLoading, error } = useWorkOrderDetail(id || '');
 
   if (isLoading) {
     return <div>Loading work order details...</div>;
   }
 
   if (error || !workOrder) {
-    return <div>Error: {error || 'Work order not found.'}</div>;
+    return <div>Error: Work order not found.</div>;
   }
 
   return (
@@ -123,7 +77,7 @@ export default function SubcontractorWorkOrderDetail() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
-                  <p className="text-sm">{workOrder.trade?.name || 'N/A'}</p>
+                  <p className="text-sm">{workOrder.trades?.name || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
@@ -136,7 +90,7 @@ export default function SubcontractorWorkOrderDetail() {
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
                   <p className="text-sm">
-                    {workOrder.due_date ? format(new Date(workOrder.due_date), 'MMM dd, yyyy') : 'N/A'}
+                    {workOrder.estimated_completion_date ? format(new Date(workOrder.estimated_completion_date), 'MMM dd, yyyy') : 'N/A'}
                   </p>
                 </div>
               </div>
@@ -211,13 +165,32 @@ export default function SubcontractorWorkOrderDetail() {
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src="https://github.com/shadcn.png" alt="Organization Avatar" />
-                  <AvatarFallback>{workOrder.organization?.initials || 'N/A'}</AvatarFallback>
+                  <AvatarFallback>{workOrder.organizations?.name?.substring(0, 2).toUpperCase() || 'N/A'}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">{workOrder.organization?.name || 'N/A'}</div>
-                  <div className="text-sm text-muted-foreground">{workOrder.organization?.contact_email || 'N/A'}</div>
+                  <div className="font-medium">{workOrder.organizations?.name || 'N/A'}</div>
+                  <div className="text-sm text-muted-foreground">{workOrder.organizations?.contact_email || 'N/A'}</div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Team Assignment */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Team Assignment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AssigneeDisplay 
+                assignments={workOrder.work_order_assignments || []}
+                assignedUser={workOrder.assigned_user}
+                assignedOrganization={workOrder.organizations}
+                showIcons={true}
+                showOrganization={true}
+              />
             </CardContent>
           </Card>
 
