@@ -27,9 +27,9 @@ export function useSubcontractorOrganizations() {
           name,
           contact_email,
           contact_phone,
-          user_organizations!inner(
+          user_organizations!left(
             user_id,
-            profiles!inner(
+            profiles!left(
               id,
               first_name,
               last_name,
@@ -46,8 +46,8 @@ export function useSubcontractorOrganizations() {
       if (error) throw error;
 
       const transformedData: SubcontractorOrganization[] = (data || []).map(org => {
-        const activeUsers = org.user_organizations
-          .filter((uo: any) => uo.profiles?.is_active)
+        const activeUsers = (org.user_organizations || [])
+          .filter((uo: any) => uo.profiles?.is_active && uo.profiles?.user_type === 'subcontractor')
           .map((uo: any) => ({
             id: uo.profiles.id,
             full_name: `${uo.profiles.first_name} ${uo.profiles.last_name}`.trim()

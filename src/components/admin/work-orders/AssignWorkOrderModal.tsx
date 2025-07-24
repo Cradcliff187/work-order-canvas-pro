@@ -421,8 +421,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             ) : (
               <div className="space-y-4">
                 {/* Employees Section */}
-                {employees.length > 0 && (
-                  <Card>
+                <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-2">
                         <UserCheck className="h-4 w-4" />
@@ -465,14 +464,17 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                             </div>
                           </div>
                         ))}
+                        {employees.length === 0 && (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            No employees available
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                )}
 
                 {/* Subcontractor Organizations Section */}
-                {subcontractorOrgs.length > 0 && (
-                  <Card>
+                <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4" />
@@ -506,20 +508,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                             </Badge>
                           </div>
                         ))}
+                        {subcontractorOrgs.length === 0 && (
+                          <div className="text-center py-4 text-sm text-muted-foreground">
+                            No subcontractor organizations available
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                )}
-
-                {employees.length === 0 && subcontractorOrgs.length === 0 && (
-                  <div className="text-center py-8">
-                    <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-1">No assignees available</p>
-                    <p className="text-xs text-muted-foreground">
-                      {tradeName ? `No active users found for ${tradeName}` : 'No active users in the system'}
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
