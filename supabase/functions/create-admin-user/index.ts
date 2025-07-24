@@ -121,7 +121,7 @@ serve(async (req) => {
       return createCorsErrorResponse('Only admins can create users', 403);
     }
 
-    // Get request body - database trigger will handle welcome email automatically
+    // Get request body
     const { userData } = await req.json();
 
     console.log('Creating user:', { 
@@ -183,7 +183,33 @@ serve(async (req) => {
 
     console.log('Profile created:', newProfile.id);
 
-    // Welcome email will be sent automatically by database trigger on profile creation
+    // Send welcome email using the send-email function
+    try {
+      console.log('Sending welcome email to:', userData.email);
+      const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
+        body: {
+          template_name: 'welcome_email',
+          test_mode: false,
+          custom_data: {
+            user_name: `${userData.first_name} ${userData.last_name}`,
+            user_email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            user_type: userData.user_type
+          }
+        }
+      });
+
+      if (emailError) {
+        console.error('Welcome email failed:', emailError);
+        // Don't throw error - user creation should succeed even if email fails
+      } else {
+        console.log('Welcome email sent successfully:', emailResult);
+      }
+    } catch (emailErr) {
+      console.error('Welcome email error:', emailErr);
+      // Don't throw error - user creation should succeed even if email fails
+    }
 
     // Handle organization relationships with validation and auto-assignment
     let finalOrganizationIds: string[] = [];
