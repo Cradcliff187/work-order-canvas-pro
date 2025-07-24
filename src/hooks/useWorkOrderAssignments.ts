@@ -9,7 +9,7 @@ export interface Assignment {
   work_order_id: string;
   assigned_to: string;
   assigned_organization_id: string | null;
-  assignment_type: 'lead' | 'support';
+  assignment_type: 'lead' | 'support' | 'assigned';
   assigned_at: string;
   assigned_by: string;
   notes: string | null;
@@ -39,12 +39,12 @@ export interface CreateAssignmentData {
   work_order_id: string;
   assigned_to: string;
   assigned_organization_id?: string;
-  assignment_type: 'lead' | 'support';
+  assignment_type: 'lead' | 'support' | 'assigned';
   notes?: string;
 }
 
 export interface UpdateAssignmentData {
-  assignment_type?: 'lead' | 'support';
+  assignment_type?: 'lead' | 'support' | 'assigned';
   notes?: string;
   assigned_organization_id?: string;
 }

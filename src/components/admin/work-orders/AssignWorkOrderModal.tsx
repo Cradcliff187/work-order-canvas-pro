@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw, ToggleLeft, ToggleRight, Building } from 'lucide-react';
-import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
+
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
@@ -40,7 +40,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [networkError, setNetworkError] = useState<string | null>(null);
   const [showAllSubcontractors, setShowAllSubcontractors] = useState(false);
 
-  const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
+  
   const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
   const { data: subcontractorOrgs = [], isLoading: isLoadingOrgs } = useSubcontractorOrganizations();
   
@@ -701,10 +701,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </Button>
             <Button 
               onClick={handleAssign} 
-              disabled={isAssigning || !hasValidWorkOrders || !!networkError || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
+              disabled={!hasValidWorkOrders || !!networkError || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
               aria-label={selectedAssignees.length > 0 || selectedOrganizations.length > 0 ? 'Assign selected' : 'Remove all assignments'}
             >
-              {(isAssigning || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
+              {(bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                   Processing...
