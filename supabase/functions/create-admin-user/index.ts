@@ -138,13 +138,11 @@ serve(async (req) => {
     // Generate a secure temporary password for initial creation
     const temporaryPassword = crypto.randomUUID() + crypto.randomUUID();
 
-    // Create auth user - database trigger will handle profile creation and welcome email
-    console.log('✅ Database trigger will handle profile creation and welcome email automatically');
-
+    // Create auth user
     const { data: authUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: temporaryPassword,
-      email_confirm: false, // No built-in emails - our trigger handles it
+      email_confirm: false, // No built-in emails - we handle it manually
       app_metadata: {  // Security data (admin-only)
         user_type: userData.user_type
       },
@@ -160,50 +158,51 @@ serve(async (req) => {
     }
 
     console.log('Auth user created:', authUser.user.id);
-    console.log('✅ Database trigger will automatically create profile and send welcome email');
 
-    // Wait for profile creation and verify with retry logic
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    console.log('Starting profile verification process for user:', authUser.user.id);
-
-    let retries = 0;
-    let newProfile = null;
-    while (retries < 3 && !newProfile) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log(`Profile verification attempt ${retries + 1}/3 for user:`, authUser.user.id);
-      
-      const { data } = await supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .eq('user_id', authUser.user.id)
-        .single();
-      newProfile = data;
-      retries++;
-    }
-
-    if (!newProfile) {
-      console.error('Profile creation failed after retries');
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      throw new Error('Profile creation failed');
-    }
-
-    console.log('Profile verification successful:', { profileId: newProfile.id, retries });
-
-    console.log('Profile created:', newProfile.id);
-
-    // Update profile with additional data
-    const { error: updateError } = await supabaseAdmin
+    // Manually create profile since we can't use triggers on auth.users
+    const { data: newProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({
+      .insert({
+        user_id: authUser.user.id,
+        email: userData.email,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        user_type: userData.user_type,
         phone: userData.phone,
         is_employee: userData.user_type === 'employee',
       })
-      .eq('id', newProfile.id);
+      .select()
+      .single();
 
-    if (updateError) {
-      console.error('Profile update failed:', updateError);
-      // Continue anyway, this is not critical
+    if (profileError) {
+      console.error('Profile creation failed:', profileError);
+      // Clean up auth user if profile creation fails
+      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      throw new Error(`Profile creation failed: ${profileError.message}`);
+    }
+
+    console.log('Profile created:', newProfile.id);
+
+    // Send welcome email via edge function
+    try {
+      console.log('Sending welcome email...');
+      const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
+        body: {
+          template_name: 'user_welcome',
+          record_id: newProfile.id,
+          record_type: 'user'
+        }
+      });
+      
+      if (emailError) {
+        console.error('Welcome email failed:', emailError);
+        // Don't fail user creation if email fails
+      } else {
+        console.log('Welcome email sent successfully');
+      }
+    } catch (emailError) {
+      console.error('Welcome email error:', emailError);
+      // Continue anyway - email failure shouldn't block user creation
     }
 
     // Handle organization relationships with validation and auto-assignment
