@@ -64,12 +64,11 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployeesForAssignment();
   
   const { data: subcontractors = [], isLoading: isLoadingSubcontractors } = useQuery({
-    queryKey: ['subcontractor-organizations-for-assignment', tradeId, showAllSubcontractors],
+    queryKey: ['subcontractor-organizations-for-assignment'],
     queryFn: async (): Promise<AssigneeData[]> => {
-      console.log('🔍 Subcontractor Organizations Query Debug:', { tradeId, showAllSubcontractors });
+      console.log('🔍 Subcontractor Organizations Query Debug - simplified key');
       
-      // Always fetch subcontractor organizations when requested
-      // Get subcontractor organizations directly
+      // Always fetch all subcontractor organizations
       const { data: orgs, error } = await supabase
         .from('organizations')
         .select('*')
@@ -113,7 +112,8 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
       console.log('✅ Final subcontractor organization result:', result);
       return result;
     },
-    enabled: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   return {
