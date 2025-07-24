@@ -1382,14 +1382,12 @@ export type Database = {
         Returns: number
       }
       call_send_email_trigger: {
-        Args:
-          | { template_name: string; record_id: string; record_type: string }
-          | {
-              template_name: string
-              record_id: string
-              record_type?: string
-              context_data?: Json
-            }
+        Args: {
+          template_name: string
+          record_id: string
+          record_type?: string
+          context_data?: Json
+        }
         Returns: undefined
       }
       check_assignment_completion_status: {

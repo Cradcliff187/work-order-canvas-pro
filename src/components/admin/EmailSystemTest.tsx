@@ -74,6 +74,52 @@ export function EmailSystemTest() {
         error: dbResult.error
       }]);
 
+      // Test 4: Assignment email with context data
+      console.log('📋 Testing assignment email with context...');
+      const assignmentResult = await supabase.functions.invoke('send-email', {
+        body: {
+          template_name: 'work_order_assigned',
+          record_id: crypto.randomUUID(),
+          record_type: 'work_order_assignment',
+          test_mode: true,
+          test_recipient: 'chris.l.radcliff@gmail.com',
+          custom_data: {
+            assigned_to: crypto.randomUUID(),
+            assignment_id: crypto.randomUUID(),
+            assigned_organization_id: crypto.randomUUID(),
+            assignment_type: 'lead'
+          }
+        }
+      });
+
+      setResults(prev => [...prev, {
+        test: 'Assignment Email Test',
+        status: assignmentResult.error ? 'failed' : 'success',
+        data: assignmentResult.data,
+        error: assignmentResult.error
+      }]);
+
+      // Test 5: Database trigger function with 4 parameters (new version)
+      console.log('🔧 Testing new 4-parameter trigger function...');
+      const dbNewResult = await supabase.rpc('call_send_email_trigger', {
+        template_name: 'work_order_assigned',
+        record_id: crypto.randomUUID(),
+        record_type: 'work_order_assignment',
+        context_data: {
+          assigned_to: crypto.randomUUID(),
+          assignment_id: crypto.randomUUID(),
+          assigned_organization_id: crypto.randomUUID(),
+          assignment_type: 'lead'
+        }
+      });
+
+      setResults(prev => [...prev, {
+        test: '4-Parameter Trigger Function',
+        status: dbNewResult.error ? 'failed' : 'success',
+        data: dbNewResult.data,
+        error: dbNewResult.error
+      }]);
+
       toast({
         title: "Tests completed",
         description: "Check results below"
