@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Download, RotateCcw, ClipboardList } from 'lucide-react';
+import { Plus, Download, RotateCcw, ClipboardList, CheckSquare } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
@@ -51,6 +51,7 @@ export default function AdminWorkOrders() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
+  const [bulkMode, setBulkMode] = useState(false);
 
   // Transform sorting state to match the hook's expected format
   const sortingFormatted = useMemo(() => ({
@@ -199,11 +200,26 @@ export default function AdminWorkOrders() {
           <p className="text-muted-foreground">
             {workOrdersData?.totalCount ? `${workOrdersData.totalCount} total work orders` : 'Manage all work orders across organizations'}
           </p>
+          {bulkMode && (
+            <p className="text-sm text-primary mt-1">
+              Select work orders using checkboxes, then use the action bar below
+            </p>
+          )}
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Work Order
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setBulkMode(!bulkMode)}
+            className={bulkMode ? "border-primary text-primary" : ""}
+          >
+            <CheckSquare className="w-4 h-4 mr-2" />
+            {bulkMode ? 'Exit Bulk Mode' : 'Bulk Actions'}
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Work Order
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
