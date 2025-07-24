@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
@@ -35,6 +35,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [notes, setNotes] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [networkError, setNetworkError] = useState<string | null>(null);
+  const [showAllSubcontractors, setShowAllSubcontractors] = useState(false);
 
   const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
   const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
@@ -53,7 +54,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     hasValidWorkOrders
   });
   
-  const { employees, subcontractors, isLoading } = useAllAssignees(tradeId);
+  const { employees, subcontractors, isLoading } = useAllAssignees(tradeId, showAllSubcontractors);
 
   useEffect(() => {
     if (isOpen) {
@@ -61,6 +62,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       setNotes('');
       setValidationErrors([]);
       setNetworkError(null);
+      setShowAllSubcontractors(false);
       
       // Validate work orders on open
       if (!hasValidWorkOrders) {
@@ -416,15 +418,48 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                 )}
 
                 {/* Subcontractors Section */}
-                {subcontractors.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-3">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
                         <span className="font-medium">Subcontractors</span>
-                        <Badge variant="secondary">{subcontractors.length}</Badge>
+                        {subcontractors.length > 0 && (
+                          <Badge variant="secondary">{subcontractors.length}</Badge>
+                        )}
+                        {tradeId && !showAllSubcontractors && (
+                          <Badge variant="outline" className="text-xs">
+                            {tradeName} only
+                          </Badge>
+                        )}
+                        {showAllSubcontractors && (
+                          <Badge variant="outline" className="text-xs">
+                            All trades
+                          </Badge>
+                        )}
                       </div>
-                    </CardHeader>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllSubcontractors(!showAllSubcontractors)}
+                        className="text-xs"
+                      >
+                        {showAllSubcontractors ? (
+                          <>
+                            <Filter className="h-3 w-3 mr-1" />
+                            Show {tradeName || 'Trade'} Only
+                          </>
+                        ) : (
+                          <>
+                            <Users className="h-3 w-3 mr-1" />
+                            Show All Subcontractors
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  {subcontractors.length > 0 ? (
                     <CardContent className="pt-0">
                       <div className="space-y-3">
                         {subcontractors.map((subcontractor) => (
@@ -462,8 +497,25 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                         ))}
                       </div>
                     </CardContent>
-                  </Card>
-                )}
+                  ) : (
+                    <CardContent className="pt-0">
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Users className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-sm">
+                          {showAllSubcontractors 
+                            ? 'No subcontractors available'
+                            : `No subcontractors available for ${tradeName || 'this trade'}`
+                          }
+                        </p>
+                        {!showAllSubcontractors && (
+                          <p className="text-xs mt-1">
+                            Click "Show All Subcontractors" to see everyone
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
 
                 {employees.length === 0 && subcontractors.length === 0 && (
                   <div className="text-center py-8">

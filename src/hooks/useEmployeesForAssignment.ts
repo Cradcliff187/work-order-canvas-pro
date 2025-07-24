@@ -60,13 +60,14 @@ export function useEmployeesForAssignment() {
   });
 }
 
-export function useAllAssignees(tradeId?: string) {
+export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean = false) {
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployeesForAssignment();
   
   const { data: subcontractors = [], isLoading: isLoadingSubcontractors } = useQuery({
-    queryKey: ['subcontractors-for-assignment', tradeId],
+    queryKey: ['subcontractors-for-assignment', tradeId, showAllSubcontractors],
     queryFn: async (): Promise<AssigneeData[]> => {
-      if (!tradeId) return [];
+      // If no trade and not showing all subcontractors, return empty array
+      if (!tradeId && !showAllSubcontractors) return [];
       
       // Get subcontractors with their organization relationships
       const { data: subs, error } = await supabase
@@ -115,7 +116,7 @@ export function useAllAssignees(tradeId?: string) {
         email: sub.email
       }));
     },
-    enabled: !!tradeId,
+    enabled: true, // Always enable - logic is handled in queryFn
   });
 
   return {
