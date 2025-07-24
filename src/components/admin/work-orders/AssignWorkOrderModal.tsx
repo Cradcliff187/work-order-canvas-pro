@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw } from 'lucide-react';
 import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
@@ -198,8 +199,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       </div>
     }>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Assign Work Order{hasValidWorkOrders && workOrders.length > 1 ? 's' : ''}
@@ -209,7 +210,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </DialogDescription>
           </DialogHeader>
 
-        <div className="space-y-6">
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
           {/* Error States */}
           {!hasValidWorkOrders && (
             <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
@@ -521,9 +523,11 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               rows={3}
             />
           </div>
+            </div>
+          </ScrollArea>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t flex-shrink-0">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
@@ -543,7 +547,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               )}
             </Button>
           </div>
-        </div>
       </DialogContent>
     </Dialog>
     </ErrorBoundary>
