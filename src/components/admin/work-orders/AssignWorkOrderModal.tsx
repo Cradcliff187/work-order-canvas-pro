@@ -131,15 +131,26 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       const assignments = workOrders.flatMap(wo => 
         selectedAssignees.map((assigneeId, assigneeIndex) => {
           const assignee = allAssignees.find(a => a.id === assigneeId);
-          const isSubcontractor = assignee?.type === 'subcontractor';
           
-          return {
-            work_order_id: wo.id,
-            assigned_to: assigneeId,
-            assigned_organization_id: isSubcontractor ? getSubcontractorOrganizationId(assigneeId) : null,
-            assignment_type: assigneeIndex === 0 ? 'lead' as const : 'support' as const,
-            notes
-          };
+          // For employees: assign to user, for subcontractors: assign to organization
+          if (assignee?.type === 'employee') {
+            return {
+              work_order_id: wo.id,
+              assigned_to: assigneeId, // Employee user ID
+              assigned_organization_id: null, // No organization for employees
+              assignment_type: assigneeIndex === 0 ? 'lead' as const : 'support' as const,
+              notes
+            };
+          } else {
+            // Subcontractor assignment - assign to organization
+            return {
+              work_order_id: wo.id,
+              assigned_to: null, // No user assignment for subcontractors
+              assigned_organization_id: assigneeId, // Organization ID (assigneeId is org ID for subcontractors)
+              assignment_type: assigneeIndex === 0 ? 'lead' as const : 'support' as const,
+              notes
+            };
+          }
         })
       );
 
@@ -152,14 +163,25 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         const assignee = allAssignees.find(a => a.id === leadAssignee);
         const assignedToType: 'internal' | 'subcontractor' = assignee?.type === 'employee' ? 'internal' : 'subcontractor';
         
-        await supabase
-          .from('work_orders')
-          .update({
-            assigned_to: leadAssignee,
-            assigned_to_type: assignedToType,
-          })
-          .in('id', workOrders.map(wo => wo.id));
-
+        // For employees: assign to user ID, for subcontractors: assign to organization
+        if (assignee?.type === 'employee') {
+          await supabase
+            .from('work_orders')
+            .update({
+              assigned_to: leadAssignee,
+              assigned_to_type: assignedToType,
+            })
+            .in('id', workOrders.map(wo => wo.id));
+        } else {
+          // For subcontractors, assign to organization, not user
+          await supabase
+            .from('work_orders')
+            .update({
+              assigned_to: null, // No individual user assignment for subcontractors
+              assigned_to_type: assignedToType,
+            })
+            .in('id', workOrders.map(wo => wo.id));
+        }
       }
 
       onClose();

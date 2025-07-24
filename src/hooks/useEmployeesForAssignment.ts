@@ -64,72 +64,56 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployeesForAssignment();
   
   const { data: subcontractors = [], isLoading: isLoadingSubcontractors } = useQuery({
-    queryKey: ['subcontractors-for-assignment', tradeId, showAllSubcontractors],
+    queryKey: ['subcontractor-organizations-for-assignment', tradeId, showAllSubcontractors],
     queryFn: async (): Promise<AssigneeData[]> => {
-      console.log('🔍 Subcontractor Query Debug:', { tradeId, showAllSubcontractors });
+      console.log('🔍 Subcontractor Organizations Query Debug:', { tradeId, showAllSubcontractors });
       
-      // If showAllSubcontractors is true, always show them regardless of trade
-      // If showAllSubcontractors is false and there's no tradeId, return empty array
-      if (!showAllSubcontractors && !tradeId) {
-        console.log('❌ Early return: no tradeId and not showing all');
-        return [];
-      }
-      
-      // Get subcontractors - use left join to include subcontractors without organizations
-      const { data: subs, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          user_organizations(
-            organization:organizations(
-              id, name, organization_type
-            )
-          )
-        `)
-        .eq('user_type', 'subcontractor')
+      // Always fetch subcontractor organizations when requested
+      // Get subcontractor organizations directly
+      const { data: orgs, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('organization_type', 'subcontractor')
         .eq('is_active', true)
-        .order('first_name');
+        .order('name');
 
-      console.log('📊 Raw subcontractor query result:', { subs, error, count: subs?.length });
+      console.log('📊 Raw subcontractor organization query result:', { orgs, error, count: orgs?.length });
 
       if (error) throw error;
 
-      // Get workload for subcontractors
+      // Get workload for subcontractor organizations (count work orders assigned to their organization)
       const { data: workOrders, error: workOrderError } = await supabase
-        .from('work_orders')
-        .select('assigned_to')
-        .in('status', ['assigned', 'in_progress'])
-        .not('assigned_to', 'is', null);
+        .from('work_order_assignments')
+        .select('assigned_organization_id')
+        .not('assigned_organization_id', 'is', null)
+        .in('assigned_organization_id', orgs?.map(org => org.id) || []);
 
       if (workOrderError) throw workOrderError;
 
-      // Calculate workload
-      const workloadMap = workOrders.reduce((acc, wo) => {
-        if (wo.assigned_to) {
-          acc[wo.assigned_to] = (acc[wo.assigned_to] || 0) + 1;
+      // Calculate workload per organization
+      const workloadMap = workOrders.reduce((acc, woa) => {
+        if (woa.assigned_organization_id) {
+          acc[woa.assigned_organization_id] = (acc[woa.assigned_organization_id] || 0) + 1;
         }
         return acc;
       }, {} as Record<string, number>);
 
-      const result = subs.map(sub => {
-        const organization = sub.user_organizations?.[0]?.organization;
-        return {
-          id: sub.id,
-          first_name: sub.first_name,
-          last_name: sub.last_name,
-          type: 'subcontractor' as const,
-          organization: sub.company_name || organization?.name || 'Independent Contractor',
-          organization_id: organization?.id || null,
-          workload: workloadMap[sub.id] || 0,
-          is_active: sub.is_active,
-          email: sub.email
-        };
-      });
+      const result = (orgs || []).map(org => ({
+        id: org.id, // Use organization ID as the assignee ID
+        first_name: org.name,
+        last_name: '', // Empty for organizations
+        type: 'subcontractor' as const,
+        organization: org.name,
+        organization_id: org.id,
+        workload: workloadMap[org.id] || 0,
+        is_active: org.is_active,
+        email: org.contact_email
+      }));
       
-      console.log('✅ Final subcontractor result:', result);
+      console.log('✅ Final subcontractor organization result:', result);
       return result;
     },
-    enabled: true, // Always enable - logic is handled in queryFn
+    enabled: true,
   });
 
   return {
