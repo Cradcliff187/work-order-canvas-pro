@@ -487,7 +487,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   </Card>
                 )}
 
-                {/* Subcontractor Organizations Section */}
+                 {/* Subcontractor Organizations Section - ALWAYS show if data exists */}
                 {subcontractorOrgs.length > 0 && (
                   <Card>
                     <CardHeader className="pb-3">
@@ -499,7 +499,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="space-y-3">
-                         {subcontractorOrgs.map((org) => (
+                         {subcontractorOrgs.map((org) => {
+                           console.log('🏢 Rendering subcontractor org:', org);
+                           return (
                            <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
                              <div className="flex items-center gap-3">
                                <Checkbox
@@ -518,6 +520,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                    {org.contact_phone && (
                                      <span>• {org.contact_phone}</span>
                                    )}
+                                   {org.active_user_count !== undefined && (
+                                     <span>• {org.active_user_count} users</span>
+                                   )}
                                  </div>
                                </div>
                              </div>
@@ -526,7 +531,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                Organization
                              </Badge>
                            </div>
-                         ))}
+                         )})}
                       </div>
                     </CardContent>
                   </Card>
