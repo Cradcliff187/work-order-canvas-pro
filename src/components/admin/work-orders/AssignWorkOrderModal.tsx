@@ -189,6 +189,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   // Enhanced error handling for data loading
   const hasDataError = !isLoading && employees.length === 0 && subcontractors.length === 0 && tradeId;
   const isDataReady = !isLoading && (employees.length > 0 || subcontractors.length > 0 || !tradeId);
+  
+  // Check if any work orders are currently assigned
+  const hasCurrentAssignments = workOrders.some(wo => wo.assigned_to || wo.status === 'assigned');
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -614,8 +617,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   Processing...
                 </>
               ) : (
-                selectedAssignees.length === 0 ? `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
-                `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
+                hasCurrentAssignments && selectedAssignees.length === 0 ? 
+                  `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
+                  `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
               )}
             </Button>
           </div>
