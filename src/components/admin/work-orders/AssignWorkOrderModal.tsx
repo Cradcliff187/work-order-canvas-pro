@@ -218,21 +218,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     [subcontractorOrgs, selectedOrganizations]
   );
   
-  // Enhanced error handling for data loading with detailed debugging
-  const hasDataError = !isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0;
-  const isDataReady = !isLoading && !isLoadingOrgs && (employees.length > 0 || subcontractorOrgs.length > 0);
-  
-  // Add critical debugging for conditional rendering
-  console.log('🔍 Conditional Rendering Debug:', {
-    hasValidWorkOrders,
+  // Debug logging for render decisions - simplified
+  console.log('🔍 Render Decision Debug:', {
     isLoading,
     isLoadingOrgs,
-    hasDataError,
-    isDataReady,
-    loadingCondition: isLoading || isLoadingOrgs,
-    renderEmployeesCondition: employees.length > 0,
-    renderSubcontractorsCondition: subcontractorOrgs.length > 0,
-    willShowContent: !isLoading && !isLoadingOrgs && !hasDataError
+    employeesCount: employees.length,
+    subcontractorOrgsCount: subcontractorOrgs.length,
+    showContent: !isLoading && !isLoadingOrgs,
+    hasAnyData: employees.length > 0 || subcontractorOrgs.length > 0
   });
 
   const getWorkloadColor = (workload: number) => {
@@ -428,8 +421,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               </div>
             )}
 
-            {/* Data Error State */}
-            {hasDataError && (
+            {/* Data Error State - Show when not loading but no data */}
+            {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
                 <div className="flex items-center gap-2 text-destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -441,8 +434,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               </div>
             )}
 
-            {/* Content - Show when data is ready */}
-            {isDataReady && (
+            {/* Content - Show when not loading and has data */}
+            {!isLoading && !isLoadingOrgs && (employees.length > 0 || subcontractorOrgs.length > 0) && (
               <div className="space-y-4">
                 {/* Employees Section */}
                 {employees.length > 0 && (
