@@ -57,7 +57,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     isLoading,
     isLoadingOrgs,
     employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
-    subcontractorOrgs: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, users: o.active_users }))
+    subcontractorOrgs: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, users: o.active_users })),
+    workOrderDetails: workOrders?.map(wo => ({
+      id: wo.id,
+      title: wo.title,
+      status: wo.status,
+      assigned_to: wo.assigned_to,
+      assigned_to_type: wo.assigned_to_type
+    }))
   });
 
   useEffect(() => {
@@ -350,7 +357,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                 </div>
               ) : (
                 <div>
-                  {workOrders.some(wo => wo.assigned_to || wo.status === 'assigned') ? (
+                  {workOrders.some(wo => wo.assigned_to) ? (
                     <>Work orders will be unassigned and returned to <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status when all assignments are removed.</>
                   ) : (
                     <>No assignments will be made. Work orders will remain at <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status.</>
@@ -598,8 +605,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   Processing...
                 </>
               ) : (
-                selectedAssignees.length === 0 && selectedOrganizations.length === 0 ? `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
-                `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
+                // Check if we're making new assignments or removing existing ones
+                selectedAssignees.length > 0 || selectedOrganizations.length > 0 ? 
+                  `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
+                  workOrders?.some(wo => wo.assigned_to) ?
+                    `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
+                    `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
               )}
             </Button>
           </div>
