@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Edit } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { useUserMutations } from '@/hooks/useUsers';
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -33,6 +34,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { data: organizations } = useOrganizations();
+  const { updateUser, updateUserOrganization } = useUserMutations();
 
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
@@ -41,7 +43,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
       last_name: user?.last_name || '',
       email: user?.email || '',
       user_type: user?.user_type || 'subcontractor',
-      organization_id: user?.organization_id || '',
+      organization_id: user?.user_organizations?.[0]?.organization_id || '',
     },
   });
 
@@ -53,7 +55,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
         last_name: user.last_name || '',
         email: user.email || '',
         user_type: user.user_type || 'subcontractor',
-        organization_id: user.organization_id || '',
+        organization_id: user.user_organizations?.[0]?.organization_id || '',
       });
     }
   }, [user, form]);
@@ -62,13 +64,23 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
     try {
       setIsLoading(true);
       
-      // Update user logic would go here
-      console.log('Updating user:', data);
-      
-      toast({
-        title: "User updated",
-        description: "The user has been successfully updated.",
+      // Update user profile
+      await updateUser.mutateAsync({
+        id: user.id,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        user_type: data.user_type,
       });
+
+      // Update organization if needed
+      if (data.user_type !== 'admin' && data.organization_id) {
+        await updateUserOrganization.mutateAsync({
+          userId: user.user_id,
+          profileId: user.id,
+          organizationId: data.organization_id,
+        });
+      }
       
       onOpenChange(false);
     } catch (error: any) {

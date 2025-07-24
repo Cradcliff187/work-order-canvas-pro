@@ -24,6 +24,8 @@ import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
 import { createUserColumns } from '@/components/admin/users/UserColumns';
 import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
+import { EditUserModal } from '@/components/admin/users/EditUserModal';
+import { ViewUserModal } from '@/components/admin/users/ViewUserModal';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserFilters {
@@ -37,6 +39,9 @@ export default function AdminUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
+  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
+  const [viewUserModalOpen, setViewUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -57,17 +62,19 @@ export default function AdminUsers() {
   // Column definitions with action handlers
   const columns = useMemo(() => createUserColumns({
     onView: (user) => {
-      navigate(`/admin/users/${user.id}`);
+      setSelectedUser(user);
+      setViewUserModalOpen(true);
     },
     onEdit: (user) => {
-      navigate(`/admin/users/${user.id}/edit`);
+      setSelectedUser(user);
+      setEditUserModalOpen(true);
     },
     onDelete: (user) => {
       if (confirm('Are you sure you want to delete this user?')) {
         deleteUser.mutate(user.id);
       }
     },
-  }), [deleteUser, navigate]);
+  }), [deleteUser]);
 
   // React Table configuration
   const table = useReactTable({
@@ -280,6 +287,20 @@ export default function AdminUsers() {
       <CreateUserModal 
         open={createUserModalOpen}
         onOpenChange={setCreateUserModalOpen}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal 
+        open={editUserModalOpen}
+        onOpenChange={setEditUserModalOpen}
+        user={selectedUser}
+      />
+
+      {/* View User Modal */}
+      <ViewUserModal 
+        isOpen={viewUserModalOpen}
+        onClose={() => setViewUserModalOpen(false)}
+        user={selectedUser}
       />
     </div>
   );
