@@ -769,7 +769,7 @@ export default function SubmitWorkOrder() {
                 <Button
                   type="submit"
                   size="lg"
-                  disabled={createWorkOrderMutation.isPending || isLoadingWorkOrderNumber}
+                  disabled={createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.watch('trade_id')}
                   className="min-h-[56px] px-6 sm:min-h-[48px] bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
                 >
                   {createWorkOrderMutation.isPending ? (
