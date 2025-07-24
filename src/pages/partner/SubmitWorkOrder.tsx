@@ -406,6 +406,53 @@ export default function SubmitWorkOrder() {
 
   // Handle form submission
   const onSubmit = async (data: FormData) => {
+    console.log('🚀 SUBMIT BUTTON CLICKED - Starting form submission');
+    console.log('📊 FORM SUBMISSION DEBUG DATA:');
+    console.log('- Form data received:', data);
+    console.log('- effectiveOrganizationId:', effectiveOrganizationId);
+    console.log('- form.watch("trade_id"):', form.watch('trade_id'));
+    console.log('- createWorkOrderMutation.isPending:', createWorkOrderMutation.isPending);
+    console.log('- profile?.id:', profile?.id);
+    console.log('- selectedOrganizationId (admin):', selectedOrganizationId);
+    console.log('- userOrganization:', userOrganization);
+    console.log('- isAdmin:', isAdmin);
+
+    // Critical validation checks with detailed logging
+    if (!effectiveOrganizationId) {
+      console.error('❌ CRITICAL ERROR: No effective organization ID available');
+      console.log('- userOrganization?.id:', userOrganization?.id);
+      console.log('- selectedOrganizationId:', selectedOrganizationId);
+      toast({
+        variant: "destructive",
+        title: "Organization Missing",
+        description: "No organization selected. Please select an organization.",
+      });
+      return;
+    }
+
+    if (!data.trade_id) {
+      console.error('❌ CRITICAL ERROR: No trade selected');
+      console.log('- data.trade_id:', data.trade_id);
+      console.log('- form.watch("trade_id"):', form.watch('trade_id'));
+      toast({
+        variant: "destructive",
+        title: "Trade Missing",
+        description: "Please select a trade category.",
+      });
+      return;
+    }
+
+    if (!profile?.id) {
+      console.error('❌ CRITICAL ERROR: User profile not available');
+      console.log('- profile:', profile);
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "User profile not available. Please refresh and try again.",
+      });
+      return;
+    }
+
     try {
       // Ensure title exists before submission - use same logic as review
       let finalTitle = data.title;
@@ -448,12 +495,26 @@ export default function SubmitWorkOrder() {
         ...(isAdmin && { estimated_hours: data.estimated_hours }),
       };
 
+      console.log('📤 Attempting to submit work order with data:', submissionData);
       await createWorkOrderMutation.mutateAsync(submissionData);
+      
+      console.log('✅ Work order submitted successfully');
+      toast({
+        title: "Success",
+        description: "Work order submitted successfully",
+      });
       
       // Navigate back to work orders list
       navigate('/partner/work-orders');
     } catch (error: any) {
-      console.error('Error submitting work order:', error);
+      console.error('❌ Error submitting work order:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        stack: error.stack
+      });
       toast({
         variant: "destructive",
         title: "Submission error",
@@ -776,24 +837,41 @@ export default function SubmitWorkOrder() {
                   )}
                 </Button>
               ) : (
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.watch('trade_id')}
-                  className="min-h-[56px] px-6 sm:min-h-[48px] bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
-                >
-                  {createWorkOrderMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-5 w-5 mr-2" />
-                      Submit Work Order
-                    </>
-                  )}
-                </Button>
+                <>
+                  {/* DEBUG: Submit Button State - Remove after debugging */}
+                  <div className="text-xs text-muted-foreground mb-2 p-2 bg-muted rounded text-center">
+                    <strong>DEBUG INFO:</strong><br/>
+                    effectiveOrganizationId: {effectiveOrganizationId || 'MISSING'}<br/>
+                    trade_id: {form.watch('trade_id') || 'MISSING'}<br/>
+                    isPending: {String(createWorkOrderMutation.isPending)}<br/>
+                    Button disabled: {String(createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.watch('trade_id'))}
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.watch('trade_id')}
+                    className="min-h-[56px] px-6 sm:min-h-[48px] bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
+                    onClick={() => console.log('📍 SUBMIT BUTTON CLICKED - Current state:', {
+                      effectiveOrganizationId,
+                      tradeId: form.watch('trade_id'),
+                      isPending: createWorkOrderMutation.isPending,
+                      isDisabled: createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.watch('trade_id')
+                    })}
+                  >
+                    {createWorkOrderMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5 mr-2" />
+                        Submit Work Order
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
             </div>
           </div>
