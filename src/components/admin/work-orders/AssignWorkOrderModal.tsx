@@ -418,14 +418,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   </p>
                 </div>
               </div>
-            ) : hasDataError ? (
-              <div className="text-center py-8">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">No assignees available for this trade</p>
-                <p className="text-xs text-muted-foreground">
-                  {tradeName ? `No active users found for ${tradeName}` : 'Please select a different trade or add users'}
-                </p>
-              </div>
             ) : (
               <div className="space-y-4">
                 {/* Employees Section */}
