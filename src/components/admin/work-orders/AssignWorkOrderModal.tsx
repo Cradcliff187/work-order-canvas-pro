@@ -1,3 +1,4 @@
+// This is the UPDATED FILE to replace: src/components/admin/work-orders/AssignWorkOrderModal.tsx
 
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,10 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw, ToggleLeft, ToggleRight, Building } from 'lucide-react';
 import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
+import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
@@ -32,13 +34,15 @@ interface AssignWorkOrderModalProps {
 
 export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWorkOrderModalProps) {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [networkError, setNetworkError] = useState<string | null>(null);
-  const [showAllSubcontractors, setShowAllSubcontractors] = useState(true);
+  const [showAllSubcontractors, setShowAllSubcontractors] = useState(false);
 
   const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
   const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
+  const { data: subcontractorOrgs = [], isLoading: isLoadingOrgs } = useSubcontractorOrganizations();
   
   // Validate work orders data
   const hasValidWorkOrders = workOrders && workOrders.length > 0;
@@ -46,33 +50,37 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const tradeName = hasValidWorkOrders ? workOrders[0]?.trades?.name : undefined;
   
   // Add debugging for data flow
-  console.log('🚀 AssignWorkOrderModal Debug:', {
+  console.log('AssignWorkOrderModal Debug:', {
     isOpen,
     workOrdersCount: workOrders?.length,
     tradeId,
     tradeName,
     hasValidWorkOrders,
-    showAllSubcontractors
+    showAllSubcontractors,
+    subcontractorOrgsCount: subcontractorOrgs.length
   });
   
   const { employees, subcontractors, isLoading } = useAllAssignees(tradeId, showAllSubcontractors);
   
   // Add more debugging for assignment data
-  console.log('📊 Assignment Data Updated:', {
+  console.log('📊 Assignment Data:', {
     employeesCount: employees.length,
     subcontractorsCount: subcontractors.length,
+    subcontractorOrgsCount: subcontractorOrgs.length,
     isLoading,
     employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
-    subcontractors: subcontractors.map(s => ({ id: s.id, name: s.organization, org_id: s.organization_id }))
+    subcontractors: subcontractors.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` })),
+    subcontractorOrgs: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, users: o.active_users }))
   });
 
   useEffect(() => {
     if (isOpen) {
       setSelectedAssignees([]);
+      setSelectedOrganizations([]);
       setNotes('');
       setValidationErrors([]);
       setNetworkError(null);
-      setShowAllSubcontractors(true);
+      setShowAllSubcontractors(false);
       
       // Validate work orders on open
       if (!hasValidWorkOrders) {
@@ -89,6 +97,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     );
   };
 
+  const toggleOrganization = (orgId: string) => {
+    setSelectedOrganizations(prev => 
+      prev.includes(orgId) 
+        ? prev.filter(id => id !== orgId)
+        : [...prev, orgId]
+    );
+  };
+
   const selectAllEmployees = () => {
     const employeeIds = employees.map(emp => emp.id);
     setSelectedAssignees(prev => {
@@ -99,11 +115,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
   const clearAllSelections = () => {
     setSelectedAssignees([]);
+    setSelectedOrganizations([]);
   };
 
   const handleAssign = async () => {
-    if (selectedAssignees.length === 0) {
-      // If no assignees selected, remove all assignments
+    // If no assignees or organizations selected, remove all assignments
+    if (selectedAssignees.length === 0 && selectedOrganizations.length === 0) {
       await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
       
       // Clear assigned_to in work_orders table and reset status
@@ -127,30 +144,36 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       // First remove all existing assignments for these work orders
       await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
 
+      // Collect all assignees (individual + from organizations)
+      const allSelectedAssignees = [...selectedAssignees];
+      
+      // Add first active user from each selected organization
+      for (const orgId of selectedOrganizations) {
+        const org = subcontractorOrgs.find(o => o.id === orgId);
+        if (org && org.first_active_user_id && !allSelectedAssignees.includes(org.first_active_user_id)) {
+          allSelectedAssignees.push(org.first_active_user_id);
+        }
+      }
+
       // Prepare new assignments for all work orders and selected assignees
       const assignments = workOrders.flatMap(wo => 
-        selectedAssignees.map((assigneeId, assigneeIndex) => {
+        allSelectedAssignees.map((assigneeId, assigneeIndex) => {
           const assignee = allAssignees.find(a => a.id === assigneeId);
+          const isSubcontractor = assignee?.type === 'subcontractor';
           
-          // For employees: assign to user, for subcontractors: assign to organization
-          if (assignee?.type === 'employee') {
-            return {
-              work_order_id: wo.id,
-              assigned_to: assigneeId, // Employee user ID
-              assigned_organization_id: null, // No organization for employees
-              assignment_type: assigneeIndex === 0 ? 'lead' as const : 'support' as const,
-              notes
-            };
-          } else {
-            // Subcontractor assignment - assign to organization
-            return {
-              work_order_id: wo.id,
-              assigned_to: null, // No user assignment for subcontractors
-              assigned_organization_id: assigneeId, // Organization ID (assigneeId is org ID for subcontractors)
-              assignment_type: assigneeIndex === 0 ? 'lead' as const : 'support' as const,
-              notes
-            };
-          }
+          // Check if this assignment is from an organization selection
+          const fromOrganization = selectedOrganizations.some(orgId => {
+            const org = subcontractorOrgs.find(o => o.id === orgId);
+            return org?.first_active_user_id === assigneeId;
+          });
+          
+          return {
+            work_order_id: wo.id,
+            assigned_to: assigneeId,
+            assigned_organization_id: isSubcontractor ? getSubcontractorOrganizationId(assigneeId) : null,
+            assignment_type: 'assigned' as const, // Simplified as requested
+            notes: fromOrganization ? `${notes}${notes ? ' - ' : ''}Assigned to organization` : notes
+          };
         })
       );
 
@@ -158,30 +181,18 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       await bulkAddAssignments.mutateAsync(assignments);
 
       // Update work_orders table with lead assignee for backward compatibility (status handled by trigger)
-      const leadAssignee = selectedAssignees[0];
+      const leadAssignee = allSelectedAssignees[0];
       if (leadAssignee) {
         const assignee = allAssignees.find(a => a.id === leadAssignee);
         const assignedToType: 'internal' | 'subcontractor' = assignee?.type === 'employee' ? 'internal' : 'subcontractor';
         
-        // For employees: assign to user ID, for subcontractors: assign to organization
-        if (assignee?.type === 'employee') {
-          await supabase
-            .from('work_orders')
-            .update({
-              assigned_to: leadAssignee,
-              assigned_to_type: assignedToType,
-            })
-            .in('id', workOrders.map(wo => wo.id));
-        } else {
-          // For subcontractors, assign to organization, not user
-          await supabase
-            .from('work_orders')
-            .update({
-              assigned_to: null, // No individual user assignment for subcontractors
-              assigned_to_type: assignedToType,
-            })
-            .in('id', workOrders.map(wo => wo.id));
-        }
+        await supabase
+          .from('work_orders')
+          .update({
+            assigned_to: leadAssignee,
+            assigned_to_type: assignedToType,
+          })
+          .in('id', workOrders.map(wo => wo.id));
       }
 
       onClose();
@@ -208,12 +219,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     [allAssignees, selectedAssignees]
   );
   
-  // Enhanced error handling for data loading
-  const hasDataError = !isLoading && employees.length === 0 && subcontractors.length === 0 && tradeId;
-  const isDataReady = !isLoading && (employees.length > 0 || subcontractors.length > 0 || !tradeId);
+  const selectedOrganizationData = useMemo(() => 
+    subcontractorOrgs.filter(org => selectedOrganizations.includes(org.id)),
+    [subcontractorOrgs, selectedOrganizations]
+  );
   
-  // Check if any work orders are currently assigned
-  const hasCurrentAssignments = workOrders.some(wo => wo.assigned_to || wo.status === 'assigned');
+  // Enhanced error handling for data loading
+  const hasDataError = !isLoading && employees.length === 0 && subcontractors.length === 0 && subcontractorOrgs.length === 0 && tradeId;
+  const isDataReady = !isLoading && !isLoadingOrgs && (employees.length > 0 || subcontractors.length > 0 || subcontractorOrgs.length > 0 || !tradeId);
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -243,7 +256,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               Assign Work Order{hasValidWorkOrders && workOrders.length > 1 ? 's' : ''}
             </DialogTitle>
             <DialogDescription>
-              Select one or more people to assign this work order to
+              Select employees individually or assign to subcontractor organizations
             </DialogDescription>
           </DialogHeader>
 
@@ -325,7 +338,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               <span className="font-medium">Status Change Preview</span>
             </div>
             <div className="text-sm text-blue-700 space-y-2">
-              {selectedAssignees.length > 0 ? (
+              {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? (
                 <div>
                   {workOrders.some(wo => wo.status === 'received') ? (
                     <>Work orders will automatically change from <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> to <Badge className="mx-1 bg-yellow-100 text-yellow-800 text-xs">Assigned</Badge> when assignments are created.</>
@@ -344,10 +357,13 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   )}
                 </div>
               )}
-              {selectedAssigneeData.length > 0 && (
+              {(selectedAssigneeData.length > 0 || selectedOrganizationData.length > 0) && (
                 <div className="text-xs">
                   <strong>Organizations involved:</strong> {
-                    Array.from(new Set(selectedAssigneeData.map(a => a.organization))).join(', ')
+                    Array.from(new Set([
+                      ...selectedAssigneeData.map(a => a.organization),
+                      ...selectedOrganizationData.map(o => o.name)
+                    ])).join(', ')
                   }
                 </div>
               )}
@@ -385,14 +401,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   variant="outline" 
                   size="sm" 
                   onClick={clearAllSelections}
-                  disabled={selectedAssignees.length === 0}
+                  disabled={selectedAssignees.length === 0 && selectedOrganizations.length === 0}
                 >
                   Clear All
                 </Button>
               </div>
             </div>
 
-            {isLoading ? (
+            {(isLoading || isLoadingOrgs) ? (
               <div className="py-8">
                 <LoadingSpinner />
                 <div className="text-center mt-4">
@@ -402,12 +418,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   </p>
                 </div>
               </div>
-            ) : !isDataReady ? (
+            ) : hasDataError ? (
               <div className="text-center py-8">
                 <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">Data not ready</p>
+                <p className="text-sm text-muted-foreground mb-2">No assignees available for this trade</p>
                 <p className="text-xs text-muted-foreground">
-                  Please wait while we load the assignee data
+                  {tradeName ? `No active users found for ${tradeName}` : 'Please select a different trade or add users'}
                 </p>
               </div>
             ) : (
@@ -462,13 +478,54 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   </Card>
                 )}
 
-                {/* Subcontractors Section */}
+                {/* Subcontractor Organizations Section */}
+                {subcontractorOrgs.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        <span className="font-medium">Subcontractor Organizations</span>
+                        <Badge variant="secondary">{subcontractorOrgs.length}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-3">
+                        {subcontractorOrgs.map((org) => (
+                          <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedOrganizations.includes(org.id)}
+                                onCheckedChange={() => toggleOrganization(org.id)}
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{org.name}</div>
+                                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                                  <Users className="h-3 w-3" />
+                                  <span>{org.active_users} active {org.active_users === 1 ? 'user' : 'users'}</span>
+                                  {org.first_active_user_name && (
+                                    <span className="text-xs">• Will assign to: {org.first_active_user_name}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <Badge variant="default" className="text-xs">
+                              <Building className="h-3 w-3 mr-1" />
+                              Organization
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Individual Subcontractors Section */}
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
-                        <span className="font-medium">Subcontractors</span>
+                        <span className="font-medium">Individual Subcontractors</span>
                         {subcontractors.length > 0 && (
                           <Badge variant="secondary">{subcontractors.length}</Badge>
                         )}
@@ -504,16 +561,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                       </Button>
                     </div>
                   </CardHeader>
-                  {isLoading ? (
-                    <CardContent className="pt-0">
-                      <div className="text-center py-6 text-muted-foreground">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                          Loading subcontractors...
-                        </div>
-                      </div>
-                    </CardContent>
-                  ) : subcontractors.length > 0 ? (
+                  {subcontractors.length > 0 ? (
                     <CardContent className="pt-0">
                       <div className="space-y-3">
                         {subcontractors.map((subcontractor) => (
@@ -525,7 +573,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                               />
                               <div className="flex-1">
                                 <div className="font-medium">
-                                  {subcontractor.organization}
+                                  {subcontractor.first_name} {subcontractor.last_name}
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
                                   <OrganizationBadge 
@@ -557,8 +605,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                         <Users className="h-8 w-8 mx-auto mb-2" />
                         <p className="text-sm">
                           {showAllSubcontractors 
-                            ? 'No subcontractors available'
-                            : `No subcontractors available for ${tradeName || 'this trade'}`
+                            ? 'No individual subcontractors available'
+                            : `No individual subcontractors available for ${tradeName || 'this trade'}`
                           }
                         </p>
                         {!showAllSubcontractors && (
@@ -571,7 +619,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   )}
                 </Card>
 
-                {employees.length === 0 && subcontractors.length === 0 && (
+                {employees.length === 0 && subcontractors.length === 0 && subcontractorOrgs.length === 0 && (
                   <div className="text-center py-8">
                     <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground mb-1">No assignees available</p>
@@ -584,21 +632,35 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             )}
 
             {/* Selected Assignees Summary */}
-            {selectedAssigneeData.length > 0 && (
+            {(selectedAssigneeData.length > 0 || selectedOrganizationData.length > 0) && (
               <Card>
                 <CardContent className="p-3">
                   <div className="text-sm font-medium mb-3">
-                    Selected Assignees ({selectedAssigneeData.length}):
+                    Selected ({selectedAssigneeData.length + selectedOrganizationData.length}):
                   </div>
                   <div className="space-y-2">
-                    {selectedAssigneeData.map((assignee, index) => (
+                    {/* Selected Organizations */}
+                    {selectedOrganizationData.map((org) => (
+                      <div key={org.id} className="flex items-center justify-between p-2 bg-primary/10 rounded border border-primary/20">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="text-xs">
+                            <Building className="h-3 w-3 mr-1" />
+                            Organization
+                          </Badge>
+                          <span className="text-sm font-medium">{org.name}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          Will assign to: {org.first_active_user_name || 'First available'}
+                        </span>
+                      </div>
+                    ))}
+                    {/* Selected Individual Assignees */}
+                    {selectedAssigneeData.map((assignee) => (
                       <div key={assignee.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border">
                         <div className="flex items-center gap-2">
-                          <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs">
-                            {index === 0 ? "Lead" : "Support"}
-                          </Badge>
+                          <Badge variant="secondary" className="text-xs">Individual</Badge>
                           <span className="text-sm font-medium">
-                            {assignee.type === 'subcontractor' ? assignee.organization : `${assignee.first_name} ${assignee.last_name}`}
+                            {assignee.first_name} {assignee.last_name}
                           </span>
                         </div>
                         <OrganizationBadge 
@@ -623,7 +685,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             <Label htmlFor="notes">Assignment Notes (Optional)</Label>
             <Textarea
               id="notes"
-              placeholder="Add any special instructions or notes for the subcontractor..."
+              placeholder="Add any special instructions or notes for the assignee..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -640,7 +702,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             <Button 
               onClick={handleAssign} 
               disabled={isAssigning || !hasValidWorkOrders || !!networkError || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
-              aria-label={selectedAssignees.length > 0 ? 'Assign selected users' : 'Remove all assignments'}
+              aria-label={selectedAssignees.length > 0 || selectedOrganizations.length > 0 ? 'Assign selected' : 'Remove all assignments'}
             >
               {(isAssigning || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
                 <>
@@ -648,9 +710,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                   Processing...
                 </>
               ) : (
-                hasCurrentAssignments && selectedAssignees.length === 0 ? 
-                  `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
-                  `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
+                selectedAssignees.length === 0 && selectedOrganizations.length === 0 ? `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
+                `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
               )}
             </Button>
           </div>
