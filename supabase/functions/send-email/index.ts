@@ -115,15 +115,15 @@ Deno.serve(async (req) => {
           email = profile?.email;
         }
       } else if (record_type === 'work_order_assignment') {
-        // For assignment emails, get assignee email from custom_data
-        const assignedToId = custom_data.assigned_to;
-        if (assignedToId) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', assignedToId)
+        // For assignment emails, get organization email from assigned_organization_id
+        const assignedOrgId = custom_data.assigned_organization_id;
+        if (assignedOrgId) {
+          const { data: organization } = await supabase
+            .from('organizations')
+            .select('contact_email')
+            .eq('id', assignedOrgId)
             .single();
-          email = profile?.email;
+          email = organization?.contact_email;
         }
       } else if (record_type === 'work_order_report') {
         // Fixed: use work_order_reports table instead of 'reports'
