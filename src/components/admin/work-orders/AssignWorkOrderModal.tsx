@@ -238,7 +238,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 pr-4 max-h-[70vh]">
             <div className="space-y-6">
               {/* Error States */}
               {!hasValidWorkOrders && (
@@ -370,8 +370,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                             <Badge variant="outline">{employees.length} available</Badge>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-2">
-                          {employees.map((employee) => (
+                        <CardContent className="p-0">
+                          <ScrollArea className="max-h-60 px-6 pb-6">
+                            <div className="space-y-2">
+                              {employees.map((employee) => (
                             <div key={employee.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
                               <Checkbox
                                 id={`employee-${employee.id}`}
@@ -393,8 +395,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                   </div>
                                 </div>
                               </div>
+                              </div>
+                              ))}
                             </div>
-                          ))}
+                          </ScrollArea>
                         </CardContent>
                       </Card>
                     )}
@@ -408,46 +412,50 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                           <Badge variant="outline">{subcontractorOrgs.length} available</Badge>
                         </div>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-0">
                         {subcontractorOrgs.length === 0 ? (
-                          <div className="text-center py-4 text-muted-foreground">
-                            <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">No subcontractor organizations available</p>
+                          <div className="px-6 pb-6">
+                            <div className="text-center py-4 text-muted-foreground">
+                              <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No subcontractor organizations available</p>
+                            </div>
                           </div>
                         ) : (
-                          <div className="space-y-2">
-                            {subcontractorOrgs.map((org) => (
-                              <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                                <Checkbox
-                                  id={`org-${org.id}`}
-                                  checked={selectedOrganizations.includes(org.id)}
-                                  onCheckedChange={() => toggleOrganization(org.id)}
-                                />
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{org.name}</span>
-                                    <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
-                                      {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                    {org.contact_email && (
-                                      <div className="flex items-center gap-1">
-                                        <Mail className="h-3 w-3" />
-                                        <span>{org.contact_email}</span>
-                                      </div>
-                                    )}
-                                    {org.first_active_user && (
-                                      <span>Lead: {org.first_active_user.full_name}</span>
-                                    )}
-                                    {org.active_user_count === 0 && (
-                                      <span className="text-amber-600">No active users</span>
-                                    )}
+                          <ScrollArea className="max-h-60 px-6 pb-6">
+                            <div className="space-y-2">
+                              {subcontractorOrgs.map((org) => (
+                                <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
+                                  <Checkbox
+                                    id={`org-${org.id}`}
+                                    checked={selectedOrganizations.includes(org.id)}
+                                    onCheckedChange={() => toggleOrganization(org.id)}
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{org.name}</span>
+                                      <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
+                                        {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                      {org.contact_email && (
+                                        <div className="flex items-center gap-1">
+                                          <Mail className="h-3 w-3" />
+                                          <span>{org.contact_email}</span>
+                                        </div>
+                                      )}
+                                      {org.first_active_user && (
+                                        <span>Lead: {org.first_active_user.full_name}</span>
+                                      )}
+                                      {org.active_user_count === 0 && (
+                                        <span className="text-amber-600">No active users</span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
                         )}
                       </CardContent>
                     </Card>
