@@ -1,4 +1,4 @@
-// This is the UPDATED FILE to replace: src/components/admin/work-orders/AssignWorkOrderModal.tsx
+// This is the CORRECTED FILE to replace: src/components/admin/work-orders/AssignWorkOrderModal.tsx
 
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,7 +11,6 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw, ToggleLeft, ToggleRight, Building } from 'lucide-react';
-
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
@@ -40,7 +39,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [networkError, setNetworkError] = useState<string | null>(null);
   const [showAllSubcontractors, setShowAllSubcontractors] = useState(false);
 
-  
   const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
   const { data: subcontractorOrgs = [], isLoading: isLoadingOrgs } = useSubcontractorOrganizations();
   
@@ -715,8 +713,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               )}
             </Button>
           </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
     </ErrorBoundary>
   );
-} 
+}
