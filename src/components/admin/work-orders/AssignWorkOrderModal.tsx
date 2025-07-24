@@ -491,30 +491,34 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="space-y-3">
-                        {subcontractorOrgs.map((org) => (
-                          <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedOrganizations.includes(org.id)}
-                                onCheckedChange={() => toggleOrganization(org.id)}
-                              />
-                              <div className="flex-1">
-                                <div className="font-medium">{org.name}</div>
-                                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                  <Users className="h-3 w-3" />
-                                  <span>{org.active_users} active {org.active_users === 1 ? 'user' : 'users'}</span>
-                                  {org.first_active_user_name && (
-                                    <span className="text-xs">• Will assign to: {org.first_active_user_name}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <Badge variant="default" className="text-xs">
-                              <Building className="h-3 w-3 mr-1" />
-                              Organization
-                            </Badge>
-                          </div>
-                        ))}
+                         {subcontractorOrgs.map((org) => (
+                           <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
+                             <div className="flex items-center gap-3">
+                               <Checkbox
+                                 checked={selectedOrganizations.includes(org.id)}
+                                 onCheckedChange={() => toggleOrganization(org.id)}
+                               />
+                               <div className="flex-1">
+                                 <div className="font-medium">{org.name}</div>
+                                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                                   {org.contact_email && (
+                                     <div className="flex items-center gap-1">
+                                       <Mail className="h-3 w-3" />
+                                       <span>{org.contact_email}</span>
+                                     </div>
+                                   )}
+                                   {org.contact_phone && (
+                                     <span>• {org.contact_phone}</span>
+                                   )}
+                                 </div>
+                               </div>
+                             </div>
+                             <Badge variant="default" className="text-xs">
+                               <Building className="h-3 w-3 mr-1" />
+                               Organization
+                             </Badge>
+                           </div>
+                         ))}
                         {subcontractorOrgs.length === 0 && (
                           <div className="text-center py-4 text-sm text-muted-foreground">
                             No subcontractor organizations available
@@ -534,21 +538,23 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                     Selected ({selectedAssigneeData.length + selectedOrganizationData.length}):
                   </div>
                   <div className="space-y-2">
-                    {/* Selected Organizations */}
-                    {selectedOrganizationData.map((org) => (
-                      <div key={org.id} className="flex items-center justify-between p-2 bg-primary/10 rounded border border-primary/20">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default" className="text-xs">
-                            <Building className="h-3 w-3 mr-1" />
-                            Organization
-                          </Badge>
-                          <span className="text-sm font-medium">{org.name}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          Will assign to: {org.first_active_user_name || 'First available'}
-                        </span>
-                      </div>
-                    ))}
+                     {/* Selected Organizations */}
+                     {selectedOrganizationData.map((org) => (
+                       <div key={org.id} className="flex items-center justify-between p-2 bg-primary/10 rounded border border-primary/20">
+                         <div className="flex items-center gap-2">
+                           <Badge variant="default" className="text-xs">
+                             <Building className="h-3 w-3 mr-1" />
+                             Organization
+                           </Badge>
+                           <span className="text-sm font-medium">{org.name}</span>
+                         </div>
+                         {org.contact_email && (
+                           <span className="text-xs text-muted-foreground">
+                             {org.contact_email}
+                           </span>
+                         )}
+                       </div>
+                     ))}
                     {/* Selected Individual Assignees */}
                     {selectedAssigneeData.map((assignee) => (
                       <div key={assignee.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border">
