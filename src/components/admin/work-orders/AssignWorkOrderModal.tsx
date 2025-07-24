@@ -70,7 +70,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     isLoading,
     employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
     subcontractors: subcontractors.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` })),
-    subcontractorOrgs: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, users: o.active_user_count }))
+    subcontractorOrgs: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, users: o.active_users }))
   });
 
   useEffect(() => {
@@ -150,8 +150,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       // Add first active user from each selected organization
       for (const orgId of selectedOrganizations) {
         const org = subcontractorOrgs.find(o => o.id === orgId);
-        if (org && org.first_active_user?.id && !allSelectedAssignees.includes(org.first_active_user.id)) {
-          allSelectedAssignees.push(org.first_active_user.id);
+        if (org && org.first_active_user_id && !allSelectedAssignees.includes(org.first_active_user_id)) {
+          allSelectedAssignees.push(org.first_active_user_id);
         }
       }
 
@@ -164,14 +164,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
           // Check if this assignment is from an organization selection
           const fromOrganization = selectedOrganizations.some(orgId => {
             const org = subcontractorOrgs.find(o => o.id === orgId);
-            return org?.first_active_user?.id === assigneeId;
+            return org?.first_active_user_id === assigneeId;
           });
           
           return {
             work_order_id: wo.id,
             assigned_to: assigneeId,
             assigned_organization_id: isSubcontractor ? getSubcontractorOrganizationId(assigneeId) : null,
-            assignment_type: 'lead' as const,
+            assignment_type: 'assigned' as const, // Simplified as requested
             notes: fromOrganization ? `${notes}${notes ? ' - ' : ''}Assigned to organization` : notes
           };
         })
@@ -501,10 +501,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                 <div className="font-medium">{org.name}</div>
                                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                                   <Users className="h-3 w-3" />
-                                   <span>{org.active_user_count} active {org.active_user_count === 1 ? 'user' : 'users'}</span>
-                                   {org.first_active_user && (
-                                     <span className="text-xs">• Will assign to: {org.first_active_user.full_name}</span>
-                                   )}
+                                  <span>{org.active_users} active {org.active_users === 1 ? 'user' : 'users'}</span>
+                                  {org.first_active_user_name && (
+                                    <span className="text-xs">• Will assign to: {org.first_active_user_name}</span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -649,9 +649,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                           </Badge>
                           <span className="text-sm font-medium">{org.name}</span>
                         </div>
-                         <span className="text-xs text-muted-foreground">
-                           Will assign to: {org.first_active_user?.full_name || 'First available'}
-                         </span>
+                        <span className="text-xs text-muted-foreground">
+                          Will assign to: {org.first_active_user_name || 'First available'}
+                        </span>
                       </div>
                     ))}
                     {/* Selected Individual Assignees */}
@@ -719,4 +719,4 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     </Dialog>
     </ErrorBoundary>
   );
-}
+} 
