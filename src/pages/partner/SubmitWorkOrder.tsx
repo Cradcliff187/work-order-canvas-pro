@@ -719,6 +719,16 @@ export default function SubmitWorkOrder() {
             </div>
           )}
 
+          {/* Error alert for work order number generation */}
+          {currentStep === 3 && workOrderNumberError && (
+            <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-800">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Work order number preview unavailable, but submission will work normally
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Enhanced Navigation Buttons */}
           <div className="flex items-center justify-between pt-6 border-t">
             <Button
