@@ -17,7 +17,6 @@ export function useSubcontractorOrganizations() {
   return useQuery({
     queryKey: ['subcontractor-organizations'],
     queryFn: async () => {
-      // Get all subcontractor organizations with their active users
       const { data, error } = await supabase
         .from('organizations')
         .select(`
@@ -43,7 +42,6 @@ export function useSubcontractorOrganizations() {
 
       if (error) throw error;
 
-      // Transform the data to get counts and first active user
       const transformedData: SubcontractorOrganization[] = (data || []).map(org => {
         const activeUsers = org.user_organizations
           .filter((uo: any) => uo.profiles?.is_active)
