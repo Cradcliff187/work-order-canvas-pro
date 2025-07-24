@@ -35,7 +35,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [notes, setNotes] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [networkError, setNetworkError] = useState<string | null>(null);
-  const [showAllSubcontractors, setShowAllSubcontractors] = useState(false);
+  const [showAllSubcontractors, setShowAllSubcontractors] = useState(true);
 
   const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
   const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
