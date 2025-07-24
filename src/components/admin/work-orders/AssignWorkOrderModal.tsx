@@ -227,7 +227,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       </div>
     }>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-2xl h-[85vh] sm:h-[80vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -238,7 +238,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-4 max-h-[70vh]">
+          <ScrollArea className="flex-1 pr-4 h-[calc(85vh-180px)] sm:h-[calc(80vh-180px)]">
             <div className="space-y-6">
               {/* Error States */}
               {!hasValidWorkOrders && (
@@ -545,11 +545,11 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               {(bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assigning...' : 'Unassigning...'}
+                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assigning...' : 'Clearing...'}
                 </>
               ) : (
                 <>
-                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assign' : 'Unassign All'}
+                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assign' : 'Clear Assignment'}
                 </>
               )}
             </Button>
