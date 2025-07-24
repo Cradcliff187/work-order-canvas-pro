@@ -64,17 +64,21 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployeesForAssignment();
   
   const { data: subcontractors = [], isLoading: isLoadingSubcontractors } = useQuery({
-    queryKey: ['subcontractor-organizations-for-assignment'],
+    queryKey: ['subcontractor-organizations-for-assignment', tradeId, showAllSubcontractors],
     queryFn: async (): Promise<AssigneeData[]> => {
       console.log('🔍 Subcontractor Organizations Query Debug - simplified key');
       
-      // Always fetch all subcontractor organizations
-      const { data: orgs, error } = await supabase
+      // Fetch subcontractor organizations with optional trade filtering
+      let query = supabase
         .from('organizations')
         .select('*')
         .eq('organization_type', 'subcontractor')
         .eq('is_active', true)
         .order('name');
+
+      // TODO: Add trade filtering when organization_trades table is available
+      // For now, fetch all subcontractors
+      const { data: orgs, error } = await query;
 
       console.log('📊 Raw subcontractor organization query result:', { orgs, error, count: orgs?.length });
 

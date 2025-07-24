@@ -63,7 +63,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     subcontractorsCount: subcontractors.length,
     isLoading,
     employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
-    subcontractors: subcontractors.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))
+    subcontractors: subcontractors.map(s => ({ id: s.id, name: s.organization }))
   });
 
   useEffect(() => {
@@ -504,7 +504,16 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                       </Button>
                     </div>
                   </CardHeader>
-                  {subcontractors.length > 0 ? (
+                  {isLoading ? (
+                    <CardContent className="pt-0">
+                      <div className="text-center py-6 text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                          Loading subcontractors...
+                        </div>
+                      </div>
+                    </CardContent>
+                  ) : subcontractors.length > 0 ? (
                     <CardContent className="pt-0">
                       <div className="space-y-3">
                         {subcontractors.map((subcontractor) => (
