@@ -32,8 +32,11 @@ export default function SubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getWorkOrder, submitReport } = useSubcontractorWorkOrders();
+  const { submitReport } = useSubcontractorWorkOrders();
   const { saveDraft, getDrafts } = useOfflineStorage();
+
+  // Use getWorkOrder hook directly
+  const workOrderQuery = useSubcontractorWorkOrders().getWorkOrder(workOrderId || '');
 
   const [formData, setFormData] = useState<FormData>({
     workPerformed: '',
@@ -44,32 +47,17 @@ export default function SubmitReport() {
     invoiceNumber: '',
     photos: [],
   });
-  const [workOrder, setWorkOrder] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!workOrderId) {
-      setError('Work Order ID is required.');
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchWorkOrder = async () => {
-      try {
-        const fetchedWorkOrder = await getWorkOrder(workOrderId).refetch();
-        setWorkOrder(fetchedWorkOrder.data);
-        setIsLoading(false);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load work order.');
-        setIsLoading(false);
-      }
-    };
-
-    fetchWorkOrder();
-  }, [workOrderId, getWorkOrder]);
+  // Check for work order ID
+  if (!workOrderId) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>Work Order ID is required.</AlertDescription>
+      </Alert>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,15 +220,16 @@ export default function SubmitReport() {
     });
   };
 
-  if (error) {
+  // Handle query states
+  if (workOrderQuery.isError) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
+        <AlertDescription>{workOrderQuery.error?.message || 'Failed to load work order.'}</AlertDescription>
       </Alert>
     );
   }
 
-  if (isLoading) {
+  if (workOrderQuery.isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -271,7 +260,7 @@ export default function SubmitReport() {
     );
   }
 
-  if (!workOrder) {
+  if (!workOrderQuery.data) {
     return (
       <Alert variant="destructive">
         <AlertDescription>
@@ -280,6 +269,8 @@ export default function SubmitReport() {
       </Alert>
     );
   }
+
+  const workOrder = workOrderQuery.data;
 
   return (
     <div className="space-y-6">
