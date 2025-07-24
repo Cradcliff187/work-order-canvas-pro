@@ -434,116 +434,127 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               </div>
             )}
 
-            {/* Content - Show when not loading and has data */}
-            {!isLoading && !isLoadingOrgs && (employees.length > 0 || subcontractorOrgs.length > 0) && (
-              <div className="space-y-4">
-                {/* Employees Section */}
-                {employees.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="h-4 w-4" />
-                        <span className="font-medium">Employees</span>
-                        <Badge variant="secondary">{employees.length}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-3">
-                        {employees.map((employee) => (
-                          <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedAssignees.includes(employee.id)}
-                                onCheckedChange={() => toggleAssignee(employee.id)}
-                              />
-                              <div className="flex-1">
-                                <div className="font-medium">
-                                  {employee.first_name} {employee.last_name}
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <OrganizationBadge 
-                                    organization={{ 
-                                      name: employee.organization, 
-                                      organization_type: 'internal' 
-                                    }} 
-                                    size="sm"
-                                    showIcon={true}
-                                  />
-                                </div>
+            {/* EMPLOYEES SECTION - Independent conditional with forced re-render */}
+            {!isLoading && employees.length > 0 && (
+              <Card key={`employees-render-${employees.length}-${Date.now()}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    <span className="font-medium">Internal Employees</span>
+                    <Badge variant="secondary">{employees.length}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    {employees.map((employee) => {
+                      console.log('👤 RENDERING EMPLOYEE:', employee);
+                      return (
+                        <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedAssignees.includes(employee.id)}
+                              onCheckedChange={() => toggleAssignee(employee.id)}
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium">
+                                {employee.first_name} {employee.last_name}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <OrganizationBadge 
+                                  organization={{ 
+                                    name: employee.organization, 
+                                    organization_type: 'internal' 
+                                  }} 
+                                  size="sm"
+                                  showIcon={true}
+                                />
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs ${getWorkloadColor(employee.workload)}`}>
-                                {getWorkloadLabel(employee.workload)}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {employee.workload} active
-                              </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs ${getWorkloadColor(employee.workload)}`}>
+                              {getWorkloadLabel(employee.workload)}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {employee.workload} active
+                            </Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* SUBCONTRACTOR ORGS SECTION - Independent conditional with forced re-render */}
+            {!isLoadingOrgs && subcontractorOrgs.length > 0 && (
+              <Card key={`subcontractors-render-${subcontractorOrgs.length}-${Date.now()}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    <span className="font-medium">Subcontractor Organizations</span>
+                    <Badge variant="secondary">{subcontractorOrgs.length}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    {subcontractorOrgs.map((org) => {
+                      console.log('🏢 FORCE RENDERING SUBCONTRACTOR ORG:', {
+                        timestamp: new Date().toISOString(),
+                        orgId: org.id,
+                        orgName: org.name,
+                        contact_email: org.contact_email,
+                        contact_phone: org.contact_phone,
+                        active_user_count: org.active_user_count,
+                        active_users: org.active_users,
+                        first_active_user: org.first_active_user,
+                        first_active_user_id: org.first_active_user_id,
+                        first_active_user_name: org.first_active_user_name,
+                        fullObject: org
+                      });
+                      return (
+                        <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedOrganizations.includes(org.id)}
+                              onCheckedChange={() => toggleOrganization(org.id)}
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium">{org.name}</div>
+                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                                {org.contact_email && (
+                                  <div className="flex items-center gap-1">
+                                    <Mail className="h-3 w-3" />
+                                    <span>{org.contact_email}</span>
+                                  </div>
+                                )}
+                                {org.contact_phone && (
+                                  <span>• {org.contact_phone}</span>
+                                )}
+                                {org.active_user_count !== undefined && (
+                                  <span>• {org.active_user_count} users</span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                 {/* Subcontractor Organizations Section - ALWAYS show if data exists */}
-                {subcontractorOrgs.length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" />
-                        <span className="font-medium">Subcontractor Organizations</span>
-                        <Badge variant="secondary">{subcontractorOrgs.length}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-3">
-                         {subcontractorOrgs.map((org) => {
-                           console.log('🏢 Rendering subcontractor org:', org);
-                           return (
-                           <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
-                             <div className="flex items-center gap-3">
-                               <Checkbox
-                                 checked={selectedOrganizations.includes(org.id)}
-                                 onCheckedChange={() => toggleOrganization(org.id)}
-                               />
-                               <div className="flex-1">
-                                 <div className="font-medium">{org.name}</div>
-                                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                   {org.contact_email && (
-                                     <div className="flex items-center gap-1">
-                                       <Mail className="h-3 w-3" />
-                                       <span>{org.contact_email}</span>
-                                     </div>
-                                   )}
-                                   {org.contact_phone && (
-                                     <span>• {org.contact_phone}</span>
-                                   )}
-                                   {org.active_user_count !== undefined && (
-                                     <span>• {org.active_user_count} users</span>
-                                   )}
-                                 </div>
-                               </div>
-                             </div>
-                             <Badge variant="default" className="text-xs">
-                               <Building className="h-3 w-3 mr-1" />
-                               Organization
-                             </Badge>
-                           </div>
-                         )})}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Show message if both sections are empty but data loaded */}
-                {employees.length === 0 && subcontractorOrgs.length === 0 && (
-                  <div className="text-center py-8 text-sm text-muted-foreground">
-                    <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No employees or subcontractor organizations available for assignment.</p>
+                          <Badge variant="default" className="text-xs">
+                            <Building className="h-3 w-3 mr-1" />
+                            Organization
+                          </Badge>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* NO DATA MESSAGE - Only show when BOTH sections have no data */}
+            {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No employees or subcontractor organizations available for assignment.</p>
               </div>
             )}
 
