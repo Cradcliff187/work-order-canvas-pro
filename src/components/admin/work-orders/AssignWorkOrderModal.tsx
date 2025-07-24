@@ -72,7 +72,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       setNotes('');
       setValidationErrors([]);
       setNetworkError(null);
-      setShowAllSubcontractors(false);
+      setShowAllSubcontractors(true);
       
       // Validate work orders on open
       if (!hasValidWorkOrders) {
