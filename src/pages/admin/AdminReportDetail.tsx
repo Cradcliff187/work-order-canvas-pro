@@ -218,18 +218,7 @@ export default function AdminReportDetail() {
                   <label className="text-sm font-medium text-muted-foreground">Hours Worked</label>
                   <p className="font-medium">{report.hours_worked || 'N/A'}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Invoice Amount</label>
-                  <p className="font-medium">${report.invoice_amount.toLocaleString()}</p>
-                </div>
               </div>
-
-              {report.invoice_number && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Invoice Number</label>
-                  <p className="font-medium">{report.invoice_number}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -413,29 +402,24 @@ export default function AdminReportDetail() {
             </CardContent>
           </Card>
 
-          {/* Financial Summary */}
+          {/* Work Summary */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Financial Summary
+                <FileText className="w-4 h-4" />
+                Work Summary
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm">Invoice Amount</span>
-                <span className="font-medium">${report.invoice_amount.toLocaleString()}</span>
-              </div>
               {report.hours_worked && (
                 <div className="flex justify-between">
                   <span className="text-sm">Hours Worked</span>
                   <span className="font-medium">{report.hours_worked}h</span>
                 </div>
               )}
-              <Separator />
-              <div className="flex justify-between font-medium">
-                <span>Total</span>
-                <span>${report.invoice_amount.toLocaleString()}</span>
+              <div className="flex justify-between">
+                <span className="text-sm">Status</span>
+                <span className="font-medium">{report.status.charAt(0).toUpperCase() + report.status.slice(1)}</span>
               </div>
             </CardContent>
           </Card>

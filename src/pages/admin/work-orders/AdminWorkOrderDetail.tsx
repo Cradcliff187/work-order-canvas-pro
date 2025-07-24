@@ -333,7 +333,7 @@ export default function AdminWorkOrderDetail() {
                           {report.hours_worked && (
                             <span>Hours: {report.hours_worked}</span>
                           )}
-                          <span>Amount: ${report.invoice_amount}</span>
+                          <span>Status: {report.status}</span>
                         </div>
                       </div>
                     </div>

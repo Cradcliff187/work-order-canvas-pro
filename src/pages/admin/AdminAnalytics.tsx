@@ -266,12 +266,8 @@ const AdminAnalytics: React.FC = () => {
                               <div className="text-muted-foreground">On-time</div>
                             </div>
                             <div className="text-center">
-                              <div className="font-medium">${sub.avgInvoiceAmount.toFixed(0)}</div>
-                              <div className="text-muted-foreground">Avg Invoice</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="font-medium">{sub.qualityScore.toFixed(1)}%</div>
-                              <div className="text-muted-foreground">Quality</div>
+                              <div className="font-medium">{sub.reportApprovalRate.toFixed(1)}%</div>
+                              <div className="text-muted-foreground">Approval Rate</div>
                             </div>
                           </div>
                         </div>

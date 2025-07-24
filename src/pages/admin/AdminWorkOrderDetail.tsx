@@ -469,14 +469,10 @@ export default function AdminWorkOrderDetail() {
                       <Badge className={getReportStatusColor(report.status)}>
                         {report.status}
                       </Badge>
-                      <div className="flex items-center gap-1 text-sm font-medium mt-1">
-                        <DollarSign className="h-3 w-3" />
-                        ${report.invoice_amount.toLocaleString()}
-                      </div>
                       {report.hours_worked && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1 text-sm font-medium mt-1">
                           <Clock className="h-3 w-3" />
-                          {report.hours_worked}h
+                          {report.hours_worked}h worked
                         </div>
                       )}
                     </div>

@@ -28,7 +28,6 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     id: string;
     status: string;
     submitted_at: string;
-    invoice_amount: number;
     work_performed: string;
     hours_worked: number | null;
     subcontractor_user: {
@@ -106,7 +105,6 @@ export function useWorkOrderDetail(id: string) {
             id,
             status,
             submitted_at,
-            invoice_amount,
             work_performed,
             hours_worked,
             subcontractor_user:profiles!subcontractor_user_id(

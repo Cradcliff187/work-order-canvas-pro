@@ -65,10 +65,8 @@ export default function ReportHistory() {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  const getTotalEarnings = () => {
-    return reportList
-      .filter(report => report.status === "approved")
-      .reduce((sum, report) => sum + (Number(report.invoice_amount) || 0), 0);
+  const getApprovedReports = () => {
+    return reportList.filter(report => report.status === "approved").length;
   };
 
   if (reports.isLoading) {
@@ -137,10 +135,10 @@ export default function ReportHistory() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Total Earnings</span>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Completed</span>
             </div>
-            <p className="text-2xl font-bold mt-2">${getTotalEarnings().toLocaleString()}</p>
+            <p className="text-2xl font-bold mt-2">{getApprovedReports()}</p>
           </CardContent>
         </Card>
       </div>
@@ -225,10 +223,12 @@ export default function ReportHistory() {
                         <Calendar className="h-4 w-4" />
                         <span>Submitted {format(new Date(report.submitted_at), "MMM d, yyyy")}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        <span>${Number(report.invoice_amount).toLocaleString()}</span>
-                      </div>
+                      {report.hours_worked && (
+                        <div className="flex items-center gap-2">
+                          <ClipboardList className="h-4 w-4" />
+                          <span>{report.hours_worked}h worked</span>
+                        </div>
+                      )}
                     </div>
 
                     {report.review_notes && (

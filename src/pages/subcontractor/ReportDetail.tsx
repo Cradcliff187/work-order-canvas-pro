@@ -270,21 +270,7 @@ export default function ReportDetail() {
                 </div>
               )}
               
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Invoice Amount</h4>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <DollarSign className="h-4 w-4 print:hidden" />
-                  ${Number(report.invoice_amount).toLocaleString()}
-                </div>
-              </div>
             </div>
-
-            {report.invoice_number && (
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground mb-1">Invoice Number</h4>
-                <p className="text-sm">{report.invoice_number}</p>
-              </div>
-            )}
 
             {(report.reviewed_at && report.profiles) && (
               <div>
