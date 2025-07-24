@@ -39,8 +39,6 @@ export function useSubcontractorOrganizations() {
           )
         `)
         .eq('organization_type', 'subcontractor')
-        .eq('user_organizations.profiles.user_type', 'subcontractor')
-        .eq('user_organizations.profiles.is_active', true)
         .order('name');
 
       if (error) throw error;
