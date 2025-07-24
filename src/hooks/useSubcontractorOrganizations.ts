@@ -27,6 +27,7 @@ export function useSubcontractorOrganizations() {
           name,
           contact_email,
           contact_phone,
+          is_active,
           user_organizations!left(
             user_id,
             profiles!left(
@@ -39,10 +40,12 @@ export function useSubcontractorOrganizations() {
           )
         `)
         .eq('organization_type', 'subcontractor')
+        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
 
+      // Return ALL subcontractor organizations, regardless of user count
       const transformedData: SubcontractorOrganization[] = (data || []).map(org => {
         const activeUsers = (org.user_organizations || [])
           .filter((uo: any) => uo.profiles?.is_active && uo.profiles?.user_type === 'subcontractor')
@@ -69,7 +72,13 @@ export function useSubcontractorOrganizations() {
       console.log('🏢 Subcontractor Organizations Query Result:', {
         rawData: data,
         transformedData,
-        count: transformedData.length
+        count: transformedData.length,
+        allOrganizations: transformedData.map(o => ({ 
+          id: o.id, 
+          name: o.name, 
+          userCount: o.active_user_count,
+          hasUsers: o.active_user_count > 0
+        }))
       });
 
       return transformedData;

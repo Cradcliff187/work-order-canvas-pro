@@ -1,5 +1,3 @@
-// This is the CORRECTED FILE to replace: src/components/admin/work-orders/AssignWorkOrderModal.tsx
-
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw, ToggleLeft, ToggleRight, Building } from 'lucide-react';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User } from 'lucide-react';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
@@ -43,28 +41,18 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   
   // Validate work orders data
   const hasValidWorkOrders = workOrders && workOrders.length > 0;
-  const tradeId = hasValidWorkOrders ? workOrders[0]?.trade_id : undefined;
   const tradeName = hasValidWorkOrders ? workOrders[0]?.trades?.name : undefined;
   
   const { employees, isLoading } = useAllAssignees();
   
-  // Add comprehensive debugging for assignment data
-  console.log('📊 Assignment Data:', {
+  // Debug logging
+  console.log('📊 Assignment Modal Data:', {
     workOrders: workOrders?.length || 0,
-    hasValidWorkOrders,
-    employeesCount: employees.length,
-    subcontractorOrgsCount: subcontractorOrgs.length,
+    employees: employees.length,
+    subcontractorOrgs: subcontractorOrgs.length,
     isLoading,
     isLoadingOrgs,
-    employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
-    subcontractorOrgs: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, users: o.active_users })),
-    workOrderDetails: workOrders?.map(wo => ({
-      id: wo.id,
-      title: wo.title,
-      status: wo.status,
-      assigned_to: wo.assigned_to,
-      assigned_to_type: wo.assigned_to_type
-    }))
+    orgDetails: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, userCount: o.active_user_count }))
   });
 
   useEffect(() => {
@@ -75,7 +63,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       setValidationErrors([]);
       setNetworkError(null);
       
-      // Validate work orders on open
       if (!hasValidWorkOrders) {
         setValidationErrors(['No valid work orders provided']);
       }
@@ -100,10 +87,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
   const selectAllEmployees = () => {
     const employeeIds = employees.map(emp => emp.id);
-    setSelectedAssignees(prev => {
-      const nonEmployeeIds = prev.filter(id => !employeeIds.includes(id));
-      return [...nonEmployeeIds, ...employeeIds];
-    });
+    setSelectedAssignees(employeeIds);
   };
 
   const clearAllSelections = () => {
@@ -116,7 +100,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     if (selectedAssignees.length === 0 && selectedOrganizations.length === 0) {
       await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
       
-      // Clear assigned_to in work_orders table and reset status
       await supabase
         .from('work_orders')
         .update({
@@ -134,13 +117,13 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     try {
       setValidationErrors([]);
 
-      // First remove all existing assignments for these work orders
+      // Remove existing assignments
       await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
 
-      // Collect all assignees (individual + from organizations)
+      // Collect all assignees
       const allSelectedAssignees = [...selectedAssignees];
       
-      // Add first active user from each selected organization
+      // Add first active user from each selected organization (if they have one)
       for (const orgId of selectedOrganizations) {
         const org = subcontractorOrgs.find(o => o.id === orgId);
         if (org && org.first_active_user_id && !allSelectedAssignees.includes(org.first_active_user_id)) {
@@ -148,44 +131,51 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         }
       }
 
-      // Prepare new assignments for all work orders and selected assignees
-      const assignments = workOrders.flatMap(wo => 
-        allSelectedAssignees.map((assigneeId) => {
-          const assignee = employees.find(e => e.id === assigneeId);
-          const isEmployee = assignee?.type === 'employee';
-          
-          // Check if this assignment is from an organization selection
-          const fromOrganization = selectedOrganizations.some(orgId => {
-            const org = subcontractorOrgs.find(o => o.id === orgId);
-            return org?.first_active_user_id === assigneeId;
-          });
-          
-          const selectedOrg = selectedOrganizations.find(orgId => {
-            const org = subcontractorOrgs.find(o => o.id === orgId);
-            return org?.first_active_user_id === assigneeId;
-          });
-          
-          return {
-            work_order_id: wo.id,
-            assigned_to: assigneeId,
-            assigned_organization_id: fromOrganization ? selectedOrg : null,
-            assignment_type: 'assigned' as const,
-            notes: fromOrganization ? `${notes}${notes ? ' - ' : ''}Assigned to organization` : notes
-          };
-        })
-      );
+      // If we selected organizations without active users, show warning but continue
+      const orgsWithoutUsers = selectedOrganizations.filter(orgId => {
+        const org = subcontractorOrgs.find(o => o.id === orgId);
+        return org && org.active_user_count === 0;
+      });
 
-      // Create all new assignments atomically - status will be automatically updated by trigger
-      await bulkAddAssignments.mutateAsync(assignments);
-
-      // Update work_orders table with lead assignee for backward compatibility (status handled by trigger)
-      const leadAssignee = allSelectedAssignees[0];
-      if (leadAssignee) {
-        const assignee = employees.find(e => e.id === leadAssignee);
-        const isFromOrganization = selectedOrganizations.some(orgId => {
+      if (orgsWithoutUsers.length > 0) {
+        const orgNames = orgsWithoutUsers.map(orgId => {
           const org = subcontractorOrgs.find(o => o.id === orgId);
-          return org?.first_active_user_id === leadAssignee;
-        });
+          return org?.name;
+        }).join(', ');
+        console.warn(`Organizations without active users selected: ${orgNames}`);
+      }
+
+      // Create assignments only for users we have
+      if (allSelectedAssignees.length > 0) {
+        const assignments = workOrders.flatMap(wo => 
+          allSelectedAssignees.map((assigneeId) => {
+            const assignee = employees.find(e => e.id === assigneeId);
+            
+            const fromOrganization = selectedOrganizations.some(orgId => {
+              const org = subcontractorOrgs.find(o => o.id === orgId);
+              return org?.first_active_user_id === assigneeId;
+            });
+            
+            const selectedOrg = selectedOrganizations.find(orgId => {
+              const org = subcontractorOrgs.find(o => o.id === orgId);
+              return org?.first_active_user_id === assigneeId;
+            });
+            
+            return {
+              work_order_id: wo.id,
+              assigned_to: assigneeId,
+              assigned_organization_id: fromOrganization ? selectedOrg : null,
+              assignment_type: 'assigned' as const,
+              notes: fromOrganization ? `${notes}${notes ? ' - ' : ''}Assigned to organization` : notes
+            };
+          })
+        );
+
+        await bulkAddAssignments.mutateAsync(assignments);
+
+        // Update work_orders table with lead assignee
+        const leadAssignee = allSelectedAssignees[0];
+        const assignee = employees.find(e => e.id === leadAssignee);
         const assignedToType: 'internal' | 'subcontractor' = assignee?.type === 'employee' ? 'internal' : 'subcontractor';
         
         await supabase
@@ -206,8 +196,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     }
   };
 
-
-  // Memoize expensive calculations
   const selectedAssigneeData = useMemo(() => 
     employees.filter(employee => selectedAssignees.includes(employee.id)),
     [employees, selectedAssignees]
@@ -217,16 +205,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     subcontractorOrgs.filter(org => selectedOrganizations.includes(org.id)),
     [subcontractorOrgs, selectedOrganizations]
   );
-  
-  // Debug logging for render decisions - simplified
-  console.log('🔍 Render Decision Debug:', {
-    isLoading,
-    isLoadingOrgs,
-    employeesCount: employees.length,
-    subcontractorOrgsCount: subcontractorOrgs.length,
-    showContent: !isLoading && !isLoadingOrgs,
-    hasAnyData: employees.length > 0 || subcontractorOrgs.length > 0
-  });
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -262,389 +240,309 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6">
-          {/* Error States */}
-          {!hasValidWorkOrders && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                <span className="font-medium">Invalid Work Orders</span>
-              </div>
-              <p className="text-sm text-destructive mt-1">No valid work orders provided for assignment.</p>
-            </div>
-          )}
-
-          {networkError && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                <span className="font-medium">Network Error</span>
-              </div>
-              <p className="text-sm text-destructive mt-1">{networkError}</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setNetworkError(null)} 
-                className="mt-2"
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {hasValidWorkOrders && (
-            <>
-              {/* Work Order Summary */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Briefcase className="h-4 w-4" />
-                    <span className="font-medium">Work Order{workOrders.length > 1 ? 's' : ''} Summary</span>
-                    <Badge variant="secondary">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
+              {/* Error States */}
+              {!hasValidWorkOrders && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="font-medium">Invalid Work Orders</span>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Trade:</span>
-                        <span className="ml-2 font-medium">{tradeName || 'N/A'}</span>
+                  <p className="text-sm text-destructive mt-1">No valid work orders provided for assignment.</p>
+                </div>
+              )}
+
+              {networkError && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="font-medium">Network Error</span>
+                  </div>
+                  <p className="text-sm text-destructive mt-1">{networkError}</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setNetworkError(null)} 
+                    className="mt-2"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Retry
+                  </Button>
+                </div>
+              )}
+
+              {hasValidWorkOrders && (
+                <>
+                  {/* Work Order Summary */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Briefcase className="h-4 w-4" />
+                        <span className="font-medium">Work Order{workOrders.length > 1 ? 's' : ''} Summary</span>
+                        <Badge variant="secondary">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Organization:</span>
-                        <span className="ml-2">{workOrders[0]?.organizations?.name || 'N/A'}</span>
+                      
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Trade:</span>
+                            <span className="ml-2 font-medium">{tradeName || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Organization:</span>
+                            <span className="ml-2">{workOrders[0]?.organizations?.name || 'N/A'}</span>
+                          </div>
+                        </div>
+                        
+                        {workOrders.length === 1 ? (
+                          <div>
+                            <span className="text-muted-foreground">Title:</span>
+                            <span className="ml-2">{workOrders[0]?.title}</span>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground">
+                            Multiple work orders selected for bulk assignment
+                          </div>
+                        )}
                       </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {/* Validation Errors */}
+              {validationErrors.length > 0 && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <div className="text-sm text-destructive space-y-1">
+                    {validationErrors.map((error, index) => (
+                      <div key={index}>• {error}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Assignee Selection */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Select Assignees</Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={selectAllEmployees}
+                      disabled={employees.length === 0}
+                    >
+                      <UserCheck className="h-4 w-4 mr-1" />
+                      Select All Employees
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearAllSelections}
+                      disabled={selectedAssignees.length === 0 && selectedOrganizations.length === 0}
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Loading State */}
+                {(isLoading || isLoadingOrgs) && (
+                  <div className="py-8">
+                    <LoadingSpinner />
+                    <div className="text-center mt-4">
+                      <p className="text-sm text-muted-foreground">Loading assignees...</p>
                     </div>
-                    
-                    {workOrders.length === 1 ? (
-                      <div>
-                        <span className="text-muted-foreground">Title:</span>
-                        <span className="ml-2">{workOrders[0]?.title}</span>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">
-                        Multiple work orders selected for bulk assignment
+                  </div>
+                )}
+
+                {/* Content when loaded */}
+                {!isLoading && !isLoadingOrgs && (
+                  <div className="space-y-6">
+                    {/* Internal Employees Section */}
+                    {employees.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            <span className="font-medium">Internal Employees</span>
+                            <Badge variant="outline">{employees.length} available</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          {employees.map((employee) => (
+                            <div key={employee.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
+                              <Checkbox
+                                id={`employee-${employee.id}`}
+                                checked={selectedAssignees.includes(employee.id)}
+                                onCheckedChange={() => toggleAssignee(employee.id)}
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{employee.first_name} {employee.last_name}</span>
+                                  <Badge variant="outline" className={getWorkloadColor(employee.workload)}>
+                                    {getWorkloadLabel(employee.workload)} ({employee.workload})
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span>{employee.organization}</span>
+                                  <div className="flex items-center gap-1">
+                                    <Mail className="h-3 w-3" />
+                                    <span>{employee.email}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Subcontractor Organizations Section */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4" />
+                          <span className="font-medium">Subcontractor Organizations</span>
+                          <Badge variant="outline">{subcontractorOrgs.length} available</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {subcontractorOrgs.length === 0 ? (
+                          <div className="text-center py-4 text-muted-foreground">
+                            <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No subcontractor organizations available</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {subcontractorOrgs.map((org) => (
+                              <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
+                                <Checkbox
+                                  id={`org-${org.id}`}
+                                  checked={selectedOrganizations.includes(org.id)}
+                                  onCheckedChange={() => toggleOrganization(org.id)}
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{org.name}</span>
+                                    <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
+                                      {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                    {org.contact_email && (
+                                      <div className="flex items-center gap-1">
+                                        <Mail className="h-3 w-3" />
+                                        <span>{org.contact_email}</span>
+                                      </div>
+                                    )}
+                                    {org.first_active_user && (
+                                      <span>Lead: {org.first_active_user.full_name}</span>
+                                    )}
+                                    {org.active_user_count === 0 && (
+                                      <span className="text-amber-600">No active users</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* No Data Available */}
+                    {employees.length === 0 && subcontractorOrgs.length === 0 && (
+                      <div className="p-4 bg-muted/50 border border-dashed rounded-md">
+                        <div className="text-center">
+                          <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">No assignees available</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Create employees or subcontractor organizations to assign work orders
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+                )}
 
-          {/* Status Preview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-sm text-blue-800 mb-2">
-              <Info className="h-4 w-4" />
-              <span className="font-medium">Status Change Preview</span>
-            </div>
-            <div className="text-sm text-blue-700 space-y-2">
-              {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? (
-                <div>
-                  {workOrders.some(wo => wo.status === 'received') ? (
-                    <>Work orders will automatically change from <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> to <Badge className="mx-1 bg-yellow-100 text-yellow-800 text-xs">Assigned</Badge> when assignments are created.</>
-                  ) : workOrders.some(wo => wo.assigned_to) ? (
-                    <>Work orders will be reassigned to the selected users.</>
-                  ) : (
-                    <>Work orders will be assigned to the selected users.</>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  {workOrders.some(wo => wo.assigned_to) ? (
-                    <>Work orders will be unassigned and returned to <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status when all assignments are removed.</>
-                  ) : (
-                    <>No assignments will be made. Work orders will remain at <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status.</>
-                  )}
-                </div>
-              )}
-              {(selectedAssigneeData.length > 0 || selectedOrganizationData.length > 0) && (
-                <div className="text-xs">
-                  <strong>Organizations involved:</strong> {
-                    Array.from(new Set([
-                      ...selectedAssigneeData.map(a => a.organization),
-                      ...selectedOrganizationData.map(o => o.name)
-                    ])).join(', ')
-                  }
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Validation Errors */}
-          {validationErrors.length > 0 && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-              <div className="text-sm text-destructive space-y-1">
-                {validationErrors.map((error, index) => (
-                  <div key={index}>• {error}</div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Assignee Selection - Always show when modal is open */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Select Assignees</Label>
-              <div className="flex gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={selectAllEmployees}
-                  disabled={employees.length === 0}
-                >
-                  <UserCheck className="h-4 w-4 mr-1" />
-                  Select All Employees
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={clearAllSelections}
-                  disabled={selectedAssignees.length === 0 && selectedOrganizations.length === 0}
-                >
-                  Clear All
-                </Button>
-              </div>
-            </div>
-
-            {/* Loading State */}
-            {(isLoading || isLoadingOrgs) && (
-              <div className="py-8">
-                <LoadingSpinner />
-                <div className="text-center mt-4">
-                  <p className="text-sm text-muted-foreground">Loading assignees...</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {tradeId ? `Finding users for ${tradeName || 'selected trade'}` : 'Loading all users'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Data Error State - Show when not loading but no data */}
-            {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="font-medium">No Data Available</span>
-                </div>
-                <p className="text-sm text-destructive mt-1">
-                  No employees or subcontractor organizations found for assignment.
-                </p>
-              </div>
-            )}
-
-            {/* EMPLOYEES SECTION - Independent conditional with forced re-render */}
-            {!isLoading && employees.length > 0 && (
-              <Card key={`employees-render-${employees.length}-${Date.now()}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4" />
-                    <span className="font-medium">Internal Employees</span>
-                    <Badge variant="secondary">{employees.length}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    {employees.map((employee) => {
-                      console.log('👤 RENDERING EMPLOYEE:', employee);
-                      return (
-                        <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedAssignees.includes(employee.id)}
-                              onCheckedChange={() => toggleAssignee(employee.id)}
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium">
-                                {employee.first_name} {employee.last_name}
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <OrganizationBadge 
-                                  organization={{ 
-                                    name: employee.organization, 
-                                    organization_type: 'internal' 
-                                  }} 
-                                  size="sm"
-                                  showIcon={true}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs ${getWorkloadColor(employee.workload)}`}>
-                              {getWorkloadLabel(employee.workload)}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {employee.workload} active
-                            </Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* SUBCONTRACTOR ORGS SECTION - Independent conditional with forced re-render */}
-            {!isLoadingOrgs && subcontractorOrgs.length > 0 && (
-              <Card key={`subcontractors-render-${subcontractorOrgs.length}-${Date.now()}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    <span className="font-medium">Subcontractor Organizations</span>
-                    <Badge variant="secondary">{subcontractorOrgs.length}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    {subcontractorOrgs.map((org) => {
-                      console.log('🏢 FORCE RENDERING SUBCONTRACTOR ORG:', {
-                        timestamp: new Date().toISOString(),
-                        orgId: org.id,
-                        orgName: org.name,
-                        contact_email: org.contact_email,
-                        contact_phone: org.contact_phone,
-                        active_user_count: org.active_user_count,
-                        active_users: org.active_users,
-                        first_active_user: org.first_active_user,
-                        first_active_user_id: org.first_active_user_id,
-                        first_active_user_name: org.first_active_user_name,
-                        fullObject: org
-                      });
-                      return (
-                        <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedOrganizations.includes(org.id)}
-                              onCheckedChange={() => toggleOrganization(org.id)}
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium">{org.name}</div>
-                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                {org.contact_email && (
-                                  <div className="flex items-center gap-1">
-                                    <Mail className="h-3 w-3" />
-                                    <span>{org.contact_email}</span>
-                                  </div>
-                                )}
-                                {org.contact_phone && (
-                                  <span>• {org.contact_phone}</span>
-                                )}
-                                {org.active_user_count !== undefined && (
-                                  <span>• {org.active_user_count} users</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <Badge variant="default" className="text-xs">
-                            <Building className="h-3 w-3 mr-1" />
-                            Organization
-                          </Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* NO DATA MESSAGE - Only show when BOTH sections have no data */}
-            {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No employees or subcontractor organizations available for assignment.</p>
-              </div>
-            )}
-
-            {/* Selected Assignees Summary */}
-            {(selectedAssigneeData.length > 0 || selectedOrganizationData.length > 0) && (
-              <Card>
-                <CardContent className="p-3">
-                  <div className="text-sm font-medium mb-3">
-                    Selected ({selectedAssigneeData.length + selectedOrganizationData.length}):
-                  </div>
-                  <div className="space-y-2">
-                     {/* Selected Organizations */}
-                     {selectedOrganizationData.map((org) => (
-                       <div key={org.id} className="flex items-center justify-between p-2 bg-primary/10 rounded border border-primary/20">
-                         <div className="flex items-center gap-2">
-                           <Badge variant="default" className="text-xs">
-                             <Building className="h-3 w-3 mr-1" />
-                             Organization
-                           </Badge>
-                           <span className="text-sm font-medium">{org.name}</span>
-                         </div>
-                         {org.contact_email && (
-                           <span className="text-xs text-muted-foreground">
-                             {org.contact_email}
-                           </span>
-                         )}
-                       </div>
-                     ))}
-                    {/* Selected Individual Assignees */}
-                    {selectedAssigneeData.map((assignee) => (
-                      <div key={assignee.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">Individual</Badge>
-                          <span className="text-sm font-medium">
-                            {assignee.first_name} {assignee.last_name}
-                          </span>
-                        </div>
-                        <OrganizationBadge 
-                          organization={{ 
-                            name: assignee.organization, 
-                            organization_type: assignee.type === 'employee' ? 'internal' : 'subcontractor' 
-                          }} 
-                          size="sm"
-                        />
+                {/* Assignment Summary */}
+                {(selectedAssigneeData.length > 0 || selectedOrganizationData.length > 0) && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <UserCheck className="h-4 w-4" />
+                        <span className="font-medium">Assignment Summary</span>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                      
+                      <div className="space-y-2">
+                        {selectedAssigneeData.length > 0 && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Selected Employees:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {selectedAssigneeData.map(assignee => (
+                                <Badge key={assignee.id} variant="secondary">
+                                  {assignee.first_name} {assignee.last_name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {selectedOrganizationData.length > 0 && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Selected Organizations:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {selectedOrganizationData.map(org => (
+                                <Badge key={org.id} variant="secondary">
+                                  {org.name}
+                                  {org.active_user_count === 0 && (
+                                    <span className="ml-1 text-amber-600">⚠</span>
+                                  )}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-          <Separator />
-
-          {/* Assignment Notes */}
-          <div className="space-y-3">
-            <Label htmlFor="notes">Assignment Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Add any special instructions or notes for the assignee..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          </div>
+                {/* Assignment Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="assignment-notes">Assignment Notes (Optional)</Label>
+                  <Textarea
+                    id="assignment-notes"
+                    placeholder="Add any notes about this assignment..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
             </div>
           </ScrollArea>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 mt-4 border-t flex-shrink-0">
+          {/* Footer Actions */}
+          <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button 
-              onClick={handleAssign} 
-              disabled={!hasValidWorkOrders || !!networkError || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
-              aria-label={selectedAssignees.length > 0 || selectedOrganizations.length > 0 ? 'Assign selected' : 'Remove all assignments'}
+              onClick={handleAssign}
+              disabled={!hasValidWorkOrders || (bulkAddAssignments.isPending || bulkRemoveAssignments.isPending)}
             >
               {(bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
+                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assigning...' : 'Unassigning...'}
                 </>
               ) : (
-                // Check if we're making new assignments or removing existing ones
-                selectedAssignees.length > 0 || selectedOrganizations.length > 0 ? 
-                  `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
-                  workOrders?.some(wo => wo.assigned_to) ?
-                    `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
-                    `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
+                <>
+                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assign' : 'Unassign All'}
+                </>
               )}
             </Button>
           </div>
@@ -652,4 +550,4 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       </Dialog>
     </ErrorBoundary>
   );
-} 
+}
