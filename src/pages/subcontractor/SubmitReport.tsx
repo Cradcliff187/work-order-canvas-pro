@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,14 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Save, ArrowLeft, Upload, FileText, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Save, ArrowLeft, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { DraftIndicator } from '@/components/DraftIndicator';
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { useAuth } from '@/contexts/AuthContext';
+import { MobileFileUpload } from '@/components/MobileFileUpload';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { FileUpload } from '@/components/FileUpload';
 import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
@@ -24,7 +25,7 @@ interface FormData {
   materialsUsed: string;
   notes: string;
   hoursWorked: string;
-  photos: File[];
+  attachments: File[];
 }
 
 export default function SubmitReport() {
@@ -34,6 +35,7 @@ export default function SubmitReport() {
   const { profile } = useAuth();
   const { submitReport } = useSubcontractorWorkOrders();
   const { saveDraft, getDrafts } = useOfflineStorage();
+  const isMobile = useIsMobile();
 
   // Use getWorkOrder hook directly
   const workOrderQuery = useSubcontractorWorkOrders().getWorkOrder(workOrderId || '');
@@ -43,7 +45,7 @@ export default function SubmitReport() {
     materialsUsed: '',
     notes: '',
     hoursWorked: '',
-    photos: [],
+    attachments: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
@@ -86,7 +88,7 @@ export default function SubmitReport() {
         materialsUsed: formData.materialsUsed || undefined,
         hoursWorked: profile?.user_type === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
         notes: formData.notes || undefined,
-        photos: formData.photos.length > 0 ? formData.photos : undefined,
+        photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
 
       toast({
@@ -124,9 +126,9 @@ export default function SubmitReport() {
     }
 
     try {
-      // Convert photos to PhotoAttachment format
+      // Convert attachments to PhotoAttachment format
       const photoAttachments: PhotoAttachment[] = await Promise.all(
-        formData.photos.map(async (file, index) => {
+        formData.attachments.map(async (file, index) => {
           const base64 = await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -181,7 +183,7 @@ export default function SubmitReport() {
       materialsUsed: draft.materialsUsed || '',
       notes: draft.notes || '',
       hoursWorked: draft.hoursWorked?.toString() || '',
-      photos: [], // Photos would need to be converted back from base64
+      attachments: [], // Attachments would need to be converted back from base64
     });
     setCurrentDraftId(draft.id);
     toast({
@@ -190,27 +192,12 @@ export default function SubmitReport() {
     });
   };
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const handleFilesSelected = useCallback((files: File[]) => {
     setFormData(prev => ({
       ...prev,
-      photos: [...prev.photos, ...acceptedFiles],
+      attachments: files,
     }));
   }, []);
-
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif']
-    }
-  });
-
-  const handleRemovePhoto = (index: number) => {
-    setFormData(prev => {
-      const newPhotos = [...prev.photos];
-      newPhotos.splice(index, 1);
-      return { ...prev, photos: newPhotos };
-    });
-  };
 
   // Handle query states
   if (workOrderQuery.isError) {
@@ -362,50 +349,31 @@ export default function SubmitReport() {
 
           <StandardFormLayout.Section 
             title="Photos & Documentation"
-            description="Upload photos or documents related to the work"
+            description="Upload photos and documents related to the work"
           >
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
-                <Label>Upload Photos</Label>
-                <div 
-                  {...getRootProps()} 
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-                    isDragActive ? "border-primary bg-primary/10" : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                  )}
-                >
-                  <input {...getInputProps()} />
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {isDragActive ? "Drop files here..." : "Drag & drop photos here, or click to select"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG, GIF up to 10MB each
-                  </p>
-                </div>
+                <Label>Upload Files</Label>
+                {isMobile ? (
+                  <MobileFileUpload
+                    onFilesSelected={handleFilesSelected}
+                    maxFiles={10}
+                    acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
+                    showCameraButton={true}
+                    showGalleryButton={true}
+                    showDocumentButton={true}
+                  />
+                ) : (
+                  <FileUpload
+                    onFilesSelected={handleFilesSelected}
+                    maxFiles={10}
+                    acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
+                  />
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Upload photos, PDF documents, Excel files, or Word documents
+                </p>
               </div>
-
-              {formData.photos.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {formData.photos.map((file, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Uploaded ${index + 1}`}
-                        className="rounded-md w-full h-32 object-cover"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 h-6 w-6 p-0 text-destructive hover:text-destructive"
-                        onClick={() => handleRemovePhoto(index)}
-                      >
-                        <Upload className="h-3 w-3 rotate-90" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 

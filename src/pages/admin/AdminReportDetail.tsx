@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAdminReportDetail } from '@/hooks/useAdminReportDetail';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
+import { ReportFileManager } from '@/components/ReportFileManager';
 import { format } from 'date-fns';
 
 export default function AdminReportDetail() {
@@ -222,58 +223,24 @@ export default function AdminReportDetail() {
             </CardContent>
           </Card>
 
-          {/* Attachments */}
-          {report.work_order_attachments && report.work_order_attachments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Image className="w-4 h-4" />
-                  Attachments ({report.work_order_attachments.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {report.work_order_attachments.map((attachment) => (
-                    <div key={attachment.id} className="border rounded-lg p-4 space-y-2">
-                      <div className="aspect-square bg-muted rounded-md flex items-center justify-center">
-                        {attachment.file_type === 'photo' ? (
-                          <img
-                            src={attachment.file_url}
-                            alt={attachment.file_name}
-                            className="w-full h-full object-cover rounded-md"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                        ) : (
-                          <FileText className="w-8 h-8 text-muted-foreground" />
-                        )}
-                        <div className="hidden flex items-center justify-center w-full h-full">
-                          <FileText className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(attachment.uploaded_at), 'MMM dd, yyyy')}
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => window.open(attachment.file_url, '_blank')}
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* File Manager */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Files & Attachments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ReportFileManager
+                reportId={report.id}
+                workOrderId={report.work_order_id}
+                existingAttachments={report.work_order_attachments || []}
+                canUpload={true}
+                canDelete={true}
+              />
+            </CardContent>
+          </Card>
 
           {/* Review Section - Only show if submitted */}
           {isSubmitted && (

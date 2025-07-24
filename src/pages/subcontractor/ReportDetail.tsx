@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Calendar, DollarSign, Clock, FileText, Printer } from "lucide-react";
+import { ReportFileManager } from '@/components/ReportFileManager';
 import { format } from "date-fns";
 
 export default function ReportDetail() {
@@ -334,33 +335,21 @@ export default function ReportDetail() {
           </Card>
         )}
 
-        {/* Attached Photos */}
-        {report.work_order_attachments && report.work_order_attachments.length > 0 && (
-          <Card className="lg:col-span-2 print:shadow-none print:border-0">
-            <CardHeader className="print:pb-2">
-              <CardTitle>Work Photos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-2">
-                {report.work_order_attachments.map((attachment: any) => (
-                  <div key={attachment.id} className="space-y-2">
-                    <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                      <img
-                        src={`${supabase.storage.from('work-order-photos').getPublicUrl(attachment.file_url).data.publicUrl}`}
-                        alt={attachment.file_name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <p>{attachment.file_name}</p>
-                      <p>{format(new Date(attachment.uploaded_at), "MMM d, yyyy")}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* File Attachments */}
+        <Card className="lg:col-span-2 print:shadow-none print:border-0">
+          <CardHeader className="print:pb-2">
+            <CardTitle>Files & Attachments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReportFileManager
+              reportId={report.id}
+              workOrderId={report.work_order_id}
+              existingAttachments={report.work_order_attachments || []}
+              canUpload={false}
+              canDelete={false}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
