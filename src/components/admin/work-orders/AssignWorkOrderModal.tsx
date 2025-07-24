@@ -9,7 +9,9 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { VirtualizedList } from '@/components/VirtualizedList';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, ChevronDown, ChevronRight } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
@@ -42,6 +44,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [searchQuery, setSearchQuery] = useState('');
   const [activeUsersFilter, setActiveUsersFilter] = useState<'all' | 'active' | 'none'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'users'>('name');
+  
+  // Grouping state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -215,8 +220,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     [subcontractorOrgs, selectedOrganizations]
   );
 
-  // Filter and sort subcontractor organizations
-  const filteredSubcontractorOrgs = useMemo(() => {
+  // Filter, sort and group subcontractor organizations
+  const groupedSubcontractorOrgs = useMemo(() => {
     let filtered = [...subcontractorOrgs];
 
     // Apply search filter
@@ -236,17 +241,97 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       filtered = filtered.filter(org => org.active_user_count === 0);
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
-      } else {
-        return b.active_user_count - a.active_user_count;
-      }
-    });
+    // Group by active users status
+    const withUsers = filtered.filter(org => org.active_user_count > 0);
+    const withoutUsers = filtered.filter(org => org.active_user_count === 0);
 
-    return filtered;
-  }, [subcontractorOrgs, debouncedSearchQuery, activeUsersFilter, sortBy]);
+    // Apply sorting within each group
+    const sortOrgs = (orgs: typeof filtered) => {
+      return orgs.sort((a, b) => {
+        if (sortBy === 'name') {
+          return a.name.localeCompare(b.name);
+        } else {
+          return b.active_user_count - a.active_user_count;
+        }
+      });
+    };
+
+    const sortedWithUsers = sortOrgs([...withUsers]);
+    const sortedWithoutUsers = sortOrgs([...withoutUsers]);
+
+    // Create grouped items for virtual list
+    interface GroupedItem {
+      type: 'header' | 'organization';
+      id: string;
+      data?: typeof filtered[0];
+      groupTitle?: string;
+      count?: number;
+      groupKey?: string;
+    }
+
+    const items: GroupedItem[] = [];
+
+    // Add "With Users" group
+    if (sortedWithUsers.length > 0) {
+      items.push({
+        type: 'header',
+        id: 'header-with-users',
+        groupTitle: 'Organizations with Active Users',
+        count: sortedWithUsers.length,
+        groupKey: 'with-users'
+      });
+
+      if (!collapsedGroups.has('with-users')) {
+        sortedWithUsers.forEach(org => {
+          items.push({
+            type: 'organization',
+            id: org.id,
+            data: org
+          });
+        });
+      }
+    }
+
+    // Add "Without Users" group
+    if (sortedWithoutUsers.length > 0) {
+      items.push({
+        type: 'header',
+        id: 'header-without-users',
+        groupTitle: 'Organizations without Active Users',
+        count: sortedWithoutUsers.length,
+        groupKey: 'without-users'
+      });
+
+      if (!collapsedGroups.has('without-users')) {
+        sortedWithoutUsers.forEach(org => {
+          items.push({
+            type: 'organization',
+            id: org.id,
+            data: org
+          });
+        });
+      }
+    }
+
+    return {
+      items,
+      totalCount: filtered.length,
+      withUsersCount: sortedWithUsers.length,
+      withoutUsersCount: sortedWithoutUsers.length
+    };
+  }, [subcontractorOrgs, debouncedSearchQuery, activeUsersFilter, sortBy, collapsedGroups]);
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
+  };
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -452,7 +537,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                           <Building className="h-4 w-4" />
                           <span className="font-medium">Subcontractor Organizations</span>
                           <Badge variant="outline">
-                            {filteredSubcontractorOrgs.length} of {subcontractorOrgs.length} shown
+                            {groupedSubcontractorOrgs.totalCount} of {subcontractorOrgs.length} shown
                           </Badge>
                         </div>
                       </CardHeader>
@@ -531,62 +616,103 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                               </div>
                             </div>
 
-                            {/* Organizations List */}
-                            <ScrollArea className="max-h-80 px-6 pb-6">
-                              <div className="space-y-2 mt-4">
-                                {filteredSubcontractorOrgs.length === 0 ? (
-                                  <div className="text-center py-8 text-muted-foreground">
-                                    <Filter className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                    <p className="text-sm">No organizations match your filters</p>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setSearchQuery('');
-                                        setActiveUsersFilter('all');
-                                        setSortBy('name');
-                                      }}
-                                      className="mt-2"
-                                    >
-                                      Clear Filters
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  filteredSubcontractorOrgs.map((org) => (
-                                    <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                                      <Checkbox
-                                        id={`org-${org.id}`}
-                                        checked={selectedOrganizations.includes(org.id)}
-                                        onCheckedChange={() => toggleOrganization(org.id)}
-                                      />
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium">{org.name}</span>
-                                          <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
-                                            {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
-                                          </Badge>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                          {org.contact_email && (
-                                            <div className="flex items-center gap-1">
-                                              <Mail className="h-3 w-3" />
-                                              <span>{org.contact_email}</span>
+                            {/* Organizations List with Virtual Scrolling */}
+                            <div className="px-6 pb-6">
+                              {groupedSubcontractorOrgs.items.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  <Filter className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                  <p className="text-sm">No organizations match your filters</p>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSearchQuery('');
+                                      setActiveUsersFilter('all');
+                                      setSortBy('name');
+                                    }}
+                                    className="mt-2"
+                                  >
+                                    Clear Filters
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="mt-4">
+                                  <VirtualizedList
+                                    items={groupedSubcontractorOrgs.items}
+                                    itemHeight={70}
+                                    containerHeight={320}
+                                    overscan={5}
+                                    renderItem={(item, index) => {
+                                      if (item.type === 'header') {
+                                        return (
+                                          <div
+                                            key={item.id}
+                                            className="flex items-center justify-between py-3 px-2 bg-muted/50 rounded-md border-b border-border sticky top-0 z-10"
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 w-6 p-0"
+                                                onClick={() => item.groupKey && toggleGroup(item.groupKey)}
+                                              >
+                                                {item.groupKey && collapsedGroups.has(item.groupKey) ? (
+                                                  <ChevronRight className="h-4 w-4" />
+                                                ) : (
+                                                  <ChevronDown className="h-4 w-4" />
+                                                )}
+                                              </Button>
+                                              <span className="font-medium text-sm">{item.groupTitle}</span>
+                                              <Badge variant="secondary" className="text-xs">
+                                                {item.count}
+                                              </Badge>
                                             </div>
-                                          )}
-                                          {org.first_active_user && (
-                                            <span>Lead: {org.first_active_user.full_name}</span>
-                                          )}
-                                          {org.active_user_count === 0 && (
-                                            <span className="text-amber-600">No active users</span>
-                                          )}
+                                          </div>
+                                        );
+                                      }
+
+                                      // Organization item
+                                      const org = item.data!;
+                                      return (
+                                        <div
+                                          key={org.id}
+                                          className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent"
+                                        >
+                                          <Checkbox
+                                            id={`org-${org.id}`}
+                                            checked={selectedOrganizations.includes(org.id)}
+                                            onCheckedChange={() => toggleOrganization(org.id)}
+                                          />
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium">{org.name}</span>
+                                              <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
+                                                {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
+                                              </Badge>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                              {org.contact_email && (
+                                                <div className="flex items-center gap-1">
+                                                  <Mail className="h-3 w-3" />
+                                                  <span>{org.contact_email}</span>
+                                                </div>
+                                              )}
+                                              {org.first_active_user && (
+                                                <span>Lead: {org.first_active_user.full_name}</span>
+                                              )}
+                                              {org.active_user_count === 0 && (
+                                                <span className="text-amber-600">No active users</span>
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
-                                      </div>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </ScrollArea>
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </>
                         )}
                       </CardContent>
