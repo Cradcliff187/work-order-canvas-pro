@@ -222,7 +222,7 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
           label: 'Assign',
           icon: UserPlus,
           onClick: () => onAssign(workOrder),
-          show: workOrder.status === 'received' || workOrder.status === 'assigned'
+          show: true // Always show for admin users
         },
         {
           label: 'Edit',
