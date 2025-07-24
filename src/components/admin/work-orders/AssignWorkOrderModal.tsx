@@ -717,4 +717,4 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       </Dialog>
     </ErrorBoundary>
   );
-}
+} 
