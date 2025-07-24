@@ -1019,8 +1019,6 @@ export type Database = {
         Row: {
           hours_worked: number | null
           id: string
-          invoice_amount: number
-          invoice_number: string | null
           materials_used: string | null
           notes: string | null
           photos: Json | null
@@ -1036,8 +1034,6 @@ export type Database = {
         Insert: {
           hours_worked?: number | null
           id?: string
-          invoice_amount: number
-          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           photos?: Json | null
@@ -1053,8 +1049,6 @@ export type Database = {
         Update: {
           hours_worked?: number | null
           id?: string
-          invoice_amount?: number
-          invoice_number?: string | null
           materials_used?: string | null
           notes?: string | null
           photos?: Json | null
@@ -1306,17 +1300,18 @@ export type Database = {
     Views: {
       mv_subcontractor_performance: {
         Row: {
+          approved_reports: number | null
           avg_completion_hours: number | null
-          avg_invoice_amount: number | null
           company_name: string | null
           completed_jobs: number | null
           first_name: string | null
           last_name: string | null
           on_time_jobs: number | null
-          quality_score: number | null
+          on_time_percentage: number | null
+          report_approval_rate: number | null
           subcontractor_id: string | null
-          total_invoice_amount: number | null
           total_jobs: number | null
+          total_reports_submitted: number | null
         }
         Relationships: []
       }

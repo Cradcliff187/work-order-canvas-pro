@@ -55,7 +55,7 @@ export function useDraftAutoSave({
         
         // Check if we have enough content to warrant saving
         const hasContent = saveData.workPerformed?.trim().length > 10 ||
-                          saveData.invoiceAmount > 0 ||
+                          saveData.hoursWorked > 0 ||
                           photos.length > 0;
 
         if (hasContent) {

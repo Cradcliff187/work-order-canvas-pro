@@ -15,8 +15,6 @@ export function useDraftManagement(
       workPerformed: string;
       materialsUsed?: string;
       hoursWorked?: number;
-      invoiceAmount?: number;
-      invoiceNumber?: string;
       notes?: string;
     },
     photos: PhotoAttachment[],

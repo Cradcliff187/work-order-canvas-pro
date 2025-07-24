@@ -23,8 +23,7 @@ export function useSubcontractorWorkOrders() {
           work_order_reports (
             id,
             status,
-            submitted_at,
-            invoice_amount
+            submitted_at
           ),
           assigned_user:profiles!assigned_to (first_name, last_name, user_type),
           work_order_assignments (
@@ -56,8 +55,7 @@ export function useSubcontractorWorkOrders() {
           work_order_reports (
             id,
             status,
-            submitted_at,
-            invoice_amount
+            submitted_at
           )
         `);
 
@@ -88,15 +86,15 @@ export function useSubcontractorWorkOrders() {
         report.status === "approved"
       ).length || 0;
 
-      const earningsThisMonth = monthlyReports
+      const reportsThisMonth = monthlyReports
         ?.filter(report => report.status === "approved")
-        ?.reduce((sum, report) => sum + (Number(report.invoice_amount) || 0), 0) || 0;
+        ?.length || 0;
 
       return {
         activeAssignments,
         pendingReports,
         completedThisMonth,
-        earningsThisMonth,
+        reportsThisMonth,
       };
     },
     enabled: !!user,
@@ -188,8 +186,6 @@ export function useSubcontractorWorkOrders() {
       workPerformed: string;
       materialsUsed?: string;
       hoursWorked?: number;
-      invoiceAmount: number;
-      invoiceNumber?: string;
       notes?: string;
       photos?: File[];
     }) => {
@@ -213,8 +209,6 @@ export function useSubcontractorWorkOrders() {
           work_performed: reportData.workPerformed,
           materials_used: reportData.materialsUsed,
           hours_worked: reportData.hoursWorked,
-          invoice_amount: reportData.invoiceAmount,
-          invoice_number: reportData.invoiceNumber,
           notes: reportData.notes,
         })
         .select()
@@ -306,7 +300,6 @@ export function useSubcontractorWorkOrders() {
             work_performed,
             materials_used,
             hours_worked,
-            invoice_amount,
             status
           )
         `)

@@ -48,8 +48,8 @@ export interface ChartData {
     totalJobs: number;
     completedJobs: number;
     onTimeRate: number;
-    avgInvoiceAmount: number;
-    qualityScore: number;
+    onTimePercentage: number;
+    reportApprovalRate: number;
   }>;
   geographicDistribution: Array<{
     state: string;
@@ -217,8 +217,8 @@ export const useAnalytics = (dateRange: DateRange) => {
         totalJobs: s.total_jobs || 0,
         completedJobs: s.completed_jobs || 0,
         onTimeRate: s.total_jobs > 0 ? ((s.on_time_jobs || 0) / s.total_jobs) * 100 : 0,
-        avgInvoiceAmount: Number(s.avg_invoice_amount) || 0,
-        qualityScore: Number(s.quality_score) || 0,
+        onTimePercentage: Number(s.on_time_percentage) || 0,
+        reportApprovalRate: Number(s.report_approval_rate) || 0,
       })) || [];
 
       const geographicDistribution = geoData?.map(g => ({

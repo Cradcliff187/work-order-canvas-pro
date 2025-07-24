@@ -134,7 +134,7 @@ Modern assignment system supporting multiple assignees per work order.
 ```
 
 ### work_order_reports
-Subcontractor completion reports with approval workflow.
+Work completion reports without financial information. Invoice data is handled separately in the invoices table.
 
 ```sql
 - id (UUID, primary key)
@@ -142,9 +142,7 @@ Subcontractor completion reports with approval workflow.
 - subcontractor_user_id (UUID, references profiles.id)
 - work_performed (text)
 - materials_used (text, nullable)
-- hours_worked (decimal, nullable)
-- invoice_amount (decimal)
-- invoice_number (string, nullable)
+- hours_worked (decimal, nullable) -- Optional, used by employees for time tracking
 - notes (text, nullable)
 - status (enum: 'submitted', 'approved', 'rejected')
 - submitted_at (timestamp, default now())

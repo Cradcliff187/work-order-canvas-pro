@@ -23,8 +23,6 @@ interface FormData {
   materialsUsed: string;
   notes: string;
   hoursWorked: string;
-  invoiceAmount: string;
-  invoiceNumber: string;
   photos: File[];
 }
 
@@ -43,8 +41,6 @@ export default function SubmitReport() {
     materialsUsed: '',
     notes: '',
     hoursWorked: '',
-    invoiceAmount: '',
-    invoiceNumber: '',
     photos: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,7 +67,7 @@ export default function SubmitReport() {
       return;
     }
 
-    if (!formData.workPerformed.trim() || !formData.invoiceAmount) {
+    if (!formData.workPerformed.trim()) {
       toast({
         title: "Missing Required Fields",
         description: "Please fill in all required fields before submitting.",
@@ -87,8 +83,6 @@ export default function SubmitReport() {
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
         hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
-        invoiceAmount: parseFloat(formData.invoiceAmount),
-        invoiceNumber: formData.invoiceNumber || undefined,
         notes: formData.notes || undefined,
         photos: formData.photos.length > 0 ? formData.photos : undefined,
       });
@@ -157,8 +151,6 @@ export default function SubmitReport() {
           workPerformed: formData.workPerformed,
           materialsUsed: formData.materialsUsed,
           hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
-          invoiceAmount: formData.invoiceAmount ? parseFloat(formData.invoiceAmount) : undefined,
-          invoiceNumber: formData.invoiceNumber,
           notes: formData.notes,
         },
         photoAttachments,
@@ -187,8 +179,6 @@ export default function SubmitReport() {
       materialsUsed: draft.materialsUsed || '',
       notes: draft.notes || '',
       hoursWorked: draft.hoursWorked?.toString() || '',
-      invoiceAmount: draft.invoiceAmount?.toString() || '',
-      invoiceNumber: draft.invoiceNumber || '',
       photos: [], // Photos would need to be converted back from base64
     });
     setCurrentDraftId(draft.id);
@@ -343,10 +333,10 @@ export default function SubmitReport() {
           </StandardFormLayout.Section>
 
           <StandardFormLayout.Section 
-            title="Time & Billing"
-            description="Enter time spent and billing information"
+            title="Time Tracking"
+            description="Enter time spent on this work (optional)"
           >
-            <StandardFormLayout.FieldGroup columns={2}>
+            <StandardFormLayout.FieldGroup columns={1}>
               <div className="space-y-2">
                 <Label htmlFor="hoursWorked">Hours Worked</Label>
                 <Input
@@ -358,30 +348,9 @@ export default function SubmitReport() {
                   value={formData.hoursWorked}
                   onChange={(e) => setFormData(prev => ({ ...prev, hoursWorked: e.target.value }))}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="invoiceAmount">Invoice Amount *</Label>
-                <Input
-                  id="invoiceAmount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.invoiceAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceAmount: e.target.value }))}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="invoiceNumber">Invoice Number</Label>
-                <Input
-                  id="invoiceNumber"
-                  placeholder="INV-2024-001"
-                  value={formData.invoiceNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                />
+                <p className="text-xs text-muted-foreground">
+                  Optional: Track time spent on this work for internal records
+                </p>
               </div>
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
