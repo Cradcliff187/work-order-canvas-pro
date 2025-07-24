@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { onOrganizationChange } from '@/lib/auth/jwtSync';
+import { onOrganizationChange, syncUserMetadataToJWT } from '@/lib/auth/jwtSync';
 import type { Database } from '@/integrations/supabase/types';
 
 export type User = Database['public']['Tables']['profiles']['Row'] & {
@@ -158,7 +158,14 @@ export function useUpdateUser() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (updatedProfile) => {
+      // Sync JWT metadata after profile update to keep auth.users in sync
+      try {
+        await syncUserMetadataToJWT(updatedProfile.user_id);
+      } catch (syncError) {
+        console.warn('JWT sync failed but profile update succeeded:', syncError);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({
         title: 'Success',
