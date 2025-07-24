@@ -60,77 +60,11 @@ export function useEmployeesForAssignment() {
   });
 }
 
-export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean = false) {
+export function useAllAssignees() {
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployeesForAssignment();
-  
-  const { data: subcontractors = [], isLoading: isLoadingSubcontractors } = useQuery({
-    queryKey: ['subcontractor-organizations-for-assignment', tradeId, showAllSubcontractors],
-    queryFn: async (): Promise<AssigneeData[]> => {
-      console.log('🔍 Subcontractor Organizations Query Debug:', { tradeId, showAllSubcontractors });
-      
-      // Fetch subcontractor organizations with optional trade filtering
-      const { data: orgs, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('organization_type', 'subcontractor')
-        .eq('is_active', true)
-        .order('name');
-
-      console.log('📊 Raw subcontractor organization query result:', { orgs, error, count: orgs?.length });
-
-      if (error) {
-        console.error('❌ Subcontractor query error:', error);
-        throw error;
-      }
-
-      if (!orgs || orgs.length === 0) {
-        console.warn('⚠️ No subcontractor organizations found');
-        return [];
-      }
-
-      // Get workload for subcontractor organizations (count work orders assigned to their organization)
-      const { data: workOrders, error: workOrderError } = await supabase
-        .from('work_order_assignments')
-        .select('assigned_organization_id')
-        .not('assigned_organization_id', 'is', null)
-        .in('assigned_organization_id', orgs.map(org => org.id));
-
-      if (workOrderError) {
-        console.error('❌ Workload query error:', workOrderError);
-        throw workOrderError;
-      }
-
-      // Calculate workload per organization
-      const workloadMap = (workOrders || []).reduce((acc, woa) => {
-        if (woa.assigned_organization_id) {
-          acc[woa.assigned_organization_id] = (acc[woa.assigned_organization_id] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      const result = orgs.map(org => ({
-        id: org.id, // Use organization ID as the assignee ID
-        first_name: org.name,
-        last_name: '', // Empty for organizations
-        type: 'subcontractor' as const,
-        organization: org.name,
-        organization_id: org.id,
-        workload: workloadMap[org.id] || 0,
-        is_active: org.is_active,
-        email: org.contact_email || ''
-      }));
-      
-      console.log('✅ Final subcontractor organization result:', result);
-      return result;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    enabled: true, // Always enabled
-  });
 
   return {
     employees,
-    subcontractors,
-    isLoading: isLoadingEmployees || isLoadingSubcontractors
+    isLoading: isLoadingEmployees
   };
 }
