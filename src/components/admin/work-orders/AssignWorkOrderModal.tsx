@@ -209,7 +209,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   );
   
   // Enhanced error handling for data loading
-  const hasDataError = !isLoading && employees.length === 0 && subcontractorOrgs.length === 0;
+  const hasDataError = !isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0;
   const isDataReady = !isLoading && !isLoadingOrgs && (employees.length > 0 || subcontractorOrgs.length > 0);
 
   const getWorkloadColor = (workload: number) => {
