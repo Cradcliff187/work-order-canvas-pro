@@ -142,7 +142,7 @@ serve(async (req) => {
     const { data: authUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: temporaryPassword,
-      email_confirm: false, // Don't auto-confirm - we'll send password setup email
+      email_confirm: true, // Enable Supabase auth confirmation email
       app_metadata: {  // Security data (admin-only)
         user_type: userData.user_type
       },
@@ -184,26 +184,6 @@ serve(async (req) => {
     console.log('Profile created:', newProfile.id);
 
     // Welcome email will be sent automatically by database trigger on profile creation
-
-    // Send password setup email so user can actually log in
-    try {
-      console.log('Sending password setup email...');
-      const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('password-reset-email', {
-        body: {
-          email: userData.email
-        }
-      });
-      
-      if (emailError) {
-        console.error('Password setup email failed:', emailError);
-        // Don't fail user creation if email fails
-      } else {
-        console.log('Password setup email sent successfully');
-      }
-    } catch (emailError) {
-      console.error('Password setup email error:', emailError);
-      // Continue anyway - email failure shouldn't block user creation
-    }
 
     // Handle organization relationships with validation and auto-assignment
     let finalOrganizationIds: string[] = [];
