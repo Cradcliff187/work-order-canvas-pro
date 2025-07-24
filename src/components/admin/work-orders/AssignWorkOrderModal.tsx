@@ -171,7 +171,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             work_order_id: wo.id,
             assigned_to: assigneeId,
             assigned_organization_id: isSubcontractor ? getSubcontractorOrganizationId(assigneeId) : null,
-            assignment_type: 'assigned' as const, // Simplified as requested
+            assignment_type: 'lead' as const,
             notes: fromOrganization ? `${notes}${notes ? ' - ' : ''}Assigned to organization` : notes
           };
         })
