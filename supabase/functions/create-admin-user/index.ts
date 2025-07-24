@@ -188,7 +188,7 @@ serve(async (req) => {
       console.log('Sending welcome email...');
       const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
         body: {
-          template_name: 'user_welcome',
+          template_name: 'welcome_email',
           record_id: newProfile.id,
           record_type: 'user'
         }
