@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage, type CompressionResult } from "@/utils/imageCompression";
+import { 
+  isSupportedFileType, 
+  getFileTypeForStorage, 
+  isImageFile, 
+  getSupportedFormatsText 
+} from "@/utils/fileTypeUtils";
 
 export interface UploadProgress {
   fileId: string;
@@ -81,8 +87,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
     files.forEach(file => {
       // Check file type
-      if (!file.type.startsWith('image/')) {
-        errors.push(`${file.name}: Only image files are allowed`);
+      if (!isSupportedFileType(file)) {
+        errors.push(`${file.name}: Unsupported file type. Allowed: ${getSupportedFormatsText()}`);
         return;
       }
 
@@ -117,29 +123,46 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
     if (!profile) throw new Error("Profile not found");
 
-    // Compress image
-    updateProgress(fileId, { status: 'compressing', progress: 0 });
+    // Determine file type for storage
+    const fileType = getFileTypeForStorage(file);
     
-    let compressionResult: CompressionResult;
-    try {
-      compressionResult = await compressImage(file, {
-        maxSizeBytes,
-        maxWidth: 1920,
-        maxHeight: 1080
-      });
-    } catch (error) {
-      throw new Error(`Compression failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    let processedFile: File;
+    let originalSize = file.size;
+    let compressedSize = file.size;
+    let compressionRatio = 1;
+
+    // Only compress images, pass documents through directly
+    if (isImageFile(file)) {
+      updateProgress(fileId, { status: 'compressing', progress: 0 });
+      
+      let compressionResult: CompressionResult;
+      try {
+        compressionResult = await compressImage(file, {
+          maxSizeBytes,
+          maxWidth: 1920,
+          maxHeight: 1080
+        });
+        processedFile = compressionResult.file;
+        originalSize = compressionResult.originalSize;
+        compressedSize = compressionResult.compressedSize;
+        compressionRatio = compressionResult.compressionRatio;
+      } catch (error) {
+        throw new Error(`Compression failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    } else {
+      // For documents, use the file as-is
+      processedFile = file;
     }
 
     // Generate file path
-    const filePath = generateFilePath(workOrderId, reportId, compressionResult.file.name);
+    const filePath = generateFilePath(workOrderId, reportId, processedFile.name);
 
     // Upload to Supabase Storage
     updateProgress(fileId, { status: 'uploading', progress: 50 });
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("work-order-attachments")
-      .upload(filePath, compressionResult.file, {
+      .upload(filePath, processedFile, {
         cacheControl: '3600',
         upsert: false
       });
@@ -155,10 +178,10 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       .from("work_order_attachments")
       .insert({
         work_order_report_id: reportId,
-        file_name: compressionResult.file.name,
+        file_name: processedFile.name,
         file_url: uploadData.path,
-        file_type: "photo",
-        file_size: compressionResult.compressedSize,
+        file_type: fileType,
+        file_size: compressedSize,
         uploaded_by_user_id: profile.id,
       })
       .select()
@@ -177,11 +200,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
     return {
       id: attachment.id,
-      fileName: compressionResult.file.name,
+      fileName: processedFile.name,
       fileUrl: uploadData.path,
-      fileSize: compressionResult.compressedSize,
-      originalSize: compressionResult.originalSize,
-      compressionRatio: compressionResult.compressionRatio
+      fileSize: compressedSize,
+      originalSize: originalSize,
+      compressionRatio: compressionRatio
     };
   }, [user, maxSizeBytes, generateFilePath, updateProgress]);
 
