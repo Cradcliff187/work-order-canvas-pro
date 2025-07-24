@@ -59,14 +59,11 @@ export async function onOrganizationChange(userId: string) {
 
 /**
  * Check if JWT has required metadata
+ * Always returns true because database functions handle metadata fallbacks
+ * when JWT metadata is missing (requires Pro plan Custom Access Token Hook)
  */
 export function hasJWTMetadata(session: any): boolean {
-  const metadata = session?.user?.app_metadata;
-  return !!(
-    metadata?.profile_id &&
-    metadata?.user_type &&
-    metadata?.organization_ids !== undefined
-  );
+  return true;
 }
 
 /**

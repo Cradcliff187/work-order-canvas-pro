@@ -177,19 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if JWT has metadata and attempt to sync ONCE (with timeout)
-          if (!hasJWTMetadata(session)) {
-            console.log('Session missing JWT metadata, syncing...');
-            // Use setTimeout to avoid blocking the auth state change callback
-            setTimeout(async () => {
-              try {
-                await syncUserMetadataToJWT(session.user.id);
-                console.log('JWT metadata sync completed');
-              } catch (error) {
-                console.error('JWT metadata sync failed:', error);
-              }
-            }, 0);
-          }
           
           // Fetch profile data asynchronously
           fetchProfile(session.user.id).then(async (profileData) => {
@@ -260,15 +247,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Check JWT metadata for existing session
-        if (!hasJWTMetadata(session)) {
-          console.log('Existing session missing JWT metadata, syncing...');
-          await syncUserMetadataToJWT(session.user.id);
-          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
-          if (refreshedSession) {
-            setSession(refreshedSession);
-          }
-        }
         
         fetchProfile(session.user.id).then(async (profileData) => {
           if (!mounted) return;
@@ -345,16 +323,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
     });
-    
-    if (!error && data.user) {
-      // Check if JWT has required metadata
-      if (!hasJWTMetadata(data.session)) {
-        console.log('JWT missing metadata, syncing...');
-        await syncUserMetadataToJWT(data.user.id);
-        // Refresh session to get updated JWT
-        await supabase.auth.refreshSession();
-      }
-    }
     
     return { error };
   };
