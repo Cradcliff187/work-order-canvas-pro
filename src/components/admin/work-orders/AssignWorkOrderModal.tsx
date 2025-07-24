@@ -48,11 +48,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   
   const { employees, isLoading } = useAllAssignees();
   
-  // Add debugging for assignment data
+  // Add comprehensive debugging for assignment data
   console.log('📊 Assignment Data:', {
+    workOrders: workOrders?.length || 0,
+    hasValidWorkOrders,
     employeesCount: employees.length,
     subcontractorOrgsCount: subcontractorOrgs.length,
     isLoading,
+    isLoadingOrgs,
     employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
     subcontractorOrgs: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, users: o.active_users }))
   });
@@ -208,9 +211,22 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     [subcontractorOrgs, selectedOrganizations]
   );
   
-  // Enhanced error handling for data loading
+  // Enhanced error handling for data loading with detailed debugging
   const hasDataError = !isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0;
   const isDataReady = !isLoading && !isLoadingOrgs && (employees.length > 0 || subcontractorOrgs.length > 0);
+  
+  // Add critical debugging for conditional rendering
+  console.log('🔍 Conditional Rendering Debug:', {
+    hasValidWorkOrders,
+    isLoading,
+    isLoadingOrgs,
+    hasDataError,
+    isDataReady,
+    loadingCondition: isLoading || isLoadingOrgs,
+    renderEmployeesCondition: employees.length > 0,
+    renderSubcontractorsCondition: subcontractorOrgs.length > 0,
+    willShowContent: !isLoading && !isLoadingOrgs && !hasDataError
+  });
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -365,7 +381,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </div>
           )}
 
-          {/* Assignee Selection */}
+          {/* Assignee Selection - Always show when modal is open */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Select Assignees</Label>
