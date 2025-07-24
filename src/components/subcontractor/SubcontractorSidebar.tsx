@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvoiceDrafts } from '@/hooks/useInvoiceDrafts';
+import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import {
   Sidebar,
   SidebarContent,
@@ -38,7 +39,7 @@ import {
 
 const sidebarItems = [
   { title: 'Dashboard', url: '/subcontractor/dashboard', icon: Home },
-  { title: 'My Work Orders', url: '/subcontractor/work-orders', icon: ClipboardList },
+  { title: 'My Work Orders', url: '/subcontractor/work-orders', icon: ClipboardList, hasWorkOrderBadge: true },
   { title: 'Invoices', url: '/subcontractor/invoices', icon: Receipt },
   { title: 'Submit Invoice', url: '/subcontractor/submit-invoice', icon: FileText, hasBadge: true },
   { title: 'Report History', url: '/subcontractor/reports', icon: History },
@@ -49,7 +50,13 @@ export function SubcontractorSidebar() {
   const { state } = useSidebar();
   const { profile, signOut } = useAuth();
   const { draftCount } = useInvoiceDrafts();
+  const { assignedWorkOrders } = useSubcontractorWorkOrders();
   const collapsed = state === 'collapsed';
+  
+  // Count work orders that need reports (assigned or in_progress status)
+  const pendingReportsCount = assignedWorkOrders.data?.filter(
+    (wo: any) => wo.status === 'assigned' || wo.status === 'in_progress'
+  ).length || 0;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -90,6 +97,11 @@ export function SubcontractorSidebar() {
                           {item.hasBadge && draftCount > 0 && (
                             <Badge variant="secondary" className="ml-2 text-xs">
                               {draftCount}
+                            </Badge>
+                          )}
+                          {item.hasWorkOrderBadge && pendingReportsCount > 0 && (
+                            <Badge variant="default" className="ml-2 text-xs">
+                              {pendingReportsCount}
                             </Badge>
                           )}
                         </>

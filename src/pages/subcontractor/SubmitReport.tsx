@@ -32,7 +32,7 @@ export default function SubmitReport() {
   const { id: workOrderId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getWorkOrder } = useSubcontractorWorkOrders();
+  const { getWorkOrder, submitReport } = useSubcontractorWorkOrders();
   const { saveDraft, getDrafts } = useOfflineStorage();
 
   const [formData, setFormData] = useState<FormData>({
@@ -83,10 +83,27 @@ export default function SubmitReport() {
       return;
     }
 
+    if (!formData.workPerformed.trim() || !formData.invoiceAmount) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Here you would typically submit to your backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await submitReport.mutateAsync({
+        workOrderId,
+        workPerformed: formData.workPerformed,
+        materialsUsed: formData.materialsUsed || undefined,
+        hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+        invoiceAmount: parseFloat(formData.invoiceAmount),
+        invoiceNumber: formData.invoiceNumber || undefined,
+        notes: formData.notes || undefined,
+        photos: formData.photos.length > 0 ? formData.photos : undefined,
+      });
 
       toast({
         title: "Report Submitted",
@@ -98,8 +115,8 @@ export default function SubmitReport() {
         localStorage.removeItem(`draft_${currentDraftId}`);
       }
 
-      // Redirect
-      navigate('/subcontractor/reports');
+      // Redirect to work orders or reports
+      navigate('/subcontractor/work-orders');
     } catch (err: any) {
       toast({
         title: "Submission Error",

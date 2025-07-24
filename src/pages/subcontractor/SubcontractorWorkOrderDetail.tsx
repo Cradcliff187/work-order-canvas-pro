@@ -153,6 +153,20 @@ export default function SubcontractorWorkOrderDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Action Buttons */}
+          {workOrder.status === 'assigned' || workOrder.status === 'in_progress' ? (
+            <Card>
+              <CardContent className="p-4">
+                <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
+                  <Button className="w-full">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Submit Report
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {/* Organization Info */}
           <Card>
             <CardHeader>

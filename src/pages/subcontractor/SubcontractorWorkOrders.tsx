@@ -201,6 +201,17 @@ const SubcontractorWorkOrders = () => {
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
+                    
+                    {(workOrder.status === 'assigned' || workOrder.status === 'in_progress') && (
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/subcontractor/reports/new/${workOrder.id}`)}
+                        className="min-h-[44px] sm:min-h-auto"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Submit Report
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
