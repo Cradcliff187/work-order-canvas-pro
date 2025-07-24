@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
@@ -35,6 +37,13 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [notes, setNotes] = useState('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [networkError, setNetworkError] = useState<string | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeUsersFilter, setActiveUsersFilter] = useState<'all' | 'active' | 'none'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'users'>('name');
+  
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
   const { data: subcontractorOrgs = [], isLoading: isLoadingOrgs } = useSubcontractorOrganizations();
@@ -205,6 +214,39 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     subcontractorOrgs.filter(org => selectedOrganizations.includes(org.id)),
     [subcontractorOrgs, selectedOrganizations]
   );
+
+  // Filter and sort subcontractor organizations
+  const filteredSubcontractorOrgs = useMemo(() => {
+    let filtered = [...subcontractorOrgs];
+
+    // Apply search filter
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
+      filtered = filtered.filter(org => 
+        org.name.toLowerCase().includes(query) ||
+        org.contact_email?.toLowerCase().includes(query) ||
+        org.first_active_user?.full_name.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply active users filter
+    if (activeUsersFilter === 'active') {
+      filtered = filtered.filter(org => org.active_user_count > 0);
+    } else if (activeUsersFilter === 'none') {
+      filtered = filtered.filter(org => org.active_user_count === 0);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name);
+      } else {
+        return b.active_user_count - a.active_user_count;
+      }
+    });
+
+    return filtered;
+  }, [subcontractorOrgs, debouncedSearchQuery, activeUsersFilter, sortBy]);
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -409,7 +451,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                         <div className="flex items-center gap-2">
                           <Building className="h-4 w-4" />
                           <span className="font-medium">Subcontractor Organizations</span>
-                          <Badge variant="outline">{subcontractorOrgs.length} available</Badge>
+                          <Badge variant="outline">
+                            {filteredSubcontractorOrgs.length} of {subcontractorOrgs.length} shown
+                          </Badge>
                         </div>
                       </CardHeader>
                       <CardContent className="p-0">
@@ -421,41 +465,129 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                             </div>
                           </div>
                         ) : (
-                          <ScrollArea className="max-h-60 px-6 pb-6">
-                            <div className="space-y-2">
-                              {subcontractorOrgs.map((org) => (
-                                <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                                  <Checkbox
-                                    id={`org-${org.id}`}
-                                    checked={selectedOrganizations.includes(org.id)}
-                                    onCheckedChange={() => toggleOrganization(org.id)}
-                                  />
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{org.name}</span>
-                                      <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
-                                        {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                      {org.contact_email && (
-                                        <div className="flex items-center gap-1">
-                                          <Mail className="h-3 w-3" />
-                                          <span>{org.contact_email}</span>
-                                        </div>
-                                      )}
-                                      {org.first_active_user && (
-                                        <span>Lead: {org.first_active_user.full_name}</span>
-                                      )}
-                                      {org.active_user_count === 0 && (
-                                        <span className="text-amber-600">No active users</span>
-                                      )}
-                                    </div>
-                                  </div>
+                          <>
+                            {/* Search and Filter Controls */}
+                            <div className="px-6 pt-4 space-y-3">
+                              {/* Search Input */}
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search organizations, emails, or lead names..."
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value)}
+                                  className="pl-10"
+                                />
+                              </div>
+                              
+                              {/* Filter and Sort Controls */}
+                              <div className="flex flex-wrap gap-2">
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button"
+                                    variant={activeUsersFilter === 'all' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setActiveUsersFilter('all')}
+                                  >
+                                    All
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={activeUsersFilter === 'active' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setActiveUsersFilter('active')}
+                                  >
+                                    With Users
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={activeUsersFilter === 'none' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setActiveUsersFilter('none')}
+                                  >
+                                    No Users
+                                  </Button>
                                 </div>
-                              ))}
+                                
+                                <Separator orientation="vertical" className="h-8" />
+                                
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button"
+                                    variant={sortBy === 'name' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setSortBy('name')}
+                                  >
+                                    A-Z
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={sortBy === 'users' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setSortBy('users')}
+                                  >
+                                    By Users
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
-                          </ScrollArea>
+
+                            {/* Organizations List */}
+                            <ScrollArea className="max-h-80 px-6 pb-6">
+                              <div className="space-y-2 mt-4">
+                                {filteredSubcontractorOrgs.length === 0 ? (
+                                  <div className="text-center py-8 text-muted-foreground">
+                                    <Filter className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">No organizations match your filters</p>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSearchQuery('');
+                                        setActiveUsersFilter('all');
+                                        setSortBy('name');
+                                      }}
+                                      className="mt-2"
+                                    >
+                                      Clear Filters
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  filteredSubcontractorOrgs.map((org) => (
+                                    <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
+                                      <Checkbox
+                                        id={`org-${org.id}`}
+                                        checked={selectedOrganizations.includes(org.id)}
+                                        onCheckedChange={() => toggleOrganization(org.id)}
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium">{org.name}</span>
+                                          <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
+                                            {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                          {org.contact_email && (
+                                            <div className="flex items-center gap-1">
+                                              <Mail className="h-3 w-3" />
+                                              <span>{org.contact_email}</span>
+                                            </div>
+                                          )}
+                                          {org.first_active_user && (
+                                            <span>Lead: {org.first_active_user.full_name}</span>
+                                          )}
+                                          {org.active_user_count === 0 && (
+                                            <span className="text-amber-600">No active users</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </>
                         )}
                       </CardContent>
                     </Card>
