@@ -16,6 +16,7 @@ import { DraftIndicator } from '@/components/DraftIndicator';
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
+import { useAuth } from '@/contexts/AuthContext';
 import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
@@ -30,6 +31,7 @@ export default function SubmitReport() {
   const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useAuth();
   const { submitReport } = useSubcontractorWorkOrders();
   const { saveDraft, getDrafts } = useOfflineStorage();
 
@@ -67,7 +69,7 @@ export default function SubmitReport() {
       return;
     }
 
-    if (!formData.workPerformed.trim()) {
+    if (!formData.workPerformed.trim() || (profile?.user_type === 'employee' && !formData.hoursWorked.trim())) {
       toast({
         title: "Missing Required Fields",
         description: "Please fill in all required fields before submitting.",
@@ -82,7 +84,7 @@ export default function SubmitReport() {
         workOrderId,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
-        hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+        hoursWorked: profile?.user_type === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
         notes: formData.notes || undefined,
         photos: formData.photos.length > 0 ? formData.photos : undefined,
       });
@@ -150,7 +152,7 @@ export default function SubmitReport() {
         {
           workPerformed: formData.workPerformed,
           materialsUsed: formData.materialsUsed,
-          hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+          hoursWorked: profile?.user_type === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
           notes: formData.notes,
         },
         photoAttachments,
@@ -332,28 +334,31 @@ export default function SubmitReport() {
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
-          <StandardFormLayout.Section 
-            title="Time Tracking"
-            description="Enter time spent on this work (optional)"
-          >
-            <StandardFormLayout.FieldGroup columns={1}>
-              <div className="space-y-2">
-                <Label htmlFor="hoursWorked">Hours Worked</Label>
-                <Input
-                  id="hoursWorked"
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  placeholder="8.5"
-                  value={formData.hoursWorked}
-                  onChange={(e) => setFormData(prev => ({ ...prev, hoursWorked: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Optional: Track time spent on this work for internal records
-                </p>
-              </div>
-            </StandardFormLayout.FieldGroup>
-          </StandardFormLayout.Section>
+          {profile?.user_type === 'employee' && (
+            <StandardFormLayout.Section 
+              title="Time Tracking"
+              description="Record hours worked for this assignment"
+            >
+              <StandardFormLayout.FieldGroup columns={1}>
+                <div className="space-y-2">
+                  <Label htmlFor="hoursWorked">Hours Worked *</Label>
+                  <Input
+                    id="hoursWorked"
+                    type="number"
+                    step="0.25"
+                    min="0"
+                    placeholder="8.5"
+                    value={formData.hoursWorked}
+                    onChange={(e) => setFormData(prev => ({ ...prev, hoursWorked: e.target.value }))}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter total hours worked on this assignment for payroll tracking
+                  </p>
+                </div>
+              </StandardFormLayout.FieldGroup>
+            </StandardFormLayout.Section>
+          )}
 
           <StandardFormLayout.Section 
             title="Photos & Documentation"

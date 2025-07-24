@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 export function useSubcontractorWorkOrders() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -200,17 +200,30 @@ export function useSubcontractorWorkOrders() {
 
       if (!profile) throw new Error("Profile not found");
 
-      // Submit the report
+      // Get current user profile to check user type
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", profile.id)
+        .single();
+
+      // Submit the report - only include hours_worked for employees
+      const reportInsert: any = {
+        work_order_id: reportData.workOrderId,
+        subcontractor_user_id: profile.id,
+        work_performed: reportData.workPerformed,
+        materials_used: reportData.materialsUsed,
+        notes: reportData.notes,
+      };
+
+      // Only include hours_worked for employees
+      if (userProfile?.user_type === 'employee' && reportData.hoursWorked !== undefined) {
+        reportInsert.hours_worked = reportData.hoursWorked;
+      }
+
       const { data: report, error: reportError } = await supabase
         .from("work_order_reports")
-        .insert({
-          work_order_id: reportData.workOrderId,
-          subcontractor_user_id: profile.id,
-          work_performed: reportData.workPerformed,
-          materials_used: reportData.materialsUsed,
-          hours_worked: reportData.hoursWorked,
-          notes: reportData.notes,
-        })
+        .insert(reportInsert)
         .select()
         .single();
 
