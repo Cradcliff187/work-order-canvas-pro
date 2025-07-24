@@ -1528,6 +1528,21 @@ export type Database = {
         Args: { template_name: string; record_id: string; record_type: string }
         Returns: undefined
       }
+      update_user_profile_and_auth: {
+        Args: {
+          p_profile_id: string
+          p_first_name: string
+          p_last_name: string
+          p_email: string
+          p_user_type: Database["public"]["Enums"]["user_type"]
+          p_phone?: string
+          p_company_name?: string
+          p_hourly_billable_rate?: number
+          p_hourly_cost_rate?: number
+          p_is_active?: boolean
+        }
+        Returns: Json
+      }
       user_assigned_to_work_order: {
         Args: { wo_id: string }
         Returns: boolean

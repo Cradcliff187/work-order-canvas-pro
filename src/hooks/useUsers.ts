@@ -148,41 +148,38 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<User> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      // Use the new database function that updates both profiles and auth.users atomically
+      const { data, error } = await supabase.rpc('update_user_profile_and_auth', {
+        p_profile_id: id,
+        p_first_name: updates.first_name || '',
+        p_last_name: updates.last_name || '',
+        p_email: updates.email || '',
+        p_user_type: updates.user_type || 'subcontractor',
+        p_phone: updates.phone || null,
+        p_company_name: updates.company_name || null,
+        p_hourly_billable_rate: updates.hourly_billable_rate || null,
+        p_hourly_cost_rate: updates.hourly_cost_rate || null,
+        p_is_active: updates.is_active ?? true,
+      });
 
       if (error) throw error;
-      return data;
-    },
-    onSuccess: async (updatedProfile) => {
-      // Update auth.users raw_user_meta_data to keep display names in sync
-      try {
-        await supabase.auth.admin.updateUserById(updatedProfile.user_id, {
-          user_metadata: {
-            first_name: updatedProfile.first_name,
-            last_name: updatedProfile.last_name,
-            user_type: updatedProfile.user_type,
-          }
-        });
-      } catch (authError) {
-        console.warn('Auth user metadata update failed but profile update succeeded:', authError);
-      }
-
-      // Sync JWT app metadata after profile update
-      try {
-        await syncUserMetadataToJWT(updatedProfile.user_id);
-      } catch (syncError) {
-        console.warn('JWT sync failed but profile update succeeded:', syncError);
+      
+      // Type the response properly
+      const result = data as any;
+      
+      // Check if the function returned success
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to update user profile and auth metadata');
       }
       
+      return result.profile;
+    },
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', result.id] });
       toast({
         title: 'Success',
-        description: 'User updated successfully',
+        description: 'User updated successfully (profile and auth synchronized)',
       });
     },
     onError: (error: any) => {
