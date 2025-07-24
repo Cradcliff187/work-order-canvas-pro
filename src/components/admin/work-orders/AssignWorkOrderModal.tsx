@@ -516,7 +516,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                               />
                               <div className="flex-1">
                                 <div className="font-medium">
-                                  {subcontractor.first_name} {subcontractor.last_name}
+                                  {subcontractor.organization}
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
                                   <OrganizationBadge 
@@ -589,7 +589,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                             {index === 0 ? "Lead" : "Support"}
                           </Badge>
                           <span className="text-sm font-medium">
-                            {assignee.first_name} {assignee.last_name}
+                            {assignee.type === 'subcontractor' ? assignee.organization : `${assignee.first_name} ${assignee.last_name}`}
                           </span>
                         </div>
                         <OrganizationBadge 
