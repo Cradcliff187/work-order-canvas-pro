@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,13 +8,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter } from 'lucide-react';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, Filter, AlertCircle, RefreshCw } from 'lucide-react';
 import { useWorkOrderAssignment } from '@/hooks/useWorkOrderAssignment';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -30,15 +32,25 @@ interface AssignWorkOrderModalProps {
 export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWorkOrderModalProps) {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [networkError, setNetworkError] = useState<string | null>(null);
 
   const { assignWorkOrders, validateAssignment, isAssigning } = useWorkOrderAssignment();
   const { bulkAddAssignments, bulkRemoveAssignments } = useWorkOrderAssignmentMutations();
   
-  // Get the trade ID from the first work order (they should all be the same trade for bulk assignment)
-  const tradeId = workOrders[0]?.trade_id;
-  const tradeName = workOrders[0]?.trades?.name;
+  // Validate work orders data
+  const hasValidWorkOrders = workOrders && workOrders.length > 0;
+  const tradeId = hasValidWorkOrders ? workOrders[0]?.trade_id : undefined;
+  const tradeName = hasValidWorkOrders ? workOrders[0]?.trades?.name : undefined;
+  
+  // Add debugging for data flow
+  console.log('AssignWorkOrderModal Debug:', {
+    isOpen,
+    workOrdersCount: workOrders?.length,
+    tradeId,
+    tradeName,
+    hasValidWorkOrders
+  });
   
   const { employees, subcontractors, isLoading } = useAllAssignees(tradeId);
 
@@ -46,10 +58,15 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     if (isOpen) {
       setSelectedAssignees([]);
       setNotes('');
-      
       setValidationErrors([]);
+      setNetworkError(null);
+      
+      // Validate work orders on open
+      if (!hasValidWorkOrders) {
+        setValidationErrors(['No valid work orders provided']);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, hasValidWorkOrders]);
 
   const toggleAssignee = (assigneeId: string) => {
     setSelectedAssignees(prev => 
@@ -135,7 +152,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       onClose();
     } catch (error) {
       console.error('Assignment failed:', error);
-      setValidationErrors(['Assignment failed. Please try again.']);
+      const errorMessage = error instanceof Error ? error.message : 'Assignment failed. Please try again.';
+      setValidationErrors([errorMessage]);
+      setNetworkError(errorMessage);
     }
   };
 
@@ -147,10 +166,16 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     return null;
   };
 
-  const allAssignees = [...employees, ...subcontractors];
-  const selectedAssigneeData = allAssignees.filter(assignee => 
-    selectedAssignees.includes(assignee.id)
+  // Memoize expensive calculations
+  const allAssignees = useMemo(() => [...employees, ...subcontractors], [employees, subcontractors]);
+  const selectedAssigneeData = useMemo(() => 
+    allAssignees.filter(assignee => selectedAssignees.includes(assignee.id)),
+    [allAssignees, selectedAssignees]
   );
+  
+  // Enhanced error handling for data loading
+  const hasDataError = !isLoading && employees.length === 0 && subcontractors.length === 0 && tradeId;
+  const isDataReady = !isLoading && (employees.length > 0 || subcontractors.length > 0 || !tradeId);
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -165,53 +190,94 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Assign Work Order{workOrders.length > 1 ? 's' : ''}
-          </DialogTitle>
-          <DialogDescription>
-            Select one or more people to assign this work order to
-          </DialogDescription>
-        </DialogHeader>
+    <ErrorBoundary fallback={
+      <div className="p-4 text-center">
+        <AlertCircle className="h-8 w-8 mx-auto mb-2 text-destructive" />
+        <p className="text-sm text-muted-foreground">Failed to load assignment modal</p>
+        <Button variant="outline" size="sm" onClick={onClose} className="mt-2">Close</Button>
+      </div>
+    }>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Assign Work Order{hasValidWorkOrders && workOrders.length > 1 ? 's' : ''}
+            </DialogTitle>
+            <DialogDescription>
+              Select one or more people to assign this work order to
+            </DialogDescription>
+          </DialogHeader>
 
         <div className="space-y-6">
-          {/* Work Order Summary */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Briefcase className="h-4 w-4" />
-                <span className="font-medium">Work Order{workOrders.length > 1 ? 's' : ''} Summary</span>
-                <Badge variant="secondary">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
+          {/* Error States */}
+          {!hasValidWorkOrders && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span className="font-medium">Invalid Work Orders</span>
               </div>
-              
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Trade:</span>
-                    <span className="ml-2 font-medium">{tradeName || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Organization:</span>
-                    <span className="ml-2">{workOrders[0]?.organizations?.name || 'N/A'}</span>
-                  </div>
-                </div>
-                
-                {workOrders.length === 1 ? (
-                  <div>
-                    <span className="text-muted-foreground">Title:</span>
-                    <span className="ml-2">{workOrders[0]?.title}</span>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    Multiple work orders selected for bulk assignment
-                  </div>
-                )}
+              <p className="text-sm text-destructive mt-1">No valid work orders provided for assignment.</p>
+            </div>
+          )}
+
+          {networkError && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span className="font-medium">Network Error</span>
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-sm text-destructive mt-1">{networkError}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setNetworkError(null)} 
+                className="mt-2"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {hasValidWorkOrders && (
+            <>
+              {/* Work Order Summary */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Briefcase className="h-4 w-4" />
+                    <span className="font-medium">Work Order{workOrders.length > 1 ? 's' : ''} Summary</span>
+                    <Badge variant="secondary">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Trade:</span>
+                        <span className="ml-2 font-medium">{tradeName || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Organization:</span>
+                        <span className="ml-2">{workOrders[0]?.organizations?.name || 'N/A'}</span>
+                      </div>
+                    </div>
+                    
+                    {workOrders.length === 1 ? (
+                      <div>
+                        <span className="text-muted-foreground">Title:</span>
+                        <span className="ml-2">{workOrders[0]?.title}</span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        Multiple work orders selected for bulk assignment
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
 
           {/* Status Preview */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -278,7 +344,23 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </div>
 
             {isLoading ? (
-              <div className="text-center py-4 text-muted-foreground">Loading assignees...</div>
+              <div className="py-8">
+                <LoadingSpinner />
+                <div className="text-center mt-4">
+                  <p className="text-sm text-muted-foreground">Loading assignees...</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {tradeId ? `Finding users for ${tradeName || 'selected trade'}` : 'Loading all users'}
+                  </p>
+                </div>
+              </div>
+            ) : hasDataError ? (
+              <div className="text-center py-8">
+                <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-2">No assignees available for this trade</p>
+                <p className="text-xs text-muted-foreground">
+                  {tradeName ? `No active users found for ${tradeName}` : 'Please select a different trade or add users'}
+                </p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {/* Employees Section */}
@@ -382,8 +464,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                 )}
 
                 {employees.length === 0 && subcontractors.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No assignees available for this trade
+                  <div className="text-center py-8">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-1">No assignees available</p>
+                    <p className="text-xs text-muted-foreground">
+                      {tradeName ? `No active users found for ${tradeName}` : 'No active users in the system'}
+                    </p>
                   </div>
                 )}
               </div>
@@ -442,16 +528,24 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               Cancel
             </Button>
             <Button 
-              onClick={handleAssign}
-              disabled={isAssigning || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
+              onClick={handleAssign} 
+              disabled={isAssigning || !hasValidWorkOrders || !!networkError || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
+              aria-label={selectedAssignees.length > 0 ? 'Assign selected users' : 'Remove all assignments'}
             >
-              {(isAssigning || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? 'Processing...' : 
-               selectedAssignees.length === 0 ? `Unassign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}` :
-               `Assign ${workOrders.length} Work Order${workOrders.length > 1 ? 's' : ''}`}
+              {(isAssigning || bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                selectedAssignees.length === 0 ? `Unassign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}` :
+                `Assign ${workOrders?.length || 0} Work Order${(workOrders?.length || 0) > 1 ? 's' : ''}`
+              )}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
+    </ErrorBoundary>
   );
 }
