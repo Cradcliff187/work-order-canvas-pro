@@ -154,12 +154,27 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
       const fallbackUser = row.original.assigned_user;
       
       if (assignments.length === 0) {
-        return fallbackUser ? `${fallbackUser.first_name} ${fallbackUser.last_name}` : 'Unassigned';
+        if (fallbackUser) {
+          return (
+            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+              {`${fallbackUser.first_name} ${fallbackUser.last_name}`}
+            </Badge>
+          );
+        }
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700">
+            Unassigned
+          </Badge>
+        );
       }
       
       if (assignments.length === 1) {
         const assignee = assignments[0].assignee;
-        return `${assignee.first_name} ${assignee.last_name}`;
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+            {`${assignee.first_name} ${assignee.last_name}`}
+          </Badge>
+        );
       }
       
       const lead = assignments.find(a => a.assignment_type === 'lead') || assignments[0];
@@ -170,9 +185,9 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="cursor-help">
+              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700 cursor-help">
                 {leadName} + {additionalCount} more
-              </span>
+              </Badge>
             </TooltipTrigger>
             <TooltipContent>
               <div className="space-y-1">
