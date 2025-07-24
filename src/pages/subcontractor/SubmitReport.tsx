@@ -29,7 +29,7 @@ interface FormData {
 }
 
 export default function SubmitReport() {
-  const { id: workOrderId } = useParams<{ id: string }>();
+  const { workOrderId } = useParams<{ workOrderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { getWorkOrder, submitReport } = useSubcontractorWorkOrders();
