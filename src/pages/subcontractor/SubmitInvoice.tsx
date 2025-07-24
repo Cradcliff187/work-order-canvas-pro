@@ -4,35 +4,32 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDropzone } from 'react-dropzone';
 import { Upload, ArrowLeft, FileText, Loader2, Save } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
-import { supabase } from '@/integrations/supabase/client';
+import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
+import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
+import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
 
 interface InvoiceFormData {
-  invoiceNumber: string;
-  invoiceAmount: string;
-  notes: string;
-  workPerformed: string;
-  materialsUsed: string;
+  externalInvoiceNumber: string;
+  selectedWorkOrders: Record<string, number>; // workOrderId -> amount
 }
 
 export default function SubmitInvoice() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { completedWorkOrdersForInvoicing } = useSubcontractorWorkOrders();
+  const { submitInvoice, isSubmitting } = useInvoiceSubmission();
+  
   const [formData, setFormData] = useState<InvoiceFormData>({
-    invoiceNumber: '',
-    invoiceAmount: '',
-    notes: '',
-    workPerformed: '',
-    materialsUsed: '',
+    externalInvoiceNumber: '',
+    selectedWorkOrders: {},
   });
   const [files, setFiles] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load saved form data from localStorage
   useEffect(() => {
@@ -52,34 +49,89 @@ export default function SubmitInvoice() {
     localStorage.setItem('invoiceFormData', JSON.stringify(formData));
   }, [formData]);
 
+  const workOrders = completedWorkOrdersForInvoicing?.data || [];
+  const availableWorkOrders = workOrders.filter(wo => 
+    !wo.invoice_work_orders || wo.invoice_work_orders.length === 0
+  );
+
+  const selectedWorkOrderIds = Object.keys(formData.selectedWorkOrders);
+  const selectedWorkOrderSummary = selectedWorkOrderIds.map(id => {
+    const workOrder = availableWorkOrders.find(wo => wo.id === id);
+    return {
+      id,
+      work_order_number: workOrder?.work_order_number || '',
+      amount: formData.selectedWorkOrders[id] || 0,
+    };
+  });
+  
+  const totalAmount = Object.values(formData.selectedWorkOrders).reduce((sum, amount) => sum + amount, 0);
+
+  const handleWorkOrderSelection = (workOrderId: string, isSelected: boolean) => {
+    setFormData(prev => {
+      const newSelectedWorkOrders = { ...prev.selectedWorkOrders };
+      if (isSelected) {
+        newSelectedWorkOrders[workOrderId] = 0; // Start with 0, user will enter amount
+      } else {
+        delete newSelectedWorkOrders[workOrderId];
+      }
+      return { ...prev, selectedWorkOrders: newSelectedWorkOrders };
+    });
+  };
+
+  const handleWorkOrderAmountChange = (workOrderId: string, amount: number) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedWorkOrders: {
+        ...prev.selectedWorkOrders,
+        [workOrderId]: amount,
+      },
+    }));
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
+    
+    if (selectedWorkOrderIds.length === 0) {
+      toast({
+        title: "No work orders selected",
+        description: "Please select at least one work order to invoice.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (Object.values(formData.selectedWorkOrders).some(amount => amount <= 0)) {
+      toast({
+        title: "Invalid amounts",
+        description: "All selected work orders must have an amount greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      // Here you would typically submit to your backend
-      // For now, we'll simulate a successful submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const workOrdersData = selectedWorkOrderIds.map(workOrderId => ({
+        workOrderId,
+        amount: formData.selectedWorkOrders[workOrderId],
+      }));
 
-      toast({
-        title: "Invoice submitted successfully!",
-        description: "You will be redirected to the invoices page.",
+      await submitInvoice({
+        externalInvoiceNumber: formData.externalInvoiceNumber || undefined,
+        totalAmount,
+        workOrders: workOrdersData,
+        attachments: files.length > 0 ? files : undefined,
       });
       
       // Clear saved form data
       localStorage.removeItem('invoiceFormData');
       
-      setTimeout(() => {
-        navigate('/subcontractor/invoices');
-      }, 1500);
+      navigate('/subcontractor/invoices');
     } catch (error: any) {
       toast({
-        title: "Error submitting invoice.",
+        title: "Error submitting invoice",
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -130,84 +182,76 @@ export default function SubmitInvoice() {
         <StandardFormLayout>
           <StandardFormLayout.Section 
             title="Invoice Details"
-            description="Enter the details of your invoice"
+            description="Enter your external invoice number (optional)"
           >
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
-                <Label htmlFor="invoiceNumber">Invoice Number *</Label>
+                <Label htmlFor="externalInvoiceNumber">External Invoice Number</Label>
                 <Input
-                  id="invoiceNumber"
+                  id="externalInvoiceNumber"
                   placeholder="INV-2024-001"
-                  value={formData.invoiceNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                  required
+                  value={formData.externalInvoiceNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="invoiceAmount">Invoice Amount *</Label>
-                <Input
-                  id="invoiceAmount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.invoiceAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceAmount: e.target.value }))}
-                  required
-                />
+                <p className="text-xs text-muted-foreground">
+                  Optional: Your own invoice number for reference
+                </p>
               </div>
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
           <StandardFormLayout.Section 
-            title="Work Details"
-            description="Provide details about the work performed"
+            title="Select Work Orders"
+            description="Choose completed work orders to include in this invoice"
           >
             <StandardFormLayout.FieldGroup>
-              <div className="space-y-2">
-                <Label htmlFor="workPerformed">Work Performed *</Label>
-                <Textarea
-                  id="workPerformed"
-                  placeholder="Describe the work you performed in detail..."
-                  value={formData.workPerformed}
-                  onChange={(e) => setFormData(prev => ({ ...prev, workPerformed: e.target.value }))}
-                  className="min-h-[120px]"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="materialsUsed">Materials Used</Label>
-                <Textarea
-                  id="materialsUsed"
-                  placeholder="List materials, parts, or supplies used..."
-                  value={formData.materialsUsed}
-                  onChange={(e) => setFormData(prev => ({ ...prev, materialsUsed: e.target.value }))}
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any additional information or observations..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="min-h-[80px]"
-                />
-              </div>
+              {completedWorkOrdersForInvoicing?.isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : availableWorkOrders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No completed work orders available for invoicing</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {availableWorkOrders.map((workOrder) => (
+                    <WorkOrderAmountCard
+                      key={workOrder.id}
+                      workOrder={workOrder}
+                      isSelected={workOrder.id in formData.selectedWorkOrders}
+                      amount={formData.selectedWorkOrders[workOrder.id] || 0}
+                      onSelectionChange={(checked) => handleWorkOrderSelection(workOrder.id, checked)}
+                      onAmountChange={(amount) => handleWorkOrderAmountChange(workOrder.id, amount)}
+                    />
+                  ))}
+                </div>
+              )}
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
+          {selectedWorkOrderIds.length > 0 && (
+            <StandardFormLayout.Section 
+              title="Invoice Summary"
+              description="Review your invoice totals"
+            >
+              <StandardFormLayout.FieldGroup>
+                <InvoiceTotalSummary
+                  selectedWorkOrders={selectedWorkOrderSummary}
+                  totalAmount={totalAmount}
+                />
+              </StandardFormLayout.FieldGroup>
+            </StandardFormLayout.Section>
+          )}
+
           <StandardFormLayout.Section 
-            title="Photos & Documentation"
-            description="Upload photos or documents related to the invoice"
+            title="Supporting Documents"
+            description="Upload invoice documents and supporting files (optional)"
           >
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
-                <Label>Upload Photos or Documents</Label>
+                <Label>Upload Documents</Label>
                 <div 
                   {...getRootProps()} 
                   className={cn(
@@ -221,25 +265,24 @@ export default function SubmitInvoice() {
                     {isDragActive ? "Drop files here..." : "Drag & drop files here, or click to select"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG, GIF, PDF up to 10MB each
+                    PDF, PNG, JPG up to 10MB each
                   </p>
                 </div>
               </div>
 
               {files.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
                   {files.map((file, index) => (
-                    <Card key={index}>
-                      <CardHeader className="flex items-center space-x-4">
-                        <CardTitle className="text-sm font-medium truncate">{file.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">{file.type}</p>
-                        <Button variant="ghost" size="sm" onClick={() => handleRemoveFile(file)}>
-                          Remove
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm truncate">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveFile(file)}>
+                        Remove
+                      </Button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -259,7 +302,7 @@ export default function SubmitInvoice() {
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={isSubmitting || selectedWorkOrderIds.length === 0}
               className="min-h-[44px]"
             >
               {isSubmitting ? (
@@ -270,7 +313,7 @@ export default function SubmitInvoice() {
               ) : (
                 <>
                   <FileText className="h-4 w-4 mr-2" />
-                  Submit Invoice
+                  Submit Invoice ({selectedWorkOrderIds.length} work order{selectedWorkOrderIds.length !== 1 ? 's' : ''})
                 </>
               )}
             </Button>

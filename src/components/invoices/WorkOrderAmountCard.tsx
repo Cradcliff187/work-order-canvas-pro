@@ -20,7 +20,7 @@ interface WorkOrderAmountCardProps {
       work_performed: string;
       materials_used?: string;
       hours_worked?: number;
-      invoice_amount: number;
+      invoice_amount?: number;
       status: string;
     }>;
   };
