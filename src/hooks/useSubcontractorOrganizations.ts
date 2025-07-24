@@ -66,6 +66,12 @@ export function useSubcontractorOrganizations() {
         };
       });
 
+      console.log('🏢 Subcontractor Organizations Query Result:', {
+        rawData: data,
+        transformedData,
+        count: transformedData.length
+      });
+
       return transformedData;
     },
   });
