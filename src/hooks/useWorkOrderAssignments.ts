@@ -146,11 +146,28 @@ export function useWorkOrderAssignmentMutations() {
 
   const addAssignment = useMutation({
     mutationFn: async (assignmentData: CreateAssignmentData) => {
+      // Get the current user's profile ID instead of auth.uid()
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get profile ID from the authenticated user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('User profile not found');
+      }
+
       const { data, error } = await supabase
         .from('work_order_assignments')
         .insert({
           ...assignmentData,
-          assigned_by: (await supabase.auth.getUser()).data.user?.id || '',
+          assigned_by: profile.id,
         })
         .select(`
           *,
@@ -258,12 +275,25 @@ export function useWorkOrderAssignmentMutations() {
 
   const bulkAddAssignments = useMutation({
     mutationFn: async (assignments: CreateAssignmentData[]) => {
-      const currentUser = (await supabase.auth.getUser()).data.user;
-      if (!currentUser) throw new Error('User not authenticated');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get profile ID from the authenticated user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('User profile not found');
+      }
 
       const assignmentsWithAssigner = assignments.map(assignment => ({
         ...assignment,
-        assigned_by: currentUser.id,
+        assigned_by: profile.id,
       }));
 
       const { data, error } = await supabase

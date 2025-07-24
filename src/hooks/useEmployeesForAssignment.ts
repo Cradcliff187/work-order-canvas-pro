@@ -69,20 +69,19 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
       // If no trade and not showing all subcontractors, return empty array
       if (!tradeId && !showAllSubcontractors) return [];
       
-      // Get subcontractors with their organization relationships
+      // Get subcontractors - use left join to include subcontractors without organizations
       const { data: subs, error } = await supabase
         .from('profiles')
         .select(`
           *,
-          user_organizations!inner(
-            organization:organizations!inner(
+          user_organizations(
+            organization:organizations(
               id, name, organization_type
             )
           )
         `)
         .eq('user_type', 'subcontractor')
         .eq('is_active', true)
-        .eq('user_organizations.organization.organization_type', 'subcontractor')
         .order('first_name');
 
       if (error) throw error;
@@ -104,17 +103,20 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
         return acc;
       }, {} as Record<string, number>);
 
-      return subs.map(sub => ({
-        id: sub.id,
-        first_name: sub.first_name,
-        last_name: sub.last_name,
-        type: 'subcontractor' as const,
-        organization: sub.company_name || sub.user_organizations?.[0]?.organization?.name || 'External',
-        organization_id: sub.user_organizations?.[0]?.organization?.id || null,
-        workload: workloadMap[sub.id] || 0,
-        is_active: sub.is_active,
-        email: sub.email
-      }));
+      return subs.map(sub => {
+        const organization = sub.user_organizations?.[0]?.organization;
+        return {
+          id: sub.id,
+          first_name: sub.first_name,
+          last_name: sub.last_name,
+          type: 'subcontractor' as const,
+          organization: sub.company_name || organization?.name || 'Independent Contractor',
+          organization_id: organization?.id || null,
+          workload: workloadMap[sub.id] || 0,
+          is_active: sub.is_active,
+          email: sub.email
+        };
+      });
     },
     enabled: true, // Always enable - logic is handled in queryFn
   });
