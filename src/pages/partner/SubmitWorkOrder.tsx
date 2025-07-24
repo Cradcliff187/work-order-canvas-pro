@@ -173,6 +173,35 @@ export default function SubmitWorkOrder() {
   // Find selected location from partner locations
   const selectedLocation = partnerLocations?.find(loc => loc.id === partnerLocationSelection) || null;
 
+  // Auto-populate form fields when an existing partner location is selected
+  useEffect(() => {
+    if (selectedLocation && partnerLocationSelection && partnerLocationSelection !== 'add_new') {
+      // Populate all location fields from the selected partner location
+      form.setValue('store_location', selectedLocation.location_name || '');
+      form.setValue('partner_location_number', selectedLocation.location_number || '');
+      form.setValue('location_street_address', selectedLocation.street_address || '');
+      form.setValue('location_city', selectedLocation.city || '');
+      form.setValue('location_state', selectedLocation.state || '');
+      form.setValue('location_zip_code', selectedLocation.zip_code || '');
+      form.setValue('location_name', selectedLocation.location_name || '');
+      form.setValue('location_contact_name', selectedLocation.contact_name || '');
+      form.setValue('location_contact_phone', selectedLocation.contact_phone || '');
+      form.setValue('location_contact_email', selectedLocation.contact_email || '');
+    } else if (partnerLocationSelection === 'add_new' || !partnerLocationSelection) {
+      // Clear location fields when switching to "add new" or no selection
+      form.setValue('store_location', '');
+      form.setValue('partner_location_number', '');
+      form.setValue('location_street_address', '');
+      form.setValue('location_city', '');
+      form.setValue('location_state', '');
+      form.setValue('location_zip_code', '');
+      form.setValue('location_name', '');
+      form.setValue('location_contact_name', '');
+      form.setValue('location_contact_phone', '');
+      form.setValue('location_contact_email', '');
+    }
+  }, [selectedLocation, partnerLocationSelection, form]);
+
   // Compute effective location number for work order generation
   const getEffectiveLocationNumber = () => {
     if (partnerLocationSelection && partnerLocationSelection !== 'add_new' && selectedLocation) {
