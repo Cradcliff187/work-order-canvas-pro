@@ -159,7 +159,20 @@ export function useUpdateUser() {
       return data;
     },
     onSuccess: async (updatedProfile) => {
-      // Sync JWT metadata after profile update to keep auth.users in sync
+      // Update auth.users raw_user_meta_data to keep display names in sync
+      try {
+        await supabase.auth.admin.updateUserById(updatedProfile.user_id, {
+          user_metadata: {
+            first_name: updatedProfile.first_name,
+            last_name: updatedProfile.last_name,
+            user_type: updatedProfile.user_type,
+          }
+        });
+      } catch (authError) {
+        console.warn('Auth user metadata update failed but profile update succeeded:', authError);
+      }
+
+      // Sync JWT app metadata after profile update
       try {
         await syncUserMetadataToJWT(updatedProfile.user_id);
       } catch (syncError) {
