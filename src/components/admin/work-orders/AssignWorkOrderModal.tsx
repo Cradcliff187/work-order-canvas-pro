@@ -51,10 +51,20 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     workOrdersCount: workOrders?.length,
     tradeId,
     tradeName,
-    hasValidWorkOrders
+    hasValidWorkOrders,
+    showAllSubcontractors
   });
   
   const { employees, subcontractors, isLoading } = useAllAssignees(tradeId, showAllSubcontractors);
+  
+  // Add more debugging for assignment data
+  console.log('📊 Assignment Data:', {
+    employeesCount: employees.length,
+    subcontractorsCount: subcontractors.length,
+    isLoading,
+    employees: employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })),
+    subcontractors: subcontractors.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -292,11 +302,21 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             <div className="text-sm text-blue-700 space-y-2">
               {selectedAssignees.length > 0 ? (
                 <div>
-                  Work orders will automatically change from <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> to <Badge className="mx-1 bg-yellow-100 text-yellow-800 text-xs">Assigned</Badge> when assignments are created.
+                  {workOrders.some(wo => wo.status === 'received') ? (
+                    <>Work orders will automatically change from <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> to <Badge className="mx-1 bg-yellow-100 text-yellow-800 text-xs">Assigned</Badge> when assignments are created.</>
+                  ) : workOrders.some(wo => wo.assigned_to) ? (
+                    <>Work orders will be reassigned to the selected users.</>
+                  ) : (
+                    <>Work orders will be assigned to the selected users.</>
+                  )}
                 </div>
               ) : (
                 <div>
-                  Work orders will be returned to <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status when all assignments are removed.
+                  {workOrders.some(wo => wo.assigned_to || wo.status === 'assigned') ? (
+                    <>Work orders will be unassigned and returned to <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status when all assignments are removed.</>
+                  ) : (
+                    <>No assignments will be made. Work orders will remain at <Badge className="mx-1 bg-blue-100 text-blue-800 text-xs">Received</Badge> status.</>
+                  )}
                 </div>
               )}
               {selectedAssigneeData.length > 0 && (

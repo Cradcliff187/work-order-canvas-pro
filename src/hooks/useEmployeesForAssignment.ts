@@ -66,8 +66,14 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
   const { data: subcontractors = [], isLoading: isLoadingSubcontractors } = useQuery({
     queryKey: ['subcontractors-for-assignment', tradeId, showAllSubcontractors],
     queryFn: async (): Promise<AssigneeData[]> => {
-      // If no trade and not showing all subcontractors, return empty array
-      if (!tradeId && !showAllSubcontractors) return [];
+      console.log('🔍 Subcontractor Query Debug:', { tradeId, showAllSubcontractors });
+      
+      // If showAllSubcontractors is true, always show them regardless of trade
+      // If showAllSubcontractors is false and there's no tradeId, return empty array
+      if (!showAllSubcontractors && !tradeId) {
+        console.log('❌ Early return: no tradeId and not showing all');
+        return [];
+      }
       
       // Get subcontractors - use left join to include subcontractors without organizations
       const { data: subs, error } = await supabase
@@ -83,6 +89,8 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
         .eq('user_type', 'subcontractor')
         .eq('is_active', true)
         .order('first_name');
+
+      console.log('📊 Raw subcontractor query result:', { subs, error, count: subs?.length });
 
       if (error) throw error;
 
@@ -103,7 +111,7 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
         return acc;
       }, {} as Record<string, number>);
 
-      return subs.map(sub => {
+      const result = subs.map(sub => {
         const organization = sub.user_organizations?.[0]?.organization;
         return {
           id: sub.id,
@@ -117,6 +125,9 @@ export function useAllAssignees(tradeId?: string, showAllSubcontractors: boolean
           email: sub.email
         };
       });
+      
+      console.log('✅ Final subcontractor result:', result);
+      return result;
     },
     enabled: true, // Always enable - logic is handled in queryFn
   });
