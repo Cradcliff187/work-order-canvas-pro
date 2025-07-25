@@ -210,6 +210,9 @@ export default function SubmitWorkOrder() {
     }
   });
 
+  // Check if mobile for conditional rendering
+  const isMobile = useIsMobile();
+
   // Watch form values for auto-generation and location selection
   const watchedStoreLocation = form.watch('store_location');
   const watchedTradeId = form.watch('trade_id');
@@ -892,7 +895,7 @@ export default function SubmitWorkOrder() {
                         Upload images or PDFs to help explain the work needed. Maximum 10 files, 10MB each.
                       </div>
                       
-                      {useIsMobile() ? (
+                      {isMobile ? (
                         <MobileFileUpload
                           onFilesSelected={handleFilesSelected}
                           maxFiles={10}
