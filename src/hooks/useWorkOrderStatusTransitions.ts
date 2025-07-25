@@ -93,6 +93,12 @@ export const useWorkOrderStatusDisplay = () => {
           label: 'Estimate Needed',
           description: 'Contractor needs to provide estimate before starting'
         };
+      case 'estimate_approved':
+        return {
+          color: 'bg-teal-100 text-teal-800 border-teal-200',
+          label: 'Estimate Approved',
+          description: 'Estimate has been approved and work can begin'
+        };
       case 'in_progress':
         return {
           color: 'bg-purple-100 text-purple-800 border-purple-200',

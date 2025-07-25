@@ -38,7 +38,7 @@ export interface WorkOrder {
   description: string | null;
   organization_id: string | null;
   trade_id: string | null;
-  status: 'received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed';
+  status: 'received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed' | 'estimate_approved';
   estimated_hours: number | null;
   actual_hours: number | null;
   estimated_completion_date: string | null;
@@ -46,6 +46,7 @@ export interface WorkOrder {
   completed_at: string | null;
   date_submitted: string;
   date_assigned: string | null;
+  date_approved: string | null;
   date_completed: string | null;
   store_location: string | null;
   street_address: string | null;
@@ -150,7 +151,7 @@ export function useWorkOrders(
       // Apply filters
       if (filters) {
         if (filters.status && filters.status.length > 0) {
-          query = query.in('status', filters.status as ('received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed')[]);
+          query = query.in('status', filters.status as ('received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed' | 'estimate_approved')[]);
         }
         if (filters.trade_id) {
           query = query.eq('trade_id', filters.trade_id);

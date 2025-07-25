@@ -24,6 +24,10 @@ export const statusConfig: Record<WorkOrderStatus, { label: string; className: s
     label: 'Estimate Needed', 
     className: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-700' 
   },
+  estimate_approved: { 
+    label: 'Estimate Approved', 
+    className: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-700' 
+  },
   in_progress: { 
     label: 'In Progress', 
     className: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700' 

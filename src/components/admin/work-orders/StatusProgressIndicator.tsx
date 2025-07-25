@@ -51,6 +51,11 @@ const specialStatuses: Partial<Record<WorkOrderStatus, { label: string; icon: Re
     icon: <Clock className="h-4 w-4" />,
     color: 'bg-orange-100 text-orange-800 border-orange-200'
   },
+  'estimate_approved': {
+    label: 'Estimate Approved',
+    icon: <CheckCircle className="h-4 w-4" />,
+    color: 'bg-teal-100 text-teal-800 border-teal-200'
+  },
   'cancelled': {
     label: 'Cancelled',
     icon: <XCircle className="h-4 w-4" />,

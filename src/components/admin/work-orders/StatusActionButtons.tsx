@@ -8,7 +8,8 @@ import {
   XCircle, 
   UserPlus,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from 'lucide-react';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
@@ -113,10 +114,34 @@ export function StatusActionButtons({
       case 'estimate_needed':
         return [
           {
+            status: 'estimate_approved',
+            label: 'Approve Estimate',
+            icon: <CheckCircle className="h-4 w-4" />,
+            variant: 'default'
+          },
+          {
+            status: 'cancelled',
+            label: 'Cancel',
+            icon: <XCircle className="h-4 w-4" />,
+            variant: 'destructive',
+            requiresConfirmation: true,
+            confirmationMessage: 'This will cancel the work order and it cannot be undone.'
+          }
+        ];
+      
+      case 'estimate_approved':
+        return [
+          {
             status: 'in_progress',
             label: 'Start Work',
             icon: <Play className="h-4 w-4" />,
             variant: 'default'
+          },
+          {
+            status: 'estimate_needed',
+            label: 'Revise Estimate',
+            icon: <FileText className="h-4 w-4" />,
+            variant: 'outline'
           },
           {
             status: 'cancelled',
