@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +26,8 @@ import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGenerati
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Unified form schema with improved error messages
 const workOrderFormSchema = z.object({
@@ -110,6 +112,9 @@ export default function SubmitWorkOrder() {
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
   const [isNavigating, setIsNavigating] = useState(false);
+  
+  // File upload state
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // Touch gesture state
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -133,6 +138,43 @@ export default function SubmitWorkOrder() {
 
   // Fetch partner locations for the selected organization
   const { data: partnerLocations, isLoading: isLoadingLocations, error: locationsError } = usePartnerLocations(effectiveOrganizationId);
+
+  // File upload handlers
+  const handleUploadProgress = useCallback((progress: any[]) => {
+    console.log('Upload progress:', progress);
+  }, []);
+
+  const handleUploadComplete = useCallback((files: any[]) => {
+    toast({
+      title: "Files uploaded successfully",
+      description: `${files.length} file(s) uploaded.`,
+    });
+  }, [toast]);
+
+  const handleUploadError = useCallback((error: string) => {
+    toast({
+      variant: "destructive",
+      title: "Upload failed",
+      description: error,
+    });
+  }, [toast]);
+
+  // Initialize file upload hook
+  const {
+    uploadFiles,
+    removeFile,
+    reset: resetFileUploads,
+    uploadProgress,
+    isUploading,
+    uploadedFiles,
+    validateFiles
+  } = useFileUpload({
+    maxFiles: 10,
+    maxSizeBytes: 10 * 1024 * 1024, // 10MB
+    onProgress: handleUploadProgress,
+    onComplete: handleUploadComplete,
+    onError: handleUploadError
+  });
 
   // Form setup
   const form = useForm<FormData>({
@@ -231,6 +273,31 @@ export default function SubmitWorkOrder() {
     organizationId: currentStep === 3 ? effectiveOrganizationId : undefined,
     locationNumber: currentStep === 3 ? effectiveLocationNumber : undefined,
   });
+
+  // File handling functions
+  const handleFilesSelected = useCallback((files: File[]) => {
+    const { valid, errors } = validateFiles(files);
+    
+    if (errors.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "File validation failed",
+        description: errors.join(', '),
+      });
+      return;
+    }
+
+    setSelectedFiles(prev => [...prev, ...valid]);
+  }, [validateFiles, toast]);
+
+  const handleRemoveFile = useCallback((fileIndex: number) => {
+    setSelectedFiles(prev => prev.filter((_, index) => index !== fileIndex));
+  }, []);
+
+  const handleClearFiles = useCallback(() => {
+    setSelectedFiles([]);
+    resetFileUploads();
+  }, [resetFileUploads]);
 
   // Auto-generate title when store_location and trade are selected
   useEffect(() => {
