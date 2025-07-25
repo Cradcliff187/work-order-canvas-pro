@@ -13,6 +13,7 @@ import {
   AdminWorkOrders,
   AdminWorkOrderDetail,
   AdminWorkOrderEdit,
+  AdminSubmitReport,
   AdminAnalytics,
   AdminEmailTemplates,
   AdminReports,
@@ -86,10 +87,7 @@ export const AdminRoutes = () => (
       <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            {(() => {
-              const AdminSubmitReport = React.lazy(() => import('@/pages/admin/AdminSubmitReport'));
-              return <AdminSubmitReport />;
-            })()}
+            <AdminSubmitReport />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
