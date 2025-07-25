@@ -17,13 +17,18 @@ import {
   DollarSign,
   Clock,
   Phone,
-  Mail
+  Mail,
+  Image as ImageIcon,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
+import { formatFileSize } from '@/utils/imageCompression';
+import { cn } from '@/lib/utils';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -43,6 +48,26 @@ const getReportStatusColor = (status: string) => {
     case 'approved': return 'bg-green-100 text-green-800 border-green-200';
     case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
     default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getFileIcon = (fileType: string, fileName: string) => {
+  if (fileType === 'photo' || fileName.match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
+    return <ImageIcon className="w-4 h-4" />;
+  }
+  return <FileText className="w-4 h-4" />;
+};
+
+const getFileTypeColor = (fileType: string) => {
+  switch (fileType) {
+    case 'photo':
+      return 'bg-blue-100 text-blue-800';
+    case 'document':
+      return 'bg-green-100 text-green-800';
+    case 'invoice':
+      return 'bg-purple-100 text-purple-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
   }
 };
 
@@ -495,24 +520,92 @@ export default function AdminWorkOrderDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {workOrder.work_order_attachments.map((attachment) => (
-                <div key={attachment.id} className="border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Paperclip className="h-4 w-4 text-muted-foreground" />
-                    <p className="font-medium text-sm truncate">{attachment.file_name}</p>
+                <Card key={attachment.id} className="overflow-hidden">
+                  <div className="aspect-video bg-muted relative">
+                    {attachment.file_type === 'photo' ? (
+                      <img
+                        src={attachment.file_url}
+                        alt={attachment.file_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                          <div className="text-sm font-medium text-muted-foreground">
+                            {attachment.file_name.split('.').pop()?.toUpperCase()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="hidden flex items-center justify-center w-full h-full">
+                      <FileText className="w-12 h-12 text-muted-foreground" />
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    <p>Type: {attachment.file_type}</p>
-                    <p>Uploaded by: {attachment.uploaded_by_user.first_name} {attachment.uploaded_by_user.last_name}</p>
-                    <p>{formatDateTime(attachment.uploaded_at)}</p>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                    <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
-                      View
-                    </a>
-                  </Button>
-                </div>
+                  
+                  <CardContent className="p-3">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center space-x-2">
+                            {getFileIcon(attachment.file_type, attachment.file_name)}
+                            <span className="text-sm font-medium truncate">
+                              {attachment.file_name}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Badge 
+                              variant="secondary" 
+                              className={cn("text-xs", getFileTypeColor(attachment.file_type))}
+                            >
+                              {attachment.file_type}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              Size: Unknown
+                            </span>
+                          </div>
+                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {format(new Date(attachment.uploaded_at), 'MMM dd, yyyy')}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded by: {attachment.uploaded_by_user.first_name} {attachment.uploaded_by_user.last_name}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => window.open(attachment.file_url, '_blank')}
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = attachment.file_url;
+                            link.download = attachment.file_name;
+                            link.click();
+                          }}
+                        >
+                          <Download className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </CardContent>
