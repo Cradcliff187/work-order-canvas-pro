@@ -189,30 +189,7 @@ export function useSubcontractorWorkOrders() {
       notes?: string;
       photos?: File[];
     }) => {
-      if (!user) throw new Error("Not authenticated");
-
-      // Force JWT metadata sync to ensure authentication context is valid
-      const { syncUserMetadataToJWT } = await import('@/lib/auth/jwtSync');
-      await syncUserMetadataToJWT();
-
-      // Validate authentication session before critical database operations
-      const { ensureAuthenticatedSession } = await import('@/lib/auth/sessionValidation');
-      const isAuthValid = await ensureAuthenticatedSession();
-      
-      if (!isAuthValid) {
-        throw new Error("Authentication session invalid. Please refresh the page and try again.");
-      }
-
-      // Get current user profile to get the profile ID
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, user_type, is_active")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (profileError) throw new Error(`Profile lookup failed: ${profileError.message}`);
-      if (!profile) throw new Error("Profile not found");
-      if (!profile.is_active) throw new Error("User account is not active");
+      if (!profile?.id) throw new Error("No user profile");
 
       // Submit the report - only include hours_worked for employees
       const reportInsert: any = {
@@ -239,7 +216,7 @@ export function useSubcontractorWorkOrders() {
       // Upload photos if provided
       if (reportData.photos && reportData.photos.length > 0) {
         const uploadPromises = reportData.photos.map(async (photo, index) => {
-          const fileName = `${user.id}/${report.id}/${Date.now()}_${index}_${photo.name}`;
+          const fileName = `${profile.id}/${report.id}/${Date.now()}_${index}_${photo.name}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from("work-order-attachments")
