@@ -20,6 +20,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { FileUpload } from '@/components/FileUpload';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ReportFileManagerProps {
   reportId: string;
@@ -130,6 +131,18 @@ export function ReportFileManager({
     }
   };
 
+  const getPublicUrl = (filePath: string) => {
+    try {
+      const { data } = supabase.storage
+        .from('work-order-attachments')
+        .getPublicUrl(filePath);
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error generating public URL:', error);
+      return filePath; // Fallback to original path
+    }
+  };
+
   return (
     <div className={cn("space-y-4", className)}>
       {/* Header */}
@@ -208,7 +221,7 @@ export function ReportFileManager({
               <div className="aspect-video bg-muted relative">
                 {attachment.file_type === 'photo' ? (
                   <img
-                    src={attachment.file_url}
+                    src={getPublicUrl(attachment.file_url)}
                     alt={attachment.file_name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -261,7 +274,7 @@ export function ReportFileManager({
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => window.open(attachment.file_url, '_blank')}
+                      onClick={() => window.open(getPublicUrl(attachment.file_url), '_blank')}
                     >
                       <ExternalLink className="w-3 h-3 mr-1" />
                       View
@@ -271,7 +284,7 @@ export function ReportFileManager({
                       size="sm"
                       onClick={() => {
                         const link = document.createElement('a');
-                        link.href = attachment.file_url;
+                        link.href = getPublicUrl(attachment.file_url);
                         link.download = attachment.file_name;
                         link.click();
                       }}
