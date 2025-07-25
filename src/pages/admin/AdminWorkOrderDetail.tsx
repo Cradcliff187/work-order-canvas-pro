@@ -20,7 +20,8 @@ import {
   Mail,
   Image as ImageIcon,
   Download,
-  ExternalLink
+  ExternalLink,
+  Eye
 } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
@@ -29,6 +30,7 @@ import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { formatFileSize } from '@/utils/imageCompression';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -526,7 +528,7 @@ export default function AdminWorkOrderDetail() {
                   <div className="aspect-video bg-muted relative">
                     {attachment.file_type === 'photo' ? (
                       <img
-                        src={attachment.file_url}
+                        src={supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url).data.publicUrl}
                         alt={attachment.file_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -585,7 +587,10 @@ export default function AdminWorkOrderDetail() {
                           variant="outline"
                           size="sm"
                           className="flex-1"
-                          onClick={() => window.open(attachment.file_url, '_blank')}
+                          onClick={() => {
+                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                            window.open(data.publicUrl, '_blank');
+                          }}
                         >
                           <ExternalLink className="w-3 h-3 mr-1" />
                           View
@@ -594,8 +599,9 @@ export default function AdminWorkOrderDetail() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
                             const link = document.createElement('a');
-                            link.href = attachment.file_url;
+                            link.href = data.publicUrl;
                             link.download = attachment.file_name;
                             link.click();
                           }}

@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, Paperclip, Download, Eye } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { formatDate } from '@/lib/utils/date';
+import { supabase } from '@/integrations/supabase/client';
 
 
 export default function WorkOrderDetail() {
@@ -165,7 +166,10 @@ export default function WorkOrderDetail() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => window.open(attachment.file_url, '_blank')}
+                          onClick={() => {
+                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                            window.open(data.publicUrl, '_blank');
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -173,8 +177,9 @@ export default function WorkOrderDetail() {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
+                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
                             const link = document.createElement('a');
-                            link.href = attachment.file_url;
+                            link.href = data.publicUrl;
                             link.download = attachment.file_name;
                             document.body.appendChild(link);
                             link.click();
