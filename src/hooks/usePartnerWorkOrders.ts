@@ -233,10 +233,43 @@ export function useCreateWorkOrder() {
         }
       }
 
-      // Let the database trigger handle work order number generation
+      // Generate work order number first
+      let workOrderNumber: string;
+      
+      // Determine location code
+      let locationCode = validatedWorkOrder.partner_location_number;
+      
+      // If organization doesn't use partner location numbers, auto-generate
+      if (!locationCode) {
+        const { data: nextLocationCode, error: locationError } = await supabase.rpc(
+          'generate_next_location_number',
+          { org_id: validatedWorkOrder.organization_id }
+        );
+        
+        if (locationError) throw new Error(`Error generating location number: ${locationError.message}`);
+        if (!nextLocationCode) throw new Error('Failed to generate location number');
+        
+        locationCode = nextLocationCode;
+      }
+      
+      // Generate the actual work order number (this increments the sequence)
+      const { data: generatedNumber, error: numberError } = await supabase.rpc(
+        'generate_work_order_number_per_location',
+        { 
+          org_id: validatedWorkOrder.organization_id,
+          location_code: locationCode
+        }
+      );
+      
+      if (numberError) throw new Error(`Error generating work order number: ${numberError.message}`);
+      if (!generatedNumber) throw new Error('Failed to generate work order number');
+      
+      workOrderNumber = generatedNumber;
+
       const { data, error } = await supabase
         .from('work_orders')
         .insert({
+          work_order_number: workOrderNumber,
           title: validatedWorkOrder.title,
           description: validatedWorkOrder.description,
           organization_id: validatedWorkOrder.organization_id,
@@ -252,7 +285,7 @@ export function useCreateWorkOrder() {
           location_zip_code: validatedWorkOrder.location_zip_code || null,
           location_name: validatedWorkOrder.location_name || null,
           partner_po_number: validatedWorkOrder.partner_po_number || null,
-          partner_location_number: validatedWorkOrder.partner_location_number || null,
+          partner_location_number: locationCode,
           created_by: profile.id,
           status: 'received',
           date_submitted: new Date().toISOString(),

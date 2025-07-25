@@ -117,9 +117,9 @@ export function useWorkOrderNumberGeneration({
           return;
         }
 
-        // Generate work order number using the new per-location function
+        // Preview work order number without incrementing sequence
         const { data: generatedNumber, error: numberError } = await supabase.rpc(
-          'generate_work_order_number_per_location',
+          'preview_work_order_number_per_location',
           { 
             org_id: organizationId,
             location_code: locationCode

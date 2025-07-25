@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FixWorkOrderNumbersButton } from '@/components/admin/FixWorkOrderNumbersButton';
+import { FixWorkOrderSequencesButton } from '@/components/admin/work-orders/FixWorkOrderSequencesButton';
 
 export default function AdminUtilities() {
   return (
@@ -18,6 +19,15 @@ export default function AdminUtilities() {
           </CardHeader>
           <CardContent>
             <FixWorkOrderNumbersButton />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Fix Sequence Numbers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FixWorkOrderSequencesButton />
           </CardContent>
         </Card>
       </div>

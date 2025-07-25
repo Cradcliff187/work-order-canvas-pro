@@ -12,9 +12,43 @@ export function useCreateWorkOrder() {
 
   return useMutation({
     mutationFn: async (workOrderData: Partial<WorkOrderInsert>) => {
+      // Generate work order number first
+      let workOrderNumber: string;
+      
+      // Determine location code
+      let locationCode = workOrderData.partner_location_number;
+      
+      // If organization doesn't use partner location numbers, auto-generate
+      if (!locationCode) {
+        const { data: nextLocationCode, error: locationError } = await supabase.rpc(
+          'generate_next_location_number',
+          { org_id: workOrderData.organization_id! }
+        );
+        
+        if (locationError) throw new Error(`Error generating location number: ${locationError.message}`);
+        if (!nextLocationCode) throw new Error('Failed to generate location number');
+        
+        locationCode = nextLocationCode;
+      }
+      
+      // Generate the actual work order number (this increments the sequence)
+      const { data: generatedNumber, error: numberError } = await supabase.rpc(
+        'generate_work_order_number_per_location',
+        { 
+          org_id: workOrderData.organization_id!,
+          location_code: locationCode
+        }
+      );
+      
+      if (numberError) throw new Error(`Error generating work order number: ${numberError.message}`);
+      if (!generatedNumber) throw new Error('Failed to generate work order number');
+      
+      workOrderNumber = generatedNumber;
+
       const { data, error } = await supabase
         .from('work_orders')
         .insert([{
+          work_order_number: workOrderNumber,
           title: workOrderData.title!,
           description: workOrderData.description || '',
           organization_id: workOrderData.organization_id!,
@@ -30,7 +64,7 @@ export function useCreateWorkOrder() {
           location_zip_code: workOrderData.location_zip_code || '',
           location_name: workOrderData.location_name || '',
           partner_po_number: workOrderData.partner_po_number || '',
-          partner_location_number: workOrderData.partner_location_number || '',
+          partner_location_number: locationCode,
           status: 'received',
           created_by: workOrderData.created_by!,
           date_submitted: new Date().toISOString(),

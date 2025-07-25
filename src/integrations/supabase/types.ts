@@ -1478,6 +1478,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      fix_work_order_sequence_numbers: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       force_jwt_sync_for_current_user: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1566,6 +1570,10 @@ export type Database = {
       jwt_user_type: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_type"]
+      }
+      preview_work_order_number_per_location: {
+        Args: { org_id: string; location_code: string }
+        Returns: string
       }
       refresh_analytics_views: {
         Args: Record<PropertyKey, never>
