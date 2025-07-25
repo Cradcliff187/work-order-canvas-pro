@@ -63,6 +63,8 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
   location_contact_email?: string | null;
 };
 
+export type { WorkOrderDetail };
+
 export function useWorkOrderDetail(id: string) {
   return useQuery({
     queryKey: ['work-order-detail', id],

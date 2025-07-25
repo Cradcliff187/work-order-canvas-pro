@@ -107,8 +107,8 @@ const DetailSkeleton = () => (
 export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: workOrder, isLoading, error } = useWorkOrderDetail(id!);
-  const { data: assignments = [], isLoading: isLoadingAssignments } = useWorkOrderAssignments(id);
+  const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id!);
+  const { data: assignments = [], isLoading: isLoadingAssignments, refetch: refetchAssignments } = useWorkOrderAssignments(id);
 
   if (!id) {
     return (
