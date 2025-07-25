@@ -61,7 +61,7 @@ export function StatusActionButtons({
             label: 'Assign',
             icon: <UserPlus className="h-4 w-4" />,
             variant: 'default',
-            requiresAssignment: true
+            requiresAssignment: false
           },
           {
             status: 'cancelled',
