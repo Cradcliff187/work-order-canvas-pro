@@ -29,7 +29,6 @@ const workOrderSchema = z.object({
   }),
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
-  status: z.enum(['received', 'assigned', 'in_progress', 'completed', 'cancelled', 'estimate_needed']),
   estimated_hours: z.string().optional(),
   due_date: z.string().optional(),
 });
@@ -61,7 +60,6 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
       location_zip_code: workOrder?.location_zip_code || '',
       partner_po_number: workOrder?.partner_po_number || '',
       partner_location_number: workOrder?.partner_location_number || '',
-      status: workOrder?.status || 'received',
       estimated_hours: workOrder?.estimated_hours?.toString() || '',
       due_date: workOrder?.due_date || '',
     },
@@ -88,32 +86,6 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="received">Received</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="estimate_needed">Estimate Needed</SelectItem>
-                  </SelectContent>
-                </Select>
                 <FormMessage />
               </FormItem>
             )}

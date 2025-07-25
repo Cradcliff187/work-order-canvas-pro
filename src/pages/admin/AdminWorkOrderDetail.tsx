@@ -28,6 +28,8 @@ import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { StatusActionButtons } from '@/components/admin/work-orders/StatusActionButtons';
 import { StatusProgressIndicator } from '@/components/admin/work-orders/StatusProgressIndicator';
+import { WorkOrderAuditTrail } from '@/components/admin/work-orders/WorkOrderAuditTrail';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { formatFileSize } from '@/utils/imageCompression';
@@ -488,165 +490,197 @@ export default function AdminWorkOrderDetail() {
         </Card>
       </div>
 
-      {/* Reports Section */}
-      {workOrder.work_order_reports && workOrder.work_order_reports.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Work Order Reports ({workOrder.work_order_reports.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {workOrder.work_order_reports.map((report) => (
-                <div key={report.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-medium">
-                        {report.subcontractor_user.first_name} {report.subcontractor_user.last_name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Submitted {formatDateTime(report.submitted_at)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <Badge className={getReportStatusColor(report.status)}>
-                        {report.status}
-                      </Badge>
-                      {report.hours_worked && (
-                        <div className="flex items-center gap-1 text-sm font-medium mt-1">
-                          <Clock className="h-3 w-3" />
-                          {report.hours_worked}h worked
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm">{report.work_performed}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Tabs for detailed sections */}
+      <Tabs defaultValue="details" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          <TabsTrigger value="audit">Audit Trail</TabsTrigger>
+        </TabsList>
 
-      {/* Attachments Section */}
-      {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Paperclip className="h-5 w-5" />
-              Attachments ({workOrder.work_order_attachments.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {workOrder.work_order_attachments.map((attachment) => (
-                <Card key={attachment.id} className="overflow-hidden">
-                  <div className="aspect-video bg-muted relative">
-                    {attachment.file_type === 'photo' ? (
-                      <img
-                        src={supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url).data.publicUrl}
-                        alt={attachment.file_name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="text-center">
-                          <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                          <div className="text-sm font-medium text-muted-foreground">
-                            {attachment.file_name.split('.').pop()?.toUpperCase()}
-                          </div>
+        <TabsContent value="details" className="space-y-6">
+          {/* Admin Notes */}
+          {workOrder.admin_completion_notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Admin Completion Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{workOrder.admin_completion_notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="reports">
+          {/* Reports Section */}
+          {workOrder.work_order_reports && workOrder.work_order_reports.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Work Order Reports ({workOrder.work_order_reports.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {workOrder.work_order_reports.map((report) => (
+                    <div key={report.id} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="font-medium">
+                            {report.subcontractor_user.first_name} {report.subcontractor_user.last_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Submitted {formatDateTime(report.submitted_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge className={getReportStatusColor(report.status)}>
+                            {report.status}
+                          </Badge>
+                          {report.hours_worked && (
+                            <div className="flex items-center gap-1 text-sm font-medium mt-1">
+                              <Clock className="h-3 w-3" />
+                              {report.hours_worked}h worked
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
-                    <div className="hidden flex items-center justify-center w-full h-full">
-                      <FileText className="w-12 h-12 text-muted-foreground" />
+                      <p className="text-sm">{report.work_performed}</p>
                     </div>
-                  </div>
-                  
-                  <CardContent className="p-3">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-2">
-                            {getFileIcon(attachment.file_type, attachment.file_name)}
-                            <span className="text-sm font-medium truncate">
-                              {attachment.file_name}
-                            </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                No reports submitted yet
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="attachments">
+          {/* Attachments Section */}
+          {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Paperclip className="h-5 w-5" />
+                  Attachments ({workOrder.work_order_attachments.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {workOrder.work_order_attachments.map((attachment) => (
+                    <Card key={attachment.id} className="overflow-hidden">
+                      <div className="aspect-video bg-muted relative">
+                        {attachment.file_type === 'photo' ? (
+                          <img
+                            src={supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url).data.publicUrl}
+                            alt={attachment.file_name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="text-center">
+                              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                              <div className="text-sm font-medium text-muted-foreground">
+                                {attachment.file_name.split('.').pop()?.toUpperCase()}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Badge 
-                              variant="secondary" 
-                              className={cn("text-xs", getFileTypeColor(attachment.file_type))}
-                            >
-                              {attachment.file_type}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              Size: Unknown
-                            </span>
-                          </div>
-                          <div className="flex items-center text-xs text-muted-foreground mt-1">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {format(new Date(attachment.uploaded_at), 'MMM dd, yyyy')}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Uploaded by: {attachment.uploaded_by_user.first_name} {attachment.uploaded_by_user.last_name}
-                          </p>
+                        )}
+                        <div className="hidden flex items-center justify-center w-full h-full">
+                          <FileText className="w-12 h-12 text-muted-foreground" />
                         </div>
                       </div>
                       
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-                            window.open(data.publicUrl, '_blank');
-                          }}
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-                            const link = document.createElement('a');
-                            link.href = data.publicUrl;
-                            link.download = attachment.file_name;
-                            link.click();
-                          }}
-                        >
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                      <CardContent className="p-3">
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center space-x-2">
+                                {getFileIcon(attachment.file_type, attachment.file_name)}
+                                <span className="text-sm font-medium truncate">
+                                  {attachment.file_name}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <Badge 
+                                  variant="secondary" 
+                                  className={cn("text-xs", getFileTypeColor(attachment.file_type))}
+                                >
+                                  {attachment.file_type}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  Size: Unknown
+                                </span>
+                              </div>
+                              <div className="flex items-center text-xs text-muted-foreground mt-1">
+                                <Calendar className="w-3 h-3 mr-1" />
+                                {format(new Date(attachment.uploaded_at), 'MMM dd, yyyy')}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Uploaded by: {attachment.uploaded_by_user.first_name} {attachment.uploaded_by_user.last_name}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                                window.open(data.publicUrl, '_blank');
+                              }}
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                                const link = document.createElement('a');
+                                link.href = data.publicUrl;
+                                link.download = attachment.file_name;
+                                link.click();
+                              }}
+                            >
+                              <Download className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                No attachments uploaded yet
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-      {/* Admin Notes */}
-      {workOrder.admin_completion_notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Completion Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{workOrder.admin_completion_notes}</p>
-          </CardContent>
-        </Card>
-      )}
+        <TabsContent value="audit">
+          <WorkOrderAuditTrail workOrderId={workOrder.id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
