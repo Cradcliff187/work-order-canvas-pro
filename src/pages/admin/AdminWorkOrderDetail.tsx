@@ -223,9 +223,12 @@ export default function AdminWorkOrderDetail() {
           </div>
           <Separator />
           <StatusActionButtons 
-            workOrderId={workOrder.id}
-            currentStatus={workOrder.status}
+            workOrder={workOrder}
             hasAssignments={assignments.length > 0}
+            onUpdate={() => {
+              refetch();
+              refetchAssignments();
+            }}
           />
         </CardContent>
       </Card>

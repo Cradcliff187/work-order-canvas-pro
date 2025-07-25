@@ -13,14 +13,16 @@ import {
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { AssignWorkOrderModal } from './AssignWorkOrderModal';
 import type { Database } from '@/integrations/supabase/types';
+import type { WorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 
 type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 
 interface StatusActionButtonsProps {
-  workOrderId: string;
-  currentStatus: WorkOrderStatus;
+  workOrder: WorkOrderDetail;
   hasAssignments: boolean;
+  onUpdate: () => void;
 }
 
 interface StatusTransition {
@@ -31,15 +33,17 @@ interface StatusTransition {
   requiresConfirmation?: boolean;
   confirmationMessage?: string;
   requiresAssignment?: boolean;
+  isSpecialAction?: boolean;
 }
 
 export function StatusActionButtons({ 
-  workOrderId, 
-  currentStatus, 
-  hasAssignments 
+  workOrder, 
+  hasAssignments,
+  onUpdate 
 }: StatusActionButtonsProps) {
   const { transitionStatus, isTransitioning } = useWorkOrderStatusTransitions();
   const { toast } = useToast();
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     status: WorkOrderStatus;
@@ -61,7 +65,8 @@ export function StatusActionButtons({
             label: 'Assign',
             icon: <UserPlus className="h-4 w-4" />,
             variant: 'default',
-            requiresAssignment: false
+            requiresAssignment: false,
+            isSpecialAction: true
           },
           {
             status: 'cancelled',
@@ -173,9 +178,9 @@ export function StatusActionButtons({
   const handleStatusTransition = async (newStatus: WorkOrderStatus) => {
     try {
       await transitionStatus.mutateAsync({
-        workOrderId,
+        workOrderId: workOrder.id,
         newStatus,
-        reason: `Status changed from ${currentStatus} to ${newStatus} by admin`
+        reason: `Status changed from ${workOrder.status} to ${newStatus} by admin`
       });
     } catch (error) {
       console.error('Failed to transition status:', error);
@@ -183,6 +188,12 @@ export function StatusActionButtons({
   };
 
   const handleTransitionClick = (transition: StatusTransition) => {
+    // Special handling for assign action
+    if (transition.isSpecialAction && transition.status === 'assigned' && workOrder.status === 'received') {
+      setShowAssignModal(true);
+      return;
+    }
+
     // Check if assignment is required but missing
     if (transition.requiresAssignment && !hasAssignments) {
       toast({
@@ -210,7 +221,7 @@ export function StatusActionButtons({
     setConfirmDialog({ ...confirmDialog, open: false });
   };
 
-  const availableTransitions = getAvailableTransitions(currentStatus);
+  const availableTransitions = getAvailableTransitions(workOrder.status);
 
   if (availableTransitions.length === 0) {
     return null;
@@ -251,6 +262,17 @@ export function StatusActionButtons({
         itemType="status change"
         isLoading={isTransitioning}
       />
+
+      {showAssignModal && (
+        <AssignWorkOrderModal
+          isOpen={showAssignModal}
+          workOrders={[workOrder]}
+          onClose={() => {
+            setShowAssignModal(false);
+            onUpdate();
+          }}
+        />
+      )}
     </>
   );
 }
