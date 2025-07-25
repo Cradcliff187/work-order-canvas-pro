@@ -296,32 +296,38 @@ serve(async (req) => {
 
     console.log(`[${requestId}] ✅ Auth user created:`, authUser.user.id);
 
-    // Manually create profile since we can't use triggers on auth.users
-    console.log(`[${requestId}] 📋 Creating user profile...`);
+    // Wait for the trigger to create the profile, then update it with additional fields
+    console.log(`[${requestId}] ⏳ Waiting for trigger to create profile...`);
     
-    const { data: newProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: authUser.user.id,
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        user_type: userData.user_type,
-        phone: userData.phone,
-        is_employee: userData.user_type === 'employee',
-      })
-      .select()
-      .single();
-
-    if (profileError) {
-      console.error(`[${requestId}] ❌ Profile creation failed:`, {
-        error: profileError,
-        userInfo: {
-          user_id: authUser.user.id,
-          email: userData.email,
-          user_type: userData.user_type
-        }
-      });
+    let newProfile;
+    let retryCount = 0;
+    const maxRetries = 10;
+    
+    while (retryCount < maxRetries) {
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authUser.user.id)
+        .single();
+      
+      if (profile) {
+        newProfile = profile;
+        console.log(`[${requestId}] ✅ Profile found, created by trigger:`, profile.id);
+        break;
+      }
+      
+      if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = "not found"
+        console.error(`[${requestId}] ❌ Unexpected error checking for profile:`, profileError);
+        break;
+      }
+      
+      retryCount++;
+      console.log(`[${requestId}] ⏳ Profile not yet created by trigger, retry ${retryCount}/${maxRetries}...`);
+      await new Promise(resolve => setTimeout(resolve, 200 * retryCount)); // Exponential backoff
+    }
+    
+    if (!newProfile) {
+      console.error(`[${requestId}] ❌ Profile was not created by trigger after ${maxRetries} retries`);
       
       // Clean up auth user if profile creation fails
       console.log(`[${requestId}] 🧹 Cleaning up auth user due to profile creation failure...`);
@@ -332,10 +338,32 @@ serve(async (req) => {
         console.error(`[${requestId}] ❌ Failed to cleanup auth user:`, cleanupError);
       }
       
-      throw new Error(`Profile creation failed: ${profileError.message}`);
+      throw new Error('Profile was not created by database trigger');
     }
-
-    console.log(`[${requestId}] ✅ Profile created:`, newProfile.id);
+    
+    // Update the profile with additional fields that the trigger doesn't set
+    console.log(`[${requestId}] 📝 Updating profile with additional fields...`);
+    
+    const updateFields: any = {};
+    if (userData.phone) updateFields.phone = userData.phone;
+    if (userData.user_type === 'employee') updateFields.is_employee = true;
+    
+    if (Object.keys(updateFields).length > 0) {
+      const { data: updatedProfile, error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update(updateFields)
+        .eq('id', newProfile.id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error(`[${requestId}] ❌ Profile update failed:`, updateError);
+        // Don't throw error here - profile exists, just missing some optional fields
+      } else {
+        newProfile = updatedProfile;
+        console.log(`[${requestId}] ✅ Profile updated with additional fields`);
+      }
+    }
 
     // Send welcome email using the send-email function
     try {
