@@ -30,9 +30,38 @@ export function filterOrganizationsByUserType(
   organizations: Organization[],
   userType: UserType
 ): Organization[] {
+  console.log('🔍 [filterOrganizationsByUserType] DEBUG - Input parameters:', {
+    organizationsCount: organizations?.length || 0,
+    userType,
+    organizations: organizations?.map(org => ({
+      id: org.id,
+      name: org.name,
+      type: org.organization_type,
+      isActive: org.is_active
+    }))
+  });
+  
   const allowedTypes = getUserTypeOrganizationTypes(userType);
   
-  return organizations.filter(org => 
+  console.log('🎯 [filterOrganizationsByUserType] DEBUG - Allowed types for user type:', {
+    userType,
+    allowedTypes
+  });
+  
+  const filteredOrganizations = organizations.filter(org => 
     org.is_active && allowedTypes.includes(org.organization_type)
   );
+  
+  console.log('✅ [filterOrganizationsByUserType] DEBUG - Filtered results:', {
+    originalCount: organizations?.length || 0,
+    filteredCount: filteredOrganizations.length,
+    filteredOrganizations: filteredOrganizations.map(org => ({
+      id: org.id,
+      name: org.name,
+      type: org.organization_type,
+      isActive: org.is_active
+    }))
+  });
+  
+  return filteredOrganizations;
 }

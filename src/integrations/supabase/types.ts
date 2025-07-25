@@ -1311,6 +1311,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      debug_user_creation_state: {
+        Args: { p_email?: string; p_user_id?: string }
+        Returns: Json
+      }
       ensure_single_organization_assignment: {
         Args: Record<PropertyKey, never>
         Returns: Json
