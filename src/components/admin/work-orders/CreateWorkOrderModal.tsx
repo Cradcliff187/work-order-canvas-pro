@@ -302,17 +302,32 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
 
   // Navigation functions
   const handleNext = async () => {
+    console.log('🔄 HandleNext called - Current step:', currentStep);
+    console.log('👤 ViewingProfile check:', viewingProfile);
+    console.log('🏢 Organization IDs:', { organizationId, selectedOrganizationId });
+    
     const isValid = await validateStep(currentStep);
-    const maxStep = isAdmin ? 3 : 3; // Same max step for now
+    console.log('✅ Step validation result:', isValid);
+    
+    const maxStep = 2; // We only have steps 0, 1, 2 based on the UI
     if (isValid && currentStep < maxStep) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      console.log('✅ Moving to step:', nextStep);
+      setCurrentStep(nextStep);
+    } else {
+      console.log('❌ Validation failed or reached max step. Current:', currentStep, 'Max:', maxStep);
     }
   };
 
   const handlePrevious = () => {
+    console.log('⬅️ HandlePrevious called - Current step:', currentStep);
     const minStep = isAdmin ? 0 : 1;
     if (currentStep > minStep) {
-      setCurrentStep(currentStep - 1);
+      const prevStep = currentStep - 1;
+      console.log('⬅️ Moving to step:', prevStep);
+      setCurrentStep(prevStep);
+    } else {
+      console.log('⬅️ Already at minimum step:', minStep);
     }
   };
 
@@ -644,12 +659,30 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
               </Button>
 
               {currentStep < 2 ? (
-                <Button type="button" onClick={handleNext}>
+                <Button 
+                  type="button" 
+                  onClick={() => {
+                    console.log('🔄 Next button clicked!');
+                    handleNext();
+                  }}
+                >
                   Next
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={createWorkOrderMutation.isPending}>
+                <Button 
+                  type="submit" 
+                  disabled={createWorkOrderMutation.isPending}
+                  onClick={() => {
+                    console.log('📤 Submit button clicked!');
+                    console.log('📊 Form state:', {
+                      isValid: form.formState.isValid,
+                      errors: form.formState.errors,
+                      isDirty: form.formState.isDirty,
+                      isSubmitting: form.formState.isSubmitting,
+                    });
+                  }}
+                >
                   {createWorkOrderMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
