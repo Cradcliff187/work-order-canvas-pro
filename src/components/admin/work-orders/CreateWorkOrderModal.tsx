@@ -23,7 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCreateWorkOrder } from '@/hooks/useAdminWorkOrders';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
-import { useOrganizations } from '@/hooks/useOrganizations';
+import { useOrganizationsForWorkOrders } from '@/hooks/useWorkOrders';
 import { usePartnerLocationsForOrganization } from '@/hooks/usePartnerLocationsForOrganization';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -121,8 +121,8 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     setSelectedFiles([]);
   };
   
-  // Load organizations for admin users
-  const { data: organizations, isLoading: isLoadingOrganizations } = useOrganizations();
+  // Load organizations for admin users (only partners for work orders)
+  const { data: organizations, isLoading: isLoadingOrganizations } = useOrganizationsForWorkOrders();
   
   // Load partner locations for the selected organization
   const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerLocationsForOrganization(

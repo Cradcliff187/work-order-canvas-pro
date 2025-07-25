@@ -203,6 +203,7 @@ export function useOrganizationsForWorkOrders() {
         .from('organizations')
         .select('id, name, organization_type')
         .eq('is_active', true)
+        .eq('organization_type', 'partner')
         .order('name');
 
       if (error) throw error;
