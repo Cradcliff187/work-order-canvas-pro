@@ -25,6 +25,10 @@ import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGenerati
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { usePartnerLocationsForOrganization } from '@/hooks/usePartnerLocationsForOrganization';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { FileUpload } from '@/components/FileUpload';
+import { MobileFileUpload } from '@/components/MobileFileUpload';
 
 // Form schema with comprehensive validation
 const workOrderFormSchema = z.object({
@@ -64,15 +68,58 @@ interface CreateWorkOrderModalProps {
 export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWorkOrderCreated }: CreateWorkOrderModalProps) {
   const { toast } = useToast();
   const { viewingProfile } = useAuth();
+  const isMobile = useIsMobile();
   const [currentStep, setCurrentStep] = useState(1);
   const [trades, setTrades] = useState<any[]>([]);
   const [isLoadingTrades, setIsLoadingTrades] = useState(true);
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
   const [selectedOrganization, setSelectedOrganization] = useState<any | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'creating' | 'uploading'>('idle');
 
   // Work order creation hook
   const createWorkOrderMutation = useCreateWorkOrder();
+
+  // File upload hook
+  const {
+    uploadFiles,
+    uploadProgress,
+    isUploading,
+    uploadedFiles,
+    removeFile: removeUploadedFile,
+    reset: resetUploads,
+  } = useFileUpload({
+    maxFiles: 10,
+    maxSizeBytes: 10 * 1024 * 1024, // 10MB
+    onProgress: (progressArray) => {
+      console.log('File upload progress:', progressArray);
+    },
+    onComplete: (files) => {
+      console.log('Files uploaded successfully:', files);
+    },
+    onError: (error) => {
+      console.error('File upload failed:', error);
+      toast({
+        variant: "destructive",
+        title: "File upload failed",
+        description: error,
+      });
+    },
+  });
+
+  // File handling functions
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleClearFiles = () => {
+    setSelectedFiles([]);
+  };
   
   // Load organizations for admin users
   const { data: organizations, isLoading: isLoadingOrganizations } = useOrganizations();
@@ -377,6 +424,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     try {
       console.log('🔧 Work Order Creation Debug - Starting submission...');
       console.log('📝 Form Data:', data);
+      console.log('📁 Selected Files:', selectedFiles);
       console.log('👤 ViewingProfile:', viewingProfile);
       console.log('🏢 Organization ID:', organizationId || selectedOrganizationId);
       console.log('🏪 Selected Organization:', selectedOrganization);
@@ -402,6 +450,9 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
       // Ensure title exists before submission
       const finalTitle = data.title || `${data.store_location || 'New Location'} - Work Order`;
 
+      // Phase 1: Create work order
+      setSubmissionPhase('creating');
+      
       // Prepare submission data
       const submissionData = {
         title: finalTitle,
@@ -428,17 +479,54 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
 
       console.log('📤 Submission Data:', submissionData);
 
-      await createWorkOrderMutation.mutateAsync(submissionData);
+      const createdWorkOrder = await createWorkOrderMutation.mutateAsync(submissionData);
+      console.log('✅ Work order created successfully:', createdWorkOrder);
+
+      // Phase 2: Upload files if any are selected
+      let uploadResults: any[] = [];
+      if (selectedFiles.length > 0) {
+        try {
+          setSubmissionPhase('uploading');
+          console.log('📁 Starting file upload for work order:', createdWorkOrder.id);
+          
+          uploadResults = await uploadFiles(selectedFiles, createdWorkOrder.id);
+          console.log('📁 File upload completed:', uploadResults);
+        } catch (uploadError: any) {
+          console.error('❌ File upload failed:', uploadError);
+          // Work order was created but file upload failed
+          toast({
+            title: "Work order created with file upload warning",
+            description: `The work order was created successfully, but some files failed to upload: ${uploadError.message}`,
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Success message
+      const hasFiles = selectedFiles.length > 0;
+      const uploadedCount = uploadResults.length;
       
-      console.log('✅ Work order created successfully');
+      let successMessage = "The work order has been successfully created.";
+      if (hasFiles) {
+        if (uploadedCount === selectedFiles.length) {
+          successMessage += ` All ${uploadedCount} files were uploaded successfully.`;
+        } else if (uploadedCount > 0) {
+          successMessage += ` ${uploadedCount} of ${selectedFiles.length} files were uploaded successfully.`;
+        } else {
+          successMessage += " However, file uploads failed.";
+        }
+      }
       
       toast({
         title: "Work order created",
-        description: "The work order has been successfully created.",
+        description: successMessage,
       });
 
-      // Reset form and steps
+      // Reset everything
+      setSubmissionPhase('idle');
       form.reset();
+      setSelectedFiles([]);
+      resetUploads();
       setCurrentStep(isAdmin ? 0 : 1);
       setSelectedOrganizationId('');
       setSelectedOrganization(null);
@@ -456,6 +544,8 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         viewingProfile,
         organizationId: organizationId || selectedOrganizationId,
       });
+      
+      setSubmissionPhase('idle');
       
       toast({
         variant: "destructive",
@@ -681,6 +771,78 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                           </FormItem>
                         )}
                       />
+                    </div>
+
+                    {/* File Upload Section */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Attachments</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Upload photos, documents, or other files related to this work order (optional)
+                        </p>
+                      </div>
+                      
+                      {isMobile ? (
+                        <MobileFileUpload
+                          onFilesSelected={handleFilesSelected}
+                          maxFiles={10}
+                          maxSizeBytes={10 * 1024 * 1024} // 10MB
+                          uploadProgress={uploadProgress}
+                          showCameraButton={true}
+                          showGalleryButton={true}
+                          showDocumentButton={true}
+                        />
+                      ) : (
+                        <FileUpload
+                          onFilesSelected={handleFilesSelected}
+                          maxFiles={10}
+                          maxSizeBytes={10 * 1024 * 1024} // 10MB
+                          uploadProgress={uploadProgress}
+                        />
+                      )}
+
+                      {/* Selected Files Display */}
+                      {selectedFiles.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleClearFiles}
+                            >
+                              Clear All
+                            </Button>
+                          </div>
+                          <div className="grid gap-2">
+                            {selectedFiles.map((file, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-2 border rounded-lg bg-background"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm font-medium">{file.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                  </span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveFile(index)}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
