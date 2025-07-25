@@ -4,7 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useWorkOrder, useUpdateWorkOrder } from '@/hooks/useWorkOrders';
+import { useWorkOrder } from '@/hooks/useWorkOrders';
+import { useAdminWorkOrderEdit } from '@/hooks/useAdminWorkOrderEdit';
 import { WorkOrderForm } from '@/components/admin/work-orders/WorkOrderForm';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { useToast } from '@/hooks/use-toast';
@@ -15,12 +16,13 @@ export default function AdminWorkOrderEdit() {
   const { toast } = useToast();
   
   const { data: workOrder, isLoading, error } = useWorkOrder(id!);
-  const updateWorkOrder = useUpdateWorkOrder();
+  const { updateWorkOrder, isUpdating } = useAdminWorkOrderEdit();
 
   const handleSubmit = async (formData: any) => {
     try {
       await updateWorkOrder.mutateAsync({
         id: id!,
+        originalStatus: workOrder?.status,
         ...formData,
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
       });
@@ -113,7 +115,7 @@ export default function AdminWorkOrderEdit() {
             workOrder={workOrder}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
-            isLoading={updateWorkOrder.isPending}
+            isLoading={isUpdating}
           />
         </CardContent>
       </Card>

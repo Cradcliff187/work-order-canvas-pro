@@ -26,6 +26,8 @@ import {
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
+import { StatusActionButtons } from '@/components/admin/work-orders/StatusActionButtons';
+import { StatusProgressIndicator } from '@/components/admin/work-orders/StatusProgressIndicator';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { formatFileSize } from '@/utils/imageCompression';
@@ -197,6 +199,22 @@ export default function AdminWorkOrderDetail() {
           </Button>
         </div>
       </div>
+
+      {/* Status Progress & Quick Actions */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Status Progress</h3>
+            <StatusProgressIndicator currentStatus={workOrder.status} />
+          </div>
+          <Separator />
+          <StatusActionButtons 
+            workOrderId={workOrder.id}
+            currentStatus={workOrder.status}
+            hasAssignments={assignments.length > 0 || !!workOrder.assigned_user}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Work Order Information */}
