@@ -322,6 +322,7 @@ export function FileUpload({
               <Button 
                 variant="outline" 
                 size="sm" 
+                type="button"
                 onClick={clearAll}
                 disabled={disabled}
               >
@@ -358,6 +359,7 @@ export function FileUpload({
                         <Button
                           variant="destructive"
                           size="sm"
+                          type="button"
                           className="absolute top-2 right-2 w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => removeFile(preview.id)}
                           disabled={disabled}
