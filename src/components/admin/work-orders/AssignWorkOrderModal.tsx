@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useAuth } from '@/contexts/AuthContext';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -34,6 +35,7 @@ interface AssignWorkOrderModalProps {
 }
 
 export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWorkOrderModalProps) {
+  const { profile } = useAuth();
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
@@ -178,60 +180,60 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     try {
       setValidationErrors([]);
 
+      // Safety check for current user profile
+      if (!profile?.id) {
+        throw new Error('Current user profile not found - cannot create assignments');
+      }
+
       // Remove existing assignments
       await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
 
-      // Collect all assignees
-      const allSelectedAssignees = [...selectedAssignees];
-      
-      // Add first active user from each selected organization (if they have one)
-      for (const orgId of selectedOrganizations) {
-        const org = subcontractorOrgs.find(o => o.id === orgId);
-        if (org && org.first_active_user_id && !allSelectedAssignees.includes(org.first_active_user_id)) {
-          allSelectedAssignees.push(org.first_active_user_id);
+      const assignments = [];
+
+      // 1. Create individual employee assignments
+      for (const assigneeId of selectedAssignees) {
+        const assignee = employees.find(e => e.id === assigneeId);
+        if (!assignee) continue;
+
+        for (const wo of workOrders) {
+          assignments.push({
+            work_order_id: wo.id,
+            assigned_to: assigneeId,
+            assigned_organization_id: null, // Individual assignment
+            assignment_type: 'assigned' as const,
+            notes: notes || `Assigned to employee: ${assignee.first_name} ${assignee.last_name}`
+          });
         }
       }
 
-      // If we selected organizations without active users, show warning but continue
-      const orgsWithoutUsers = selectedOrganizations.filter(orgId => {
+      // 2. Create organization-level assignments
+      for (const orgId of selectedOrganizations) {
         const org = subcontractorOrgs.find(o => o.id === orgId);
-        return org && org.active_user_count === 0;
-      });
+        if (!org) continue;
 
-      if (orgsWithoutUsers.length > 0) {
-        const orgNames = orgsWithoutUsers.map(orgId => {
-          const org = subcontractorOrgs.find(o => o.id === orgId);
-          return org?.name;
-        }).join(', ');
-        console.warn(`Organizations without active users selected: ${orgNames}`);
+        for (const wo of workOrders) {
+          // For organizations with users, use the first active user
+          // For organizations without users, use current user as placeholder
+          const assignedTo = org.first_active_user_id || profile.id;
+          
+          const isPlaceholder = !org.first_active_user_id;
+          const orgNotes = isPlaceholder 
+            ? `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name} (no active users - placeholder assignment)`
+            : `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name}`;
+
+          assignments.push({
+            work_order_id: wo.id,
+            assigned_to: assignedTo,
+            assigned_organization_id: orgId, // Always set for organization assignments
+            assignment_type: 'assigned' as const,
+            notes: orgNotes
+          });
+        }
       }
 
-      // Create assignments only for users we have
-      if (allSelectedAssignees.length > 0) {
-        const assignments = workOrders.flatMap(wo => 
-          allSelectedAssignees.map((assigneeId) => {
-            const assignee = employees.find(e => e.id === assigneeId);
-            
-            const fromOrganization = selectedOrganizations.some(orgId => {
-              const org = subcontractorOrgs.find(o => o.id === orgId);
-              return org?.first_active_user_id === assigneeId;
-            });
-            
-            const selectedOrg = selectedOrganizations.find(orgId => {
-              const org = subcontractorOrgs.find(o => o.id === orgId);
-              return org?.first_active_user_id === assigneeId;
-            });
-            
-            return {
-              work_order_id: wo.id,
-              assigned_to: assigneeId,
-              assigned_organization_id: fromOrganization ? selectedOrg : null,
-              assignment_type: 'assigned' as const,
-              notes: fromOrganization ? `${notes}${notes ? ' - ' : ''}Assigned to organization` : notes
-            };
-          })
-        );
-
+      // Create all assignments
+      if (assignments.length > 0) {
+        console.log('Creating assignments:', assignments);
         await bulkAddAssignments.mutateAsync(assignments);
 
         // Update work order status to assigned when assignments are created
