@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, ArrowLeft, ArrowRight, Loader2, AlertCircle, CheckCircle2, Building2, FileText, Clock, MapPin, Check } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
@@ -557,8 +558,8 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px]" aria-describedby="create-work-order-description">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden flex flex-col" aria-describedby="create-work-order-description">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             Create New Work Order
@@ -568,340 +569,340 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
           </p>
         </DialogHeader>
 
-        {/* Form */}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Step 0: Organization Selection (Admin Only) */}
-            {isAdmin && currentStep === 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    Select Organization
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Choose the organization for this work order
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {isLoadingOrganizations ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Loading organizations...</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <Label>Organization *</Label>
-                      <Select onValueChange={(value) => {
-                        setSelectedOrganizationId(value);
-                        const org = organizations?.find(o => o.id === value);
-                        setSelectedOrganization(org);
-                      }} value={selectedOrganizationId}>
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select an organization" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {organizations?.map((org) => (
-                            <SelectItem key={org.id} value={org.id}>
-                              <div className="flex items-center gap-2">
-                                <span>{org.name}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {org.organization_type}
-                                </Badge>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      {selectedOrganization && (
-                        <div className="bg-muted/50 p-4 rounded-lg">
-                          <h4 className="font-medium mb-2">{selectedOrganization.name}</h4>
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <p>Type: {selectedOrganization.organization_type}</p>
-                            <p>Contact: {selectedOrganization.contact_email}</p>
-                            {selectedOrganization.address && (
-                              <p>Address: {selectedOrganization.address}</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Step 1: Location Details */}
-            {currentStep === 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    Location Details
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Enter the location information for this work order
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <LocationFields
-                    form={form}
-                    organizationId={organizationId || selectedOrganizationId}
-                    showPoNumber={true}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 2: Trade & Description */}
-            {currentStep === 2 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Trade & Description
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Provide details about the work to be performed
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Work Order Title</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Auto-generated from location and trade selection"
-                              className="h-11"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Title will be auto-generated when you select a location and trade. You can edit it if needed.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="trade_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Trade *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-11">
-                                <SelectValue placeholder="Select a trade" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {trades.map((trade) => (
-                                <SelectItem key={trade.id} value={trade.id}>
-                                  {trade.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Detailed description of the work to be performed..."
-                              className="min-h-[120px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="due_date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Due Date</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="date"
-                                className="h-11"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="estimated_hours"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Estimated Hours</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                placeholder="Estimated hours"
-                                className="h-11"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* File Upload Section */}
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Attachments</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Upload photos, documents, or other files related to this work order (optional)
-                        </p>
+        {/* Scrollable Form Content */}
+        <ScrollArea className="flex-1 px-1">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pr-4">
+              {/* Step 0: Organization Selection (Admin Only) */}
+              {isAdmin && currentStep === 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      Select Organization
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Choose the organization for this work order
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {isLoadingOrganizations ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Loading organizations...</span>
                       </div>
-                      
-                      {isMobile ? (
-                        <MobileFileUpload
-                          onFilesSelected={handleFilesSelected}
-                          maxFiles={10}
-                          maxSizeBytes={10 * 1024 * 1024} // 10MB
-                          uploadProgress={uploadProgress}
-                          showCameraButton={true}
-                          showGalleryButton={true}
-                          showDocumentButton={true}
-                        />
-                      ) : (
-                        <FileUpload
-                          onFilesSelected={handleFilesSelected}
-                          maxFiles={10}
-                          maxSizeBytes={10 * 1024 * 1024} // 10MB
-                          uploadProgress={uploadProgress}
-                        />
-                      )}
-
-                      {/* Selected Files Display */}
-                      {selectedFiles.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">
-                              {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
-                            </span>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleClearFiles}
-                            >
-                              Clear All
-                            </Button>
-                          </div>
-                          <div className="grid gap-2">
-                            {selectedFiles.map((file, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-2 border rounded-lg bg-background"
-                              >
+                    ) : (
+                      <div className="space-y-4">
+                        <Label>Organization *</Label>
+                        <Select onValueChange={(value) => {
+                          setSelectedOrganizationId(value);
+                          const org = organizations?.find(o => o.id === value);
+                          setSelectedOrganization(org);
+                        }} value={selectedOrganizationId}>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select an organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizations?.map((org) => (
+                              <SelectItem key={org.id} value={org.id}>
                                 <div className="flex items-center gap-2">
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-medium">{file.name}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                                  </span>
+                                  <span>{org.name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {org.organization_type}
+                                  </Badge>
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveFile(index)}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
+                              </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        {selectedOrganization && (
+                          <div className="bg-muted/50 p-4 rounded-lg">
+                            <h4 className="font-medium mb-2">{selectedOrganization.name}</h4>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <p>Type: {selectedOrganization.organization_type}</p>
+                              <p>Contact: {selectedOrganization.contact_email}</p>
+                              {selectedOrganization.address && (
+                                <p>Address: {selectedOrganization.address}</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Navigation */}
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === (isAdmin ? 0 : 1)}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Previous
-              </Button>
-
-              {currentStep < 2 ? (
-                <Button 
-                  type="button" 
-                  onClick={() => {
-                    console.log('🔄 Next button clicked!');
-                    handleNext();
-                  }}
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button 
-                  type="submit" 
-                  disabled={createWorkOrderMutation.isPending}
-                  onClick={() => {
-                    console.log('📤 Submit button clicked!');
-                    console.log('📊 Form state:', {
-                      isValid: form.formState.isValid,
-                      errors: form.formState.errors,
-                      isDirty: form.formState.isDirty,
-                      isSubmitting: form.formState.isSubmitting,
-                    });
-                  }}
-                >
-                  {createWorkOrderMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Create Work Order
-                    </>
-                  )}
-                </Button>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
-            </div>
-          </form>
-        </Form>
+              
+              {/* Step 1: Location Details */}
+              {currentStep === 1 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      Location Details
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Enter the location information for this work order
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <LocationFields
+                      form={form}
+                      organizationId={organizationId || selectedOrganizationId}
+                      showPoNumber={true}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Step 2: Trade & Description */}
+              {currentStep === 2 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      Trade & Description
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Provide details about the work to be performed
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Work Order Title</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Auto-generated from location and trade selection"
+                                className="h-11"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Title will be auto-generated when you select a location and trade. You can edit it if needed.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="trade_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Trade *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-11">
+                                  <SelectValue placeholder="Select a trade" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {trades.map((trade) => (
+                                  <SelectItem key={trade.id} value={trade.id}>
+                                    {trade.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Detailed description of the work to be performed..."
+                                className="min-h-[120px]"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="due_date"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Due Date</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  className="h-11"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="estimated_hours"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Estimated Hours</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.5"
+                                  min="0"
+                                  placeholder="Estimated hours"
+                                  className="h-11"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* File Upload Section */}
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Attachments</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Upload photos, documents, or other files related to this work order (optional)
+                          </p>
+                        </div>
+                        
+                        {isMobile ? (
+                          <MobileFileUpload
+                            onFilesSelected={handleFilesSelected}
+                            maxFiles={10}
+                            maxSizeBytes={10 * 1024 * 1024} // 10MB
+                            uploadProgress={uploadProgress}
+                            showCameraButton={true}
+                            showGalleryButton={true}
+                            showDocumentButton={true}
+                          />
+                        ) : (
+                          <FileUpload
+                            onFilesSelected={handleFilesSelected}
+                            maxFiles={10}
+                            maxSizeBytes={10 * 1024 * 1024} // 10MB
+                            uploadProgress={uploadProgress}
+                          />
+                        )}
+
+                        {/* Selected Files Display */}
+                        {selectedFiles.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">
+                                {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                              </span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleClearFiles}
+                              >
+                                Clear All
+                              </Button>
+                            </div>
+                            <div className="grid gap-2">
+                              {selectedFiles.map((file, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between p-2 border rounded-lg bg-background"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">{file.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                    </span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveFile(index)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </form>
+          </Form>
+        </ScrollArea>
+
+        {/* Fixed Navigation Footer */}
+        <div className="flex-shrink-0 border-t pt-4">
+          <div className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === (isAdmin ? 0 : 1)}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+
+            {currentStep < 2 ? (
+              <Button 
+                type="button" 
+                onClick={() => {
+                  console.log('🔄 Next button clicked!');
+                  handleNext();
+                }}
+              >
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button 
+                type="submit" 
+                disabled={createWorkOrderMutation.isPending}
+                onClick={() => {
+                  console.log('📤 Submit button clicked!');
+                  const formData = form.getValues();
+                  form.handleSubmit(onSubmit)(new Event('submit') as any);
+                }}
+              >
+                {createWorkOrderMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Create Work Order
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
