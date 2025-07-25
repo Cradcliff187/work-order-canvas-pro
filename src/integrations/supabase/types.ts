@@ -1059,6 +1059,7 @@ export type Database = {
           completion_method: string | null
           created_at: string
           created_by: string
+          date_approved: string | null
           date_assigned: string | null
           date_completed: string | null
           date_submitted: string
@@ -1103,6 +1104,7 @@ export type Database = {
           completion_method?: string | null
           created_at?: string
           created_by: string
+          date_approved?: string | null
           date_assigned?: string | null
           date_completed?: string | null
           date_submitted?: string
@@ -1147,6 +1149,7 @@ export type Database = {
           completion_method?: string | null
           created_at?: string
           created_by?: string
+          date_approved?: string | null
           date_assigned?: string | null
           date_completed?: string | null
           date_submitted?: string
@@ -1444,6 +1447,10 @@ export type Database = {
         Args: { test_email?: string }
         Returns: Json
       }
+      test_work_order_transitions: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       transition_work_order_status: {
         Args: {
           work_order_id: string
@@ -1451,7 +1458,7 @@ export type Database = {
           reason?: string
           user_id?: string
         }
-        Returns: boolean
+        Returns: Json
       }
       trigger_jwt_metadata_sync: {
         Args: { p_user_id?: string }
@@ -1507,6 +1514,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "estimate_needed"
+        | "estimate_approved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1647,6 +1655,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "estimate_needed",
+        "estimate_approved",
       ],
     },
   },
