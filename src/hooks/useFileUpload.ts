@@ -33,6 +33,9 @@ interface UseFileUploadOptions {
   onProgress?: (progress: UploadProgress[]) => void;
   onComplete?: (files: UploadedFile[]) => void;
   onError?: (error: string) => void;
+  // Context for attaching to work order or work order report
+  workOrderId?: string;
+  reportId?: string;
 }
 
 export function useFileUpload(options: UseFileUploadOptions = {}) {
@@ -43,14 +46,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     maxSizeBytes = 10 * 1024 * 1024, // 10MB
     onProgress,
     onComplete,
-    onError
+    onError,
+    workOrderId: defaultWorkOrderId,
+    reportId: defaultReportId
   } = options;
 
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
-  // Generate file path structure: {user_id}/{work_order_id}/{report_id}/{timestamp}_{filename}
+  // Generate file path structure: {user_id}/{work_order_id_or_report_id}/{timestamp}_{filename}
   const generateFilePath = useCallback((
     workOrderId: string,
     reportId: string,
@@ -60,7 +65,10 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     
     const timestamp = Date.now();
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    return `${user.id}/${workOrderId}/${reportId}/${timestamp}_${sanitizedFileName}`;
+    
+    // Use workOrderId for work order attachments, reportId for report attachments
+    const pathId = workOrderId !== 'temp' ? workOrderId : reportId;
+    return `${user.id}/${pathId}/${timestamp}_${sanitizedFileName}`;
   }, [user]);
 
   // Update progress for a specific file
@@ -108,9 +116,9 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   // Upload single file
   const uploadFile = useCallback(async (
     file: File,
-    workOrderId: string,
-    reportId: string,
-    fileId: string
+    workOrderId?: string,
+    reportId?: string,
+    fileId?: string
   ): Promise<UploadedFile> => {
     if (!user) throw new Error("User not authenticated");
 
@@ -133,7 +141,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
     // Only compress images, pass documents through directly
     if (isImageFile(file)) {
-      updateProgress(fileId, { status: 'compressing', progress: 0 });
+      if (fileId) updateProgress(fileId, { status: 'compressing', progress: 0 });
       
       let compressionResult: CompressionResult;
       try {
@@ -155,10 +163,10 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     }
 
     // Generate file path
-    const filePath = generateFilePath(workOrderId, reportId, processedFile.name);
+    const filePath = generateFilePath(workOrderId || 'temp', reportId || 'temp', processedFile.name);
 
     // Upload to Supabase Storage
-    updateProgress(fileId, { status: 'uploading', progress: 50 });
+    if (fileId) updateProgress(fileId, { status: 'uploading', progress: 50 });
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("work-order-attachments")
@@ -171,19 +179,30 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
-    updateProgress(fileId, { progress: 90 });
+    if (fileId) updateProgress(fileId, { progress: 90 });
 
     // Save metadata to work_order_attachments table
+    // Ensure exactly one of work_order_id or work_order_report_id is set
+    const insertData: any = {
+      file_name: processedFile.name,
+      file_url: uploadData.path,
+      file_type: fileType,
+      file_size: compressedSize,
+      uploaded_by_user_id: profile.id,
+    };
+
+    // Set either work_order_id OR work_order_report_id, never both
+    if (workOrderId) {
+      insertData.work_order_id = workOrderId;
+    } else if (reportId) {
+      insertData.work_order_report_id = reportId;
+    } else {
+      throw new Error("Either workOrderId or reportId must be provided");
+    }
+
     const { data: attachment, error: attachmentError } = await supabase
       .from("work_order_attachments")
-      .insert({
-        work_order_report_id: reportId,
-        file_name: processedFile.name,
-        file_url: uploadData.path,
-        file_type: fileType,
-        file_size: compressedSize,
-        uploaded_by_user_id: profile.id,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -196,7 +215,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       throw new Error(`Database save failed: ${attachmentError.message}`);
     }
 
-    updateProgress(fileId, { status: 'completed', progress: 100 });
+    if (fileId) updateProgress(fileId, { status: 'completed', progress: 100 });
 
     return {
       id: attachment.id,
@@ -208,12 +227,15 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     };
   }, [user, maxSizeBytes, generateFilePath, updateProgress]);
 
-  // Main upload function
+  // Main upload function - use provided IDs or fall back to defaults from options
   const uploadFiles = useCallback(async (
     files: File[],
-    workOrderId: string,
-    reportId: string
+    workOrderId?: string,
+    reportId?: string
   ): Promise<UploadedFile[]> => {
+    // Use provided IDs or fall back to defaults from options
+    const effectiveWorkOrderId = workOrderId || defaultWorkOrderId;
+    const effectiveReportId = reportId || defaultReportId;
     if (!user) {
       const error = "User not authenticated";
       onError?.(error);
@@ -256,14 +278,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         const fileId = initialProgress[i].fileId;
         
         try {
-          const result = await uploadFile(file, workOrderId, reportId, fileId);
+          const result = await uploadFile(file, effectiveWorkOrderId, effectiveReportId, fileId);
           results.push(result);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-          updateProgress(fileId, { 
-            status: 'error', 
-            error: errorMessage 
-          });
+          if (fileId) {
+            updateProgress(fileId, { 
+              status: 'error', 
+              error: errorMessage 
+            });
+          }
           
           toast({
             title: "Upload Failed",

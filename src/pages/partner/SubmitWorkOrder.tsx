@@ -615,41 +615,15 @@ export default function SubmitWorkOrder() {
         console.log('📁 Starting file upload for', selectedFiles.length, 'files');
 
         try {
-          // Upload files to storage bucket
+          // Upload files using the hook - it will handle both storage and database
           const uploadResults = await uploadFiles(
             selectedFiles,
             workOrderResult.id, // work order ID
             undefined // no report ID for work order attachments
           );
 
-          console.log('📁 File upload results:', uploadResults);
-
-          // Create work_order_attachments records for each uploaded file
-          for (let i = 0; i < uploadResults.length; i++) {
-            const result = uploadResults[i];
-            const originalFile = selectedFiles[i]; // Get original file for type detection
-            const fileType = getFileTypeForStorage(originalFile);
-            
-            const { error: attachmentError } = await supabase
-              .from('work_order_attachments')
-              .insert({
-                work_order_id: workOrderResult.id,
-                file_name: result.fileName,
-                file_url: result.fileUrl,
-                file_type: fileType,
-                file_size: result.fileSize,
-                uploaded_by_user_id: profile.id,
-              });
-
-            if (attachmentError) {
-              console.error('❌ Error creating attachment record:', attachmentError);
-              throw new Error(`Failed to save file attachment: ${result.fileName}`);
-            }
-
-            filesUploaded++;
-          }
-
-          console.log('✅ All files uploaded and attachment records created');
+          console.log('✅ All files uploaded successfully:', uploadResults);
+          filesUploaded = uploadResults.length;
         } catch (uploadError: any) {
           console.error('❌ File upload error:', uploadError);
           // Work order was created successfully, but file upload failed
