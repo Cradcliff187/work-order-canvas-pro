@@ -117,13 +117,24 @@ export function useWorkOrderNumberGeneration({
           return;
         }
 
-        // Fetch the next sequence number for the work order
-        const sequence = organization.next_sequence_number || 1;
-        const formattedSequence = String(sequence).padStart(3, '0');
+        // Generate work order number using the new per-location function
+        const { data: generatedNumber, error: numberError } = await supabase.rpc(
+          'generate_work_order_number_per_location',
+          { 
+            org_id: organizationId,
+            location_code: locationCode
+          }
+        );
 
-        // Construct the work order number
-        const newWorkOrderNumber = `${organization.initials || 'ORG'}-${locationCode}-${formattedSequence}`;
-        setWorkOrderNumber(newWorkOrderNumber);
+        if (numberError) {
+          throw new Error(`Error generating work order number: ${numberError.message}`);
+        }
+
+        if (!generatedNumber) {
+          throw new Error('Failed to generate work order number.');
+        }
+
+        setWorkOrderNumber(generatedNumber);
 
       } catch (e: any) {
         setError(e.message || 'An error occurred');

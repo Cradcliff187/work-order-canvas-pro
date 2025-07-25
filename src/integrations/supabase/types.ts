@@ -499,6 +499,41 @@ export type Database = {
           },
         ]
       }
+      organization_location_sequences: {
+        Row: {
+          created_at: string
+          id: string
+          location_number: string
+          next_sequence_number: number
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_number: string
+          next_sequence_number?: number
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_number?: string
+          next_sequence_number?: number
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_location_sequences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           address: string | null
@@ -1439,6 +1474,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      fix_existing_work_order_numbers: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       force_jwt_sync_for_current_user: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1453,6 +1492,10 @@ export type Database = {
       }
       generate_work_order_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_work_order_number_per_location: {
+        Args: { org_id: string; location_code: string }
         Returns: string
       }
       generate_work_order_number_simple: {
