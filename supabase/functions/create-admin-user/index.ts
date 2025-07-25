@@ -185,21 +185,54 @@ serve(async (req) => {
 
     // Create admin client with service role
     console.log(`[${requestId}] 🔧 Creating admin client...`);
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
-    // Test database connection
-    console.log(`[${requestId}] 🔍 Testing database connection...`);
-    const { data: connectionTest, error: connectionError } = await supabaseAdmin
-      .from('profiles')
-      .select('count')
-      .limit(1);
+    // Test database connectivity with multiple tables
+    console.log(`[${requestId}] 🔍 Testing database connectivity...`);
+    try {
+      // Test basic connection
+      const { data: profileTest, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('count')
+        .limit(1);
 
-    if (connectionError) {
-      console.error(`[${requestId}] ❌ Database connection failed:`, connectionError);
-      return createCorsErrorResponse('Database connection failed', 500);
+      if (profileError) {
+        console.error(`[${requestId}] ❌ Profiles table access failed:`, profileError);
+        return createCorsErrorResponse('Database profiles access error: ' + profileError.message, 500);
+      }
+
+      // Test user_organizations table specifically
+      const { data: userOrgTest, error: userOrgError } = await supabaseAdmin
+        .from('user_organizations')
+        .select('id')
+        .limit(1);
+
+      if (userOrgError) {
+        console.error(`[${requestId}] ❌ user_organizations table access failed:`, userOrgError);
+        return createCorsErrorResponse('Database user_organizations access error: ' + userOrgError.message, 500);
+      }
+
+      // Test organizations table
+      const { data: orgTest, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .select('id')
+        .limit(1);
+
+      if (orgError) {
+        console.error(`[${requestId}] ❌ Organizations table access failed:`, orgError);
+        return createCorsErrorResponse('Database organizations access error: ' + orgError.message, 500);
+      }
+
+      console.log(`[${requestId}] ✅ Database connectivity verified for all required tables`);
+    } catch (dbError) {
+      console.error(`[${requestId}] ❌ Critical database connectivity error:`, dbError);
+      return createCorsErrorResponse('Critical database connectivity error', 500);
     }
-
-    console.log(`[${requestId}] ✅ Database connection verified`);
 
     // Generate a secure temporary password for initial creation
     const temporaryPassword = crypto.randomUUID() + crypto.randomUUID();
@@ -365,24 +398,7 @@ serve(async (req) => {
 
       console.log(`[${requestId}] Inserting organization relationships:`, orgRelationships);
 
-      // Verify user_organizations table exists
-      const { data: tableCheck, error: tableError } = await supabaseAdmin
-        .from('user_organizations')
-        .select('count')
-        .limit(1);
-
-      if (tableError) {
-        console.error(`[${requestId}] ❌ user_organizations table check failed:`, {
-          error: tableError,
-          message: tableError.message,
-          details: tableError.details,
-          hint: tableError.hint,
-          code: tableError.code
-        });
-        throw new Error(`Database table verification failed: ${tableError.message}`);
-      }
-
-      console.log(`[${requestId}] ✅ user_organizations table verified`);
+      console.log(`[${requestId}] 📝 About to insert organization relationships:`, orgRelationships);
 
       const { data: insertedRelationships, error: orgError } = await supabaseAdmin
         .from('user_organizations')
@@ -396,15 +412,41 @@ serve(async (req) => {
           details: orgError.details,
           hint: orgError.hint,
           code: orgError.code,
-          orgRelationships: orgRelationships
+          sqlState: orgError.code,
+          orgRelationships: orgRelationships,
+          profileId: newProfile.id,
+          orgIds: finalOrganizationIds
         });
         
-        // For auto-assignment, this is more critical
-        if (autoAssignedOrganizations.length > 0) {
-          throw new Error(`Failed to assign user to organization: ${orgError.message}`);
+        // Clean up created user on organization assignment failure
+        console.log(`[${requestId}] 🧹 Cleaning up auth user due to organization assignment failure...`);
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+          console.log(`[${requestId}] ✅ Auth user cleanup completed`);
+        } catch (cleanupError) {
+          console.error(`[${requestId}] ❌ Failed to cleanup auth user:`, cleanupError);
         }
-      } else {
-        console.log(`[${requestId}] ✅ Organization relationships created successfully:`, insertedRelationships);
+        
+        throw new Error(`Failed to assign user to organization: ${orgError.message}. Please check if the user_organizations table exists and has proper permissions.`);
+      }
+
+      console.log(`[${requestId}] ✅ Organization relationships created successfully:`, insertedRelationships);
+      
+      // Sync JWT metadata after successful creation
+      try {
+        console.log(`[${requestId}] 🔄 Syncing JWT metadata...`);
+        const { data: syncResult, error: syncError } = await supabaseAdmin.rpc(
+          'trigger_jwt_metadata_sync', 
+          { p_user_id: authUser.user.id }
+        );
+        
+        if (syncError) {
+          console.warn(`[${requestId}] ⚠️ JWT metadata sync failed (non-critical):`, syncError);
+        } else {
+          console.log(`[${requestId}] ✅ JWT metadata synced:`, syncResult);
+        }
+      } catch (syncErr) {
+        console.warn(`[${requestId}] ⚠️ JWT metadata sync error (non-critical):`, syncErr);
       }
     }
 
