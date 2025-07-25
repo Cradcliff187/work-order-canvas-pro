@@ -191,6 +191,10 @@ export function useSubcontractorWorkOrders() {
     }) => {
       if (!user) throw new Error("Not authenticated");
 
+      // Force JWT metadata sync to ensure authentication context is valid
+      const { syncUserMetadataToJWT } = await import('@/lib/auth/jwtSync');
+      await syncUserMetadataToJWT();
+
       // Validate authentication session before critical database operations
       const { ensureAuthenticatedSession } = await import('@/lib/auth/sessionValidation');
       const isAuthValid = await ensureAuthenticatedSession();
@@ -200,20 +204,15 @@ export function useSubcontractorWorkOrders() {
       }
 
       // Get current user profile to get the profile ID
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, user_type, is_active")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
+      if (profileError) throw new Error(`Profile lookup failed: ${profileError.message}`);
       if (!profile) throw new Error("Profile not found");
-
-      // Get current user profile to check user type
-      const { data: userProfile } = await supabase
-        .from("profiles")
-        .select("user_type")
-        .eq("id", profile.id)
-        .single();
+      if (!profile.is_active) throw new Error("User account is not active");
 
       // Submit the report - only include hours_worked for employees
       const reportInsert: any = {
@@ -225,7 +224,7 @@ export function useSubcontractorWorkOrders() {
       };
 
       // Only include hours_worked for employees
-      if (userProfile?.user_type === 'employee' && reportData.hoursWorked !== undefined) {
+      if (profile.user_type === 'employee' && reportData.hoursWorked !== undefined) {
         reportInsert.hours_worked = reportData.hoursWorked;
       }
 
