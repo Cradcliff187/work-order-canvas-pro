@@ -324,6 +324,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       password,
     });
     
+    // Sync JWT metadata on successful login
+    if (!error && data.user) {
+      // Use setTimeout to avoid blocking the login flow
+      setTimeout(async () => {
+        await syncUserMetadataToJWT(data.user!.id);
+      }, 100);
+    }
+    
     return { error };
   };
 
