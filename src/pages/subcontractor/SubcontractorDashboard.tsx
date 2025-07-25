@@ -18,7 +18,7 @@ import {
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
-import { AuthDebugPanel } from '@/components/AuthDebugPanel';
+
 import { format } from 'date-fns';
 
 const SubcontractorDashboard = () => {
@@ -63,8 +63,6 @@ const SubcontractorDashboard = () => {
         <p className="text-muted-foreground">Manage your assigned work orders and submit reports</p>
       </div>
 
-      {/* DEBUG PANEL - Remove after fixing auth */}
-      <AuthDebugPanel />
 
       {/* Summary Cards */}
       <StandardDashboardStats stats={statsData} loading={assignedWorkOrders.isLoading} className="mb-8" />
