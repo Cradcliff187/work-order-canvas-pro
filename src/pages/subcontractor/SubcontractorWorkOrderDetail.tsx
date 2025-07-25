@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, Users } from "lucide-react";
+import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, Users, Paperclip, Download, ExternalLink, Image as ImageIcon } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -138,6 +138,76 @@ export default function SubcontractorWorkOrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Attachments */}
+          {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Paperclip className="h-5 w-5" />
+                  Attachments
+                </CardTitle>
+                <CardDescription>
+                  Files and photos attached to this work order
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {workOrder.work_order_attachments.map((attachment) => (
+                    <div key={attachment.id} className="border rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                          {attachment.file_type === 'photo' ? (
+                            <ImageIcon className="h-8 w-8 text-blue-500" />
+                          ) : (
+                            <FileText className="h-8 w-8 text-gray-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {attachment.file_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {attachment.file_type}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(attachment.uploaded_at), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                            window.open(data.publicUrl, '_blank');
+                          }}
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                            const link = document.createElement('a');
+                            link.href = data.publicUrl;
+                            link.download = attachment.file_name;
+                            link.click();
+                          }}
+                        >
+                          <Download className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Additional Notes */}
           <Card>
