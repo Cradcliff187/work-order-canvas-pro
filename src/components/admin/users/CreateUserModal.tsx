@@ -62,29 +62,69 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
   }, [form]);
 
   const onSubmit = async (data: CreateUserFormData) => {
+    const debugId = `USER_CREATE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
       setIsLoading(true);
+      
+      console.group(`🔧 [FRONTEND DEBUG ${debugId}] User Creation Flow Started`);
+      console.log('📋 Form Data Received:', {
+        email: data.email,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        userType: data.user_type,
+        phone: data.phone,
+        organizationId: data.organization_id,
+        organizationProvided: data.organization_id && data.organization_id !== 'none',
+        timestamp: new Date().toISOString()
+      });
+
+      const requestPayload = {
+        userData: {
+          email: data.email,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          user_type: data.user_type,
+          phone: data.phone || '',
+          organization_ids: data.organization_id && data.organization_id !== 'none' ? [data.organization_id] : [],
+        },
+      };
+
+      console.log('📤 Sending to create-admin-user edge function:', requestPayload);
+      console.log('🎯 Organization processing:', {
+        rawOrganizationId: data.organization_id,
+        isNone: data.organization_id === 'none',
+        finalOrganizationIds: requestPayload.userData.organization_ids,
+        organizationIdsLength: requestPayload.userData.organization_ids.length
+      });
       
       // Use the existing edge function to create user properly
       // Database trigger will automatically handle profile creation and welcome email
       const { data: result, error } = await supabase.functions.invoke('create-admin-user', {
-        body: {
-          userData: {
-            email: data.email,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            user_type: data.user_type,
-            phone: data.phone || '',
-            organization_ids: data.organization_id && data.organization_id !== 'none' ? [data.organization_id] : [],
-          },
-        },
+        body: requestPayload,
       });
 
-      if (error) throw error;
+      console.log('📥 Edge function response:', {
+        result,
+        error,
+        hasResult: !!result,
+        hasError: !!error,
+        resultSuccess: result?.success,
+        resultMessage: result?.message
+      });
+
+      if (error) {
+        console.error('❌ Edge function error:', error);
+        throw error;
+      }
       
       if (!result.success) {
+        console.error('❌ Edge function returned failure:', result);
         throw new Error(result.message || 'Failed to create user');
       }
+
+      console.log('✅ User creation successful:', result);
+      console.groupEnd();
 
       // Show success state
       setShowSuccess(true);
@@ -103,6 +143,15 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       }, 2000);
       
     } catch (error: any) {
+      console.error(`❌ [FRONTEND DEBUG ${debugId}] User creation failed:`, {
+        error: error.message,
+        errorCode: error.code,
+        errorDetails: error.details,
+        fullError: error,
+        timestamp: new Date().toISOString()
+      });
+      console.groupEnd();
+      
       toast({
         variant: "destructive",
         title: "Error",

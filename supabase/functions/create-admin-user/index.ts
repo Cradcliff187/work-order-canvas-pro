@@ -169,7 +169,21 @@ serve(async (req) => {
     console.log(`[${requestId}] 📝 Processing user creation request:`, { 
       email: userData.email, 
       userType: userData.user_type,
-      hasOrganizations: !!(userData.organization_ids?.length)
+      firstName: userData.first_name,
+      lastName: userData.last_name,
+      phone: userData.phone,
+      organizationIds: userData.organization_ids,
+      hasOrganizations: !!(userData.organization_ids?.length),
+      organizationIdsLength: userData.organization_ids?.length || 0,
+      fullUserData: userData
+    });
+
+    console.log(`[${requestId}] 🔍 Debug - Raw organization_ids analysis:`, {
+      rawOrganizationIds: userData.organization_ids,
+      isArray: Array.isArray(userData.organization_ids),
+      length: userData.organization_ids?.length,
+      firstElement: userData.organization_ids?.[0],
+      isEmpty: !userData.organization_ids || userData.organization_ids.length === 0
     });
 
     // Validate required fields
@@ -255,7 +269,7 @@ serve(async (req) => {
       }
 
       // Create the auth user with proper metadata for the trigger
-      const result = await supabaseAdmin.auth.admin.createUser({
+      const authUserPayload = {
         email: userData.email,
         password: temporaryPassword,
         email_confirm: true,
@@ -266,7 +280,18 @@ serve(async (req) => {
         app_metadata: {
           user_type: userData.user_type,
         }
+      };
+
+      console.log(`[${requestId}] 👤 DEBUG - Auth user creation payload:`, {
+        email: authUserPayload.email,
+        hasPassword: !!authUserPayload.password,
+        emailConfirm: authUserPayload.email_confirm,
+        userMetadata: authUserPayload.user_metadata,
+        appMetadata: authUserPayload.app_metadata,
+        userTypeInMetadata: authUserPayload.app_metadata.user_type
       });
+
+      const result = await supabaseAdmin.auth.admin.createUser(authUserPayload);
 
       if (result.error) {
         console.error(`[${requestId}] ❌ Auth creation error details:`, {
@@ -304,6 +329,16 @@ serve(async (req) => {
       .select('*')
       .eq('user_id', authUser.user.id)
       .single();
+    
+    console.log(`[${requestId}] 🔍 DEBUG - Profile verification result:`, {
+      profileFound: !!newProfile,
+      profileError: profileError,
+      profileData: newProfile,
+      profileUserType: newProfile?.user_type,
+      profileEmail: newProfile?.email,
+      expectedUserType: userData.user_type,
+      userTypeMatches: newProfile?.user_type === userData.user_type
+    });
     
     if (profileError || !newProfile) {
       console.error(`[${requestId}] ❌ Profile was not created by trigger:`, profileError);
@@ -378,30 +413,63 @@ serve(async (req) => {
     let finalOrganizationIds: string[] = [];
     let autoAssignedOrganizations: any[] = [];
     
+    console.log(`[${requestId}] 🏢 DEBUG - Organization assignment analysis:`, {
+      providedOrganizationIds: userData.organization_ids,
+      hasOrganizationIds: !!(userData.organization_ids && userData.organization_ids.length > 0),
+      organizationIdsLength: userData.organization_ids?.length || 0,
+      userType: userData.user_type,
+      needsOrganization: userData.user_type !== 'admin'
+    });
+    
     if (userData.organization_ids && userData.organization_ids.length > 0) {
       // Validate provided organizations
-      console.log('Validating provided organizations:', userData.organization_ids);
+      console.log(`[${requestId}] 🔍 Validating provided organizations:`, userData.organization_ids);
       const { validOrganizations, errors } = await validateAndProcessOrganizations(
         supabaseAdmin,
         userData.user_type,
         userData.organization_ids
       );
 
+      console.log(`[${requestId}] 📊 Organization validation results:`, {
+        validOrganizations: validOrganizations.map(org => ({ id: org.id, name: org.name, type: org.organization_type })),
+        validCount: validOrganizations.length,
+        errors: errors,
+        errorCount: errors.length
+      });
+
       if (errors.length > 0) {
-        console.error('Organization validation failed:', errors);
+        console.error(`[${requestId}] ❌ Organization validation failed:`, errors);
         throw new Error(`Organization validation failed: ${errors.join(', ')}`);
       }
 
       finalOrganizationIds = validOrganizations.map(org => org.id);
-      console.log('Validated organizations:', validOrganizations.map(org => org.name));
+      console.log(`[${requestId}] ✅ Validated organizations:`, validOrganizations.map(org => org.name));
     } else {
       // Auto-assign organizations for partner, subcontractor, and employee users
       if (userData.user_type !== 'admin') {
-        console.log('Auto-assigning organizations for user type:', userData.user_type);
+        console.log(`[${requestId}] 🔄 Auto-assigning organizations for user type:`, userData.user_type);
+        const expectedOrgType = getUserExpectedOrganizationType(userData.user_type);
+        console.log(`[${requestId}] 🎯 Expected organization type:`, expectedOrgType);
+        
         const availableOrganizations = await getOrganizationsForAutoAssignment(supabaseAdmin, userData.user_type);
+        
+        console.log(`[${requestId}] 📋 Available organizations for auto-assignment:`, {
+          organizationCount: availableOrganizations.length,
+          organizations: availableOrganizations.map(org => ({ 
+            id: org.id, 
+            name: org.name, 
+            type: org.organization_type,
+            isActive: org.is_active 
+          })),
+          expectedType: expectedOrgType
+        });
         
         if (availableOrganizations.length === 0) {
           const expectedType = getUserExpectedOrganizationType(userData.user_type);
+          console.error(`[${requestId}] ❌ No organizations available for auto-assignment`, {
+            userType: userData.user_type,
+            expectedType: expectedType
+          });
           throw new Error(`No ${expectedType} organizations available for auto-assignment. Please create a ${expectedType} organization first.`);
         }
         
@@ -409,7 +477,13 @@ serve(async (req) => {
         const selectedOrg = availableOrganizations[0];
         finalOrganizationIds = [selectedOrg.id];
         autoAssignedOrganizations = [selectedOrg];
-        console.log('Auto-assigned to organization:', selectedOrg.name);
+        console.log(`[${requestId}] ✅ Auto-assigned to organization:`, {
+          id: selectedOrg.id,
+          name: selectedOrg.name,
+          type: selectedOrg.organization_type
+        });
+      } else {
+        console.log(`[${requestId}] ℹ️ Admin user - no organization assignment needed`);
       }
     }
 
