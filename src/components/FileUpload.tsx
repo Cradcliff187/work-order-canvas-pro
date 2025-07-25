@@ -197,20 +197,9 @@ export function FileUpload({
     currentPreviews: previews.length,
     remainingSlots: maxFiles - previews.length,
     acceptedTypes,
-    dropzoneAccept: getDropzoneAccept()
+    dropzoneAccept: getDropzoneAccept(),
+    hasOpenFunction: !!open
   });
-
-  // Fallback click handler for browse files
-  const handleBrowseClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Browse files clicked, triggering file picker...');
-    if (!disabled && open) {
-      open();
-    } else if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  }, [disabled, open]);
 
   // Remove file preview
   const removeFile = useCallback((id: string) => {
@@ -282,6 +271,8 @@ export function FileUpload({
             {...getRootProps({
               onClick: (e) => {
                 console.log('Dropzone area clicked:', e.target);
+                console.log('File input element:', fileInputRef.current);
+                console.log('Open function available:', !!open);
               }
             })}
             className={cn(
@@ -311,10 +302,7 @@ export function FileUpload({
                 }
               </h3>
               <p className="text-sm text-muted-foreground">
-                or <span 
-                  className="text-primary underline cursor-pointer" 
-                  onClick={handleBrowseClick}
-                >
+                or <span className="text-primary underline cursor-pointer">
                   browse files
                 </span>
               </p>
