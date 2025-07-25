@@ -289,7 +289,7 @@ export const useCompanyAccessVerification = () => {
           id,
           assigned_to,
           work_order_id,
-          assignee_profile:profiles!assigned_to (
+          assignee_profile:profiles!work_order_assignments_assigned_to_fkey (
             id,
             user_type
           )

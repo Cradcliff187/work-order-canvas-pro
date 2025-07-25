@@ -59,6 +59,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   
   const { employees, isLoading } = useAllAssignees();
   
+  // Check if any work orders have existing assignments
+  const [hasExistingAssignments, setHasExistingAssignments] = useState(false);
+  
   // Debug logging
   console.log('📊 Assignment Modal Data:', {
     workOrders: workOrders?.length || 0,
@@ -66,6 +69,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     subcontractorOrgs: subcontractorOrgs.length,
     isLoading,
     isLoadingOrgs,
+    hasExistingAssignments,
     orgDetails: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, userCount: o.active_user_count }))
   });
 
@@ -94,7 +98,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             `)
             .in('work_order_id', workOrderIds);
 
-          if (existingAssignments) {
+          if (existingAssignments && existingAssignments.length > 0) {
             // Pre-select currently assigned users
             const assignedUserIds = existingAssignments.map(a => a.assigned_to);
             setSelectedAssignees(assignedUserIds);
@@ -104,19 +108,27 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               .filter(a => a.assigned_organization_id)
               .map(a => a.assigned_organization_id!);
             setSelectedOrganizations(assignedOrgIds);
+            setHasExistingAssignments(true);
           } else {
             // No existing assignments
             setSelectedAssignees([]);
             setSelectedOrganizations([]);
+            setHasExistingAssignments(false);
           }
         } catch (error) {
           console.error('Error fetching existing assignments:', error);
           setSelectedAssignees([]);
           setSelectedOrganizations([]);
+          setHasExistingAssignments(false);
         }
       };
 
       fetchExistingAssignments();
+    } else {
+      // Reset when modal closes
+      setSelectedAssignees([]);
+      setSelectedOrganizations([]);
+      setHasExistingAssignments(false);
     }
   }, [isOpen, hasValidWorkOrders, workOrders]);
 
@@ -838,7 +850,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                 </>
               ) : (
                 <>
-                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assign' : 'Clear Assignment'}
+                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) 
+                    ? (hasExistingAssignments ? 'Update Assignment' : 'Assign')
+                    : 'Clear Assignment'}
                 </>
               )}
             </Button>
