@@ -239,41 +239,59 @@ serve(async (req) => {
 
     console.log(`[${requestId}] 👤 Creating auth user...`);
 
-    // Create auth user with retry logic
-    let authUser, createError;
-    let retryCount = 0;
-    const maxRetries = 3;
+    // Create auth user with enhanced error handling
+    let authUser;
+    try {
+      // First check if user already exists
+      const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        console.warn(`[${requestId}] ⚠️ Could not check existing users:`, listError);
+      } else {
+        const existingUser = existingUsers.users?.find(u => u.email === userData.email);
+        if (existingUser) {
+          console.error(`[${requestId}] ❌ User already exists with email:`, userData.email);
+          throw new Error(`User with email ${userData.email} already exists`);
+        }
+      }
 
-    while (retryCount < maxRetries) {
+      // Create the auth user
       const result = await supabaseAdmin.auth.admin.createUser({
         email: userData.email,
         password: temporaryPassword,
-        email_confirm: true, // Enable Supabase auth confirmation email
-        app_metadata: {  // Security data (admin-only)
+        email_confirm: true,
+        app_metadata: {
           user_type: userData.user_type
         },
-        user_metadata: {  // Non-security data (user-editable)
+        user_metadata: {
           first_name: userData.first_name,
           last_name: userData.last_name
         }
       });
 
-      authUser = result.data;
-      createError = result.error;
-
-      if (!createError) break;
-
-      retryCount++;
-      console.warn(`[${requestId}] ⚠️ Auth user creation attempt ${retryCount} failed:`, createError);
-      
-      if (retryCount < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+      if (result.error) {
+        console.error(`[${requestId}] ❌ Auth creation error details:`, {
+          error: result.error,
+          message: result.error.message,
+          code: result.error.code || result.error.status,
+          details: result.error
+        });
+        throw new Error(`Auth user creation failed: ${result.error.message}`);
       }
-    }
 
-    if (createError) {
-      console.error(`[${requestId}] ❌ Auth user creation failed after ${maxRetries} attempts:`, createError);
-      throw createError;
+      if (!result.data?.user) {
+        throw new Error('No user data returned from auth creation');
+      }
+
+      authUser = result.data;
+      console.log(`[${requestId}] ✅ Auth user created successfully:`, authUser.user.id);
+      
+    } catch (error) {
+      console.error(`[${requestId}] ❌ Auth user creation failed:`, {
+        error: error.message,
+        type: error.constructor.name,
+        stack: error.stack
+      });
+      throw new Error(`Failed to create authentication user: ${error.message}`);
     }
 
     console.log(`[${requestId}] ✅ Auth user created:`, authUser.user.id);
