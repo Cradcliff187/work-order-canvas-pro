@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Download, RotateCcw, ClipboardList, CheckSquare } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
@@ -264,7 +265,7 @@ export default function AdminWorkOrders() {
           {isLoading ? (
             renderTableSkeleton()
           ) : workOrdersData?.data.length === 0 ? (
-            <EmptyTableState
+            <EmptyState
               icon={ClipboardList}
               title="No work orders found"
               description={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Get started by creating your first work order"}
@@ -273,7 +274,7 @@ export default function AdminWorkOrders() {
                 onClick: () => setShowCreateModal(true),
                 icon: Plus
               }}
-              colSpan={columns.length}
+              variant="card"
             />
           ) : (
             <>
