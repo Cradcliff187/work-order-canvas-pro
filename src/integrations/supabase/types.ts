@@ -1431,8 +1431,8 @@ export type Database = {
         Returns: string
       }
       generate_work_order_number_v2: {
-        Args: { org_id: string; location_number?: string }
-        Returns: Json
+        Args: { org_id: string; location_code?: string }
+        Returns: string
       }
       get_current_user_type: {
         Args: Record<PropertyKey, never>
