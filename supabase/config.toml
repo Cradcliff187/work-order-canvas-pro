@@ -2,6 +2,9 @@
 
 project_id = "inudoymofztrvxhrlrek"
 
+[functions.create-admin-user]
+verify_jwt = false
+
 [functions.setup-test-environment]
 verify_jwt = false
 

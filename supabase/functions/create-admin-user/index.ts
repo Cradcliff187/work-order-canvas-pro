@@ -97,17 +97,50 @@ serve(async (req) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
   
+  const startTime = Date.now();
+  const requestId = crypto.randomUUID().slice(0, 8);
+  
+  console.log(`[${requestId}] 🚀 Starting user creation request at ${new Date().toISOString()}`);
+  
   try {
-    // Create authenticated Supabase client
+    // Health check endpoint
+    if (req.url.includes('/health')) {
+      return createCorsResponse({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        services: ['supabase', 'auth', 'database']
+      });
+    }
+
+    console.log(`[${requestId}] 🔍 Verifying environment variables...`);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      console.error(`[${requestId}] ❌ Missing environment variables:`, {
+        hasUrl: !!supabaseUrl,
+        hasServiceRole: !!serviceRoleKey,
+        hasAnonKey: !!anonKey
+      });
+      return createCorsErrorResponse('Server configuration error', 500);
+    }
+
+    console.log(`[${requestId}] ✅ Environment variables verified`);
+
+    // Create authenticated Supabase client for user verification
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      supabaseUrl,
+      anonKey,
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
+    console.log(`[${requestId}] 🔐 Verifying admin authentication...`);
+    
     // Verify admin user
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
+      console.error(`[${requestId}] ❌ Authentication failed:`, authError);
       return createCorsErrorResponse('Unauthorized', 401);
     }
 
@@ -118,48 +151,97 @@ serve(async (req) => {
       .single();
 
     if (profile?.user_type !== 'admin') {
+      console.error(`[${requestId}] ❌ Non-admin user attempted access:`, { userId: user.id, userType: profile?.user_type });
       return createCorsErrorResponse('Only admins can create users', 403);
     }
+
+    console.log(`[${requestId}] ✅ Admin authentication verified for user:`, user.id);
 
     // Get request body
     const { userData } = await req.json();
 
-    console.log('Creating user:', { 
+    console.log(`[${requestId}] 📝 Processing user creation request:`, { 
       email: userData.email, 
-      userType: userData.user_type
+      userType: userData.user_type,
+      hasOrganizations: !!(userData.organization_ids?.length)
     });
 
-    // Create admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Validate required fields
+    if (!userData.email || !userData.first_name || !userData.last_name || !userData.user_type) {
+      console.error(`[${requestId}] ❌ Missing required fields:`, {
+        hasEmail: !!userData.email,
+        hasFirstName: !!userData.first_name,
+        hasLastName: !!userData.last_name,
+        hasUserType: !!userData.user_type
+      });
+      return createCorsErrorResponse('Missing required fields', 400);
+    }
+
+    // Create admin client with service role
+    console.log(`[${requestId}] 🔧 Creating admin client...`);
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Test database connection
+    console.log(`[${requestId}] 🔍 Testing database connection...`);
+    const { data: connectionTest, error: connectionError } = await supabaseAdmin
+      .from('profiles')
+      .select('count')
+      .limit(1);
+
+    if (connectionError) {
+      console.error(`[${requestId}] ❌ Database connection failed:`, connectionError);
+      return createCorsErrorResponse('Database connection failed', 500);
+    }
+
+    console.log(`[${requestId}] ✅ Database connection verified`);
 
     // Generate a secure temporary password for initial creation
     const temporaryPassword = crypto.randomUUID() + crypto.randomUUID();
 
-    // Create auth user
-    const { data: authUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: userData.email,
-      password: temporaryPassword,
-      email_confirm: true, // Enable Supabase auth confirmation email
-      app_metadata: {  // Security data (admin-only)
-        user_type: userData.user_type
-      },
-      user_metadata: {  // Non-security data (user-editable)
-        first_name: userData.first_name,
-        last_name: userData.last_name
+    console.log(`[${requestId}] 👤 Creating auth user...`);
+
+    // Create auth user with retry logic
+    let authUser, createError;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      const result = await supabaseAdmin.auth.admin.createUser({
+        email: userData.email,
+        password: temporaryPassword,
+        email_confirm: true, // Enable Supabase auth confirmation email
+        app_metadata: {  // Security data (admin-only)
+          user_type: userData.user_type
+        },
+        user_metadata: {  // Non-security data (user-editable)
+          first_name: userData.first_name,
+          last_name: userData.last_name
+        }
+      });
+
+      authUser = result.data;
+      createError = result.error;
+
+      if (!createError) break;
+
+      retryCount++;
+      console.warn(`[${requestId}] ⚠️ Auth user creation attempt ${retryCount} failed:`, createError);
+      
+      if (retryCount < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
       }
-    });
+    }
 
     if (createError) {
-      console.error('Auth user creation failed:', createError);
+      console.error(`[${requestId}] ❌ Auth user creation failed after ${maxRetries} attempts:`, createError);
       throw createError;
     }
 
-    console.log('Auth user created:', authUser.user.id);
+    console.log(`[${requestId}] ✅ Auth user created:`, authUser.user.id);
 
     // Manually create profile since we can't use triggers on auth.users
+    console.log(`[${requestId}] 📋 Creating user profile...`);
+    
     const { data: newProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -175,13 +257,28 @@ serve(async (req) => {
       .single();
 
     if (profileError) {
-      console.error('Profile creation failed:', profileError);
+      console.error(`[${requestId}] ❌ Profile creation failed:`, {
+        error: profileError,
+        userInfo: {
+          user_id: authUser.user.id,
+          email: userData.email,
+          user_type: userData.user_type
+        }
+      });
+      
       // Clean up auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      console.log(`[${requestId}] 🧹 Cleaning up auth user due to profile creation failure...`);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+        console.log(`[${requestId}] ✅ Auth user cleanup completed`);
+      } catch (cleanupError) {
+        console.error(`[${requestId}] ❌ Failed to cleanup auth user:`, cleanupError);
+      }
+      
       throw new Error(`Profile creation failed: ${profileError.message}`);
     }
 
-    console.log('Profile created:', newProfile.id);
+    console.log(`[${requestId}] ✅ Profile created:`, newProfile.id);
 
     // Send welcome email using the send-email function
     try {
@@ -252,15 +349,34 @@ serve(async (req) => {
 
     // Create organization relationships
     if (finalOrganizationIds.length > 0) {
-      console.log('Creating organization relationships for user:', newProfile.id);
-      console.log('Organization IDs:', finalOrganizationIds);
+      console.log(`[${requestId}] 🏢 Creating organization relationships...`);
+      console.log(`[${requestId}] Organization IDs:`, finalOrganizationIds);
       
       const orgRelationships = finalOrganizationIds.map((orgId: string) => ({
         user_id: newProfile.id,
         organization_id: orgId,
       }));
 
-      console.log('Inserting organization relationships:', orgRelationships);
+      console.log(`[${requestId}] Inserting organization relationships:`, orgRelationships);
+
+      // Verify user_organizations table exists
+      const { data: tableCheck, error: tableError } = await supabaseAdmin
+        .from('user_organizations')
+        .select('count')
+        .limit(1);
+
+      if (tableError) {
+        console.error(`[${requestId}] ❌ user_organizations table check failed:`, {
+          error: tableError,
+          message: tableError.message,
+          details: tableError.details,
+          hint: tableError.hint,
+          code: tableError.code
+        });
+        throw new Error(`Database table verification failed: ${tableError.message}`);
+      }
+
+      console.log(`[${requestId}] ✅ user_organizations table verified`);
 
       const { data: insertedRelationships, error: orgError } = await supabaseAdmin
         .from('user_organizations')
@@ -268,12 +384,13 @@ serve(async (req) => {
         .select();
 
       if (orgError) {
-        console.error('Organization relationship creation failed:', orgError);
-        console.error('Error details:', {
+        console.error(`[${requestId}] ❌ Organization relationship creation failed:`, {
+          error: orgError,
           message: orgError.message,
           details: orgError.details,
           hint: orgError.hint,
-          code: orgError.code
+          code: orgError.code,
+          orgRelationships: orgRelationships
         });
         
         // For auto-assignment, this is more critical
@@ -281,26 +398,52 @@ serve(async (req) => {
           throw new Error(`Failed to assign user to organization: ${orgError.message}`);
         }
       } else {
-        console.log('Organization relationships created successfully:', insertedRelationships);
+        console.log(`[${requestId}] ✅ Organization relationships created successfully:`, insertedRelationships);
       }
     }
 
     // Return success response
+    const endTime = Date.now();
+    const duration = endTime - startTime;
     const message = 'User created successfully. They will receive a welcome email with login instructions.';
 
-    console.log('✅ User creation process completed:', { 
+    console.log(`[${requestId}] ✅ User creation process completed in ${duration}ms:`, { 
       userId: newProfile.id, 
-      email: userData.email
+      email: userData.email,
+      duration: `${duration}ms`,
+      timestamp: new Date().toISOString()
     });
 
     return createCorsResponse({
       success: true,
       user: newProfile,
       message,
+      meta: {
+        requestId,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      }
     });
 
   } catch (error) {
-    console.error('Create user error:', error);
-    return createCorsErrorResponse(error.message || 'Internal error', 400);
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    console.error(`[${requestId}] ❌ Create user error after ${duration}ms:`, {
+      error: error.message,
+      stack: error.stack,
+      duration: `${duration}ms`,
+      timestamp: new Date().toISOString()
+    });
+    
+    return createCorsErrorResponse(
+      error.message || 'Internal error', 
+      400, 
+      {
+        requestId,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      }
+    );
   }
 });
