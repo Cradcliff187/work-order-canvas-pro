@@ -31,6 +31,15 @@ export function useAdminReportSubmission() {
 
       if (!adminProfile) throw new Error("Admin profile not found");
 
+      // Get subcontractor's auth user_id for proper file organization
+      const { data: subcontractorProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("id", reportData.subcontractorUserId)
+        .single();
+
+      if (!subcontractorProfile) throw new Error("Subcontractor profile not found");
+
       // Submit the report with admin as submitted_by_user_id
       const reportInsert: any = {
         work_order_id: reportData.workOrderId,
@@ -57,13 +66,17 @@ export function useAdminReportSubmission() {
       // Upload photos if provided
       if (reportData.photos && reportData.photos.length > 0) {
         const uploadPromises = reportData.photos.map(async (photo, index) => {
-          const fileName = `${adminProfile.id}/${report.id}/${Date.now()}_${index}_${photo.name}`;
+          // Use subcontractor's auth user_id for file path organization
+          const fileName = `${subcontractorProfile.user_id}/${report.id}/${Date.now()}_${index}_${photo.name}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from("work-order-attachments")
             .upload(fileName, photo);
 
-          if (uploadError) throw uploadError;
+          if (uploadError) {
+            console.error("Storage upload error:", uploadError);
+            throw new Error(`Failed to upload file ${photo.name}: ${uploadError.message}`);
+          }
 
           // Create attachment record
           const { error: attachmentError } = await supabase
@@ -77,7 +90,10 @@ export function useAdminReportSubmission() {
               uploaded_by_user_id: adminProfile.id,
             });
 
-          if (attachmentError) throw attachmentError;
+          if (attachmentError) {
+            console.error("Attachment record creation error:", attachmentError);
+            throw new Error(`Failed to create attachment record for ${photo.name}: ${attachmentError.message}`);
+          }
         });
 
         await Promise.all(uploadPromises);
