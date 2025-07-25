@@ -196,7 +196,7 @@ export default function AdminWorkOrderDetail() {
             {workOrder.status.replace('_', ' ')}
           </Badge>
           {/* Show Submit Report button if assigned to subcontractor and no reports exist */}
-          {workOrder.assigned_user && 
+          {assignments.length > 0 && 
            workOrder.status !== 'completed' && 
            (!workOrder.work_order_reports || workOrder.work_order_reports.length === 0) && (
             <Button 
@@ -225,7 +225,7 @@ export default function AdminWorkOrderDetail() {
           <StatusActionButtons 
             workOrderId={workOrder.id}
             currentStatus={workOrder.status}
-            hasAssignments={assignments.length > 0 || !!workOrder.assigned_user}
+            hasAssignments={assignments.length > 0}
           />
         </CardContent>
       </Card>
@@ -409,25 +409,6 @@ export default function AdminWorkOrderDetail() {
                       )}
                     </div>
                   ))}
-                </div>
-              ) : workOrder.assigned_user ? (
-                <div className="border rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium">
-                      {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
-                    </p>
-                    <Badge variant="outline">legacy</Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <Mail className="h-3 w-3" />
-                    {workOrder.assigned_user.email}
-                  </div>
-                  {workOrder.assigned_user.phone && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      {workOrder.assigned_user.phone}
-                    </div>
-                  )}
                 </div>
               ) : (
                 <p className="text-muted-foreground">Unassigned</p>

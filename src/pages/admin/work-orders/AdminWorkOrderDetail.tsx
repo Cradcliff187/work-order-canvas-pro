@@ -256,11 +256,11 @@ export default function AdminWorkOrderDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {workOrder.assigned_user ? (
+                {workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0 ? (
                   <div>
                     <p className="text-sm font-medium">Assigned To</p>
                     <p className="text-sm text-muted-foreground">
-                      {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
+                      {workOrder.work_order_assignments[0].assignee_profile?.first_name} {workOrder.work_order_assignments[0].assignee_profile?.last_name}
                     </p>
                   </div>
                 ) : (

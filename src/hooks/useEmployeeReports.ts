@@ -14,24 +14,31 @@ export function useEmployeeReports() {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from("work_orders")
+      // Get work orders assigned to this employee through work_order_assignments
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from("work_order_assignments")
         .select(`
-          *,
-          trades (name),
-          organizations!organization_id (name),
-          employee_reports (
-            id,
-            report_date,
-            hours_worked,
-            total_labor_cost
+          work_order_id,
+          work_orders!work_order_assignments_work_order_id_fkey (
+            *,
+            trades (name),
+            organizations!work_orders_organization_id_fkey (name),
+            employee_reports (
+              id,
+              report_date,
+              hours_worked,
+              total_labor_cost
+            )
           )
         `)
-        .eq("assigned_to_type", "internal")
+        .eq("assigned_to", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (assignmentError) throw assignmentError;
+      
+      // Transform the data to extract work orders
+      const data = assignmentData?.map(assignment => assignment.work_orders).filter(Boolean) || [];
+      return data;
     },
     enabled: !!user,
   });

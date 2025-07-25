@@ -165,7 +165,7 @@ export const useCompanyAccessVerification = () => {
     // Get work orders for this organization
     const { data: workOrders } = await supabase
       .from('work_orders')
-      .select('id, title, organization_id, assigned_to')
+      .select('id, title, organization_id')
       .eq('organization_id', organization.id);
 
     // Get reports for this organization's work orders
@@ -195,8 +195,7 @@ export const useCompanyAccessVerification = () => {
         // This would normally require actual authentication context
         // For testing, we verify the data structure is correct
         const userWorkOrders = workOrders?.filter(wo => 
-          wo.organization_id === organization.id || 
-          wo.assigned_to === user.id
+          wo.organization_id === organization.id
         ) || [];
 
         if (organization.organization_type === 'partner' && userWorkOrders.length === 0 && workOrders && workOrders.length > 0) {
@@ -283,19 +282,18 @@ export const useCompanyAccessVerification = () => {
 
   const verifyAssignmentPatterns = async () => {
     try {
-      // Check individual assignments
+      // Check individual assignments through assignments table
       const { data: individualAssignments } = await supabase
-        .from('work_orders')
+        .from('work_order_assignments')
         .select(`
           id,
           assigned_to,
-          organization_id,
-          profiles!work_orders_assigned_to_fkey (
+          work_order_id,
+          assignee_profile:profiles!assigned_to (
             id,
             user_type
           )
-        `)
-        .not('assigned_to', 'is', null);
+        `);
 
       // Check organization-based assignments through assignments table
       const { data: organizationAssignments } = await supabase

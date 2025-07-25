@@ -270,8 +270,6 @@ export default function SubcontractorWorkOrderDetail() {
             <CardContent>
               <AssigneeDisplay 
                 assignments={workOrder.work_order_assignments || []}
-                assignedUser={workOrder.assigned_user}
-                assignedOrganization={workOrder.organizations}
                 showIcons={true}
                 showOrganization={true}
               />

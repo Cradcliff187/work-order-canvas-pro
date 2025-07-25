@@ -88,15 +88,33 @@ export function useReceipts() {
     queryFn: async () => {
       if (!profile?.id) return [];
       
-      const { data, error } = await supabase
-        .from("work_orders")
-        .select("id, work_order_number, title, store_location, status")
+      // Get work orders assigned to this employee through work_order_assignments
+      const { data: assignmentData, error } = await supabase
+        .from("work_order_assignments")
+        .select(`
+          work_orders!work_order_assignments_work_order_id_fkey (
+            id, 
+            work_order_number, 
+            title, 
+            store_location, 
+            status
+          )
+        `)
         .eq("assigned_to", profile.id)
-        .in("status", ["assigned", "in_progress", "completed"])
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (error) {
+        console.error("Error fetching work orders:", error);
+        throw error;
+      }
+
+      // Transform the data to extract work orders and filter by status
+      const workOrders = assignmentData?.map(assignment => assignment.work_orders).filter(Boolean) || [];
+      const filteredWorkOrders = workOrders.filter(wo => 
+        ["assigned", "in_progress", "completed"].includes(wo.status)
+      );
+      
+      return filteredWorkOrders;
     },
     enabled: !!profile?.id,
   });

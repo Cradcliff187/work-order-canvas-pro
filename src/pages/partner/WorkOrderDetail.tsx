@@ -214,7 +214,7 @@ export default function WorkOrderDetail() {
           </Card>
 
           {/* Assigned User */}
-          {workOrder.assigned_user && (
+          {workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function WorkOrderDetail() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm">
-                  {workOrder.assigned_user.first_name} {workOrder.assigned_user.last_name}
+                  {workOrder.work_order_assignments[0].assignee_profile?.first_name} {workOrder.work_order_assignments[0].assignee_profile?.last_name}
                 </p>
               </CardContent>
             </Card>

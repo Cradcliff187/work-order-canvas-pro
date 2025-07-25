@@ -157,10 +157,8 @@ export const useAnalytics = (dateRange: DateRange) => {
         .gte('date_submitted', startDate)
         .lte('date_submitted', endDate);
 
-      // Subcontractor Performance
-      const { data: subcontractorData } = await supabase
-        .from('mv_subcontractor_performance')
-        .select('*');
+      // Subcontractor Performance - Remove this since mv_subcontractor_performance no longer exists
+      const subcontractorData: any[] = [];
 
       // Geographic Distribution
       const { data: geoData } = await supabase.rpc('get_geographic_distribution', {
@@ -210,16 +208,8 @@ export const useAnalytics = (dateRange: DateRange) => {
         avgTurnaroundTime: data.completedCount > 0 ? data.totalTime / data.completedCount : 0,
       }));
 
-      const subcontractorPerformance = subcontractorData?.map(s => ({
-        id: s.subcontractor_id,
-        name: `${s.first_name} ${s.last_name}`,
-        company: s.company_name || 'N/A',
-        totalJobs: s.total_jobs || 0,
-        completedJobs: s.completed_jobs || 0,
-        onTimeRate: s.total_jobs > 0 ? ((s.on_time_jobs || 0) / s.total_jobs) * 100 : 0,
-        onTimePercentage: Number(s.on_time_percentage) || 0,
-        reportApprovalRate: Number(s.report_approval_rate) || 0,
-      })) || [];
+      // Simplified subcontractor performance without the materialized view
+      const subcontractorPerformance: any[] = [];
 
       const geographicDistribution = geoData?.map(g => ({
         state: g.state,

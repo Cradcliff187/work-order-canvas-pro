@@ -13,13 +13,6 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     name: string; 
     description: string | null;
   } | null;
-  assigned_user: { 
-    id: string;
-    first_name: string; 
-    last_name: string;
-    email: string;
-    phone: string | null;
-  } | null;
   created_user: { 
     first_name: string; 
     last_name: string;
@@ -91,13 +84,6 @@ export function useWorkOrderDetail(id: string) {
             name,
             description
           ),
-          assigned_user:profiles!assigned_to(
-            id,
-            first_name,
-            last_name,
-            email,
-            phone
-          ),
           created_user:profiles!created_by(
             first_name,
             last_name,
@@ -168,7 +154,7 @@ export function useWorkOrderDetail(id: string) {
         location_contact_name: locationContact?.contact_name,
         location_contact_phone: locationContact?.contact_phone,
         location_contact_email: locationContact?.contact_email,
-      } as WorkOrderDetail;
+      };
     },
     enabled: !!id,
   });

@@ -74,8 +74,10 @@ export default function AdminSubmitReport() {
   }
 
   // Check if there's an assigned subcontractor
-  const assignedSubcontractor = workOrder.assigned_user;
-  if (!assignedSubcontractor) {
+  const hasAssignments = workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0;
+  const assignedSubcontractor = hasAssignments ? workOrder.work_order_assignments[0].assignee_profile : null;
+  
+  if (!hasAssignments || !assignedSubcontractor) {
     return (
       <div className="p-6">
         <Alert variant="destructive">
@@ -114,7 +116,7 @@ export default function AdminSubmitReport() {
     try {
       await submitReportForSubcontractor.mutateAsync({
         workOrderId,
-        subcontractorUserId: assignedSubcontractor.id,
+        subcontractorUserId: workOrder.work_order_assignments[0].assigned_to,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
         hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
