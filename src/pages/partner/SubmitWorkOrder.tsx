@@ -28,6 +28,8 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { FileUpload } from '@/components/FileUpload';
+import { MobileFileUpload } from '@/components/MobileFileUpload';
 
 // Unified form schema with improved error messages
 const workOrderFormSchema = z.object({
@@ -807,6 +809,39 @@ export default function SubmitWorkOrder() {
                         </FormItem>
                       )}
                     />
+
+                    {/* File Upload Section */}
+                    <div className="space-y-4">
+                      <Label className="text-base font-medium">
+                        Add photos to help explain the issue (optional)
+                      </Label>
+                      <div className="text-sm text-muted-foreground mb-4">
+                        Upload images or PDFs to help explain the work needed. Maximum 10 files, 10MB each.
+                      </div>
+                      
+                      {useIsMobile() ? (
+                        <MobileFileUpload
+                          onFilesSelected={handleFilesSelected}
+                          maxFiles={10}
+                          maxSizeBytes={10 * 1024 * 1024}
+                          uploadProgress={uploadProgress}
+                          disabled={isUploading}
+                          acceptedTypes={['image/*', '.pdf']}
+                          showCameraButton={true}
+                          showGalleryButton={true}
+                          showDocumentButton={true}
+                        />
+                      ) : (
+                        <FileUpload
+                          onFilesSelected={handleFilesSelected}
+                          maxFiles={10}
+                          maxSizeBytes={10 * 1024 * 1024}
+                          uploadProgress={uploadProgress}
+                          disabled={isUploading}
+                          acceptedTypes={['image/*', '.pdf']}
+                        />
+                      )}
+                    </div>
 
                     {/* Admin-only fields */}
                     {isAdmin && (
