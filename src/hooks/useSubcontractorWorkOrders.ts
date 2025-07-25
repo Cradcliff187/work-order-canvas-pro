@@ -191,6 +191,14 @@ export function useSubcontractorWorkOrders() {
     }) => {
       if (!user) throw new Error("Not authenticated");
 
+      // Validate authentication session before critical database operations
+      const { ensureAuthenticatedSession } = await import('@/lib/auth/sessionValidation');
+      const isAuthValid = await ensureAuthenticatedSession();
+      
+      if (!isAuthValid) {
+        throw new Error("Authentication session invalid. Please refresh the page and try again.");
+      }
+
       // Get current user profile to get the profile ID
       const { data: profile } = await supabase
         .from("profiles")
@@ -280,11 +288,28 @@ export function useSubcontractorWorkOrders() {
       queryClient.invalidateQueries({ queryKey: ["subcontractor-dashboard"] });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to submit report. Please try again.",
-        variant: "destructive",
-      });
+      const errorMessage = error.message;
+      
+      // Provide specific feedback for authentication errors
+      if (errorMessage.includes("Authentication session invalid")) {
+        toast({
+          title: "Authentication Error",
+          description: "Your session has expired. Please refresh the page and try again.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("row-level security")) {
+        toast({
+          title: "Permission Error",
+          description: "Authentication issue detected. Please refresh the page and try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit report. Please try again.",
+          variant: "destructive",
+        });
+      }
       console.error("Report submission error:", error);
     },
   });
