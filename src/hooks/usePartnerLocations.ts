@@ -12,7 +12,13 @@ export function usePartnerLocations(organizationId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('partner_locations')
-        .select('*')
+        .select(`
+          *,
+          organizations!inner(
+            name,
+            initials
+          )
+        `)
         .order('location_name');
 
       if (organizationId) {
@@ -24,7 +30,6 @@ export function usePartnerLocations(organizationId?: string) {
       if (error) throw error;
       return data;
     },
-    enabled: !!organizationId,
   });
 }
 
