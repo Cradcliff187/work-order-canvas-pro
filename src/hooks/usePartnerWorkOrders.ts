@@ -58,7 +58,6 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
           *,
           organizations!organization_id(name),
           trades!trade_id(name),
-          assigned_user:profiles!assigned_to(first_name, last_name),
           work_order_assignments(
             assigned_to,
             assignment_type,
@@ -449,7 +448,7 @@ export function useWorkOrderById(id: string) {
           *,
           organizations!organization_id(name, contact_email, contact_phone),
           trades!trade_id(name, description),
-          assigned_user:profiles!assigned_to(first_name, last_name),
+          
           created_user:profiles!created_by(first_name, last_name)
         `)
         .eq('id', id)

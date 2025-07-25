@@ -25,7 +25,7 @@ export function useSubcontractorWorkOrders() {
             status,
             submitted_at
           ),
-          assigned_user:profiles!assigned_to (first_name, last_name, user_type),
+          
           work_order_assignments (
             assigned_to,
             assignment_type,

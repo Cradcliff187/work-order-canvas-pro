@@ -24,11 +24,6 @@ interface AssigneeUser {
 
 interface AssigneeDisplayProps {
   assignments?: Assignment[];
-  assignedUser?: AssigneeUser | null;
-  assignedOrganization?: {
-    name: string;
-    organization_type?: string;
-  } | null;
   className?: string;
   showIcons?: boolean;
   showOrganization?: boolean;
@@ -36,13 +31,11 @@ interface AssigneeDisplayProps {
 
 export function AssigneeDisplay({ 
   assignments = [], 
-  assignedUser, 
-  assignedOrganization,
   className = "",
   showIcons = true,
   showOrganization = true 
 }: AssigneeDisplayProps) {
-  // If we have assignments, use them. Otherwise fall back to legacy assigned_user
+  // Use only assignments table - no more legacy fallback
   const hasAssignments = assignments && assignments.length > 0;
   const assignees = hasAssignments ? assignments : [];
 
@@ -62,30 +55,11 @@ export function AssigneeDisplay({
   };
 
   // Render unassigned state
-  if (!hasAssignments && !assignedUser) {
+  if (!hasAssignments) {
     return (
       <div className={`flex items-center gap-1 text-muted-foreground ${className}`}>
         {showIcons && <Users className="h-4 w-4" />}
         <span>Unassigned</span>
-      </div>
-    );
-  }
-
-  // Render legacy single assignee
-  if (!hasAssignments && assignedUser) {
-    return (
-      <div className={`flex items-center gap-2 ${className}`}>
-        <div className="flex items-center gap-1">
-          {showIcons && <UserCheck className="h-4 w-4" />}
-          <span>{assignedUser.first_name} {assignedUser.last_name}</span>
-        </div>
-        {showOrganization && assignedOrganization && (
-          <OrganizationBadge 
-            organization={assignedOrganization}
-            size="sm"
-            showIcon={false}
-          />
-        )}
       </div>
     );
   }

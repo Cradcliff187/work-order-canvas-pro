@@ -28,19 +28,21 @@ export function useEmployeesForAssignment() {
 
       if (error) throw error;
 
-      // Get workload for employees
-      const { data: workOrders, error: workOrderError } = await supabase
-        .from('work_orders')
-        .select('assigned_to')
-        .in('status', ['assigned', 'in_progress'])
-        .not('assigned_to', 'is', null);
+      // Get workload for employees from assignments
+      const { data: assignments, error: assignmentError } = await supabase
+        .from('work_order_assignments')
+        .select(`
+          assigned_to,
+          work_orders!inner(status)
+        `)
+        .in('work_orders.status', ['assigned', 'in_progress']);
 
-      if (workOrderError) throw workOrderError;
+      if (assignmentError) throw assignmentError;
 
       // Calculate workload
-      const workloadMap = workOrders.reduce((acc, wo) => {
-        if (wo.assigned_to) {
-          acc[wo.assigned_to] = (acc[wo.assigned_to] || 0) + 1;
+      const workloadMap = (assignments || []).reduce((acc, assignment) => {
+        if (assignment.assigned_to) {
+          acc[assignment.assigned_to] = (acc[assignment.assigned_to] || 0) + 1;
         }
         return acc;
       }, {} as Record<string, number>);

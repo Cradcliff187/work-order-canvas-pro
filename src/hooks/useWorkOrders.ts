@@ -39,8 +39,6 @@ export interface WorkOrder {
   organization_id: string | null;
   trade_id: string | null;
   status: 'received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed';
-  assigned_to: string | null;
-  assigned_to_type: 'internal' | 'subcontractor' | null;
   estimated_hours: number | null;
   actual_hours: number | null;
   estimated_completion_date: string | null;
@@ -80,15 +78,21 @@ export interface WorkOrder {
   // Joined relations - must match exactly what the query returns
   organizations: WorkOrderOrganization | null;
   trades: WorkOrderTrade | null;
-  assigned_user: WorkOrderProfile | null;
-  assignments?: Array<{
+  work_order_assignments?: Array<{
     id: string;
     assigned_to: string;
     assignment_type: string;
-    assignee: {
+    profiles?: {
+      id: string;
       first_name: string;
       last_name: string;
-    };
+      email: string;
+    } | null;
+    organizations?: {
+      id: string;
+      name: string;
+      initials: string;
+    } | null;
   }>;
 }
 
@@ -118,7 +122,26 @@ export function useWorkOrders(
           *,
           organizations!organization_id(id, name, contact_email, organization_type),
           trades!trade_id(id, name),
-          assigned_user:profiles!assigned_to(id, first_name, last_name)
+          work_order_assignments(
+            id,
+            assigned_to,
+            assignment_type,
+            assigned_organization_id,
+            assigned_by,
+            assigned_at,
+            notes,
+            profiles!work_order_assignments_assigned_to_fkey(
+              id,
+              first_name,
+              last_name,
+              email
+            ),
+            organizations!work_order_assignments_assigned_organization_id_fkey(
+              id,
+              name,
+              initials
+            )
+          )
         `,
           { count: 'exact' }
         )
@@ -183,7 +206,26 @@ export function useWorkOrder(id: string) {
           *,
           organizations!organization_id(id, name, contact_email, organization_type),
           trades!trade_id(id, name),
-          assigned_user:profiles!assigned_to(id, first_name, last_name)
+          work_order_assignments(
+            id,
+            assigned_to,
+            assignment_type,
+            assigned_organization_id,
+            assigned_by,
+            assigned_at,
+            notes,
+            profiles!work_order_assignments_assigned_to_fkey(
+              id,
+              first_name,
+              last_name,
+              email
+            ),
+            organizations!work_order_assignments_assigned_organization_id_fkey(
+              id,
+              name,
+              initials
+            )
+          )
         `)
         .eq('id', id)
         .single();

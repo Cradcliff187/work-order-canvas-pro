@@ -150,17 +150,9 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
     accessorKey: 'assigned_user',
     header: 'Assigned To',
     cell: ({ row }) => {
-      const assignments = row.original.assignments || [];
-      const fallbackUser = row.original.assigned_user;
+      const assignments = row.original.work_order_assignments || [];
       
       if (assignments.length === 0) {
-        if (fallbackUser) {
-          return (
-            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
-              {`${fallbackUser.first_name} ${fallbackUser.last_name}`}
-            </Badge>
-          );
-        }
         return (
           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700">
             Unassigned
@@ -169,16 +161,17 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
       }
       
       if (assignments.length === 1) {
-        const assignee = assignments[0].assignee;
+        const assignee = assignments[0].profiles;
         return (
           <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
-            {`${assignee.first_name} ${assignee.last_name}`}
+            {assignee ? `${assignee.first_name} ${assignee.last_name}` : 'Unknown'}
           </Badge>
         );
       }
       
       const lead = assignments.find(a => a.assignment_type === 'lead') || assignments[0];
-      const leadName = `${lead.assignee.first_name} ${lead.assignee.last_name.charAt(0)}.`;
+      const assignee = lead.profiles;
+      const leadName = assignee ? `${assignee.first_name} ${assignee.last_name.charAt(0)}.` : 'Unknown';
       const additionalCount = assignments.length - 1;
       
       return (
@@ -191,12 +184,15 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
             </TooltipTrigger>
             <TooltipContent>
               <div className="space-y-1">
-                {assignments.map((assignment, index) => (
-                  <div key={assignment.id} className="text-sm">
-                    {assignment.assignee.first_name} {assignment.assignee.last_name}
-                    {assignment.assignment_type === 'lead' && ' (Lead)'}
-                  </div>
-                ))}
+                {assignments.map((assignment, index) => {
+                  const profile = assignment.profiles;
+                  return (
+                    <div key={assignment.id} className="text-sm">
+                      {profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown'}
+                      {assignment.assignment_type === 'lead' && ' (Lead)'}
+                    </div>
+                  );
+                })}
               </div>
             </TooltipContent>
           </Tooltip>

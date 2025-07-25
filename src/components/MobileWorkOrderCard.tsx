@@ -249,8 +249,6 @@ export function MobileWorkOrderCard({
               <div className="flex-1 min-w-0">
                 <AssigneeDisplay 
                   assignments={workOrder.work_order_assignments}
-                  assignedUser={workOrder.assigned_user}
-                  assignedOrganization={workOrder.assigned_organizations}
                   showIcons={false}
                   showOrganization={true}
                 />

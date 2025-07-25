@@ -278,16 +278,18 @@ const fetchRecentWorkOrders = async (): Promise<RecentWorkOrder[]> => {
     data.map(async (workOrder) => {
       let assigned_to_name: string | undefined;
       
-      if (workOrder.assigned_to) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', workOrder.assigned_to)
-          .single();
-        
-        if (profile) {
-          assigned_to_name = `${profile.first_name} ${profile.last_name}`;
-        }
+      // Get assignment names from work_order_assignments
+      const { data: assignments } = await supabase
+        .from('work_order_assignments')
+        .select(`
+          profiles!work_order_assignments_assigned_to_fkey(first_name, last_name)
+        `)
+        .eq('work_order_id', workOrder.id)
+        .limit(1);
+      
+      if (assignments?.[0]?.profiles) {
+        const profile = assignments[0].profiles;
+        assigned_to_name = `${profile.first_name} ${profile.last_name}`;
       }
 
       return {

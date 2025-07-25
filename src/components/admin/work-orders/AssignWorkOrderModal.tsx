@@ -117,8 +117,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       await supabase
         .from('work_orders')
         .update({
-          assigned_to: null,
-          assigned_to_type: null,
           status: 'received' as const,
           date_assigned: null,
         })
@@ -187,16 +185,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
         await bulkAddAssignments.mutateAsync(assignments);
 
-        // Update work_orders table with lead assignee
-        const leadAssignee = allSelectedAssignees[0];
-        const assignee = employees.find(e => e.id === leadAssignee);
-        const assignedToType: 'internal' | 'subcontractor' = assignee?.type === 'employee' ? 'internal' : 'subcontractor';
-        
+        // Update work order status to assigned when assignments are created
         await supabase
           .from('work_orders')
           .update({
-            assigned_to: leadAssignee,
-            assigned_to_type: assignedToType,
+            status: 'assigned',
+            date_assigned: new Date().toISOString()
           })
           .in('id', workOrders.map(wo => wo.id));
       }
