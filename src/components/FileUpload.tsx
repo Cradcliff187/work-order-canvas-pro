@@ -189,17 +189,15 @@ export function FileUpload({
     noKeyboard: false
   });
 
-  // Debug logging
-  console.log('FileUpload dropzone state:', {
-    isDragActive,
-    disabled,
-    maxFiles,
-    currentPreviews: previews.length,
-    remainingSlots: maxFiles - previews.length,
-    acceptedTypes,
-    dropzoneAccept: getDropzoneAccept(),
-    hasOpenFunction: !!open
-  });
+  // Handle browse files click
+  const handleBrowseClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Browse files clicked, opening file picker...');
+    if (open && !disabled) {
+      open();
+    }
+  }, [open, disabled]);
 
   // Remove file preview
   const removeFile = useCallback((id: string) => {
@@ -268,19 +266,13 @@ export function FileUpload({
       )}>
         <CardContent className="p-8">
           <div
-            {...getRootProps({
-              onClick: (e) => {
-                console.log('Dropzone area clicked:', e.target);
-                console.log('File input element:', fileInputRef.current);
-                console.log('Open function available:', !!open);
-              }
-            })}
+            {...getRootProps()}
             className={cn(
               "flex flex-col items-center justify-center space-y-4 text-center cursor-pointer",
               disabled && "cursor-not-allowed"
             )}
           >
-            <input {...getInputProps()} ref={fileInputRef} />
+            <input {...getInputProps()} />
             <div className={cn(
               "w-16 h-16 rounded-full flex items-center justify-center",
               "bg-muted text-muted-foreground transition-colors",
@@ -302,7 +294,10 @@ export function FileUpload({
                 }
               </h3>
               <p className="text-sm text-muted-foreground">
-                or <span className="text-primary underline cursor-pointer">
+                or <span 
+                  className="text-primary underline cursor-pointer" 
+                  onClick={handleBrowseClick}
+                >
                   browse files
                 </span>
               </p>
