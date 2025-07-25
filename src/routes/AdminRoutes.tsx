@@ -82,6 +82,19 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
+    <Route path="/admin/work-orders/:workOrderId/submit-report" element={
+      <ProtectedRoute requiredUserType="employee">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            {(() => {
+              const AdminSubmitReport = React.lazy(() => import('@/pages/admin/AdminSubmitReport'));
+              return <AdminSubmitReport />;
+            })()}
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
     <Route path="/admin/users" element={
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>

@@ -195,6 +195,18 @@ export default function AdminWorkOrderDetail() {
           <Badge className={getStatusColor(workOrder.status)}>
             {workOrder.status.replace('_', ' ')}
           </Badge>
+          {/* Show Submit Report button if assigned to subcontractor and no reports exist */}
+          {workOrder.assigned_user && 
+           workOrder.status !== 'completed' && 
+           (!workOrder.work_order_reports || workOrder.work_order_reports.length === 0) && (
+            <Button 
+              variant="outline"
+              onClick={() => navigate(`/admin/work-orders/${id}/submit-report`)}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Submit Report
+            </Button>
+          )}
           <Button onClick={() => navigate(`/admin/work-orders/${id}/edit`)}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Work Order

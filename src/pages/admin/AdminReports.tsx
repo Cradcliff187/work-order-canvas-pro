@@ -135,11 +135,17 @@ export default function AdminReports() {
       header: 'Subcontractor',
       cell: ({ row }) => {
         const subcontractor = row.original.subcontractor;
+        const submittedBy = row.original.submitted_by;
         return (
           <div>
             <div className="font-medium">
               {subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}
             </div>
+            {submittedBy && submittedBy.user_type !== 'subcontractor' && (
+              <div className="text-xs text-orange-600 font-medium">
+                Submitted by {submittedBy.user_type}: {submittedBy.first_name} {submittedBy.last_name}
+              </div>
+            )}
             {subcontractor?.company_name && (
               <div className="text-sm text-muted-foreground">{subcontractor.company_name}</div>
             )}

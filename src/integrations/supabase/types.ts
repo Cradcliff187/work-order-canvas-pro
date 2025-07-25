@@ -1028,6 +1028,7 @@ export type Database = {
           status: Database["public"]["Enums"]["report_status"]
           subcontractor_user_id: string
           submitted_at: string
+          submitted_by_user_id: string | null
           work_order_id: string
           work_performed: string
         }
@@ -1043,6 +1044,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["report_status"]
           subcontractor_user_id: string
           submitted_at?: string
+          submitted_by_user_id?: string | null
           work_order_id: string
           work_performed: string
         }
@@ -1058,6 +1060,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["report_status"]
           subcontractor_user_id?: string
           submitted_at?: string
+          submitted_by_user_id?: string | null
           work_order_id?: string
           work_performed?: string
         }
@@ -1086,6 +1089,20 @@ export type Database = {
           {
             foreignKeyName: "work_order_reports_subcontractor_user_id_fkey"
             columns: ["subcontractor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_reports_submitted_by_user_id_fkey"
+            columns: ["submitted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "mv_subcontractor_performance"
+            referencedColumns: ["subcontractor_id"]
+          },
+          {
+            foreignKeyName: "work_order_reports_submitted_by_user_id_fkey"
+            columns: ["submitted_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

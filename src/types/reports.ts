@@ -25,6 +25,11 @@ export type WorkOrderReport = Database['public']['Tables']['work_order_reports']
     first_name: string;
     last_name: string;
   } | null;
+  submitted_by?: {
+    first_name: string;
+    last_name: string;
+    user_type: string;
+  } | null;
 };
 
 export interface ReportFilters {

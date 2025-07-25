@@ -36,6 +36,11 @@ export function useAdminReports(
           reviewed_by:profiles!reviewed_by_user_id(
             first_name,
             last_name
+          ),
+          submitted_by:profiles!submitted_by_user_id(
+            first_name,
+            last_name,
+            user_type
           )
         `, { count: 'exact' });
 

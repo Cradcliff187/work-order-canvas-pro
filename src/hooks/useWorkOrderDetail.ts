@@ -14,6 +14,7 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     description: string | null;
   } | null;
   assigned_user: { 
+    id: string;
     first_name: string; 
     last_name: string;
     email: string;
@@ -91,6 +92,7 @@ export function useWorkOrderDetail(id: string) {
             description
           ),
           assigned_user:profiles!assigned_to(
+            id,
             first_name,
             last_name,
             email,
