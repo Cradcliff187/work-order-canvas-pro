@@ -178,14 +178,39 @@ export function FileUpload({
   }, [validateFiles, previews, onFilesSelected]);
 
   // Dropzone configuration
-  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragReject, open } = useDropzone({
     onDrop: handleFilesSelected,
     accept: getDropzoneAccept(),
     multiple: true,
     disabled,
     maxFiles,
-    maxSize: maxSizeBytes
+    maxSize: maxSizeBytes,
+    noClick: false,
+    noKeyboard: false
   });
+
+  // Debug logging
+  console.log('FileUpload dropzone state:', {
+    isDragActive,
+    disabled,
+    maxFiles,
+    currentPreviews: previews.length,
+    remainingSlots: maxFiles - previews.length,
+    acceptedTypes,
+    dropzoneAccept: getDropzoneAccept()
+  });
+
+  // Fallback click handler for browse files
+  const handleBrowseClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Browse files clicked, triggering file picker...');
+    if (!disabled && open) {
+      open();
+    } else if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, [disabled, open]);
 
   // Remove file preview
   const removeFile = useCallback((id: string) => {
@@ -254,7 +279,11 @@ export function FileUpload({
       )}>
         <CardContent className="p-8">
           <div
-            {...getRootProps()}
+            {...getRootProps({
+              onClick: (e) => {
+                console.log('Dropzone area clicked:', e.target);
+              }
+            })}
             className={cn(
               "flex flex-col items-center justify-center space-y-4 text-center cursor-pointer",
               disabled && "cursor-not-allowed"
@@ -282,7 +311,12 @@ export function FileUpload({
                 }
               </h3>
               <p className="text-sm text-muted-foreground">
-                or <span className="text-primary underline cursor-pointer">browse files</span>
+                or <span 
+                  className="text-primary underline cursor-pointer" 
+                  onClick={handleBrowseClick}
+                >
+                  browse files
+                </span>
               </p>
               <p className="text-xs text-muted-foreground">
                 Supports {getSupportedFormatsText()} • Max {formatFileSize(maxSizeBytes)} per file • Up to {maxFiles} files
