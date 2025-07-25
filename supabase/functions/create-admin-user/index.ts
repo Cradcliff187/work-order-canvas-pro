@@ -254,17 +254,17 @@ serve(async (req) => {
         }
       }
 
-      // Create the auth user
+      // Create the auth user with proper metadata for the trigger
       const result = await supabaseAdmin.auth.admin.createUser({
         email: userData.email,
         password: temporaryPassword,
         email_confirm: true,
-        app_metadata: {
-          user_type: userData.user_type
-        },
         user_metadata: {
           first_name: userData.first_name,
-          last_name: userData.last_name
+          last_name: userData.last_name,
+        },
+        app_metadata: {
+          user_type: userData.user_type,
         }
       });
 
@@ -296,38 +296,17 @@ serve(async (req) => {
 
     console.log(`[${requestId}] ✅ Auth user created:`, authUser.user.id);
 
-    // Wait for the trigger to create the profile, then update it with additional fields
-    console.log(`[${requestId}] ⏳ Waiting for trigger to create profile...`);
+    // Verify the trigger created the profile with proper metadata
+    console.log(`[${requestId}] 🔍 Verifying trigger created profile...`);
     
-    let newProfile;
-    let retryCount = 0;
-    const maxRetries = 10;
+    const { data: newProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('user_id', authUser.user.id)
+      .single();
     
-    while (retryCount < maxRetries) {
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .eq('user_id', authUser.user.id)
-        .single();
-      
-      if (profile) {
-        newProfile = profile;
-        console.log(`[${requestId}] ✅ Profile found, created by trigger:`, profile.id);
-        break;
-      }
-      
-      if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = "not found"
-        console.error(`[${requestId}] ❌ Unexpected error checking for profile:`, profileError);
-        break;
-      }
-      
-      retryCount++;
-      console.log(`[${requestId}] ⏳ Profile not yet created by trigger, retry ${retryCount}/${maxRetries}...`);
-      await new Promise(resolve => setTimeout(resolve, 200 * retryCount)); // Exponential backoff
-    }
-    
-    if (!newProfile) {
-      console.error(`[${requestId}] ❌ Profile was not created by trigger after ${maxRetries} retries`);
+    if (profileError || !newProfile) {
+      console.error(`[${requestId}] ❌ Profile was not created by trigger:`, profileError);
       
       // Clean up auth user if profile creation fails
       console.log(`[${requestId}] 🧹 Cleaning up auth user due to profile creation failure...`);
@@ -340,6 +319,8 @@ serve(async (req) => {
       
       throw new Error('Profile was not created by database trigger');
     }
+    
+    console.log(`[${requestId}] ✅ Profile created by trigger:`, newProfile.id);
     
     // Update the profile with additional fields that the trigger doesn't set
     console.log(`[${requestId}] 📝 Updating profile with additional fields...`);
