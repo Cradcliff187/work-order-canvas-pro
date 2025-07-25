@@ -1427,11 +1427,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      debug_auth_state: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       ensure_single_organization_assignment: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
       fix_existing_test_user_organizations: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      force_jwt_sync_for_current_user: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
@@ -1505,6 +1513,10 @@ export type Database = {
         Returns: string[]
       }
       jwt_profile_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      jwt_profile_id_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

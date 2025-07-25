@@ -10,6 +10,7 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { StorageDebugPanel } from "./components/StorageDebugPanel";
+import { AuthDebugPanel } from "./components/AuthDebugPanel";
 
 const queryClient = new QueryClient();
 
@@ -43,10 +44,13 @@ const App = () => {
             {/* <PWAInstallPrompt /> */}
             <AppRouter />
             {process.env.NODE_ENV !== 'production' && (
-              <StorageDebugPanel 
-                isOpen={showDebugPanel} 
-                onClose={() => setShowDebugPanel(false)} 
-              />
+              <>
+                <StorageDebugPanel 
+                  isOpen={showDebugPanel} 
+                  onClose={() => setShowDebugPanel(false)} 
+                />
+                <AuthDebugPanel />
+              </>
             )}
           </AuthProvider>
         </BrowserRouter>
