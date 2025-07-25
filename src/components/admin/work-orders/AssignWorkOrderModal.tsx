@@ -841,7 +841,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </Button>
             <Button 
               onClick={handleAssign}
-              disabled={!hasValidWorkOrders || (bulkAddAssignments.isPending || bulkRemoveAssignments.isPending)}
+              disabled={!hasValidWorkOrders || (bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) || (!hasExistingAssignments && selectedAssignees.length === 0 && selectedOrganizations.length === 0)}
             >
               {(bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
                 <>
@@ -850,9 +850,11 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                 </>
               ) : (
                 <>
-                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) 
-                    ? (hasExistingAssignments ? 'Update Assignment' : 'Assign')
-                    : 'Clear Assignment'}
+                  {hasExistingAssignments
+                    ? (selectedAssignees.length > 0 || selectedOrganizations.length > 0)
+                      ? 'Update Assignment'
+                      : 'Clear Assignment'
+                    : 'Assign'}
                 </>
               )}
             </Button>
