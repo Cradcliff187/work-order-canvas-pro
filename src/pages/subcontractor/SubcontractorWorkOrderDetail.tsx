@@ -269,7 +269,12 @@ export default function SubcontractorWorkOrderDetail() {
             </CardHeader>
             <CardContent>
               <AssigneeDisplay 
-                assignments={workOrder.work_order_assignments || []}
+                assignments={(workOrder.work_order_assignments || []).map(assignment => ({
+                  assigned_to: assignment.assigned_to,
+                  assignment_type: assignment.assignment_type,
+                  assignee_profile: assignment.profiles,
+                  assigned_organization: assignment.assigned_organization
+                }))}
                 showIcons={true}
                 showOrganization={true}
               />

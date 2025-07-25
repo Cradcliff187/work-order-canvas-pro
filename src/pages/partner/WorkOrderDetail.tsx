@@ -224,7 +224,7 @@ export default function WorkOrderDetail() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm">
-                  {workOrder.work_order_assignments[0].assignee_profile?.first_name} {workOrder.work_order_assignments[0].assignee_profile?.last_name}
+                  {workOrder.work_order_assignments[0].profiles?.first_name} {workOrder.work_order_assignments[0].profiles?.last_name}
                 </p>
               </CardContent>
             </Card>

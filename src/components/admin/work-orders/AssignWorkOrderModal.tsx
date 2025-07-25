@@ -71,17 +71,54 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedAssignees([]);
-      setSelectedOrganizations([]);
       setNotes('');
       setValidationErrors([]);
       setNetworkError(null);
       
       if (!hasValidWorkOrders) {
         setValidationErrors(['No valid work orders provided']);
+        return;
       }
+
+      // Fetch existing assignments when modal opens
+      const fetchExistingAssignments = async () => {
+        try {
+          const workOrderIds = workOrders.map(wo => wo.id);
+          const { data: existingAssignments } = await supabase
+            .from('work_order_assignments')
+            .select(`
+              assigned_to,
+              assigned_organization_id,
+              profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
+              organizations!work_order_assignments_assigned_organization_id_fkey(id, name)
+            `)
+            .in('work_order_id', workOrderIds);
+
+          if (existingAssignments) {
+            // Pre-select currently assigned users
+            const assignedUserIds = existingAssignments.map(a => a.assigned_to);
+            setSelectedAssignees(assignedUserIds);
+
+            // Pre-select currently assigned organizations (if any)
+            const assignedOrgIds = existingAssignments
+              .filter(a => a.assigned_organization_id)
+              .map(a => a.assigned_organization_id!);
+            setSelectedOrganizations(assignedOrgIds);
+          } else {
+            // No existing assignments
+            setSelectedAssignees([]);
+            setSelectedOrganizations([]);
+          }
+        } catch (error) {
+          console.error('Error fetching existing assignments:', error);
+          setSelectedAssignees([]);
+          setSelectedOrganizations([]);
+        }
+      };
+
+      fetchExistingAssignments();
     }
-  }, [isOpen, hasValidWorkOrders]);
+  }, [isOpen, hasValidWorkOrders, workOrders]);
 
   const toggleAssignee = (assigneeId: string) => {
     setSelectedAssignees(prev => 
@@ -348,16 +385,16 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       </div>
     }>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl h-[85vh] sm:h-[80vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Assign Work Order{hasValidWorkOrders && workOrders.length > 1 ? 's' : ''}
-            </DialogTitle>
-            <DialogDescription>
-              Select employees individually or assign to subcontractor organizations
-            </DialogDescription>
-          </DialogHeader>
+          <DialogContent className="max-w-2xl h-[85vh] sm:h-[80vh] flex flex-col overflow-hidden">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Update Assignment' : 'Assign Work Order'}{hasValidWorkOrders && workOrders.length > 1 ? 's' : ''}
+              </DialogTitle>
+              <DialogDescription>
+                Select employees individually or assign to subcontractor organizations
+              </DialogDescription>
+            </DialogHeader>
 
           <ScrollArea className="flex-1 pr-4 h-[calc(85vh-180px)] sm:h-[calc(80vh-180px)]">
             <div className="space-y-6">

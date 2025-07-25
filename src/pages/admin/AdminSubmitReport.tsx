@@ -75,7 +75,7 @@ export default function AdminSubmitReport() {
 
   // Check if there's an assigned subcontractor
   const hasAssignments = workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0;
-  const assignedSubcontractor = hasAssignments ? workOrder.work_order_assignments[0].assignee_profile : null;
+  const assignedSubcontractor = hasAssignments ? workOrder.work_order_assignments[0].profiles : null;
   
   if (!hasAssignments || !assignedSubcontractor) {
     return (

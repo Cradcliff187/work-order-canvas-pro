@@ -147,7 +147,7 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
     },
   },
   {
-    accessorKey: 'assigned_user',
+    accessorKey: 'work_order_assignments',
     header: 'Assigned To',
     cell: ({ row }) => {
       const assignments = row.original.work_order_assignments || [];

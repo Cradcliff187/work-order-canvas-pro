@@ -29,7 +29,7 @@ export function useSubcontractorWorkOrders() {
           work_order_assignments (
             assigned_to,
             assignment_type,
-            assignee_profile:profiles!assigned_to (first_name, last_name),
+            profiles!work_order_assignments_assigned_to_fkey (first_name, last_name),
             assigned_organization:organizations!assigned_organization_id(name, organization_type)
           )
         `)

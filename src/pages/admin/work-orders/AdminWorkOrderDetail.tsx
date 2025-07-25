@@ -260,7 +260,7 @@ export default function AdminWorkOrderDetail() {
                   <div>
                     <p className="text-sm font-medium">Assigned To</p>
                     <p className="text-sm text-muted-foreground">
-                      {workOrder.work_order_assignments[0].assignee_profile?.first_name} {workOrder.work_order_assignments[0].assignee_profile?.last_name}
+                      {workOrder.work_order_assignments[0].profiles?.first_name} {workOrder.work_order_assignments[0].profiles?.last_name}
                     </p>
                   </div>
                 ) : (

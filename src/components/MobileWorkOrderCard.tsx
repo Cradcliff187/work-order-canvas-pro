@@ -32,11 +32,6 @@ interface WorkOrder {
   date_submitted: string;
   trades?: { name: string };
   subcontractor_invoice_amount?: number;
-  assigned_user?: { 
-    first_name: string; 
-    last_name: string; 
-    user_type?: string; 
-  };
   work_order_assignments?: Array<{
     assigned_to: string;
     assignment_type: string;
@@ -248,7 +243,12 @@ export function MobileWorkOrderCard({
               <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <AssigneeDisplay 
-                  assignments={workOrder.work_order_assignments}
+                  assignments={(workOrder.work_order_assignments || []).map(assignment => ({
+                    assigned_to: assignment.assigned_to,
+                    assignment_type: assignment.assignment_type,
+                    assignee_profile: assignment.assignee_profile,
+                    assigned_organization: assignment.assigned_organization
+                  }))}
                   showIcons={false}
                   showOrganization={true}
                 />

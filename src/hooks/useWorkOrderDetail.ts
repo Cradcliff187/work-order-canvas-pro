@@ -47,7 +47,7 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     assignment_type: string;
     notes: string | null;
     assigned_at: string;
-    assignee_profile: {
+    profiles: {
       first_name: string;
       last_name: string;
       email: string;
@@ -118,7 +118,7 @@ export function useWorkOrderDetail(id: string) {
             assignment_type,
             notes,
             assigned_at,
-            assignee_profile:profiles!assigned_to(
+            profiles!work_order_assignments_assigned_to_fkey(
               first_name,
               last_name,
               email,

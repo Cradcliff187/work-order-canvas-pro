@@ -182,7 +182,12 @@ const SubcontractorWorkOrders = () => {
                     {workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0 && (
                       <div className="mt-3 pt-3 border-t">
                         <AssigneeDisplay 
-                          assignments={workOrder.work_order_assignments}
+                          assignments={(workOrder.work_order_assignments || []).map(assignment => ({
+                            assigned_to: assignment.assigned_to,
+                            assignment_type: assignment.assignment_type,
+                            assignee_profile: assignment.profiles,
+                            assigned_organization: assignment.assigned_organization
+                          }))}
                           className="text-xs"
                           showIcons={false}
                           showOrganization={true}

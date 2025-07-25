@@ -8,18 +8,17 @@ import { useAuth } from '@/contexts/AuthContext';
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
   trades: { name: string } | null;
-  assigned_user: { first_name: string; last_name: string } | null;
-  location_contact_name?: string | null;
-  location_contact_phone?: string | null;
-  location_contact_email?: string | null;
   work_order_assignments?: Array<{
     assigned_to: string;
     assignment_type: string;
-    assignee_profile: {
+    profiles?: {
       first_name: string;
       last_name: string;
     } | null;
   }>;
+  location_contact_name?: string | null;
+  location_contact_phone?: string | null;
+  location_contact_email?: string | null;
 };
 
 interface WorkOrderFilters {
@@ -61,8 +60,7 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
           work_order_assignments(
             assigned_to,
             assignment_type,
-            assignee_profile:profiles!assigned_to(first_name, last_name),
-            assigned_organization:organizations!assigned_organization_id(name, organization_type)
+            profiles!work_order_assignments_assigned_to_fkey(first_name, last_name)
           )
         `, { count: 'exact' })
         .in('organization_id', organizationIds);
