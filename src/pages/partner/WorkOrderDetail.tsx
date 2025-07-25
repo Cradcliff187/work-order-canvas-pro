@@ -1,47 +1,21 @@
 
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { capitalize } from '@/lib/utils';
-import { WorkOrder } from '@/hooks/useWorkOrders';
+import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, Paperclip, Download, Eye } from 'lucide-react';
+import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { formatDate } from '@/lib/utils/date';
 
-// Function to fetch work order details by ID
-const getWorkOrder = async (id: string): Promise<WorkOrder | null> => {
-  const { data, error } = await supabase
-    .from('work_orders')
-    .select(`
-      *,
-      organizations!organization_id(id, name, contact_email, organization_type),
-      trades!trade_id(id, name),
-      assigned_user:profiles!assigned_to(id, first_name, last_name)
-    `)
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error("Error fetching work order:", error);
-    throw new Error(error.message);
-  }
-
-  return data;
-};
 
 export default function WorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: workOrder, isLoading, isError, error } = useQuery({
-    queryKey: ['work-order', id],
-    queryFn: () => getWorkOrder(id!),
-    enabled: !!id,
-  });
+  const { data: workOrder, isLoading, isError, error } = useWorkOrderDetail(id!);
 
   if (isLoading) {
     return <div>Loading work order details...</div>;
@@ -65,7 +39,9 @@ export default function WorkOrderDetail() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Work Order Details</h1>
-          <p className="text-muted-foreground">View details of work order {workOrder.id}</p>
+          <p className="text-muted-foreground">
+            {workOrder.work_order_number ? `Work Order #${workOrder.work_order_number}` : `Work Order ${workOrder.id}`}
+          </p>
         </div>
       </div>
 
@@ -102,8 +78,8 @@ export default function WorkOrderDetail() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Title</Label>
-                  <p className="text-sm">{workOrder.title || 'Not specified'}</p>
+                  <Label className="text-sm font-medium text-muted-foreground">Work Order Number</Label>
+                  <p className="text-sm">{workOrder.work_order_number || 'Not assigned'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Status</Label>
@@ -115,7 +91,7 @@ export default function WorkOrderDetail() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
-                  <p className="text-sm">{workOrder.created_at || 'Not specified'}</p>
+                  <p className="text-sm">{formatDate(workOrder.created_at)}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Description</Label>
@@ -162,6 +138,58 @@ export default function WorkOrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Attachments */}
+          {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Paperclip className="h-5 w-5" />
+                  Attachments ({workOrder.work_order_attachments.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {workOrder.work_order_attachments.map((attachment) => (
+                    <div key={attachment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">{attachment.file_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded {formatDate(attachment.uploaded_at)} by {attachment.uploaded_by_user?.first_name} {attachment.uploaded_by_user?.last_name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(attachment.file_url, '_blank')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = attachment.file_url;
+                            link.download = attachment.file_name;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
