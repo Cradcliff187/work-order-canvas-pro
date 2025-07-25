@@ -30,6 +30,8 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FileUpload } from '@/components/FileUpload';
 import { MobileFileUpload } from '@/components/MobileFileUpload';
+import { getFileTypeForStorage } from '@/utils/fileTypeUtils';
+import { formatFileSize } from '@/utils/imageCompression';
 
 // Unified form schema with improved error messages
 const workOrderFormSchema = z.object({
@@ -117,6 +119,7 @@ export default function SubmitWorkOrder() {
   
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'creating' | 'uploading'>('idle');
 
   // Touch gesture state
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -502,7 +505,7 @@ export default function SubmitWorkOrder() {
     }
   };
 
-  // Handle form submission
+  // Handle form submission with file upload integration
   const onSubmit = async (data: FormData) => {
     console.log('🚀 SUBMIT BUTTON CLICKED - Starting form submission');
     console.log('📊 FORM SUBMISSION DEBUG DATA:');
@@ -514,6 +517,7 @@ export default function SubmitWorkOrder() {
     console.log('- selectedOrganizationId (admin):', selectedOrganizationId);
     console.log('- userOrganization:', userOrganization);
     console.log('- isAdmin:', isAdmin);
+    console.log('- selectedFiles.length:', selectedFiles.length);
 
     // Critical validation checks with detailed logging
     if (!effectiveOrganizationId) {
@@ -552,6 +556,9 @@ export default function SubmitWorkOrder() {
     }
 
     try {
+      // Phase 1: Create the work order
+      setSubmissionPhase('creating');
+      
       // Ensure title exists before submission - use same logic as review
       let finalTitle = data.title;
       if (!finalTitle || !finalTitle.trim()) {
@@ -594,12 +601,74 @@ export default function SubmitWorkOrder() {
       };
 
       console.log('📤 Attempting to submit work order with data:', submissionData);
-      await createWorkOrderMutation.mutateAsync(submissionData);
-      
-      console.log('✅ Work order submitted successfully');
+      const workOrderResult = await createWorkOrderMutation.mutateAsync(submissionData);
+      console.log('✅ Work order created successfully:', workOrderResult);
+
+      let filesUploaded = 0;
+
+      // Phase 2: Upload files if any are selected
+      if (selectedFiles.length > 0) {
+        setSubmissionPhase('uploading');
+        console.log('📁 Starting file upload for', selectedFiles.length, 'files');
+
+        try {
+          // Upload files to storage bucket
+          const uploadResults = await uploadFiles(
+            selectedFiles,
+            workOrderResult.id, // work order ID
+            undefined // no report ID for work order attachments
+          );
+
+          console.log('📁 File upload results:', uploadResults);
+
+          // Create work_order_attachments records for each uploaded file
+          for (let i = 0; i < uploadResults.length; i++) {
+            const result = uploadResults[i];
+            const originalFile = selectedFiles[i]; // Get original file for type detection
+            const fileType = getFileTypeForStorage(originalFile);
+            
+            const { error: attachmentError } = await supabase
+              .from('work_order_attachments')
+              .insert({
+                work_order_id: workOrderResult.id,
+                file_name: result.fileName,
+                file_url: result.fileUrl,
+                file_type: fileType,
+                file_size: result.fileSize,
+                uploaded_by_user_id: profile.id,
+              });
+
+            if (attachmentError) {
+              console.error('❌ Error creating attachment record:', attachmentError);
+              throw new Error(`Failed to save file attachment: ${result.fileName}`);
+            }
+
+            filesUploaded++;
+          }
+
+          console.log('✅ All files uploaded and attachment records created');
+        } catch (uploadError: any) {
+          console.error('❌ File upload error:', uploadError);
+          // Work order was created successfully, but file upload failed
+          toast({
+            variant: "destructive",
+            title: "File upload failed",
+            description: `Work order created successfully, but failed to upload files: ${uploadError.message}`,
+          });
+          // Still navigate since work order was created
+          navigate('/partner/work-orders');
+          return;
+        }
+      }
+
+      // Success message with file count
+      const successDescription = filesUploaded > 0 
+        ? `Work order created with ${filesUploaded} files uploaded`
+        : "Work order created successfully";
+
       toast({
         title: "Success",
-        description: "Work order submitted successfully",
+        description: successDescription,
       });
       
       // Navigate back to work orders list
@@ -613,11 +682,15 @@ export default function SubmitWorkOrder() {
         hint: error.hint,
         stack: error.stack
       });
+      
+      const errorPhase = submissionPhase === 'creating' ? 'work order creation' : 'file upload';
       toast({
         variant: "destructive",
-        title: "Submission error",
-        description: error.message || "Failed to submit the work order.",
+        title: `${errorPhase.charAt(0).toUpperCase() + errorPhase.slice(1)} error`,
+        description: error.message || `Failed to complete ${errorPhase}.`,
       });
+    } finally {
+      setSubmissionPhase('idle');
     }
   };
 
@@ -982,7 +1055,7 @@ export default function SubmitWorkOrder() {
                   <Button
                     type="submit"
                     size="lg"
-                    disabled={createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.getValues('trade_id')}
+                    disabled={submissionPhase !== 'idle' || !effectiveOrganizationId || !form.getValues('trade_id')}
                     className="min-h-[56px] px-6 sm:min-h-[48px] bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
                     onClick={(e) => {
                       console.log('🚀 SUBMIT BUTTON CLICKED!');
@@ -990,19 +1063,29 @@ export default function SubmitWorkOrder() {
                       console.log('Current step:', currentStep);
                       console.log('Form values:', form.getValues());
                       console.log('Organization ID:', effectiveOrganizationId);
-                      console.log('Is button disabled:', createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.getValues('trade_id'));
-                      console.log('Mutation pending:', createWorkOrderMutation.isPending);
+                      console.log('Submission phase:', submissionPhase);
+                      console.log('Selected files:', selectedFiles.length);
                     }}
                   >
-                    {createWorkOrderMutation.isPending ? (
+                    {submissionPhase === 'creating' ? (
                       <>
                         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Submitting...
+                        Creating Work Order...
+                      </>
+                    ) : submissionPhase === 'uploading' ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Uploading Files...
                       </>
                     ) : (
                       <>
                         <Send className="h-5 w-5 mr-2" />
                         Submit Work Order
+                        {selectedFiles.length > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            +{selectedFiles.length} files
+                          </Badge>
+                        )}
                       </>
                     )}
                   </Button>
