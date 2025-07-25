@@ -282,7 +282,7 @@ export function FileUpload({
                 }
               </h3>
               <p className="text-sm text-muted-foreground">
-                or <Button type="button" variant="link" className="h-auto p-0 text-primary">browse files</Button>
+                or <span className="text-primary underline cursor-pointer">browse files</span>
               </p>
               <p className="text-xs text-muted-foreground">
                 Supports {getSupportedFormatsText()} • Max {formatFileSize(maxSizeBytes)} per file • Up to {maxFiles} files
