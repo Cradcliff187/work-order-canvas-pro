@@ -319,6 +319,30 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
   // Handle form submission
   const onSubmit = async (data: FormData) => {
     try {
+      console.log('🔧 Work Order Creation Debug - Starting submission...');
+      console.log('📝 Form Data:', data);
+      console.log('👤 ViewingProfile:', viewingProfile);
+      console.log('🏢 Organization ID:', organizationId || selectedOrganizationId);
+      console.log('🏪 Selected Organization:', selectedOrganization);
+
+      // Validate critical fields
+      if (!viewingProfile?.id) {
+        throw new Error('User profile not found. Please refresh the page and try again.');
+      }
+
+      const targetOrgId = organizationId || selectedOrganizationId;
+      if (!targetOrgId) {
+        throw new Error('Organization ID is required but not found.');
+      }
+
+      if (!data.trade_id) {
+        throw new Error('Trade selection is required.');
+      }
+
+      if (!data.store_location) {
+        throw new Error('Store location is required.');
+      }
+
       // Ensure title exists before submission
       const finalTitle = data.title || `${data.store_location || 'New Location'} - Work Order`;
 
@@ -327,7 +351,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         title: finalTitle,
         description: data.description || '',
         trade_id: data.trade_id,
-        organization_id: organizationId || selectedOrganizationId,
+        organization_id: targetOrgId,
         store_location: data.store_location,
         street_address: data.street_address || '',
         city: data.city || '',
@@ -343,10 +367,14 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         location_contact_email: data.location_contact_email || '',
         partner_po_number: data.partner_po_number || '',
         partner_location_number: data.partner_location_number || generatedLocationNumber || '',
-        created_by: viewingProfile?.id!, // Use the actual user's profile ID
+        created_by: viewingProfile.id,
       };
 
+      console.log('📤 Submission Data:', submissionData);
+
       await createWorkOrderMutation.mutateAsync(submissionData);
+      
+      console.log('✅ Work order created successfully');
       
       toast({
         title: "Work order created",
@@ -365,23 +393,33 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         onWorkOrderCreated();
       }
     } catch (error: any) {
-      console.error('Error submitting work order:', error);
+      console.error('❌ Error submitting work order:', error);
+      console.error('🔍 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        viewingProfile,
+        organizationId: organizationId || selectedOrganizationId,
+      });
+      
       toast({
         variant: "destructive",
         title: "Submission error",
-        description: error.message || "Failed to submit the work order.",
+        description: error.message || "Failed to submit the work order. Please check the console for more details.",
       });
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px]">
+      <DialogContent className="sm:max-w-[900px]" aria-describedby="create-work-order-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             Create New Work Order
           </DialogTitle>
+          <p id="create-work-order-description" className="text-sm text-muted-foreground">
+            Create a new work order by filling out the required information in the steps below.
+          </p>
         </DialogHeader>
 
         {/* Form */}
