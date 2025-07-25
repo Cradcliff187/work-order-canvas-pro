@@ -9,7 +9,8 @@ import {
   Mail,
   Activity,
   Receipt,
-  Clock
+  Clock,
+  MapPin
 } from 'lucide-react';
 
 export interface SidebarItem {
@@ -28,6 +29,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Invoices', url: '/admin/invoices', icon: Receipt },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
+  { title: 'Partner Locations', url: '/admin/partner-locations', icon: MapPin },
   { title: 'Employees', url: '/admin/employees', icon: Users },
   { title: 'Email Templates', url: '/admin/email-templates', icon: Mail },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
@@ -38,5 +40,5 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
-export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Organization Diagnostics', 'Email Testing', 'Dev Tools'];
+export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Organization Diagnostics', 'Email Testing', 'Dev Tools'];
 export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];

@@ -10,6 +10,7 @@ import {
   EmployeeDashboard,
   AdminUsers,
   AdminOrganizations,
+  AdminPartnerLocations,
   AdminWorkOrders,
   AdminWorkOrderDetail,
   AdminWorkOrderEdit,
@@ -108,6 +109,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminOrganizations />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/partner-locations" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminPartnerLocations />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
