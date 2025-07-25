@@ -129,10 +129,16 @@ serve(async (req) => {
     console.log(`[${requestId}] ✅ Environment variables verified`);
 
     // Create authenticated Supabase client for user verification
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error(`[${requestId}] ❌ Missing Authorization header`);
+      return createCorsErrorResponse('Missing authorization', 401);
+    }
+    
     const supabaseClient = createClient(
       supabaseUrl,
       anonKey,
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      { global: { headers: { Authorization: authHeader } } }
     );
 
     console.log(`[${requestId}] 🔐 Verifying admin authentication...`);
