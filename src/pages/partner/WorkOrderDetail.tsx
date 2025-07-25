@@ -10,6 +10,7 @@ import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calend
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { formatDate } from '@/lib/utils/date';
 import { supabase } from '@/integrations/supabase/client';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 
 
 export default function WorkOrderDetail() {
@@ -84,7 +85,7 @@ export default function WorkOrderDetail() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                  <Badge variant="secondary">{workOrder.status || 'Not specified'}</Badge>
+                  <WorkOrderStatusBadge status={workOrder.status} />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
@@ -208,7 +209,7 @@ export default function WorkOrderDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge variant="secondary">{workOrder.status || 'Not specified'}</Badge>
+              <WorkOrderStatusBadge status={workOrder.status} />
             </CardContent>
           </Card>
 
