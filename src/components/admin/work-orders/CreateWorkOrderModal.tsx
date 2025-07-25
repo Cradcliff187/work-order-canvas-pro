@@ -24,6 +24,7 @@ import { useCreateWorkOrder } from '@/hooks/useAdminWorkOrders';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { usePartnerLocationsForOrganization } from '@/hooks/usePartnerLocationsForOrganization';
 
 // Form schema with comprehensive validation
 const workOrderFormSchema = z.object({
@@ -76,6 +77,11 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
   // Load organizations for admin users
   const { data: organizations, isLoading: isLoadingOrganizations } = useOrganizations();
   
+  // Load partner locations for the selected organization
+  const { data: partnerLocations, isLoading: isLoadingPartnerLocations } = usePartnerLocationsForOrganization(
+    organizationId || selectedOrganizationId
+  );
+  
   // Check if user is admin to show organization selection
   const isAdmin = viewingProfile?.user_type === 'admin';
 
@@ -119,10 +125,45 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     }
   }, [open, isAdmin, organizationId]);
 
-  // Watch form values for auto-generation
+  // Watch form values for auto-generation and location selection
   const watchedStoreLocation = form.watch('store_location');
   const watchedTradeId = form.watch('trade_id');
   const watchedTitle = form.watch('title');
+  const partnerLocationSelection = form.watch('partner_location_selection');
+
+  // Find selected location from partner locations
+  const selectedLocation = partnerLocations?.find(loc => loc.id === partnerLocationSelection) || null;
+
+  // Auto-populate form fields when an existing partner location is selected
+  useEffect(() => {
+    if (selectedLocation && partnerLocationSelection && partnerLocationSelection !== 'add_new') {
+      console.log('🏢 Populating form fields from selected location:', selectedLocation);
+      // Populate all location fields from the selected partner location
+      form.setValue('store_location', selectedLocation.location_name || '');
+      form.setValue('partner_location_number', selectedLocation.location_number || '');
+      form.setValue('location_street_address', selectedLocation.street_address || '');
+      form.setValue('location_city', selectedLocation.city || '');
+      form.setValue('location_state', selectedLocation.state || '');
+      form.setValue('location_zip_code', selectedLocation.zip_code || '');
+      form.setValue('location_name', selectedLocation.location_name || '');
+      form.setValue('location_contact_name', selectedLocation.contact_name || '');
+      form.setValue('location_contact_phone', selectedLocation.contact_phone || '');
+      form.setValue('location_contact_email', selectedLocation.contact_email || '');
+    } else if (partnerLocationSelection === 'add_new' || !partnerLocationSelection) {
+      console.log('🧹 Clearing location fields for manual entry');
+      // Clear location fields when switching to "add new" or no selection
+      form.setValue('store_location', '');
+      form.setValue('partner_location_number', '');
+      form.setValue('location_street_address', '');
+      form.setValue('location_city', '');
+      form.setValue('location_state', '');
+      form.setValue('location_zip_code', '');
+      form.setValue('location_name', '');
+      form.setValue('location_contact_name', '');
+      form.setValue('location_contact_phone', '');
+      form.setValue('location_contact_email', '');
+    }
+  }, [selectedLocation, partnerLocationSelection, form]);
 
   // Auto-generate title when store_location and trade are selected
   useEffect(() => {
