@@ -323,21 +323,46 @@ serve(async (req) => {
 
     // Verify the trigger created the profile with proper metadata
     console.log(`[${requestId}] 🔍 Verifying trigger created profile...`);
-    
-    const { data: newProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('user_id', authUser.user.id)
-      .single();
-    
+
+    // Retry logic to wait for trigger to complete
+    let newProfile = null;
+    let profileError = null;
+    let retryCount = 0;
+    const maxRetries = 5;
+    const retryDelay = 500; // 500ms
+
+    while (retryCount < maxRetries) {
+        const { data, error } = await supabaseAdmin
+            .from('profiles')
+            .select('*')
+            .eq('user_id', authUser.user.id)
+            .single();
+        
+        if (data) {
+            newProfile = data;
+            profileError = null;
+            console.log(`[${requestId}] ✅ Profile found on attempt ${retryCount + 1}`);
+            break;
+        }
+        
+        profileError = error;
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+            console.log(`[${requestId}] ⏳ Profile not found yet, retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+    }
+
     console.log(`[${requestId}] 🔍 DEBUG - Profile verification result:`, {
-      profileFound: !!newProfile,
-      profileError: profileError,
-      profileData: newProfile,
-      profileUserType: newProfile?.user_type,
-      profileEmail: newProfile?.email,
-      expectedUserType: userData.user_type,
-      userTypeMatches: newProfile?.user_type === userData.user_type
+        profileFound: !!newProfile,
+        profileError: profileError,
+        profileData: newProfile,
+        profileUserType: newProfile?.user_type,
+        profileEmail: newProfile?.email,
+        expectedUserType: userData.user_type,
+        userTypeMatches: newProfile?.user_type === userData.user_type,
+        retriesNeeded: retryCount
     });
     
     if (profileError || !newProfile) {
