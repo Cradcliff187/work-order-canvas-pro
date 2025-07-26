@@ -34,8 +34,47 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const { data: internalMessages = [], isLoading: isLoadingInternal } = useWorkOrderMessages(workOrderId, true);
   const postMessage = usePostMessage();
   
-  // Set up real-time subscription
-  useMessageSubscription(workOrderId);
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(console.error);
+    }
+  }, []);
+
+  // Browser notification handler
+  const handleBrowserNotification = useCallback(async (message: any) => {
+    if (!profile?.id || message.sender_id === profile.id) return;
+    
+    try {
+      // Only show browser notification if page is not focused
+      if ('Notification' in window && 
+          Notification.permission === 'granted' && 
+          document.hidden) {
+        
+        // Fetch work order details for notification
+        const { data: workOrder } = await supabase
+          .from('work_orders')
+          .select('work_order_number')
+          .eq('id', workOrderId)
+          .single();
+
+        const workOrderNumber = workOrder?.work_order_number || workOrderId;
+        const messagePreview = message.message.length > 100 
+          ? `${message.message.substring(0, 100)}...`
+          : message.message;
+
+        new Notification(`New message in Work Order ${workOrderNumber}`, {
+          body: messagePreview,
+          icon: '/favicon.ico',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to show browser notification:', error);
+    }
+  }, [profile?.id, workOrderId]);
+
+  // Set up real-time subscription with browser notification callback
+  useMessageSubscription(workOrderId, handleBrowserNotification);
 
   // Function to mark messages as read
   const markMessagesAsRead = useCallback(async (messages: WorkOrderMessage[]) => {
