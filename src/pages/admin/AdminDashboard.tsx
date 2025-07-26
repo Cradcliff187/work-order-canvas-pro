@@ -21,6 +21,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { WorkOrderNumberTest } from '@/components/admin/work-orders/WorkOrderNumberTest';
+import { ExecutiveSummary } from '@/components/admin/dashboard/ExecutiveSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const COLORS = {
@@ -76,8 +77,9 @@ const AdminDashboard = () => {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="executive">Executive Summary</TabsTrigger>
           <TabsTrigger value="testing">Work Order Number Testing</TabsTrigger>
         </TabsList>
         
@@ -513,6 +515,10 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+        
+        <TabsContent value="executive" className="space-y-6">
+          <ExecutiveSummary />
         </TabsContent>
         
         <TabsContent value="testing" className="space-y-6">
