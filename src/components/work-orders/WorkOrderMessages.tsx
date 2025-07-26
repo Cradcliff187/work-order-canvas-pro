@@ -21,9 +21,13 @@ interface WorkOrderMessagesProps {
 
 export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderId }) => {
   const { profile, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
+  
+  // Default tab based on user type
+  const defaultTab = isPartner() ? 'public' : isSubcontractor() ? 'internal' : 'public';
+  
   const [newMessage, setNewMessage] = useState('');
   const [isInternal, setIsInternal] = useState(false);
-  const [activeTab, setActiveTab] = useState(isPartner() ? 'public' : isSubcontractor() ? 'internal' : 'public');
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   // Fetch messages using custom hooks
   const { data: publicMessages = [], isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false);
@@ -82,8 +86,6 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
   // Remove message filtering as it's now handled by the hooks
 
-  // Default tab based on user type
-  const defaultTab = isPartner() ? 'public' : isSubcontractor() ? 'internal' : 'public';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
