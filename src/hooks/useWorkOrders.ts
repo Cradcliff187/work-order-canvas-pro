@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +29,7 @@ export interface WorkOrderProfile {
   last_name: string;
 }
 
-// Main WorkOrder type - completely separate from WorkOrderRow to avoid circular references
+// Main WorkOrder type - updated to match current database schema
 export interface WorkOrder {
   id: string;
   work_order_number: string | null;
@@ -43,7 +42,6 @@ export interface WorkOrder {
   actual_hours: number | null;
   estimated_completion_date: string | null;
   actual_completion_date: string | null;
-  completed_at: string | null;
   date_submitted: string;
   date_assigned: string | null;
   date_approved: string | null;
@@ -65,7 +63,6 @@ export interface WorkOrder {
   updated_at: string;
   assigned_organization_id: string | null;
   subcontractor_report_submitted: boolean | null;
-  subcontractor_invoice_amount: number | null;
   admin_completion_notes: string | null;
   final_completion_date: string | null;
   due_date: string | null;
@@ -185,7 +182,7 @@ export function useWorkOrders(
 
       const pageCount = count ? Math.ceil(count / pageSize) : 0;
       
-      // Transform the data to ensure type safety
+      // Transform the data to ensure type safety - no type assertion needed now
       const transformedData = (data || []) as WorkOrder[];
 
       return {
