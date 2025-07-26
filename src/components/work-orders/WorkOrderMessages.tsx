@@ -127,7 +127,10 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               <Circle className="h-2 w-2 fill-blue-500 text-blue-500 flex-shrink-0" />
             )}
             <span className={`text-foreground ${isUnread ? 'font-medium' : 'font-normal'}`}>
-              {message.sender.first_name} {message.sender.last_name}
+              {message.sender 
+                ? `${message.sender.first_name} ${message.sender.last_name}`
+                : 'Unknown User'
+              }
             </span>
             <Badge variant="outline" className="text-xs">
               {message.sender_organization?.name || 'Internal Team'}

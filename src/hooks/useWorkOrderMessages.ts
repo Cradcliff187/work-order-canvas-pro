@@ -14,7 +14,7 @@ export interface WorkOrderMessage {
     last_name: string;
     email: string;
     user_type: string;
-  };
+  } | null;
   sender_organization: {
     name: string;
   } | null;
