@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MessageCircle, Users, Lock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage } from '@/hooks/useWorkOrderMessages';
@@ -65,8 +66,8 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       key={message.id}
       className={`p-4 rounded-lg border-l-4 ${
         message.is_internal
-          ? 'bg-blue-50 border-l-blue-500'
-          : 'bg-white border-l-primary'
+          ? 'bg-[#EFF8FF] border-l-[#0485EA]'
+          : 'bg-white border-l-[#0485EA]'
       }`}
     >
       <div className="flex items-start justify-between mb-2">
@@ -99,9 +100,15 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-              <div className="h-16 bg-muted rounded"></div>
+            <div key={i} className="p-4 rounded-lg border-l-4 border-l-[#0485EA] space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <Skeleton className="h-12 w-full" />
             </div>
           ))}
         </div>
