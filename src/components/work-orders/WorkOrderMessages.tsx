@@ -36,6 +36,9 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const [internalPage, setInternalPage] = useState(1);
   const [allPublicMessages, setAllPublicMessages] = useState<WorkOrderMessage[]>([]);
   const [allInternalMessages, setAllInternalMessages] = useState<WorkOrderMessage[]>([]);
+  
+  // Track which message IDs have been marked as read to prevent re-processing
+  const [markedAsReadIds, setMarkedAsReadIds] = useState<Set<string>>(new Set());
 
   // Fetch messages using custom hooks
   const { data: publicData, isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false, publicPage);
@@ -111,6 +114,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     setInternalPage(1);
     setAllPublicMessages([]);
     setAllInternalMessages([]);
+    setMarkedAsReadIds(new Set());
   }, [workOrderId]);
 
   // Load more messages functions
@@ -163,9 +167,20 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     const isLoading = activeTab === 'public' ? isLoadingPublic : isLoadingInternal;
     
     if (!isLoading && messages.length > 0) {
-      markMessagesAsRead(messages);
+      // Filter out messages that have already been marked as read
+      const newMessages = messages.filter(msg => !markedAsReadIds.has(msg.id));
+      
+      if (newMessages.length > 0) {
+        markMessagesAsRead(newMessages);
+        // Add the processed message IDs to the tracked set
+        setMarkedAsReadIds(prev => {
+          const newSet = new Set(prev);
+          newMessages.forEach(msg => newSet.add(msg.id));
+          return newSet;
+        });
+      }
     }
-  }, [activeTab, allPublicMessages, allInternalMessages, isLoadingPublic, isLoadingInternal, markMessagesAsRead]);
+  }, [activeTab, allPublicMessages, allInternalMessages, isLoadingPublic, isLoadingInternal, markMessagesAsRead, markedAsReadIds]);
 
   // Determine which tabs to show based on user type
   const showPublicTab = isAdmin() || isEmployee() || isPartner();
