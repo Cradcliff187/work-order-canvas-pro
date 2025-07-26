@@ -19,6 +19,18 @@ export interface ProcessQueueResult {
   error?: string;
 }
 
+export interface ClearEmailsResult {
+  success: boolean;
+  deleted_count: number;
+  error?: string;
+}
+
+export interface RetryEmailsResult {
+  success: boolean;
+  retry_count: number;
+  error?: string;
+}
+
 export const useEmailQueueStats = () => {
   const queryClient = useQueryClient();
   
@@ -89,6 +101,78 @@ export const useEmailQueueStats = () => {
     },
   });
 
+  const clearProcessedEmailsMutation = useMutation({
+    mutationFn: async (retentionDays: number): Promise<ClearEmailsResult> => {
+      const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+      
+      const { count, error } = await supabase
+        .from('email_queue' as any)
+        .delete({ count: 'exact' })
+        .in('status', ['sent', 'failed'])
+        .lt('created_at', cutoffDate);
+
+      if (error) {
+        throw new Error(error.message || 'Failed to clear old emails');
+      }
+
+      return {
+        success: true,
+        deleted_count: count || 0
+      };
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Old Emails Cleared",
+        description: `Deleted ${result.deleted_count} old emails`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['email_queue_stats'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Clear Failed",
+        description: error.message || "Failed to clear old emails",
+      });
+    },
+  });
+
+  const retryFailedEmailsMutation = useMutation({
+    mutationFn: async (): Promise<RetryEmailsResult> => {
+      const { count, error } = await supabase
+        .from('email_queue' as any)
+        .update({ 
+          status: 'pending', 
+          error_message: null,
+          next_retry_at: null
+        }, { count: 'exact' })
+        .eq('status', 'failed')
+        .lt('retry_count', 3);
+
+      if (error) {
+        throw new Error(error.message || 'Failed to retry failed emails');
+      }
+
+      return {
+        success: true,
+        retry_count: count || 0
+      };
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Failed Emails Retried",
+        description: `Reset ${result.retry_count} failed emails to pending`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['email_queue_stats'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Retry Failed",
+        description: error.message || "Failed to retry failed emails",
+      });
+    },
+  });
+
   return {
     stats,
     isLoading,
@@ -98,5 +182,11 @@ export const useEmailQueueStats = () => {
     isProcessing: processQueueMutation.isPending,
     lastProcessResult: processQueueMutation.data,
     processError: processQueueMutation.error,
+    clearProcessedEmails: clearProcessedEmailsMutation.mutate,
+    isClearingEmails: clearProcessedEmailsMutation.isPending,
+    clearEmailsResult: clearProcessedEmailsMutation.data,
+    retryFailedEmails: retryFailedEmailsMutation.mutate,
+    isRetryingFailed: retryFailedEmailsMutation.isPending,
+    retryEmailsResult: retryFailedEmailsMutation.data,
   };
 };
