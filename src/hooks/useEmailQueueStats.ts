@@ -173,6 +173,33 @@ export const useEmailQueueStats = () => {
     },
   });
 
+  // Function to get accurate counts before confirmation
+  const getCountableEmails = async (action: 'clear' | 'retry', retentionDays?: number): Promise<number> => {
+    if (action === 'clear' && retentionDays) {
+      const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+      
+      const { count, error } = await supabase
+        .from('email_queue' as any)
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['sent', 'failed'])
+        .lt('created_at', cutoffDate);
+
+      if (error) throw new Error('Failed to count clearable emails');
+      return count || 0;
+    } else if (action === 'retry') {
+      const { count, error } = await supabase
+        .from('email_queue' as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'failed')
+        .lt('retry_count', 3);
+
+      if (error) throw new Error('Failed to count retryable emails');
+      return count || 0;
+    }
+    
+    return 0;
+  };
+
   return {
     stats,
     isLoading,
@@ -188,5 +215,6 @@ export const useEmailQueueStats = () => {
     retryFailedEmails: retryFailedEmailsMutation.mutate,
     isRetryingFailed: retryFailedEmailsMutation.isPending,
     retryEmailsResult: retryFailedEmailsMutation.data,
+    getCountableEmails,
   };
 };

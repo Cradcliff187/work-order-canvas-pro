@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,8 +18,15 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
 import { AlertTriangle, CheckCircle, Clock, Mail, Loader2, RefreshCw, Trash2, RotateCcw, ChevronDown } from 'lucide-react';
 import { useEmailQueueStats } from '@/hooks/useEmailQueueStats';
+import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ConfirmationState {
@@ -30,6 +37,8 @@ interface ConfirmationState {
 
 export function EmailQueueStatus() {
   const [confirmationState, setConfirmationState] = useState<ConfirmationState>({ action: null, count: 0 });
+  const [isCountingEmails, setIsCountingEmails] = useState(false);
+  const operationInProgress = useRef(false);
   
   const {
     stats,
@@ -42,48 +51,127 @@ export function EmailQueueStatus() {
     clearProcessedEmails,
     isClearingEmails,
     retryFailedEmails,
-    isRetryingFailed
+    isRetryingFailed,
+    getCountableEmails
   } = useEmailQueueStats();
 
-  const handleClearEmails = (retentionDays: number) => {
-    setConfirmationState({ 
-      action: 'clear', 
-      count: (stats?.sent_emails || 0) + (stats?.failed_emails || 0), 
-      retention: retentionDays 
-    });
+  // Validation helper
+  const validateRetentionDays = (days: number): boolean => {
+    return days >= 1 && days <= 365;
   };
 
-  const handleRetryFailed = () => {
-    setConfirmationState({ 
-      action: 'retry', 
-      count: stats?.failed_emails || 0 
-    });
-  };
+  // Prevent concurrent operations
+  const isAnyOperationInProgress = isProcessing || isClearingEmails || isRetryingFailed || operationInProgress.current;
 
-  const handleConfirm = () => {
+  const handleClearEmails = useCallback(async (retentionDays: number) => {
+    if (isAnyOperationInProgress) return;
+    
+    // Validation
+    if (!validateRetentionDays(retentionDays)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid retention period",
+        description: "Retention period must be between 1 and 365 days",
+      });
+      return;
+    }
+
+    operationInProgress.current = true;
+    setIsCountingEmails(true);
+    
+    try {
+      const count = await getCountableEmails('clear', retentionDays);
+      setConfirmationState({ 
+        action: 'clear', 
+        count, 
+        retention: retentionDays 
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to count emails",
+        description: "Unable to estimate the number of emails to clear",
+      });
+    } finally {
+      setIsCountingEmails(false);
+      operationInProgress.current = false;
+    }
+  }, [getCountableEmails, isAnyOperationInProgress]);
+
+  const handleRetryFailed = useCallback(async () => {
+    if (isAnyOperationInProgress) return;
+    
+    operationInProgress.current = true;
+    setIsCountingEmails(true);
+    
+    try {
+      const count = await getCountableEmails('retry');
+      setConfirmationState({ 
+        action: 'retry', 
+        count 
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to count failed emails",
+        description: "Unable to estimate the number of emails to retry",
+      });
+    } finally {
+      setIsCountingEmails(false);
+      operationInProgress.current = false;
+    }
+  }, [getCountableEmails, isAnyOperationInProgress]);
+
+  const handleConfirm = useCallback(() => {
+    if (isAnyOperationInProgress) return;
+    
+    operationInProgress.current = true;
+    
     if (confirmationState.action === 'clear' && confirmationState.retention) {
       clearProcessedEmails(confirmationState.retention);
     } else if (confirmationState.action === 'retry') {
       retryFailedEmails();
     }
+    
     setConfirmationState({ action: null, count: 0 });
-  };
+    // operationInProgress.current will be reset by mutation completion
+  }, [confirmationState, clearProcessedEmails, retryFailedEmails, isAnyOperationInProgress]);
+
+  // Reset operation lock when mutations complete
+  React.useEffect(() => {
+    if (!isProcessing && !isClearingEmails && !isRetryingFailed) {
+      operationInProgress.current = false;
+    }
+  }, [isProcessing, isClearingEmails, isRetryingFailed]);
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load email queue statistics';
+    const isNetworkError = errorMessage.includes('network') || errorMessage.includes('fetch');
+    
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center justify-center text-destructive">
-            <AlertTriangle className="h-5 w-5 mr-2" />
-            <span>Failed to load email queue statistics</span>
+          <div className="flex flex-col items-center justify-center text-destructive space-y-3">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2" />
+              <span>
+                {isNetworkError 
+                  ? 'Network error - please check your connection' 
+                  : 'Failed to load email queue statistics'}
+              </span>
+            </div>
+            {isNetworkError && (
+              <p className="text-sm text-muted-foreground text-center">
+                This could be due to a temporary network issue. Please try again.
+              </p>
+            )}
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => refetch()} 
-              className="ml-2"
             >
               <RefreshCw className="h-4 w-4 mr-1" />
-              Retry
+              Try Again
             </Button>
           </div>
         </CardContent>
@@ -92,16 +180,17 @@ export function EmailQueueStatus() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Mail className="h-5 w-5 mr-2" />
-          Email Queue Status
-        </CardTitle>
-        <CardDescription>
-          Monitor and manage the email processing queue
-        </CardDescription>
-      </CardHeader>
+    <TooltipProvider>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Mail className="h-5 w-5 mr-2" />
+            Email Queue Status
+          </CardTitle>
+          <CardDescription>
+            Monitor and manage the email processing queue
+          </CardDescription>
+        </CardHeader>
       <CardContent className="space-y-6">
         {/* Queue Statistics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -184,79 +273,138 @@ export function EmailQueueStatus() {
 
         <div className="space-y-4">
           {/* Processing Button */}
-          <Button
-            onClick={() => processQueue()}
-            disabled={!stats?.pending_emails || isProcessing}
-            className="w-full"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Mail className="h-4 w-4 mr-2" />
-                Process Email Queue
-                {stats?.pending_emails && stats.pending_emails > 0 && (
-                  <span className="ml-2 bg-primary-foreground text-primary px-2 py-1 rounded-full text-xs">
-                    {stats.pending_emails}
-                  </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => processQueue()}
+                disabled={!stats?.pending_emails || isAnyOperationInProgress}
+                className="w-full"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Process Email Queue
+                    {stats?.pending_emails && stats.pending_emails > 0 && (
+                      <span className="ml-2 bg-primary-foreground text-primary px-2 py-1 rounded-full text-xs">
+                        {stats.pending_emails}
+                      </span>
+                    )}
+                  </>
                 )}
-              </>
-            )}
-          </Button>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {!stats?.pending_emails 
+                ? "No pending emails to process" 
+                : isAnyOperationInProgress
+                ? "Another operation is in progress"
+                : `Process ${stats.pending_emails} pending email${stats.pending_emails === 1 ? '' : 's'}`
+              }
+            </TooltipContent>
+          </Tooltip>
 
           {/* Queue Management Actions */}
           <div className="flex gap-2">
             {/* Clear Old Emails Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  disabled={!stats?.total_emails || isClearingEmails}
-                  className="flex-1"
-                >
-                  {isClearingEmails ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
-                  Clear Old Emails
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleClearEmails(7)}>
-                  Clear emails older than 7 days
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleClearEmails(14)}>
-                  Clear emails older than 14 days
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleClearEmails(30)}>
-                  Clear emails older than 30 days
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      disabled={!stats?.total_emails || isAnyOperationInProgress || isCountingEmails}
+                      className="flex-1"
+                    >
+                      {isClearingEmails || isCountingEmails ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
+                      Clear Old Emails
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem 
+                      onClick={() => handleClearEmails(7)}
+                      disabled={isAnyOperationInProgress}
+                    >
+                      Clear emails older than 7 days
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleClearEmails(14)}
+                      disabled={isAnyOperationInProgress}
+                    >
+                      Clear emails older than 14 days
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleClearEmails(30)}
+                      disabled={isAnyOperationInProgress}
+                    >
+                      Clear emails older than 30 days
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TooltipTrigger>
+              <TooltipContent>
+                {!stats?.total_emails 
+                  ? "No emails to clear" 
+                  : isAnyOperationInProgress
+                  ? "Another operation is in progress"
+                  : "Remove old processed emails to keep the queue clean"
+                }
+              </TooltipContent>
+            </Tooltip>
 
             {/* Retry Failed Button */}
-            {stats?.failed_emails && stats.failed_emails > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleRetryFailed}
-                disabled={isRetryingFailed}
-                className="flex-1"
-              >
-                {isRetryingFailed ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                )}
-                Retry Failed
-                <span className="ml-2 bg-destructive text-destructive-foreground px-2 py-1 rounded-full text-xs">
-                  {stats.failed_emails}
-                </span>
-              </Button>
+            {stats?.failed_emails && stats.failed_emails > 0 ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    onClick={handleRetryFailed}
+                    disabled={isAnyOperationInProgress || isCountingEmails}
+                    className="flex-1"
+                  >
+                    {isRetryingFailed || isCountingEmails ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                    )}
+                    Retry Failed
+                    <span className="ml-2 bg-destructive text-destructive-foreground px-2 py-1 rounded-full text-xs">
+                      {stats.failed_emails}
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isAnyOperationInProgress
+                    ? "Another operation is in progress"
+                    : `Reset ${stats.failed_emails} failed email${stats.failed_emails === 1 ? '' : 's'} to pending status`
+                  }
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="flex-1 opacity-50"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Retry Failed
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  No failed emails to retry
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -322,22 +470,37 @@ export function EmailQueueStatus() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmationState.action === 'clear' 
-                ? `This will permanently delete approximately ${confirmationState.count} emails older than ${confirmationState.retention} days. This action cannot be undone.`
-                : `This will reset ${confirmationState.count} failed emails to pending status and attempt to process them again.`
+                ? confirmationState.count > 0
+                  ? `This will permanently delete ${confirmationState.count} emails older than ${confirmationState.retention} days. This action cannot be undone.`
+                  : `No emails found older than ${confirmationState.retention} days to delete.`
+                : confirmationState.count > 0
+                ? `This will reset ${confirmationState.count} failed emails to pending status and attempt to process them again.`
+                : 'No failed emails found that can be retried.'
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isAnyOperationInProgress}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
+              disabled={confirmationState.count === 0 || isAnyOperationInProgress}
               className={confirmationState.action === 'clear' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
-              {confirmationState.action === 'clear' ? 'Delete Emails' : 'Retry Emails'}
+              {isAnyOperationInProgress ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {confirmationState.action === 'clear' ? 'Deleting...' : 'Retrying...'}
+                </>
+              ) : (
+                confirmationState.action === 'clear' ? 'Delete Emails' : 'Retry Emails'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+      </Card>
+    </TooltipProvider>
   );
 }
