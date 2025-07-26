@@ -1,18 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-// Mobile device detection utilities
-const isIOS = () => {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-};
-
-const isAndroid = () => {
-  return /Android/.test(navigator.userAgent);
-};
-
-const isMobileDevice = () => {
-  return isIOS() || isAndroid() || /Mobile|Tablet/.test(navigator.userAgent);
-};
+import { isIOS, isAndroid, isMobileBrowser } from "@/utils/mobileDetection";
 
 export interface CameraCapabilities {
   hasCamera: boolean;
@@ -66,7 +55,7 @@ export function useCamera() {
         console.error('Camera permission denied:', error);
         
         // If getUserMedia fails on mobile, fallback to native file input
-        if (isMobileDevice()) {
+        if (isMobileBrowser()) {
           // On mobile, file input with capture is a valid alternative
           return true;
         }
@@ -81,7 +70,7 @@ export function useCamera() {
       }
     } else {
       // No getUserMedia support - use file input fallback on mobile
-      if (isMobileDevice()) {
+      if (isMobileBrowser()) {
         return true; // File input with capture works on mobile
       }
       
