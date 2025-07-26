@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
+import { ActivityFeed } from '@/components/admin/dashboard/ActivityFeed';
 import { 
   AlertTriangle, 
   Activity, 
@@ -52,7 +53,7 @@ export const ExecutiveSummary = () => {
   const todayCompletions = metrics?.completedThisMonth || 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Urgent Actions */}
       <Card className="cursor-pointer hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -200,6 +201,11 @@ export const ExecutiveSummary = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Activity Feed - Full Width */}
+      <div className="col-span-full">
+        <ActivityFeed />
+      </div>
     </div>
   );
 };
