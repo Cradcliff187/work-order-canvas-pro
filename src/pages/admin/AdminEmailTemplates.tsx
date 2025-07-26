@@ -25,6 +25,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
+import EmailQueueStatus from '@/components/admin/EmailQueueStatus';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { format } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
@@ -183,6 +184,8 @@ const AdminEmailTemplates: React.FC = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <EmailQueueStatus />
 
       <Card>
         <CardHeader>
