@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -20,6 +21,7 @@ interface UserProfileDropdownProps {
 
 export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownProps) {
   const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -32,6 +34,10 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleProfileClick = () => {
+    navigate('/admin/profile');
   };
 
   const handleMouseEnter = () => {
@@ -88,7 +94,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleProfileClick}>
               <Settings className="mr-2 h-4 w-4" />
               Profile Settings
             </DropdownMenuItem>
@@ -138,7 +144,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={handleProfileClick}>
             <Settings className="mr-2 h-4 w-4" />
             Profile Settings
           </DropdownMenuItem>
