@@ -20,7 +20,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
-import { WorkOrderNumberTest } from '@/components/admin/work-orders/WorkOrderNumberTest';
+
 import { ExecutiveSummary } from '@/components/admin/dashboard/ExecutiveSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -76,11 +76,10 @@ const AdminDashboard = () => {
         <p className="text-muted-foreground">Monitor system performance and manage work orders</p>
       </div>
 
-      <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+      <Tabs defaultValue="executive" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsTrigger value="dashboard">Overview</TabsTrigger>
           <TabsTrigger value="executive">Executive Summary</TabsTrigger>
-          <TabsTrigger value="testing">Work Order Number Testing</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="space-y-8">
@@ -521,9 +520,6 @@ const AdminDashboard = () => {
           <ExecutiveSummary />
         </TabsContent>
         
-        <TabsContent value="testing" className="space-y-6">
-          <WorkOrderNumberTest />
-        </TabsContent>
       </Tabs>
     </div>
   );
