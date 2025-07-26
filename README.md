@@ -3,6 +3,18 @@
 
 A comprehensive construction work order management system that facilitates workflows between Partners (Property Management), WorkOrderPortal (General Contractor), and Subcontractors (Trade Companies). Features company-level access control, multi-organization architecture, and complete financial privacy between organizations.
 
+## 🎯 Features
+
+- 🏢 **Multi-Organization Architecture** - Partners, subcontractors, and internal teams with complete data isolation
+- 📋 **Smart Work Order Management** - Location-based numbering, status tracking, and assignment workflows  
+- 💰 **Financial Privacy** - Organization-level invoice isolation with secure payment tracking
+- 👥 **Role-Based Access Control** - Granular permissions for admins, employees, partners, and subcontractors
+- 💬 **Real-time Messaging** - In-app communication with role-based visibility
+- 📱 **Progressive Web App** - Offline support with IndexedDB storage and mobile optimization
+- 📧 **Automated Email Notifications** - Transactional emails via Resend for all workflow events
+- 📊 **Analytics & Reporting** - Performance tracking, financial summaries, and audit trails
+- 🔒 **Enterprise Security** - Row-level security, audit logging, and compliance features
+
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
@@ -10,6 +22,8 @@ A comprehensive construction work order management system that facilitates workf
 - **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
 - **State**: TanStack Query + React Router
 - **Email**: Resend (All emails including auth - SMTP configured but bypassed)
+- **Real-time**: Real-time subscriptions via Supabase
+- **Offline Storage**: IndexedDB for offline message queue
 
 ## 🚀 Live Application
 

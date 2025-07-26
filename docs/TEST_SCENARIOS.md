@@ -310,3 +310,202 @@ SELECT * FROM clear_test_data();
 - **Multi-tenant isolation** verification
 
 This comprehensive test data structure ensures thorough coverage of all WorkOrderPortal features and workflows while providing realistic business scenarios for development and quality assurance testing.
+
+## Messaging Test Scenarios
+
+### Overview
+The messaging system provides in-app real-time communication between users with role-based visibility. These test scenarios verify message visibility rules, real-time functionality, and cross-organizational boundaries.
+
+### 9. Partner Posts Public Message on Work Order ABC-001-001
+
+**Test Scenario**: Partner user posts a public message that should be visible to all authorized users
+**Test User**: partner1@abc.com
+**Target Work Order**: ABC-001-001 (ABC Property Management work order)
+
+#### Test Coverage:
+- **Public message visibility** to subcontractors and admins
+- **Message creation** by partner users
+- **Real-time message delivery** across user types
+- **Cross-organization communication** boundaries
+
+#### Example Test Query:
+```sql
+-- Create public message from partner
+INSERT INTO work_order_messages (work_order_id, sender_id, message, is_internal)
+VALUES (
+  (SELECT id FROM work_orders WHERE work_order_number = 'ABC-001-001'),
+  (SELECT id FROM profiles WHERE email = 'partner1@abc.com'),
+  'Work site is ready for HVAC installation. Please coordinate entry with building manager.',
+  false
+);
+
+-- Verify message visibility for subcontractor
+SELECT m.message, m.is_internal, p.first_name, p.last_name, p.user_type
+FROM work_order_messages m
+JOIN profiles p ON p.id = m.sender_id
+WHERE m.work_order_id = (SELECT id FROM work_orders WHERE work_order_number = 'ABC-001-001')
+  AND m.is_internal = false;
+```
+
+#### Expected Results:
+- Partner can post public message
+- Assigned subcontractor can see the message
+- Admin users can see the message
+- Message appears in real-time for all authorized users
+
+### 10. Subcontractor Posts Internal Note on Assigned Work Order
+
+**Test Scenario**: Subcontractor posts internal note that partners should NOT see
+**Test User**: hvac1@coolairhvac.com
+**Target Work Order**: ABC-001-001 (assigned to Cool Air HVAC)
+
+#### Test Coverage:
+- **Internal message creation** by subcontractors
+- **Message visibility restriction** from partners
+- **Admin access** to internal communications
+- **RLS policy enforcement** for message privacy
+
+#### Example Test Query:
+```sql
+-- Create internal message from subcontractor
+INSERT INTO work_order_messages (work_order_id, sender_id, message, is_internal)
+VALUES (
+  (SELECT id FROM work_orders WHERE work_order_number = 'ABC-001-001'),
+  (SELECT id FROM profiles WHERE email = 'hvac1@coolairhvac.com'),
+  'Found additional damage to ductwork. Will need extra materials and 2 more hours.',
+  true
+);
+
+-- Test partner CANNOT see internal message (should return empty)
+SET request.jwt.claims TO '{"sub": "partner_user_id", "email": "partner1@abc.com"}';
+SELECT COUNT(*) as visible_internal_messages
+FROM work_order_messages m
+WHERE m.work_order_id = (SELECT id FROM work_orders WHERE work_order_number = 'ABC-001-001')
+  AND m.is_internal = true;
+-- Should return 0
+
+-- Test admin CAN see internal message
+SET request.jwt.claims TO '{"sub": "admin_user_id", "email": "admin1@workorderportal.com"}';
+SELECT m.message, m.is_internal, p.first_name, p.user_type
+FROM work_order_messages m
+JOIN profiles p ON p.id = m.sender_id
+WHERE m.work_order_id = (SELECT id FROM work_orders WHERE work_order_number = 'ABC-001-001')
+  AND m.is_internal = true;
+```
+
+#### Expected Results:
+- Subcontractor can post internal message
+- Partner users CANNOT see internal messages
+- Admin users CAN see all messages (public and internal)
+- RLS policies correctly restrict visibility
+
+### 11. Admin Sees Both Types of Messages
+
+**Test Scenario**: Admin user has full visibility to all message types
+**Test User**: admin1@workorderportal.com
+**Target Work Order**: ABC-001-001
+
+#### Test Coverage:
+- **Admin full message visibility** (public + internal)
+- **Message type filtering** and display
+- **Administrative oversight** capabilities
+- **Cross-organizational message access**
+
+#### Example Test Query:
+```sql
+-- Admin views all messages on work order
+SET request.jwt.claims TO '{"sub": "admin_user_id", "email": "admin1@workorderportal.com"}';
+SELECT 
+  m.message,
+  m.is_internal,
+  p.first_name,
+  p.last_name,
+  p.user_type,
+  o.name as sender_organization,
+  m.created_at
+FROM work_order_messages m
+JOIN profiles p ON p.id = m.sender_id
+LEFT JOIN user_organizations uo ON uo.user_id = p.id
+LEFT JOIN organizations o ON o.id = uo.organization_id
+WHERE m.work_order_id = (SELECT id FROM work_orders WHERE work_order_number = 'ABC-001-001')
+ORDER BY m.created_at;
+```
+
+#### Expected Results:
+- Admin sees both public and internal messages
+- Messages are properly categorized by type
+- Sender information and organization context is visible
+- Full audit trail of work order communications
+
+### 12. Test Partner Cannot See Internal Messages
+
+**Test Scenario**: Verify RLS policies prevent partners from accessing internal communications
+**Test User**: partner2@abc.com
+**Target**: Multiple work orders with internal messages
+
+#### Test Coverage:
+- **RLS policy enforcement** for message visibility
+- **Cross-work order message isolation**
+- **Partner access boundaries** verification
+- **Security compliance** testing
+
+#### Example Test Query:
+```sql
+-- Attempt to view internal messages as partner (should fail/return empty)
+SET request.jwt.claims TO '{"sub": "partner_user_id", "email": "partner2@abc.com"}';
+
+-- This should return 0 internal messages visible to partner
+SELECT COUNT(*) as partner_visible_internal_messages
+FROM work_order_messages m
+JOIN work_orders wo ON wo.id = m.work_order_id
+WHERE wo.organization_id = (SELECT id FROM organizations WHERE name = 'ABC Property Management')
+  AND m.is_internal = true;
+
+-- Verify partner can only see public messages
+SELECT 
+  m.message,
+  m.is_internal,
+  wo.work_order_number
+FROM work_order_messages m
+JOIN work_orders wo ON wo.id = m.work_order_id
+WHERE wo.organization_id = (SELECT id FROM organizations WHERE name = 'ABC Property Management')
+  AND m.is_internal = false
+ORDER BY m.created_at DESC;
+```
+
+#### Expected Results:
+- Partner sees 0 internal messages
+- Partner can only access public messages on their work orders
+- Security boundaries are properly maintained
+- No data leakage between message types
+
+### Real-Time Testing Scenarios
+
+#### 13. Message Synchronization Testing
+- **Test offline message queuing** when network is unavailable
+- **Verify message delivery** when connection is restored
+- **Test real-time subscriptions** across multiple browser tabs
+- **Validate message order** and timestamp accuracy
+
+#### 14. Cross-Organization Message Boundaries
+- **Verify organization isolation** for work order messages
+- **Test subcontractor message access** only to assigned work orders
+- **Validate partner message scope** to their organization's work orders
+- **Confirm admin global access** across all organizations
+
+### Message System Performance Testing
+
+#### Test Data for Load Testing:
+```sql
+-- Generate test messages for performance testing
+INSERT INTO work_order_messages (work_order_id, sender_id, message, is_internal)
+SELECT 
+  wo.id,
+  (SELECT id FROM profiles WHERE email = 'admin1@workorderportal.com'),
+  'Test message ' || generate_series,
+  (generate_series % 2 = 0) -- Alternate between public and internal
+FROM work_orders wo, generate_series(1, 100)
+WHERE wo.work_order_number LIKE 'ABC-%';
+```
+
+This messaging test framework ensures comprehensive validation of the real-time communication system while maintaining security and organizational boundaries.
