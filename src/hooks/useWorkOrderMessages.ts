@@ -2,6 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from './useUserProfile';
 
+export interface WorkOrderAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+}
+
 export interface WorkOrderMessage {
   id: string;
   message: string;
@@ -9,6 +16,8 @@ export interface WorkOrderMessage {
   sender_id: string;
   work_order_id: string;
   created_at: string;
+  attachment_ids?: string[];
+  attachments?: WorkOrderAttachment[];
   sender: {
     first_name: string;
     last_name: string;
@@ -55,6 +64,7 @@ export function useWorkOrderMessages(
           sender_id,
           work_order_id,
           created_at,
+          attachment_ids,
           sender:profiles!sender_id(
             first_name,
             last_name,
@@ -141,8 +151,20 @@ export function useWorkOrderMessages(
             }
           }
 
+          // Fetch attachments if message has attachment_ids
+          let attachments: WorkOrderAttachment[] = [];
+          if (message.attachment_ids && message.attachment_ids.length > 0) {
+            const { data: attachmentData } = await supabase
+              .from('work_order_attachments')
+              .select('id, file_name, file_url, file_type')
+              .in('id', message.attachment_ids);
+            
+            attachments = attachmentData || [];
+          }
+
           return {
             ...message,
+            attachments,
             sender_organization: userOrg?.[0]?.organization || null,
             is_read: isRead,
             read_count: readCount,

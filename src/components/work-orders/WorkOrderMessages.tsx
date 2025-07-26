@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageCircle, Users, Lock, Circle, Clock, Camera, X, Image } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult } from '@/hooks/useWorkOrderMessages';
+import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult, WorkOrderAttachment } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
 import { useMessageSubscription } from '@/hooks/useMessageSubscription';
 import { useOfflineMessageSync } from '@/hooks/useOfflineMessageSync';
@@ -272,33 +272,8 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const renderAttachments = useCallback((attachmentIds: string[] | null) => {
-    if (!attachmentIds || attachmentIds.length === 0) return null;
-
-    // For now, we'll fetch attachments in a simple way
-    // In a real implementation, you might want to use a proper hook
-    const [attachments, setAttachments] = useState<any[]>([]);
-
-    useEffect(() => {
-      const fetchAttachments = async () => {
-        try {
-          const { data } = await supabase
-            .from('work_order_attachments')
-            .select('id, file_name, file_url, file_type')
-            .in('id', attachmentIds);
-          
-          if (data) {
-            setAttachments(data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch attachments:', error);
-        }
-      };
-
-      fetchAttachments();
-    }, [attachmentIds]);
-
-    if (attachments.length === 0) return null;
+  const renderAttachments = (attachments: WorkOrderAttachment[] | undefined) => {
+    if (!attachments || attachments.length === 0) return null;
 
     return (
       <div className="mt-3 flex flex-wrap gap-2">
@@ -325,7 +300,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         ))}
       </div>
     );
-  }, []);
+  };
 
   const renderMessage = (message: WorkOrderMessage | any) => {
     const isOwnMessage = message.sender_id === profile?.id;
@@ -384,7 +359,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
             {message.message}
           </p>
         )}
-        {renderAttachments(message.attachment_ids)}
+        {renderAttachments(message.attachments)}
         {isOwnMessage && message.total_recipients > 0 && (
           <div className="mt-2 pt-2 border-t border-muted">
             <span className="text-xs text-muted-foreground">
