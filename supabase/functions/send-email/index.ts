@@ -91,6 +91,14 @@ Deno.serve(async (req) => {
           .eq('id', record_id)
           .single();
         email = user?.email;
+      } else if (record_type === 'profile') {
+        // Handle profile record type - direct lookup by profile id
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', record_id)
+          .single();
+        email = profile?.email;
       } else if (record_type === 'auth_user') {
         // Handle auth_user record type - lookup by user_id instead of id
         const { data: user } = await supabase
