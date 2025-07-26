@@ -23,13 +23,28 @@ export interface WorkOrderMessage {
   total_recipients: number;
 }
 
-export function useWorkOrderMessages(workOrderId: string, isInternal?: boolean) {
+export interface WorkOrderMessagesResult {
+  messages: WorkOrderMessage[];
+  hasMore: boolean;
+  totalCount: number;
+}
+
+export function useWorkOrderMessages(
+  workOrderId: string, 
+  isInternal?: boolean, 
+  page: number = 1, 
+  pageSize: number = 50
+) {
   const { profile } = useUserProfile();
   
   return useQuery({
-    queryKey: ['work-order-messages', workOrderId, isInternal, profile?.id],
-    queryFn: async () => {
-      if (!workOrderId) return [];
+    queryKey: ['work-order-messages', workOrderId, isInternal, page, pageSize, profile?.id],
+    queryFn: async (): Promise<WorkOrderMessagesResult> => {
+      if (!workOrderId) return { messages: [], hasMore: false, totalCount: 0 };
+
+      // Calculate pagination range
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
       let query = supabase
         .from('work_order_messages')
@@ -46,16 +61,17 @@ export function useWorkOrderMessages(workOrderId: string, isInternal?: boolean) 
             email,
             user_type
           )
-        `)
+        `, { count: 'exact' })
         .eq('work_order_id', workOrderId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       // Filter by internal flag if specified
       if (typeof isInternal === 'boolean') {
         query = query.eq('is_internal', isInternal);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -135,7 +151,14 @@ export function useWorkOrderMessages(workOrderId: string, isInternal?: boolean) 
         })
       );
 
-      return enhancedMessages as WorkOrderMessage[];
+      const totalCount = count || 0;
+      const hasMore = (data?.length || 0) === pageSize && (from + pageSize) < totalCount;
+
+      return {
+        messages: enhancedMessages as WorkOrderMessage[],
+        hasMore,
+        totalCount,
+      };
     },
     enabled: !!workOrderId,
   });

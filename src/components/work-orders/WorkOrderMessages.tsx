@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageCircle, Users, Lock, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useWorkOrderMessages, WorkOrderMessage } from '@/hooks/useWorkOrderMessages';
+import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
 import { useMessageSubscription } from '@/hooks/useMessageSubscription';
 
@@ -28,10 +28,16 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const [newMessage, setNewMessage] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
+  
+  // Pagination state
+  const [publicPage, setPublicPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(1);
+  const [allPublicMessages, setAllPublicMessages] = useState<WorkOrderMessage[]>([]);
+  const [allInternalMessages, setAllInternalMessages] = useState<WorkOrderMessage[]>([]);
 
   // Fetch messages using custom hooks
-  const { data: publicMessages = [], isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false);
-  const { data: internalMessages = [], isLoading: isLoadingInternal } = useWorkOrderMessages(workOrderId, true);
+  const { data: publicData, isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false, publicPage);
+  const { data: internalData, isLoading: isLoadingInternal } = useWorkOrderMessages(workOrderId, true, internalPage);
   const postMessage = usePostMessage();
   
   // Request browser notification permission on mount
@@ -76,6 +82,48 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   // Set up real-time subscription with browser notification callback
   useMessageSubscription(workOrderId, handleBrowserNotification);
 
+  // Handle pagination data updates
+  useEffect(() => {
+    if (publicData?.messages) {
+      if (publicPage === 1) {
+        setAllPublicMessages(publicData.messages);
+      } else {
+        setAllPublicMessages(prev => [...prev, ...publicData.messages]);
+      }
+    }
+  }, [publicData, publicPage]);
+
+  useEffect(() => {
+    if (internalData?.messages) {
+      if (internalPage === 1) {
+        setAllInternalMessages(internalData.messages);
+      } else {
+        setAllInternalMessages(prev => [...prev, ...internalData.messages]);
+      }
+    }
+  }, [internalData, internalPage]);
+
+  // Reset pagination when work order changes
+  useEffect(() => {
+    setPublicPage(1);
+    setInternalPage(1);
+    setAllPublicMessages([]);
+    setAllInternalMessages([]);
+  }, [workOrderId]);
+
+  // Load more messages functions
+  const loadMorePublicMessages = useCallback(() => {
+    if (publicData?.hasMore && !isLoadingPublic) {
+      setPublicPage(prev => prev + 1);
+    }
+  }, [publicData?.hasMore, isLoadingPublic]);
+
+  const loadMoreInternalMessages = useCallback(() => {
+    if (internalData?.hasMore && !isLoadingInternal) {
+      setInternalPage(prev => prev + 1);
+    }
+  }, [internalData?.hasMore, isLoadingInternal]);
+
   // Function to mark messages as read
   const markMessagesAsRead = useCallback(async (messages: WorkOrderMessage[]) => {
     if (!profile?.id || messages.length === 0) return;
@@ -109,13 +157,13 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
   // Mark messages as read when tab changes or component mounts
   useEffect(() => {
-    const messages = activeTab === 'public' ? publicMessages : internalMessages;
+    const messages = activeTab === 'public' ? allPublicMessages : allInternalMessages;
     const isLoading = activeTab === 'public' ? isLoadingPublic : isLoadingInternal;
     
     if (!isLoading && messages.length > 0) {
       markMessagesAsRead(messages);
     }
-  }, [activeTab, workOrderId, markMessagesAsRead]);
+  }, [activeTab, allPublicMessages, allInternalMessages, isLoadingPublic, isLoadingInternal, markMessagesAsRead]);
 
   // Determine which tabs to show based on user type
   const showPublicTab = isAdmin() || isEmployee() || isPartner();
@@ -129,11 +177,11 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       return { publicUnreadCount: 0, internalUnreadCount: 0 };
     }
 
-    const publicUnread = publicMessages.filter(
+    const publicUnread = allPublicMessages.filter(
       msg => !msg.is_read && msg.sender_id !== profile.id
     ).length;
 
-    const internalUnread = internalMessages.filter(
+    const internalUnread = allInternalMessages.filter(
       msg => !msg.is_read && msg.sender_id !== profile.id
     ).length;
 
@@ -141,7 +189,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       publicUnreadCount: publicUnread, 
       internalUnreadCount: internalUnread 
     };
-  }, [publicMessages, internalMessages, profile?.id, isLoadingPublic, isLoadingInternal]);
+  }, [allPublicMessages, allInternalMessages, profile?.id, isLoadingPublic, isLoadingInternal]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -217,9 +265,29 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     );
   };
 
-  const renderMessageList = (messageList: WorkOrderMessage[], emptyMessage: string, isLoading: boolean) => (
+  const renderMessageList = (
+    messageList: WorkOrderMessage[], 
+    emptyMessage: string, 
+    isLoading: boolean,
+    hasMore: boolean,
+    onLoadMore: () => void
+  ) => (
     <div className="space-y-4">
-      {isLoading ? (
+      {/* Load More Button at the top */}
+      {hasMore && messageList.length > 0 && (
+        <div className="text-center">
+          <Button 
+            variant="outline" 
+            onClick={onLoadMore}
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading ? 'Loading...' : 'Load More Messages'}
+          </Button>
+        </div>
+      )}
+      
+      {isLoading && messageList.length === 0 ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="p-4 rounded-lg border-l-4 border-l-[#0485EA] space-y-3">
@@ -344,7 +412,13 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                 <h3 className="text-sm font-medium mb-4 text-muted-foreground">
                   Visible to partner organization and internal team
                 </h3>
-                {renderMessageList(publicMessages, "No public messages yet. Start the conversation!", isLoadingPublic)}
+                {renderMessageList(
+                  allPublicMessages, 
+                  "No public messages yet. Start the conversation!", 
+                  isLoadingPublic,
+                  publicData?.hasMore || false,
+                  loadMorePublicMessages
+                )}
               </div>
               {renderMessageComposer(false)}
             </TabsContent>
@@ -356,7 +430,13 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                 <h3 className="text-sm font-medium mb-4 text-muted-foreground">
                   Only visible to internal team and assigned subcontractors
                 </h3>
-                {renderMessageList(internalMessages, "No internal notes yet. Add a note to start tracking internal communication.", isLoadingInternal)}
+                {renderMessageList(
+                  allInternalMessages, 
+                  "No internal notes yet. Add a note to start tracking internal communication.", 
+                  isLoadingInternal,
+                  internalData?.hasMore || false,
+                  loadMoreInternalMessages
+                )}
               </div>
               {renderMessageComposer(true)}
             </TabsContent>
