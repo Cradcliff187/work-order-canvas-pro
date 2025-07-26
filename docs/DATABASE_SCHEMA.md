@@ -319,6 +319,33 @@ Comprehensive audit trail for all system changes.
 - created_at (timestamp, default now())
 ```
 
+### Messaging System Tables
+
+**`work_order_messages`**
+```sql
+- id (UUID, primary key)
+- work_order_id (UUID, references work_orders.id)
+- sender_id (UUID, references profiles.id)
+- message (text, not null, trimmed length > 0)
+- is_internal (boolean, default false)
+- created_at (timestamptz, default now())
+- updated_at (timestamptz, default now())
+```
+
+**`message_read_receipts`**
+```sql
+- message_id (UUID, references work_order_messages.id)
+- user_id (UUID, references profiles.id)
+- read_at (timestamptz, default now())
+- PRIMARY KEY (message_id, user_id)
+```
+
+**Message Visibility Rules:**
+- **is_internal = FALSE (Public)**: Visible to partners + internal team (admins/employees)
+- **is_internal = TRUE (Internal)**: Visible to internal team + assigned subcontractors only
+- **Strict Separation**: Partners and subcontractors can never see each other's messages
+- **Message Creation**: Partners can only create public messages, subcontractors can only create internal messages
+
 ## Key Features
 
 ### Format Validation Constraints
