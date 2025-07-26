@@ -846,6 +846,24 @@ export type Database = {
         }
         Relationships: []
       }
+      trigger_debug_log: {
+        Row: {
+          created_at: string | null
+          id: number
+          message: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+        }
+        Relationships: []
+      }
       user_organizations: {
         Row: {
           created_at: string
