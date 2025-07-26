@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import type { UploadProgress } from "@/hooks/useFileUpload";
 import { getCameraAttribute } from "@/utils/mobileDetection";
 import CameraPermissionHelper from "./CameraPermissionHelper";
+import { CameraDebugPanel } from "./CameraDebugPanel";
 
 interface MobileMediaUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -66,7 +67,16 @@ export function MobileMediaUpload({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   
-  const { isSupported: cameraSupported, checkCameraPermission } = useCamera();
+  const {
+    isSupported: cameraSupported,
+    checkCameraPermission,
+    debugMode,
+    debugInfo,
+    errors,
+    enableDebug,
+    disableDebug,
+    collectDebugInfo
+  } = useCamera();
 
   const getFileType = (file: File): 'image' | 'document' => {
     return file.type.startsWith('image/') ? 'image' : 'document';
@@ -519,6 +529,17 @@ export function MobileMediaUpload({
           galleryInputRef.current?.click();
         }}
       />
+
+      {/* Debug Panel - Development Only */}
+      {import.meta.env.MODE === 'development' && (
+        <CameraDebugPanel
+          debugMode={debugMode}
+          debugInfo={debugInfo}
+          errors={errors}
+          onToggleDebug={() => debugMode ? disableDebug() : enableDebug()}
+          onRefreshInfo={collectDebugInfo}
+        />
+      )}
     </div>
   );
 }

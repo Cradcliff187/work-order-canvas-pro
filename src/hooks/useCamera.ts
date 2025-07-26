@@ -80,9 +80,12 @@ export function useCamera() {
   }, [capabilities, errors, logError, logInfo]);
 
   const enableDebug = useCallback(() => {
-    setDebugMode(true);
-    collectDebugInfo();
-    console.info('[Camera:Debug] Debug mode enabled');
+    // Only allow debug mode in development
+    if (import.meta.env.MODE === 'development') {
+      setDebugMode(true);
+      collectDebugInfo();
+      console.info('[Camera:Debug] Debug mode enabled');
+    }
   }, [collectDebugInfo]);
 
   const disableDebug = useCallback(() => {

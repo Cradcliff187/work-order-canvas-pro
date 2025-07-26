@@ -23,6 +23,11 @@ export const CameraDebugPanel: React.FC<CameraDebugPanelProps> = ({
   onToggleDebug,
   onRefreshInfo
 }) => {
+  // Only render in development mode
+  if (import.meta.env.MODE !== 'development') {
+    return null;
+  }
+
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const formatTimestamp = (timestamp: string) => {
