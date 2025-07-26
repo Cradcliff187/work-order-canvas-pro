@@ -2,6 +2,20 @@
 
 This document provides a chronological history of all database migrations applied to WorkOrderPro.
 
+## 2025-07-26
+
+### 20250726055515-[uuid].sql
+**Purpose:** Messaging system tables and RLS policies
+**Notes:** Implementation of work_order_messages and message_read_receipts tables with role-based visibility
+
+### 20250726065320-[uuid].sql
+**Purpose:** Test data for messaging system
+**Notes:** Seed data for messaging functionality testing
+
+### 20250726124536-[uuid].sql
+**Purpose:** Optimized unread message count function
+**Notes:** Performance optimization for unread message counting RPC function
+
 ## 2025-07-13
 
 ### 20250713153445-450fdbfd-d68e-48ea-873b-4218a40db997.sql

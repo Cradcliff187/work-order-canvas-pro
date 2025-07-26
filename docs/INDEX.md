@@ -26,6 +26,7 @@ This documentation map helps developers quickly find the right documentation for
 | [RLS_POLICIES.md](./RLS_POLICIES.md) | Row Level Security policies and access control rules | Implementing security features, debugging permission issues |
 | [OFFLINE_STORAGE_GUIDE.md](./OFFLINE_STORAGE_GUIDE.md) | PWA capabilities and offline data management | Adding offline features, troubleshooting sync issues |
 | [EDGE_FUNCTIONS.md](./EDGE_FUNCTIONS.md) | Supabase Edge Functions for external integrations | Creating new integrations, debugging serverless functions |
+| [MESSAGING_SYSTEM.md](./MESSAGING_SYSTEM.md) | In-app messaging system guide | Building messaging features, understanding visibility rules |
 
 ## ⚙️ Operations & Maintenance
 
