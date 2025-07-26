@@ -16,6 +16,7 @@ interface DashboardMetrics {
   unpaidApprovedInvoices: number;
   employeesOnDuty: number;
   activeSubcontractors: number;
+  todayWorkOrders: number;
   recentPayments: Array<{
     id: string;
     internal_invoice_number: string;
@@ -84,6 +85,15 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     .from('work_orders')
     .select('id', { count: 'exact' })
     .eq('status', 'received');
+
+  // Today's new work orders
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  
+  const { count: todayWorkOrdersCount } = await supabase
+    .from('work_orders')
+    .select('id', { count: 'exact' })
+    .gte('date_submitted', todayStart.toISOString());
 
   // Overdue work orders
   const { count: overdueCount } = await supabase
@@ -194,6 +204,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     unpaidApprovedInvoices: unpaidApprovedCount || 0,
     employeesOnDuty: uniqueActiveEmployees.size,
     activeSubcontractors: uniqueSubcontractorOrgs.size,
+    todayWorkOrders: todayWorkOrdersCount || 0,
     recentPayments,
   };
 };
