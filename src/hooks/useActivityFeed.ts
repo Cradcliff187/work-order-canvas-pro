@@ -62,7 +62,8 @@ const fetchActivityFeed = async (): Promise<ActivityItem[]> => {
       ),
       subcontractor:profiles!subcontractor_user_id(
         first_name,
-        last_name
+        last_name,
+        company_name
       )
     `)
     .gte('submitted_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -71,15 +72,14 @@ const fetchActivityFeed = async (): Promise<ActivityItem[]> => {
 
   if (reports) {
     reports.forEach((report) => {
-      const subcontractorName = report.subcontractor 
-        ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}`
-        : 'Unknown Subcontractor';
+      const organizationName = report.subcontractor?.company_name 
+        || (report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'Unknown Organization');
       
       activities.push({
         id: `report_new_${report.id}`,
         type: 'report_new',
         title: `New Report: ${report.work_orders?.work_order_number}`,
-        description: `Report submitted by ${subcontractorName} - ${report.work_orders?.organizations?.name || 'Unknown Organization'}`,
+        description: `Report submitted by ${organizationName} - ${report.work_orders?.organizations?.name || 'Unknown Organization'}`,
         timestamp: report.submitted_at || new Date().toISOString(),
         actionUrl: `/admin/reports`,
       });
