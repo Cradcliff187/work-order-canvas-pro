@@ -185,6 +185,7 @@ const AdminEmailTemplates: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Email Queue Management */}
       <EmailQueueStatus />
 
       <Card>
