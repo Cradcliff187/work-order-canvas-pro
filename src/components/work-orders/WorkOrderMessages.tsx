@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, Lock } from 'lucide-react';
+import { MessageCircle, Users, Lock, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
@@ -106,39 +106,56 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     }
   };
 
-  const renderMessage = (message: WorkOrderMessage) => (
-    <div
-      key={message.id}
-      className={`p-4 rounded-lg border-l-4 ${
-        message.is_internal
-          ? 'bg-[#EFF8FF] border-l-[#0485EA]'
-          : 'bg-white border-l-[#0485EA]'
-      }`}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground">
-            {message.sender.first_name} {message.sender.last_name}
-          </span>
-          <Badge variant="outline" className="text-xs">
-            {message.sender_organization?.name || 'Internal Team'}
-          </Badge>
-          {message.is_internal && (
-            <Badge variant="secondary" className="text-xs flex items-center gap-1">
-              <Lock className="h-3 w-3" />
-              Internal
+  const renderMessage = (message: WorkOrderMessage) => {
+    const isOwnMessage = message.sender_id === profile?.id;
+    const isUnread = !message.is_read && !isOwnMessage;
+    
+    return (
+      <div
+        key={message.id}
+        className={`p-4 rounded-lg border-l-4 transition-colors ${
+          isUnread 
+            ? 'bg-blue-50 dark:bg-blue-950/20 border-l-blue-500' 
+            : message.is_internal
+              ? 'bg-[#EFF8FF] border-l-[#0485EA]'
+              : 'bg-white border-l-[#0485EA]'
+        }`}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-2">
+            {isUnread && (
+              <Circle className="h-2 w-2 fill-blue-500 text-blue-500 flex-shrink-0" />
+            )}
+            <span className={`text-foreground ${isUnread ? 'font-medium' : 'font-normal'}`}>
+              {message.sender.first_name} {message.sender.last_name}
+            </span>
+            <Badge variant="outline" className="text-xs">
+              {message.sender_organization?.name || 'Internal Team'}
             </Badge>
-          )}
+            {message.is_internal && (
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Internal
+              </Badge>
+            )}
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+          </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
-        </span>
+        <p className={`text-sm text-foreground whitespace-pre-wrap ${isUnread ? 'font-medium' : 'font-normal'}`}>
+          {message.message}
+        </p>
+        {isOwnMessage && message.total_recipients > 0 && (
+          <div className="mt-2 pt-2 border-t border-muted">
+            <span className="text-xs text-muted-foreground">
+              Read by {message.read_count} of {message.total_recipients} recipients
+            </span>
+          </div>
+        )}
       </div>
-      <p className="text-sm text-foreground whitespace-pre-wrap">
-        {message.message}
-      </p>
-    </div>
-  );
+    );
+  };
 
   const renderMessageList = (messageList: WorkOrderMessage[], emptyMessage: string, isLoading: boolean) => (
     <div className="space-y-4">
