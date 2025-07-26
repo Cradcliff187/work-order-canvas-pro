@@ -3,6 +3,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { Eye, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
 
@@ -21,17 +22,23 @@ type WorkOrder = {
 };
 
 interface WorkOrderColumnProps {
+  unreadCounts: Record<string, number>;
   onView: (workOrder: WorkOrder) => void;
 }
 
-export function createWorkOrderColumns({ onView }: WorkOrderColumnProps): ColumnDef<WorkOrder>[] {
+export function createWorkOrderColumns({ unreadCounts, onView }: WorkOrderColumnProps): ColumnDef<WorkOrder>[] {
   return [
     {
       accessorKey: 'work_order_number',
       header: 'Work Order #',
       cell: ({ row }) => (
-        <div className="font-medium">
+        <div className="font-medium flex items-center gap-2">
           {row.getValue('work_order_number') || 'N/A'}
+          {unreadCounts[row.original.id] > 0 && (
+            <Badge variant="default">
+              {unreadCounts[row.original.id]}
+            </Badge>
+          )}
         </div>
       ),
     },

@@ -31,6 +31,7 @@ import {
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
+import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import {
   Select,
@@ -66,6 +67,10 @@ const WorkOrderList = () => {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const workOrderList = workOrdersData?.data || [];
+  
+  // Extract work order IDs for unread message counts
+  const workOrderIds = workOrderList.map(wo => wo.id);
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
 
   // Filter and sort work orders
   const filteredAndSortedWorkOrders = useMemo(() => {
@@ -139,8 +144,9 @@ const WorkOrderList = () => {
 
   // Table columns
   const columns = useMemo(() => createWorkOrderColumns({
+    unreadCounts,
     onView: (workOrder) => navigate(`/partner/work-orders/${workOrder.id}`),
-  }), [navigate]);
+  }), [navigate, unreadCounts]);
 
   // React Table setup
   const table = useReactTable({
@@ -343,6 +349,11 @@ const WorkOrderList = () => {
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg">{workOrder.work_order_number}</h3>
+                      {unreadCounts[workOrder.id] > 0 && (
+                        <Badge variant="default" className="ml-2">
+                          {unreadCounts[workOrder.id]}
+                        </Badge>
+                      )}
                       <WorkOrderStatusBadge status={workOrder.status} />
                     </div>
 
