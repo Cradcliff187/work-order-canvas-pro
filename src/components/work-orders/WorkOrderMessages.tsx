@@ -9,11 +9,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, Lock, Circle } from 'lucide-react';
+import { MessageCircle, Users, Lock, Circle, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
 import { useMessageSubscription } from '@/hooks/useMessageSubscription';
+import { useOfflineMessageSync } from '@/hooks/useOfflineMessageSync';
 import { useToast } from '@/hooks/use-toast';
 
 interface WorkOrderMessagesProps {
@@ -44,6 +45,9 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const { data: publicData, isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false, publicPage);
   const { data: internalData, isLoading: isLoadingInternal } = useWorkOrderMessages(workOrderId, true, internalPage);
   const postMessage = usePostMessage();
+  
+  // Initialize offline message sync
+  const { getQueuedMessages } = useOfflineMessageSync();
   
   // Request browser notification permission on mount
   useEffect(() => {
@@ -228,24 +232,30 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     }
   };
 
-  const renderMessage = (message: WorkOrderMessage) => {
+  const renderMessage = (message: WorkOrderMessage | any) => {
     const isOwnMessage = message.sender_id === profile?.id;
     const isUnread = !message.is_read && !isOwnMessage;
+    const isQueued = message.isQueued || message.id?.startsWith('temp-');
     
     return (
       <div
         key={message.id}
         className={`p-4 rounded-lg border-l-4 transition-colors ${
-          isUnread 
-            ? 'bg-blue-50 dark:bg-blue-950/20 border-l-blue-500' 
-            : message.is_internal
-              ? 'bg-[#EFF8FF] border-l-[#0485EA]'
-              : 'bg-white border-l-[#0485EA]'
+          isQueued
+            ? 'bg-amber-50 dark:bg-amber-950/20 border-l-amber-500'
+            : isUnread 
+              ? 'bg-blue-50 dark:bg-blue-950/20 border-l-blue-500' 
+              : message.is_internal
+                ? 'bg-[#EFF8FF] border-l-[#0485EA]'
+                : 'bg-white border-l-[#0485EA]'
         }`}
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
-            {isUnread && (
+            {isQueued && (
+              <Clock className="h-3 w-3 text-amber-500 flex-shrink-0" />
+            )}
+            {isUnread && !isQueued && (
               <Circle className="h-2 w-2 fill-blue-500 text-blue-500 flex-shrink-0" />
             )}
             <span className={`text-foreground ${isUnread ? 'font-medium' : 'font-normal'}`}>
@@ -261,6 +271,12 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               <Badge variant="secondary" className="text-xs flex items-center gap-1">
                 <Lock className="h-3 w-3" />
                 Internal
+              </Badge>
+            )}
+            {isQueued && (
+              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-amber-50 text-amber-700 border-amber-200">
+                <Clock className="h-3 w-3" />
+                Queued
               </Badge>
             )}
           </div>
