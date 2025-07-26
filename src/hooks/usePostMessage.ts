@@ -7,6 +7,7 @@ export interface PostMessageData {
   workOrderId: string;
   message: string;
   isInternal: boolean;
+  attachmentIds?: string[];
 }
 
 export function usePostMessage() {
@@ -14,7 +15,7 @@ export function usePostMessage() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ workOrderId, message, isInternal }: PostMessageData) => {
+    mutationFn: async ({ workOrderId, message, isInternal, attachmentIds }: PostMessageData) => {
       // Check if offline
       if (!navigator.onLine) {
         // Get current user's profile ID for offline storage
@@ -84,6 +85,7 @@ export function usePostMessage() {
           message: message.trim(),
           is_internal: isInternal,
           sender_id: profile.id,
+          attachment_ids: attachmentIds || [],
         })
         .select(`
           id,

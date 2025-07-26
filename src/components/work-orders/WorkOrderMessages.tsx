@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -9,13 +10,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, Lock, Circle, Clock } from 'lucide-react';
+import { MessageCircle, Users, Lock, Circle, Clock, Camera, X, Image } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
 import { useMessageSubscription } from '@/hooks/useMessageSubscription';
 import { useOfflineMessageSync } from '@/hooks/useOfflineMessageSync';
 import { useToast } from '@/hooks/use-toast';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { FileUpload } from '@/components/FileUpload';
+import { MobileFileUpload } from '@/components/MobileFileUpload';
 
 interface WorkOrderMessagesProps {
   workOrderId: string;
@@ -31,6 +36,14 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const [newMessage, setNewMessage] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  
+  const isMobile = useIsMobile();
+  const { uploadFiles, uploadProgress, isUploading } = useFileUpload({
+    maxFiles: 3,
+    maxSizeBytes: 10 * 1024 * 1024, // 10MB
+  });
   
   // Pagination state
   const [publicPage, setPublicPage] = useState(1);
@@ -215,22 +228,104 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && selectedFiles.length === 0) return;
 
     try {
-      await postMessage.mutateAsync({
+      let attachmentIds: string[] = [];
+      
+      // Upload files first if any are selected
+      if (selectedFiles.length > 0) {
+        const uploadResults = await uploadFiles(selectedFiles, workOrderId);
+        attachmentIds = uploadResults.map(result => result.id);
+      }
+
+      const result = await postMessage.mutateAsync({
         workOrderId,
-        message: newMessage,
+        message: newMessage || ' ', // Ensure message is not empty if only attachments
         isInternal: isInternal && (isAdmin() || isEmployee()),
+        attachmentIds,
       });
+
+      // Update work_order_attachments to link back to the message
+      if (attachmentIds.length > 0 && result?.data?.id) {
+        await supabase
+          .from('work_order_attachments')
+          .update({ work_order_message_id: result.data.id })
+          .in('id', attachmentIds);
+      }
       
       setNewMessage('');
       setIsInternal(false);
+      setSelectedFiles([]);
+      setShowFileUpload(false);
     } catch (error) {
       // Error is handled by the mutation hook
       console.error('Failed to post message:', error);
     }
   };
+
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(files);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const renderAttachments = useCallback((attachmentIds: string[] | null) => {
+    if (!attachmentIds || attachmentIds.length === 0) return null;
+
+    // For now, we'll fetch attachments in a simple way
+    // In a real implementation, you might want to use a proper hook
+    const [attachments, setAttachments] = useState<any[]>([]);
+
+    useEffect(() => {
+      const fetchAttachments = async () => {
+        try {
+          const { data } = await supabase
+            .from('work_order_attachments')
+            .select('id, file_name, file_url, file_type')
+            .in('id', attachmentIds);
+          
+          if (data) {
+            setAttachments(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch attachments:', error);
+        }
+      };
+
+      fetchAttachments();
+    }, [attachmentIds]);
+
+    if (attachments.length === 0) return null;
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {attachments.map((attachment) => (
+          <div key={attachment.id} className="relative group">
+            {attachment.file_type === 'photo' ? (
+              <img
+                src={attachment.file_url}
+                alt={attachment.file_name}
+                className="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => window.open(attachment.file_url, '_blank')}
+              />
+            ) : (
+              <div className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors">
+                <Image className="h-8 w-8 text-muted-foreground" />
+              </div>
+            )}
+            {attachments.length > 1 && (
+              <Badge className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5">
+                {attachments.length}
+              </Badge>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }, []);
 
   const renderMessage = (message: WorkOrderMessage | any) => {
     const isOwnMessage = message.sender_id === profile?.id;
@@ -284,9 +379,12 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
             {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
           </span>
         </div>
-        <p className={`text-sm text-foreground whitespace-pre-wrap ${isUnread ? 'font-medium' : 'font-normal'}`}>
-          {message.message}
-        </p>
+        {message.message && message.message.trim() && (
+          <p className={`text-sm text-foreground whitespace-pre-wrap ${isUnread ? 'font-medium' : 'font-normal'}`}>
+            {message.message}
+          </p>
+        )}
+        {renderAttachments(message.attachment_ids)}
         {isOwnMessage && message.total_recipients > 0 && (
           <div className="mt-2 pt-2 border-t border-muted">
             <span className="text-xs text-muted-foreground">
@@ -359,13 +457,59 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={forInternal ? "Add an internal note..." : "Type your message..."}
-            className="min-h-[100px] resize-none"
-            disabled={postMessage.isPending}
-          />
+        <Textarea
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder={forInternal ? "Add an internal note..." : "Type your message..."}
+          className="min-h-[100px] resize-none"
+          disabled={postMessage.isPending || isUploading}
+        />
+
+        {/* Selected Files Preview */}
+        {selectedFiles.length > 0 && (
+          <div className="border rounded-lg p-3 bg-muted/50">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Selected Photos ({selectedFiles.length})</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedFiles([])}
+                disabled={postMessage.isPending || isUploading}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedFiles.map((file, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="w-16 h-16 object-cover rounded border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0"
+                    onClick={() => handleRemoveFile(index)}
+                    disabled={postMessage.isPending || isUploading}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* File Upload Progress */}
+        {isUploading && (
+          <div className="text-sm text-muted-foreground">
+            Uploading photos...
+          </div>
+        )}
         
         {(isAdmin() || isEmployee()) && !forInternal && (
           <div className="flex items-center space-x-2">
@@ -373,7 +517,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               id="internal-note"
               checked={isInternal}
               onCheckedChange={(checked) => setIsInternal(checked as boolean)}
-              disabled={postMessage.isPending}
+              disabled={postMessage.isPending || isUploading}
             />
             <Label htmlFor="internal-note" className="text-sm font-medium">
               Make this an internal note (only visible to team and subcontractors)
@@ -381,25 +525,81 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           </div>
         )}
         
-        <div className="flex justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setNewMessage('');
-              setIsInternal(false);
-            }}
-            disabled={postMessage.isPending || !newMessage.trim()}
-          >
-            Clear
-          </Button>
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setNewMessage('');
+                setIsInternal(false);
+                setSelectedFiles([]);
+              }}
+              disabled={postMessage.isPending || isUploading || (!newMessage.trim() && selectedFiles.length === 0)}
+            >
+              Clear
+            </Button>
+            
+            {/* Camera/Photo Button */}
+            {isMobile ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowFileUpload(!showFileUpload)}
+                disabled={postMessage.isPending || isUploading}
+                className="flex items-center gap-2"
+              >
+                <Camera className="h-4 w-4" />
+                Photos
+              </Button>
+            ) : (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={postMessage.isPending || isUploading}
+                    className="flex items-center gap-2"
+                  >
+                    <Camera className="h-4 w-4" />
+                    Add Photos
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Photos</DialogTitle>
+                  </DialogHeader>
+                  <FileUpload
+                    onFilesSelected={handleFilesSelected}
+                    maxFiles={3}
+                    maxSizeBytes={10 * 1024 * 1024}
+                    acceptedTypes={['image/jpeg', 'image/jpg', 'image/png', 'image/webp']}
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+          
           <Button
             type="submit"
-            disabled={postMessage.isPending || !newMessage.trim()}
+            disabled={postMessage.isPending || isUploading || (!newMessage.trim() && selectedFiles.length === 0)}
           >
-            {postMessage.isPending ? 'Posting...' : 'Post Message'}
+            {postMessage.isPending ? 'Posting...' : isUploading ? 'Uploading...' : 'Post Message'}
           </Button>
         </div>
+
+        {/* Mobile File Upload */}
+        {isMobile && showFileUpload && (
+          <div className="border rounded-lg p-4 bg-background">
+            <MobileFileUpload
+              onFilesSelected={handleFilesSelected}
+              maxFiles={3}
+              maxSizeBytes={10 * 1024 * 1024}
+              acceptedTypes={['image/jpeg', 'image/jpg', 'image/png', 'image/webp']}
+              showDocumentButton={false}
+            />
+          </div>
+        )}
       </form>
     );
   };
