@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,18 +9,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Search, Filter, X, CheckCircle, RotateCcw } from 'lucide-react';
 import { useApprovalQueue } from '@/hooks/useApprovalQueue';
+import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
+import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { ApprovalQueueItem } from '@/components/admin/approvals/ApprovalQueueItem';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminApprovals() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
 
   const { data: approvalItems = [], totalCount = 0, loading, error } = useApprovalQueue();
+  const { reviewReport } = useAdminReportMutations();
+  const { approveInvoice, rejectInvoice } = useInvoiceMutations();
 
   // Filter items
   const filteredItems = approvalItems.filter(item => {
@@ -48,9 +54,22 @@ export default function AdminApprovals() {
 
   const handleApprove = async (item: any) => {
     setLoadingItems(prev => new Set(prev).add(item.id));
+    
     try {
-      // TODO: Implement approval API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Temporary simulation
+      if (item.type === 'report') {
+        await reviewReport.mutateAsync({ 
+          reportId: item.id, 
+          status: 'approved' 
+        });
+      } else {
+        await approveInvoice.mutateAsync({ 
+          invoiceId: item.id 
+        });
+      }
+      
+      // Refetch approval queue
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+      
       toast({
         title: "Item approved",
         description: `${item.title} has been approved successfully.`,
@@ -72,9 +91,24 @@ export default function AdminApprovals() {
 
   const handleReject = async (item: any) => {
     setLoadingItems(prev => new Set(prev).add(item.id));
+    
     try {
-      // TODO: Implement rejection API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Temporary simulation
+      if (item.type === 'report') {
+        await reviewReport.mutateAsync({ 
+          reportId: item.id, 
+          status: 'rejected',
+          reviewNotes: 'Rejected from approval center'
+        });
+      } else {
+        await rejectInvoice.mutateAsync({ 
+          invoiceId: item.id,
+          notes: 'Rejected from approval center'
+        });
+      }
+      
+      // Refetch approval queue
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+      
       toast({
         title: "Item rejected",
         description: `${item.title} has been rejected.`,
