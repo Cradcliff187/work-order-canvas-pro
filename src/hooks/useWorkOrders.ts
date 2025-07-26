@@ -29,7 +29,7 @@ export interface WorkOrderProfile {
   last_name: string;
 }
 
-// Main WorkOrder type - updated to match current database schema
+  // Main WorkOrder type - updated to match current database schema
 export interface WorkOrder {
   id: string;
   work_order_number: string | null;
@@ -77,6 +77,7 @@ export interface WorkOrder {
   // Joined relations - must match exactly what the query returns
   organizations: WorkOrderOrganization | null;
   trades: WorkOrderTrade | null;
+  attachment_count?: number;
   work_order_assignments?: Array<{
     id: string;
     assigned_to: string;
@@ -121,6 +122,7 @@ export function useWorkOrders(
           *,
           organizations!organization_id(id, name, contact_email, organization_type),
           trades!trade_id(id, name),
+          work_order_attachments(count),
           work_order_assignments(
             id,
             assigned_to,
@@ -183,8 +185,11 @@ export function useWorkOrders(
 
       const pageCount = count ? Math.ceil(count / pageSize) : 0;
       
-      // Transform the data to ensure type safety - no type assertion needed now
-      const transformedData = (data || []) as WorkOrder[];
+      // Transform the data to ensure type safety and add attachment count
+      const transformedData = (data || []).map((wo: any) => ({
+        ...wo,
+        attachment_count: wo.work_order_attachments?.[0]?.count || 0
+      })) as WorkOrder[];
 
       return {
         data: transformedData,

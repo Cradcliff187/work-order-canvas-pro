@@ -1,7 +1,7 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { Eye, ArrowUpDown } from 'lucide-react';
+import { Eye, ArrowUpDown, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
@@ -17,6 +17,7 @@ type WorkOrder = {
   city: string | null;
   state: string | null;
   date_submitted: string;
+  attachment_count?: number;
   trades: { name: string } | null;
   organizations: { name: string } | null;
 };
@@ -31,16 +32,27 @@ export function createWorkOrderColumns({ unreadCounts, onView }: WorkOrderColumn
     {
       accessorKey: 'work_order_number',
       header: 'Work Order #',
-      cell: ({ row }) => (
-        <div className="font-medium flex items-center gap-2">
-          {row.getValue('work_order_number') || 'N/A'}
-          {unreadCounts[row.original.id] > 0 && (
-            <Badge variant="default">
-              {unreadCounts[row.original.id]}
-            </Badge>
-          )}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const attachmentCount = row.original.attachment_count || 0;
+        return (
+          <div className="font-medium flex items-center gap-2">
+            {row.getValue('work_order_number') || 'N/A'}
+            {unreadCounts[row.original.id] > 0 && (
+              <Badge variant="default">
+                {unreadCounts[row.original.id]}
+              </Badge>
+            )}
+            {attachmentCount > 0 && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Paperclip className="h-3 w-3" />
+                {attachmentCount > 1 && (
+                  <span className="text-xs">{attachmentCount}</span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'title',

@@ -3,7 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, Edit, Trash2, UserPlus, MapPin, Copy } from 'lucide-react';
+import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
@@ -53,6 +53,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     header: 'Work Order #',
     cell: ({ row }) => {
       const number = row.getValue('work_order_number') as string;
+      const attachmentCount = row.original.attachment_count || 0;
       return (
         <div className="flex items-center gap-2">
           <Badge variant="default" className="font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground">
@@ -62,6 +63,14 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
             <Badge variant="default" className="ml-1">
               {unreadCounts[row.original.id]}
             </Badge>
+          )}
+          {attachmentCount > 0 && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Paperclip className="h-3 w-3" />
+              {attachmentCount > 1 && (
+                <span className="text-xs">{attachmentCount}</span>
+              )}
+            </div>
           )}
           {number && (
             <Button

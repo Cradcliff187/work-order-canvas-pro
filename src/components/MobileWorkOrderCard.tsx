@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, AlertCircle } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, AlertCircle, Paperclip } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
@@ -30,6 +30,7 @@ interface WorkOrder {
   zip_code?: string;
   estimated_completion_date?: string;
   date_submitted: string;
+  attachment_count?: number;
   trades?: { name: string };
   subcontractor_invoice_amount?: number;
   work_order_assignments?: Array<{
@@ -194,6 +195,14 @@ export function MobileWorkOrderCard({
               >
                 {workOrder.status.replace('_', ' ')}
               </Badge>
+              {(workOrder.attachment_count || 0) > 0 && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Paperclip className="h-3 w-3" />
+                  {(workOrder.attachment_count || 0) > 1 && (
+                    <span className="text-xs">{workOrder.attachment_count}</span>
+                  )}
+                </div>
+              )}
               {shouldShowField('daysOld') && isOverdue && (
                 <Badge variant="destructive" className="text-xs">
                   <AlertCircle className="h-3 w-3 mr-1" />

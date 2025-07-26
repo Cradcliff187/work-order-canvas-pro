@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
   trades: { name: string } | null;
+  attachment_count?: number;
   work_order_assignments?: Array<{
     assigned_to: string;
     assignment_type: string;
@@ -57,6 +58,7 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
           *,
           organizations!organization_id(name),
           trades!trade_id(name),
+          work_order_attachments(count),
           work_order_assignments(
             assigned_to,
             assignment_type,
@@ -87,8 +89,14 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
       const { data, error, count } = await query;
       if (error) throw error;
 
+      // Transform data to include attachment count
+      const transformedData = (data || []).map((wo: any) => ({
+        ...wo,
+        attachment_count: wo.work_order_attachments?.[0]?.count || 0
+      }));
+
       return {
-        data: data || [],
+        data: transformedData,
         totalCount: count || 0,
       };
     },

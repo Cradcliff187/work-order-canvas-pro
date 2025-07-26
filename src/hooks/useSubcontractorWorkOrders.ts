@@ -20,6 +20,7 @@ export function useSubcontractorWorkOrders() {
           *,
           trades (name),
           organizations!organization_id (name),
+          work_order_attachments(count),
           work_order_reports (
             id,
             status,
@@ -36,7 +37,14 @@ export function useSubcontractorWorkOrders() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform data to include attachment count
+      const transformedData = (data || []).map((wo: any) => ({
+        ...wo,
+        attachment_count: wo.work_order_attachments?.[0]?.count || 0
+      }));
+      
+      return transformedData;
     },
     enabled: !!user,
   });
