@@ -17,7 +17,21 @@ import {
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/utils/imageCompression';
 import { useCamera } from '@/hooks/useCamera';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { UploadProgress } from '@/hooks/useFileUpload';
+
+// Mobile device detection utilities
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+};
+
+const isAndroid = () => {
+  return /Android/.test(navigator.userAgent);
+};
+
+const isMobileDevice = () => {
+  return isIOS() || isAndroid() || /Mobile|Tablet/.test(navigator.userAgent);
+};
 
 interface MobileFileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -60,6 +74,7 @@ export function MobileFileUpload({
   const documentInputRef = useRef<HTMLInputElement>(null);
   
   const camera = useCamera();
+  const isMobile = useIsMobile();
 
   // Helper functions
   const getFileType = (file: File): 'image' | 'document' => {
@@ -139,11 +154,17 @@ export function MobileFileUpload({
     }
   }, [validateFiles, previews, onFilesSelected]);
 
-  // Camera capture
+  // Camera capture with dynamic capture attribute
   const handleCameraCapture = async () => {
     try {
       await camera.requestCameraPermission();
       if (cameraInputRef.current) {
+        // Set capture attribute dynamically for mobile devices
+        if (isMobileDevice()) {
+          cameraInputRef.current.setAttribute('capture', 'environment');
+        } else {
+          cameraInputRef.current.removeAttribute('capture');
+        }
         cameraInputRef.current.click();
       }
     } catch (error) {
@@ -266,10 +287,9 @@ export function MobileFileUpload({
               ref={cameraInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
-              multiple={false}
               onChange={handleFileInputChange}
-              className="hidden"
+              className="sr-only"
+              disabled={disabled}
             />
           </>
         )}
