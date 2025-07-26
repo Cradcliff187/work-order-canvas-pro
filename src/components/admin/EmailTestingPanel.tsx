@@ -38,7 +38,8 @@ interface EmailLog {
 export function EmailTestingPanel() {
   const { toast } = useToast();
   const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('chris.l.radcliff@gmail.com');
+  const [testMode, setTestMode] = useState<'direct' | 'production'>('direct');
   const [isLoading, setIsLoading] = useState(false);
 
   // Query for email logs
@@ -147,22 +148,28 @@ export function EmailTestingPanel() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          template_name: selectedTemplate,
-          record_id: `TEST-${Date.now()}`,
-          record_type: 'test',
-          test_mode: true,
-          test_recipient: recipientEmail,
-          custom_data: getMockData(selectedTemplate),
-        },
-      });
+      if (testMode === 'direct') {
+        // Direct function call (existing functionality)
+        const { data, error } = await supabase.functions.invoke('send-email', {
+          body: {
+            template_name: selectedTemplate,
+            record_id: `TEST-${Date.now()}`,
+            record_type: 'test',
+            test_mode: true,
+            test_recipient: recipientEmail,
+            custom_data: getMockData(selectedTemplate),
+          },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Production path testing - use database triggers
+        await handleProductionPathTest(selectedTemplate);
+      }
 
       toast({
         title: 'Test Email Sent',
-        description: `${selectedTemplate} email sent to ${recipientEmail}`,
+        description: `${selectedTemplate} email sent to ${recipientEmail} via ${testMode} path`,
       });
 
       // Refresh email logs to show the new test email
@@ -173,6 +180,141 @@ export function EmailTestingPanel() {
         variant: 'destructive',
         title: 'Email Send Failed',
         description: error.message || 'Failed to send test email',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleProductionPathTest = async (templateName: string) => {
+    // Get existing test data for realistic scenarios
+    const { data: organizations } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('organization_type', 'partner')
+      .limit(1);
+
+    const { data: trades } = await supabase
+      .from('trades')
+      .select('id, name')
+      .limit(1);
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_type', 'admin')
+      .limit(1);
+
+    const orgId = organizations?.[0]?.id;
+    const tradeId = trades?.[0]?.id;
+    const adminId = profiles?.[0]?.id;
+
+    if (!orgId || !tradeId || !adminId) {
+      throw new Error('Missing test data - ensure organizations, trades, and admin users exist');
+    }
+
+    switch (templateName) {
+      case 'work_order_created':
+        // Create a real work order to trigger email
+        await supabase.from('work_orders').insert({
+          work_order_number: `TEST-${Date.now()}`,
+          title: 'Production Path Test - Work Order Created',
+          description: 'Testing real production email path',
+          organization_id: orgId,
+          trade_id: tradeId,
+          status: 'received',
+          created_by: adminId,
+          date_submitted: new Date().toISOString(),
+          store_location: 'Test Location',
+          street_address: '123 Test St',
+          city: 'Test City',
+          state: 'TX',
+          zip_code: '12345',
+        });
+        break;
+
+      case 'work_order_assigned':
+        // Create work order then assignment
+        const { data: newWo } = await supabase.from('work_orders').insert({
+          work_order_number: `TEST-${Date.now()}`,
+          title: 'Production Path Test - Assignment',
+          organization_id: orgId,
+          trade_id: tradeId,
+          status: 'received',
+          created_by: adminId,
+        }).select().single();
+
+        if (newWo) {
+          await supabase.from('work_order_assignments').insert({
+            work_order_id: newWo.id,
+            assigned_to: adminId,
+            assigned_by: adminId,
+            assignment_type: 'lead',
+            notes: 'Production path test assignment',
+          });
+        }
+        break;
+
+      case 'report_submitted':
+        // Create work order, assignment, then report
+        const { data: reportWo } = await supabase.from('work_orders').insert({
+          work_order_number: `TEST-${Date.now()}`,
+          title: 'Production Path Test - Report Submission',
+          description: 'Testing report submission email path',
+          organization_id: orgId,
+          trade_id: tradeId,
+          status: 'assigned',
+          created_by: adminId,
+          date_submitted: new Date().toISOString(),
+          store_location: 'Test Location',
+          street_address: '123 Test St',
+          city: 'Test City',
+          state: 'TX',
+          zip_code: '12345',
+        }).select().single();
+
+        if (reportWo) {
+          await supabase.from('work_order_reports').insert({
+            work_order_id: reportWo.id,
+            subcontractor_user_id: adminId,
+            work_performed: 'Production path test work',
+            hours_worked: 2.5,
+            status: 'submitted',
+          });
+        }
+        break;
+
+      default:
+        // For other templates, use RPC call
+        await supabase.rpc('call_send_email_trigger', {
+          template_name: templateName,
+          record_id: `TEST-${Date.now()}`,
+          record_type: 'test',
+          context_data: { test_recipient: recipientEmail },
+        });
+    }
+  };
+
+  const sendAllTemplatesTest = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-all-emails', {
+        body: { recipient_email: recipientEmail },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'All Templates Sent',
+        description: `All 9 email templates sent to ${recipientEmail}`,
+      });
+
+      refetch();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Bulk Test Failed',
+        description: error.message || 'Failed to send all templates',
       });
     } finally {
       setIsLoading(false);
@@ -203,7 +345,7 @@ export function EmailTestingPanel() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="template">Email Template</Label>
               <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
@@ -227,32 +369,68 @@ export function EmailTestingPanel() {
                 type="email"
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="test@example.com"
+                placeholder="chris.l.radcliff@gmail.com"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="testMode">Test Mode</Label>
+              <Select value={testMode} onValueChange={(value: 'direct' | 'production') => setTestMode(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="direct">Direct Function Call</SelectItem>
+                  <SelectItem value="production">Production Path (DB Triggers)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
-          <Button 
-            onClick={handleSendTestEmail}
-            disabled={isLoading || !selectedTemplate || !recipientEmail}
-            className="w-full h-12 text-lg"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending Test Email...
-              </>
-            ) : (
-              <>
-                <Mail className="mr-2 h-5 w-5" />
-                Send Test Email
-              </>
-            )}
-          </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button 
+              onClick={handleSendTestEmail}
+              disabled={isLoading || !selectedTemplate || !recipientEmail}
+              className="h-12 text-lg"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending Test Email...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-5 w-5" />
+                  Send Single Template
+                </>
+              )}
+            </Button>
+
+            <Button 
+              onClick={sendAllTemplatesTest}
+              disabled={isLoading || !recipientEmail}
+              variant="outline"
+              className="h-12 text-lg"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending All Templates...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-5 w-5" />
+                  Send All 9 Templates
+                </>
+              )}
+            </Button>
+          </div>
           
-          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-            <p><strong>Note:</strong> Test emails include mock data appropriate for each template. 
-            The email will be sent to your specified recipient with realistic test content and AKC branding.</p>
+          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md space-y-2">
+            <p><strong>Real-World Testing:</strong> Default recipient is chris.l.radcliff@gmail.com for comprehensive production testing.</p>
+            <p><strong>Direct Mode:</strong> Calls send-email function directly with mock data.</p>
+            <p><strong>Production Mode:</strong> Creates actual database records to trigger emails via real production paths.</p>
+            <p><strong>Bulk Test:</strong> Sends all 9 email templates using the test-all-emails function.</p>
           </div>
         </CardContent>
       </Card>

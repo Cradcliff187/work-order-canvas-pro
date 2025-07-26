@@ -13,116 +13,152 @@ export function EmailSystemTest() {
   const runComprehensiveTest = async () => {
     setTesting(true);
     setResults([]);
+    const testEmail = 'chris.l.radcliff@gmail.com';
     
     try {
-      // Test 1: Create user via admin function
-      console.log('🚀 Starting admin user creation test...');
-      const adminResult = await supabase.functions.invoke('create-admin-user', {
-        body: {
-          userData: {
-            email: 'chris.l.radcliff@gmail.com',
-            userType: 'subcontractor',
-            firstName: 'Chris Test',
-            lastName: 'Admin Flow'
-          },
-          sendWelcomeEmail: true
-        }
-      });
+      // Test 1: Production User Creation Flow
+      console.log('🚀 Starting production user creation test...');
+      const userCreationResult = await supabase.functions.invoke('create-test-auth-users');
       
       setResults(prev => [...prev, {
-        test: 'Admin User Creation',
-        status: adminResult.error ? 'failed' : 'success',
-        data: adminResult.data,
-        error: adminResult.error
+        test: 'Production User Creation (Auth + Profiles)',
+        status: userCreationResult.error ? 'failed' : 'success',
+        data: userCreationResult.data,
+        error: userCreationResult.error
       }]);
 
-      // Test 2: Direct email function test
-      console.log('📧 Testing direct email function...');
-      const emailResult = await supabase.functions.invoke('send-email', {
-        body: {
-          template_name: 'welcome_email',
-          record_id: crypto.randomUUID(),
-          record_type: 'user',
-          test_mode: true,
-          test_recipient: 'chris.l.radcliff@gmail.com',
-          custom_data: {
-            user_name: 'Chris Test Direct',
-            confirmation_link: 'https://test.com/confirm'
-          }
+      // Test 2: Work Order Lifecycle (Create → Assign → Complete)
+      console.log('📋 Testing complete work order lifecycle...');
+      
+      // Get test organization and trade
+      const { data: org } = await supabase.from('organizations').select('id').eq('organization_type', 'partner').limit(1).single();
+      const { data: trade } = await supabase.from('trades').select('id').limit(1).single();
+      const { data: admin } = await supabase.from('profiles').select('id').eq('user_type', 'admin').limit(1).single();
+
+      if (org && trade && admin) {
+        // Create work order (triggers work_order_created email)
+        const { data: newWO, error: woError } = await supabase.from('work_orders').insert({
+          work_order_number: `TEST-WO-${Date.now()}`,
+          title: 'End-to-End Email Test Work Order',
+          description: 'Testing production email triggers',
+          organization_id: org.id,
+          trade_id: trade.id,
+          status: 'received',
+          created_by: admin.id,
+          date_submitted: new Date().toISOString(),
+          store_location: 'Test Location',
+          street_address: '123 Test Street',
+          city: 'Test City',
+          state: 'TX',
+          zip_code: '12345'
+        }).select().single();
+
+        setResults(prev => [...prev, {
+          test: 'Work Order Creation (triggers work_order_created email)',
+          status: woError ? 'failed' : 'success',
+          data: newWO,
+          error: woError
+        }]);
+
+        if (newWO) {
+          // Create assignment (triggers work_order_assigned email)
+          const { data: assignment, error: assignError } = await supabase.from('work_order_assignments').insert({
+            work_order_id: newWO.id,
+            assigned_to: admin.id,
+            assigned_by: admin.id,
+            assignment_type: 'lead',
+            notes: 'Production path email test assignment'
+          }).select().single();
+
+          setResults(prev => [...prev, {
+            test: 'Work Order Assignment (triggers work_order_assigned email)',
+            status: assignError ? 'failed' : 'success',
+            data: assignment,
+            error: assignError
+          }]);
+
+          // Submit report (triggers report_submitted email)
+          const { data: report, error: reportError } = await supabase.from('work_order_reports').insert({
+            work_order_id: newWO.id,
+            subcontractor_user_id: admin.id,
+            work_performed: 'Production test work completed',
+            materials_used: 'Test materials',
+            hours_worked: 3.5,
+            status: 'submitted'
+          }).select().single();
+
+          setResults(prev => [...prev, {
+            test: 'Report Submission (triggers report_submitted email)',
+            status: reportError ? 'failed' : 'success',
+            data: report,
+            error: reportError
+          }]);
+
+          // Update work order to completed (triggers work_order_completed email)
+          const { data: completedWO, error: completeError } = await supabase
+            .from('work_orders')
+            .update({ status: 'completed' })
+            .eq('id', newWO.id)
+            .select().single();
+
+          setResults(prev => [...prev, {
+            test: 'Work Order Completion (triggers work_order_completed email)',
+            status: completeError ? 'failed' : 'success',
+            data: completedWO,
+            error: completeError
+          }]);
+        }
+      }
+
+      // Test 3: All Email Templates Bulk Test
+      console.log('📧 Testing all email templates...');
+      const bulkResult = await supabase.functions.invoke('test-all-emails', {
+        body: { recipient_email: testEmail }
+      });
+
+      setResults(prev => [...prev, {
+        test: 'Bulk All Templates Test (9 emails to chris.l.radcliff@gmail.com)',
+        status: bulkResult.error ? 'failed' : 'success',
+        data: bulkResult.data,
+        error: bulkResult.error
+      }]);
+
+      // Test 4: Password Reset Flow
+      console.log('🔑 Testing password reset email...');
+      const resetResult = await supabase.functions.invoke('password-reset-email', {
+        body: { email: testEmail }
+      });
+
+      setResults(prev => [...prev, {
+        test: 'Password Reset Email (production path)',
+        status: resetResult.error ? 'failed' : 'success',
+        data: resetResult.data,
+        error: resetResult.error
+      }]);
+
+      // Test 5: Database Trigger Test Environment
+      console.log('🔧 Testing database trigger with real context...');
+      const dbResult = await supabase.rpc('call_send_email_trigger', {
+        template_name: 'test_email',
+        record_id: crypto.randomUUID(),
+        record_type: 'comprehensive_test',
+        context_data: { 
+          test_recipient: testEmail,
+          test_type: 'comprehensive_system_test',
+          timestamp: new Date().toISOString()
         }
       });
 
       setResults(prev => [...prev, {
-        test: 'Direct Email Test',
-        status: emailResult.error ? 'failed' : 'success',
-        data: emailResult.data,
-        error: emailResult.error
-      }]);
-
-      // Test 3: Database trigger function
-      console.log('🔧 Testing database trigger function...');
-      const dbResult = await supabase.rpc('call_send_email_trigger', {
-        template_name: 'welcome_email',
-        record_id: crypto.randomUUID(),
-        record_type: 'user'
-      });
-
-      setResults(prev => [...prev, {
-        test: 'Database Trigger Function',
+        test: 'Database Trigger Function (with context)',
         status: dbResult.error ? 'failed' : 'success',
         data: dbResult.data,
         error: dbResult.error
       }]);
 
-      // Test 4: Assignment email with context data
-      console.log('📋 Testing assignment email with context...');
-      const assignmentResult = await supabase.functions.invoke('send-email', {
-        body: {
-          template_name: 'work_order_assigned',
-          record_id: crypto.randomUUID(),
-          record_type: 'work_order_assignment',
-          test_mode: true,
-          test_recipient: 'chris.l.radcliff@gmail.com',
-          custom_data: {
-            assigned_to: crypto.randomUUID(),
-            assignment_id: crypto.randomUUID(),
-            assigned_organization_id: crypto.randomUUID(),
-            assignment_type: 'lead'
-          }
-        }
-      });
-
-      setResults(prev => [...prev, {
-        test: 'Assignment Email Test',
-        status: assignmentResult.error ? 'failed' : 'success',
-        data: assignmentResult.data,
-        error: assignmentResult.error
-      }]);
-
-      // Test 5: Database trigger function with 4 parameters (new version)
-      console.log('🔧 Testing new 4-parameter trigger function...');
-      const dbNewResult = await supabase.rpc('call_send_email_trigger', {
-        template_name: 'work_order_assigned',
-        record_id: crypto.randomUUID(),
-        record_type: 'work_order_assignment',
-        context_data: {
-          assigned_to: crypto.randomUUID(),
-          assignment_id: crypto.randomUUID(),
-          assigned_organization_id: crypto.randomUUID(),
-          assignment_type: 'lead'
-        }
-      });
-
-      setResults(prev => [...prev, {
-        test: '4-Parameter Trigger Function',
-        status: dbNewResult.error ? 'failed' : 'success',
-        data: dbNewResult.data,
-        error: dbNewResult.error
-      }]);
-
       toast({
-        title: "Tests completed",
-        description: "Check results below"
+        title: "Comprehensive Tests Completed",
+        description: `All production email paths tested with ${testEmail}`
       });
 
     } catch (error) {
@@ -140,19 +176,31 @@ export function EmailSystemTest() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>🧪 Email System Comprehensive Test</CardTitle>
+        <CardTitle>🧪 Real-World Email System Test</CardTitle>
         <CardDescription>
-          Test all user creation flows and email functionality
+          Test all production email paths using real database triggers and workflows. All emails sent to chris.l.radcliff@gmail.com.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Button 
           onClick={runComprehensiveTest}
           disabled={testing}
-          className="w-full"
+          className="w-full h-12 text-lg"
         >
-          {testing ? 'Running Tests...' : 'Run Full System Test'}
+          {testing ? 'Running Production Email Tests...' : 'Run Complete Production Email Test Suite'}
         </Button>
+        
+        <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+          <p><strong>This test suite covers:</strong></p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Production user creation with auth integration</li>
+            <li>Complete work order lifecycle (create → assign → report → complete)</li>
+            <li>All 9 email templates via bulk test function</li>
+            <li>Password reset production flow</li>
+            <li>Database trigger functions with real context</li>
+          </ul>
+          <p className="mt-2"><strong>All emails delivered to:</strong> chris.l.radcliff@gmail.com</p>
+        </div>
 
         {results.length > 0 && (
           <div className="space-y-4">
