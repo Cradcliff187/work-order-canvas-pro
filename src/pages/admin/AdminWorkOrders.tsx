@@ -21,6 +21,7 @@ import { Plus, Download, RotateCcw, ClipboardList, CheckSquare } from 'lucide-re
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
+import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
@@ -68,8 +69,13 @@ export default function AdminWorkOrders() {
 
   const { deleteWorkOrder } = useWorkOrderMutations();
 
+  // Extract work order IDs for unread message counts
+  const workOrderIds = workOrdersData?.data?.map(wo => wo.id) || [];
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
+
   // Column definitions with action handlers - Updated with proper type handling
   const columns = useMemo(() => createWorkOrderColumns({
+    unreadCounts,
     onEdit: (workOrder: WorkOrder) => {
       navigate(`/admin/work-orders/${workOrder.id}/edit`);
     },
@@ -96,7 +102,7 @@ export default function AdminWorkOrders() {
       setAssignmentWorkOrders([typedWorkOrder]);
       setShowAssignModal(true);
     },
-  }), [deleteWorkOrder, navigate]);
+  }), [deleteWorkOrder, navigate, unreadCounts]);
 
   // React Table configuration
   const table = useReactTable({

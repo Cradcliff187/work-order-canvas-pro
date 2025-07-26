@@ -21,13 +21,14 @@ const getStatusColor = (status: string) => {
 };
 
 interface WorkOrderColumnsProps {
+  unreadCounts: Record<string, number>;
   onEdit: (workOrder: WorkOrder) => void;
   onView: (workOrder: WorkOrder) => void;
   onDelete: (workOrder: WorkOrder) => void;
   onAssign: (workOrder: WorkOrder) => void;
 }
 
-export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: WorkOrderColumnsProps): ColumnDef<WorkOrder>[] => [
+export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete, onAssign }: WorkOrderColumnsProps): ColumnDef<WorkOrder>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -57,6 +58,11 @@ export const createWorkOrderColumns = ({ onEdit, onView, onDelete, onAssign }: W
           <Badge variant="default" className="font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground">
             {number || 'Pending'}
           </Badge>
+          {unreadCounts[row.original.id] > 0 && (
+            <Badge variant="default" className="ml-1">
+              {unreadCounts[row.original.id]}
+            </Badge>
+          )}
           {number && (
             <Button
               variant="ghost"
