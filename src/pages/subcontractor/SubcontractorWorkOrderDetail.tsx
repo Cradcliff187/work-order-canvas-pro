@@ -16,6 +16,7 @@ import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
+import { MessageErrorBoundary } from '@/components/work-orders/MessageErrorBoundary';
 
 export default function SubcontractorWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -220,7 +221,9 @@ export default function SubcontractorWorkOrderDetail() {
               <CardDescription>Communicate with the team about this work order</CardDescription>
             </CardHeader>
             <CardContent>
-              <WorkOrderMessages workOrderId={id!} />
+              <MessageErrorBoundary>
+                <WorkOrderMessages workOrderId={id!} />
+              </MessageErrorBoundary>
             </CardContent>
           </Card>
 

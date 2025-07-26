@@ -12,6 +12,7 @@ import { formatDate } from '@/lib/utils/date';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
+import { MessageErrorBoundary } from '@/components/work-orders/MessageErrorBoundary';
 
 
 export default function WorkOrderDetail() {
@@ -207,7 +208,9 @@ export default function WorkOrderDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <WorkOrderMessages workOrderId={id!} />
+              <MessageErrorBoundary>
+                <WorkOrderMessages workOrderId={id!} />
+              </MessageErrorBoundary>
             </CardContent>
           </Card>
         </div>

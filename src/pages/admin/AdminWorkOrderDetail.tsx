@@ -31,6 +31,7 @@ import { StatusActionButtons } from '@/components/admin/work-orders/StatusAction
 import { StatusProgressIndicator } from '@/components/admin/work-orders/StatusProgressIndicator';
 import { WorkOrderAuditTrail } from '@/components/admin/work-orders/WorkOrderAuditTrail';
 import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
+import { MessageErrorBoundary } from '@/components/work-orders/MessageErrorBoundary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
@@ -680,7 +681,9 @@ export default function AdminWorkOrderDetail() {
         </TabsContent>
 
         <TabsContent value="messages">
-          <WorkOrderMessages workOrderId={workOrder.id} />
+          <MessageErrorBoundary>
+            <WorkOrderMessages workOrderId={workOrder.id} />
+          </MessageErrorBoundary>
         </TabsContent>
 
         <TabsContent value="audit">
