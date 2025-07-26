@@ -12,8 +12,10 @@ interface DashboardMetrics {
   overdueWorkOrders: number;
   completedThisMonth: number;
   pendingInvoices: number;
+  pendingReports: number;
   unpaidApprovedInvoices: number;
   employeesOnDuty: number;
+  activeSubcontractors: number;
   recentPayments: Array<{
     id: string;
     internal_invoice_number: string;
@@ -103,6 +105,12 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     .select('id', { count: 'exact' })
     .eq('status', 'submitted');
 
+  // Pending reports
+  const { count: pendingReportsCount } = await supabase
+    .from('work_order_reports')
+    .select('id', { count: 'exact' })
+    .eq('status', 'submitted');
+
   // Unpaid approved invoices
   const { count: unpaidApprovedCount } = await supabase
     .from('invoices')
@@ -151,6 +159,20 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     subcontractor_name: payment.subcontractor_organization?.name || 'Unknown'
   }));
 
+  // Active subcontractors (with recent activity)
+  const sevenDaysAgoSubcontractors = new Date();
+  sevenDaysAgoSubcontractors.setDate(sevenDaysAgoSubcontractors.getDate() - 7);
+
+  const { data: activeSubcontractors } = await supabase
+    .from('work_order_assignments')
+    .select('assigned_organization_id')
+    .not('assigned_organization_id', 'is', null)
+    .gte('assigned_at', sevenDaysAgoSubcontractors.toISOString());
+
+  const uniqueSubcontractorOrgs = new Set(
+    activeSubcontractors?.map(a => a.assigned_organization_id).filter(Boolean) || []
+  );
+
   const currentTotal = currentMonthData?.length || 0;
   const lastMonthTotal = lastMonthData?.length || 0;
   
@@ -168,8 +190,10 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     overdueWorkOrders: overdueCount || 0,
     completedThisMonth: completedCount || 0,
     pendingInvoices: pendingInvoicesCount || 0,
+    pendingReports: pendingReportsCount || 0,
     unpaidApprovedInvoices: unpaidApprovedCount || 0,
     employeesOnDuty: uniqueActiveEmployees.size,
+    activeSubcontractors: uniqueSubcontractorOrgs.size,
     recentPayments,
   };
 };
