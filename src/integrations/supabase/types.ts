@@ -1011,6 +1011,7 @@ export type Database = {
           uploaded_at: string
           uploaded_by_user_id: string
           work_order_id: string | null
+          work_order_message_id: string | null
           work_order_report_id: string | null
         }
         Insert: {
@@ -1022,6 +1023,7 @@ export type Database = {
           uploaded_at?: string
           uploaded_by_user_id: string
           work_order_id?: string | null
+          work_order_message_id?: string | null
           work_order_report_id?: string | null
         }
         Update: {
@@ -1033,6 +1035,7 @@ export type Database = {
           uploaded_at?: string
           uploaded_by_user_id?: string
           work_order_id?: string | null
+          work_order_message_id?: string | null
           work_order_report_id?: string | null
         }
         Relationships: [
@@ -1051,6 +1054,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "work_order_attachments_work_order_message_id_fkey"
+            columns: ["work_order_message_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_messages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "work_order_attachments_work_order_report_id_fkey"
             columns: ["work_order_report_id"]
             isOneToOne: false
@@ -1061,6 +1071,7 @@ export type Database = {
       }
       work_order_messages: {
         Row: {
+          attachment_ids: string[] | null
           created_at: string | null
           id: string
           is_internal: boolean | null
@@ -1070,6 +1081,7 @@ export type Database = {
           work_order_id: string
         }
         Insert: {
+          attachment_ids?: string[] | null
           created_at?: string | null
           id?: string
           is_internal?: boolean | null
@@ -1079,6 +1091,7 @@ export type Database = {
           work_order_id: string
         }
         Update: {
+          attachment_ids?: string[] | null
           created_at?: string | null
           id?: string
           is_internal?: boolean | null
