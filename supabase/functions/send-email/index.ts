@@ -49,6 +49,191 @@ function createCorsResponse(body: any, statusCode: number = 200): Response {
   });
 }
 
+/**
+ * Handle work order message notifications with multiple recipients
+ */
+async function handleWorkOrderMessageNotification(
+  messageId: string,
+  templateName: string,
+  contextData: any,
+  template: any,
+  supabase: any,
+  resend: any,
+  fromDomain: string
+): Promise<Response> {
+  console.log(`📬 Processing work order message notification for message ${messageId}`);
+  
+  const { is_internal, sender_id, work_order_id, partner_organization_id } = contextData;
+  const senderId = sender_id;
+  
+  let recipients: string[] = [];
+  
+  try {
+    if (is_internal) {
+      // INTERNAL MESSAGE: Send to assigned subcontractors + internal team (exclude sender)
+      console.log('🔒 Processing internal message notification');
+      
+      // Get assigned subcontractors
+      const { data: assignments } = await supabase
+        .from('work_order_assignments')
+        .select(`
+          assigned_to,
+          profiles!inner(email, is_active)
+        `)
+        .eq('work_order_id', work_order_id);
+      
+      if (assignments) {
+        const subcontractorEmails = assignments
+          .filter((a: any) => a.profiles?.is_active && a.assigned_to !== senderId)
+          .map((a: any) => a.profiles.email);
+        recipients.push(...subcontractorEmails);
+      }
+      
+      // Get internal team (admins + employees, exclude sender)
+      const { data: internalUsers } = await supabase
+        .from('profiles')
+        .select('email')
+        .in('user_type', ['admin', 'employee'])
+        .eq('is_active', true)
+        .neq('id', senderId);
+      
+      if (internalUsers) {
+        const internalEmails = internalUsers.map((u: any) => u.email);
+        recipients.push(...internalEmails);
+      }
+      
+    } else {
+      // PUBLIC MESSAGE: Send to partner organization + internal team (exclude sender)
+      console.log('🌐 Processing public message notification');
+      
+      // Get partner organization users
+      const { data: partnerUsers } = await supabase
+        .from('user_organizations')
+        .select(`
+          user_id,
+          profiles!inner(email, is_active)
+        `)
+        .eq('organization_id', partner_organization_id);
+      
+      if (partnerUsers) {
+        const partnerEmails = partnerUsers
+          .filter((pu: any) => pu.profiles?.is_active && pu.user_id !== senderId)
+          .map((pu: any) => pu.profiles.email);
+        recipients.push(...partnerEmails);
+      }
+      
+      // Get internal team (admins + employees, exclude sender)
+      const { data: internalUsers } = await supabase
+        .from('profiles')
+        .select('email')
+        .in('user_type', ['admin', 'employee'])
+        .eq('is_active', true)
+        .neq('id', senderId);
+      
+      if (internalUsers) {
+        const internalEmails = internalUsers.map((u: any) => u.email);
+        recipients.push(...internalEmails);
+      }
+    }
+    
+    // Remove duplicates and filter out empty emails
+    recipients = [...new Set(recipients)].filter(email => email && email.trim());
+    
+    console.log(`📧 Sending to ${recipients.length} recipients (internal: ${is_internal})`);
+    
+    if (recipients.length === 0) {
+      console.log('⚠️  No recipients found for message notification');
+      return createCorsResponse({
+        success: true,
+        message: 'No recipients found for notification',
+        recipients_count: 0
+      });
+    }
+    
+    // Merge context data with branding variables
+    const allVariables = {
+      ...contextData,
+      ...BRANDING_VARIABLES,
+      message_url: generateUrl(`/work-orders/${work_order_id}#messages`)
+    };
+    
+    // Process template with variables
+    let processedHtml = template.html_content;
+    let processedSubject = template.subject;
+    
+    Object.entries(allVariables).forEach(([key, value]) => {
+      const placeholder = `{{${key}}}`;
+      const replacement = value?.toString() || '';
+      processedHtml = processedHtml.replaceAll(placeholder, replacement);
+      processedSubject = processedSubject.replaceAll(placeholder, replacement);
+    });
+    
+    // Send emails to all recipients
+    const fromEmail = `noreply@${fromDomain}`;
+    const fromName = BRANDING_VARIABLES.company_name;
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const recipient of recipients) {
+      try {
+        const emailData = {
+          from: `${fromName} <${fromEmail}>`,
+          to: [recipient],
+          subject: processedSubject,
+          html: processedHtml,
+        };
+        
+        const resendResponse = await resend.emails.send(emailData);
+        
+        // Log each email
+        await supabase
+          .from('email_logs')
+          .insert({
+            template_used: templateName,
+            recipient_email: recipient,
+            work_order_id: work_order_id,
+            status: resendResponse.error ? 'failed' : 'sent',
+            error_message: resendResponse.error?.message,
+            record_id: messageId,
+            record_type: 'work_order_message',
+            test_mode: false
+          });
+          
+        if (resendResponse.error) {
+          console.error(`❌ Failed to send to ${recipient}:`, resendResponse.error);
+          errorCount++;
+        } else {
+          console.log(`✅ Sent to ${recipient}`);
+          successCount++;
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error sending to ${recipient}:`, error);
+        errorCount++;
+      }
+    }
+    
+    console.log(`📊 Message notification results: ${successCount} sent, ${errorCount} failed`);
+    
+    return createCorsResponse({
+      success: true,
+      message: 'Message notifications processed',
+      recipients_count: recipients.length,
+      success_count: successCount,
+      error_count: errorCount,
+      message_type: is_internal ? 'internal' : 'public'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error processing message notification:', error);
+    return createCorsResponse({
+      success: false,
+      error: error.message
+    }, 500);
+  }
+}
+
 Deno.serve(async (req) => {
   console.log('📧 Processing email request');
   
@@ -75,7 +260,35 @@ Deno.serve(async (req) => {
       throw new Error('template_name is required');
     }
 
-    // Determine recipient based on test mode
+    // Get email template first (needed for all record types)
+    const { data: template, error: templateError } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('template_name', template_name)
+      .eq('is_active', true)
+      .single();
+
+    if (templateError || !template) {
+      throw new Error(`Template not found: ${template_name}. Error: ${templateError?.message}`);
+    }
+
+    // Get from domain for all email types
+    const fromDomain = Deno.env.get('EMAIL_FROM_DOMAIN') || 'workorderportal.com';
+
+    // Handle work_order_message as special case with multiple recipients
+    if (record_type === 'work_order_message' && !test_mode) {
+      return await handleWorkOrderMessageNotification(
+        record_id,
+        template_name,
+        custom_data,
+        template,
+        supabase,
+        resend,
+        fromDomain
+      );
+    }
+
+    // Determine recipient based on test mode (for single-recipient emails)
     let recipient: string;
     if (test_mode) {
       recipient = test_recipient || 'test@example.com';
@@ -175,17 +388,6 @@ Deno.serve(async (req) => {
       recipient = email;
     }
 
-    // Get email template
-    const { data: template, error: templateError } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('template_name', template_name)
-      .eq('is_active', true)
-      .single();
-
-    if (templateError || !template) {
-      throw new Error(`Template not found: ${template_name}. Error: ${templateError?.message}`);
-    }
 
     // Fetch additional data based on template requirements
     let variables: { [key: string]: any } = {};
@@ -316,7 +518,6 @@ Deno.serve(async (req) => {
     });
 
     // Get the correct "from" email based on environment
-    const fromDomain = Deno.env.get('EMAIL_FROM_DOMAIN') || 'workorderportal.com';
     const fromEmail = `noreply@${fromDomain}`;
     const fromName = BRANDING_VARIABLES.company_name;
 
