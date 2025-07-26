@@ -40,5 +40,13 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
+export const sidebarSections = {
+  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Reports', 'Time Reports'],
+  FINANCIAL: ['Receipts', 'Invoices'],
+  MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
+  INSIGHTS: ['Analytics', 'Email Templates'],
+  SYSTEM: ['Settings', 'System Health', 'Organization Diagnostics', 'Email Testing', 'Dev Tools']
+};
+
 export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Organization Diagnostics', 'Email Testing', 'Dev Tools'];
 export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];

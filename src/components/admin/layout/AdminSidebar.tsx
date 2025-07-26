@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/hooks/useBranding';
-import { sidebarItems, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
+import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
 import { UserProfileDropdown } from './UserProfileDropdown';
 
 export function AdminSidebar() {
@@ -30,6 +30,54 @@ export function AdminSidebar() {
   const isEmployee = profile?.is_employee === true;
 
   const isActive = (path: string) => location.pathname === path;
+
+  const getFilteredItemsForSection = (sectionItems: string[]) => {
+    return sidebarItems.filter((item) => {
+      if (!sectionItems.includes(item.title)) return false;
+      
+      // Hide admin-only items for employees
+      if (!isAdmin && adminOnlyItems.includes(item.title)) {
+        return false;
+      }
+      
+      // For employees, only show employee-accessible items
+      if (isEmployee && !isAdmin && !employeeAccessItems.includes(item.title)) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+
+  const renderSidebarSection = (sectionTitle: string, sectionItems: string[]) => {
+    const filteredItems = getFilteredItemsForSection(sectionItems);
+    
+    if (filteredItems.length === 0) return null;
+
+    return (
+      <SidebarGroup key={sectionTitle}>
+        <SidebarGroupLabel>{sectionTitle}</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {filteredItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={isActive(item.url)}
+                  className={isActive(item.url) ? "bg-sidebar-accent" : ""}
+                >
+                  <Link to={item.url} className="flex items-center gap-2">
+                    <item.icon className="h-4 w-4" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
 
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
@@ -45,39 +93,11 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {sidebarItems.map((item) => {
-                // Hide admin-only items for employees
-                if (!isAdmin && adminOnlyItems.includes(item.title)) {
-                  return null;
-                }
-                
-                // For employees, only show employee-accessible items
-                if (isEmployee && !isAdmin && !employeeAccessItems.includes(item.title)) {
-                  return null;
-                }
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild
-                      isActive={isActive(item.url)}
-                      className={isActive(item.url) ? "bg-sidebar-accent" : ""}
-                    >
-                      <Link to={item.url} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderSidebarSection('Operations', sidebarSections.OPERATIONS)}
+        {renderSidebarSection('Financial', sidebarSections.FINANCIAL)}
+        {renderSidebarSection('Management', sidebarSections.MANAGEMENT)}
+        {renderSidebarSection('Insights', sidebarSections.INSIGHTS)}
+        {renderSidebarSection('System', sidebarSections.SYSTEM)}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
