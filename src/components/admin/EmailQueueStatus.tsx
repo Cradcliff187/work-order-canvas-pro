@@ -420,9 +420,9 @@ export function EmailQueueStatus() {
           {/* Queue Management Actions */}
           <div className="flex gap-2">
             {/* Clear Old Emails Dropdown */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenu>
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="outline" 
@@ -438,37 +438,37 @@ export function EmailQueueStatus() {
                       <ChevronDown className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem 
-                      onClick={() => handleClearEmails(7)}
-                      disabled={isAnyOperationInProgress}
-                    >
-                      Clear emails older than 7 days
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleClearEmails(14)}
-                      disabled={isAnyOperationInProgress}
-                    >
-                      Clear emails older than 14 days
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleClearEmails(30)}
-                      disabled={isAnyOperationInProgress}
-                    >
-                      Clear emails older than 30 days
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TooltipTrigger>
-              <TooltipContent>
-                {!stats?.total_emails 
-                  ? "No emails to clear" 
-                  : isAnyOperationInProgress
-                  ? "Another operation is in progress"
-                  : "Remove old processed emails to keep the queue clean"
-                }
-              </TooltipContent>
-            </Tooltip>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!stats?.total_emails 
+                    ? "No emails to clear" 
+                    : isAnyOperationInProgress
+                    ? "Another operation is in progress"
+                    : "Remove old processed emails to keep the queue clean"
+                  }
+                </TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent>
+                <DropdownMenuItem 
+                  onClick={() => handleClearEmails(7)}
+                  disabled={isAnyOperationInProgress}
+                >
+                  Clear emails older than 7 days
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleClearEmails(14)}
+                  disabled={isAnyOperationInProgress}
+                >
+                  Clear emails older than 14 days
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleClearEmails(30)}
+                  disabled={isAnyOperationInProgress}
+                >
+                  Clear emails older than 30 days
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Retry Failed Button */}
             {stats?.failed_emails && stats.failed_emails > 0 ? (
