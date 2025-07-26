@@ -1,8 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Camera, RotateCcw, Check, X, Download } from 'lucide-react';
+import { Camera, RotateCcw, Check, X, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { isMobileBrowser, getCameraAttribute } from '@/utils/mobileDetection';
 
 interface CameraCaptureProps {
   onCapture: (file: File) => void;
@@ -20,9 +21,11 @@ export function CameraCapture({
   const [isStreaming, setIsStreaming] = useState(false);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [fallbackMode, setFallbackMode] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const startCamera = useCallback(async () => {
@@ -41,13 +44,49 @@ export function CameraCapture({
         setIsStreaming(true);
       }
     } catch (error) {
-      toast({
-        title: "Camera Error",
-        description: "Unable to access camera. Please check permissions.",
-        variant: "destructive"
-      });
+      // For mobile browsers, fall back to file input instead of showing error
+      if (isMobileBrowser()) {
+        setFallbackMode(true);
+      } else {
+        toast({
+          title: "Camera Error",
+          description: "Unable to access camera. Please check permissions.",
+          variant: "destructive"
+        });
+      }
     }
   }, [facingMode, toast]);
+
+  const handleFileInputChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length && capturedImages.length + i < maxPhotos; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        // Compress the image
+        const compressedBlob = await compressImage(file, quality);
+        const compressedFile = new File([compressedBlob], `photo-${Date.now()}-${i}.jpg`, {
+          type: 'image/jpeg'
+        });
+        
+        onCapture(compressedFile);
+        
+        // Add to preview
+        const imageUrl = URL.createObjectURL(compressedBlob);
+        setCapturedImages(prev => [...prev, imageUrl]);
+      }
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [capturedImages.length, maxPhotos, onCapture, quality]);
+
+  const triggerFileInput = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -153,15 +192,54 @@ export function CameraCapture({
           <Button variant="ghost" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
-          <h2 className="text-lg font-semibold">Camera</h2>
-          <Button variant="ghost" onClick={switchCamera}>
-            <RotateCcw className="h-5 w-5" />
-          </Button>
+          <h2 className="text-lg font-semibold">{fallbackMode ? "Photo Upload" : "Camera"}</h2>
+          {!fallbackMode && (
+            <Button variant="ghost" onClick={switchCamera}>
+              <RotateCcw className="h-5 w-5" />
+            </Button>
+          )}
+          {fallbackMode && <div className="w-10" />}
         </div>
+
+        {/* Hidden file input for fallback mode */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileInputChange}
+          {...(getCameraAttribute() && { capture: getCameraAttribute() as "user" | "environment" })}
+        />
 
         {/* Camera View */}
         <div className="flex-1 relative bg-black">
-          {!isStreaming ? (
+          {fallbackMode ? (
+            <div className="flex flex-col items-center justify-center h-full p-8 bg-muted/50">
+              <div className="text-center space-y-4">
+                <Upload className="h-16 w-16 mx-auto text-muted-foreground" />
+                <h3 className="text-lg font-semibold">Camera not available</h3>
+                <p className="text-muted-foreground max-w-sm">
+                  Select photos from your device's camera or gallery
+                </p>
+                <Button
+                  onClick={triggerFileInput}
+                  size="lg"
+                  disabled={capturedImages.length >= maxPhotos}
+                >
+                  <Camera className="h-5 w-5 mr-2" />
+                  Select Photos
+                </Button>
+              </div>
+              
+              {/* Photo Count for fallback mode */}
+              {capturedImages.length > 0 && (
+                <div className="absolute top-4 right-4 bg-background border px-3 py-1 rounded-full text-sm">
+                  {capturedImages.length}/{maxPhotos}
+                </div>
+              )}
+            </div>
+          ) : !isStreaming ? (
             <div className="flex items-center justify-center h-full">
               <Button onClick={startCamera} size="lg">
                 <Camera className="h-5 w-5 mr-2" />
