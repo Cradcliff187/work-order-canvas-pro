@@ -1,9 +1,66 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from './useUserProfile';
 
 export function useUnreadMessageCounts(workOrderIds: string[]) {
   const { profile } = useUserProfile();
+  const queryClient = useQueryClient();
+
+  // Set up real-time subscriptions for instant badge updates
+  useEffect(() => {
+    if (!workOrderIds.length || !profile?.id) {
+      return;
+    }
+
+    // Subscribe to new messages across all work orders
+    const messagesChannel = supabase
+      .channel('work-order-messages-subscription')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'work_order_messages'
+      }, (payload) => {
+        // Only invalidate if the new message is for a tracked work order
+        if (workOrderIds.includes(payload.new.work_order_id)) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['unread-message-counts'] 
+          });
+        }
+      })
+      .subscribe();
+
+    // Subscribe to read receipt changes for current user
+    const readReceiptsChannel = supabase
+      .channel('message-read-receipts-subscription')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'message_read_receipts',
+        filter: `user_id=eq.${profile.id}`
+      }, () => {
+        queryClient.invalidateQueries({ 
+          queryKey: ['unread-message-counts'] 
+        });
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'message_read_receipts',
+        filter: `user_id=eq.${profile.id}`
+      }, () => {
+        queryClient.invalidateQueries({ 
+          queryKey: ['unread-message-counts'] 
+        });
+      })
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(readReceiptsChannel);
+    };
+  }, [workOrderIds, profile?.id, queryClient]);
 
   return useQuery({
     queryKey: ['unread-message-counts', workOrderIds, profile?.id],
