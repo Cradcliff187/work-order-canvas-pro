@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -84,7 +84,25 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const canPostToPublic = isAdmin() || isEmployee() || isPartner();
   const canPostToInternal = isAdmin() || isEmployee() || isSubcontractor();
 
-  // Remove message filtering as it's now handled by the hooks
+  // Calculate unread message counts for tab badges
+  const { publicUnreadCount, internalUnreadCount } = useMemo(() => {
+    if (!profile?.id || isLoadingPublic || isLoadingInternal) {
+      return { publicUnreadCount: 0, internalUnreadCount: 0 };
+    }
+
+    const publicUnread = publicMessages.filter(
+      msg => !msg.is_read && msg.sender_id !== profile.id
+    ).length;
+
+    const internalUnread = internalMessages.filter(
+      msg => !msg.is_read && msg.sender_id !== profile.id
+    ).length;
+
+    return { 
+      publicUnreadCount: publicUnread, 
+      internalUnreadCount: internalUnread 
+    };
+  }, [publicMessages, internalMessages, profile?.id, isLoadingPublic, isLoadingInternal]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -261,12 +279,22 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               <TabsTrigger value="public" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Public Discussion
+                {publicUnreadCount > 0 && (
+                  <span className="text-muted-foreground font-normal">
+                    ({publicUnreadCount})
+                  </span>
+                )}
               </TabsTrigger>
             )}
             {showInternalTab && (
               <TabsTrigger value="internal" className="flex items-center gap-2">
                 <Lock className="h-4 w-4" />
                 Internal Notes
+                {internalUnreadCount > 0 && (
+                  <span className="text-muted-foreground font-normal">
+                    ({internalUnreadCount})
+                  </span>
+                )}
               </TabsTrigger>
             )}
           </TabsList>
