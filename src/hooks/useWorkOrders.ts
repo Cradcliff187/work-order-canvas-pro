@@ -72,6 +72,7 @@ export interface WorkOrder {
   completion_checked_at: string | null;
   completion_method: string | null;
   location_address: string | null;
+  subcontractor_invoice_amount: number | null;
   
   // Joined relations - must match exactly what the query returns
   organizations: WorkOrderOrganization | null;

@@ -303,7 +303,7 @@ export function useSubcontractorWorkOrders() {
           work_order_number,
           title,
           description,
-          completed_at,
+          actual_completion_date,
           date_completed,
           invoice_work_orders (
             id,
@@ -318,7 +318,7 @@ export function useSubcontractorWorkOrders() {
           )
         `)
         .eq("status", "completed")
-        .order("completed_at", { ascending: false });
+        .order("actual_completion_date", { ascending: false });
 
       if (error) throw error;
       return data || [];

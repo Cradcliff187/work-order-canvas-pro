@@ -312,6 +312,374 @@ ORDER BY sent_at DESC
 LIMIT 10;
 ```
 
+## Health Check System
+
+### Email System Health Verification
+
+Use these queries to ensure the email system is functioning correctly after migration or maintenance.
+
+#### 1. System Component Checks
+
+**Verify Email Queue Table Structure**:
+```sql
+-- Check email_queue table exists and has correct structure
+SELECT 
+  column_name, 
+  data_type, 
+  is_nullable,
+  column_default
+FROM information_schema.columns 
+WHERE table_name = 'email_queue' 
+  AND table_schema = 'public'
+ORDER BY ordinal_position;
+
+-- Expected columns: id, template_name, record_type, record_id, context_data, 
+-- status, retry_count, error_message, next_retry_at, created_at, processed_at
+```
+
+**Verify Process Function Exists**:
+```sql
+-- Check process_email_queue function exists
+SELECT 
+  routine_name,
+  routine_type,
+  routine_definition
+FROM information_schema.routines 
+WHERE routine_name = 'process_email_queue' 
+  AND routine_schema = 'public';
+
+-- Should return 1 row with function definition
+```
+
+**Check Email Triggers Count**:
+```sql
+-- Verify all 6 email triggers exist
+SELECT 
+  trigger_name,
+  event_manipulation,
+  event_object_table,
+  action_statement
+FROM information_schema.triggers 
+WHERE trigger_schema = 'public'
+  AND trigger_name LIKE '%email%'
+ORDER BY trigger_name;
+
+-- Expected triggers: 6 total
+-- - Work order created/assigned/completed triggers
+-- - Report submitted/reviewed triggers  
+-- - User creation trigger
+```
+
+**Validate Email Templates**:
+```sql
+-- Confirm all 9 email templates exist and are active
+SELECT 
+  template_name,
+  is_active,
+  LENGTH(html_content) as content_length,
+  created_at
+FROM email_templates 
+WHERE template_name IN (
+  'work_order_created', 'work_order_assigned', 'work_order_completed',
+  'report_submitted', 'report_reviewed', 'welcome_email', 'test_email',
+  'auth_confirmation', 'password_reset'
+)
+ORDER BY template_name;
+
+-- Should return 9 rows, all with is_active = true
+```
+
+#### 2. Queue Health Checks
+
+**Identify Stuck Emails**:
+```sql
+-- Find emails that have failed permanently (retry_count >= 3)
+SELECT 
+  id,
+  template_name,
+  record_type,
+  record_id,
+  status,
+  retry_count,
+  error_message,
+  created_at,
+  next_retry_at
+FROM email_queue 
+WHERE status = 'failed' 
+  AND retry_count >= 3
+ORDER BY created_at DESC;
+
+-- Should return 0 rows in healthy system
+```
+
+**Queue Status Summary**:
+```sql
+-- Overall queue health summary
+SELECT 
+  status,
+  COUNT(*) as count,
+  MIN(created_at) as oldest_entry,
+  MAX(created_at) as newest_entry
+FROM email_queue 
+GROUP BY status
+ORDER BY status;
+
+-- Healthy system: mostly 'sent', minimal 'pending', few 'failed'
+```
+
+**Old Pending Emails Detection**:
+```sql
+-- Find emails pending for more than 1 hour (potential issue)
+SELECT 
+  id,
+  template_name,
+  record_type,
+  status,
+  retry_count,
+  created_at,
+  AGE(now(), created_at) as pending_duration
+FROM email_queue 
+WHERE status = 'pending' 
+  AND created_at < now() - INTERVAL '1 hour'
+ORDER BY created_at ASC;
+
+-- Should return 0 rows in healthy system
+```
+
+#### 3. Expected Email Trigger Behavior
+
+**Work Order Created (`work_order_created`)**:
+- **Trigger**: INSERT on `work_orders` table
+- **Recipients**: Admin users
+- **Template**: Notifies admins of new work order submission
+- **Variables**: `work_order_number`, `organization_name`, `store_location`, `description`
+
+**Work Order Assigned (`work_order_assigned`)**:
+- **Trigger**: UPDATE on `work_orders` when status changes to 'assigned'
+- **Recipients**: Assigned subcontractor(s)
+- **Template**: Notifies assignee of new work assignment
+- **Variables**: `work_order_number`, `assignee_name`, `due_date`, `work_description`
+
+**Work Order Completed (`work_order_completed`)**:
+- **Trigger**: UPDATE on `work_orders` when status changes to 'completed'
+- **Recipients**: Partner organization contact
+- **Template**: Notifies partner that work is complete
+- **Variables**: `work_order_number`, `completion_date`, `work_summary`
+
+**Report Submitted (`report_submitted`)**:
+- **Trigger**: INSERT on `work_order_reports` table
+- **Recipients**: Admin users
+- **Template**: Notifies admins of submitted work report
+- **Variables**: `work_order_number`, `subcontractor_name`, `work_performed`
+
+**Report Reviewed (`report_reviewed`)**:
+- **Trigger**: UPDATE on `work_order_reports` when status changes to 'approved' or 'rejected'
+- **Recipients**: Report submitter (subcontractor)
+- **Template**: Notifies subcontractor of report review result
+- **Variables**: `work_order_number`, `review_status`, `review_notes`
+
+**User Welcome (`welcome_email`)**:
+- **Trigger**: Manual or INSERT on `profiles` table (optional)
+- **Recipients**: New user
+- **Template**: Welcome message for new system users
+- **Variables**: `first_name`, `user_type`, `login_link`
+
+#### 4. Functional Testing
+
+**Test Work Order Email Queuing**:
+```sql
+-- Before test: Note current queue count
+SELECT COUNT(*) as current_queue_count FROM email_queue WHERE status = 'pending';
+
+-- Create test work order (replace with actual org_id and trade_id)
+INSERT INTO work_orders (
+  work_order_number, title, description, organization_id, trade_id, 
+  status, store_location, street_address, city, state, zip_code, created_by
+) VALUES (
+  'TEST-001-001', 'Test Email Trigger', 'Testing email queue functionality',
+  'your-org-id', 'your-trade-id', 'received', 'Test Location',
+  '123 Test St', 'Test City', 'TX', '12345', 'your-user-id'
+);
+
+-- After test: Verify queue entry was created
+SELECT 
+  template_name,
+  record_type,
+  status,
+  created_at
+FROM email_queue 
+WHERE template_name = 'work_order_created' 
+  AND created_at > now() - INTERVAL '5 minutes'
+ORDER BY created_at DESC;
+
+-- Cleanup: Delete test work order
+DELETE FROM work_orders WHERE work_order_number = 'TEST-001-001';
+```
+
+**Manual Queue Processing Test**:
+```sql
+-- Process the email queue manually
+SELECT process_email_queue();
+
+-- Verify processing results
+SELECT 
+  template_name,
+  status,
+  processed_at,
+  error_message
+FROM email_queue 
+WHERE processed_at > now() - INTERVAL '5 minutes'
+ORDER BY processed_at DESC;
+```
+
+#### 5. Troubleshooting Common Issues
+
+**Missing Triggers (Critical)**:
+```sql
+-- If trigger count is less than 6, email queuing is broken
+-- Check specific missing triggers:
+SELECT 
+  'work_order_created' as expected_trigger
+WHERE NOT EXISTS (
+  SELECT 1 FROM information_schema.triggers 
+  WHERE trigger_name LIKE '%work_order_created%'
+);
+
+-- Repeat for each expected trigger
+```
+
+**Queue Processing Not Working**:
+```sql
+-- Check if process function is being called
+SELECT 
+  id,
+  status,
+  retry_count,
+  created_at,
+  processed_at
+FROM email_queue 
+WHERE created_at > now() - INTERVAL '24 hours'
+  AND processed_at IS NULL
+ORDER BY created_at DESC;
+
+-- If many unprocessed entries exist, check Edge Function deployment
+```
+
+**Email Delivery Failures**:
+```sql
+-- Check recent email failures in logs
+SELECT 
+  template_used,
+  recipient_email,
+  status,
+  error_message,
+  sent_at
+FROM email_logs 
+WHERE status IN ('failed', 'bounced')
+  AND sent_at > now() - INTERVAL '24 hours'
+ORDER BY sent_at DESC;
+
+-- Common causes: Invalid Resend API key, domain not verified
+```
+
+#### 6. Performance Monitoring
+
+**Email Volume Tracking**:
+```sql
+-- Daily email volume by template
+SELECT 
+  DATE(created_at) as date,
+  template_name,
+  COUNT(*) as emails_queued,
+  COUNT(CASE WHEN status = 'sent' THEN 1 END) as emails_sent,
+  COUNT(CASE WHEN status = 'failed' THEN 1 END) as emails_failed
+FROM email_queue 
+WHERE created_at > now() - INTERVAL '7 days'
+GROUP BY DATE(created_at), template_name
+ORDER BY date DESC, template_name;
+```
+
+**Queue Processing Performance**:
+```sql
+-- Average processing time per email
+SELECT 
+  template_name,
+  AVG(EXTRACT(EPOCH FROM (processed_at - created_at))) as avg_processing_seconds,
+  MIN(processed_at - created_at) as min_processing_time,
+  MAX(processed_at - created_at) as max_processing_time
+FROM email_queue 
+WHERE processed_at IS NOT NULL
+  AND created_at > now() - INTERVAL '7 days'
+GROUP BY template_name
+ORDER BY avg_processing_seconds DESC;
+```
+
+### Health Check Automation
+
+Consider automating these health checks with a scheduled function:
+
+```sql
+-- Create a comprehensive health check function
+CREATE OR REPLACE FUNCTION email_system_health_check()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result jsonb := '{}'::jsonb;
+  stuck_emails integer;
+  old_pending integer;
+  trigger_count integer;
+  template_count integer;
+BEGIN
+  -- Count stuck emails
+  SELECT COUNT(*) INTO stuck_emails
+  FROM email_queue 
+  WHERE status = 'failed' AND retry_count >= 3;
+  
+  -- Count old pending emails
+  SELECT COUNT(*) INTO old_pending
+  FROM email_queue 
+  WHERE status = 'pending' 
+    AND created_at < now() - INTERVAL '1 hour';
+  
+  -- Count email triggers
+  SELECT COUNT(*) INTO trigger_count
+  FROM information_schema.triggers 
+  WHERE trigger_schema = 'public'
+    AND trigger_name LIKE '%email%';
+  
+  -- Count active templates
+  SELECT COUNT(*) INTO template_count
+  FROM email_templates 
+  WHERE is_active = true;
+  
+  -- Build result
+  result := jsonb_build_object(
+    'timestamp', now(),
+    'status', CASE 
+      WHEN stuck_emails > 0 OR old_pending > 5 OR trigger_count < 6 OR template_count < 9 
+      THEN 'unhealthy' 
+      ELSE 'healthy' 
+    END,
+    'stuck_emails', stuck_emails,
+    'old_pending_emails', old_pending,
+    'active_triggers', trigger_count,
+    'active_templates', template_count,
+    'expected_triggers', 6,
+    'expected_templates', 9
+  );
+  
+  RETURN result;
+END;
+$$;
+```
+
+Run the health check with:
+```sql
+SELECT email_system_health_check();
+```
+
 ## Configuration and Setup
 
 ### Required Environment Variables

@@ -237,11 +237,11 @@ export default function AdminWorkOrderDetail() {
                   </div>
                 )}
                 
-                {workOrder.completed_at && (
+                {workOrder.actual_completion_date && (
                   <div>
                     <p className="text-sm font-medium">Completed</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(workOrder.completed_at)}
+                      {formatDate(workOrder.actual_completion_date)}
                     </p>
                   </div>
                 )}
