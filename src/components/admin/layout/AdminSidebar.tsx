@@ -14,8 +14,10 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/hooks/useBranding';
+import { useApprovalQueue } from '@/hooks/useApprovalQueue';
 import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
 import { UserProfileDropdown } from './UserProfileDropdown';
 
@@ -24,6 +26,7 @@ export function AdminSidebar() {
   const { state } = useSidebar();
   const { profile } = useAuth();
   const { getProductDisplayName } = useBranding();
+  const { totalCount } = useApprovalQueue();
   const collapsed = state === 'collapsed';
   
   const isAdmin = profile?.user_type === 'admin';
@@ -61,14 +64,23 @@ export function AdminSidebar() {
           <SidebarMenu>
             {filteredItems.map((item) => (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton 
+                 <SidebarMenuButton 
                   asChild
                   isActive={isActive(item.url)}
                   className={isActive(item.url) ? "bg-sidebar-accent" : ""}
                 >
                   <Link to={item.url} className="flex items-center gap-2">
                     <item.icon className="h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{item.title}</span>
+                        {item.title === 'Approval Center' && totalCount > 0 && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {totalCount}
+                          </Badge>
+                        )}
+                      </>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
