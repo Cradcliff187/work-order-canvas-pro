@@ -28,7 +28,7 @@ export const ExecutiveSummary = () => {
   };
 
   const handlePendingApprovalsClick = () => {
-    navigate('/admin/reports');
+    navigate('/admin/approvals');
   };
 
   const handlePendingInvoicesClick = () => {
@@ -144,8 +144,7 @@ export const ExecutiveSummary = () => {
                 onClick={handlePendingApprovalsClick}
               >
                 <div className="text-lg font-bold text-warning">
-                  {/* This would need to be added to useAdminDashboard hook */}
-                  0
+                  {metrics?.pendingReports || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Reports to Review</div>
               </div>
@@ -192,8 +191,7 @@ export const ExecutiveSummary = () => {
                 onClick={handleActiveUsersClick}
               >
                 <div className="text-lg font-bold text-success">
-                  {/* This would need to be calculated from active subcontractors */}
-                  0
+                  {metrics?.activeSubcontractors || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Active Subcontractors</div>
               </div>
