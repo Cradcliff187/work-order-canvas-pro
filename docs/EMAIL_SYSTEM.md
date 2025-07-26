@@ -1,6 +1,30 @@
 
 # WorkOrderPortal Email System Documentation
 
+## Email vs Messaging System
+
+**⚠️ IMPORTANT DISTINCTION:**
+
+WorkOrderPortal has **TWO COMPLETELY SEPARATE** communication systems:
+
+### 🔄 **EMAIL SYSTEM** (This Document)
+- **Purpose**: External notifications sent via Resend API
+- **Usage**: Transactional emails (work order notifications, reports, authentication)
+- **Recipients**: External email addresses (users' inboxes)
+- **Technology**: Resend API + Edge Functions
+- **Storage**: `email_templates`, `email_logs`, `email_queue` tables
+
+### 💬 **MESSAGING SYSTEM** (See [MESSAGING_SYSTEM.md](./MESSAGING_SYSTEM.md))
+- **Purpose**: In-app real-time chat between users
+- **Usage**: Work order discussions, internal communication
+- **Recipients**: Users within the application interface
+- **Technology**: Supabase real-time subscriptions + React components
+- **Storage**: `work_order_messages`, `message_read_receipts` tables
+
+**These systems serve different purposes and operate independently. Do not confuse email notifications with in-app messaging.**
+
+---
+
 ## Overview
 
 WorkOrderPortal implements a unified email system using Resend API that handles ALL email communications, including both transactional notifications and authentication emails. This system bypasses Supabase's unreliable SMTP service to provide 100% reliable email delivery with complete control and monitoring.
