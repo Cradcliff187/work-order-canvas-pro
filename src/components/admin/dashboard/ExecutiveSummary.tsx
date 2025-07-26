@@ -48,8 +48,16 @@ export const ExecutiveSummary = () => {
     navigate(`/admin/users?${params.toString()}`);
   };
 
+  const handleTodayWorkOrdersClick = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const params = new URLSearchParams();
+    params.set('date_from', today.toISOString().split('T')[0]);
+    navigate(`/admin/work-orders?${params.toString()}`);
+  };
+
   // Calculate today's activity from existing data
-  const todaySubmissions = metrics?.totalWorkOrders.current || 0;
+  const todaySubmissions = metrics?.todayWorkOrders || 0;
   const todayCompletions = metrics?.completedThisMonth || 0;
 
   return (
@@ -107,11 +115,14 @@ export const ExecutiveSummary = () => {
             </>
           ) : (
             <>
-              <div className="cursor-pointer hover:text-primary transition-colors">
+              <div 
+                className="cursor-pointer hover:text-primary transition-colors"
+                onClick={handleTodayWorkOrdersClick}
+              >
                 <div className="text-lg font-bold text-primary">
                   {todaySubmissions}
                 </div>
-                <div className="text-xs text-muted-foreground">New Submissions</div>
+                <div className="text-xs text-muted-foreground">New Work Orders Today</div>
               </div>
               <div className="cursor-pointer hover:text-primary transition-colors pt-1">
                 <div className="text-lg font-bold text-success">
