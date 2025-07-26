@@ -21,6 +21,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 import { getCameraAttribute, isMobileBrowser } from '@/utils/mobileDetection';
 import CameraPermissionHelper from './CameraPermissionHelper';
+import { CameraDebugPanel } from './CameraDebugPanel';
 
 interface MobileFileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -64,7 +65,15 @@ export function MobileFileUpload({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   
-  const { checkCameraPermission } = useCamera();
+  const { 
+    checkCameraPermission,
+    debugMode,
+    debugInfo,
+    errors,
+    enableDebug,
+    disableDebug,
+    collectDebugInfo
+  } = useCamera();
   const isMobile = useIsMobile();
 
   // Helper functions
@@ -498,6 +507,15 @@ export function MobileFileUpload({
           </CardContent>
         </Card>
       )}
+
+      {/* Debug Panel */}
+      <CameraDebugPanel
+        debugMode={debugMode}
+        debugInfo={debugInfo}
+        errors={errors}
+        onToggleDebug={debugMode ? disableDebug : enableDebug}
+        onRefreshInfo={collectDebugInfo}
+      />
 
       <CameraPermissionHelper
         isVisible={showPermissionHelper}

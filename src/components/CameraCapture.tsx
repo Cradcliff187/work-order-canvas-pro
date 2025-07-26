@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCamera } from '@/hooks/useCamera';
 import { isMobileBrowser, getCameraAttribute } from '@/utils/mobileDetection';
 import CameraPermissionHelper from './CameraPermissionHelper';
+import { CameraDebugPanel } from './CameraDebugPanel';
 
 interface CameraCaptureProps {
   onCapture: (file: File) => void;
@@ -31,7 +32,15 @@ export function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { checkCameraPermission } = useCamera();
+  const { 
+    checkCameraPermission,
+    debugMode,
+    debugInfo,
+    errors,
+    enableDebug,
+    disableDebug,
+    collectDebugInfo
+  } = useCamera();
 
   const startCamera = useCallback(async () => {
     try {
@@ -306,6 +315,17 @@ export function CameraCapture({
             </div>
           </div>
         )}
+
+        {/* Debug Panel */}
+        <div className="p-4">
+          <CameraDebugPanel
+            debugMode={debugMode}
+            debugInfo={debugInfo}
+            errors={errors}
+            onToggleDebug={debugMode ? disableDebug : enableDebug}
+            onRefreshInfo={collectDebugInfo}
+          />
+        </div>
 
         {/* Footer */}
         <div className="p-4 border-t">
