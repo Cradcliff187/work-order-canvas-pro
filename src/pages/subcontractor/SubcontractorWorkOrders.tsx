@@ -18,6 +18,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import {
@@ -36,6 +37,10 @@ const SubcontractorWorkOrders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
 
   const workOrderList = assignedWorkOrders.data || [];
+  
+  // Extract work order IDs for unread message counts
+  const workOrderIds = workOrderList.map(wo => wo.id);
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
 
   const filteredWorkOrders = workOrderList.filter((workOrder) => {
     const matchesSearch = 
@@ -148,6 +153,11 @@ const SubcontractorWorkOrders = () => {
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-lg">{workOrder.work_order_number}</h3>
+                      {unreadCounts[workOrder.id] > 0 && (
+                        <Badge variant="default" className="ml-2">
+                          {unreadCounts[workOrder.id]}
+                        </Badge>
+                      )}
                       <WorkOrderStatusBadge status={workOrder.status} />
                     </div>
 
