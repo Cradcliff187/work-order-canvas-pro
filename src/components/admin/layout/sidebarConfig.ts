@@ -4,6 +4,7 @@ import {
   Users,
   Building2,
   ClipboardList,
+  ClipboardCheck,
   Settings,
   Wrench,
   Mail,
@@ -23,6 +24,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Admin Dashboard', url: '/admin/dashboard', icon: BarChart3 },
   { title: 'Employee Dashboard', url: '/admin/employee-dashboard', icon: BarChart3 },
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
+  { title: 'Approval Center', url: '/admin/approvals', icon: ClipboardCheck },
   { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
   { title: 'Time Reports', url: '/admin/time-reports', icon: Clock },
   { title: 'Receipts', url: '/admin/receipts', icon: Receipt },
@@ -41,7 +43,7 @@ export const sidebarItems: SidebarItem[] = [
 ];
 
 export const sidebarSections = {
-  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Reports', 'Time Reports'],
+  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Approval Center', 'Reports', 'Time Reports'],
   FINANCIAL: ['Receipts', 'Invoices'],
   MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
@@ -49,4 +51,4 @@ export const sidebarSections = {
 };
 
 export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Organization Diagnostics', 'Email Testing', 'Dev Tools'];
-export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];
+export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Approval Center', 'Time Reports', 'Receipts'];

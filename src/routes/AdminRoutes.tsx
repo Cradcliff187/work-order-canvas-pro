@@ -29,6 +29,7 @@ import {
   TestEmailPage,
   AdminOrganizationDiagnostics,
   AdminUtilities,
+  AdminApprovals,
   DevTools,
   
 } from '@/pages/LazyPages';
@@ -140,6 +141,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminEmailTemplates />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/approvals" element={
+      <ProtectedRoute requiredUserType="employee">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminApprovals />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
