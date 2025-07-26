@@ -9,48 +9,26 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Users, Lock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useWorkOrderMessages, WorkOrderMessage } from '@/hooks/useWorkOrderMessages';
+import { usePostMessage } from '@/hooks/usePostMessage';
+import { useMessageSubscription } from '@/hooks/useMessageSubscription';
 
 interface WorkOrderMessagesProps {
   workOrderId: string;
-}
-
-interface Message {
-  id: string;
-  message: string;
-  is_internal: boolean;
-  sender_id: string;
-  sender_name: string;
-  sender_organization: string;
-  created_at: string;
 }
 
 export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderId }) => {
   const { profile, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
   const [newMessage, setNewMessage] = useState('');
   const [isInternal, setIsInternal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock data for now - will be replaced with actual hooks
-  const messages: Message[] = [
-    {
-      id: '1',
-      message: 'Work order has been submitted. Please review and assign to appropriate team.',
-      is_internal: false,
-      sender_id: 'partner-1',
-      sender_name: 'John Partner',
-      sender_organization: 'ABC Property Management',
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: '2',
-      message: 'Assigning to Mike from Pipes & More. They have experience with similar issues.',
-      is_internal: true,
-      sender_id: 'admin-1',
-      sender_name: 'Sarah Admin',
-      sender_organization: 'WorkOrderPro Internal',
-      created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
-    }
-  ];
+  // Fetch messages using custom hooks
+  const { data: publicMessages = [], isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false);
+  const { data: internalMessages = [], isLoading: isLoadingInternal } = useWorkOrderMessages(workOrderId, true);
+  const postMessage = usePostMessage();
+  
+  // Set up real-time subscription
+  useMessageSubscription(workOrderId);
 
   // Determine which tabs to show based on user type
   const showPublicTab = isAdmin() || isEmployee() || isPartner();
@@ -58,9 +36,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const canPostToPublic = isAdmin() || isEmployee() || isPartner();
   const canPostToInternal = isAdmin() || isEmployee() || isSubcontractor();
 
-  // Filter messages based on tab
-  const publicMessages = messages.filter(msg => !msg.is_internal);
-  const internalMessages = messages.filter(msg => msg.is_internal);
+  // Remove message filtering as it's now handled by the hooks
 
   // Default tab based on user type
   const defaultTab = isPartner() ? 'public' : isSubcontractor() ? 'internal' : 'public';
@@ -69,25 +45,22 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    setIsSubmitting(true);
     try {
-      // TODO: Implement usePostMessage hook
-      console.log('Posting message:', { 
-        workOrderId, 
-        message: newMessage, 
-        isInternal: isInternal && (isAdmin() || isEmployee())
+      await postMessage.mutateAsync({
+        workOrderId,
+        message: newMessage,
+        isInternal: isInternal && (isAdmin() || isEmployee()),
       });
       
       setNewMessage('');
       setIsInternal(false);
     } catch (error) {
+      // Error is handled by the mutation hook
       console.error('Failed to post message:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const renderMessage = (message: Message) => (
+  const renderMessage = (message: WorkOrderMessage) => (
     <div
       key={message.id}
       className={`p-4 rounded-lg border-l-4 ${
@@ -99,10 +72,10 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="font-medium text-foreground">
-            {message.sender_name}
+            {message.sender.first_name} {message.sender.last_name}
           </span>
           <Badge variant="outline" className="text-xs">
-            {message.sender_organization}
+            {message.sender_organization?.name || 'Internal Team'}
           </Badge>
           {message.is_internal && (
             <Badge variant="secondary" className="text-xs flex items-center gap-1">
@@ -121,9 +94,18 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     </div>
   );
 
-  const renderMessageList = (messageList: Message[], emptyMessage: string) => (
+  const renderMessageList = (messageList: WorkOrderMessage[], emptyMessage: string, isLoading: boolean) => (
     <div className="space-y-4">
-      {messageList.length > 0 ? (
+      {isLoading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+              <div className="h-16 bg-muted rounded"></div>
+            </div>
+          ))}
+        </div>
+      ) : messageList.length > 0 ? (
         messageList.map(renderMessage)
       ) : (
         <div className="text-center py-8 text-muted-foreground">
@@ -147,13 +129,13 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Textarea
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder={forInternal ? "Add an internal note..." : "Type your message..."}
-          className="min-h-[100px] resize-none"
-          disabled={isSubmitting}
-        />
+          <Textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder={forInternal ? "Add an internal note..." : "Type your message..."}
+            className="min-h-[100px] resize-none"
+            disabled={postMessage.isPending}
+          />
         
         {(isAdmin() || isEmployee()) && !forInternal && (
           <div className="flex items-center space-x-2">
@@ -161,7 +143,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               id="internal-note"
               checked={isInternal}
               onCheckedChange={(checked) => setIsInternal(checked as boolean)}
-              disabled={isSubmitting}
+              disabled={postMessage.isPending}
             />
             <Label htmlFor="internal-note" className="text-sm font-medium">
               Make this an internal note (only visible to team and subcontractors)
@@ -177,15 +159,15 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               setNewMessage('');
               setIsInternal(false);
             }}
-            disabled={isSubmitting || !newMessage.trim()}
+            disabled={postMessage.isPending || !newMessage.trim()}
           >
             Clear
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting || !newMessage.trim()}
+            disabled={postMessage.isPending || !newMessage.trim()}
           >
-            {isSubmitting ? 'Posting...' : 'Post Message'}
+            {postMessage.isPending ? 'Posting...' : 'Post Message'}
           </Button>
         </div>
       </form>
@@ -223,7 +205,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                 <h3 className="text-sm font-medium mb-4 text-muted-foreground">
                   Visible to partner organization and internal team
                 </h3>
-                {renderMessageList(publicMessages, "No public messages yet. Start the conversation!")}
+                {renderMessageList(publicMessages, "No public messages yet. Start the conversation!", isLoadingPublic)}
               </div>
               {renderMessageComposer(false)}
             </TabsContent>
@@ -235,7 +217,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                 <h3 className="text-sm font-medium mb-4 text-muted-foreground">
                   Only visible to internal team and assigned subcontractors
                 </h3>
-                {renderMessageList(internalMessages, "No internal notes yet. Add a note to start tracking internal communication.")}
+                {renderMessageList(internalMessages, "No internal notes yet. Add a note to start tracking internal communication.", isLoadingInternal)}
               </div>
               {renderMessageComposer(true)}
             </TabsContent>
