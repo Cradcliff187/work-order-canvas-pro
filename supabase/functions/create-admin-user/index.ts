@@ -363,6 +363,7 @@ serve(async (req) => {
     const updateFields: any = {};
     if (userData.phone) updateFields.phone = userData.phone;
     if (userData.user_type === 'employee') updateFields.is_employee = true;
+    updateFields.user_type = userData.user_type;  // Fix the user_type from trigger default
     
     if (Object.keys(updateFields).length > 0) {
       const { data: updatedProfile, error: updateError } = await supabaseAdmin
