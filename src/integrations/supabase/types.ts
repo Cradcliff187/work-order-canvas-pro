@@ -114,6 +114,48 @@ export type Database = {
           },
         ]
       }
+      email_queue: {
+        Row: {
+          context_data: Json | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          next_retry_at: string | null
+          processed_at: string | null
+          record_id: string
+          record_type: string
+          retry_count: number | null
+          status: string | null
+          template_name: string
+        }
+        Insert: {
+          context_data?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          next_retry_at?: string | null
+          processed_at?: string | null
+          record_id: string
+          record_type: string
+          retry_count?: number | null
+          status?: string | null
+          template_name: string
+        }
+        Update: {
+          context_data?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          next_retry_at?: string | null
+          processed_at?: string | null
+          record_id?: string
+          record_type?: string
+          retry_count?: number | null
+          status?: string | null
+          template_name?: string
+        }
+        Relationships: []
+      }
       email_recipient_settings: {
         Row: {
           created_at: string
@@ -1054,7 +1096,6 @@ export type Database = {
           assigned_organization_id: string | null
           auto_completion_blocked: boolean | null
           city: string | null
-          completed_at: string | null
           completion_checked_at: string | null
           completion_method: string | null
           created_at: string
@@ -1099,7 +1140,6 @@ export type Database = {
           assigned_organization_id?: string | null
           auto_completion_blocked?: boolean | null
           city?: string | null
-          completed_at?: string | null
           completion_checked_at?: string | null
           completion_method?: string | null
           created_at?: string
@@ -1144,7 +1184,6 @@ export type Database = {
           assigned_organization_id?: string | null
           auto_completion_blocked?: boolean | null
           city?: string | null
-          completed_at?: string | null
           completion_checked_at?: string | null
           completion_method?: string | null
           created_at?: string
@@ -1215,39 +1254,7 @@ export type Database = {
       }
     }
     Views: {
-      mv_work_order_analytics: {
-        Row: {
-          assigned_count: number | null
-          avg_completion_hours: number | null
-          cancelled_count: number | null
-          completed_count: number | null
-          in_progress_count: number | null
-          organization_id: string | null
-          received_count: number | null
-          submission_date: string | null
-          submission_month: string | null
-          submission_week: string | null
-          total_invoice_amount: number | null
-          total_orders: number | null
-          trade_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "work_orders_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_orders_trade_id_fkey"
-            columns: ["trade_id"]
-            isOneToOne: false
-            referencedRelation: "trades"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       auth_user_belongs_to_organization: {
@@ -1403,6 +1410,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_valid_transition: {
+        Args: {
+          p_from_status: Database["public"]["Enums"]["work_order_status"]
+          p_to_status: Database["public"]["Enums"]["work_order_status"]
+        }
+        Returns: boolean
+      }
       jwt_is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -1426,6 +1440,10 @@ export type Database = {
       preview_work_order_number_per_location: {
         Args: { org_id: string; location_code: string }
         Returns: string
+      }
+      process_email_queue: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       refresh_analytics_views: {
         Args: Record<PropertyKey, never>
