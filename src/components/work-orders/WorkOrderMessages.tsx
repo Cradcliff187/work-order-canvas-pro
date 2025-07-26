@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,6 +23,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const { profile, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
   const [newMessage, setNewMessage] = useState('');
   const [isInternal, setIsInternal] = useState(false);
+  const [activeTab, setActiveTab] = useState(isPartner() ? 'public' : isSubcontractor() ? 'internal' : 'public');
 
   // Fetch messages using custom hooks
   const { data: publicMessages = [], isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false);
@@ -30,6 +32,47 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   
   // Set up real-time subscription
   useMessageSubscription(workOrderId);
+
+  // Function to mark messages as read
+  const markMessagesAsRead = useCallback(async (messages: WorkOrderMessage[]) => {
+    if (!profile?.id || messages.length === 0) return;
+
+    try {
+      // Get unread message IDs
+      const { data: existingReceipts } = await supabase
+        .from('message_read_receipts')
+        .select('message_id')
+        .eq('user_id', profile.id)
+        .in('message_id', messages.map(m => m.id));
+
+      const readMessageIds = new Set(existingReceipts?.map(r => r.message_id) || []);
+      const unreadMessages = messages.filter(m => !readMessageIds.has(m.id));
+
+      if (unreadMessages.length > 0) {
+        await supabase
+          .from('message_read_receipts')
+          .insert(
+            unreadMessages.map(msg => ({
+              message_id: msg.id,
+              user_id: profile.id,
+              read_at: new Date().toISOString()
+            }))
+          );
+      }
+    } catch (error) {
+      console.log('Failed to mark messages as read:', error);
+    }
+  }, [profile?.id]);
+
+  // Mark messages as read when tab changes or component mounts
+  useEffect(() => {
+    const messages = activeTab === 'public' ? publicMessages : internalMessages;
+    const isLoading = activeTab === 'public' ? isLoadingPublic : isLoadingInternal;
+    
+    if (!isLoading && messages.length > 0) {
+      markMessagesAsRead(messages);
+    }
+  }, [activeTab, workOrderId, markMessagesAsRead]);
 
   // Determine which tabs to show based on user type
   const showPublicTab = isAdmin() || isEmployee() || isPartner();
@@ -190,7 +233,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue={defaultTab} className="w-full">
+        <Tabs defaultValue={defaultTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             {showPublicTab && (
               <TabsTrigger value="public" className="flex items-center gap-2">
