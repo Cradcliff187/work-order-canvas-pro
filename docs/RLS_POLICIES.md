@@ -121,6 +121,56 @@ WorkOrderPortal supports both individual access (backward compatibility) and com
 - Subcontractors: Can create drafts, view their company invoices, update modifiable invoices, delete draft invoices
 **Security Notes**: Status-based workflow prevents unauthorized changes to processed invoices
 
+## Messaging System Policies
+
+The WorkOrderPortal messaging system enables secure communication between different user types while maintaining strict visibility controls based on message type and organizational relationships.
+
+### Message Visibility Rules
+
+**Public Messages (is_internal=false)**:
+- Visible to partner organizations that submitted the work order
+- Visible to all internal team members (admins/employees)
+- Used for client-facing communication and updates
+
+**Internal Messages (is_internal=true)**:
+- Visible to internal team members (admins/employees)
+- Visible to assigned subcontractors for the specific work order
+- Used for operational coordination and sensitive information
+
+### Message Creation Restrictions
+
+**Partners**:
+- Can only create public messages (is_internal=false)
+- Limited to work orders from their organization
+- Ensures client communication remains professional and accessible
+
+**Subcontractors**:
+- Can only create internal messages (is_internal=true)
+- Limited to work orders assigned to them
+- Keeps operational details private from clients
+
+**Admins/Employees**:
+- Can create both public and internal messages
+- Full access to all work order conversations
+- Can moderate and manage all communications
+
+### Table: work_order_messages
+**Purpose**: Real-time messaging system for work order communication
+**Migration**: 20250712204423-9a1234b5-6c78-9d01-2e34-56789abcdef0.sql
+**Access Rules (8 policies)**:
+- Admins: Full management of all messages (select, insert, update, delete)
+- Employees: Full management of all messages (select, insert, update, delete) 
+- Partners: Can view public messages for their org work orders, can insert public messages only
+- Subcontractors: Can view all messages for assigned work orders, can insert internal messages only
+**Security Notes**: Message visibility strictly enforced through is_internal flag and organizational boundaries
+
+### Table: message_read_receipts  
+**Purpose**: Tracks when users have read specific messages for notification management
+**Migration**: 20250712204423-9a1234b5-6c78-9d01-2e34-56789abcdef0.sql
+**Access Rules (1 policy)**:
+- All authenticated users: Full management of their own read receipts only
+**Security Notes**: Individual read tracking prevents cross-user visibility of reading habits
+
 ### Table: organizations
 **Purpose**: Company/organization master data
 **Migration**: 20250710162019-bb5da63a-ae41-496a-9614-5056c64eb672.sql
