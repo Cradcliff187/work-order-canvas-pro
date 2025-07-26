@@ -29,7 +29,7 @@ interface AuthContextType {
   userOrganization: UserOrganization | null;
   loading: boolean;
   organizationLoading: boolean;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, userType?: 'admin' | 'partner' | 'subcontractor' | 'employee', phone?: string, companyName?: string) => Promise<{ error: any; data?: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
@@ -293,29 +293,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [impersonatedProfile]);
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, userType: 'admin' | 'partner' | 'subcontractor' | 'employee' = 'subcontractor', phone?: string, companyName?: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('sign-up-user', {
+        body: {
+          email,
+          password,
           first_name: firstName,
           last_name: lastName,
+          user_type: userType,
+          phone,
+          company_name: companyName
         }
+      });
+
+      if (error) {
+        console.error('Sign-up edge function error:', error);
+        return { error: new Error(error.message || 'Sign-up failed') };
       }
-    });
-    
-    if (!error && data.user) {
-      // Wait for profile to be created by trigger, then sync JWT
-      setTimeout(async () => {
-        await syncUserMetadataToJWT(data.user!.id);
-      }, 2000);
+
+      if (!data?.success) {
+        console.error('Sign-up failed:', data?.error);
+        return { error: new Error(data?.error || 'Sign-up failed') };
+      }
+
+      console.log('User created successfully:', data.user);
+      return { error: null, data: data.user };
+    } catch (error: any) {
+      console.error('Sign-up function error:', error);
+      return { error: new Error(error.message || 'Sign-up failed') };
     }
-    
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
