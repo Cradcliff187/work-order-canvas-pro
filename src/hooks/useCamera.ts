@@ -1,6 +1,19 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+// Mobile device detection utilities
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+};
+
+const isAndroid = () => {
+  return /Android/.test(navigator.userAgent);
+};
+
+const isMobileDevice = () => {
+  return isIOS() || isAndroid() || /Mobile|Tablet/.test(navigator.userAgent);
+};
+
 export interface CameraCapabilities {
   hasCamera: boolean;
   hasMultipleCameras: boolean;
@@ -43,15 +56,38 @@ export function useCamera() {
   }, []);
 
   const requestCameraPermission = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch (error) {
-      console.error('Camera permission denied:', error);
+    // First check if getUserMedia is available
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop());
+        return true;
+      } catch (error) {
+        console.error('Camera permission denied:', error);
+        
+        // If getUserMedia fails on mobile, fallback to native file input
+        if (isMobileDevice()) {
+          // On mobile, file input with capture is a valid alternative
+          return true;
+        }
+        
+        // On desktop, show permission error
+        toast({
+          title: "Camera Permission Required",
+          description: "Please allow camera access to take photos for work reports.",
+          variant: "destructive"
+        });
+        return false;
+      }
+    } else {
+      // No getUserMedia support - use file input fallback on mobile
+      if (isMobileDevice()) {
+        return true; // File input with capture works on mobile
+      }
+      
       toast({
-        title: "Camera Permission Required",
-        description: "Please allow camera access to take photos for work reports.",
+        title: "Camera Not Supported",
+        description: "Your browser doesn't support camera access.",
         variant: "destructive"
       });
       return false;
