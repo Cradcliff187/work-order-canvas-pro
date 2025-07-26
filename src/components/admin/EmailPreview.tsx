@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Smartphone, Monitor, Copy, Eye } from 'lucide-react';
 import { useTemplatePreview } from '@/hooks/useTemplatePreview';
 import { useToast } from '@/hooks/use-toast';
+import DOMPurify from 'dompurify';
 
 interface EmailPreviewProps {
   templateName: string;
@@ -24,6 +25,25 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
   const { toast } = useToast();
 
   const interpolatedContent = interpolateTemplate(htmlContent);
+  
+  // Sanitize the HTML content to prevent XSS attacks
+  const sanitizedContent = DOMPurify.sanitize(interpolatedContent, {
+    // Allow common email HTML elements and attributes
+    ALLOWED_TAGS: [
+      'div', 'span', 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'a', 'img', 
+      'table', 'tr', 'td', 'th', 'tbody', 'thead', 'tfoot',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li',
+      'blockquote', 'pre', 'code', 'hr'
+    ],
+    ALLOWED_ATTR: [
+      'href', 'src', 'alt', 'title', 'style', 'class', 'id',
+      'width', 'height', 'border', 'cellpadding', 'cellspacing',
+      'align', 'valign', 'bgcolor', 'color'
+    ],
+    // Remove any script tags and event handlers
+    FORBID_TAGS: ['script', 'object', 'embed', 'form', 'input'],
+    FORBID_ATTR: ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus']
+  });
   
   const availableVariables = getAvailableVariables();
 
@@ -76,7 +96,7 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => copyToClipboard(interpolatedContent)}
+              onClick={() => copyToClipboard(sanitizedContent)}
             >
               <Copy className="h-4 w-4 mr-2" />
               Copy HTML
@@ -96,7 +116,7 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
               >
                 <div
                   className="p-4 min-h-[400px] bg-white"
-                  dangerouslySetInnerHTML={{ __html: interpolatedContent }}
+                  dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                 />
               </div>
             </CardContent>
@@ -160,7 +180,7 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(interpolatedContent)}
+                onClick={() => copyToClipboard(sanitizedContent)}
               >
                 <Copy className="h-4 w-4 mr-2" />
                 Copy
@@ -168,7 +188,7 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({
             </CardHeader>
             <CardContent>
               <pre className="bg-muted p-4 rounded-lg overflow-auto text-sm whitespace-pre-wrap">
-                {interpolatedContent}
+                {sanitizedContent}
               </pre>
             </CardContent>
           </Card>
