@@ -8,13 +8,22 @@ import {
   Clock, 
   CheckCircle, 
   AlertTriangle,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 import { useEmailQueueStats } from '@/hooks/useEmailQueueStats';
 import { format } from 'date-fns';
 
 const EmailQueueStatus: React.FC = () => {
-  const { stats, isLoading, error, refetch } = useEmailQueueStats();
+  const { 
+    stats, 
+    isLoading, 
+    error, 
+    refetch, 
+    processQueue, 
+    isProcessing, 
+    lastProcessResult 
+  } = useEmailQueueStats();
 
   if (error) {
     return (
@@ -147,11 +156,16 @@ const EmailQueueStatus: React.FC = () => {
           ) : (
             <Button 
               className="w-full" 
-              disabled={!stats?.pending_emails}
+              disabled={!stats?.pending_emails || isProcessing}
+              onClick={() => processQueue()}
             >
-              <Mail className="h-4 w-4 mr-2" />
-              Process Email Queue
-              {stats?.pending_emails ? (
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4 mr-2" />
+              )}
+              {isProcessing ? 'Processing...' : 'Process Email Queue'}
+              {stats?.pending_emails && !isProcessing ? (
                 <Badge variant="secondary" className="ml-2">
                   {stats.pending_emails}
                 </Badge>
@@ -159,6 +173,54 @@ const EmailQueueStatus: React.FC = () => {
             </Button>
           )}
         </div>
+
+        {/* Process Results */}
+        {lastProcessResult && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center space-x-2 mb-3">
+              {lastProcessResult.success ? (
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+              )}
+              <span className="text-sm font-medium">
+                {lastProcessResult.success ? 'Processing Complete' : 'Processing Failed'}
+              </span>
+            </div>
+            
+            {lastProcessResult.success ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="font-semibold text-green-600">
+                      {lastProcessResult.processed_count}
+                    </div>
+                    <div className="text-muted-foreground">Processed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-red-600">
+                      {lastProcessResult.failed_count}
+                    </div>
+                    <div className="text-muted-foreground">Failed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-semibold text-yellow-600">
+                      {lastProcessResult.skipped_count}
+                    </div>
+                    <div className="text-muted-foreground">Skipped</div>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground text-center">
+                  Processed at {format(new Date(lastProcessResult.processed_at), 'MMM d, yyyy at h:mm a')}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-red-600">
+                {lastProcessResult.error || 'An error occurred during processing'}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

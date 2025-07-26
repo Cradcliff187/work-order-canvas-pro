@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export interface EmailQueueStats {
   pending_emails: number;
@@ -9,7 +10,18 @@ export interface EmailQueueStats {
   last_processed: string | null;
 }
 
+export interface ProcessQueueResult {
+  success: boolean;
+  processed_count: number;
+  failed_count: number;
+  skipped_count: number;
+  processed_at: string;
+  error?: string;
+}
+
 export const useEmailQueueStats = () => {
+  const queryClient = useQueryClient();
+  
   const {
     data: stats,
     isLoading,
@@ -41,10 +53,50 @@ export const useEmailQueueStats = () => {
     refetchInterval: 30000, // 30 seconds
   });
 
+  const processQueueMutation = useMutation({
+    mutationFn: async (): Promise<ProcessQueueResult> => {
+      const { data, error } = await supabase.functions.invoke('process-email-queue');
+      
+      if (error) {
+        throw new Error(error.message || 'Failed to process email queue');
+      }
+      
+      return data as ProcessQueueResult;
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({
+          title: "Email Queue Processed",
+          description: `Processed: ${result.processed_count}, Failed: ${result.failed_count}, Skipped: ${result.skipped_count}`,
+        });
+        
+        // Refresh the queue statistics
+        queryClient.invalidateQueries({ queryKey: ['email_queue_stats'] });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Processing Failed",
+          description: result.error || "Failed to process email queue",
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Processing Error",
+        description: error.message || "An unexpected error occurred while processing the queue",
+      });
+    },
+  });
+
   return {
     stats,
     isLoading,
     error,
     refetch,
+    processQueue: processQueueMutation.mutate,
+    isProcessing: processQueueMutation.isPending,
+    lastProcessResult: processQueueMutation.data,
+    processError: processQueueMutation.error,
   };
 };
