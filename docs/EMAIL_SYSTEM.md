@@ -46,6 +46,85 @@ WorkOrderPro implements a unified email system using Resend API that handles ALL
 5. **Delivery**: Sends via Resend API
 6. **Logging**: Records result in `email_logs` table
 
+## Email Queue Architecture
+
+As of January 2025, WorkOrderPro has implemented a sophisticated queue-based email system for enhanced reliability and performance. This architecture provides asynchronous email processing with automatic retry capabilities.
+
+### Queue-Based Flow Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Application   │───▶│   email_queue    │───▶│process-email-   │
+│   Triggers      │    │   Table          │    │queue Function   │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+        │                        │                        │
+        ▼                        ▼                        ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  Database       │    │  Background      │    │   send-email    │
+│  Triggers       │    │  Processing      │    │   Edge Function │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │                        │
+                                ▼                        ▼
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │  Retry Logic     │    │   Resend API    │
+                       │  (Exponential)   │    │   (Delivery)    │
+                       └──────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+                                               ┌─────────────────┐
+                                               │   email_logs    │
+                                               │   (Tracking)    │
+                                               └─────────────────┘
+```
+
+### Queue Processing Flow
+
+**Enhanced Process**:
+1. **Trigger**: Database trigger or manual function call queues email
+2. **Queue Entry**: Email request stored in `email_queue` table with `pending` status
+3. **Background Processing**: `process-email-queue` function processes pending emails in batches
+4. **Email Delivery**: Calls `send-email` Edge Function for actual delivery
+5. **Status Update**: Queue entry updated to `sent` or `failed` based on result
+6. **Retry Logic**: Failed emails automatically retried with exponential backoff
+7. **Final Logging**: Complete audit trail maintained in `email_logs` table
+
+### Queue Retry Logic
+
+**Exponential Backoff Strategy**:
+- **First Retry**: 5 minutes after initial failure
+- **Second Retry**: 30 minutes after first retry
+- **Third Retry**: 2 hours after second retry
+- **Maximum Attempts**: 3 total retry attempts
+- **Final Status**: Marked as permanently failed after 3 attempts
+
+**Retry Conditions**:
+- Network timeouts or temporary API errors
+- Rate limiting from email service
+- Temporary template processing issues
+- Does NOT retry for permanent failures (invalid email, blocked domain)
+
+### Queue Management Features
+
+**Admin Interface**:
+- Real-time queue status monitoring
+- Manual queue processing controls
+- Failed email retry capabilities
+- Queue cleanup for old processed emails
+- Performance metrics and analytics
+
+**Database Functions**:
+- `process_email_queue()` - Batch processes pending emails
+- Queue status tracking and error logging
+- Automatic cleanup of old processed entries
+
+### Migration History
+
+**2025-01-26 Email System Cleanup**:
+- **Removed Functions**: `call_send_email_trigger()` and `trigger_work_order_created_email_v2()`
+- **Reason**: Obsoleted by queue-based architecture
+- **Impact**: System now uses 6 active triggers with queue processing
+- **Status**: Migration completed successfully with full backward compatibility
+
 ## Email Templates
 
 ### Complete Template List (9 Total)
@@ -454,18 +533,28 @@ ORDER BY delivery_rate_percent DESC;
 - **99.9% Delivery Rate**: Resend's enterprise infrastructure
 - **No Supabase Dependencies**: Independent of Supabase SMTP issues
 - **Redundant Monitoring**: Database logging + Resend webhooks
+- **Queue-Based Processing**: Automatic retry for failed emails with exponential backoff
+- **Resilient Architecture**: System continues functioning if email service is temporarily unavailable
 
 ### Control
 - **Custom Templates**: Full HTML/CSS customization
 - **Dynamic Content**: Rich variable substitution
 - **Timing Control**: Send emails exactly when needed
 - **Testing Capabilities**: Comprehensive testing without affecting users
+- **Queue Management**: Manual processing and retry capabilities
 
 ### Monitoring
 - **Complete Audit Trail**: Every email logged with full metadata
 - **Real-time Status**: Delivery tracking via Resend webhooks
 - **Performance Analytics**: Delivery rates, failure analysis
 - **Debug Information**: Detailed error messages and troubleshooting data
+- **Queue Visibility**: Complete queue status and processing metrics
+
+### Performance
+- **Non-Blocking Processing**: Email sending doesn't block application operations
+- **Batch Processing**: Efficient handling of multiple emails
+- **Scalable Architecture**: Handles high email volumes without performance impact
+- **Background Processing**: Emails processed asynchronously for optimal user experience
 
 ### Security
 - **No User Enumeration**: Password resets never reveal user existence
@@ -473,4 +562,4 @@ ORDER BY delivery_rate_percent DESC;
 - **Token Validation**: Proper token handling and expiration
 - **CORS Protection**: Secure cross-origin request handling
 
-This unified email system provides WorkOrderPro with enterprise-grade email capabilities, ensuring all communications - from work order notifications to password resets - are delivered reliably with complete visibility and control.
+This unified, queue-based email system provides WorkOrderPro with enterprise-grade email capabilities, ensuring all communications - from work order notifications to password resets - are delivered reliably with complete visibility and control. The queue architecture adds resilience and performance while maintaining the same reliability and security standards.

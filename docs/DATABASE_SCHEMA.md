@@ -201,6 +201,32 @@ All templates route through the `send-email` Edge Function using Resend API:
 - `auth_confirmation` - Account confirmation email with activation link
 - `password_reset` - Password reset email with recovery link
 
+### email_queue
+Queue-based email processing system for reliable, asynchronous email delivery.
+
+```sql
+- id (UUID, primary key)
+- template_name (text, not null) -- Which email template to use
+- record_id (UUID, not null) -- Associated record identifier
+- record_type (text, not null) -- Type of record ('work_order', 'user', 'invoice', etc.)
+- context_data (jsonb, default '{}') -- Additional data for template processing
+- status (text, default 'pending') -- Queue status: 'pending', 'sent', 'failed'
+- created_at (timestamp, default now()) -- When email was queued
+- processed_at (timestamp, nullable) -- When email was processed
+- error_message (text, nullable) -- Failure reason if status = 'failed'
+- retry_count (integer, default 0) -- Number of retry attempts made
+- next_retry_at (timestamp, nullable) -- When to retry if failed
+```
+
+**Queue Status Workflow**:
+- `pending` → `sent` (successful delivery)
+- `pending` → `failed` (permanent failure or max retries exceeded)
+
+**Queue Processing**:
+- Emails are processed by the `process_email_queue()` database function
+- Failed emails are automatically retried with exponential backoff
+- Queue entries are cleaned up after successful processing or permanent failure
+
 ### email_logs
 Comprehensive email delivery tracking for all emails sent via Resend.
 
@@ -330,9 +356,11 @@ Auto-generated format: `{ORG_INITIALS}-{LOCATION}-{SEQUENCE}`
 ### Email System Architecture
 - **Unified Delivery**: All emails (transactional + auth) use Resend API
 - **Template Management**: 9 templates stored in `email_templates` table
+- **Queue-Based Processing**: Asynchronous email processing via `email_queue` table
+- **Automatic Retries**: Failed emails retried with exponential backoff strategy
 - **Delivery Tracking**: Complete audit trail in `email_logs` table
 - **Bypass Supabase**: Custom auth email flow bypasses unreliable Supabase SMTP
-- **Edge Function**: Single `send-email` function handles all email types
+- **Edge Function**: `send-email` function handles delivery, `process-email-queue` manages queue
 
 ### Security Features
 - Row Level Security (RLS) on all tables

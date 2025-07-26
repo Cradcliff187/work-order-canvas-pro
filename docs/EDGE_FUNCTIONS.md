@@ -8,6 +8,54 @@ WorkOrderPortal uses Supabase Edge Functions for secure server-side operations t
 
 ## Available Edge Functions
 
+### process-email-queue
+
+**Purpose**: Batch processes queued emails for reliable, asynchronous email delivery
+
+**File**: `supabase/functions/process-email-queue/index.ts`
+
+**Features**:
+- **Queue Management**: Processes pending emails from the `email_queue` table
+- **Batch Processing**: Handles multiple emails efficiently in a single execution
+- **Database Function Integration**: Calls the `process_email_queue()` database function
+- **Admin Interface**: Provides API for manual queue processing and monitoring
+- **Error Handling**: Graceful error management with detailed logging
+- **Status Tracking**: Updates queue status and retry information
+
+**Queue Processing Flow**:
+1. **Queue Monitoring**: Checks `email_queue` table for pending emails
+2. **Batch Selection**: Selects emails ready for processing (not in retry delay)
+3. **Email Processing**: Calls `send-email` function for each queued email
+4. **Status Updates**: Updates queue entries based on delivery results
+5. **Retry Scheduling**: Schedules failed emails for retry with exponential backoff
+6. **Cleanup**: Removes successfully processed emails from queue
+
+**Request Format**:
+```typescript
+// No request body required - processes all pending emails
+POST /functions/v1/process-email-queue
+Authorization: Bearer <token>
+```
+
+**Response Format**:
+```typescript
+{
+  success: boolean;
+  processed_count: number;
+  failed_count: number;
+  message: string;
+  details?: any;
+}
+```
+
+**Usage**: Called manually via admin interface or scheduled for automatic processing
+
+**Configuration**: 
+```toml
+[functions.process-email-queue]
+# verify_jwt = true (default) - requires authentication
+```
+
 ### send-email
 
 **Purpose**: Unified email handler for ALL email types including transactional and authentication emails
@@ -335,6 +383,21 @@ ORDER BY sent_at DESC;
 4. **Consistency**: Single email service (Resend) for all communications
 5. **Testing**: Comprehensive testing capabilities with custom recipients
 
-**Result**: 100% reliable email delivery with complete control over all email communications through a unified, well-monitored system.
+**Queue-Based Architecture Advantages**:
+1. **Performance**: Non-blocking email processing doesn't slow down application
+2. **Resilience**: System continues functioning if email service is temporarily unavailable
+3. **Retry Logic**: Automatic retry with exponential backoff for failed emails
+4. **Scalability**: Efficient batch processing handles high email volumes
+5. **Monitoring**: Complete queue visibility and processing metrics
+6. **Admin Control**: Manual queue processing and retry management
 
-This architecture ensures that all emails - from work order notifications to password resets - are delivered reliably through Resend's robust infrastructure while providing comprehensive monitoring and testing capabilities.
+**Queue Processing Features**:
+- **Exponential Backoff**: 5 minutes → 30 minutes → 2 hours retry intervals
+- **Maximum Attempts**: 3 total retry attempts before permanent failure
+- **Batch Processing**: Efficient handling of multiple emails simultaneously
+- **Status Tracking**: Real-time queue monitoring and processing metrics
+- **Manual Control**: Admin interface for queue management and troubleshooting
+
+**Result**: 100% reliable email delivery with complete control over all email communications through a unified, queue-based, well-monitored system that provides both reliability and performance.
+
+This architecture ensures that all emails - from work order notifications to password resets - are delivered reliably through Resend's robust infrastructure while providing comprehensive monitoring, automatic retry capabilities, and optimal performance through asynchronous processing.
