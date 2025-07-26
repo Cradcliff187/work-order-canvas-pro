@@ -53,7 +53,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   }, []);
 
   // Browser notification handler
-  const handleBrowserNotification = useCallback(async (message: any) => {
+  const handleBrowserNotification = useCallback(async (message: WorkOrderMessage) => {
     if (!profile?.id || message.sender_id === profile.id) return;
     
     try {
