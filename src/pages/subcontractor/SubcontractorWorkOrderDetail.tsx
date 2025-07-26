@@ -8,13 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, Users, Paperclip, Download, ExternalLink, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, Users, Paperclip, Download, ExternalLink, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { useAuth } from '@/contexts/AuthContext';
+import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
 
 export default function SubcontractorWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -208,6 +209,20 @@ export default function SubcontractorWorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Messages Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Messages
+              </CardTitle>
+              <CardDescription>Communicate with the team about this work order</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WorkOrderMessages workOrderId={id!} />
+            </CardContent>
+          </Card>
 
           {/* Additional Notes */}
           <Card>

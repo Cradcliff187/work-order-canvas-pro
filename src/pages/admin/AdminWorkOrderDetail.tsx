@@ -21,7 +21,8 @@ import {
   Image as ImageIcon,
   Download,
   ExternalLink,
-  Eye
+  Eye,
+  MessageCircle
 } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
@@ -29,6 +30,7 @@ import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBre
 import { StatusActionButtons } from '@/components/admin/work-orders/StatusActionButtons';
 import { StatusProgressIndicator } from '@/components/admin/work-orders/StatusProgressIndicator';
 import { WorkOrderAuditTrail } from '@/components/admin/work-orders/WorkOrderAuditTrail';
+import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
@@ -488,10 +490,14 @@ export default function AdminWorkOrderDetail() {
 
       {/* Tabs for detailed sections */}
       <Tabs defaultValue="details" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          <TabsTrigger value="messages">
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Messages
+          </TabsTrigger>
           <TabsTrigger value="audit">Audit Trail</TabsTrigger>
         </TabsList>
 
@@ -671,6 +677,10 @@ export default function AdminWorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="messages">
+          <WorkOrderMessages workOrderId={workOrder.id} />
         </TabsContent>
 
         <TabsContent value="audit">

@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, Paperclip, Download, Eye } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, Paperclip, Download, Eye, MessageCircle } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { formatDate } from '@/lib/utils/date';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
 
 
 export default function WorkOrderDetail() {
@@ -196,6 +197,19 @@ export default function WorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Messages Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Messages
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WorkOrderMessages workOrderId={id!} />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}
