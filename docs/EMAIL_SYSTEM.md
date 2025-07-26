@@ -1,9 +1,9 @@
 
-# WorkOrderPro Email System Documentation
+# WorkOrderPortal Email System Documentation
 
 ## Overview
 
-WorkOrderPro implements a unified email system using Resend API that handles ALL email communications, including both transactional notifications and authentication emails. This system bypasses Supabase's unreliable SMTP service to provide 100% reliable email delivery with complete control and monitoring.
+WorkOrderPortal implements a unified email system using Resend API that handles ALL email communications, including both transactional notifications and authentication emails. This system bypasses Supabase's unreliable SMTP service to provide 100% reliable email delivery with complete control and monitoring.
 
 ## Architecture
 

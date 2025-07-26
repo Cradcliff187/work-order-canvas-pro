@@ -1,12 +1,12 @@
-# WorkOrderPro Row Level Security (RLS) Policies
+# WorkOrderPortal Row Level Security (RLS) Policies
 
 ## Overview
 
-WorkOrderPro implements comprehensive Row Level Security (RLS) with company-level access control to ensure proper data isolation between different user types and organizations. The system uses helper functions and a layered policy approach to avoid infinite recursion while providing efficient multi-tenant access control.
+WorkOrderPortal implements comprehensive Row Level Security (RLS) with company-level access control to ensure proper data isolation between different user types and organizations. The system uses helper functions and a layered policy approach to avoid infinite recursion while providing efficient multi-tenant access control.
 
 ## Company Access Model
 
-WorkOrderPro supports both individual access (backward compatibility) and company-level access (new enhanced model) simultaneously:
+WorkOrderPortal supports both individual access (backward compatibility) and company-level access (new enhanced model) simultaneously:
 
 ### Access Patterns
 

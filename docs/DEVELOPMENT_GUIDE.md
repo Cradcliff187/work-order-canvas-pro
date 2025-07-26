@@ -19,7 +19,7 @@ This comprehensive guide provides everything developers need for productive Work
 1. **Clone and Install**
    ```bash
    git clone <YOUR_GIT_URL>
-   cd workorderpro
+   cd workorderportal
    npm install
    npm run dev
    ```
