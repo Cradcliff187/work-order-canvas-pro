@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Camera, RotateCcw, Check, X, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useCamera } from '@/hooks/useCamera';
 import { isMobileBrowser, getCameraAttribute } from '@/utils/mobileDetection';
+import CameraPermissionHelper from './CameraPermissionHelper';
 
 interface CameraCaptureProps {
   onCapture: (file: File) => void;
@@ -22,14 +24,25 @@ export function CameraCapture({
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [fallbackMode, setFallbackMode] = useState(false);
+  const [showPermissionHelper, setShowPermissionHelper] = useState(false);
+  const [permissionError, setPermissionError] = useState<'denied' | 'unavailable' | 'not_supported'>();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { checkCameraPermission } = useCamera();
 
   const startCamera = useCallback(async () => {
     try {
+      const permissionState = await checkCameraPermission();
+      
+      if (!permissionState.granted) {
+        setPermissionError(permissionState.error);
+        setShowPermissionHelper(true);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode,
@@ -42,20 +55,19 @@ export function CameraCapture({
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsStreaming(true);
+        setShowPermissionHelper(false);
       }
-    } catch (error) {
-      // For mobile browsers, fall back to file input instead of showing error
-      if (isMobileBrowser()) {
-        setFallbackMode(true);
-      } else {
-        toast({
-          title: "Camera Error",
-          description: "Unable to access camera. Please check permissions.",
-          variant: "destructive"
-        });
-      }
+    } catch (error: any) {
+      console.error('Error accessing camera:', error);
+      
+      let errorType: 'denied' | 'unavailable' | 'not_supported' = 'not_supported';
+      if (error.name === 'NotAllowedError') errorType = 'denied';
+      else if (error.name === 'NotFoundError') errorType = 'unavailable';
+      
+      setPermissionError(errorType);
+      setShowPermissionHelper(true);
     }
-  }, [facingMode, toast]);
+  }, [facingMode, checkCameraPermission]);
 
   const handleFileInputChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -312,6 +324,21 @@ export function CameraCapture({
           </div>
         </div>
       </div>
+
+      <CameraPermissionHelper
+        isVisible={showPermissionHelper}
+        onClose={() => {
+          setShowPermissionHelper(false);
+          onClose();
+        }}
+        onRetry={startCamera}
+        permissionDeniedReason={permissionError}
+        showFallbackOption={true}
+        onUseFallback={() => {
+          setShowPermissionHelper(false);
+          setFallbackMode(true);
+        }}
+      />
     </div>
   );
 }

@@ -20,6 +20,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { cn } from "@/lib/utils";
 import type { UploadProgress } from "@/hooks/useFileUpload";
 import { getCameraAttribute } from "@/utils/mobileDetection";
+import CameraPermissionHelper from "./CameraPermissionHelper";
 
 interface MobileMediaUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -57,13 +58,15 @@ export function MobileMediaUpload({
 }: MobileMediaUploadProps) {
   const [previews, setPreviews] = useState<FilePreview[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showPermissionHelper, setShowPermissionHelper] = useState(false);
+  const [permissionError, setPermissionError] = useState<'denied' | 'unavailable' | 'not_supported'>();
   const [isCapturing, setIsCapturing] = useState(false);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   
-  const { isSupported: cameraSupported, requestCameraPermission } = useCamera();
+  const { isSupported: cameraSupported, checkCameraPermission } = useCamera();
 
   const getFileType = (file: File): 'image' | 'document' => {
     return file.type.startsWith('image/') ? 'image' : 'document';
@@ -149,8 +152,11 @@ export function MobileMediaUpload({
     setIsCapturing(true);
     
     try {
-      const hasPermission = await requestCameraPermission();
-      if (!hasPermission) {
+      const permissionState = await checkCameraPermission();
+      
+      if (!permissionState.granted) {
+        setPermissionError(permissionState.error);
+        setShowPermissionHelper(true);
         setIsCapturing(false);
         return;
       }
@@ -171,7 +177,7 @@ export function MobileMediaUpload({
     } finally {
       setIsCapturing(false);
     }
-  }, [cameraSupported, requestCameraPermission]);
+  }, [cameraSupported, checkCameraPermission]);
 
   const handleGallerySelect = useCallback(() => {
     galleryInputRef.current?.click();
@@ -498,6 +504,21 @@ export function MobileMediaUpload({
           </CardContent>
         </Card>
       )}
+
+      <CameraPermissionHelper
+        isVisible={showPermissionHelper}
+        onClose={() => setShowPermissionHelper(false)}
+        onRetry={async () => {
+          setShowPermissionHelper(false);
+          handleCameraCapture();
+        }}
+        permissionDeniedReason={permissionError}
+        showFallbackOption={true}
+        onUseFallback={() => {
+          setShowPermissionHelper(false);
+          galleryInputRef.current?.click();
+        }}
+      />
     </div>
   );
 }

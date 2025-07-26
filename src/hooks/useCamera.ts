@@ -9,6 +9,13 @@ export interface CameraCapabilities {
   supportsImageCapture: boolean;
 }
 
+interface CameraPermissionState {
+  granted: boolean;
+  denied: boolean;
+  prompt: boolean;
+  error?: 'denied' | 'unavailable' | 'not_supported';
+}
+
 export function useCamera() {
   const [isSupported, setIsSupported] = useState<boolean | null>(null);
   const [capabilities, setCapabilities] = useState<CameraCapabilities | null>(null);
@@ -44,44 +51,71 @@ export function useCamera() {
     }
   }, []);
 
-  const requestCameraPermission = useCallback(async () => {
-    // First check if getUserMedia is available
-    if (navigator.mediaDevices?.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop());
-        return true;
-      } catch (error) {
-        console.error('Camera permission denied:', error);
-        
-        // If getUserMedia fails on mobile, fallback to native file input
-        if (isMobileBrowser()) {
-          // On mobile, file input with capture is a valid alternative
-          return true;
+  const checkCameraPermission = useCallback(async (): Promise<CameraPermissionState> => {
+    try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return { granted: false, denied: true, prompt: false, error: 'not_supported' };
+      }
+
+      // Check permission API if available
+      if ('permissions' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          
+          if (permission.state === 'granted') {
+            return { granted: true, denied: false, prompt: false };
+          } else if (permission.state === 'denied') {
+            return { granted: false, denied: true, prompt: false, error: 'denied' };
+          } else {
+            return { granted: false, denied: false, prompt: true };
+          }
+        } catch (error) {
+          // Permissions API not fully supported, fall through to getUserMedia test
         }
-        
-        // On desktop, show permission error
-        toast({
-          title: "Camera Permission Required",
-          description: "Please allow camera access to take photos for work reports.",
-          variant: "destructive"
+      }
+
+      // For mobile or browsers without permission API, try getUserMedia
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
         });
-        return false;
+        stream.getTracks().forEach(track => track.stop());
+        return { granted: true, denied: false, prompt: false };
+      } catch (error: any) {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          return { granted: false, denied: true, prompt: false, error: 'denied' };
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          return { granted: false, denied: true, prompt: false, error: 'unavailable' };
+        } else {
+          return { granted: false, denied: true, prompt: false, error: 'not_supported' };
+        }
       }
-    } else {
-      // No getUserMedia support - use file input fallback on mobile
-      if (isMobileBrowser()) {
-        return true; // File input with capture works on mobile
-      }
-      
-      toast({
-        title: "Camera Not Supported",
-        description: "Your browser doesn't support camera access.",
-        variant: "destructive"
-      });
+    } catch (error) {
+      return { granted: false, denied: true, prompt: false, error: 'not_supported' };
+    }
+  }, []);
+
+  const requestCameraPermission = useCallback(async () => {
+    const permissionState = await checkCameraPermission();
+    
+    if (permissionState.granted) {
+      return true;
+    }
+    
+    if (permissionState.denied && permissionState.error) {
       return false;
     }
-  }, [toast]);
+
+    // If in prompt state, try to trigger the permission dialog
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }, [checkCameraPermission]);
 
   const captureImageFromCamera = useCallback(async (
     facingMode: 'user' | 'environment' = 'environment',
@@ -198,6 +232,7 @@ export function useCamera() {
     isSupported,
     capabilities,
     checkCameraSupport,
+    checkCameraPermission,
     requestCameraPermission,
     captureImageFromCamera,
     compressImage

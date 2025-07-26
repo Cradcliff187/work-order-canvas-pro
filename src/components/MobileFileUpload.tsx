@@ -20,6 +20,7 @@ import { useCamera } from '@/hooks/useCamera';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 import { getCameraAttribute, isMobileBrowser } from '@/utils/mobileDetection';
+import CameraPermissionHelper from './CameraPermissionHelper';
 
 interface MobileFileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -55,13 +56,15 @@ export function MobileFileUpload({
 }: MobileFileUploadProps) {
   const [previews, setPreviews] = useState<FilePreview[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showPermissionHelper, setShowPermissionHelper] = useState(false);
+  const [permissionError, setPermissionError] = useState<'denied' | 'unavailable' | 'not_supported'>();
   const [isCapturing, setIsCapturing] = useState(false);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   
-  const camera = useCamera();
+  const { checkCameraPermission } = useCamera();
   const isMobile = useIsMobile();
 
   // Helper functions
@@ -142,22 +145,24 @@ export function MobileFileUpload({
     }
   }, [validateFiles, previews, onFilesSelected]);
 
-  // Camera capture with dynamic capture attribute
+  // Camera capture with permission check
   const handleCameraCapture = async () => {
-    try {
-      await camera.requestCameraPermission();
-      if (cameraInputRef.current) {
-        // Set capture attribute dynamically for mobile devices
-        const captureValue = getCameraAttribute();
-        if (captureValue) {
-          cameraInputRef.current.setAttribute('capture', captureValue);
-        } else {
-          cameraInputRef.current.removeAttribute('capture');
-        }
-        cameraInputRef.current.click();
+    const permissionState = await checkCameraPermission();
+    
+    if (!permissionState.granted) {
+      setPermissionError(permissionState.error);
+      setShowPermissionHelper(true);
+      return;
+    }
+    
+    if (cameraInputRef.current) {
+      const captureValue = getCameraAttribute();
+      if (captureValue) {
+        cameraInputRef.current.setAttribute('capture', captureValue);
+      } else {
+        cameraInputRef.current.removeAttribute('capture');
       }
-    } catch (error) {
-      console.error('Camera permission denied:', error);
+      cameraInputRef.current.click();
     }
   };
 
@@ -493,6 +498,21 @@ export function MobileFileUpload({
           </CardContent>
         </Card>
       )}
+
+      <CameraPermissionHelper
+        isVisible={showPermissionHelper}
+        onClose={() => setShowPermissionHelper(false)}
+        onRetry={async () => {
+          setShowPermissionHelper(false);
+          handleCameraCapture();
+        }}
+        permissionDeniedReason={permissionError}
+        showFallbackOption={true}
+        onUseFallback={() => {
+          setShowPermissionHelper(false);
+          galleryInputRef.current?.click();
+        }}
+      />
     </div>
   );
 }
