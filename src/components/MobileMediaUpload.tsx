@@ -20,6 +20,15 @@ import { useCamera } from "@/hooks/useCamera";
 import { cn } from "@/lib/utils";
 import type { UploadProgress } from "@/hooks/useFileUpload";
 
+// Mobile device detection utilities
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+};
+
+const isAndroid = () => {
+  return /Android/.test(navigator.userAgent);
+};
+
 interface MobileMediaUploadProps {
   onFilesSelected: (files: File[]) => void;
   maxFiles?: number;
@@ -154,6 +163,17 @@ export function MobileMediaUpload({
         return;
       }
       
+      // Dynamically set capture attribute based on platform
+      if (cameraInputRef.current) {
+        if (isIOS()) {
+          cameraInputRef.current.setAttribute('capture', 'camera');
+        } else if (isAndroid()) {
+          cameraInputRef.current.setAttribute('capture', 'environment');
+        } else {
+          cameraInputRef.current.removeAttribute('capture');
+        }
+      }
+      
       cameraInputRef.current?.click();
     } catch (error) {
       console.error('Camera capture failed:', error);
@@ -236,7 +256,6 @@ export function MobileMediaUpload({
         ref={cameraInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={handleFileInputChange}
         className="sr-only"
         disabled={disabled}
