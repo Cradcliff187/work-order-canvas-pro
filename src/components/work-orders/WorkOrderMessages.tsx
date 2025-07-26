@@ -277,27 +277,34 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
     return (
       <div className="mt-3 flex flex-wrap gap-2">
-        {attachments.map((attachment) => (
-          <div key={attachment.id} className="relative group">
-            {attachment.file_type === 'photo' ? (
-              <img
-                src={attachment.file_url}
-                alt={attachment.file_name}
-                className="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => window.open(attachment.file_url, '_blank')}
-              />
-            ) : (
-              <div className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors">
-                <Image className="h-8 w-8 text-muted-foreground" />
-              </div>
-            )}
-            {attachments.length > 1 && (
-              <Badge className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5">
-                {attachments.length}
-              </Badge>
-            )}
-          </div>
-        ))}
+        {attachments.map((attachment) => {
+          const publicUrl = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url).data.publicUrl;
+          
+          return (
+            <div key={attachment.id} className="relative group">
+              {attachment.file_type === 'photo' ? (
+                <img
+                  src={publicUrl}
+                  alt={attachment.file_name}
+                  className="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => window.open(publicUrl, '_blank')}
+                />
+              ) : (
+                <div 
+                  className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors"
+                  onClick={() => window.open(publicUrl, '_blank')}
+                >
+                  <Image className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+              {attachments.length > 1 && (
+                <Badge className="absolute -top-1 -right-1 text-xs px-1.5 py-0.5">
+                  {attachments.length}
+                </Badge>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   };
