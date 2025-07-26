@@ -28,14 +28,14 @@ serve(async (req) => {
         template_name: 'auth_confirmation',
         custom_data: {
           user_name: 'Chris Test User',
-          confirmation_link: 'https://workorderpro.test/confirm?token=test123'
+          confirmation_link: 'https://workorderportal.test/confirm?token=test123'
         }
       },
       {
         template_name: 'password_reset',
         custom_data: {
           user_name: 'Chris Test User',
-          reset_link: 'https://workorderpro.test/reset?token=test456'
+          reset_link: 'https://workorderportal.test/reset?token=test456'
         }
       },
       {

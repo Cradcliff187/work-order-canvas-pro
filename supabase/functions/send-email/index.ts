@@ -19,7 +19,7 @@ const corsHeaders = {
 
 // Branding variables for all emails
 const BRANDING_VARIABLES = {
-  company_name: 'WorkOrderPro',
+  company_name: 'WorkOrderPortal',
   support_email: 'support@workorderportal.com',
   company_address: 'Austin, TX',
   company_logo_url: 'https://workorderportal.com/logo.png',

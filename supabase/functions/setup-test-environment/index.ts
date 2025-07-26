@@ -12,14 +12,14 @@ interface TestUser {
 
 const testUsers: TestUser[] = [
   {
-    email: 'test-admin@workorderpro.test',
+    email: 'test-admin@workorderportal.test',
     password: 'TestPass123!',
     firstName: 'Test',
     lastName: 'Admin',
     userType: 'admin'
   },
   {
-    email: 'test-partner@workorderpro.test', 
+    email: 'test-partner@workorderportal.test', 
     password: 'TestPass123!',
     firstName: 'Test',
     lastName: 'Partner',
@@ -27,7 +27,7 @@ const testUsers: TestUser[] = [
     companyName: 'Test Property Management'
   },
   {
-    email: 'test-subcontractor@workorderpro.test',
+    email: 'test-subcontractor@workorderportal.test',
     password: 'TestPass123!',
     firstName: 'Test', 
     lastName: 'Subcontractor',
@@ -35,7 +35,7 @@ const testUsers: TestUser[] = [
     companyName: 'Test Plumbing Services'
   },
   {
-    email: 'test-employee@workorderpro.test',
+    email: 'test-employee@workorderportal.test',
     password: 'TestPass123!',
     firstName: 'Test',
     lastName: 'Employee', 
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       },
       {
         name: 'Internal Test Organization',
-        contact_email: 'internal@workorderpro.test',
+        contact_email: 'internal@workorderportal.test',
         contact_phone: '555-0300', 
         organization_type: 'internal',
         initials: 'ITO',

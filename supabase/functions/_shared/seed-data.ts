@@ -1,12 +1,12 @@
 /**
- * Comprehensive Seed Data Module for WorkOrderPro
+ * Comprehensive Seed Data Module for WorkOrderPortal
  * 
  * This module contains all test data used to populate the database with realistic scenarios
  * for development, testing, and demonstration purposes. The data is organized by user journey
  * and business workflow to ensure comprehensive test coverage.
  * 
  * @fileoverview Edge Function seed data - extracted from browser-based seeding
- * @author WorkOrderPro Team
+ * @author WorkOrderPortal Team
  * @since 2024-07-13
  */
 
@@ -67,13 +67,13 @@ export const getRandomElement = <T>(array: T[]): T => {
 export const organizations: Omit<Organization, 'id' | 'created_at' | 'updated_at' | 'next_sequence_number'>[] = [
   {
     /**
-     * Internal Organization - WorkOrderPro Internal
+     * Internal Organization - WorkOrderPortal Internal
      * 
      * Purpose: Houses admin users and employees who manage the platform
      * Test Scenarios: Admin oversight, employee assignments, internal reporting
      */
-    name: 'WorkOrderPro Internal',
-    contact_email: 'admin@workorderpro.com',
+    name: 'WorkOrderPortal Internal',
+    contact_email: 'admin@workorderportal.com',
     contact_phone: '(555) 000-0000',
     address: '100 Main Street, Suite 200, Business City, BC 12345',
     organization_type: 'internal',
@@ -229,13 +229,13 @@ export const users: Omit<Profile, 'id' | 'user_id' | 'created_at' | 'updated_at'
      * 
      * Purpose: System administration, user management, work order oversight
      * Test Scenarios: Admin dashboard, system configuration, user creation
-     * Login: admin@workorderpro.com / Test123!
+     * Login: admin@workorderportal.com / Test123!
      */
-    email: 'admin@workorderpro.com',
+    email: 'admin@workorderportal.com',
     first_name: 'Admin',
     last_name: 'User',
     user_type: 'admin',
-    company_name: 'WorkOrderPro Internal',
+    company_name: 'WorkOrderPortal Internal',
     is_employee: true,
     is_active: true
   },
@@ -245,13 +245,13 @@ export const users: Omit<Profile, 'id' | 'user_id' | 'created_at' | 'updated_at'
      * 
      * Purpose: Employee management, time tracking oversight, payroll administration
      * Test Scenarios: Employee reports, time tracking, internal operations
-     * Login: employee@workorderpro.com / Test123!
+     * Login: employee@workorderportal.com / Test123!
      */
-    email: 'employee@workorderpro.com',
+    email: 'employee@workorderportal.com',
     first_name: 'Emily',
     last_name: 'Employee',
     user_type: 'employee',
-    company_name: 'WorkOrderPro Internal',
+    company_name: 'WorkOrderPortal Internal',
     is_employee: true,
     is_active: true
   },
@@ -264,13 +264,13 @@ export const users: Omit<Profile, 'id' | 'user_id' | 'created_at' | 'updated_at'
      * Purpose: Lead technician, complex assignments, mentoring
      * Test Scenarios: High-value work orders, lead assignments, overtime tracking
      * Rates: $75/hr cost, $150/hr billable (2x markup)
-     * Login: senior@workorderpro.com / Test123!
+     * Login: senior@workorderportal.com / Test123!
      */
-    email: 'senior@workorderpro.com',
+    email: 'senior@workorderportal.com',
     first_name: 'David',
     last_name: 'Senior',
     user_type: 'employee',
-    company_name: 'WorkOrderPro Internal',
+    company_name: 'WorkOrderPortal Internal',
     is_employee: true,
     hourly_cost_rate: 75,
     hourly_billable_rate: 150,
@@ -284,13 +284,13 @@ export const users: Omit<Profile, 'id' | 'user_id' | 'created_at' | 'updated_at'
      * Purpose: Regular technician, standard assignments, skill development
      * Test Scenarios: Standard work orders, skill-based assignments, training scenarios
      * Rates: $50/hr cost, $100/hr billable (2x markup)
-     * Login: midlevel@workorderpro.com / Test123!
+     * Login: midlevel@workorderportal.com / Test123!
      */
-    email: 'midlevel@workorderpro.com',
+    email: 'midlevel@workorderportal.com',
     first_name: 'Jennifer',
     last_name: 'Mid',
     user_type: 'employee',
-    company_name: 'WorkOrderPro Internal',
+    company_name: 'WorkOrderPortal Internal',
     is_employee: true,
     hourly_cost_rate: 50,
     hourly_billable_rate: 100,
@@ -304,13 +304,13 @@ export const users: Omit<Profile, 'id' | 'user_id' | 'created_at' | 'updated_at'
      * Purpose: Apprentice, support role, learning assignments
      * Test Scenarios: Support assignments, training work orders, skill progression
      * Rates: $35/hr cost, $70/hr billable (2x markup)
-     * Login: junior@workorderpro.com / Test123!
+     * Login: junior@workorderportal.com / Test123!
      */
-    email: 'junior@workorderpro.com',
+    email: 'junior@workorderportal.com',
     first_name: 'Alex',
     last_name: 'Junior',
     user_type: 'employee',
-    company_name: 'WorkOrderPro Internal',
+    company_name: 'WorkOrderPortal Internal',
     is_employee: true,
     hourly_cost_rate: 35,
     hourly_billable_rate: 70,

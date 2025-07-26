@@ -79,7 +79,7 @@ const TEST_USERS: TestUser[] = [
     first_name: 'Alex',
     last_name: 'Thompson',
     user_type: 'employee',
-    company_name: 'WorkOrderPro'
+    company_name: 'WorkOrderPortal'
   },
   {
     email: 'supervisor@workorderpro.com',
@@ -87,7 +87,7 @@ const TEST_USERS: TestUser[] = [
     first_name: 'Jordan',
     last_name: 'Lee',
     user_type: 'employee',
-    company_name: 'WorkOrderPro'
+    company_name: 'WorkOrderPortal'
   }
 ];
 
