@@ -1,16 +1,18 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useToast, toast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { WorkOrderMessage } from './useWorkOrderMessages';
 
 export function useMessageSubscription(
   workOrderId: string,
-  onMessageReceived?: (message: WorkOrderMessage) => void
+  onMessageReceived?: (message: WorkOrderMessage) => void,
+  toastFn?: typeof toast
 ) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const { toast: defaultToast } = useToast();
+  const toast = toastFn || defaultToast;
   const { profile } = useUserProfile();
 
   useEffect(() => {
@@ -45,13 +47,13 @@ export function useMessageSubscription(
                 .single();
 
               const workOrderNumber = workOrder?.work_order_number || workOrderId;
-              const messagePreview = payload.new.message.length > 50 
-                ? `${payload.new.message.substring(0, 50)}...`
+              const messagePreview = payload.new.message.length > 80 
+                ? `${payload.new.message.substring(0, 80)}...`
                 : payload.new.message;
 
               toast({
-                title: `New message in Work Order ${workOrderNumber}`,
-                description: messagePreview,
+                title: "New message",
+                description: `Work Order ${workOrderNumber}: ${messagePreview}`,
               });
             } catch (error) {
               console.error('Failed to fetch work order details for notification:', error);

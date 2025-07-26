@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
 import { useMessageSubscription } from '@/hooks/useMessageSubscription';
+import { useToast } from '@/hooks/use-toast';
 
 interface WorkOrderMessagesProps {
   workOrderId: string;
@@ -21,6 +22,7 @@ interface WorkOrderMessagesProps {
 
 export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderId }) => {
   const { profile, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
+  const { toast } = useToast();
   
   // Default tab based on user type
   const defaultTab = isPartner() ? 'public' : isSubcontractor() ? 'internal' : 'public';
@@ -80,7 +82,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   }, [profile?.id, workOrderId]);
 
   // Set up real-time subscription with browser notification callback
-  useMessageSubscription(workOrderId, handleBrowserNotification);
+  useMessageSubscription(workOrderId, handleBrowserNotification, toast);
 
   // Handle pagination data updates
   useEffect(() => {
