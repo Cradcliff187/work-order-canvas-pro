@@ -1482,6 +1482,17 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string
       }
+      get_unread_message_counts: {
+        Args: {
+          p_work_order_ids: string[]
+          p_user_id: string
+          p_user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Returns: {
+          work_order_id: string
+          unread_count: number
+        }[]
+      }
       get_user_organization_ids_direct: {
         Args: { p_user_id: string }
         Returns: {

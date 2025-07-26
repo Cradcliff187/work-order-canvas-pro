@@ -8,56 +8,25 @@ export function useUnreadMessageCounts(workOrderIds: string[]) {
   return useQuery({
     queryKey: ['unread-message-counts', workOrderIds, profile?.id],
     queryFn: async () => {
-      if (!workOrderIds.length || !profile?.id) {
+      if (!workOrderIds.length || !profile?.id || !profile?.user_type) {
         return {};
       }
 
-      // Build base query for messages without read receipts
-      let query = supabase
-        .from('work_order_messages')
-        .select(`
-          work_order_id,
-          id
-        `)
-        .in('work_order_id', workOrderIds);
+      // Use optimized SQL function for single-query performance
+      const { data, error } = await supabase.rpc('get_unread_message_counts', {
+        p_work_order_ids: workOrderIds,
+        p_user_id: profile.id,
+        p_user_type: profile.user_type
+      });
 
-      // Apply role-based filtering for is_internal messages
-      if (profile.user_type === 'partner') {
-        // Partners only see public messages
-        query = query.eq('is_internal', false);
-      } else if (profile.user_type === 'subcontractor') {
-        // Subcontractors only see internal messages
-        query = query.eq('is_internal', true);
-      }
-      // Admin/Employee see all messages (no filter needed)
+      if (error) throw error;
 
-      const { data: messages, error: messagesError } = await query;
-
-      if (messagesError) throw messagesError;
-      if (!messages?.length) return {};
-
-      // Get read receipts for current user for these messages
-      const messageIds = messages.map(m => m.id);
-      const { data: readReceipts, error: receiptsError } = await supabase
-        .from('message_read_receipts')
-        .select('message_id')
-        .eq('user_id', profile.id)
-        .in('message_id', messageIds);
-
-      if (receiptsError) throw receiptsError;
-
-      // Create set of read message IDs for fast lookup
-      const readMessageIds = new Set(readReceipts?.map(r => r.message_id) || []);
-
-      // Count unread messages per work order
+      // Transform result to Record<string, number> format for backward compatibility
       const unreadCounts: Record<string, number> = {};
       
-      for (const message of messages) {
-        if (!readMessageIds.has(message.id)) {
-          const workOrderId = message.work_order_id;
-          unreadCounts[workOrderId] = (unreadCounts[workOrderId] || 0) + 1;
-        }
-      }
+      data?.forEach((row: { work_order_id: string; unread_count: number }) => {
+        unreadCounts[row.work_order_id] = Number(row.unread_count);
+      });
 
       return unreadCounts;
     },
