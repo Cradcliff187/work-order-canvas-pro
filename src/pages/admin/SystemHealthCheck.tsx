@@ -12,6 +12,7 @@ import { EmailFailedManager } from '@/components/admin/EmailFailedManager';
 import { OrganizationHealthTab } from '@/components/admin/system-health/OrganizationHealthTab';
 import { DataIntegrityTab } from '@/components/admin/system-health/DataIntegrityTab';
 import { DatabasePerformanceTab } from '@/components/admin/system-health/DatabasePerformanceTab';
+import { MessagingSystemTab } from '@/components/admin/system-health/MessagingSystemTab';
 import { ActiveIssuesTab } from '@/components/admin/system-health/ActiveIssuesTab';
 import { useSystemMetrics } from '@/hooks/useSystemMetrics';
 import { StandardDashboardStats } from '@/components/dashboard/StandardDashboardStats';
@@ -375,6 +376,7 @@ const SystemHealthCheck = () => {
           <TabsTrigger value="organization">Organization & Users</TabsTrigger>
           <TabsTrigger value="data-integrity">Data Integrity</TabsTrigger>
           <TabsTrigger value="database-performance">Database Performance</TabsTrigger>
+          <TabsTrigger value="messaging-system">Messaging System</TabsTrigger>
           <TabsTrigger value="active-issues">Active Issues</TabsTrigger>
         </TabsList>
 
@@ -610,6 +612,10 @@ const SystemHealthCheck = () => {
 
         <TabsContent value="database-performance">
           <DatabasePerformanceTab />
+        </TabsContent>
+
+        <TabsContent value="messaging-system">
+          <MessagingSystemTab />
         </TabsContent>
 
         <TabsContent value="active-issues">
