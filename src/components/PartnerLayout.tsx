@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useBranding } from '@/hooks/useBranding';
 import { SingleOrganizationGuard } from '@/components/SingleOrganizationGuard';
 import { StandardHeader } from '@/components/layout/StandardHeader';
+import { MobileHeader } from '@/components/layout/MobileHeader';
 import {
   Sidebar,
   SidebarContent,
@@ -192,7 +193,7 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
         <PartnerSidebar />
         
         <div className="flex-1 flex flex-col">
-          <StandardHeader />
+          {isMobile ? <MobileHeader /> : <StandardHeader />}
 
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
             <SingleOrganizationGuard userType="partner">
