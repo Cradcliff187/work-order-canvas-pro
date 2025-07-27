@@ -59,6 +59,13 @@
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+    /* Professional gradients with mobile optimizations */
+    --gradient-header-desktop: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.05));
+    --gradient-card-desktop: linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted) / 0.3));
+    --gradient-button-hover: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-mobile-header: hsl(var(--primary));
+    --gradient-mobile-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.5));
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -163,6 +170,31 @@
   @media (max-width: 767px) {
     .card-hover {
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  /* Responsive gradient utilities */
+  @media (min-width: 768px) {
+    .gradient-header-responsive { 
+      background: var(--gradient-header-desktop); 
+    }
+    .gradient-card-responsive { 
+      background: var(--gradient-card-desktop); 
+    }
+    .gradient-button-hover {
+      background: var(--gradient-button-hover);
+    }
+  }
+  
+  @media (max-width: 767px) {
+    .gradient-header-responsive { 
+      background: var(--gradient-mobile-header); 
+    }
+    .gradient-card-responsive { 
+      background: hsl(var(--card)); 
+    }
+    .gradient-button-hover {
+      background: hsl(var(--primary));
     }
   }
 }
