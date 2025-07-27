@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   DropdownMenu, 
@@ -40,9 +39,7 @@ interface ConfirmationState {
 export function EmailQueueStatus() {
   const [confirmationState, setConfirmationState] = useState<ConfirmationState>({ action: null, count: 0 });
   const [isCountingEmails, setIsCountingEmails] = useState(false);
-  const [isAutoProcessEnabled, setIsAutoProcessEnabled] = useState(false);
   const operationInProgress = useRef(false);
-  const autoProcessInterval = useRef<NodeJS.Timeout | null>(null);
   
   const {
     stats,
@@ -84,55 +81,6 @@ export function EmailQueueStatus() {
     return { variant: "outline" as const, text: "Idle", pulse: false };
   };
 
-  // Auto-process logic
-  const startAutoProcess = useCallback(() => {
-    if (autoProcessInterval.current) return;
-    
-    autoProcessInterval.current = setInterval(() => {
-      // Only process if tab is visible, has pending emails, and no operation in progress
-      if (
-        document.visibilityState === 'visible' && 
-        stats?.pending_emails && 
-        stats.pending_emails > 0 && 
-        !isAnyOperationInProgress
-      ) {
-        processQueue();
-      }
-    }, 5 * 60 * 1000); // 5 minutes
-  }, [stats?.pending_emails, isAnyOperationInProgress, processQueue]);
-
-  const stopAutoProcess = useCallback(() => {
-    if (autoProcessInterval.current) {
-      clearInterval(autoProcessInterval.current);
-      autoProcessInterval.current = null;
-    }
-  }, []);
-
-  // Handle auto-process toggle
-  const handleAutoProcessToggle = useCallback((enabled: boolean) => {
-    setIsAutoProcessEnabled(enabled);
-    if (enabled) {
-      startAutoProcess();
-    } else {
-      stopAutoProcess();
-    }
-  }, [startAutoProcess, stopAutoProcess]);
-
-  // Auto-process effect
-  useEffect(() => {
-    if (isAutoProcessEnabled) {
-      startAutoProcess();
-    } else {
-      stopAutoProcess();
-    }
-    
-    return () => stopAutoProcess();
-  }, [isAutoProcessEnabled, startAutoProcess, stopAutoProcess]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => stopAutoProcess();
-  }, [stopAutoProcess]);
 
   const handleClearEmails = useCallback(async (retentionDays: number) => {
     if (isAnyOperationInProgress) return;
@@ -352,32 +300,12 @@ export function EmailQueueStatus() {
           </div>
         </div>
 
-        {/* Auto-Process Toggle */}
-        <div className="border-t pt-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="auto-process"
-                  checked={isAutoProcessEnabled}
-                  onCheckedChange={handleAutoProcessToggle}
-                  disabled={isAnyOperationInProgress}
-                />
-                <label htmlFor="auto-process" className="text-sm font-medium">
-                  Auto-process emails
-                </label>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Automatically process pending emails every 5 minutes when the tab is visible
-              </p>
-            </div>
+        {/* Automated Processing Info */}
+        <div className="border-t pt-4">
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Automated processing runs every 5 minutes via pg_cron</span>
           </div>
-          {isAutoProcessEnabled && (
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Auto-processing enabled</span>
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">
