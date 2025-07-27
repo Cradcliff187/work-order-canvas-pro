@@ -28,8 +28,12 @@ import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { exportWorkOrders } from '@/lib/utils/export';
+import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -43,6 +47,7 @@ interface WorkOrderFiltersState {
 export default function AdminWorkOrders() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -284,7 +289,8 @@ export default function AdminWorkOrders() {
             />
           ) : (
             <>
-              <div className="rounded-md border">
+              {/* Desktop Table */}
+              <div className="hidden lg:block rounded-md border">
                 <Table className="admin-table">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -331,6 +337,53 @@ export default function AdminWorkOrders() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="block lg:hidden space-y-3">
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const workOrder = row.original;
+                    const getStatusVariant = (status: string) => {
+                      switch (status) {
+                        case 'received': return 'secondary';
+                        case 'assigned': return 'default';
+                        case 'in_progress': return 'outline';
+                        case 'completed': return 'default';
+                        case 'cancelled': return 'destructive';
+                        default: return 'secondary';
+                      }
+                    };
+                    
+                    return (
+                      <MobileTableCard
+                        key={row.id}
+                        title={workOrder.work_order_number || 'N/A'}
+                        subtitle={`${workOrder.title || 'Untitled'} • ${workOrder.store_location || 'No location'}, ${workOrder.city || 'No city'}`}
+                        status={
+                          <Badge variant={getStatusVariant(workOrder.status)} className="h-5 text-[10px] px-1.5">
+                            {workOrder.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
+                          </Badge>
+                        }
+                        onClick={() => navigate(`/admin/work-orders/${workOrder.id}`)}
+                      >
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{workOrder.trades?.name || 'No trade'}</span>
+                          {workOrder.date_submitted && (
+                            <span>{format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}</span>
+                          )}
+                        </div>
+                      </MobileTableCard>
+                    );
+                  })
+                ) : (
+                  <EmptyTableState
+                    icon={ClipboardList}
+                    title="No work orders found"
+                    description="Try adjusting your filters or search criteria"
+                    colSpan={1}
+                  />
+                )}
               </div>
 
               {/* Pagination */}

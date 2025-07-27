@@ -26,7 +26,10 @@ import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { ViewUserModal } from '@/components/admin/users/ViewUserModal';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface UserFilters {
   search?: string;
@@ -38,6 +41,7 @@ interface UserFilters {
 export default function AdminUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [editUserModalOpen, setEditUserModalOpen] = useState(false);
   const [viewUserModalOpen, setViewUserModalOpen] = useState(false);
@@ -198,7 +202,8 @@ export default function AdminUsers() {
             />
           ) : (
             <>
-              <div className="rounded-md border">
+              {/* Desktop Table */}
+              <div className="hidden lg:block rounded-md border">
                 <Table className="admin-table">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -248,6 +253,54 @@ export default function AdminUsers() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="block lg:hidden space-y-3">
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const user = row.original;
+                    const getRoleVariant = (userType: string) => {
+                      switch (userType) {
+                        case 'admin': return 'destructive';
+                        case 'partner': return 'default';
+                        case 'subcontractor': return 'secondary';
+                        case 'employee': return 'outline';
+                        default: return 'secondary';
+                      }
+                    };
+                    
+                    return (
+                      <MobileTableCard
+                        key={row.id}
+                        title={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
+                        subtitle={user.email || 'No email'}
+                        status={
+                          <Badge variant={getRoleVariant(user.user_type)} className="h-5 text-[10px] px-1.5">
+                            {user.user_type?.toUpperCase() || 'UNKNOWN'}
+                          </Badge>
+                        }
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setViewUserModalOpen(true);
+                        }}
+                      >
+                        {(user as any).organizations && (user as any).organizations.length > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            {(user as any).organizations.map((org: any) => org.name).join(', ')}
+                          </div>
+                        )}
+                      </MobileTableCard>
+                    );
+                  })
+                ) : (
+                  <EmptyTableState
+                    icon={Users}
+                    title="No users found"
+                    description="Try adjusting your filters or search criteria"
+                    colSpan={1}
+                  />
+                )}
               </div>
 
               {/* Pagination */}
