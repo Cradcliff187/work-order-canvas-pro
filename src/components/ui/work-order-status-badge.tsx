@@ -30,7 +30,7 @@ export const statusConfig: Record<WorkOrderStatus, { label: string; className: s
   },
   in_progress: { 
     label: 'In Progress', 
-    className: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700' 
+    className: 'bg-primary/10 text-primary border-primary/20 dark:bg-primary/20 dark:text-primary-foreground dark:border-primary/30' 
   },
   completed: { 
     label: 'Completed', 

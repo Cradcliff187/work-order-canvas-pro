@@ -119,7 +119,7 @@ export const ExecutiveSummary = () => {
                 className="cursor-pointer hover:text-primary transition-colors"
                 onClick={handleTodayWorkOrdersClick}
               >
-                <div className="text-lg font-bold text-primary">
+                <div className="text-lg md:text-xl font-bold text-primary">
                   {todaySubmissions}
                 </div>
                 <div className="text-xs text-muted-foreground">New Work Orders Today</div>

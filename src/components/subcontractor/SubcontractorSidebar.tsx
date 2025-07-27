@@ -90,7 +90,7 @@ export function SubcontractorSidebar() {
                   <SidebarMenuButton 
                     asChild
                     isActive={isActive(item.url)}
-                    className={isActive(item.url) ? "bg-sidebar-accent" : ""}
+                    className={isActive(item.url) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
                   >
                     <Link to={item.url} className="flex items-center gap-2">
                       <item.icon className="h-4 w-4" />
