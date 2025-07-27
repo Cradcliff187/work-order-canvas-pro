@@ -16,8 +16,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBranding } from '@/hooks/useBranding';
 import { useApprovalQueue } from '@/hooks/useApprovalQueue';
+import { WorkOrderPortalLogo } from '@/components/ui/WorkOrderPortalLogo';
 import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
 import { UserProfileDropdown } from './UserProfileDropdown';
 
@@ -25,7 +25,6 @@ export function AdminSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { profile } = useAuth();
-  const { getProductDisplayName } = useBranding();
   const { totalCount } = useApprovalQueue();
   const collapsed = state === 'collapsed';
   
@@ -95,10 +94,12 @@ export function AdminSidebar() {
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-3 py-2">
-          {!collapsed && (
-            <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">{getProductDisplayName()}</h2>
-              <p className="text-xs text-sidebar-foreground/60">Admin Portal</p>
+          {collapsed ? (
+            <WorkOrderPortalLogo size="sm" iconOnly className="mx-auto" />
+          ) : (
+            <div className="flex flex-col gap-1">
+              <WorkOrderPortalLogo size="md" />
+              <p className="text-xs text-sidebar-foreground/60 ml-11">Admin Portal</p>
             </div>
           )}
         </div>

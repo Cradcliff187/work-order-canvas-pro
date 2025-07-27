@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvoiceDrafts } from '@/hooks/useInvoiceDrafts';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { WorkOrderPortalLogo } from '@/components/ui/WorkOrderPortalLogo';
 import {
   Sidebar,
   SidebarContent,
@@ -68,10 +69,12 @@ export function SubcontractorSidebar() {
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-3 py-2">
-          {!collapsed && (
-            <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">AKC Contracting</h2>
-              <p className="text-xs text-sidebar-foreground/60">Subcontractor Portal</p>
+          {collapsed ? (
+            <WorkOrderPortalLogo size="sm" iconOnly className="mx-auto" />
+          ) : (
+            <div className="flex flex-col gap-1">
+              <WorkOrderPortalLogo size="md" />
+              <p className="text-xs text-sidebar-foreground/60 ml-11">Subcontractor Portal</p>
             </div>
           )}
         </div>
