@@ -86,7 +86,7 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40 pb-safe-area-pb">
+    <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm bg-white/95 border-t border-gray-200/80 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] z-40 pb-safe-area-pb dark:bg-gray-900/95 dark:border-gray-700/80">
       <div className="flex items-center justify-around px-1 py-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -98,10 +98,10 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
               variant="ghost"
               size="sm"
               onClick={() => handleNavClick(item)}
-              className={`flex flex-col items-center gap-1 h-14 min-w-0 px-2 py-1 relative touch-manipulation ${
+              className={`flex flex-col items-center gap-1 min-h-[48px] min-w-0 px-2 py-1 relative touch-manipulation transition-all duration-200 ease-in-out active:scale-95 ${
                 active 
-                  ? 'text-primary bg-primary/10' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                  ? 'text-primary font-medium bg-primary/12' 
+                  : 'text-gray-400 font-normal hover:text-gray-600 active:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:active:bg-gray-800'
               }`}
             >
               <div className="relative flex items-center justify-center">
