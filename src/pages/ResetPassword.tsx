@@ -286,13 +286,39 @@ const ResetPassword = () => {
     const processUrlParameters = async () => {
       const { accessToken, refreshToken, type } = extractTokensFromUrl();
       
-      // Check if we have the required parameters
+      // Check for Lovable token (redirect to proper URL)
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const lovableToken = searchParams.get('__lovable_token') || hashParams.get('__lovable_token');
+      
+      if (lovableToken && !accessToken && !refreshToken) {
+        console.log('❌ FOUND LOVABLE TOKEN - This indicates URL configuration issue');
+        setResetError({
+          type: 'URL_CONFIG',
+          title: 'Password Reset Configuration Issue',
+          message: 'The password reset link is not configured properly. This typically means the Supabase URL settings need to be updated to point to the correct domain.',
+          canRetry: false,
+          showRequestNewLink: true,
+          showConfigHelp: true
+        });
+        return;
+      }
+      
+      // Check if we have the required Supabase parameters
       if (!accessToken || !refreshToken || (type !== 'recovery' && type !== 'signup')) {
-        console.log('Missing URL parameters for password reset');
+        console.log('❌ Missing URL parameters for password reset');
         const errorContext = !accessToken ? 'missing_access_token' :
                              !refreshToken ? 'missing_refresh_token' :
                              (type !== 'recovery' && type !== 'signup') ? 'invalid_type' : 'missing_params';
-        setResetError(categorizeError(`Missing parameters: ${errorContext}`, 'missing_params'));
+        
+        setResetError({
+          type: 'URL_CONFIG',
+          title: 'Invalid Password Reset Link',
+          message: 'This password reset link is missing required authentication parameters. Please request a new password reset link.',
+          canRetry: false,
+          showRequestNewLink: true,
+          showConfigHelp: false
+        });
         return;
       }
       
