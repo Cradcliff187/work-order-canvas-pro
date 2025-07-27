@@ -117,3 +117,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* iOS PWA Optimizations */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+button, a, input, select, textarea, .touch-manipulation {
+  touch-action: manipulation;
+}
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior-y: contain;
+}
+
+input, select, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
