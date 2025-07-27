@@ -160,7 +160,10 @@ const PartnerDashboard = () => {
               variant="full"
             />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
+              {/* Scroll fade hint for mobile */}
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
+              
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -175,37 +178,52 @@ const PartnerDashboard = () => {
                 </TableHeader>
                 <TableBody>
                   {recentOrders.map((workOrder) => (
-                    <TableRow key={workOrder.id}>
-                      <TableCell className="font-medium">
+                    <TableRow 
+                      key={workOrder.id}
+                      className="min-h-[60px] border-b border-gray-100 cursor-pointer active:bg-gray-50 transition-colors sm:min-h-auto sm:active:bg-inherit sm:cursor-default"
+                      onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                    >
+                      <TableCell className="font-medium py-4">
                         {workOrder.work_order_number}
                       </TableCell>
-                      <TableCell>
-                        <div>
+                      <TableCell className="py-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
                           <div className="font-medium">{workOrder.store_location}</div>
                           <div className="text-sm text-muted-foreground">
                             {workOrder.city}, {workOrder.state}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {workOrder.trades?.name || 'N/A'}
+                      <TableCell className="py-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center">
+                          <span className="font-medium sm:font-normal">
+                            {workOrder.trades?.name || 'N/A'}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        <WorkOrderStatusBadge status={workOrder.status} />
+                      <TableCell className="py-4">
+                        <WorkOrderStatusBadge 
+                          status={workOrder.status} 
+                          className="sm:px-2 sm:py-1"
+                        />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-4">
                         <span className="text-sm text-muted-foreground">
                           {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-4">
                         {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-4">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                          className="min-w-[44px] min-h-[44px] sm:min-w-auto sm:min-h-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/partner/work-orders/${workOrder.id}`);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

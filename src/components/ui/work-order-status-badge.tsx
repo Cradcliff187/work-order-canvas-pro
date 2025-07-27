@@ -62,7 +62,7 @@ export const WorkOrderStatusBadge: React.FC<WorkOrderStatusBadgeProps> = ({
   }
   
   return (
-    <Badge variant="outline" className={cn(config.className, className)}>
+    <Badge variant="outline" className={cn(config.className, "px-3 py-1", className)}>
       {config.label}
     </Badge>
   );
