@@ -27,6 +27,7 @@ import {
   Building2,
   ClipboardList,
   Mail,
+  MessageSquare,
   Database,
   Shield,
   Loader2
@@ -350,6 +351,14 @@ const SystemHealthCheck = () => {
         description: metrics.emailQueue.change,
         variant: (metrics.emailQueue.status === 'healthy' ? 'success' : 
                metrics.emailQueue.status === 'warning' ? 'warning' : 'destructive') as 'default' | 'warning' | 'success' | 'destructive'
+      },
+      {
+        icon: MessageSquare,
+        label: metrics.messagesHealth.label,
+        value: metrics.messagesHealth.value,
+        description: metrics.messagesHealth.change,
+        variant: (metrics.messagesHealth.status === 'healthy' ? 'success' : 
+               metrics.messagesHealth.status === 'warning' ? 'warning' : 'destructive') as 'default' | 'warning' | 'success' | 'destructive'
       }
     ];
   };

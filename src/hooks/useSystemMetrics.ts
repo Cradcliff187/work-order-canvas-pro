@@ -16,6 +16,7 @@ export interface SystemMetrics {
   organizations: SystemMetric;
   workOrders: SystemMetric;
   emailQueue: SystemMetric;
+  messagesHealth: SystemMetric;
 }
 
 export const useSystemMetrics = () => {
@@ -74,6 +75,40 @@ export const useSystemMetrics = () => {
           Math.round((emailStats.sent_emails / emailStats.total_emails) * 100) : 100
         : 0;
 
+      // Fetch messaging metrics
+      const { data: todayMessages, error: todayMessagesError } = await supabase
+        .from('work_order_messages')
+        .select('id')
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      if (todayMessagesError) throw todayMessagesError;
+
+      const { data: weekMessages, error: weekMessagesError } = await supabase
+        .from('work_order_messages')
+        .select('id')
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+      if (weekMessagesError) throw weekMessagesError;
+
+      const todayMessageCount = todayMessages?.length || 0;
+      const weekMessageCount = weekMessages?.length || 0;
+      const dailyAverage = weekMessageCount / 7;
+      const messageChangePercent = dailyAverage > 0 ? Math.round(((todayMessageCount - dailyAverage) / dailyAverage) * 100) : 0;
+      
+      // Determine message health status
+      let messageStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
+      if (messageChangePercent >= 100) {
+        messageStatus = 'critical';
+      } else if (messageChangePercent >= 50) {
+        messageStatus = 'warning';
+      }
+
+      const messageChange = messageChangePercent > 0 ? 
+        `+${messageChangePercent}% from avg` : 
+        messageChangePercent < 0 ? 
+          `${messageChangePercent}% from avg` : 
+          'At average';
+
       return {
         activeUsers: {
           label: 'Active Users',
@@ -106,6 +141,14 @@ export const useSystemMetrics = () => {
           changeType: emailDeliveryRate >= 90 ? 'positive' : emailDeliveryRate >= 70 ? 'neutral' : 'negative',
           status: emailDeliveryRate >= 90 ? 'healthy' : emailDeliveryRate >= 70 ? 'warning' : 'critical',
           description: 'Email delivery performance'
+        },
+        messagesHealth: {
+          label: 'Messages Today',
+          value: todayMessageCount,
+          change: messageChange,
+          changeType: messageChangePercent <= 0 ? 'neutral' : messageChangePercent < 50 ? 'positive' : 'negative',
+          status: messageStatus,
+          description: 'Work order messaging activity'
         }
       };
     },
