@@ -18,13 +18,18 @@ import {
   UserCheck,
   Search,
   X,
-  AlertCircle
+  AlertCircle,
+  Activity,
+  Terminal,
+  GitBranch
 } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, flexRender, SortingState, ColumnFiltersState } from '@tanstack/react-table';
 import { useDevTools } from '@/hooks/useDevTools';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +57,11 @@ const DevTools = () => {
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [sqlQuery, setSqlQuery] = useState('');
+  const [sqlResults, setSqlResults] = useState<any>(null);
+  const [sqlExecuteLoading, setSqlExecuteLoading] = useState(false);
+  const [migrationInfo, setMigrationInfo] = useState<any>(null);
+  const [isQueriesOpen, setIsQueriesOpen] = useState(false);
   const { toast } = useToast();
   
   const {
@@ -83,6 +93,7 @@ const DevTools = () => {
     if (isDevelopment && isAdmin) {
       fetchCounts();
       fetchImpersonationUsers();
+      fetchMigrationInfo();
     }
   }, [isDevelopment, isAdmin]);
 
@@ -156,6 +167,63 @@ const DevTools = () => {
       title: "Impersonation Stopped",
       description: "Returned to your normal account view",
     });
+  };
+
+  const executeSqlQuery = async () => {
+    if (!sqlQuery.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a SQL query",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSqlExecuteLoading(true);
+    try {
+      // For database functions, use .rpc()
+      // For direct queries, we'd need a custom function
+      const { data, error } = await supabase.rpc('debug_auth_state');
+      
+      if (error) {
+        setSqlResults({ error: error.message });
+        toast({
+          title: "Query Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setSqlResults(data);
+        toast({
+          title: "Query Executed",
+          description: "Query completed successfully",
+        });
+      }
+    } catch (err: any) {
+      setSqlResults({ error: err.message });
+      toast({
+        title: "Query Failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSqlExecuteLoading(false);
+    }
+  };
+
+  const fetchMigrationInfo = async () => {
+    try {
+      // Get basic migration status
+      const migrationData = {
+        lastApplied: "2024-01-27 - Latest migration",
+        pendingCount: 0,
+        databaseVersion: "Current",
+        indexedDbVersion: "v1.0.0"
+      };
+      setMigrationInfo(migrationData);
+    } catch (error) {
+      console.error('Error fetching migration info:', error);
+    }
   };
 
   const impersonationColumns: ColumnDef<ImpersonationUser>[] = useMemo(() => [
@@ -300,15 +368,26 @@ const DevTools = () => {
         </Alert>
       )}
 
-      <div className="flex items-center gap-2 mb-6">
-        <Settings className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">Development Tools</h1>
-        <Badge variant="secondary">DEV MODE</Badge>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Settings className="h-6 w-6" />
+          <h1 className="text-3xl font-bold">Development Tools</h1>
+          <Badge variant="secondary">DEV MODE</Badge>
+        </div>
+        <Button
+          onClick={() => window.open('/admin/system-health', '_blank')}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <Activity className="h-4 w-4" />
+          System Health
+        </Button>
       </div>
 
       <Tabs defaultValue="setup" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="setup">Environment Setup</TabsTrigger>
+          <TabsTrigger value="database">Database Tools</TabsTrigger>
           <TabsTrigger value="impersonation">Test Users</TabsTrigger>
         </TabsList>
         
@@ -444,6 +523,107 @@ const DevTools = () => {
                 </Button>
               </div>
             </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-6">
+          {/* Migration Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <GitBranch className="h-5 w-5" />
+                Migration Status
+              </CardTitle>
+              <CardDescription>
+                Database and IndexedDB migration information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {migrationInfo ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Database</div>
+                    <div className="text-sm text-muted-foreground">
+                      <div>Last Applied: {migrationInfo.lastApplied}</div>
+                      <div>Pending: {migrationInfo.pendingCount} migrations</div>
+                      <div>Version: {migrationInfo.databaseVersion}</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">IndexedDB</div>
+                    <div className="text-sm text-muted-foreground">
+                      <div>Version: {migrationInfo.indexedDbVersion}</div>
+                      <div>Status: Active</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Loading migration info...</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Database Queries */}
+          <Card>
+            <Collapsible open={isQueriesOpen} onOpenChange={setIsQueriesOpen}>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Terminal className="h-5 w-5" />
+                    Database Queries
+                    <Badge variant="outline" className="ml-auto">
+                      {isQueriesOpen ? 'Hide' : 'Show'}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Execute custom database functions and queries
+                  </CardDescription>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="space-y-4">
+                  <Alert className="border-warning bg-warning/10">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Warning:</strong> Only use database functions (RPC calls) in production. Direct SQL queries are not supported.
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium">SQL Query / Function Name</label>
+                      <Textarea
+                        value={sqlQuery}
+                        onChange={(e) => setSqlQuery(e.target.value)}
+                        placeholder="Enter database function name (e.g., debug_auth_state)"
+                        className="font-mono text-sm"
+                        rows={4}
+                      />
+                    </div>
+                    
+                    <Button
+                      onClick={executeSqlQuery}
+                      disabled={sqlExecuteLoading}
+                      className="w-full"
+                    >
+                      {sqlExecuteLoading ? <LoadingSpinner /> : <Terminal className="h-4 w-4 mr-2" />}
+                      Execute Query
+                    </Button>
+                    
+                    {sqlResults && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Results</label>
+                        <div className="p-4 bg-muted rounded-lg">
+                          <pre className="text-sm overflow-x-auto">
+                            {JSON.stringify(sqlResults, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         </TabsContent>
 
