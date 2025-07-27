@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { EmailQueueStatus } from '@/components/admin/EmailQueueStatus';
 import { 
   Activity, 
   CheckCircle, 
@@ -302,9 +303,22 @@ const SystemHealthCheck = () => {
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">System Health Check</h1>
-        <p className="text-muted-foreground">Verify audit logging system and RLS policies are functioning correctly</p>
+        <h1 className="text-3xl font-bold mb-2">System Health</h1>
+        <p className="text-muted-foreground">Technical monitoring and system status</p>
       </div>
+
+      {/* Email Queue Automation */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Email Queue Automation</CardTitle>
+          <CardDescription>
+            Monitor email queue status and automated processing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EmailQueueStatus />
+        </CardContent>
+      </Card>
 
       {/* Control Panel */}
       <Card className="mb-6">

@@ -22,7 +22,6 @@ import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Resp
 import { format } from 'date-fns';
 
 import { ExecutiveSummary } from '@/components/admin/dashboard/ExecutiveSummary';
-import { EmailQueueStatus } from '@/components/admin/EmailQueueStatus';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const COLORS = {
@@ -84,17 +83,7 @@ const AdminDashboard = () => {
         </TabsList>
         
         <TabsContent value="dashboard" className="space-y-8">
-
-      {/* System Health Section */}
-      <div className="mb-8">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold mb-2">System Health</h2>
-          <p className="text-sm text-muted-foreground">Monitor email queue status and system performance</p>
-        </div>
-        <EmailQueueStatus />
-      </div>
-
-      {/* Overview Cards */}
+          {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
