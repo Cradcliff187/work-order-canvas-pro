@@ -15,11 +15,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
+import { MobileOrganizationSelector } from '@/components/layout/MobileOrganizationSelector';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { format, differenceInDays } from 'date-fns';
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const isMobile = useIsMobile();
   const { data: stats, isLoading: statsLoading } = usePartnerWorkOrderStats();
   const { data: recentWorkOrders, isLoading: workOrdersLoading } = usePartnerWorkOrders();
   const { data: userOrganizations, isLoading: orgLoading } = useUserOrganizations();
@@ -78,29 +81,39 @@ const PartnerDashboard = () => {
       <OrganizationValidationAlert className="mb-6" />
 
       {/* Organization Context */}
-      {primaryOrganization && (
-        <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20 mb-4">
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Building2 className="h-6 w-6 text-primary" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-semibold">{primaryOrganization.name}</h2>
-              <OrganizationBadge 
-                organization={{ 
-                  name: primaryOrganization.name, 
-                  organization_type: 'partner' 
-                }} 
-                size="sm"
-                showIcon={false}
-                showType={false}
-              />
+      {primaryOrganization && userOrganizations && (
+        <>
+          {isMobile ? (
+            <MobileOrganizationSelector
+              organizations={userOrganizations}
+              currentOrganization={primaryOrganization}
+              className="mb-4"
+            />
+          ) : (
+            <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20 mb-4">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-semibold">{primaryOrganization.name}</h2>
+                  <OrganizationBadge 
+                    organization={{ 
+                      name: primaryOrganization.name, 
+                      organization_type: 'partner' 
+                    }} 
+                    size="sm"
+                    showIcon={false}
+                    showType={false}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Organization ID: {primaryOrganization.initials || 'Not configured'} • {primaryOrganization.contact_email}
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Organization ID: {primaryOrganization.initials || 'Not configured'} • {primaryOrganization.contact_email}
-            </p>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
       {/* Organization Numbering Status */}
