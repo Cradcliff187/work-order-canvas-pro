@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { HardHat, AlertCircle, CheckCircle, Eye, EyeOff, Check, X, Clock, Link2, RefreshCw, Settings } from 'lucide-react';
+import { AlertCircle, CheckCircle, Eye, EyeOff, Check, X, Clock, Link2, RefreshCw, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useBranding } from '@/hooks/useBranding';
@@ -34,7 +34,7 @@ const ResetPassword = () => {
   const [countdown, setCountdown] = useState(3);
   const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   const { resetPassword, isRecoverySession, setRecoveryFlow } = useAuth();
-  const { getProductDisplayName, getCompanyDisplayName } = useBranding();
+  const branding = useBranding();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -441,13 +441,17 @@ const ResetPassword = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/20 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-                <HardHat className="w-8 h-8 text-primary-foreground" />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">{getProductDisplayName()}</h1>
-            <p className="text-muted-foreground">{getCompanyDisplayName()}</p>
+            <img 
+              src={branding.assets.logos.horizontal} 
+              alt={branding.company.name}
+              className="mx-auto h-12 w-auto mb-6"
+            />
+            <h1 className="text-2xl font-bold text-foreground mb-1">
+              {branding.getProductDisplayName()}
+            </h1>
+            <h2 className="text-lg font-medium text-muted-foreground">
+              {branding.getCompanyDisplayName()}
+            </h2>
           </div>
 
           <Card className="shadow-xl border-0 bg-card/95 backdrop-blur">
@@ -510,14 +514,17 @@ const ResetPassword = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-              <HardHat className="w-8 h-8 text-primary-foreground" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">{getProductDisplayName()}</h1>
-          <p className="text-muted-foreground">{getCompanyDisplayName()}</p>
-          <p className="text-muted-foreground">Reset Your Password</p>
+          <img 
+            src={branding.assets.logos.horizontal} 
+            alt={branding.company.name}
+            className="mx-auto h-12 w-auto mb-6"
+          />
+          <h1 className="text-2xl font-bold text-foreground mb-1">
+            {branding.getProductDisplayName()}
+          </h1>
+          <h2 className="text-lg font-medium text-muted-foreground">
+            {branding.getCompanyDisplayName()}
+          </h2>
         </div>
 
         <Card className="shadow-xl border-0 bg-card/95 backdrop-blur">
