@@ -175,3 +175,20 @@ textarea {
     font-size: 16px !important;
   }
 }
+
+/* iOS Safe Area Support for Standalone PWA */
+@supports (-webkit-touch-callout: none) {
+  @media all and (display-mode: standalone) {
+    .min-h-screen {
+      padding-top: env(safe-area-inset-top);
+    }
+    
+    .pb-safe-area-pb {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+}
+
+.fixed.bottom-0 {
+  bottom: env(safe-area-inset-bottom);
+}
