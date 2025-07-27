@@ -234,3 +234,16 @@ textarea {
     border-radius: 2px;
   }
 }
+
+/* Mobile-only table scrolling fix */
+@media (max-width: 768px) {
+  main {
+    overflow: auto !important;
+  }
+  
+  /* Fix table wrapper scrolling */
+  .table-wrapper > div {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}

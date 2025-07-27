@@ -160,7 +160,7 @@ const PartnerDashboard = () => {
               variant="full"
             />
           ) : (
-            <Table className="min-w-[700px]">
+            <Table className="md:min-w-[700px] min-w-[600px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Work Order #</TableHead>

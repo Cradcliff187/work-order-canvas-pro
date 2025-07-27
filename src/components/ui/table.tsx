@@ -7,10 +7,10 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto overscroll-behavior-x-contain [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
+  <div className="relative w-full overflow-auto table-wrapper overscroll-behavior-x-contain [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm min-w-[600px]", className)}
+      className={cn("w-full caption-bottom text-sm", className)}
       {...props}
     />
   </div>
