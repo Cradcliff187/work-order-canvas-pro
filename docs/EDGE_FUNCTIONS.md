@@ -10,25 +10,43 @@ WorkOrderPortal uses Supabase Edge Functions for secure server-side operations t
 
 ### process-email-queue
 
-**Purpose**: Batch processes queued emails for reliable, asynchronous email delivery
+**Purpose**: Batch processes queued emails for reliable, asynchronous email delivery with automated scheduling
 
 **File**: `supabase/functions/process-email-queue/index.ts`
 
 **Features**:
+- **Automated Processing**: Invoked every 5 minutes via pg_cron for continuous processing
 - **Queue Management**: Processes pending emails from the `email_queue` table
 - **Batch Processing**: Handles multiple emails efficiently in a single execution
 - **Database Function Integration**: Calls the `process_email_queue()` database function
 - **Admin Interface**: Provides API for manual queue processing and monitoring
+- **Processing History**: Logs each processing run in `email_queue_processing_log` table
 - **Error Handling**: Graceful error management with detailed logging
 - **Status Tracking**: Updates queue status and retry information
 
+**Automated Processing Schedule**:
+```sql
+-- pg_cron job runs every 5 minutes
+SELECT cron.schedule(
+  'process-email-queue-every-5-minutes',
+  '*/5 * * * *',  -- Every 5 minutes
+  $$ SELECT net.http_post(
+    url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/process-email-queue',
+    headers := '{"Authorization": "Bearer ' || current_setting('app.service_role_key') || '"}',
+    body := '{}'
+  ); $$
+);
+```
+
 **Queue Processing Flow**:
-1. **Queue Monitoring**: Checks `email_queue` table for pending emails
-2. **Batch Selection**: Selects emails ready for processing (not in retry delay)
-3. **Email Processing**: Calls `send-email` function for each queued email
-4. **Status Updates**: Updates queue entries based on delivery results
-5. **Retry Scheduling**: Schedules failed emails for retry with exponential backoff
-6. **Cleanup**: Removes successfully processed emails from queue
+1. **Automated Trigger**: pg_cron invokes function every 5 minutes
+2. **Queue Monitoring**: Checks `email_queue` table for pending emails
+3. **Batch Selection**: Selects emails ready for processing (not in retry delay)
+4. **Email Processing**: Calls `send-email` function for each queued email
+5. **Status Updates**: Updates queue entries based on delivery results
+6. **Retry Scheduling**: Schedules failed emails for retry with exponential backoff
+7. **Processing Log**: Records processing run statistics and duration
+8. **Cleanup**: Removes successfully processed emails from queue
 
 **Request Format**:
 ```typescript
@@ -48,7 +66,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**Usage**: Called manually via admin interface or scheduled for automatic processing
+**Usage**: Automated processing every 5 minutes via pg_cron, plus manual processing via admin interface
 
 **Configuration**: 
 ```toml
@@ -392,6 +410,9 @@ ORDER BY sent_at DESC;
 6. **Admin Control**: Manual queue processing and retry management
 
 **Queue Processing Features**:
+- **Automated Processing**: pg_cron schedule ensures continuous 5-minute processing
+- **Processing History**: `email_queue_processing_log` tracks all processing runs with metrics
+- **Failed Email Management**: Admin interface for emails with retry_count >= 3
 - **Exponential Backoff**: 5 minutes → 30 minutes → 2 hours retry intervals
 - **Maximum Attempts**: 3 total retry attempts before permanent failure
 - **Batch Processing**: Efficient handling of multiple emails simultaneously

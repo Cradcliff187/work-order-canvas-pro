@@ -72,23 +72,47 @@ WorkOrderPortal implements a unified email system using Resend API that handles 
 
 ## Email Queue Architecture
 
-As of January 2025, WorkOrderPro has implemented a sophisticated queue-based email system for enhanced reliability and performance. This architecture provides asynchronous email processing with automatic retry capabilities.
+As of January 2025, WorkOrderPortal has implemented a sophisticated queue-based email system with automated processing for enhanced reliability and performance. This architecture provides asynchronous email processing with automatic retry capabilities and comprehensive monitoring.
+
+### Automated Processing System
+
+**pg_cron Schedule**: Email queue is automatically processed every 5 minutes using PostgreSQL's cron extension:
+```sql
+-- Automated processing schedule
+SELECT cron.schedule(
+  'process-email-queue-every-5-minutes',
+  '*/5 * * * *',  -- Every 5 minutes
+  $$
+  SELECT net.http_post(
+    url := 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/process-email-queue',
+    headers := '{"Authorization": "Bearer ' || current_setting('app.service_role_key') || '"}',
+    body := '{}'
+  );
+  $$
+);
+```
 
 ### Queue-Based Flow Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Application   │───▶│   email_queue    │───▶│process-email-   │
-│   Triggers      │    │   Table          │    │queue Function   │
+│   Application   │───▶│   email_queue    │───▶│ Automated       │
+│   Triggers      │    │   Table          │    │ Processing      │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
         │                        │                        │
         ▼                        ▼                        ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  Database       │    │  Background      │    │   send-email    │
-│  Triggers       │    │  Processing      │    │   Edge Function │
+│  Database       │    │  pg_cron         │    │process-email-   │
+│  Triggers       │    │  (Every 5 min)   │    │queue Function   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                 │                        │
                                 ▼                        ▼
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │  Processing Log  │    │   send-email    │
+                       │  (History)       │    │   Edge Function │
+                       └──────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
                        ┌──────────────────┐    ┌─────────────────┐
                        │  Retry Logic     │    │   Resend API    │
                        │  (Exponential)   │    │   (Delivery)    │
@@ -103,14 +127,16 @@ As of January 2025, WorkOrderPro has implemented a sophisticated queue-based ema
 
 ### Queue Processing Flow
 
-**Enhanced Process**:
+**Automated Process**:
 1. **Trigger**: Database trigger or manual function call queues email
 2. **Queue Entry**: Email request stored in `email_queue` table with `pending` status
-3. **Background Processing**: `process-email-queue` function processes pending emails in batches
-4. **Email Delivery**: Calls `send-email` Edge Function for actual delivery
-5. **Status Update**: Queue entry updated to `sent` or `failed` based on result
-6. **Retry Logic**: Failed emails automatically retried with exponential backoff
-7. **Final Logging**: Complete audit trail maintained in `email_logs` table
+3. **Automated Processing**: pg_cron invokes `process-email-queue` function every 5 minutes
+4. **Batch Processing**: Function processes pending emails in batches
+5. **Email Delivery**: Calls `send-email` Edge Function for actual delivery
+6. **Status Update**: Queue entry updated to `sent` or `failed` based on result
+7. **Retry Logic**: Failed emails automatically retried with exponential backoff
+8. **Processing Log**: Each processing run logged in `email_queue_processing_log` table
+9. **Final Logging**: Complete audit trail maintained in `email_logs` table
 
 ### Queue Retry Logic
 
@@ -129,19 +155,41 @@ As of January 2025, WorkOrderPro has implemented a sophisticated queue-based ema
 
 ### Queue Management Features
 
-**Admin Interface**:
-- Real-time queue status monitoring
-- Manual queue processing controls
-- Failed email retry capabilities
-- Queue cleanup for old processed emails
-- Performance metrics and analytics
+**System Health Check Interface** (`/admin/system-health`):
+- **Email Queue Automation**: Real-time automated processing status
+- **Queue Status Monitoring**: Live statistics (pending, sent, failed emails)
+- **Manual Processing Controls**: Force immediate queue processing
+- **Processing History**: Recent processing runs with metrics
+- **Failed Email Management**: Comprehensive failed email intervention
+
+**Admin Interface Components**:
+- **EmailQueueStatus**: Queue statistics, manual processing, history view
+- **EmailFailedManager**: Failed email management (retry_count >= 3)
+- **ProcessingHistory**: Recent processing runs with duration and counts
 
 **Database Functions**:
-- `process_email_queue()` - Batch processes pending emails
-- Queue status tracking and error logging
+- `process_email_queue()` - Batch processes pending emails with logging
+- Queue status tracking and comprehensive error logging
 - Automatic cleanup of old processed entries
+- Processing history tracking in `email_queue_processing_log`
 
 ### Migration History
+
+**Phase A-H Implementation (2025-01-27)**:
+- **Phase A**: Email queue table creation with retry logic
+- **Phase B**: Database function `process_email_queue()` implementation
+- **Phase C**: `process-email-queue` Edge Function creation
+- **Phase D**: Queue integration into existing email triggers
+- **Phase E**: SystemHealthCheck page creation with monitoring
+- **Phase F**: EmailQueueStatus component with queue management
+- **Phase G**: Processing history tracking and display
+- **Phase H**: Failed email management with retry/delete capabilities
+
+**Automated Processing Setup (2025-01-27)**:
+- **pg_cron Integration**: 5-minute automated queue processing schedule
+- **Processing Log**: `email_queue_processing_log` table for history tracking
+- **Admin Interface**: Comprehensive queue monitoring and management
+- **Failed Email Management**: Manual intervention for permanently failed emails
 
 **2025-01-26 Email System Cleanup**:
 - **Removed Functions**: `call_send_email_trigger()` and `trigger_work_order_created_email_v2()`
@@ -338,6 +386,64 @@ LIMIT 10;
 
 ## Health Check System
 
+### Automated Processing Monitoring
+
+**Processing History Table**:
+```sql
+-- email_queue_processing_log structure
+CREATE TABLE email_queue_processing_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  processed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  processed_count INTEGER NOT NULL,
+  failed_count INTEGER NOT NULL,
+  duration_ms INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+```
+
+**Recent Processing Verification**:
+```sql
+-- Check recent automated processing runs
+SELECT 
+  processed_at,
+  processed_count,
+  failed_count,
+  duration_ms,
+  (processed_count + failed_count) as total_processed
+FROM email_queue_processing_log 
+ORDER BY processed_at DESC 
+LIMIT 10;
+
+-- Should show regular 5-minute intervals with processing activity
+```
+
+### Failed Email Management
+
+**Failed Email Detection**:
+```sql
+-- Find permanently failed emails (retry_count >= 3)
+SELECT 
+  id,
+  template_name,
+  record_type,
+  record_id,
+  status,
+  retry_count,
+  error_message,
+  created_at,
+  context_data->>'recipient_email' as recipient_email
+FROM email_queue 
+WHERE status = 'failed' 
+  AND retry_count >= 3
+ORDER BY created_at DESC;
+```
+
+**Failed Email Management Interface**:
+- **Location**: SystemHealthCheck page → "Failed Email Management" section
+- **Features**: View, retry (reset retry_count to 0), delete failed emails
+- **Bulk Actions**: Select multiple emails for batch operations
+- **Error Details**: View detailed error messages and recipient information
+
 ### Email System Health Verification
 
 Use these queries to ensure the email system is functioning correctly after migration or maintenance.
@@ -453,7 +559,7 @@ ORDER BY status;
 
 **Old Pending Emails Detection**:
 ```sql
--- Find emails pending for more than 1 hour (potential issue)
+-- Find emails pending for more than 30 minutes (potential issue with 5-min processing)
 SELECT 
   id,
   template_name,
@@ -461,13 +567,28 @@ SELECT
   status,
   retry_count,
   created_at,
+  next_retry_at,
   AGE(now(), created_at) as pending_duration
 FROM email_queue 
 WHERE status = 'pending' 
-  AND created_at < now() - INTERVAL '1 hour'
+  AND created_at < now() - INTERVAL '30 minutes'
+  AND (next_retry_at IS NULL OR next_retry_at < now())
 ORDER BY created_at ASC;
 
--- Should return 0 rows in healthy system
+-- Should return 0 rows in healthy system with 5-minute processing
+```
+
+**Automated Processing Health Check**:
+```sql
+-- Verify automated processing is running (should have recent entries)
+SELECT 
+  COUNT(*) as recent_processing_runs,
+  MAX(processed_at) as last_processing_run,
+  AGE(now(), MAX(processed_at)) as time_since_last_run
+FROM email_queue_processing_log 
+WHERE processed_at > now() - INTERVAL '1 hour';
+
+-- Should show recent processing runs within last 5-10 minutes
 ```
 
 #### 3. Expected Email Trigger Behavior
