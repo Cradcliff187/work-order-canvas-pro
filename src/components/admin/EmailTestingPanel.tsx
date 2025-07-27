@@ -20,7 +20,7 @@ const EMAIL_TEMPLATES = [
   { value: 'work_order_completed', label: 'Work Order Completed' },
   { value: 'report_submitted', label: 'Report Submitted' },
   { value: 'report_reviewed', label: 'Report Reviewed' },
-  { value: 'welcome_email', label: 'Welcome Email' },
+  
   { value: 'test_email', label: 'Test Email' },
   { value: 'auth_confirmation', label: 'Auth Confirmation' },
   { value: 'password_reset', label: 'Password Reset' },

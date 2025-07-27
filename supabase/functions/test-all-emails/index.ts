@@ -39,13 +39,6 @@ serve(async (req) => {
         }
       },
       {
-        template_name: 'welcome_email',
-        custom_data: {
-          user_name: 'Chris Test User',
-          user_email: recipient_email
-        }
-      },
-      {
         template_name: 'work_order_created',
         custom_data: {
           work_order_number: 'TEST-001-001',
