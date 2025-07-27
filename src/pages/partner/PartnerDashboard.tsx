@@ -131,7 +131,7 @@ const PartnerDashboard = () => {
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {workOrdersLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
