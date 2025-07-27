@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from "@/components/ui/input"
 import { Skeleton } from '@/components/ui/skeleton';
@@ -139,7 +140,7 @@ export default function AdminOrganizations() {
             />
           ) : (
             <div className="rounded-md border">
-              <Table>
+              <Table className="admin-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[100px]">Initials</TableHead>
@@ -151,16 +152,31 @@ export default function AdminOrganizations() {
                 </TableHeader>
                 <TableBody>
                   {organizations?.map((organization) => (
-                    <TableRow key={organization.id}>
+                    <TableRow 
+                      key={organization.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setSelectedOrganization(organization);
+                        setShowEditModal(true);
+                      }}
+                    >
                       <TableCell className="font-medium">{organization.initials}</TableCell>
                       <TableCell>{organization.name}</TableCell>
                       <TableCell>{organization.contact_email}</TableCell>
-                      <TableCell>{organization.organization_type}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
+                          className="h-5 text-[10px] px-1.5"
+                        >
+                          {organization.organization_type}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedOrganization(organization);
                             setShowEditModal(true);
                           }}

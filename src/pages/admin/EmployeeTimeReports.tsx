@@ -137,26 +137,30 @@ export default function EmployeeTimeReports() {
               No time reports submitted yet.
             </div>
           ) : (
-            <Table>
+            <Table className="admin-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Work Order</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Hours</TableHead>
-                  <TableHead>Labor Cost</TableHead>
+                  <TableHead className="text-right">Labor Cost</TableHead>
                   <TableHead>Work Performed</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.map((report) => (
-                  <TableRow key={report.id}>
+                  <TableRow 
+                    key={report.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => window.location.href = `/admin/time-reports/submit/${report.work_order_id}`}
+                  >
                     <TableCell>
-                      {format(new Date(report.report_date), "MMM dd, yyyy")}
+                      {format(new Date(report.report_date), "PP")}
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">
+                        <p className="font-medium font-mono text-sm">
                           {report.work_orders?.work_order_number || `WO-${report.work_order_id.slice(0, 8)}`}
                         </p>
                         <p className="text-sm text-muted-foreground">{report.work_orders?.title}</p>
@@ -164,7 +168,7 @@ export default function EmployeeTimeReports() {
                     </TableCell>
                     <TableCell>{report.work_orders?.store_location}</TableCell>
                     <TableCell>{report.hours_worked} hrs</TableCell>
-                    <TableCell>${(report.total_labor_cost || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-mono">${(report.total_labor_cost || 0).toFixed(2)}</TableCell>
                     <TableCell>
                       <div className="max-w-xs truncate">
                         {report.work_performed}

@@ -174,7 +174,7 @@ export default function AdminEmployees() {
           </div>
 
           <div className="rounded-md border">
-            <Table>
+            <Table className="admin-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -200,7 +200,11 @@ export default function AdminEmployees() {
                   />
                 ) : (
                   filteredEmployees.map((employee) => (
-                    <TableRow key={employee.id}>
+                    <TableRow 
+                      key={employee.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => setEditRatesEmployee(employee)}
+                    >
                       <TableCell className="font-medium">
                         {employee.first_name} {employee.last_name}
                       </TableCell>
@@ -216,23 +220,30 @@ export default function AdminEmployees() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={employee.is_active ? 'default' : 'secondary'}>
+                        <Badge 
+                          variant={employee.is_active ? 'default' : 'secondary'}
+                          className="h-5 text-[10px] px-1.5"
+                        >
                           {employee.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
-                       <TableCell>
+                       <TableCell onClick={(e) => e.stopPropagation()}>
                          <TableActionsDropdown
                            itemName={`${employee.first_name} ${employee.last_name}`}
                            actions={[
                              {
                                label: 'Edit Rates',
                                icon: Edit,
-                               onClick: () => setEditRatesEmployee(employee),
+                               onClick: () => {
+                                 setEditRatesEmployee(employee);
+                               },
                              },
                              {
                                label: employee.is_active ? 'Deactivate' : 'Activate',
                                icon: Power,
-                               onClick: () => handleToggleStatus(employee.id, employee.is_active),
+                               onClick: () => {
+                                 handleToggleStatus(employee.id, employee.is_active);
+                               },
                                variant: employee.is_active ? 'destructive' : 'default',
                              },
                            ]}

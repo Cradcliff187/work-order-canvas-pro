@@ -197,7 +197,7 @@ export default function AdminInvoices() {
           ) : (
             <>
               <div className="rounded-md border">
-                <Table>
+                <Table className="admin-table">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
@@ -220,9 +220,25 @@ export default function AdminInvoices() {
                         <TableRow
                           key={row.id}
                           data-state={row.getIsSelected() && 'selected'}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => {
+                            const invoice = row.original;
+                            handleViewInvoice(invoice);
+                          }}
                         >
                           {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
+                            <TableCell 
+                              key={cell.id}
+                              onClick={(e) => {
+                                // Prevent row click when interacting with dropdown or checkboxes
+                                const target = e.target as HTMLElement;
+                                if (target.closest('[data-radix-collection-item]') || 
+                                    target.closest('input[type="checkbox"]') ||
+                                    target.closest('button')) {
+                                  e.stopPropagation();
+                                }
+                              }}
+                            >
                               {flexRender(
                                 cell.column.columnDef.cell,
                                 cell.getContext()
