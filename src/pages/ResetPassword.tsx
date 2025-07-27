@@ -36,6 +36,10 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  
+  // Extract type parameter for different flows (signup vs recovery)
+  const urlType = searchParams.get('type') || 
+    new URLSearchParams(window.location.hash.substring(1)).get('type');
 
   // Error categorization helper
   const categorizeError = (error: any, context: string): ResetError => {
@@ -243,11 +247,11 @@ const ResetPassword = () => {
       const { accessToken, refreshToken, type } = extractTokensFromUrl();
       
       // Check if we have the required parameters
-      if (!accessToken || !refreshToken || type !== 'recovery') {
+      if (!accessToken || !refreshToken || (type !== 'recovery' && type !== 'signup')) {
         console.log('Missing URL parameters for password reset');
         const errorContext = !accessToken ? 'missing_access_token' :
                              !refreshToken ? 'missing_refresh_token' :
-                             type !== 'recovery' ? 'invalid_type' : 'missing_params';
+                             (type !== 'recovery' && type !== 'signup') ? 'invalid_type' : 'missing_params';
         setResetError(categorizeError(`Missing parameters: ${errorContext}`, 'missing_params'));
         return;
       }
@@ -462,9 +466,14 @@ const ResetPassword = () => {
 
         <Card className="shadow-xl border-0 bg-card/95 backdrop-blur">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Set New Password</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              {urlType === 'signup' ? 'Set Your Password' : 'Reset Your Password'}
+            </CardTitle>
             <CardDescription className="text-center">
-              Enter your new password below
+              {urlType === 'signup' 
+                ? 'Create a secure password for your new account'
+                : 'Enter a new password for your account'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
