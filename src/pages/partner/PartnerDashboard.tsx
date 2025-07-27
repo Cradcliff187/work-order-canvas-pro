@@ -131,7 +131,7 @@ const PartnerDashboard = () => {
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           {workOrdersLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -160,59 +160,61 @@ const PartnerDashboard = () => {
               variant="full"
             />
           ) : (
-            <Table className="md:min-w-[700px] min-w-[600px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Work Order #</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Trade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Days Old</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.map((workOrder) => (
-                  <TableRow key={workOrder.id}>
-                    <TableCell className="font-medium">
-                      {workOrder.work_order_number}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{workOrder.store_location}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {workOrder.city}, {workOrder.state}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {workOrder.trades?.name || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <WorkOrderStatusBadge status={workOrder.status} />
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Work Order #</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Trade</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Days Old</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentOrders.map((workOrder) => (
+                    <TableRow key={workOrder.id}>
+                      <TableCell className="font-medium">
+                        {workOrder.work_order_number}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{workOrder.store_location}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {workOrder.city}, {workOrder.state}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {workOrder.trades?.name || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <WorkOrderStatusBadge status={workOrder.status} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

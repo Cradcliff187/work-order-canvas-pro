@@ -66,34 +66,34 @@ async function cleanupCaches() {
 
 // Fetch event - implement caching strategies
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/') || event.request.url.includes('supabase')) {
-    // Network first for API calls
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const responseClone = response.clone();
-          caches.open(DYNAMIC_CACHE).then(cache => {
-            cache.put(event.request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-  } else {
-    // Stale while revalidate for assets
-    event.respondWith(
-      caches.match(event.request)
-        .then(cachedResponse => {
-          const fetchPromise = fetch(event.request).then(networkResponse => {
-            caches.open(DYNAMIC_CACHE).then(cache => {
-              cache.put(event.request, networkResponse.clone());
-            });
-            return networkResponse;
-          });
-          return cachedResponse || fetchPromise;
-        })
-    );
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Skip non-http requests
+  if (!url.protocol.startsWith('http')) {
+    return;
   }
+
+  // Handle API requests (Supabase)
+  if (isApiRequest(url)) {
+    event.respondWith(networkFirstWithCache(request, API_CACHE));
+    return;
+  }
+
+  // Handle static assets dynamically (including JS chunks)
+  if (isStaticAsset(url) || isJavaScriptChunk(url)) {
+    event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
+    return;
+  }
+
+  // Handle navigation requests
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstWithFallback(request));
+    return;
+  }
+
+  // Default to network first for other requests
+  event.respondWith(networkFirst(request));
 });
 
 // Helper functions for request classification
