@@ -844,6 +844,30 @@ export type Database = {
           },
         ]
       }
+      system_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          message: string
+          severity: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          message: string
+          severity: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          message?: string
+          severity?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           category: string
@@ -1444,6 +1468,10 @@ export type Database = {
       check_assignment_completion_status_enhanced: {
         Args: { work_order_id: string }
         Returns: boolean
+      }
+      check_email_queue_health: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       clear_test_data: {
         Args: Record<PropertyKey, never>
