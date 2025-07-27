@@ -140,19 +140,34 @@ input, select, textarea {
   user-select: text;
 }
 
-.min-h-screen {
+/* Prevent viewport bouncing on iOS */
+html {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
 }
 
+body {
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main content scrolling */
 main {
+  flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  height: 100%;
+  overscroll-behavior-y: contain;
 }
 
 /* Prevent iOS zoom on input focus */
