@@ -27,7 +27,7 @@ import {
   ReceiptHistory,
   SystemHealthCheck,
   TestEmailPage,
-  AdminOrganizationDiagnostics,
+  
   AdminUtilities,
   AdminApprovals,
   DevTools,
@@ -251,16 +251,6 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <SystemHealthCheck />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
-    
-    <Route path="/admin/organization-diagnostics" element={
-      <ProtectedRoute requiredUserType="admin">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <AdminOrganizationDiagnostics />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
