@@ -197,4 +197,29 @@
       background: hsl(var(--primary));
     }
   }
+
+  /* Admin Table Styling */
+  .admin-table tbody tr:nth-child(even) {
+    @apply bg-muted/20;
+  }
+
+  .admin-table tbody tr:hover {
+    @apply bg-muted/50 cursor-pointer transition-colors;
+  }
+
+  .admin-table th {
+    @apply text-xs font-semibold text-muted-foreground uppercase tracking-wider;
+  }
+
+  /* Admin table row selection states */
+  .admin-table tbody tr[data-state="selected"] {
+    @apply bg-primary/10 hover:bg-primary/15;
+  }
+
+  /* Admin table responsive adjustments */
+  @media (max-width: 767px) {
+    .admin-table tbody tr:hover {
+      @apply bg-muted/30;
+    }
+  }
 }
