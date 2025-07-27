@@ -74,15 +74,15 @@ export default function AdminReports() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'submitted':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
+        return <Badge variant="secondary" className="h-5 text-[10px] px-1.5"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
       case 'reviewed':
-        return <Badge variant="outline"><Eye className="w-3 h-3 mr-1" />Reviewed</Badge>;
+        return <Badge variant="outline" className="h-5 text-[10px] px-1.5"><Eye className="w-3 h-3 mr-1" />Reviewed</Badge>;
       case 'approved':
-        return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+        return <Badge variant="default" className="h-5 text-[10px] px-1.5"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
       case 'rejected':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+        return <Badge variant="destructive" className="h-5 text-[10px] px-1.5"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="h-5 text-[10px] px-1.5">{status}</Badge>;
     }
   };
 
@@ -94,6 +94,7 @@ export default function AdminReports() {
           checked={table.getIsAllPageRowsSelected()}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
+          onClick={(e) => e.stopPropagation()}
         />
       ),
       cell: ({ row }) => (
@@ -101,6 +102,7 @@ export default function AdminReports() {
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
+          onClick={(e) => e.stopPropagation()}
         />
       ),
       enableSorting: false,
@@ -203,7 +205,11 @@ export default function AdminReports() {
         ];
         
         const reportName = `${report.work_orders?.work_order_number || 'Report'} - ${report.work_orders?.title || 'Work Order'}`;
-        return <TableActionsDropdown actions={actions} itemName={reportName} align="end" />;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <TableActionsDropdown actions={actions} itemName={reportName} align="end" />
+          </div>
+        );
       },
     },
   ], [navigate, reviewReport]);
@@ -423,52 +429,54 @@ export default function AdminReports() {
             />
           ) : (
             <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          data-state={row.getIsSelected() && "selected"}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
+                <div className="rounded-md border">
+                  <Table className="admin-table">
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} className="h-12">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
                           ))}
                         </TableRow>
-                      ))
-                    ) : (
-                      <EmptyTableState
-                        icon={FileText}
-                        title="No reports found"
-                        description="Try adjusting your filters or search criteria"
-                        colSpan={columns.length}
-                      />
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            data-state={row.getIsSelected() && "selected"}
+                            onClick={() => navigate(`/admin/reports/${row.original.id}`)}
+                            className="cursor-pointer"
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <EmptyTableState
+                          icon={FileText}
+                          title="No reports found"
+                          description="Try adjusting your filters or search criteria"
+                          colSpan={columns.length}
+                        />
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
               {/* Pagination */}
               <div className="flex items-center justify-between space-x-2 py-4">

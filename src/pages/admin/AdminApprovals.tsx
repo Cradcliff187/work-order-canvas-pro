@@ -1,45 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  RowSelectionState,
+} from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Search, Filter, X, CheckCircle, RotateCcw } from 'lucide-react';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { Search, Filter, X, CheckCircle, RotateCcw, FileText, DollarSign } from 'lucide-react';
 import { useApprovalQueue } from '@/hooks/useApprovalQueue';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
-import { ApprovalQueueItem } from '@/components/admin/approvals/ApprovalQueueItem';
+import { createApprovalColumns } from '@/components/admin/approvals/ApprovalColumns';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminApprovals() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>('reports');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const { data: approvalItems = [], totalCount = 0, loading, error } = useApprovalQueue();
   const { reviewReport } = useAdminReportMutations();
   const { approveInvoice, rejectInvoice } = useInvoiceMutations();
 
-  // Filter items
+  // Filter items by tab and other filters
   const filteredItems = approvalItems.filter(item => {
-    const matchesType = typeFilter === 'all' || item.type === typeFilter;
+    const matchesTab = activeTab === 'all' || item.type === activeTab.slice(0, -1); // 'reports' -> 'report'
     const matchesUrgency = urgencyFilter === 'all' || item.urgency === urgencyFilter;
     const matchesSearch = !searchQuery || 
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.submittedBy.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesType && matchesUrgency && matchesSearch;
+    return matchesTab && matchesUrgency && matchesSearch;
   });
 
+  // Separate items by type for tabs
+  const reportItems = approvalItems.filter(item => item.type === 'report');
+  const invoiceItems = approvalItems.filter(item => item.type === 'invoice');
+
+  // Get current tab items
+  const currentTabItems = activeTab === 'reports' ? reportItems : invoiceItems;
+
   const clearFilters = () => {
-    setTypeFilter('all');
     setUrgencyFilter('all');
     setSearchQuery('');
   };
@@ -128,26 +146,39 @@ export default function AdminApprovals() {
     }
   };
 
-  const renderLoadingSkeleton = () => (
-    <div className="space-y-4">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-              <div className="flex gap-2 mt-4">
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-20" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  // Table setup
+  const columns = useMemo(() => createApprovalColumns({
+    onView: handleView,
+    onApprove: handleApprove,
+    onReject: handleReject,
+    loadingItems,
+  }), [loadingItems]);
+
+  const table = useReactTable({
+    data: filteredItems.filter(item => 
+      activeTab === 'reports' ? item.type === 'report' : item.type === 'invoice'
+    ),
+    columns,
+    state: {
+      rowSelection,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const renderTableSkeleton = () => (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex space-x-4">
+          <Skeleton className="h-4 w-8" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+        </div>
       ))}
     </div>
   );
@@ -190,7 +221,7 @@ export default function AdminApprovals() {
         </p>
       </div>
 
-      {/* Filters Card */}
+      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -211,17 +242,6 @@ export default function AdminApprovals() {
                 />
               </div>
             </div>
-            
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="report">Reports</SelectItem>
-                <SelectItem value="invoice">Invoices</SelectItem>
-              </SelectContent>
-            </Select>
 
             <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
               <SelectTrigger className="w-40">
@@ -234,7 +254,7 @@ export default function AdminApprovals() {
               </SelectContent>
             </Select>
 
-            {(typeFilter !== 'all' || urgencyFilter !== 'all' || searchQuery) && (
+            {(urgencyFilter !== 'all' || searchQuery) && (
               <Button
                 variant="outline"
                 onClick={clearFilters}
@@ -248,41 +268,175 @@ export default function AdminApprovals() {
         </CardContent>
       </Card>
 
-      {/* Main Content Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Approvals ({filteredItems.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            renderLoadingSkeleton()
-          ) : filteredItems.length === 0 ? (
-            <EmptyState
-              icon={CheckCircle}
-              title="No pending approvals"
-              description={
-                searchQuery || typeFilter !== 'all' || urgencyFilter !== 'all'
-                  ? "No items match your current filters."
-                  : "All items have been reviewed. New submissions will appear here."
-              }
-              variant="card"
-            />
-          ) : (
-            <div className="space-y-4">
-              {filteredItems.map((item) => (
-                <ApprovalQueueItem
-                  key={item.id}
-                  item={item}
-                  onView={handleView}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  loading={loadingItems.has(item.id)}
+      {/* Tabbed Content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Reports ({reportItems.length})
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Invoices ({invoiceItems.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="reports" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Report Approvals</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                renderTableSkeleton()
+              ) : reportItems.filter(item => 
+                (urgencyFilter === 'all' || item.urgency === urgencyFilter) &&
+                (!searchQuery || 
+                  item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  item.submittedBy.toLowerCase().includes(searchQuery.toLowerCase()))
+              ).length === 0 ? (
+                <EmptyTableState
+                  icon={FileText}
+                  title="No pending report approvals"
+                  description={
+                    searchQuery || urgencyFilter !== 'all'
+                      ? "No reports match your current filters."
+                      : "All reports have been reviewed. New submissions will appear here."
+                  }
+                  colSpan={columns.length}
                 />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              ) : (
+                <div className="rounded-md border">
+                  <Table className="admin-table">
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id}>
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            data-state={row.getIsSelected() && "selected"}
+                            onClick={() => handleView(row.original)}
+                            className="cursor-pointer"
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <EmptyTableState
+                          icon={FileText}
+                          title="No reports found"
+                          description="Try adjusting your filters"
+                          colSpan={columns.length}
+                        />
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="invoices" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Invoice Approvals</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                renderTableSkeleton()
+              ) : invoiceItems.filter(item => 
+                (urgencyFilter === 'all' || item.urgency === urgencyFilter) &&
+                (!searchQuery || 
+                  item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  item.submittedBy.toLowerCase().includes(searchQuery.toLowerCase()))
+              ).length === 0 ? (
+                <EmptyTableState
+                  icon={DollarSign}
+                  title="No pending invoice approvals"
+                  description={
+                    searchQuery || urgencyFilter !== 'all'
+                      ? "No invoices match your current filters."
+                      : "All invoices have been reviewed. New submissions will appear here."
+                  }
+                  colSpan={columns.length}
+                />
+              ) : (
+                <div className="rounded-md border">
+                  <Table className="admin-table">
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id}>
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            data-state={row.getIsSelected() && "selected"}
+                            onClick={() => handleView(row.original)}
+                            className="cursor-pointer"
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <EmptyTableState
+                          icon={DollarSign}
+                          title="No invoices found"
+                          description="Try adjusting your filters"
+                          colSpan={columns.length}
+                        />
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
