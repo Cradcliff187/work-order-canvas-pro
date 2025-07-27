@@ -23,59 +23,79 @@ export const useDataIntegrity = () => {
       const issues: DataIntegrityIssue[] = [];
 
       try {
+        console.log('Starting data integrity checks...');
+
         // 1. Check for orphaned work order reports (reports without work orders)
-        const { data: orphanedReports, error: orphanedError } = await supabase
+        const { data: allReports, error: reportsError } = await supabase
           .from('work_order_reports')
-          .select(`
-            id,
-            work_order_id,
-            work_orders!left(id)
-          `)
-          .is('work_orders.id', null);
+          .select('id, work_order_id');
 
-        if (orphanedError) throw orphanedError;
+        if (reportsError) throw reportsError;
 
-        const orphanedReportsCount = orphanedReports?.length || 0;
-        if (orphanedReportsCount > 0) {
+        const { data: existingWorkOrders, error: workOrdersError } = await supabase
+          .from('work_orders')
+          .select('id');
+
+        if (workOrdersError) throw workOrdersError;
+
+        const existingWorkOrderIds = new Set(existingWorkOrders?.map(wo => wo.id) || []);
+        const orphanedReports = allReports?.filter(report => !existingWorkOrderIds.has(report.work_order_id)) || [];
+        
+        console.log('Orphaned reports check:', { 
+          totalReports: allReports?.length, 
+          existingWorkOrders: existingWorkOrders?.length,
+          orphanedCount: orphanedReports.length 
+        });
+
+        if (orphanedReports.length > 0) {
           issues.push({
             type: 'orphaned_reports',
             label: 'Orphaned Work Order Reports',
-            count: orphanedReportsCount,
-            severity: orphanedReportsCount > 10 ? 'critical' : orphanedReportsCount > 5 ? 'high' : 'medium',
+            count: orphanedReports.length,
+            severity: orphanedReports.length > 10 ? 'critical' : orphanedReports.length > 5 ? 'high' : 'medium',
             description: 'Work order reports that reference non-existent work orders',
             details: orphanedReports
           });
         }
 
         // 2. Check for completed work orders without reports
-        const { data: workOrdersWithoutReports, error: missingReportsError } = await supabase
+        const { data: completedWorkOrders, error: completedError } = await supabase
           .from('work_orders')
-          .select(`
-            id,
-            status,
-            work_order_reports!left (id)
-          `)
-          .eq('status', 'completed')
-          .is('work_order_reports.id', null);
+          .select('id, work_order_number, status')
+          .eq('status', 'completed');
 
-        if (missingReportsError) throw missingReportsError;
+        if (completedError) throw completedError;
 
-        const missingReportsCount = workOrdersWithoutReports?.length || 0;
-        if (missingReportsCount > 0) {
+        const { data: allWorkOrderReports, error: allReportsError } = await supabase
+          .from('work_order_reports')
+          .select('work_order_id');
+
+        if (allReportsError) throw allReportsError;
+
+        const workOrdersWithReports = new Set(allWorkOrderReports?.map(r => r.work_order_id) || []);
+        const workOrdersWithoutReports = completedWorkOrders?.filter(wo => !workOrdersWithReports.has(wo.id)) || [];
+
+        console.log('Missing reports check:', {
+          completedWorkOrders: completedWorkOrders?.length,
+          workOrdersWithReports: workOrdersWithReports.size,
+          missingReports: workOrdersWithoutReports.length
+        });
+
+        if (workOrdersWithoutReports.length > 0) {
           issues.push({
             type: 'missing_reports',
             label: 'Completed Work Orders Without Reports',
-            count: missingReportsCount,
-            severity: missingReportsCount > 20 ? 'high' : missingReportsCount > 10 ? 'medium' : 'low',
+            count: workOrdersWithoutReports.length,
+            severity: workOrdersWithoutReports.length > 20 ? 'high' : workOrdersWithoutReports.length > 10 ? 'medium' : 'low',
             description: 'Work orders marked as completed but missing completion reports',
             details: workOrdersWithoutReports
           });
         }
 
-        // 3. Check for duplicate user profiles (simplified check)
+        // 3. Check for duplicate user profiles
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('user_id, email');
+          .select('id, user_id, email');
 
         if (profilesError) throw profilesError;
 
@@ -83,6 +103,12 @@ export const useDataIntegrity = () => {
         const profileUserIds = profiles?.map(p => p.user_id) || [];
         const uniqueUserIds = new Set(profileUserIds);
         const duplicateProfilesCount = profileUserIds.length - uniqueUserIds.size;
+
+        console.log('Duplicate profiles check:', {
+          totalProfiles: profiles?.length,
+          uniqueUserIds: uniqueUserIds.size,
+          duplicates: duplicateProfilesCount
+        });
 
         if (duplicateProfilesCount > 0) {
           issues.push({
@@ -96,25 +122,33 @@ export const useDataIntegrity = () => {
         }
 
         // 4. Check for work orders without organizations
-        const { data: orphanedWorkOrders, error: orphanedWOError } = await supabase
+        const { data: allWorkOrdersWithOrgs, error: allWOError } = await supabase
           .from('work_orders')
-          .select(`
-            id,
-            organization_id,
-            work_order_number,
-            organizations!left(id)
-          `)
-          .is('organizations.id', null);
+          .select('id, work_order_number, organization_id');
 
-        if (orphanedWOError) throw orphanedWOError;
+        if (allWOError) throw allWOError;
 
-        const orphanedWorkOrdersCount = orphanedWorkOrders?.length || 0;
-        if (orphanedWorkOrdersCount > 0) {
+        const { data: existingOrganizations, error: orgsError } = await supabase
+          .from('organizations')
+          .select('id');
+
+        if (orgsError) throw orgsError;
+
+        const existingOrgIds = new Set(existingOrganizations?.map(org => org.id) || []);
+        const orphanedWorkOrders = allWorkOrdersWithOrgs?.filter(wo => !existingOrgIds.has(wo.organization_id)) || [];
+
+        console.log('Orphaned work orders check:', {
+          totalWorkOrders: allWorkOrdersWithOrgs?.length,
+          existingOrgs: existingOrganizations?.length,
+          orphanedWorkOrders: orphanedWorkOrders.length
+        });
+
+        if (orphanedWorkOrders.length > 0) {
           issues.push({
             type: 'orphaned_work_orders',
             label: 'Work Orders Without Organizations',
-            count: orphanedWorkOrdersCount,
-            severity: orphanedWorkOrdersCount > 10 ? 'critical' : orphanedWorkOrdersCount > 5 ? 'high' : 'medium',
+            count: orphanedWorkOrders.length,
+            severity: orphanedWorkOrders.length > 10 ? 'critical' : orphanedWorkOrders.length > 5 ? 'high' : 'medium',
             description: 'Work orders that reference non-existent organizations',
             details: orphanedWorkOrders
           });
