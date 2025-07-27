@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   AlertTriangle, 
@@ -15,7 +16,8 @@ import {
   Eye, 
   Download,
   RefreshCw,
-  Shield
+  Shield,
+  User
 } from 'lucide-react';
 
 interface UserIssue {
@@ -42,12 +44,33 @@ interface DiagnosticSummary {
 }
 
 export const OrganizationHealthTab = () => {
+  const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isFixing, setIsFixing] = useState(false);
   const [usersWithIssues, setUsersWithIssues] = useState<UserIssue[]>([]);
   const [summary, setSummary] = useState<DiagnosticSummary | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
+  const [currentUserInfo, setCurrentUserInfo] = useState<any>(null);
   const { toast } = useToast();
+
+  const fetchCurrentUserInfo = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const userInfo = {
+        auth_uid: user?.id,
+        email: user?.email,
+        profile: profile,
+        created_at: user?.created_at
+      };
+
+      setCurrentUserInfo(userInfo);
+      return userInfo;
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+      return null;
+    }
+  };
 
   const fetchDiagnostics = async () => {
     setIsLoading(true);
@@ -283,6 +306,7 @@ export const OrganizationHealthTab = () => {
 
   useEffect(() => {
     fetchDiagnostics();
+    fetchCurrentUserInfo();
   }, []);
 
   const getIssueType = (user: UserIssue) => {
@@ -341,6 +365,46 @@ export const OrganizationHealthTab = () => {
 
   return (
     <div className="space-y-6">
+      {/* Current User Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Current User Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {currentUserInfo ? (
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="font-medium">Auth UID:</span>
+                <span className="text-sm font-mono">{currentUserInfo.auth_uid}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Email:</span>
+                <span className="text-sm">{currentUserInfo.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Profile ID:</span>
+                <span className="text-sm font-mono">{currentUserInfo.profile?.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">User Type:</span>
+                <Badge>{currentUserInfo.profile?.user_type}</Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Full Name:</span>
+                <span className="text-sm">{currentUserInfo.profile?.first_name} {currentUserInfo.profile?.last_name}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-4">
+              Loading user information...
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Organization Diagnostics</h2>

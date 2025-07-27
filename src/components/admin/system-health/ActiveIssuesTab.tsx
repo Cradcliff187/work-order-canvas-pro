@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveIssues } from '@/hooks/useActiveIssues';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -19,6 +20,15 @@ import {
   Users,
   TrendingUp
 } from 'lucide-react';
+
+interface AuditLogEntry {
+  id: string;
+  table_name: string;
+  record_id: string;
+  action: string;
+  created_at: string;
+  user_id: string | null;
+}
 
 const getSeverityColor = (severity: string) => {
   switch (severity) {
@@ -65,6 +75,32 @@ export const ActiveIssuesTab: React.FC = () => {
   const { issues, isLoading, error, autoFixableIssues, fixAllAutoFixableIssues, refetch } = useActiveIssues();
   const { toast } = useToast();
   const [isFixingAll, setIsFixingAll] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState(false);
+
+  const fetchAuditLogs = async () => {
+    setIsLoadingAuditLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setAuditLogs(data || []);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error);
+      return [];
+    } finally {
+      setIsLoadingAuditLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, []);
 
   const handleFixAll = async () => {
     setIsFixingAll(true);
@@ -276,6 +312,75 @@ export const ActiveIssuesTab: React.FC = () => {
                     </TableRow>
                   );
                 })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Audit Logs */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Recent Audit Logs
+              </CardTitle>
+              <CardDescription>
+                Latest system activity and changes
+              </CardDescription>
+            </div>
+            <Button onClick={fetchAuditLogs} variant="outline" size="sm" disabled={isLoadingAuditLogs}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingAuditLogs ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingAuditLogs ? (
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No recent audit logs found</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Table</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Record ID</TableHead>
+                  <TableHead>User ID</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {auditLogs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>
+                      <Badge variant="outline">{log.table_name}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{log.action.toUpperCase()}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-sm">{log.record_id}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-sm">{log.user_id || 'System'}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString()}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           )}
