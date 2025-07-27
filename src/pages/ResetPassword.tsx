@@ -198,7 +198,6 @@ const ResetPassword = () => {
       let refreshToken = searchParams.get('refresh_token');
       let type = searchParams.get('type');
       
-      console.log('Search params ALL:', Array.from(searchParams.entries()));
       console.log('Search params found:', { 
         accessToken: !!accessToken, 
         refreshToken: !!refreshToken, 
@@ -214,32 +213,12 @@ const ResetPassword = () => {
         refreshToken = hashParams.get('refresh_token');
         type = hashParams.get('type');
         
-        console.log('Hash params ALL:', Array.from(hashParams.entries()));
         console.log('Hash params found:', { 
           accessToken: !!accessToken, 
           refreshToken: !!refreshToken, 
           type,
           accessTokenLength: accessToken?.length || 0,
           refreshTokenLength: refreshToken?.length || 0 
-        });
-      }
-      
-      // Additional debugging for common issues
-      if (!accessToken && !refreshToken) {
-        console.log('❌ NO TOKENS FOUND - Checking for other parameters:');
-        const allSearchParams = Array.from(new URLSearchParams(window.location.search).entries());
-        const allHashParams = Array.from(new URLSearchParams(window.location.hash.substring(1)).entries());
-        console.log('All search parameters:', allSearchParams);
-        console.log('All hash parameters:', allHashParams);
-        
-        // Check for common alternative parameter names
-        const altParams = ['token', 'access', 'auth_token', '__lovable_token'];
-        altParams.forEach(param => {
-          const searchValue = searchParams.get(param);
-          const hashValue = new URLSearchParams(window.location.hash.substring(1)).get(param);
-          if (searchValue || hashValue) {
-            console.log(`Found alternative parameter "${param}":`, { search: !!searchValue, hash: !!hashValue });
-          }
         });
       }
       
@@ -288,30 +267,17 @@ const ResetPassword = () => {
     const processUrlParameters = async () => {
       const { accessToken, refreshToken, type } = extractTokensFromUrl();
       
-      // Check for Lovable token (redirect to proper URL)
-      const searchParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const lovableToken = searchParams.get('__lovable_token') || hashParams.get('__lovable_token');
-      
-      if (lovableToken && !accessToken && !refreshToken) {
-        console.log('❌ FOUND LOVABLE TOKEN - This indicates URL configuration issue');
-        setResetError({
-          type: 'URL_CONFIG',
-          title: 'Password Reset Configuration Issue',
-          message: 'The password reset link is not configured properly. This typically means the Supabase URL settings need to be updated to point to the correct domain.',
-          canRetry: false,
-          showRequestNewLink: true,
-          showConfigHelp: true
-        });
-        return;
-      }
-      
       // Check if we have the required Supabase parameters
       if (!accessToken || !refreshToken || (type !== 'recovery' && type !== 'signup')) {
-        console.log('❌ Missing URL parameters for password reset');
-        const errorContext = !accessToken ? 'missing_access_token' :
-                             !refreshToken ? 'missing_refresh_token' :
-                             (type !== 'recovery' && type !== 'signup') ? 'invalid_type' : 'missing_params';
+        console.log('Missing URL parameters for password reset - this may be normal in preview environments');
+        
+        // Check if we're in a preview environment or if we have valid existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          console.log('Existing session found, proceeding with recovery flow');
+          setRecoveryFlow(true);
+          return;
+        }
         
         setResetError({
           type: 'URL_CONFIG',
