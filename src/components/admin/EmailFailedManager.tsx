@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, RotateCcw, Trash2, Mail, Clock, Filter, TrendingDown, Info } from 'lucide-react';
+import { AlertTriangle, RotateCcw, Trash2, Mail, Clock, Filter, TrendingDown, Info, RefreshCw } from 'lucide-react';
 import { TableActionsDropdown, type TableAction } from '@/components/ui/table-actions-dropdown';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
@@ -248,15 +248,28 @@ export function EmailFailedManager() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Failed Email Management
-            {failedEmails && failedEmails.length > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {failedEmails.length} failed
-              </Badge>
-            )}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Failed Email Management
+                {failedEmails && failedEmails.length > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {failedEmails.length} failed
+                  </Badge>
+                )}
+              </CardTitle>
+            </div>
+            <Button 
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['failed_emails'] })} 
+              variant="outline" 
+              size="sm" 
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
           <CardDescription>
             Manage emails that have failed permanently (retry count ≥ 3)
           </CardDescription>

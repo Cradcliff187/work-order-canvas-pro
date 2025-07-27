@@ -216,14 +216,20 @@ export function EmailQueueStatus() {
               <Mail className="h-5 w-5 mr-2" />
               Email Queue Status
             </div>
-            {!isLoading && stats && (
-              <Badge 
-                variant={getQueueStatusBadge().variant}
-                className={getQueueStatusBadge().pulse ? 'animate-pulse' : ''}
-              >
-                {getQueueStatusBadge().text}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              <Button onClick={() => refetch()} variant="outline" size="sm" disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              {!isLoading && stats && (
+                <Badge 
+                  variant={getQueueStatusBadge().variant}
+                  className={getQueueStatusBadge().pulse ? 'animate-pulse' : ''}
+                >
+                  {getQueueStatusBadge().text}
+                </Badge>
+              )}
+            </div>
           </CardTitle>
           <CardDescription>
             Monitor and manage the email processing queue

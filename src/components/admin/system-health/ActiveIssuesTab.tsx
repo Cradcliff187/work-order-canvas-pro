@@ -211,8 +211,8 @@ export const ActiveIssuesTab: React.FC = () => {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => refetch()} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
+              <Button onClick={() => refetch()} variant="outline" size="sm" disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
               {autoFixableIssues.length > 0 && (

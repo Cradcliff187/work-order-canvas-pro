@@ -12,14 +12,16 @@ import {
   WifiOff,
   TrendingUp,
   Eye,
-  Timer
+  Timer,
+  RefreshCw
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useMessagingHealth } from '@/hooks/useMessagingHealth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const MessagingSystemTab: React.FC = () => {
-  const { data: messagingHealth, isLoading, error } = useMessagingHealth();
+  const { data: messagingHealth, isLoading, error, refetch } = useMessagingHealth();
 
   if (isLoading) {
     return (
@@ -65,6 +67,17 @@ export const MessagingSystemTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Refresh Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Messaging System Health</h2>
+          <p className="text-sm text-muted-foreground">Real-time messaging performance and health metrics</p>
+        </div>
+        <Button onClick={() => refetch()} variant="outline" size="sm" disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
       {/* Message Queue Status */}
       <Card>
         <CardHeader>
