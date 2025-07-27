@@ -119,6 +119,35 @@
 }
 
 @layer components {
+  /* Smooth transition utilities */
+  .smooth-transition {
+    transition: all 200ms ease-in-out;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .smooth-transition {
+      transition: none;
+    }
+  }
+  
+  /* Performance optimized variants */
+  .smooth-transition-colors {
+    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, border-color 200ms ease-in-out;
+  }
+  
+  .smooth-transition-transform {
+    transition: transform 200ms ease-in-out;
+    will-change: transform;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .smooth-transition-colors,
+    .smooth-transition-transform {
+      transition: none;
+      will-change: auto;
+    }
+  }
+
   /* Desktop hover effects */
   @media (min-width: 768px) {
     .card-hover {
