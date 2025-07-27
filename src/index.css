@@ -139,3 +139,18 @@ input, select, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
+
+.min-h-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+main {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  height: 100%;
+}
