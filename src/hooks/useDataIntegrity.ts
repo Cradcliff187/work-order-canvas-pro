@@ -138,6 +138,13 @@ export const useDataIntegrity = () => {
       
       healthScore = Math.max(0, healthScore);
 
+      console.log('Data Integrity Results:', {
+        totalIssues,
+        healthScore,
+        issueCount: issues.length,
+        issues: issues.map(i => ({ type: i.type, count: i.count, severity: i.severity }))
+      });
+
       return {
         issues,
         totalIssues,
