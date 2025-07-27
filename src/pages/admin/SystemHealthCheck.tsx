@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmailQueueStatus } from '@/components/admin/EmailQueueStatus';
 import { EmailFailedManager } from '@/components/admin/EmailFailedManager';
+import { OrganizationHealthTab } from '@/components/admin/system-health/OrganizationHealthTab';
 import { 
   Activity, 
   CheckCircle, 
@@ -308,225 +310,238 @@ const SystemHealthCheck = () => {
         <p className="text-muted-foreground">Technical monitoring and system status</p>
       </div>
 
-      {/* Email Queue Automation */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Email Queue Automation</CardTitle>
-          <CardDescription>
-            Monitor email queue status and automated processing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmailQueueStatus />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">System Overview</TabsTrigger>
+          <TabsTrigger value="organization">Organization & Users</TabsTrigger>
+        </TabsList>
 
-      {/* Failed Email Management */}
-      <div className="mb-6">
-        <EmailFailedManager />
-      </div>
+        <TabsContent value="overview" className="space-y-6">
+          {/* Email Queue Automation */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Queue Automation</CardTitle>
+              <CardDescription>
+                Monitor email queue status and automated processing
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmailQueueStatus />
+            </CardContent>
+          </Card>
 
-      {/* Control Panel */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Test Control Panel
-          </CardTitle>
-          <CardDescription>
-            Run comprehensive tests to verify system functionality
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <Button 
-                onClick={runAllTests} 
-                disabled={isRunning}
-                className="flex items-center gap-2"
-              >
-                {isRunning ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Activity className="h-4 w-4" />
-                )}
-                Run All Tests
-              </Button>
-              {lastTestRun && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Last run: {new Date(lastTestRun).toLocaleString()}
-                </p>
-              )}
-            </div>
+          {/* Failed Email Management */}
+          <div>
+            <EmailFailedManager />
           </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Current User Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Current User Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {currentUserInfo ? (
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Auth UID:</span>
-                  <span className="text-sm font-mono">{currentUserInfo.auth_uid}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Email:</span>
-                  <span className="text-sm">{currentUserInfo.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Profile ID:</span>
-                  <span className="text-sm font-mono">{currentUserInfo.profile?.id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">User Type:</span>
-                  <Badge>{currentUserInfo.profile?.user_type}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Full Name:</span>
-                  <span className="text-sm">{currentUserInfo.profile?.first_name} {currentUserInfo.profile?.last_name}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-4">
-                Run tests to fetch user information
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Helper Function Tests */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Helper Function Tests
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {helperFunctionTests.length > 0 ? (
-              <div className="space-y-3">
-                {helperFunctionTests.map((test, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{test.function}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Result: {JSON.stringify(test.actual)}
-                      </p>
-                    </div>
-                    {getStatusIcon(test.status)}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-4">
-                No tests run yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Test Results */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Audit System Test Results
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {testResults.length > 0 ? (
-            <div className="space-y-3">
-              {testResults.map((result, index) => (
-                <div key={index} className="flex items-start justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getStatusIcon(result.status)}
-                      <h4 className="font-medium">{result.name}</h4>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{result.message}</p>
-                    {result.data && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-muted-foreground cursor-pointer">View Details</summary>
-                        <pre className="text-xs mt-1 p-2 bg-muted rounded overflow-auto">
-                          {JSON.stringify(result.data, null, 2)}
-                        </pre>
-                      </details>
+          {/* Control Panel */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Test Control Panel
+              </CardTitle>
+              <CardDescription>
+                Run comprehensive tests to verify system functionality
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Button 
+                    onClick={runAllTests} 
+                    disabled={isRunning}
+                    className="flex items-center gap-2"
+                  >
+                    {isRunning ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Activity className="h-4 w-4" />
                     )}
-                  </div>
-                  {getStatusBadge(result.status)}
+                    Run All Tests
+                  </Button>
+                  {lastTestRun && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Last run: {new Date(lastTestRun).toLocaleString()}
+                    </p>
+                  )}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No test results yet. Click "Run All Tests" to begin.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Recent Audit Logs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Recent Audit Logs
-          </CardTitle>
-          <CardDescription>
-            Last 10 audit log entries from the system
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {auditLogs.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Table</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Record ID</TableHead>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Created At</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {auditLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>
-                      <Badge variant="outline">{log.table_name}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={log.action === 'INSERT' ? 'default' : log.action === 'UPDATE' ? 'secondary' : 'destructive'}>
-                        {log.action}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{log.record_id.slice(0, 8)}...</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {log.user_id ? log.user_id.slice(0, 8) + '...' : 'null'}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {new Date(log.created_at).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No audit logs found. Run tests to generate audit entries.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Current User Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Current User Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentUserInfo ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Auth UID:</span>
+                      <span className="text-sm font-mono">{currentUserInfo.auth_uid}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Email:</span>
+                      <span className="text-sm">{currentUserInfo.email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Profile ID:</span>
+                      <span className="text-sm font-mono">{currentUserInfo.profile?.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">User Type:</span>
+                      <Badge>{currentUserInfo.profile?.user_type}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Full Name:</span>
+                      <span className="text-sm">{currentUserInfo.profile?.first_name} {currentUserInfo.profile?.last_name}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4">
+                    Run tests to fetch user information
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Helper Function Tests */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Helper Function Tests
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {helperFunctionTests.length > 0 ? (
+                  <div className="space-y-3">
+                    {helperFunctionTests.map((test, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{test.function}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Result: {JSON.stringify(test.actual)}
+                          </p>
+                        </div>
+                        {getStatusIcon(test.status)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4">
+                    No tests run yet
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Test Results */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Audit System Test Results
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {testResults.length > 0 ? (
+                <div className="space-y-3">
+                  {testResults.map((result, index) => (
+                    <div key={index} className="flex items-start justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {getStatusIcon(result.status)}
+                          <h4 className="font-medium">{result.name}</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{result.message}</p>
+                        {result.data && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-muted-foreground cursor-pointer">View Details</summary>
+                            <pre className="text-xs mt-1 p-2 bg-muted rounded overflow-auto">
+                              {JSON.stringify(result.data, null, 2)}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
+                      {getStatusBadge(result.status)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  No test results yet. Click "Run All Tests" to begin.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Audit Logs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Recent Audit Logs
+              </CardTitle>
+              <CardDescription>
+                Last 10 audit log entries from the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {auditLogs.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Table</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Record ID</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Created At</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {auditLogs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell>
+                          <Badge variant="outline">{log.table_name}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={log.action === 'INSERT' ? 'default' : log.action === 'UPDATE' ? 'secondary' : 'destructive'}>
+                            {log.action}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{log.record_id.slice(0, 8)}...</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {log.user_id ? log.user_id.slice(0, 8) + '...' : 'null'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {new Date(log.created_at).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  No audit logs found. Run tests to generate audit entries.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="organization">
+          <OrganizationHealthTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
