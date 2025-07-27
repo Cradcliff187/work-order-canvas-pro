@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useBranding } from '@/hooks/useBranding';
 import { SingleOrganizationGuard } from '@/components/SingleOrganizationGuard';
 import { StandardHeader } from '@/components/layout/StandardHeader';
 import {
@@ -52,6 +53,8 @@ function PartnerSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { profile, signOut } = useAuth();
+  const { assets } = useBranding();
+  const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
 
   const isActive = (path: string) => location.pathname === path;
@@ -64,10 +67,22 @@ function PartnerSidebar() {
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-3 py-2">
-          {!collapsed && (
-            <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">AKC Contracting</h2>
-              <p className="text-xs text-sidebar-foreground/60">Partner Portal</p>
+          {collapsed || isMobile ? (
+            <div className="flex items-center justify-center w-full">
+              <img 
+                src={assets.logos.square} 
+                alt="AKC Logo" 
+                className="h-6 w-6 object-contain"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <img 
+                src={assets.logos.main} 
+                alt="AKC Logo" 
+                className="h-8 w-auto object-contain"
+              />
+              <p className="text-xs text-sidebar-foreground/60 ml-2">Partner Portal</p>
             </div>
           )}
         </div>
