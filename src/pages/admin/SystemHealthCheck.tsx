@@ -10,6 +10,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EmailQueueStatus } from '@/components/admin/EmailQueueStatus';
 import { EmailFailedManager } from '@/components/admin/EmailFailedManager';
 import { OrganizationHealthTab } from '@/components/admin/system-health/OrganizationHealthTab';
+import { DataIntegrityTab } from '@/components/admin/system-health/DataIntegrityTab';
+import { DatabasePerformanceTab } from '@/components/admin/system-health/DatabasePerformanceTab';
+import { ActiveIssuesTab } from '@/components/admin/system-health/ActiveIssuesTab';
 import { 
   Activity, 
   CheckCircle, 
@@ -314,6 +317,9 @@ const SystemHealthCheck = () => {
         <TabsList>
           <TabsTrigger value="overview">System Overview</TabsTrigger>
           <TabsTrigger value="organization">Organization & Users</TabsTrigger>
+          <TabsTrigger value="data-integrity">Data Integrity</TabsTrigger>
+          <TabsTrigger value="database-performance">Database Performance</TabsTrigger>
+          <TabsTrigger value="active-issues">Active Issues</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -540,6 +546,18 @@ const SystemHealthCheck = () => {
 
         <TabsContent value="organization">
           <OrganizationHealthTab />
+        </TabsContent>
+
+        <TabsContent value="data-integrity">
+          <DataIntegrityTab />
+        </TabsContent>
+
+        <TabsContent value="database-performance">
+          <DatabasePerformanceTab />
+        </TabsContent>
+
+        <TabsContent value="active-issues">
+          <ActiveIssuesTab />
         </TabsContent>
       </Tabs>
     </div>
