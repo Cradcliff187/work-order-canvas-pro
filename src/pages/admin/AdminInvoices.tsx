@@ -31,8 +31,14 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 
 export default function AdminInvoices() {
+  const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -191,12 +197,11 @@ export default function AdminInvoices() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center py-8">
-              <LoadingSpinner />
-            </div>
+            <TableSkeleton rows={5} columns={8} />
           ) : (
             <>
-              <div className="rounded-md border">
+              {/* Desktop Table */}
+              <div className="hidden lg:block rounded-md border">
                 <Table className="admin-table">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -257,6 +262,59 @@ export default function AdminInvoices() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="block lg:hidden space-y-3">
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const invoice = row.original;
+                    const getStatusVariant = (status: string) => {
+                      switch (status) {
+                        case 'submitted': return 'secondary';
+                        case 'approved': return 'default';
+                        case 'rejected': return 'destructive';
+                        case 'paid': return 'outline';
+                        default: return 'secondary';
+                      }
+                    };
+                    
+                    return (
+                      <MobileTableCard
+                        key={row.id}
+                        title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
+                        subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • $${invoice.total_amount?.toFixed(2) || '0.00'}`}
+                        status={
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant={getStatusVariant(invoice.status)} className="h-5 text-[10px] px-1.5">
+                              {invoice.status?.toUpperCase() || 'UNKNOWN'}
+                            </Badge>
+                            {invoice.paid_at && (
+                              <Badge variant="outline" className="h-5 text-[10px] px-1.5">
+                                PAID
+                              </Badge>
+                            )}
+                          </div>
+                        }
+                        onClick={() => handleViewInvoice(invoice)}
+                      >
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{invoice.invoice_work_orders?.[0]?.work_order?.work_order_number || 'No WO'}</span>
+                          {invoice.submitted_at && (
+                            <span>{format(new Date(invoice.submitted_at), 'MMM d, yyyy')}</span>
+                          )}
+                        </div>
+                      </MobileTableCard>
+                    );
+                  })
+                ) : (
+                  <EmptyTableState
+                    icon={FileText}
+                    title="No invoices found"
+                    description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Invoices will appear here when subcontractors submit them"}
+                    colSpan={1}
+                  />
+                )}
               </div>
 
               {/* Pagination */}

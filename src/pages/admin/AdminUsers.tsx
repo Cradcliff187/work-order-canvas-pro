@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { Plus, Download, RotateCcw, Users } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -118,21 +118,6 @@ export default function AdminUsers() {
     setRowSelection({});
   };
 
-  const renderTableSkeleton = () => (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex space-x-4">
-          <Skeleton className="h-4 w-8" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-16" />
-        </div>
-      ))}
-    </div>
-  );
 
   if (error) {
     return (
@@ -188,7 +173,7 @@ export default function AdminUsers() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            renderTableSkeleton()
+            <TableSkeleton rows={5} columns={6} />
           ) : !users || users.length === 0 ? (
             <EmptyState
               icon={Users}
