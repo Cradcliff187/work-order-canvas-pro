@@ -11,6 +11,7 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { StorageDebugPanel } from "./components/StorageDebugPanel";
+import { PWAInstallBanner } from "./components/PWAInstallBanner";
 
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => {
                 />
               </>
             )}
+            <PWAInstallBanner />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
