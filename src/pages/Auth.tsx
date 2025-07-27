@@ -98,11 +98,11 @@ export const Auth = () => {
           <div className="flex items-center justify-center gap-2 mb-2">
             <HardHat className="h-6 w-6 text-primary" />
             <h1 className="text-3xl font-bold text-foreground">
-              WorkOrderPortal
+              {branding.getProductDisplayName()}
             </h1>
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">
-            AKC Contracting Portal
+            {branding.getCompanyDisplayName()}
           </h2>
           <h3 className="text-lg font-medium text-foreground">
             {getTitle()}

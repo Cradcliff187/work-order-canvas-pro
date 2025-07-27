@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { HardHat, AlertCircle, CheckCircle, Eye, EyeOff, Check, X, Clock, Link2, RefreshCw, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useBranding } from '@/hooks/useBranding';
 import { supabase } from '@/integrations/supabase/client';
 
 // Error types for better categorization
@@ -33,6 +34,7 @@ const ResetPassword = () => {
   const [countdown, setCountdown] = useState(3);
   const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   const { resetPassword, isRecoverySession, setRecoveryFlow } = useAuth();
+  const { getProductDisplayName, getCompanyDisplayName } = useBranding();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -458,7 +460,8 @@ const ResetPassword = () => {
                 <HardHat className="w-8 h-8 text-primary-foreground" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">WorkOrderPro</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">{getProductDisplayName()}</h1>
+            <p className="text-muted-foreground">{getCompanyDisplayName()}</p>
           </div>
 
           <Card className="shadow-xl border-0 bg-card/95 backdrop-blur">
@@ -526,7 +529,8 @@ const ResetPassword = () => {
               <HardHat className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">WorkOrderPro</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">{getProductDisplayName()}</h1>
+          <p className="text-muted-foreground">{getCompanyDisplayName()}</p>
           <p className="text-muted-foreground">Reset Your Password</p>
         </div>
 
