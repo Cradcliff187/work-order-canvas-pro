@@ -26,8 +26,12 @@ export const useDataIntegrity = () => {
         // 1. Check for orphaned work order reports (reports without work orders)
         const { data: orphanedReports, error: orphanedError } = await supabase
           .from('work_order_reports')
-          .select('id, work_order_id')
-          .not('work_order_id', 'in', '(SELECT id FROM work_orders)');
+          .select(`
+            id,
+            work_order_id,
+            work_orders!left(id)
+          `)
+          .is('work_orders.id', null);
 
         if (orphanedError) throw orphanedError;
 
@@ -68,27 +72,25 @@ export const useDataIntegrity = () => {
           });
         }
 
-        // 3. Check for missing user profiles (simplified approach)
-        // Count profiles where user_id doesn't exist in auth.users (can't directly query auth.users)
-        // This is a simplified check - we'll just verify profile data consistency
+        // 3. Check for duplicate user profiles (simplified check)
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('user_id, email');
 
         if (profilesError) throw profilesError;
 
-        // Check for duplicate user_ids or missing essential data
+        // Check for duplicate user_ids
         const profileUserIds = profiles?.map(p => p.user_id) || [];
         const uniqueUserIds = new Set(profileUserIds);
-        const missingProfilesCount = profileUserIds.length - uniqueUserIds.size;
+        const duplicateProfilesCount = profileUserIds.length - uniqueUserIds.size;
 
-        if (missingProfilesCount > 0) {
+        if (duplicateProfilesCount > 0) {
           issues.push({
             type: 'missing_profiles',
-            label: 'Auth Users Without Profiles',
-            count: missingProfilesCount,
-            severity: missingProfilesCount > 5 ? 'critical' : missingProfilesCount > 2 ? 'high' : 'medium',
-            description: 'Authenticated users that do not have corresponding profile records',
+            label: 'Duplicate User Profiles',
+            count: duplicateProfilesCount,
+            severity: duplicateProfilesCount > 5 ? 'critical' : duplicateProfilesCount > 2 ? 'high' : 'medium',
+            description: 'Multiple profile records found for the same user',
             details: profiles?.filter((p, i, arr) => arr.findIndex(x => x.user_id === p.user_id) !== i)
           });
         }
@@ -96,8 +98,13 @@ export const useDataIntegrity = () => {
         // 4. Check for work orders without organizations
         const { data: orphanedWorkOrders, error: orphanedWOError } = await supabase
           .from('work_orders')
-          .select('id, organization_id, work_order_number')
-          .not('organization_id', 'in', '(SELECT id FROM organizations)');
+          .select(`
+            id,
+            organization_id,
+            work_order_number,
+            organizations!left(id)
+          `)
+          .is('organizations.id', null);
 
         if (orphanedWOError) throw orphanedWOError;
 

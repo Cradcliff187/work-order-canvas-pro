@@ -28,55 +28,58 @@ export const useActiveIssues = () => {
   const { data: organizationIssues, isLoading: orgLoading } = useQuery({
     queryKey: ['organization_issues'],
     queryFn: async () => {
-      // Get users with organization issues
-      const { data: users, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          user_type,
-          is_active,
-          user_organizations!inner(organization_id, organizations(id, name))
-        `);
-
-      if (error) throw error;
-
-      const userOrgCounts = new Map();
-      users?.forEach(user => {
-        const orgCount = user.user_organizations?.length || 0;
-        userOrgCounts.set(user.id, { user, orgCount });
-      });
-
-      // Get users with no organizations
-      const { data: usersWithoutOrgs, error: noOrgsError } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name, user_type')
-        .not('user_type', 'eq', 'admin')
-        .is('user_organizations.user_id', null)
-        .limit(1, { foreignTable: 'user_organizations' });
-
-      if (noOrgsError) throw noOrgsError;
-
       const issues = [];
-      const noOrgCount = usersWithoutOrgs?.length || 0;
-      const multiOrgCount = Array.from(userOrgCounts.values()).filter(({ orgCount }) => orgCount > 1).length;
 
-      if (noOrgCount > 0) {
-        issues.push({
-          type: 'no_organization',
-          count: noOrgCount,
-          severity: noOrgCount > 5 ? 'critical' : noOrgCount > 2 ? 'high' : 'medium'
-        });
-      }
+      try {
+        // Get users without organizations (excluding admins)
+        const { data: usersWithoutOrgs, error: noOrgsError } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            email,
+            first_name,
+            last_name,
+            user_type,
+            user_organizations!left(organization_id)
+          `)
+          .neq('user_type', 'admin')
+          .is('user_organizations.organization_id', null);
 
-      if (multiOrgCount > 0) {
-        issues.push({
-          type: 'multiple_organizations',
-          count: multiOrgCount,
-          severity: multiOrgCount > 10 ? 'high' : 'medium'
-        });
+        if (noOrgsError) throw noOrgsError;
+
+        const noOrgCount = usersWithoutOrgs?.length || 0;
+        if (noOrgCount > 0) {
+          issues.push({
+            type: 'no_organization',
+            count: noOrgCount,
+            severity: noOrgCount > 5 ? 'critical' : noOrgCount > 2 ? 'high' : 'medium'
+          });
+        }
+
+        // Get users with multiple organizations
+        const { data: userOrgCounts, error: multiOrgsError } = await supabase
+          .from('user_organizations')
+          .select('user_id');
+
+        if (multiOrgsError) throw multiOrgsError;
+
+        const orgCountMap = userOrgCounts?.reduce((acc, { user_id }) => {
+          acc[user_id] = (acc[user_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>) || {};
+
+        const multiOrgCount = Object.values(orgCountMap).filter(count => count > 1).length;
+        if (multiOrgCount > 0) {
+          issues.push({
+            type: 'multiple_organizations',
+            count: multiOrgCount,
+            severity: multiOrgCount > 10 ? 'high' : 'medium'
+          });
+        }
+
+      } catch (error) {
+        console.error('Error fetching organization issues:', error);
+        throw error;
       }
 
       return issues;
