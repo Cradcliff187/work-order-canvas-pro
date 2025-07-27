@@ -407,31 +407,52 @@ serve(async (req) => {
       }
     }
 
-    // Send welcome email using the send-email function
+    // Generate confirmation link and send password setup email
     try {
-      console.log('Sending welcome email to:', userData.email);
+      console.log(`[${requestId}] 📧 Generating confirmation link for password setup...`);
+      
+      // Generate confirmation link with redirect to /reset-password
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email: userData.email,
+        options: {
+          redirectTo: `${Deno.env.get('PUBLIC_SITE_URL')}/reset-password`
+        }
+      });
+
+      if (linkError) {
+        console.error(`[${requestId}] ❌ Failed to generate confirmation link:`, linkError);
+        throw new Error(`Failed to generate confirmation link: ${linkError.message}`);
+      }
+
+      console.log(`[${requestId}] ✅ Confirmation link generated successfully`);
+
+      // Send password setup email using auth_confirmation template
+      console.log(`[${requestId}] 📧 Sending password setup email to:`, userData.email);
       const { data: emailResult, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
         body: {
-          template_name: 'welcome_email',
+          template_name: 'auth_confirmation',
           test_mode: false,
           custom_data: {
             user_name: `${userData.first_name} ${userData.last_name}`,
             user_email: userData.email,
             first_name: userData.first_name,
             last_name: userData.last_name,
-            user_type: userData.user_type
+            email: userData.email,
+            user_type: userData.user_type,
+            confirmation_link: linkData.properties.action_link
           }
         }
       });
 
       if (emailError) {
-        console.error('Welcome email failed:', emailError);
+        console.error(`[${requestId}] ❌ Password setup email failed:`, emailError);
         // Don't throw error - user creation should succeed even if email fails
       } else {
-        console.log('Welcome email sent successfully:', emailResult);
+        console.log(`[${requestId}] ✅ Password setup email sent successfully:`, emailResult);
       }
     } catch (emailErr) {
-      console.error('Welcome email error:', emailErr);
+      console.error(`[${requestId}] ❌ Password setup email error:`, emailErr);
       // Don't throw error - user creation should succeed even if email fails
     }
 
