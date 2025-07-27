@@ -156,6 +156,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_queue_processing_log: {
+        Row: {
+          created_at: string | null
+          duration_ms: number
+          failed_count: number
+          id: string
+          processed_at: string
+          processed_count: number
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms: number
+          failed_count: number
+          id?: string
+          processed_at: string
+          processed_count: number
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number
+          failed_count?: number
+          id?: string
+          processed_at?: string
+          processed_count?: number
+        }
+        Relationships: []
+      }
       email_recipient_settings: {
         Row: {
           created_at: string
