@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/tooltip';
 import { AlertTriangle, CheckCircle, Clock, Mail, Loader2, RefreshCw, Trash2, RotateCcw, ChevronDown } from 'lucide-react';
 import { useEmailQueueStats } from '@/hooks/useEmailQueueStats';
+import { useProcessingHistory } from '@/hooks/useProcessingHistory';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -55,6 +56,12 @@ export function EmailQueueStatus() {
     isRetryingFailed,
     getCountableEmails
   } = useEmailQueueStats();
+
+  const {
+    data: processingHistory,
+    isLoading: isLoadingHistory,
+    error: historyError
+  } = useProcessingHistory();
 
   // Validation helper
   const validateRetentionDays = (days: number): boolean => {
@@ -305,6 +312,63 @@ export function EmailQueueStatus() {
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
             <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             <span>Automated processing runs every 5 minutes via pg_cron</span>
+          </div>
+        </div>
+
+        {/* Recent Processing History */}
+        <div className="border-t pt-4">
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Recent Processing History</h4>
+            {isLoadingHistory ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : historyError ? (
+              <div className="text-sm text-muted-foreground">
+                Failed to load processing history
+              </div>
+            ) : !processingHistory || processingHistory.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No processing history available
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {processingHistory.map((entry) => {
+                  const duration = entry.duration_ms < 1000 
+                    ? `${entry.duration_ms}ms` 
+                    : `${(entry.duration_ms / 1000).toFixed(1)}s`;
+                  
+                  return (
+                    <div key={entry.id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {formatDistanceToNow(new Date(entry.processed_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4 text-xs">
+                        <div className="flex items-center space-x-1">
+                          <CheckCircle className="h-3 w-3 text-green-600" />
+                          <span>{entry.processed_count}</span>
+                        </div>
+                        {entry.failed_count > 0 && (
+                          <div className="flex items-center space-x-1">
+                            <AlertTriangle className="h-3 w-3 text-red-600" />
+                            <span>{entry.failed_count}</span>
+                          </div>
+                        )}
+                        <span className="text-muted-foreground">{duration}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
