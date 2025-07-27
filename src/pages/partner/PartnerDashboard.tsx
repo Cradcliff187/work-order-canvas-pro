@@ -160,8 +160,8 @@ const PartnerDashboard = () => {
               variant="full"
             />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <Table className="min-w-[700px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Work Order #</TableHead>
