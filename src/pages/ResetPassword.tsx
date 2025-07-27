@@ -182,7 +182,13 @@ const ResetPassword = () => {
 
   useEffect(() => {
     const extractTokensFromUrl = () => {
-      console.log('Extracting tokens from URL:', window.location.href);
+      console.log('=== URL DEBUGGING START ===');
+      console.log('Full URL:', window.location.href);
+      console.log('Protocol:', window.location.protocol);
+      console.log('Host:', window.location.host);
+      console.log('Pathname:', window.location.pathname);
+      console.log('Search:', window.location.search);
+      console.log('Hash:', window.location.hash);
       
       // Check search parameters first
       const searchParams = new URLSearchParams(window.location.search);
@@ -190,7 +196,14 @@ const ResetPassword = () => {
       let refreshToken = searchParams.get('refresh_token');
       let type = searchParams.get('type');
       
-      console.log('Search params found:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+      console.log('Search params ALL:', Array.from(searchParams.entries()));
+      console.log('Search params found:', { 
+        accessToken: !!accessToken, 
+        refreshToken: !!refreshToken, 
+        type,
+        accessTokenLength: accessToken?.length || 0,
+        refreshTokenLength: refreshToken?.length || 0 
+      });
       
       // If not found in search params, check hash fragments
       if (!accessToken && window.location.hash) {
@@ -199,9 +212,36 @@ const ResetPassword = () => {
         refreshToken = hashParams.get('refresh_token');
         type = hashParams.get('type');
         
-        console.log('Hash params found:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+        console.log('Hash params ALL:', Array.from(hashParams.entries()));
+        console.log('Hash params found:', { 
+          accessToken: !!accessToken, 
+          refreshToken: !!refreshToken, 
+          type,
+          accessTokenLength: accessToken?.length || 0,
+          refreshTokenLength: refreshToken?.length || 0 
+        });
       }
       
+      // Additional debugging for common issues
+      if (!accessToken && !refreshToken) {
+        console.log('❌ NO TOKENS FOUND - Checking for other parameters:');
+        const allSearchParams = Array.from(new URLSearchParams(window.location.search).entries());
+        const allHashParams = Array.from(new URLSearchParams(window.location.hash.substring(1)).entries());
+        console.log('All search parameters:', allSearchParams);
+        console.log('All hash parameters:', allHashParams);
+        
+        // Check for common alternative parameter names
+        const altParams = ['token', 'access', 'auth_token', '__lovable_token'];
+        altParams.forEach(param => {
+          const searchValue = searchParams.get(param);
+          const hashValue = new URLSearchParams(window.location.hash.substring(1)).get(param);
+          if (searchValue || hashValue) {
+            console.log(`Found alternative parameter "${param}":`, { search: !!searchValue, hash: !!hashValue });
+          }
+        });
+      }
+      
+      console.log('=== URL DEBUGGING END ===');
       return { accessToken, refreshToken, type };
     };
 
