@@ -37,11 +37,30 @@ export const DataIntegrityTab: React.FC = () => {
     return 'text-destructive';
   };
 
-  const handleViewDetails = (issueType: string) => {
-    toast({
-      title: 'View Details',
-      description: `Detailed view for ${issueType} coming soon`,
-    });
+  const handleViewDetails = (issue: any) => {
+    if (!issue.details || issue.details.length === 0) {
+      toast({
+        title: "No Details Available",
+        description: "No detailed records found for this issue.",
+      });
+      return;
+    }
+
+    // Create a simple alert showing the details
+    const detailsText = issue.details.map((detail: any, index: number) => {
+      if (issue.type === 'orphaned_work_orders') {
+        return `${index + 1}. Work Order: ${detail.work_order_number || detail.id} (Org ID: ${detail.organization_id})`;
+      } else if (issue.type === 'orphaned_reports') {
+        return `${index + 1}. Report ID: ${detail.id} (Work Order ID: ${detail.work_order_id})`;
+      } else if (issue.type === 'missing_reports') {
+        return `${index + 1}. Work Order: ${detail.work_order_number || detail.id} (Status: ${detail.status})`;
+      } else if (issue.type === 'missing_profiles') {
+        return `${index + 1}. User ID: ${detail.user_id} (Email: ${detail.email})`;
+      }
+      return `${index + 1}. ${JSON.stringify(detail)}`;
+    }).join('\n');
+
+    alert(`${issue.label} Details:\n\n${detailsText}`);
   };
 
   const handleFixIssue = (issueType: string) => {
@@ -242,7 +261,7 @@ export const DataIntegrityTab: React.FC = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleViewDetails(issue.type)}
+                              onClick={() => handleViewDetails(issue)}
                             >
                               <Eye className="h-3 w-3" />
                             </Button>

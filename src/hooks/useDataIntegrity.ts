@@ -7,6 +7,7 @@ export interface DataIntegrityIssue {
   count: number;
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
+  details?: any[];
 }
 
 export interface DataIntegrityResult {
@@ -25,12 +26,8 @@ export const useDataIntegrity = () => {
         // 1. Check for orphaned work order reports (reports without work orders)
         const { data: orphanedReports, error: orphanedError } = await supabase
           .from('work_order_reports')
-          .select(`
-            id,
-            work_order_id,
-            work_orders!left (id)
-          `)
-          .is('work_orders.id', null);
+          .select('id, work_order_id')
+          .not('work_order_id', 'in', '(SELECT id FROM work_orders)');
 
         if (orphanedError) throw orphanedError;
 
@@ -41,7 +38,8 @@ export const useDataIntegrity = () => {
             label: 'Orphaned Work Order Reports',
             count: orphanedReportsCount,
             severity: orphanedReportsCount > 10 ? 'critical' : orphanedReportsCount > 5 ? 'high' : 'medium',
-            description: 'Work order reports that reference non-existent work orders'
+            description: 'Work order reports that reference non-existent work orders',
+            details: orphanedReports
           });
         }
 
@@ -65,7 +63,8 @@ export const useDataIntegrity = () => {
             label: 'Completed Work Orders Without Reports',
             count: missingReportsCount,
             severity: missingReportsCount > 20 ? 'high' : missingReportsCount > 10 ? 'medium' : 'low',
-            description: 'Work orders marked as completed but missing completion reports'
+            description: 'Work orders marked as completed but missing completion reports',
+            details: workOrdersWithoutReports
           });
         }
 
@@ -89,19 +88,16 @@ export const useDataIntegrity = () => {
             label: 'Auth Users Without Profiles',
             count: missingProfilesCount,
             severity: missingProfilesCount > 5 ? 'critical' : missingProfilesCount > 2 ? 'high' : 'medium',
-            description: 'Authenticated users that do not have corresponding profile records'
+            description: 'Authenticated users that do not have corresponding profile records',
+            details: profiles?.filter((p, i, arr) => arr.findIndex(x => x.user_id === p.user_id) !== i)
           });
         }
 
         // 4. Check for work orders without organizations
         const { data: orphanedWorkOrders, error: orphanedWOError } = await supabase
           .from('work_orders')
-          .select(`
-            id,
-            organization_id,
-            organizations!work_orders_organization_id_fkey (id)
-          `)
-          .is('organizations.id', null);
+          .select('id, organization_id, work_order_number')
+          .not('organization_id', 'in', '(SELECT id FROM organizations)');
 
         if (orphanedWOError) throw orphanedWOError;
 
@@ -112,7 +108,8 @@ export const useDataIntegrity = () => {
             label: 'Work Orders Without Organizations',
             count: orphanedWorkOrdersCount,
             severity: orphanedWorkOrdersCount > 10 ? 'critical' : orphanedWorkOrdersCount > 5 ? 'high' : 'medium',
-            description: 'Work orders that reference non-existent organizations'
+            description: 'Work orders that reference non-existent organizations',
+            details: orphanedWorkOrders
           });
         }
 
