@@ -99,11 +99,23 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'construction-bounce': {
+					'0%, 20%, 50%, 80%, 100%': {
+						transform: 'translateY(0)'
+					},
+					'40%': {
+						transform: 'translateY(-4px)'
+					},
+					'60%': {
+						transform: 'translateY(-2px)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'construction-bounce': 'construction-bounce 3s ease-in-out infinite'
 			}
 		}
 	},
