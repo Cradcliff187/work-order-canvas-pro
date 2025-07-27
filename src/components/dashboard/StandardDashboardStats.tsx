@@ -5,6 +5,7 @@ import { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface StatCard {
   icon: LucideIcon;
@@ -26,6 +27,7 @@ export function StandardDashboardStats({
   loading = false, 
   className 
 }: StandardDashboardStatsProps) {
+  const isMobile = useIsMobile();
   if (loading) {
     return (
       <div className={cn("grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4", className)}>
@@ -99,12 +101,23 @@ export function StandardDashboardStats({
         key={index} 
         className={cn(
           getVariantStyles(stat.variant),
-          stat.href && "hover:bg-muted/50 transition-colors cursor-pointer"
+          stat.href && isMobile 
+            ? "active:scale-98 active:border-primary/20 transition-transform cursor-pointer" 
+            : "hover:bg-muted/50 transition-colors cursor-pointer",
+          !stat.href && isMobile && "active:scale-98 transition-transform"
         )}
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex items-center space-x-2">
-            <stat.icon className={cn("h-4 w-4", getIconStyles(stat.variant))} />
+          <div className="flex items-center space-x-3">
+            <div className={cn(
+              "rounded-lg p-2 bg-primary/10",
+              isMobile ? "min-w-[44px] min-h-[44px] flex items-center justify-center" : ""
+            )}>
+              <stat.icon className={cn(
+                isMobile ? "h-5 w-5" : "h-4 w-4", 
+                getIconStyles(stat.variant)
+              )} />
+            </div>
             <span className="text-sm font-medium">{stat.label}</span>
           </div>
         </CardHeader>
