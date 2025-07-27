@@ -1557,6 +1557,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_type"]
       }
+      monitor_email_queue: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       preview_work_order_number_per_location: {
         Args: { org_id: string; location_code: string }
         Returns: string
