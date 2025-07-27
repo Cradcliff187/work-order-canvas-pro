@@ -25,11 +25,13 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from '@/components/ui/tooltip';
-import { AlertTriangle, CheckCircle, Clock, Mail, Loader2, RefreshCw, Trash2, RotateCcw, ChevronDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Mail, Loader2, RefreshCw, Trash2, RotateCcw, ChevronDown, TrendingUp, Activity } from 'lucide-react';
 import { useEmailQueueStats } from '@/hooks/useEmailQueueStats';
 import { useProcessingHistory } from '@/hooks/useProcessingHistory';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { Progress } from '@/components/ui/progress';
 
 interface ConfirmationState {
   action: 'clear' | 'retry' | null;
@@ -226,6 +228,54 @@ export function EmailQueueStatus() {
           <CardDescription>
             Monitor and manage the email processing queue
           </CardDescription>
+          
+          {/* Health Score Section */}
+          {!isLoading && stats && (
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">System Health Score</span>
+                </div>
+                <div className="text-right">
+                  {stats.total_emails > 0 ? (
+                    <>
+                      <div className={`text-lg font-bold ${
+                        Math.round((stats.sent_emails / stats.total_emails) * 100) >= 95 ? 'text-green-600' :
+                        Math.round((stats.sent_emails / stats.total_emails) * 100) >= 80 ? 'text-orange-600' : 'text-red-600'
+                      }`}>
+                        {Math.round((stats.sent_emails / stats.total_emails) * 100)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">Delivery Rate</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-lg font-bold text-muted-foreground">N/A</div>
+                      <div className="text-xs text-muted-foreground">No Data</div>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {/* Queue Depth Indicator */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Queue Depth</span>
+                  <span className="text-muted-foreground">
+                    {stats.pending_emails} pending
+                  </span>
+                </div>
+                <Progress 
+                  value={stats.total_emails > 0 ? (stats.pending_emails / Math.max(stats.total_emails, 10)) * 100 : 0}
+                  className={`h-2 ${
+                    stats.pending_emails === 0 ? 'bg-green-100' :
+                    stats.pending_emails <= 10 ? 'bg-green-100' :
+                    stats.pending_emails <= 50 ? 'bg-orange-100' : 'bg-red-100'
+                  }`}
+                />
+              </div>
+            </div>
+          )}
         </CardHeader>
       <CardContent className="space-y-6">
         {/* Queue Statistics Grid */}
@@ -315,6 +365,77 @@ export function EmailQueueStatus() {
           </div>
         </div>
 
+        {/* 24-Hour Stats */}
+        <div className="border-t pt-4">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <TrendingUp className="h-3 w-3" />
+                <span>24h Delivery Rate</span>
+              </div>
+              {isLoading ? (
+                <Skeleton className="h-6 w-16 mt-1" />
+              ) : stats?.total_emails > 0 ? (
+                <div className="text-lg font-semibold text-green-600 mt-1">
+                  {Math.round((stats.sent_emails / stats.total_emails) * 100)}%
+                </div>
+              ) : (
+                <div className="text-lg font-semibold text-muted-foreground mt-1">N/A</div>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>Processing Trend</span>
+              </div>
+              <div className="text-lg font-semibold mt-1">
+                {processingHistory && processingHistory.length > 0 ? (
+                  processingHistory.reduce((sum, entry) => sum + entry.processed_count, 0) > 0 ? 'Active' : 'Stable'
+                ) : 'No Data'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Processing Trend Mini-Graph */}
+        <div className="border-t pt-4">
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Processing Trend (7 days)
+            </h4>
+            {isLoadingHistory ? (
+              <Skeleton className="h-24 w-full" />
+            ) : historyError || !processingHistory || processingHistory.length === 0 ? (
+              <div className="h-24 flex items-center justify-center text-sm text-muted-foreground bg-muted/20 rounded">
+                No trend data available
+              </div>
+            ) : (
+              <div className="h-24">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={processingHistory.slice(-7)}>
+                    <XAxis 
+                      dataKey="processed_at" 
+                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                      tick={{ fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis hide />
+                    <Line 
+                      type="monotone" 
+                      dataKey="processed_count" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Recent Processing History */}
         <div className="border-t pt-4">
           <div className="space-y-3">
@@ -338,7 +459,7 @@ export function EmailQueueStatus() {
               </div>
             ) : (
               <div className="space-y-2">
-                {processingHistory.map((entry) => {
+                {processingHistory.slice(0, 3).map((entry) => {
                   const duration = entry.duration_ms < 1000 
                     ? `${entry.duration_ms}ms` 
                     : `${(entry.duration_ms / 1000).toFixed(1)}s`;
