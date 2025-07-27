@@ -41,7 +41,7 @@ export function ReportCard({ report }: ReportCardProps) {
   const subcontractor = report.subcontractor;
 
   return (
-    <Card className="h-full hover:shadow-md transition-shadow">
+    <Card className="h-full card-hover">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>

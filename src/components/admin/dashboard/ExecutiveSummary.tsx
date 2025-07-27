@@ -63,7 +63,7 @@ export const ExecutiveSummary = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Urgent Actions */}
-      <Card className="cursor-pointer hover:shadow-md transition-shadow">
+      <Card className="cursor-pointer card-hover">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Urgent Actions</CardTitle>
           <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -101,7 +101,7 @@ export const ExecutiveSummary = () => {
       </Card>
 
       {/* Today's Activity */}
-      <Card className="cursor-pointer hover:shadow-md transition-shadow">
+      <Card className="cursor-pointer card-hover">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Today's Activity</CardTitle>
           <Activity className="h-4 w-4 text-primary" />
@@ -136,7 +136,7 @@ export const ExecutiveSummary = () => {
       </Card>
 
       {/* Pending Approvals */}
-      <Card className="cursor-pointer hover:shadow-md transition-shadow">
+      <Card className="cursor-pointer card-hover">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
           <Clock className="h-4 w-4 text-warning" />
@@ -174,7 +174,7 @@ export const ExecutiveSummary = () => {
       </Card>
 
       {/* Team Status */}
-      <Card className="cursor-pointer hover:shadow-md transition-shadow">
+      <Card className="cursor-pointer card-hover">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Team Status</CardTitle>
           <Users className="h-4 w-4 text-success" />

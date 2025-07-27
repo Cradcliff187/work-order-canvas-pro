@@ -117,3 +117,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Desktop hover effects */
+  @media (min-width: 768px) {
+    .card-hover {
+      transition: var(--transition-smooth);
+    }
+    .card-hover:hover {
+      box-shadow: var(--shadow-card);
+      transform: translateY(-2px);
+    }
+  }
+
+  /* Mobile static shadows */
+  @media (max-width: 767px) {
+    .card-hover {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+  }
+}

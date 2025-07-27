@@ -63,7 +63,7 @@ export const ActivityFeed: React.FC = () => {
   }
 
   return (
-    <Card>
+    <Card className="card-hover">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">

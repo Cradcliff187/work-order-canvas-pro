@@ -174,7 +174,7 @@ export function MobileWorkOrderCard({
 
   return (
     <Card 
-      className="mb-4 touch-manipulation active:scale-95 transition-transform duration-150 min-h-[44px]"
+      className="mb-4 touch-manipulation active:scale-95 transition-transform duration-150 min-h-[44px] card-hover"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
