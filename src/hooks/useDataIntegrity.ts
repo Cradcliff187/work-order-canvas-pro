@@ -99,7 +99,7 @@ export const useDataIntegrity = () => {
           .select(`
             id,
             organization_id,
-            organizations!left (id)
+            organizations!work_orders_organization_id_fkey (id)
           `)
           .is('organizations.id', null);
 
