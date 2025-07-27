@@ -7,7 +7,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AppRouter } from "./routes/AppRouter";
 import { useBrowserTabTitle } from "./hooks/useBrowserTabTitle";
-import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { StorageDebugPanel } from "./components/StorageDebugPanel";
@@ -48,7 +48,7 @@ const App = () => {
             <Sonner />
             <OfflineIndicator />
             <PWAUpdateNotification />
-            {/* <PWAInstallPrompt /> */}
+            
             <AppContent />
             {process.env.NODE_ENV !== 'production' && (
               <>
