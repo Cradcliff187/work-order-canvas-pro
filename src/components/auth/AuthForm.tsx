@@ -146,7 +146,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
               >
                 Forgot your password?
               </Button>
-              <div>
+              {/* <div>
                 <span className="text-sm text-muted-foreground">Don't have an account? </span>
                 <Button
                   variant="link"
@@ -156,7 +156,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
                 >
                   Sign up
                 </Button>
-              </div>
+              </div> */}
             </>
           ) : (
             <div>
