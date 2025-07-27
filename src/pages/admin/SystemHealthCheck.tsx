@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmailQueueStatus } from '@/components/admin/EmailQueueStatus';
+import { EmailFailedManager } from '@/components/admin/EmailFailedManager';
 import { 
   Activity, 
   CheckCircle, 
@@ -319,6 +320,11 @@ const SystemHealthCheck = () => {
           <EmailQueueStatus />
         </CardContent>
       </Card>
+
+      {/* Failed Email Management */}
+      <div className="mb-6">
+        <EmailFailedManager />
+      </div>
 
       {/* Control Panel */}
       <Card className="mb-6">
