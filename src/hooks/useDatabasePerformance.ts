@@ -59,7 +59,7 @@ export const useDatabasePerformance = () => {
         supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso),
         supabase.from('work_orders').select('*', { count: 'exact', head: true }).gte('date_submitted', sevenDaysAgoIso),
         supabase.from('organizations').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso),
-        supabase.from('work_order_reports').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso),
+        supabase.from('work_order_reports').select('*', { count: 'exact', head: true }).gte('submitted_at', sevenDaysAgoIso),
         supabase.from('work_order_assignments').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso),
         supabase.from('invoices').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgoIso)
       ]);
