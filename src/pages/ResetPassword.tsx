@@ -12,7 +12,7 @@ import { useBranding } from '@/hooks/useBranding';
 import { supabase } from '@/integrations/supabase/client';
 
 // Error types for better categorization
-type ResetErrorType = 'EXPIRED_LINK' | 'INVALID_TOKEN' | 'ALREADY_USED' | 'MISSING_PARAMS' | 'SESSION_ERROR' | 'NETWORK_ERROR' | 'URL_CONFIG' | 'UNKNOWN';
+type ResetErrorType = 'EXPIRED_LINK' | 'INVALID_TOKEN' | 'ALREADY_USED' | 'MISSING_PARAMS' | 'SESSION_ERROR' | 'NETWORK_ERROR' | 'URL_CONFIG' | 'AUTH_ERROR' | 'UNKNOWN';
 
 interface ResetError {
   type: ResetErrorType;
@@ -267,22 +267,42 @@ const ResetPassword = () => {
     const processUrlParameters = async () => {
       const { accessToken, refreshToken, type } = extractTokensFromUrl();
       
-      // Check if we have the required Supabase parameters
+      // Check if we have the required Supabase parameters for production flow
       if (!accessToken || !refreshToken || (type !== 'recovery' && type !== 'signup')) {
-        console.log('Missing URL parameters for password reset - this may be normal in preview environments');
+        console.log('Missing standard URL parameters - checking for alternative flows');
         
-        // Check if we're in a preview environment or if we have valid existing session
+        // Check if we already have a valid authenticated session (common in preview environments)
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          console.log('Existing session found, proceeding with recovery flow');
+          console.log('Valid existing session found, proceeding with password reset');
           setRecoveryFlow(true);
           return;
         }
         
+        // Check if this is a valid user accessing the reset page directly
+        // In some environments, users may be redirected here with different authentication flows
+        const currentUrl = window.location.href;
+        const hasValidContext = currentUrl.includes('reset-password') || currentUrl.includes('recovery');
+        
+        if (hasValidContext) {
+          console.log('Reset password page accessed directly - checking authentication state');
+          // Allow the flow to continue but show appropriate error if no valid auth
+          setResetError({
+            type: 'AUTH_ERROR',
+            title: 'Authentication Required',
+            message: 'Please use a valid password reset link from your email, or request a new one.',
+            canRetry: false,
+            showRequestNewLink: true,
+            showConfigHelp: false
+          });
+          return;
+        }
+        
+        // Fallback for completely invalid access
         setResetError({
           type: 'URL_CONFIG',
           title: 'Invalid Password Reset Link',
-          message: 'This password reset link is missing required authentication parameters. Please request a new password reset link.',
+          message: 'This password reset link is invalid or has expired. Please request a new one.',
           canRetry: false,
           showRequestNewLink: true,
           showConfigHelp: false
