@@ -9,6 +9,8 @@ import { AddEmployeeModal } from '@/components/admin/employees/AddEmployeeModal'
 import { EditEmployeeRatesModal } from '@/components/admin/employees/EditEmployeeRatesModal';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useEmployees, useEmployeeMutations, formatCurrency, Employee } from '@/hooks/useEmployees';
 import { Users, UserPlus, Search, DollarSign, Edit, UserCheck, Power, TrendingUp } from 'lucide-react';
 
@@ -20,6 +22,7 @@ export default function AdminEmployees() {
 
   const { data, isLoading, refetch } = useEmployees();
   const { toggleEmployeeStatus } = useEmployeeMutations();
+  const isMobile = useIsMobile();
 
   const filteredEmployees = useMemo(() => {
     if (!data?.employees) return [];
@@ -173,88 +176,120 @@ export default function AdminEmployees() {
             </div>
           </div>
 
-          <div className="rounded-md border">
-            <Table className="admin-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Cost Rate</TableHead>
-                  <TableHead>Billable Rate</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[70px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEmployees.length === 0 ? (
-                  <EmptyTableState
-                    icon={Users}
-                    title={searchTerm ? "No employees found matching your search" : "No employees found"}
-                    description={!searchTerm ? "Get started by adding your first employee" : "Try adjusting your search criteria"}
-                    action={{
-                      label: "Add Employee",
-                      onClick: () => setShowAddModal(true),
-                      icon: UserPlus
-                    }}
-                    colSpan={6}
-                  />
-                ) : (
-                  filteredEmployees.map((employee) => (
-                    <TableRow 
-                      key={employee.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => setEditRatesEmployee(employee)}
-                    >
-                      <TableCell className="font-medium">
-                        {employee.first_name} {employee.last_name}
-                      </TableCell>
-                      <TableCell>{employee.email}</TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">
-                          {formatCurrency(employee.hourly_cost_rate)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-sm">
-                          {formatCurrency(employee.hourly_billable_rate)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={employee.is_active ? 'default' : 'secondary'}
-                          className="h-5 text-[10px] px-1.5"
-                        >
-                          {employee.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                       <TableCell onClick={(e) => e.stopPropagation()}>
-                         <TableActionsDropdown
-                           itemName={`${employee.first_name} ${employee.last_name}`}
-                           actions={[
-                             {
-                               label: 'Edit Rates',
-                               icon: Edit,
-                               onClick: () => {
-                                 setEditRatesEmployee(employee);
-                               },
-                             },
-                             {
-                               label: employee.is_active ? 'Deactivate' : 'Activate',
-                               icon: Power,
-                               onClick: () => {
-                                 handleToggleStatus(employee.id, employee.is_active);
-                               },
-                               variant: employee.is_active ? 'destructive' : 'default',
-                             },
-                           ]}
-                         />
-                       </TableCell>
+          {filteredEmployees.length === 0 ? (
+            <EmptyTableState
+              icon={Users}
+              title={searchTerm ? "No employees found matching your search" : "No employees found"}
+              description={!searchTerm ? "Get started by adding your first employee" : "Try adjusting your search criteria"}
+              action={{
+                label: "Add Employee",
+                onClick: () => setShowAddModal(true),
+                icon: UserPlus
+              }}
+              colSpan={6}
+            />
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden lg:block rounded-md border">
+                <Table className="admin-table">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Cost Rate</TableHead>
+                      <TableHead>Billable Rate</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[70px]">Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEmployees.map((employee) => (
+                      <TableRow 
+                        key={employee.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setEditRatesEmployee(employee)}
+                      >
+                        <TableCell className="font-medium">
+                          {employee.first_name} {employee.last_name}
+                        </TableCell>
+                        <TableCell>{employee.email}</TableCell>
+                        <TableCell>
+                          <span className="font-mono text-sm">
+                            {formatCurrency(employee.hourly_cost_rate)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-sm">
+                            {formatCurrency(employee.hourly_billable_rate)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={employee.is_active ? 'default' : 'secondary'}
+                            className="h-5 text-[10px] px-1.5"
+                          >
+                            {employee.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                         <TableCell onClick={(e) => e.stopPropagation()}>
+                           <TableActionsDropdown
+                             itemName={`${employee.first_name} ${employee.last_name}`}
+                             actions={[
+                               {
+                                 label: 'Edit Rates',
+                                 icon: Edit,
+                                 onClick: () => {
+                                   setEditRatesEmployee(employee);
+                                 },
+                               },
+                               {
+                                 label: employee.is_active ? 'Deactivate' : 'Activate',
+                                 icon: Power,
+                                 onClick: () => {
+                                   handleToggleStatus(employee.id, employee.is_active);
+                                 },
+                                 variant: employee.is_active ? 'destructive' : 'default',
+                               },
+                             ]}
+                           />
+                         </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="block lg:hidden space-y-3">
+                {filteredEmployees.map((employee) => (
+                  <MobileTableCard
+                    key={employee.id}
+                    title={`${employee.first_name} ${employee.last_name}`}
+                    subtitle={employee.email}
+                    status={
+                      <Badge 
+                        variant={employee.is_active ? 'default' : 'secondary'}
+                        className="h-5 text-[10px] px-1.5"
+                      >
+                        {employee.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    }
+                    onClick={() => setEditRatesEmployee(employee)}
+                  >
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Cost Rate:</span>
+                      <span className="font-mono">{formatCurrency(employee.hourly_cost_rate)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Billable Rate:</span>
+                      <span className="font-mono">{formatCurrency(employee.hourly_billable_rate)}</span>
+                    </div>
+                  </MobileTableCard>
+                ))}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

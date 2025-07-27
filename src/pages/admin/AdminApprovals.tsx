@@ -19,6 +19,9 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { Search, Filter, X, CheckCircle, RotateCcw, FileText, DollarSign } from 'lucide-react';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useApprovalQueue } from '@/hooks/useApprovalQueue';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
@@ -167,21 +170,7 @@ export default function AdminApprovals() {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const renderTableSkeleton = () => (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex space-x-4">
-          <Skeleton className="h-4 w-8" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      ))}
-    </div>
-  );
+  const isMobile = useIsMobile();
 
   if (error) {
     return (
@@ -288,7 +277,7 @@ export default function AdminApprovals() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                renderTableSkeleton()
+                <TableSkeleton rows={5} columns={7} />
               ) : reportItems.filter(item => 
                 (urgencyFilter === 'all' || item.urgency === urgencyFilter) &&
                 (!searchQuery || 
@@ -306,54 +295,88 @@ export default function AdminApprovals() {
                   colSpan={columns.length}
                 />
               ) : (
-                <div className="rounded-md border">
-                  <Table className="admin-table">
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
-                            onClick={() => handleView(row.original)}
-                            className="cursor-pointer"
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
+                <>
+                  {/* Desktop Table */}
+                  <div className="hidden lg:block rounded-md border">
+                    <Table className="admin-table">
+                      <TableHeader>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                          <TableRow key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                              <TableHead key={header.id}>
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext()
+                                    )}
+                              </TableHead>
                             ))}
                           </TableRow>
-                        ))
-                      ) : (
-                        <EmptyTableState
-                          icon={FileText}
-                          title="No reports found"
-                          description="Try adjusting your filters"
-                          colSpan={columns.length}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {table.getRowModel().rows?.length ? (
+                          table.getRowModel().rows.map((row) => (
+                            <TableRow
+                              key={row.id}
+                              data-state={row.getIsSelected() && "selected"}
+                              onClick={() => handleView(row.original)}
+                              className="cursor-pointer"
+                            >
+                              {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id}>
+                                  {flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext()
+                                  )}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))
+                        ) : (
+                          <EmptyTableState
+                            icon={FileText}
+                            title="No reports found"
+                            description="Try adjusting your filters"
+                            colSpan={columns.length}
+                          />
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="block lg:hidden space-y-3">
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => {
+                        const item = row.original;
+                        return (
+                          <MobileTableCard
+                            key={item.id}
+                            title={item.title}
+                            subtitle={`By: ${item.submittedBy} • ${item.urgency} urgency`}
+                            status={
+                              <div className="flex flex-col gap-1">
+                                <div className="text-xs text-muted-foreground">
+                                  {item.submittedAt}
+                                </div>
+                              </div>
+                            }
+                            onClick={() => handleView(item)}
+                          />
+                        );
+                      })
+                    ) : (
+                      <EmptyTableState
+                        icon={FileText}
+                        title="No reports found"
+                        description="Try adjusting your filters"
+                        colSpan={1}
+                      />
+                    )}
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -366,7 +389,7 @@ export default function AdminApprovals() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                renderTableSkeleton()
+                <TableSkeleton rows={5} columns={7} />
               ) : invoiceItems.filter(item => 
                 (urgencyFilter === 'all' || item.urgency === urgencyFilter) &&
                 (!searchQuery || 
@@ -384,54 +407,88 @@ export default function AdminApprovals() {
                   colSpan={columns.length}
                 />
               ) : (
-                <div className="rounded-md border">
-                  <Table className="admin-table">
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
-                            onClick={() => handleView(row.original)}
-                            className="cursor-pointer"
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
+                <>
+                  {/* Desktop Table */}
+                  <div className="hidden lg:block rounded-md border">
+                    <Table className="admin-table">
+                      <TableHeader>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                          <TableRow key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                              <TableHead key={header.id}>
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext()
+                                    )}
+                              </TableHead>
                             ))}
                           </TableRow>
-                        ))
-                      ) : (
-                        <EmptyTableState
-                          icon={DollarSign}
-                          title="No invoices found"
-                          description="Try adjusting your filters"
-                          colSpan={columns.length}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {table.getRowModel().rows?.length ? (
+                          table.getRowModel().rows.map((row) => (
+                            <TableRow
+                              key={row.id}
+                              data-state={row.getIsSelected() && "selected"}
+                              onClick={() => handleView(row.original)}
+                              className="cursor-pointer"
+                            >
+                              {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id}>
+                                  {flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext()
+                                  )}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))
+                        ) : (
+                          <EmptyTableState
+                            icon={DollarSign}
+                            title="No invoices found"
+                            description="Try adjusting your filters"
+                            colSpan={columns.length}
+                          />
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="block lg:hidden space-y-3">
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => {
+                        const item = row.original;
+                        return (
+                          <MobileTableCard
+                            key={item.id}
+                            title={item.title}
+                            subtitle={`By: ${item.submittedBy} • $${item.amount}`}
+                            status={
+                              <div className="flex flex-col gap-1">
+                                <div className="text-xs text-muted-foreground">
+                                  {item.submittedAt}
+                                </div>
+                              </div>
+                            }
+                            onClick={() => handleView(item)}
+                          />
+                        );
+                      })
+                    ) : (
+                      <EmptyTableState
+                        icon={DollarSign}
+                        title="No invoices found"
+                        description="Try adjusting your filters"
+                        colSpan={1}
+                      />
+                    )}
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

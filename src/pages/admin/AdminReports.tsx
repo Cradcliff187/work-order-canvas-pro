@@ -36,6 +36,9 @@ import {
 } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAdminReports } from '@/hooks/useAdminReports';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useSubcontractors } from '@/hooks/useSubcontractors';
@@ -256,22 +259,7 @@ export default function AdminReports() {
     setRowSelection({});
   };
 
-  const renderTableSkeleton = () => (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex space-x-4">
-          <Skeleton className="h-4 w-8" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      ))}
-    </div>
-  );
+  const isMobile = useIsMobile();
 
   if (error) {
     return (
@@ -419,7 +407,7 @@ export default function AdminReports() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            renderTableSkeleton()
+            <TableSkeleton rows={5} columns={8} />
           ) : reportsData?.data.length === 0 ? (
             <EmptyTableState
               icon={FileText}
@@ -429,89 +417,130 @@ export default function AdminReports() {
             />
           ) : (
             <>
-                <div className="rounded-md border">
-                  <Table className="admin-table">
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id} className="h-12">
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
+              {/* Desktop Table */}
+              <div className="hidden lg:block rounded-md border">
+                <Table className="admin-table">
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() && "selected"}
+                          onClick={() => navigate(`/admin/reports/${row.original.id}`)}
+                          className="cursor-pointer"
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
                           ))}
                         </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
-                            onClick={() => navigate(`/admin/reports/${row.original.id}`)}
-                            className="cursor-pointer"
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <EmptyTableState
-                          icon={FileText}
-                          title="No reports found"
-                          description="Try adjusting your filters or search criteria"
-                          colSpan={columns.length}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      ))
+                    ) : (
+                      <EmptyTableState
+                        icon={FileText}
+                        title="No reports found"
+                        description="Try adjusting your filters or search criteria"
+                        colSpan={columns.length}
+                      />
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
-              {/* Pagination */}
-              <div className="flex items-center justify-between space-x-2 py-4">
-                <div className="flex-1 text-sm text-muted-foreground">
-                  {selectedRows.length > 0 && (
-                    <span>
-                      {selectedRows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
+              {/* Mobile Cards */}
+              <div className="block lg:hidden space-y-3">
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => {
+                    const report = row.original;
+                    const workOrder = report.work_orders;
+                    const subcontractor = report.subcontractor;
+                    return (
+                      <MobileTableCard
+                        key={report.id}
+                        title={workOrder?.work_order_number || 'N/A'}
+                        subtitle={`${workOrder?.title || 'N/A'} • ${subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}`}
+                        status={getStatusBadge(report.status)}
+                        onClick={() => navigate(`/admin/reports/${report.id}`)}
+                      >
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Amount:</span>
+                          <span className="font-medium">
+                            {report.invoice_amount ? `$${report.invoice_amount.toLocaleString()}` : 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Submitted:</span>
+                          <span>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</span>
+                        </div>
+                      </MobileTableCard>
+                    );
+                  })
+                ) : (
+                  <EmptyTableState
+                    icon={FileText}
+                    title="No reports found"
+                    description="Try adjusting your filters or search criteria"
+                    colSpan={1}
+                  />
+                )}
               </div>
             </>
+          )}
+
+          {/* Pagination */}
+          {table.getRowModel().rows?.length > 0 && (
+            <div className="flex items-center justify-between space-x-2 py-4 mt-4">
+              <div className="flex-1 text-sm text-muted-foreground">
+                {selectedRows.length > 0 && (
+                  <span>
+                    {selectedRows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-muted-foreground">
+                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

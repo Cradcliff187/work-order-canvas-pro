@@ -21,6 +21,9 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Edit, Trash2, RotateCcw, ClipboardList } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
 import { EditOrganizationModal } from '@/components/admin/organizations/EditOrganizationModal';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -46,28 +49,12 @@ export default function AdminOrganizations() {
     setFilters({ search: debouncedSearch });
   }, [debouncedSearch]);
 
+  const isMobile = useIsMobile();
+
   const handleClearFilters = () => {
     setSearch('');
     setFilters({});
   };
-
-  const renderTableSkeleton = () => (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex space-x-4">
-          <Skeleton className="h-4 w-8" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-16" />
-        </div>
-      ))}
-    </div>
-  );
 
   if (error) {
     return (
@@ -125,7 +112,7 @@ export default function AdminOrganizations() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            renderTableSkeleton()
+            <TableSkeleton rows={5} columns={5} />
           ) : organizations?.length === 0 ? (
             <EmptyTableState
               icon={ClipboardList}
@@ -139,57 +126,83 @@ export default function AdminOrganizations() {
               colSpan={5}
             />
           ) : (
-            <div className="rounded-md border">
-              <Table className="admin-table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[100px]">Initials</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact Email</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {organizations?.map((organization) => (
-                    <TableRow 
-                      key={organization.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => {
-                        setSelectedOrganization(organization);
-                        setShowEditModal(true);
-                      }}
-                    >
-                      <TableCell className="font-medium">{organization.initials}</TableCell>
-                      <TableCell>{organization.name}</TableCell>
-                      <TableCell>{organization.contact_email}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
-                          className="h-5 text-[10px] px-1.5"
-                        >
-                          {organization.organization_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOrganization(organization);
-                            setShowEditModal(true);
-                          }}
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </Button>
-                      </TableCell>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden lg:block rounded-md border">
+                <Table className="admin-table">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">Initials</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Contact Email</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {organizations?.map((organization) => (
+                      <TableRow 
+                        key={organization.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => {
+                          setSelectedOrganization(organization);
+                          setShowEditModal(true);
+                        }}
+                      >
+                        <TableCell className="font-medium">{organization.initials}</TableCell>
+                        <TableCell>{organization.name}</TableCell>
+                        <TableCell>{organization.contact_email}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
+                            className="h-5 text-[10px] px-1.5"
+                          >
+                            {organization.organization_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrganization(organization);
+                              setShowEditModal(true);
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="block lg:hidden space-y-3">
+                {organizations?.map((organization) => (
+                  <MobileTableCard
+                    key={organization.id}
+                    title={organization.name}
+                    subtitle={`${organization.initials} • ${organization.contact_email}`}
+                    status={
+                      <Badge 
+                        variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
+                        className="h-5 text-[10px] px-1.5"
+                      >
+                        {organization.organization_type}
+                      </Badge>
+                    }
+                    onClick={() => {
+                      setSelectedOrganization(organization);
+                      setShowEditModal(true);
+                    }}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
