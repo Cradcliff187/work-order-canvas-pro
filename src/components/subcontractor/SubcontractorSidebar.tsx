@@ -4,7 +4,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvoiceDrafts } from '@/hooks/useInvoiceDrafts';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
-import { WorkOrderPortalLogo } from '@/components/ui/WorkOrderPortalLogo';
+import { useBranding } from '@/hooks/useBranding';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Sidebar,
   SidebarContent,
@@ -52,6 +53,8 @@ export function SubcontractorSidebar() {
   const { profile, signOut } = useAuth();
   const { draftCount } = useInvoiceDrafts();
   const { assignedWorkOrders } = useSubcontractorWorkOrders();
+  const { assets } = useBranding();
+  const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
   
   // Count work orders that need reports (assigned or in_progress status)
@@ -69,12 +72,22 @@ export function SubcontractorSidebar() {
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-3 py-2">
-          {collapsed ? (
-            <WorkOrderPortalLogo size="sm" iconOnly className="mx-auto" />
+          {collapsed || isMobile ? (
+            <div className="flex items-center justify-center w-full">
+              <img 
+                src={assets.logos.square} 
+                alt="AKC Logo" 
+                className="h-6 w-6 object-contain"
+              />
+            </div>
           ) : (
             <div className="flex flex-col gap-1">
-              <WorkOrderPortalLogo size="md" />
-              <p className="text-xs text-sidebar-foreground/60 ml-11">Subcontractor Portal</p>
+              <img 
+                src={assets.logos.main} 
+                alt="AKC Logo" 
+                className="h-8 w-auto object-contain"
+              />
+              <p className="text-xs text-sidebar-foreground/60 ml-2">Subcontractor Portal</p>
             </div>
           )}
         </div>
