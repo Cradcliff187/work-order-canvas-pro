@@ -28,6 +28,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
+          onClick={(e) => e.stopPropagation()}
           aria-label="Select row"
         />
       ),
@@ -53,7 +54,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       cell: ({ row }) => {
         const userType = row.getValue('user_type') as string;
         return (
-          <Badge variant={userType === 'admin' ? 'default' : 'secondary'}>
+          <Badge variant={userType === 'admin' ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5">
             {userType}
           </Badge>
         );
@@ -70,7 +71,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
         return (
           <div className="flex flex-col gap-1">
             {orgs.map((org) => (
-              <Badge key={org.organization_id} variant="outline">
+              <Badge key={org.organization_id} variant="outline" className="h-5 text-[10px] px-1.5">
                 {org.organization.name}
               </Badge>
             ))}
@@ -84,7 +85,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       cell: ({ row }) => {
         const isActive = row.getValue('is_active') as boolean;
         return (
-          <Badge variant={isActive ? 'default' : 'secondary'}>
+          <Badge variant={isActive ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5">
             {isActive ? 'Active' : 'Inactive'}
           </Badge>
         );
@@ -103,28 +104,30 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       cell: ({ row }) => {
         const user = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handlers.onView(user)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlers.onEdit(user)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handlers.onDelete(user)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handlers.onView(user)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlers.onEdit(user)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handlers.onDelete(user)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },

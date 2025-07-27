@@ -199,7 +199,7 @@ export default function AdminUsers() {
           ) : (
             <>
               <div className="rounded-md border">
-                <Table>
+                <Table className="admin-table">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
@@ -222,6 +222,11 @@ export default function AdminUsers() {
                         <TableRow
                           key={row.id}
                           data-state={row.getIsSelected() && "selected"}
+                          onClick={() => {
+                            setSelectedUser(row.original);
+                            setViewUserModalOpen(true);
+                          }}
+                          className="cursor-pointer"
                         >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id}>

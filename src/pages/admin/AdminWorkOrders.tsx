@@ -285,7 +285,7 @@ export default function AdminWorkOrders() {
           ) : (
             <>
               <div className="rounded-md border">
-                <Table>
+                <Table className="admin-table">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
@@ -308,6 +308,8 @@ export default function AdminWorkOrders() {
                         <TableRow
                           key={row.id}
                           data-state={row.getIsSelected() && "selected"}
+                          onClick={() => navigate(`/admin/work-orders/${row.original.id}`)}
+                          className="cursor-pointer"
                         >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id}>

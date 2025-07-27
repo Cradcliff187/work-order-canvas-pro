@@ -42,6 +42,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
+        onClick={(e) => e.stopPropagation()}
         aria-label="Select row"
       />
     ),
@@ -56,11 +57,11 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       const attachmentCount = row.original.attachment_count || 0;
       return (
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground">
+          <Badge variant="default" className="h-5 text-[10px] px-1.5 font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground">
             {number || 'Pending'}
           </Badge>
           {unreadCounts[row.original.id] > 0 && (
-            <Badge variant="default" className="ml-1">
+            <Badge variant="default" className="h-5 text-[10px] px-1.5 ml-1">
               {unreadCounts[row.original.id]}
             </Badge>
           )}
@@ -155,7 +156,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
       return (
-        <Badge className={getStatusColor(status)}>
+        <Badge className={`h-5 text-[10px] px-1.5 ${getStatusColor(status)}`}>
           {status.replace('_', ' ')}
         </Badge>
       );
@@ -169,7 +170,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       
       if (assignments.length === 0) {
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700">
+          <Badge variant="outline" className="h-5 text-[10px] px-1.5 bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700">
             Unassigned
           </Badge>
         );
@@ -178,7 +179,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       if (assignments.length === 1) {
         const assignee = assignments[0].profiles;
         return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+          <Badge variant="secondary" className="h-5 text-[10px] px-1.5 bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
             {assignee ? `${assignee.first_name} ${assignee.last_name}` : 'Unknown'}
           </Badge>
         );
@@ -193,7 +194,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700 cursor-help">
+              <Badge variant="secondary" className="h-5 text-[10px] px-1.5 bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700 cursor-help">
                 {leadName} + {additionalCount} more
               </Badge>
             </TooltipTrigger>
@@ -264,11 +265,13 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       ];
 
       return (
-        <TableActionsDropdown 
-          actions={actions} 
-          itemName={workOrderName}
-          align="end"
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <TableActionsDropdown 
+            actions={actions} 
+            itemName={workOrderName}
+            align="end"
+          />
+        </div>
       );
     },
     enableSorting: false,
