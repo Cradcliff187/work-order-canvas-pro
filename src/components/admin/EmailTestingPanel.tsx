@@ -113,12 +113,6 @@ export function EmailTestingPanel() {
           reset_link: 'https://test.com/auth/reset?token=test-reset-token',
         };
       
-      case 'welcome_email':
-        return {
-          ...baseData,
-          login_url: 'https://test.com/login',
-        };
-      
       default:
         return baseData;
     }
@@ -306,7 +300,7 @@ export function EmailTestingPanel() {
 
       toast({
         title: 'All Templates Sent',
-        description: `All 9 email templates sent to ${recipientEmail}`,
+        description: `All 8 email templates sent to ${recipientEmail}`,
       });
 
       refetch();
@@ -420,7 +414,7 @@ export function EmailTestingPanel() {
               ) : (
                 <>
                   <Mail className="mr-2 h-5 w-5" />
-                  Send All 9 Templates
+                  Send All 8 Templates
                 </>
               )}
             </Button>
@@ -430,7 +424,7 @@ export function EmailTestingPanel() {
             <p><strong>Real-World Testing:</strong> Default recipient is chris.l.radcliff@gmail.com for comprehensive production testing.</p>
             <p><strong>Direct Mode:</strong> Calls send-email function directly with mock data.</p>
             <p><strong>Production Mode:</strong> Creates actual database records to trigger emails via real production paths.</p>
-            <p><strong>Bulk Test:</strong> Sends all 9 email templates using the test-all-emails function.</p>
+            <p><strong>Bulk Test:</strong> Sends all 8 email templates using the test-all-emails function.</p>
           </div>
         </CardContent>
       </Card>
