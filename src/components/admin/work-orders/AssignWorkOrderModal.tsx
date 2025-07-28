@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
@@ -41,6 +43,7 @@ interface AssignWorkOrderModalProps {
 export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWorkOrderModalProps) {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
@@ -361,6 +364,427 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     }
   };
 
+  // Render Work Order Summary Component
+  const renderWorkOrderSummary = () => (
+    <Card className={isMobile ? "mb-4" : ""}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="h-4 w-4" />
+          <span className="font-medium">Work Order{workOrders.length > 1 ? 's' : ''} Summary</span>
+          <Badge variant="secondary" className="h-5 text-[10px] px-1.5">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-muted-foreground">Trade:</span>
+              <span className="ml-2 font-medium">{tradeName || 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Organization:</span>
+              <span className="ml-2">{workOrders[0]?.organizations?.name || 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // Render main content
+  const renderContent = () => (
+    <div className="space-y-6">
+      {/* Error States */}
+      {!hasValidWorkOrders && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span className="font-medium">Invalid Work Orders</span>
+          </div>
+          <p className="text-sm text-destructive mt-1">No valid work orders provided for assignment.</p>
+        </div>
+      )}
+
+      {networkError && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span className="font-medium">Network Error</span>
+          </div>
+          <p className="text-sm text-destructive mt-1">{networkError}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setNetworkError(null)} 
+            className="mt-2"
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* Work Order Summary - Only show on desktop, mobile shows in header */}
+      {hasValidWorkOrders && !isMobile && renderWorkOrderSummary()}
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+          <div className="text-sm text-destructive space-y-1">
+            {validationErrors.map((error, index) => (
+              <div key={index}>• {error}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {(isLoading || isLoadingOrgs) && (
+        <div className="space-y-4">
+          <TableSkeleton rows={5} columns={1} />
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Loading assignees...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Content when loaded */}
+      {!isLoading && !isLoadingOrgs && (
+        <>
+          {/* Current Assignments Section */}
+          {currentAssignments && currentAssignments.length > 0 ? (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <UserCheck className="h-4 w-4" />
+                  <span className="font-medium">Current Assignments</span>
+                </div>
+                <div className="space-y-2">
+                  {currentAssignments.map((assignment) => (
+                    <div key={assignment.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                      <AssigneeDisplay assignments={[assignment]} showIcons={false} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeCurrentAssignment(assignment.id)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        title="Remove assignment"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <UserCheck className="h-4 w-4" />
+                  <span className="font-medium">Current Assignments</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Not yet assigned
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assignment Type Selection */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <UserCheck className="h-4 w-4" />
+                  <span className="font-medium">Assignment Type</span>
+                </div>
+                
+                <RadioGroup 
+                  value={assignmentType} 
+                  onValueChange={handleAssignmentTypeChange}
+                  className={`${isMobile ? 'flex flex-col space-y-4' : 'flex gap-6'}`}
+                  disabled={isLoading || isLoadingOrgs}
+                >
+                  <div className={`flex items-center space-x-2 ${isMobile ? 'min-h-[44px]' : ''}`}>
+                    <RadioGroupItem value="individual" id="individual" />
+                    <Label htmlFor="individual" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      Assign to Individuals
+                    </Label>
+                  </div>
+                  <div className={`flex items-center space-x-2 ${isMobile ? 'min-h-[44px]' : ''}`}>
+                    <RadioGroupItem value="organization" id="organization" />
+                    <Label htmlFor="organization" className="flex items-center gap-2 cursor-pointer">
+                      <Building className="h-4 w-4" />
+                      Assign to Organization
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Individual Assignment Section */}
+          {assignmentType === 'individual' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="font-medium">Select Employees</span>
+              </div>
+
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search employees by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`pl-9 ${isMobile ? 'min-h-[44px]' : ''}`}
+                  disabled={isLoading || isLoadingOrgs}
+                />
+              </div>
+
+              {employees.length === 0 ? (
+                <EmptyTableState
+                  icon={Users}
+                  title="No Employees Available"
+                  description="There are no employees available for assignment at this time."
+                  colSpan={1}
+                />
+              ) : (
+                <div className="space-y-4">
+                  {/* Group employees by organization */}
+                  {Object.entries(
+                    employees
+                      .filter(emp => {
+                        if (!searchQuery) return true;
+                        const query = searchQuery.toLowerCase();
+                        return (
+                          emp.first_name.toLowerCase().includes(query) ||
+                          emp.last_name.toLowerCase().includes(query) ||
+                          emp.email.toLowerCase().includes(query)
+                        );
+                      })
+                      .reduce((groups: Record<string, AssigneeData[]>, emp) => {
+                        const orgName = emp.organization || 'Internal';
+                        if (!groups[orgName]) groups[orgName] = [];
+                        groups[orgName].push(emp);
+                        return groups;
+                      }, {})
+                  ).map(([orgName, groupEmployees], index) => (
+                    <div key={orgName}>
+                      {index > 0 && <Separator className="my-4" />}
+                      <div className="mb-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">{orgName}</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {groupEmployees.map((employee) => (
+                          <div key={employee.id} className={`flex items-center space-x-3 p-2 rounded-md hover:bg-accent ${isMobile ? 'min-h-[44px]' : ''}`}>
+                            <Checkbox
+                              checked={selectedAssignees.includes(employee.id)}
+                              onCheckedChange={() => toggleAssignee(employee.id)}
+                              disabled={isLoading || isLoadingOrgs}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">
+                                  {employee.first_name} {employee.last_name}
+                                </span>
+                                <OrganizationBadge 
+                                  organization={{ 
+                                    name: employee.organization, 
+                                    organization_type: 'internal' 
+                                  }} 
+                                  size="sm" 
+                                />
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {employee.email}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Organization Assignment Section */}
+          {assignmentType === 'organization' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                <span className="font-medium">Subcontractor Organizations</span>
+                <Badge variant="outline">
+                  {filteredSubcontractorOrgs.length} available
+                </Badge>
+              </div>
+
+              {/* Search Input */}
+              {subcontractorOrgs.length > 0 && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search organizations..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={`pl-10 ${isMobile ? 'min-h-[44px]' : ''}`}
+                    disabled={isLoading || isLoadingOrgs}
+                  />
+                </div>
+              )}
+
+              {filteredSubcontractorOrgs.length === 0 ? (
+                subcontractorOrgs.length === 0 ? (
+                  <EmptyTableState
+                    icon={Building}
+                    title="No subcontractor organizations"
+                    description="Create subcontractor organizations to assign work orders"
+                    colSpan={1}
+                  />
+                ) : (
+                  <EmptyTableState
+                    icon={Filter}
+                    title="No organizations found"
+                    description="No organizations with active users match your search"
+                    colSpan={1}
+                    action={{
+                      label: "Clear search",
+                      onClick: () => setSearchQuery('')
+                    }}
+                  />
+                )
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
+                    <div className={isMobile ? "max-h-80 overflow-y-auto px-6 py-4" : ""}>
+                      <ScrollArea className={isMobile ? "" : "max-h-80 px-6 py-4"}>
+                        <div className="space-y-2">
+                          {filteredSubcontractorOrgs.map((org) => (
+                            <div key={org.id} className={`flex items-center space-x-3 p-2 rounded-md hover:bg-accent ${isMobile ? 'min-h-[44px]' : ''}`}>
+                              <Checkbox
+                                id={`org-${org.id}`}
+                                checked={selectedOrganizations.includes(org.id)}
+                                onCheckedChange={() => toggleOrganization(org.id)}
+                                disabled={isLoading || isLoadingOrgs}
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <OrganizationBadge 
+                                    organization={{ 
+                                      name: org.name, 
+                                      organization_type: 'subcontractor' 
+                                    }} 
+                                    size="sm"
+                                    showIcon={false}
+                                    showType={false}
+                                  />
+                                  <span className="font-medium">
+                                    {org.name} ({org.active_user_count} employee{org.active_user_count !== 1 ? 's' : ''})
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Clear All Button - Only show when selections exist */}
+          {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) && (
+            <div className="flex justify-center">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={clearAllSelections}
+                className={isMobile ? 'min-h-[44px] w-full' : ''}
+              >
+                Clear All Selections
+              </Button>
+            </div>
+          )}
+
+          {/* Assignment Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="assignment-notes">Assignment Notes (Optional)</Label>
+            <Textarea
+              id="assignment-notes"
+              placeholder="Add any notes about this assignment..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className={isMobile ? 'min-h-[88px]' : ''}
+            />
+          </div>
+        </>
+      )}
+
+      {/* No Data Available - when both are empty */}
+      {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
+        <EmptyTableState 
+          icon={Users}
+          title="No assignees available"
+          description="Create employees or subcontractor organizations to assign work orders"
+          action={{
+            label: "Create Employee",
+            onClick: () => navigate('/admin/employees'),
+            icon: Plus
+          }}
+          colSpan={1}
+        />
+      )}
+    </div>
+  );
+
+  // Render footer actions
+  const renderFooter = () => (
+    <div className={`flex gap-3 ${isMobile ? 'flex-col' : 'justify-end'}`}>
+      <Button 
+        variant="outline" 
+        onClick={onClose}
+        disabled={bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
+        className={isMobile ? 'min-h-[44px] order-2' : ''}
+      >
+        Cancel
+      </Button>
+      <Button 
+        onClick={handleAssign}
+        disabled={!hasValidWorkOrders || 
+                 (bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) || 
+                 (!hasExistingAssignments && 
+                  ((assignmentType === 'individual' && selectedAssignees.length === 0) || 
+                   (assignmentType === 'organization' && selectedOrganizations.length === 0)))}
+        className={isMobile ? 'min-h-[44px] order-1' : ''}
+      >
+        {(bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
+          <>
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            {((assignmentType === 'individual' && selectedAssignees.length > 0) || 
+              (assignmentType === 'organization' && selectedOrganizations.length > 0)) ? 'Assigning...' : 'Clearing...'}
+          </>
+        ) : (
+          <>
+            {hasExistingAssignments
+              ? ((assignmentType === 'individual' && selectedAssignees.length > 0) || 
+                 (assignmentType === 'organization' && selectedOrganizations.length > 0))
+                ? 'Update Assignment'
+                : 'Clear Assignment'
+              : 'Assign'}
+          </>
+        )}
+      </Button>
+    </div>
+  );
+
   return (
     <ErrorBoundary fallback={
       <div className="p-4 text-center">
@@ -369,7 +793,31 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         <Button variant="outline" size="sm" onClick={onClose} className="mt-2">Close</Button>
       </div>
     }>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      {isMobile ? (
+        <Sheet open={isOpen} onOpenChange={onClose}>
+          <SheetContent side="bottom" className="h-[95vh] flex flex-col">
+            <SheetHeader className="sticky top-0 bg-background border-b pb-4 z-10">
+              <SheetTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Update Assignment' : 'Assign Work Order'}{hasValidWorkOrders && workOrders.length > 1 ? 's' : ''}
+              </SheetTitle>
+              <SheetDescription>
+                Select employees individually or assign to subcontractor organizations
+              </SheetDescription>
+              {hasValidWorkOrders && renderWorkOrderSummary()}
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto px-0 py-4">
+              {renderContent()}
+            </div>
+
+            <SheetFooter className="sticky bottom-0 bg-background border-t pt-4 z-10">
+              {renderFooter()}
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent className="max-w-2xl h-[85vh] sm:h-[80vh] flex flex-col overflow-hidden">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle className="flex items-center gap-2">
@@ -381,428 +829,16 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               </DialogDescription>
             </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-4 h-[calc(85vh-180px)] sm:h-[calc(80vh-180px)]">
-            <div className="space-y-6">
-              {/* Error States */}
-              {!hasValidWorkOrders && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <div className="flex items-center gap-2 text-destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="font-medium">Invalid Work Orders</span>
-                  </div>
-                  <p className="text-sm text-destructive mt-1">No valid work orders provided for assignment.</p>
-                </div>
-              )}
+            <ScrollArea className="flex-1 pr-4 h-[calc(85vh-180px)] sm:h-[calc(80vh-180px)]">
+              {renderContent()}
+            </ScrollArea>
 
-              {networkError && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <div className="flex items-center gap-2 text-destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="font-medium">Network Error</span>
-                  </div>
-                  <p className="text-sm text-destructive mt-1">{networkError}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setNetworkError(null)} 
-                    className="mt-2"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-1" />
-                    Retry
-                  </Button>
-                </div>
-              )}
-
-              {hasValidWorkOrders && (
-                <>
-                  {/* Work Order Summary */}
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Briefcase className="h-4 w-4" />
-                        <span className="font-medium">Work Order{workOrders.length > 1 ? 's' : ''} Summary</span>
-                        <Badge variant="secondary" className="h-5 text-[10px] px-1.5">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Trade:</span>
-                            <span className="ml-2 font-medium">{tradeName || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Organization:</span>
-                            <span className="ml-2">{workOrders[0]?.organizations?.name || 'N/A'}</span>
-                          </div>
-                        </div>
-                        
-                        {workOrders.length === 1 ? (
-                          <div>
-                            <span className="text-muted-foreground">Title:</span>
-                            <span className="ml-2">{workOrders[0]?.title}</span>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">
-                            Multiple work orders selected for bulk assignment
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-              {/* Validation Errors */}
-              {validationErrors.length > 0 && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <div className="text-sm text-destructive space-y-1">
-                    {validationErrors.map((error, index) => (
-                      <div key={index}>• {error}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Loading State */}
-              {(isLoading || isLoadingOrgs) && (
-                <div className="space-y-4">
-                  <TableSkeleton rows={5} columns={1} />
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Loading assignees...</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Content when loaded */}
-              {!isLoading && !isLoadingOrgs && (
-                <>
-                  {/* Current Assignments Section */}
-                  {currentAssignments && currentAssignments.length > 0 ? (
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <UserCheck className="h-4 w-4" />
-                          <span className="font-medium">Current Assignments</span>
-                        </div>
-                        <div className="space-y-2">
-                          {currentAssignments.map((assignment) => (
-                            <div key={assignment.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                              <AssigneeDisplay assignments={[assignment]} showIcons={false} />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeCurrentAssignment(assignment.id)}
-                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                title="Remove assignment"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <UserCheck className="h-4 w-4" />
-                          <span className="font-medium">Current Assignments</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Not yet assigned
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Assignment Type Selection */}
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <UserCheck className="h-4 w-4" />
-                          <span className="font-medium">Assignment Type</span>
-                        </div>
-                        
-                        <RadioGroup 
-                          value={assignmentType} 
-                          onValueChange={handleAssignmentTypeChange}
-                          className="flex gap-6"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="individual" id="individual" />
-                            <Label htmlFor="individual" className="flex items-center gap-2 cursor-pointer">
-                              <User className="h-4 w-4" />
-                              Assign to Individuals
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="organization" id="organization" />
-                            <Label htmlFor="organization" className="flex items-center gap-2 cursor-pointer">
-                              <Building className="h-4 w-4" />
-                              Assign to Organization
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Individual Assignment Section */}
-                  {assignmentType === 'individual' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span className="font-medium">Select Employees</span>
-                      </div>
-
-                      {/* Search Input */}
-                      <div className="relative">
-                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search employees by name or email..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-9"
-                          disabled={isLoading || isLoadingOrgs}
-                        />
-                      </div>
-
-                      {employees.length === 0 ? (
-                        <EmptyTableState
-                          icon={Users}
-                          title="No Employees Available"
-                          description="There are no employees available for assignment at this time."
-                          colSpan={1}
-                        />
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Group employees by organization */}
-                          {Object.entries(
-                            employees
-                              .filter(emp => {
-                                if (!searchQuery) return true;
-                                const query = searchQuery.toLowerCase();
-                                return (
-                                  emp.first_name.toLowerCase().includes(query) ||
-                                  emp.last_name.toLowerCase().includes(query) ||
-                                  emp.email.toLowerCase().includes(query)
-                                );
-                              })
-                              .reduce((groups: Record<string, AssigneeData[]>, emp) => {
-                                const orgName = emp.organization || 'Internal';
-                                if (!groups[orgName]) groups[orgName] = [];
-                                groups[orgName].push(emp);
-                                return groups;
-                              }, {})
-                          ).map(([orgName, groupEmployees], index) => (
-                            <div key={orgName}>
-                              {index > 0 && <Separator className="my-4" />}
-                              <div className="mb-3">
-                                <h4 className="text-sm font-medium text-muted-foreground">{orgName}</h4>
-                              </div>
-                              <div className="space-y-2">
-                                {groupEmployees.map((employee) => (
-                                  <div key={employee.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                                     <Checkbox
-                                      checked={selectedAssignees.includes(employee.id)}
-                                      onCheckedChange={() => toggleAssignee(employee.id)}
-                                      disabled={isLoading || isLoadingOrgs}
-                                    />
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                          {employee.first_name} {employee.last_name}
-                                        </span>
-                                        <OrganizationBadge 
-                                          organization={{ 
-                                            name: employee.organization, 
-                                            organization_type: 'internal' 
-                                          }} 
-                                          size="sm" 
-                                        />
-                                      </div>
-                                      <div className="text-sm text-muted-foreground">
-                                        {employee.email}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Organization Assignment Section */}
-                  {assignmentType === 'organization' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" />
-                        <span className="font-medium">Subcontractor Organizations</span>
-                        <Badge variant="outline">
-                          {filteredSubcontractorOrgs.length} available
-                        </Badge>
-                      </div>
-
-                      {/* Search Input */}
-                      {subcontractorOrgs.length > 0 && (
-                        <div className="relative">
-                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search organizations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10"
-                            disabled={isLoading || isLoadingOrgs}
-                          />
-                        </div>
-                      )}
-
-                      {filteredSubcontractorOrgs.length === 0 ? (
-                        subcontractorOrgs.length === 0 ? (
-                          <EmptyTableState
-                            icon={Building}
-                            title="No subcontractor organizations"
-                            description="Create subcontractor organizations to assign work orders"
-                            colSpan={1}
-                          />
-                        ) : (
-                          <EmptyTableState
-                            icon={Filter}
-                            title="No organizations found"
-                            description="No organizations with active users match your search"
-                            colSpan={1}
-                            action={{
-                              label: "Clear search",
-                              onClick: () => setSearchQuery('')
-                            }}
-                          />
-                        )
-                      ) : (
-                        <Card>
-                          <CardContent className="p-0">
-                            <ScrollArea className="max-h-80 px-6 py-4">
-                              <div className="space-y-2">
-                                {filteredSubcontractorOrgs.map((org) => (
-                                  <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                                     <Checkbox
-                                      id={`org-${org.id}`}
-                                      checked={selectedOrganizations.includes(org.id)}
-                                      onCheckedChange={() => toggleOrganization(org.id)}
-                                      disabled={isLoading || isLoadingOrgs}
-                                    />
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <OrganizationBadge 
-                                          organization={{ 
-                                            name: org.name, 
-                                            organization_type: 'subcontractor' 
-                                          }} 
-                                          size="sm"
-                                          showIcon={false}
-                                          showType={false}
-                                        />
-                                        <span className="font-medium">
-                                          {org.name} ({org.active_user_count} employee{org.active_user_count !== 1 ? 's' : ''})
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </ScrollArea>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Clear All Button - Only show when selections exist */}
-                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) && (
-                    <div className="flex justify-center">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={clearAllSelections}
-                      >
-                        Clear All Selections
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Assignment Notes */}
-                  <div className="space-y-2">
-                    <Label htmlFor="assignment-notes">Assignment Notes (Optional)</Label>
-                    <Textarea
-                      id="assignment-notes"
-                      placeholder="Add any notes about this assignment..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* No Data Available - when both are empty */}
-              {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
-                <EmptyTableState 
-                  icon={Users}
-                  title="No assignees available"
-                  description="Create employees or subcontractor organizations to assign work orders"
-                  action={{
-                    label: "Create Employee",
-                    onClick: () => navigate('/admin/employees'),
-                    icon: Plus
-                  }}
-                  colSpan={1}
-                />
-              )}
+            <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
+              {renderFooter()}
             </div>
-          </ScrollArea>
-
-          {/* Footer Actions */}
-          <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={onClose}
-              disabled={bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleAssign}
-              disabled={!hasValidWorkOrders || 
-                       (bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) || 
-                       (!hasExistingAssignments && 
-                        ((assignmentType === 'individual' && selectedAssignees.length === 0) || 
-                         (assignmentType === 'organization' && selectedOrganizations.length === 0)))}
-            >
-              {(bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  {((assignmentType === 'individual' && selectedAssignees.length > 0) || 
-                    (assignmentType === 'organization' && selectedOrganizations.length > 0)) ? 'Assigning...' : 'Clearing...'}
-                </>
-              ) : (
-                <>
-                  {hasExistingAssignments
-                    ? ((assignmentType === 'individual' && selectedAssignees.length > 0) || 
-                       (assignmentType === 'organization' && selectedOrganizations.length > 0))
-                      ? 'Update Assignment'
-                      : 'Clear Assignment'
-                    : 'Assign'}
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </ErrorBoundary>
   );
 }
