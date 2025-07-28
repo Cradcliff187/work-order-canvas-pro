@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -44,8 +44,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [networkError, setNetworkError] = useState<string | null>(null);
   
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'individuals' | 'organizations'>('individuals');
+  // Assignment type state
+  const [assignmentType, setAssignmentType] = useState<'individual' | 'organization'>('individual');
   
   // Search state for organizations
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,6 +170,16 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     );
   };
 
+  const handleAssignmentTypeChange = (type: 'individual' | 'organization') => {
+    setAssignmentType(type);
+    // Clear selections when switching types
+    if (type === 'individual') {
+      setSelectedOrganizations([]);
+    } else {
+      setSelectedAssignees([]);
+    }
+  };
+
   const selectAllEmployees = () => {
     const employeeIds = employees.map(emp => emp.id);
     setSelectedAssignees(employeeIds);
@@ -181,22 +191,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   };
 
   const handleAssign = async () => {
-    // If no assignees or organizations selected, remove all assignments
-    if (selectedAssignees.length === 0 && selectedOrganizations.length === 0) {
-      await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
-      
-      await supabase
-        .from('work_orders')
-        .update({
-          status: 'received' as const,
-          date_assigned: null,
-        })
-        .in('id', workOrders.map(wo => wo.id));
-      
-      onClose();
-      return;
-    }
-
     try {
       setValidationErrors([]);
 
@@ -205,62 +199,74 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         throw new Error('Current user profile not found - cannot create assignments');
       }
 
-      // Remove existing assignments
+      // Always clear ALL existing assignments first
       await bulkRemoveAssignments.mutateAsync(workOrders.map(wo => wo.id));
 
       const assignments = [];
 
-      // 1. Create individual employee assignments
-      for (const assigneeId of selectedAssignees) {
-        const assignee = employees.find(e => e.id === assigneeId);
-        if (!assignee) continue;
+      // Only create assignments for the selected type
+      if (assignmentType === 'individual' && selectedAssignees.length > 0) {
+        // Create individual employee assignments
+        for (const assigneeId of selectedAssignees) {
+          const assignee = employees.find(e => e.id === assigneeId);
+          if (!assignee) continue;
 
-        for (const wo of workOrders) {
-          assignments.push({
-            work_order_id: wo.id,
-            assigned_to: assigneeId,
-            assigned_organization_id: null, // Individual assignment
-            assignment_type: 'assigned' as const,
-            notes: notes || `Assigned to employee: ${assignee.first_name} ${assignee.last_name}`
-          });
+          for (const wo of workOrders) {
+            assignments.push({
+              work_order_id: wo.id,
+              assigned_to: assigneeId,
+              assigned_organization_id: null, // Individual assignment
+              assignment_type: 'assigned' as const,
+              notes: notes || `Assigned to employee: ${assignee.first_name} ${assignee.last_name}`
+            });
+          }
+        }
+      } else if (assignmentType === 'organization' && selectedOrganizations.length > 0) {
+        // Create organization-level assignments
+        for (const orgId of selectedOrganizations) {
+          const org = subcontractorOrgs.find(o => o.id === orgId);
+          if (!org) continue;
+
+          for (const wo of workOrders) {
+            // For organizations with users, use the first active user
+            // For organizations without users, use current user as placeholder
+            const assignedTo = org.first_active_user_id || profile.id;
+            
+            const isPlaceholder = !org.first_active_user_id;
+            const orgNotes = isPlaceholder 
+              ? `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name} (no active users - placeholder assignment)`
+              : `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name}`;
+
+            assignments.push({
+              work_order_id: wo.id,
+              assigned_to: assignedTo,
+              assigned_organization_id: orgId, // Always set for organization assignments
+              assignment_type: 'assigned' as const,
+              notes: orgNotes
+            });
+          }
         }
       }
 
-      // 2. Create organization-level assignments
-      for (const orgId of selectedOrganizations) {
-        const org = subcontractorOrgs.find(o => o.id === orgId);
-        if (!org) continue;
-
-        for (const wo of workOrders) {
-          // For organizations with users, use the first active user
-          // For organizations without users, use current user as placeholder
-          const assignedTo = org.first_active_user_id || profile.id;
-          
-          const isPlaceholder = !org.first_active_user_id;
-          const orgNotes = isPlaceholder 
-            ? `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name} (no active users - placeholder assignment)`
-            : `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name}`;
-
-          assignments.push({
-            work_order_id: wo.id,
-            assigned_to: assignedTo,
-            assigned_organization_id: orgId, // Always set for organization assignments
-            assignment_type: 'assigned' as const,
-            notes: orgNotes
-          });
-        }
-      }
-
-      // Create all assignments
+      // Update work order status based on assignments
       if (assignments.length > 0) {
+        // Create assignments and update status to 'assigned'
         await bulkAddAssignments.mutateAsync(assignments);
-
-        // Update work order status to assigned when assignments are created
+        
         await supabase
           .from('work_orders')
           .update({
             status: 'assigned',
             date_assigned: new Date().toISOString()
+          })
+          .in('id', workOrders.map(wo => wo.id));
+      } else {
+        // No new assignments, set status back to 'received'
+        await supabase
+          .from('work_orders')
+          .update({
+            status: 'received' as const,
+            date_assigned: null,
           })
           .in('id', workOrders.map(wo => wo.id));
       }
@@ -507,20 +513,47 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                     </Card>
                   )}
 
-                  {/* Assignment Tabs */}
-                  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'individuals' | 'organizations')} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="individuals" className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Assign to Individual
-                      </TabsTrigger>
-                      <TabsTrigger value="organizations" className="flex items-center gap-2">
-                        <Building className="h-4 w-4" />
-                        Assign to Organization
-                      </TabsTrigger>
-                    </TabsList>
+                  {/* Assignment Type Selection */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <UserCheck className="h-4 w-4" />
+                          <span className="font-medium">Assignment Type</span>
+                        </div>
+                        
+                        <RadioGroup 
+                          value={assignmentType} 
+                          onValueChange={handleAssignmentTypeChange}
+                          className="flex gap-6"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="individual" id="individual" />
+                            <Label htmlFor="individual" className="flex items-center gap-2 cursor-pointer">
+                              <User className="h-4 w-4" />
+                              Assign to Individuals
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="organization" id="organization" />
+                            <Label htmlFor="organization" className="flex items-center gap-2 cursor-pointer">
+                              <Building className="h-4 w-4" />
+                              Assign to Organization
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                    <TabsContent value="individuals" className="space-y-4 mt-4">
+                  {/* Individual Assignment Section */}
+                  {assignmentType === 'individual' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span className="font-medium">Select Employees</span>
+                      </div>
+
                       {/* Search Input */}
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -596,9 +629,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                           ))}
                         </div>
                       )}
-                    </TabsContent>
+                    </div>
+                  )}
 
-                    <TabsContent value="organizations" className="space-y-4 mt-4">
+                  {/* Organization Assignment Section */}
+                  {assignmentType === 'organization' && (
+                    <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4" />
                         <span className="font-medium">Subcontractor Organizations</span>
@@ -675,8 +711,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                           </CardContent>
                         </Card>
                       )}
-                    </TabsContent>
-                  </Tabs>
+                    </div>
+                  )}
 
                   {/* Clear All Button - Only show when selections exist */}
                   {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) && (
@@ -728,17 +764,23 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             </Button>
             <Button 
               onClick={handleAssign}
-              disabled={!hasValidWorkOrders || (bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) || (!hasExistingAssignments && selectedAssignees.length === 0 && selectedOrganizations.length === 0)}
+              disabled={!hasValidWorkOrders || 
+                       (bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) || 
+                       (!hasExistingAssignments && 
+                        ((assignmentType === 'individual' && selectedAssignees.length === 0) || 
+                         (assignmentType === 'organization' && selectedOrganizations.length === 0)))}
             >
               {(bulkAddAssignments.isPending || bulkRemoveAssignments.isPending) ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) ? 'Assigning...' : 'Clearing...'}
+                  {((assignmentType === 'individual' && selectedAssignees.length > 0) || 
+                    (assignmentType === 'organization' && selectedOrganizations.length > 0)) ? 'Assigning...' : 'Clearing...'}
                 </>
               ) : (
                 <>
                   {hasExistingAssignments
-                    ? (selectedAssignees.length > 0 || selectedOrganizations.length > 0)
+                    ? ((assignmentType === 'individual' && selectedAssignees.length > 0) || 
+                       (assignmentType === 'organization' && selectedOrganizations.length > 0))
                       ? 'Update Assignment'
                       : 'Clear Assignment'
                     : 'Assign'}
