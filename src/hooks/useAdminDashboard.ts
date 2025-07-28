@@ -107,7 +107,7 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     .from('work_orders')
     .select('id', { count: 'exact' })
     .eq('status', 'completed')
-    .gte('completed_at', firstDayCurrentMonth.toISOString());
+    .gte('date_completed', firstDayCurrentMonth.toISOString());
 
   // Pending invoices
   const { count: pendingInvoicesCount } = await supabase

@@ -47,7 +47,7 @@ export function useAdminReportMutations() {
           .from('work_orders')
           .update({ 
             status: 'completed',
-            completed_at: new Date().toISOString()
+            date_completed: new Date().toISOString()
           })
           .eq('id', data.work_orders.id);
 
@@ -121,7 +121,7 @@ export function useAdminReportMutations() {
           .from('work_orders')
           .update({ 
             status: 'completed',
-            completed_at: new Date().toISOString()
+            date_completed: new Date().toISOString()
           })
           .in('id', workOrderIds);
       }
