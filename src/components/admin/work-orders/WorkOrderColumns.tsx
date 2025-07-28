@@ -51,14 +51,18 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   },
   {
     accessorKey: 'work_order_number',
-    header: 'Work Order #',
+    header: 'Work Order',
+    size: 140,
+    minSize: 120,
+    maxSize: 160,
+    enableResizing: false,
     cell: ({ row }) => {
       const number = row.getValue('work_order_number') as string;
       const attachmentCount = row.original.attachment_count || 0;
       return (
         <div className="flex items-center gap-2">
-          <div className="font-mono text-sm font-semibold text-right">
-            {number || 'Pending'}
+          <div className="font-mono text-sm whitespace-nowrap">
+            {number || 'N/A'}
           </div>
           {unreadCounts[row.original.id] > 0 && (
             <Badge variant="default" className="h-5 text-[10px] px-1.5 transition-all duration-200">
@@ -95,7 +99,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     accessorKey: 'title',
     header: 'Title',
     cell: ({ row }) => (
-      <div className="font-medium max-w-xs truncate">
+      <div className="font-medium truncate text-ellipsis">
         {row.getValue('title')}
       </div>
     ),
@@ -103,11 +107,13 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   {
     accessorKey: 'organizations.name',
     header: 'Organization',
+    size: 180,
     cell: ({ row }) => row.original.organizations?.name || 'N/A',
   },
   {
     accessorKey: 'store_location',
     header: 'Location',
+    size: 150,
     cell: ({ row }) => {
       const workOrder = row.original;
       const locationDisplay = formatLocationDisplay(workOrder);
@@ -148,11 +154,13 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   {
     accessorKey: 'trades.name',
     header: 'Trade',
+    size: 120,
     cell: ({ row }) => row.original.trades?.name || 'N/A',
   },
   {
     accessorKey: 'status',
     header: 'Status',
+    size: 100,
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
       return (
@@ -165,6 +173,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   {
     accessorKey: 'work_order_assignments',
     header: 'Assigned To',
+    size: 120,
     cell: ({ row }) => {
       const assignments = row.original.work_order_assignments || [];
       
@@ -219,6 +228,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   {
     accessorKey: 'date_submitted',
     header: 'Date Submitted',
+    size: 100,
     cell: ({ row }) => {
       const date = new Date(row.getValue('date_submitted'));
       return date.toLocaleDateString();
@@ -227,6 +237,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   {
     accessorKey: 'due_date',
     header: 'Due Date',
+    size: 80,
     cell: ({ row }) => {
       const date = row.getValue('due_date');
       return date ? new Date(date as string).toLocaleDateString() : 'N/A';
@@ -235,6 +246,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   {
     id: 'actions',
     header: 'Actions',
+    size: 80,
     cell: ({ row }) => {
       const workOrder = row.original;
       const workOrderName = `${workOrder.work_order_number || 'Work Order'} - ${workOrder.title}`;
