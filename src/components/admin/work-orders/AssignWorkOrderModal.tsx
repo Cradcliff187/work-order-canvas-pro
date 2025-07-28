@@ -521,67 +521,80 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                     </TabsList>
 
                     <TabsContent value="individuals" className="space-y-4 mt-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          <span className="font-medium">Internal Employees</span>
-                          <Badge variant="outline">{employees.length} available</Badge>
-                        </div>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={selectAllEmployees}
-                          disabled={employees.length === 0}
-                        >
-                          <UserCheck className="h-4 w-4 mr-1" />
-                          Select All
-                        </Button>
+                      {/* Search Input */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search employees by name or email..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-9"
+                        />
                       </div>
 
                       {employees.length === 0 ? (
-                        <div className="p-4 bg-muted/50 border border-dashed rounded-md">
-                          <div className="text-center">
-                            <User className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-                            <p className="text-sm text-muted-foreground">No internal employees available</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Create employee profiles to assign work orders
-                            </p>
-                          </div>
-                        </div>
+                        <EmptyTableState
+                          icon={Users}
+                          title="No Employees Available"
+                          description="There are no employees available for assignment at this time."
+                          colSpan={1}
+                        />
                       ) : (
-                        <Card>
-                          <CardContent className="p-0">
-                            <ScrollArea className="max-h-80 px-6 py-4">
+                        <div className="space-y-4">
+                          {/* Group employees by organization */}
+                          {Object.entries(
+                            employees
+                              .filter(emp => {
+                                if (!searchQuery) return true;
+                                const query = searchQuery.toLowerCase();
+                                return (
+                                  emp.first_name.toLowerCase().includes(query) ||
+                                  emp.last_name.toLowerCase().includes(query) ||
+                                  emp.email.toLowerCase().includes(query)
+                                );
+                              })
+                              .reduce((groups: Record<string, AssigneeData[]>, emp) => {
+                                const orgName = emp.organization || 'Internal';
+                                if (!groups[orgName]) groups[orgName] = [];
+                                groups[orgName].push(emp);
+                                return groups;
+                              }, {})
+                          ).map(([orgName, groupEmployees], index) => (
+                            <div key={orgName}>
+                              {index > 0 && <Separator className="my-4" />}
+                              <div className="mb-3">
+                                <h4 className="text-sm font-medium text-muted-foreground">{orgName}</h4>
+                              </div>
                               <div className="space-y-2">
-                                {employees.map((employee) => (
+                                {groupEmployees.map((employee) => (
                                   <div key={employee.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
                                     <Checkbox
-                                      id={`employee-${employee.id}`}
                                       checked={selectedAssignees.includes(employee.id)}
                                       onCheckedChange={() => toggleAssignee(employee.id)}
                                     />
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
-                                        <span className="font-medium">{employee.first_name} {employee.last_name}</span>
-                                        <Badge variant="outline" className={getWorkloadColor(employee.workload)}>
-                                          {getWorkloadLabel(employee.workload)} ({employee.workload})
-                                        </Badge>
+                                        <span className="font-medium">
+                                          {employee.first_name} {employee.last_name}
+                                        </span>
+                                        <OrganizationBadge 
+                                          organization={{ 
+                                            name: employee.organization, 
+                                            organization_type: 'internal' 
+                                          }} 
+                                          size="sm" 
+                                        />
                                       </div>
-                                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                        <span>{employee.organization}</span>
-                                        <div className="flex items-center gap-1">
-                                          <Mail className="h-3 w-3" />
-                                          <span>{employee.email}</span>
-                                        </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {employee.email}
                                       </div>
                                     </div>
                                   </div>
                                 ))}
                               </div>
-                            </ScrollArea>
-                          </CardContent>
-                        </Card>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </TabsContent>
 
