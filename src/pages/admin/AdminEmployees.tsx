@@ -208,7 +208,18 @@ export default function AdminEmployees() {
                       <TableRow 
                         key={employee.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setEditRatesEmployee(employee)}
+                        onClick={(e) => {
+                          // Don't navigate if clicking interactive elements
+                          const target = e.target as HTMLElement;
+                          if (target instanceof HTMLButtonElement || 
+                              target instanceof HTMLInputElement ||
+                              target.closest('[role="checkbox"]') ||
+                              target.closest('[data-radix-collection-item]') ||
+                              target.closest('.dropdown-trigger')) {
+                            return;
+                          }
+                          setEditRatesEmployee(employee);
+                        }}
                       >
                         <TableCell className="font-medium">
                           {employee.first_name} {employee.last_name}

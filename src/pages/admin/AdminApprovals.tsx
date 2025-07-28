@@ -321,7 +321,18 @@ export default function AdminApprovals() {
                             <TableRow
                               key={row.id}
                               data-state={row.getIsSelected() && "selected"}
-                              onClick={() => handleView(row.original)}
+                              onClick={(e) => {
+                                // Don't navigate if clicking interactive elements
+                                const target = e.target as HTMLElement;
+                                if (target instanceof HTMLButtonElement || 
+                                    target instanceof HTMLInputElement ||
+                                    target.closest('[role="checkbox"]') ||
+                                    target.closest('[data-radix-collection-item]') ||
+                                    target.closest('.dropdown-trigger')) {
+                                  return;
+                                }
+                                handleView(row.original);
+                              }}
                               className="cursor-pointer"
                             >
                               {row.getVisibleCells().map((cell) => (
@@ -433,7 +444,18 @@ export default function AdminApprovals() {
                             <TableRow
                               key={row.id}
                               data-state={row.getIsSelected() && "selected"}
-                              onClick={() => handleView(row.original)}
+                              onClick={(e) => {
+                                // Don't navigate if clicking interactive elements
+                                const target = e.target as HTMLElement;
+                                if (target instanceof HTMLButtonElement || 
+                                    target instanceof HTMLInputElement ||
+                                    target.closest('[role="checkbox"]') ||
+                                    target.closest('[data-radix-collection-item]') ||
+                                    target.closest('.dropdown-trigger')) {
+                                  return;
+                                }
+                                handleView(row.original);
+                              }}
                               className="cursor-pointer"
                             >
                               {row.getVisibleCells().map((cell) => (
