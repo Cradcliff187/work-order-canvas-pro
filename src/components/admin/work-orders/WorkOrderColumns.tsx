@@ -57,11 +57,11 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       const attachmentCount = row.original.attachment_count || 0;
       return (
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="h-5 text-[10px] px-1.5 font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground transition-all duration-200">
+          <div className="font-mono text-sm font-semibold text-right">
             {number || 'Pending'}
-          </Badge>
+          </div>
           {unreadCounts[row.original.id] > 0 && (
-            <Badge variant="default" className="h-5 text-[10px] px-1.5 ml-1 transition-all duration-200">
+            <Badge variant="default" className="h-5 text-[10px] px-1.5 transition-all duration-200">
               {unreadCounts[row.original.id]}
             </Badge>
           )}
