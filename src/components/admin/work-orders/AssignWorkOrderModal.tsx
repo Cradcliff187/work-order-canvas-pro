@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { VirtualizedList } from '@/components/VirtualizedList';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, ChevronDown, ChevronRight } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
@@ -42,6 +43,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [networkError, setNetworkError] = useState<string | null>(null);
   
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'individuals' | 'organizations'>('individuals');
+  
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [activeUsersFilter, setActiveUsersFilter] = useState<'all' | 'active' | 'none'>('all');
@@ -64,16 +68,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   // Check if any work orders have existing assignments
   const [hasExistingAssignments, setHasExistingAssignments] = useState(false);
   
-  // Debug logging
-  console.log('📊 Assignment Modal Data:', {
-    workOrders: workOrders?.length || 0,
-    employees: employees.length,
-    subcontractorOrgs: subcontractorOrgs.length,
-    isLoading,
-    isLoadingOrgs,
-    hasExistingAssignments,
-    orgDetails: subcontractorOrgs.map(o => ({ id: o.id, name: o.name, userCount: o.active_user_count }))
-  });
 
   useEffect(() => {
     if (isOpen) {
@@ -131,7 +125,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             setHasExistingAssignments(false);
           }
         } catch (error) {
-          console.error('Error fetching existing assignments:', error);
           setSelectedAssignees([]);
           setSelectedOrganizations([]);
           setHasExistingAssignments(false);
@@ -246,7 +239,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
       // Create all assignments
       if (assignments.length > 0) {
-        console.log('Creating assignments:', assignments);
         await bulkAddAssignments.mutateAsync(assignments);
 
         // Update work order status to assigned when assignments are created
@@ -261,7 +253,6 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
       onClose();
     } catch (error) {
-      console.error('Assignment failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Assignment failed. Please try again.';
       setValidationErrors([errorMessage]);
       setNetworkError(errorMessage);
@@ -505,110 +496,119 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                 </div>
               )}
 
-              {/* Assignee Selection */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Select Assignees</Label>
-                  <div className="flex gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={selectAllEmployees}
-                      disabled={employees.length === 0}
-                    >
-                      <UserCheck className="h-4 w-4 mr-1" />
-                      Select All Employees
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={clearAllSelections}
-                      disabled={selectedAssignees.length === 0 && selectedOrganizations.length === 0}
-                    >
-                      Clear All
-                    </Button>
+              {/* Loading State */}
+              {(isLoading || isLoadingOrgs) && (
+                <div className="py-8">
+                  <LoadingSpinner />
+                  <div className="text-center mt-4">
+                    <p className="text-sm text-muted-foreground">Loading assignees...</p>
                   </div>
                 </div>
+              )}
 
-                {/* Loading State */}
-                {(isLoading || isLoadingOrgs) && (
-                  <div className="py-8">
-                    <LoadingSpinner />
-                    <div className="text-center mt-4">
-                      <p className="text-sm text-muted-foreground">Loading assignees...</p>
-                    </div>
-                  </div>
-                )}
+              {/* Content when loaded */}
+              {!isLoading && !isLoadingOrgs && (
+                <>
+                  {/* Assignment Tabs */}
+                  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'individuals' | 'organizations')} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="individuals" className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Assign to Individual
+                      </TabsTrigger>
+                      <TabsTrigger value="organizations" className="flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        Assign to Organization
+                      </TabsTrigger>
+                    </TabsList>
 
-                {/* Content when loaded */}
-                {!isLoading && !isLoadingOrgs && (
-                  <div className="space-y-6">
-                    {/* Internal Employees Section */}
-                    {employees.length > 0 && (
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span className="font-medium">Internal Employees</span>
-                            <Badge variant="outline">{employees.length} available</Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <ScrollArea className="max-h-60 px-6 pb-6">
-                            <div className="space-y-2">
-                              {employees.map((employee) => (
-                            <div key={employee.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                              <Checkbox
-                                id={`employee-${employee.id}`}
-                                checked={selectedAssignees.includes(employee.id)}
-                                onCheckedChange={() => toggleAssignee(employee.id)}
-                              />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{employee.first_name} {employee.last_name}</span>
-                                  <Badge variant="outline" className={getWorkloadColor(employee.workload)}>
-                                    {getWorkloadLabel(employee.workload)} ({employee.workload})
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                  <span>{employee.organization}</span>
-                                  <div className="flex items-center gap-1">
-                                    <Mail className="h-3 w-3" />
-                                    <span>{employee.email}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Subcontractor Organizations Section */}
-                    <Card>
-                      <CardHeader className="pb-3">
+                    <TabsContent value="individuals" className="space-y-4 mt-4">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4" />
-                          <span className="font-medium">Subcontractor Organizations</span>
-                          <Badge variant="outline">
-                            {groupedSubcontractorOrgs.totalCount} of {subcontractorOrgs.length} shown
-                          </Badge>
+                          <User className="h-4 w-4" />
+                          <span className="font-medium">Internal Employees</span>
+                          <Badge variant="outline">{employees.length} available</Badge>
                         </div>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        {subcontractorOrgs.length === 0 ? (
-                          <div className="px-6 pb-6">
-                            <div className="text-center py-4 text-muted-foreground">
-                              <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                              <p className="text-sm">No subcontractor organizations available</p>
-                            </div>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={selectAllEmployees}
+                          disabled={employees.length === 0}
+                        >
+                          <UserCheck className="h-4 w-4 mr-1" />
+                          Select All
+                        </Button>
+                      </div>
+
+                      {employees.length === 0 ? (
+                        <div className="p-4 bg-muted/50 border border-dashed rounded-md">
+                          <div className="text-center">
+                            <User className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                            <p className="text-sm text-muted-foreground">No internal employees available</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Create employee profiles to assign work orders
+                            </p>
                           </div>
-                        ) : (
-                          <>
+                        </div>
+                      ) : (
+                        <Card>
+                          <CardContent className="p-0">
+                            <ScrollArea className="max-h-80 px-6 py-4">
+                              <div className="space-y-2">
+                                {employees.map((employee) => (
+                                  <div key={employee.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
+                                    <Checkbox
+                                      id={`employee-${employee.id}`}
+                                      checked={selectedAssignees.includes(employee.id)}
+                                      onCheckedChange={() => toggleAssignee(employee.id)}
+                                    />
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{employee.first_name} {employee.last_name}</span>
+                                        <Badge variant="outline" className={getWorkloadColor(employee.workload)}>
+                                          {getWorkloadLabel(employee.workload)} ({employee.workload})
+                                        </Badge>
+                                      </div>
+                                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                        <span>{employee.organization}</span>
+                                        <div className="flex items-center gap-1">
+                                          <Mail className="h-3 w-3" />
+                                          <span>{employee.email}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="organizations" className="space-y-4 mt-4">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        <span className="font-medium">Subcontractor Organizations</span>
+                        <Badge variant="outline">
+                          {groupedSubcontractorOrgs.totalCount} of {subcontractorOrgs.length} shown
+                        </Badge>
+                      </div>
+
+                      {subcontractorOrgs.length === 0 ? (
+                        <div className="p-4 bg-muted/50 border border-dashed rounded-md">
+                          <div className="text-center">
+                            <Building className="h-8 w-8 mx-auto mb-2 opacity-50 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">No subcontractor organizations available</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Create subcontractor organizations to assign work orders
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <Card>
+                          <CardContent className="p-0">
                             {/* Search and Filter Controls */}
                             <div className="px-6 pt-4 space-y-3">
                               {/* Search Input */}
@@ -771,81 +771,52 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                 </div>
                               )}
                             </div>
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </TabsContent>
+                  </Tabs>
 
-                    {/* No Data Available */}
-                    {employees.length === 0 && subcontractorOrgs.length === 0 && (
-                      <div className="p-4 bg-muted/50 border border-dashed rounded-md">
-                        <div className="text-center">
-                          <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">No assignees available</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Create employees or subcontractor organizations to assign work orders
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                  {/* Clear All Button - Only show when selections exist */}
+                  {(selectedAssignees.length > 0 || selectedOrganizations.length > 0) && (
+                    <div className="flex justify-center">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={clearAllSelections}
+                      >
+                        Clear All Selections
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Assignment Notes */}
+                  <div className="space-y-2">
+                    <Label htmlFor="assignment-notes">Assignment Notes (Optional)</Label>
+                    <Textarea
+                      id="assignment-notes"
+                      placeholder="Add any notes about this assignment..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={3}
+                    />
                   </div>
-                )}
+                </>
+              )}
 
-                {/* Assignment Summary */}
-                {(selectedAssigneeData.length > 0 || selectedOrganizationData.length > 0) && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <UserCheck className="h-4 w-4" />
-                        <span className="font-medium">Assignment Summary</span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        {selectedAssigneeData.length > 0 && (
-                          <div>
-                            <span className="text-sm text-muted-foreground">Selected Employees:</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {selectedAssigneeData.map(assignee => (
-                                <Badge key={assignee.id} variant="secondary">
-                                  {assignee.first_name} {assignee.last_name}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {selectedOrganizationData.length > 0 && (
-                          <div>
-                            <span className="text-sm text-muted-foreground">Selected Organizations:</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {selectedOrganizationData.map(org => (
-                                <Badge key={org.id} variant="secondary">
-                                  {org.name}
-                                  {org.active_user_count === 0 && (
-                                    <span className="ml-1 text-amber-600">⚠</span>
-                                  )}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Assignment Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="assignment-notes">Assignment Notes (Optional)</Label>
-                  <Textarea
-                    id="assignment-notes"
-                    placeholder="Add any notes about this assignment..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
-                  />
+              {/* No Data Available - when both are empty */}
+              {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
+                <div className="p-4 bg-muted/50 border border-dashed rounded-md">
+                  <div className="text-center">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No assignees available</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Create employees or subcontractor organizations to assign work orders
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </ScrollArea>
 
