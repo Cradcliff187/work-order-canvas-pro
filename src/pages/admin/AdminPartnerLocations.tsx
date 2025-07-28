@@ -12,6 +12,7 @@ import { AddLocationModal } from '@/components/admin/partner-locations/AddLocati
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { toast } from 'sonner';
 
@@ -198,8 +199,9 @@ export default function AdminPartnerLocations() {
           <CardTitle>Locations ({filteredLocations.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
+          {/* Desktop Table */}
+          <div className="hidden lg:block rounded-md border">
+            <Table className="admin-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Organization</TableHead>
@@ -251,7 +253,7 @@ export default function AdminPartnerLocations() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={location.is_active ? "default" : "secondary"}>
+                          <Badge variant={location.is_active ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
                             {location.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>
@@ -280,6 +282,68 @@ export default function AdminPartnerLocations() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="block lg:hidden space-y-3">
+            {filteredLocations.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No locations found.
+              </div>
+            ) : (
+              filteredLocations.map((location) => {
+                const organization = organizationMap[location.organization_id];
+                const address = [location.city, location.state, location.zip_code].filter(Boolean).join(', ');
+                
+                return (
+                  <MobileTableCard
+                    key={location.id}
+                    title={location.location_name}
+                    subtitle={`${organization?.name || 'Unknown Organization'} • #${location.location_number}${address ? ` • ${address}` : ''}`}
+                    status={
+                      <Badge variant={location.is_active ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                        {location.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    }
+                    onClick={() => setEditingLocation(location)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        {location.contact_name && (
+                          <div>{location.contact_name}</div>
+                        )}
+                        {location.contact_email && (
+                          <div>{location.contact_email}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingLocation(location);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingLocation(location);
+                          }}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </MobileTableCard>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
