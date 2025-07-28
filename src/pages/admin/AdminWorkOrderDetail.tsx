@@ -400,7 +400,9 @@ export default function AdminWorkOrderDetail() {
                     <div key={assignment.id} className="border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         <p className="font-medium">
-                          {assignment.assignee.first_name} {assignment.assignee.last_name}
+                          {assignment.assignee.user_type === 'subcontractor' && assignment.assigned_organization 
+                            ? assignment.assigned_organization.name 
+                            : `${assignment.assignee.first_name} ${assignment.assignee.last_name}`}
                         </p>
                         <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
                           {assignment.assignment_type}
