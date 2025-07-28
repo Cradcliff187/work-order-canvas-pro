@@ -91,7 +91,7 @@ export function StatusProgressIndicator({ currentStatus, className }: StatusProg
         const isNext = step.order === currentOrder + 1;
 
         return (
-          <React.Fragment key={step.status}>
+          <div key={step.status} className="contents">
             <div className="flex items-center gap-1">
               <div
                 className={cn(
@@ -135,7 +135,7 @@ export function StatusProgressIndicator({ currentStatus, className }: StatusProg
                 )}
               />
             )}
-          </React.Fragment>
+          </div>
         );
       })}
     </div>
