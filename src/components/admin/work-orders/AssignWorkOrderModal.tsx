@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +13,8 @@ import { Input } from '@/components/ui/input';
 
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, X } from 'lucide-react';
+import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, X, Plus } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
@@ -38,6 +40,7 @@ interface AssignWorkOrderModalProps {
 
 export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWorkOrderModalProps) {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
@@ -462,9 +465,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
               {/* Loading State */}
               {(isLoading || isLoadingOrgs) && (
-                <div className="py-8">
-                  <LoadingSpinner />
-                  <div className="text-center mt-4">
+                <div className="space-y-4">
+                  <TableSkeleton rows={5} columns={1} />
+                  <div className="text-center">
                     <p className="text-sm text-muted-foreground">Loading assignees...</p>
                   </div>
                 </div>
@@ -556,12 +559,13 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
                       {/* Search Input */}
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           placeholder="Search employees by name or email..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="pl-9"
+                          disabled={isLoading || isLoadingOrgs}
                         />
                       </div>
 
@@ -601,9 +605,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                               <div className="space-y-2">
                                 {groupEmployees.map((employee) => (
                                   <div key={employee.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                                    <Checkbox
+                                     <Checkbox
                                       checked={selectedAssignees.includes(employee.id)}
                                       onCheckedChange={() => toggleAssignee(employee.id)}
+                                      disabled={isLoading || isLoadingOrgs}
                                     />
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
@@ -646,12 +651,13 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                       {/* Search Input */}
                       {subcontractorOrgs.length > 0 && (
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
                             placeholder="Search organizations..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10"
+                            disabled={isLoading || isLoadingOrgs}
                           />
                         </div>
                       )}
@@ -683,10 +689,11 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                               <div className="space-y-2">
                                 {filteredSubcontractorOrgs.map((org) => (
                                   <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
-                                    <Checkbox
+                                     <Checkbox
                                       id={`org-${org.id}`}
                                       checked={selectedOrganizations.includes(org.id)}
                                       onCheckedChange={() => toggleOrganization(org.id)}
+                                      disabled={isLoading || isLoadingOrgs}
                                     />
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
@@ -744,22 +751,28 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
 
               {/* No Data Available - when both are empty */}
               {!isLoading && !isLoadingOrgs && employees.length === 0 && subcontractorOrgs.length === 0 && (
-                <div className="p-4 bg-muted/50 border border-dashed rounded-md">
-                  <div className="text-center">
-                    <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">No assignees available</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Create employees or subcontractor organizations to assign work orders
-                    </p>
-                  </div>
-                </div>
+                <EmptyTableState 
+                  icon={Users}
+                  title="No assignees available"
+                  description="Create employees or subcontractor organizations to assign work orders"
+                  action={{
+                    label: "Create Employee",
+                    onClick: () => navigate('/admin/employees'),
+                    icon: Plus
+                  }}
+                  colSpan={1}
+                />
               )}
             </div>
           </ScrollArea>
 
           {/* Footer Actions */}
           <div className="flex-shrink-0 flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              disabled={bulkAddAssignments.isPending || bulkRemoveAssignments.isPending}
+            >
               Cancel
             </Button>
             <Button 
