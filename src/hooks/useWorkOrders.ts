@@ -92,6 +92,7 @@ export interface WorkOrder {
       id: string;
       name: string;
       initials: string;
+      contact_email: string;
     } | null;
   }>;
 }
@@ -140,7 +141,8 @@ export function useWorkOrders(
             organizations!work_order_assignments_assigned_organization_id_fkey(
               id,
               name,
-              initials
+              initials,
+              contact_email
             )
           )
         `,
@@ -227,7 +229,8 @@ export function useWorkOrder(id: string) {
             organizations!work_order_assignments_assigned_organization_id_fkey(
               id,
               name,
-              initials
+              initials,
+              contact_email
             )
           )
         `)
