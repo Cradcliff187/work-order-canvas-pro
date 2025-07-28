@@ -54,7 +54,12 @@ export function AssigneeDisplay({
 
   // Helper function to get full name for tooltip
   const getFullName = (assignment: Assignment) => {
-    if (!assignment.assignee_profile) return 'Unknown User';
+    if (!assignment.assignee_profile) {
+      if (assignment.assigned_organization) {
+        return `Assigned to ${assignment.assigned_organization.name}`;
+      }
+      return 'Unassigned';
+    }
     const { first_name, last_name } = assignment.assignee_profile;
     return `${first_name} ${last_name}${assignment.assignment_type === 'lead' ? ' (Lead)' : ''}`;
   };
