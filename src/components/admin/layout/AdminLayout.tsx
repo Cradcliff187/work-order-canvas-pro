@@ -23,8 +23,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         
         <div className="flex-1 flex flex-col">
           {/* Header with toggle */}
-          <header className="h-14 flex items-center justify-between border-b border-border gradient-header-responsive px-4">
-            <SidebarTrigger>
+          <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
+            <SidebarTrigger className="lg:hidden">
               <Menu className="h-5 w-5" />
             </SidebarTrigger>
           </header>
