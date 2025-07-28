@@ -15,6 +15,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApprovalQueue } from '@/hooks/useApprovalQueue';
 import { useBranding } from '@/hooks/useBranding';
@@ -66,10 +67,11 @@ export function AdminSidebar() {
           <SidebarMenu>
             {filteredItems.map((item) => (
               <SidebarMenuItem key={item.title}>
-                 <SidebarMenuButton 
+                <SidebarMenuButton 
                   asChild
                   isActive={isActive(item.url)}
                   className={isActive(item.url) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
+                  tooltip={collapsed ? item.title : undefined}
                 >
                   <Link to={item.url} className="flex items-center gap-2">
                     <item.icon className="h-4 w-4" />
@@ -94,8 +96,9 @@ export function AdminSidebar() {
   };
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
+    <TooltipProvider>
+      <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
+        <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-3 py-2">
           {collapsed || isMobile ? (
             <div className="flex items-center justify-center w-full">
@@ -132,5 +135,6 @@ export function AdminSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
+    </TooltipProvider>
   );
 }
