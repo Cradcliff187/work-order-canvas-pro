@@ -400,9 +400,17 @@ export default function AdminWorkOrderDetail() {
                     <div key={assignment.id} className="border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         <p className="font-medium">
-                          {assignment.assignee.user_type === 'subcontractor' && assignment.assigned_organization 
-                            ? assignment.assigned_organization.name 
-                            : `${assignment.assignee.first_name} ${assignment.assignee.last_name}`}
+                          {(() => {
+                            const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
+                            
+                            if (isPlaceholder && assignment.assigned_organization) {
+                              return assignment.assigned_organization.name;
+                            } else if (assignment.assignee.user_type === 'subcontractor' && assignment.assigned_organization) {
+                              return assignment.assigned_organization.name;
+                            } else {
+                              return `${assignment.assignee.first_name} ${assignment.assignee.last_name}`;
+                            }
+                          })()}
                         </p>
                         <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
                           {assignment.assignment_type}
