@@ -264,7 +264,9 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
 
         let displayText = 'Unknown';
         if (isPlaceholder && assignment.organizations) {
-          displayText = assignment.organizations.contact_email || assignment.organizations.name;
+          displayText = assignment.organizations.name;
+        } else if (assignee && assignee.user_type === 'subcontractor' && assignment.organizations) {
+          displayText = assignment.organizations.name;
         } else if (assignee) {
           displayText = `${assignee.first_name} ${assignee.last_name}`;
         }
