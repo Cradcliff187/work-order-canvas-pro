@@ -1,7 +1,9 @@
-// Utility function for formatting currency
+import { formatCurrency as formatCurrencyUtil } from './formatting';
+
+// Utility function for formatting employee hourly rates
 export function formatCurrency(amount?: number): string {
   if (amount === null || amount === undefined) {
     return 'Not set';
   }
-  return `$${amount.toFixed(2)}/hr`;
+  return `${formatCurrencyUtil(amount, true)}/hr`;
 }

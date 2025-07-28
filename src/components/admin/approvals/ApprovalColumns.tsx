@@ -5,6 +5,7 @@ import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Eye, CheckCircle, XCircle, Clock, FileText, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { ApprovalItem } from '@/hooks/useApprovalQueue';
+import { formatCurrency } from '@/utils/formatting';
 
 interface ApprovalColumnsProps {
   onView: (item: ApprovalItem) => void;
@@ -101,11 +102,11 @@ export function createApprovalColumns({
       cell: ({ row }) => {
         const amount = row.getValue('amount') as number;
         return amount ? (
-          <span className="font-medium text-green-600">
-            ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          <span className="font-mono font-medium text-green-600 text-right block">
+            {formatCurrency(amount)}
           </span>
         ) : (
-          <span className="text-muted-foreground">N/A</span>
+          <span className="text-muted-foreground text-right block">N/A</span>
         );
       },
     },

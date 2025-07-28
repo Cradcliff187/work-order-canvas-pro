@@ -158,3 +158,24 @@ export function formatCity(city: string | null | undefined): string {
   
   return formatted;
 }
+
+/**
+ * Format currency amount with proper locale formatting
+ * Handles null, undefined, and zero values gracefully
+ */
+export function formatCurrency(amount: number | null | undefined, showZero: boolean = false): string {
+  if (amount === null || amount === undefined) {
+    return '—';
+  }
+  
+  if (amount === 0 && !showZero) {
+    return '—';
+  }
+  
+  return amount.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}

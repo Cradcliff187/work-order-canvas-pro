@@ -6,6 +6,7 @@ import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Eye, CheckCircle, XCircle, DollarSign, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
+import { formatCurrency } from '@/utils/formatting';
 
 interface InvoiceColumnsProps {
   onViewInvoice: (invoice: Invoice) => void;
@@ -46,7 +47,7 @@ export const createInvoiceColumns = ({
     accessorKey: 'internal_invoice_number',
     header: 'Internal #',
     cell: ({ row }) => (
-      <div className="font-mono text-sm">
+      <div className="font-mono text-sm text-right">
         {row.getValue('internal_invoice_number')}
       </div>
     ),
@@ -57,7 +58,7 @@ export const createInvoiceColumns = ({
     cell: ({ row }) => {
       const external = row.getValue('external_invoice_number') as string | null;
       return (
-        <div className="font-mono text-sm">
+        <div className="font-mono text-sm text-right">
           {external || <span className="text-muted-foreground">—</span>}
         </div>
       );
@@ -95,8 +96,8 @@ export const createInvoiceColumns = ({
     cell: ({ row }) => {
       const amount = row.getValue('total_amount') as number;
       return (
-        <div className="font-medium">
-          ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+        <div className="font-mono font-medium text-right">
+          {formatCurrency(amount, true)}
         </div>
       );
     },
@@ -148,11 +149,11 @@ export const createInvoiceColumns = ({
     cell: ({ row }) => {
       const paidAt = row.getValue('paid_at') as string | null;
       return paidAt ? (
-        <Badge className="bg-green-100 text-green-800 border-green-200 h-5 text-[10px] px-1.5">
+        <Badge className="bg-green-100 text-green-800 border-green-200 h-5 text-[10px] px-1.5 transition-all duration-200">
           Paid
         </Badge>
       ) : (
-        <Badge variant="outline">
+        <Badge variant="outline" className="h-5 text-[10px] px-1.5 transition-all duration-200">
           Unpaid
         </Badge>
       );

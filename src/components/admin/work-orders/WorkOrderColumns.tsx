@@ -57,11 +57,11 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       const attachmentCount = row.original.attachment_count || 0;
       return (
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="h-5 text-[10px] px-1.5 font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground">
+          <Badge variant="default" className="h-5 text-[10px] px-1.5 font-mono font-semibold bg-primary/90 hover:bg-primary text-primary-foreground transition-all duration-200">
             {number || 'Pending'}
           </Badge>
           {unreadCounts[row.original.id] > 0 && (
-            <Badge variant="default" className="h-5 text-[10px] px-1.5 ml-1">
+            <Badge variant="default" className="h-5 text-[10px] px-1.5 ml-1 transition-all duration-200">
               {unreadCounts[row.original.id]}
             </Badge>
           )}
@@ -69,7 +69,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
             <div className="flex items-center gap-1 text-muted-foreground">
               <Paperclip className="h-3 w-3" />
               {attachmentCount > 1 && (
-                <span className="text-xs">{attachmentCount}</span>
+                <span className="text-xs font-mono">{attachmentCount}</span>
               )}
             </div>
           )}
