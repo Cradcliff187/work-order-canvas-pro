@@ -1,3 +1,39 @@
+/**
+ * AssignWorkOrderModal - Modal component for assigning work orders to employees or organizations
+ * 
+ * PURPOSE:
+ * This component provides a comprehensive interface for assigning work orders to either individual
+ * employees or entire organizations. It supports bulk assignment operations and manages the complete
+ * assignment lifecycle.
+ * 
+ * ASSIGNMENT MODES:
+ * 1. Individual Assignment - Assign directly to specific employees with their personal workload tracking
+ * 2. Organization Assignment - Assign to organizations with automatic user selection or placeholder handling
+ * 
+ * KEY FEATURES:
+ * - Radio group selection between individual and organization assignment types
+ * - Real-time search and filtering for employees and organizations  
+ * - Current assignment display with ability to remove existing assignments
+ * - Mobile-responsive design using Sheet component for mobile and Dialog for desktop
+ * - Workload tracking and visual indicators for employee availability
+ * - Empty state handling when no assignees are available
+ * - Comprehensive error handling and validation
+ * 
+ * REFACTORING IMPROVEMENTS:
+ * - Added mobile optimization with touch-friendly 44px minimum tap targets
+ * - Implemented sticky header/footer for mobile navigation
+ * - Added comprehensive search functionality with debouncing
+ * - Improved TypeScript type safety and error handling
+ * - Enhanced UI consistency with shadcn/ui component patterns
+ * - Added proper loading states using TableSkeleton component
+ * - Implemented workload color coding and status indicators
+ * 
+ * PROPS:
+ * - isOpen: Controls modal visibility
+ * - onClose: Callback function to close the modal
+ * - workOrders: Array of work orders to be assigned
+ */
+
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -71,7 +107,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   const [hasExistingAssignments, setHasExistingAssignments] = useState(false);
   
   // State for current assignments display
-  const [currentAssignments, setCurrentAssignments] = useState<any[]>([]);
+  interface CurrentAssignment {
+    id: string;
+    assigned_to: string;
+    assignment_type: string;
+    assignee_profile: { id: string; first_name: string; last_name: string } | null;
+    assigned_organization: { id: string; name: string; organization_type: string } | null;
+  }
+  const [currentAssignments, setCurrentAssignments] = useState<CurrentAssignment[]>([]);
   
 
   useEffect(() => {
@@ -360,7 +403,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         setCurrentAssignments([]);
       }
     } catch (error) {
-      console.error('Failed to remove assignment:', error);
+      setNetworkError('Failed to remove assignment. Please try again.');
     }
   };
 
