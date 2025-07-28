@@ -41,7 +41,12 @@ export function AssigneeDisplay({
 
   // Helper function to get display name with lead indicator
   const getDisplayName = (assignment: Assignment) => {
-    if (!assignment.assignee_profile) return 'Unknown User';
+    if (!assignment.assignee_profile) {
+      if (assignment.assigned_organization) {
+        return 'Organization Assignment';
+      }
+      return 'Unassigned';
+    }
     const { first_name, last_name } = assignment.assignee_profile;
     const shortName = `${first_name} ${last_name.charAt(0)}.`;
     return assignment.assignment_type === 'lead' ? `${shortName} (L)` : shortName;
