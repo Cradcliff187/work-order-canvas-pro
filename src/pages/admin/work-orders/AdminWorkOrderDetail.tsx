@@ -122,7 +122,7 @@ export default function AdminWorkOrderDetail() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge className={getStatusColor(workOrder.status)}>
+           <Badge className={`${getStatusColor(workOrder.status)} h-5 text-[10px] px-1.5`}>
             {getStatusText(workOrder.status)}
           </Badge>
           <Button asChild size="sm">
@@ -319,7 +319,7 @@ export default function AdminWorkOrderDetail() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(report.status)}>
+                           <Badge className={`${getStatusColor(report.status)} h-5 text-[10px] px-1.5`}>
                             {report.status}
                           </Badge>
                           <span className="text-sm text-muted-foreground">

@@ -607,9 +607,9 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                               <SelectItem key={org.id} value={org.id}>
                                 <div className="flex items-center gap-2">
                                   <span>{org.name}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {org.organization_type}
-                                  </Badge>
+                                   <Badge variant="outline" className="h-5 text-[10px] px-1.5">
+                                     {org.organization_type}
+                                   </Badge>
                                 </div>
                               </SelectItem>
                             ))}

@@ -68,7 +68,7 @@ export function ViewOrganizationModal({ open, onOpenChange, organization, onEdit
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Type</label>
                   <div className="mt-1">
-                    <Badge className={getTypeColor(organization.organization_type)}>
+                    <Badge className={`${getTypeColor(organization.organization_type)} h-5 text-[10px] px-1.5`}>
                       {organization.organization_type.charAt(0).toUpperCase() + organization.organization_type.slice(1)}
                     </Badge>
                   </div>
@@ -76,7 +76,7 @@ export function ViewOrganizationModal({ open, onOpenChange, organization, onEdit
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Status</label>
                   <div className="mt-1">
-                    <Badge className={getStatusColor(organization.is_active)}>
+                    <Badge className={`${getStatusColor(organization.is_active)} h-5 text-[10px] px-1.5`}>
                       {organization.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>

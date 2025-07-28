@@ -450,7 +450,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                       <div className="flex items-center gap-2 mb-3">
                         <Briefcase className="h-4 w-4" />
                         <span className="font-medium">Work Order{workOrders.length > 1 ? 's' : ''} Summary</span>
-                        <Badge variant="secondary">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
+                        <Badge variant="secondary" className="h-5 text-[10px] px-1.5">{workOrders.length} item{workOrders.length > 1 ? 's' : ''}</Badge>
                       </div>
                       
                       <div className="space-y-2">
@@ -709,9 +709,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                                                 )}
                                               </Button>
                                               <span className="font-medium text-sm">{item.groupTitle}</span>
-                                              <Badge variant="secondary" className="text-xs">
-                                                {item.count}
-                                              </Badge>
+                                               <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
+                                                 {item.count}
+                                               </Badge>
                                             </div>
                                           </div>
                                         );

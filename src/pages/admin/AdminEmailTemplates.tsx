@@ -259,7 +259,7 @@ const AdminEmailTemplates: React.FC = () => {
                               onCheckedChange={() => handleToggleActive(template)}
                               disabled={toggleActive.isPending}
                             />
-                            <Badge variant={template.is_active ? 'default' : 'secondary'}>
+                            <Badge variant={template.is_active ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5">
                               {template.is_active ? 'Active' : 'Inactive'}
                             </Badge>
                           </div>
@@ -330,7 +330,7 @@ const AdminEmailTemplates: React.FC = () => {
                       <p className="font-mono text-sm font-medium">{template.template_name}</p>
                       <p className="text-xs text-muted-foreground truncate">{template.subject}</p>
                     </div>
-                    <Badge variant={template.is_active ? 'default' : 'secondary'} className="ml-2">
+                    <Badge variant={template.is_active ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5 ml-2">
                       {template.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>

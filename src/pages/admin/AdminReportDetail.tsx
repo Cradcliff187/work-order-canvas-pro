@@ -40,15 +40,15 @@ export default function AdminReportDetail() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'submitted':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
+        return <Badge variant="secondary" className="h-5 text-[10px] px-1.5"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
       case 'reviewed':
-        return <Badge variant="outline">Reviewed</Badge>;
+        return <Badge variant="outline" className="h-5 text-[10px] px-1.5">Reviewed</Badge>;
       case 'approved':
-        return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+        return <Badge variant="default" className="h-5 text-[10px] px-1.5"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
       case 'rejected':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+        return <Badge variant="destructive" className="h-5 text-[10px] px-1.5"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="h-5 text-[10px] px-1.5">{status}</Badge>;
     }
   };
 

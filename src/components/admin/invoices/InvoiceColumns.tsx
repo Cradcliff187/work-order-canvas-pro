@@ -71,7 +71,7 @@ export const createInvoiceColumns = ({
       return count > 0 ? (
         <div className="flex items-center gap-1">
           <Paperclip className="h-4 w-4 text-blue-600" />
-          <Badge variant="outline" className="h-5 px-1.5 text-xs">
+          <Badge variant="outline" className="h-5 text-[10px] px-1.5">
             {count}
           </Badge>
         </div>
@@ -122,7 +122,7 @@ export const createInvoiceColumns = ({
       };
       
       return (
-        <Badge className={`${getStatusColor()} capitalize`}>
+        <Badge className={`${getStatusColor()} h-5 text-[10px] px-1.5 capitalize`}>
           {status}
         </Badge>
       );
@@ -148,7 +148,7 @@ export const createInvoiceColumns = ({
     cell: ({ row }) => {
       const paidAt = row.getValue('paid_at') as string | null;
       return paidAt ? (
-        <Badge className="bg-green-100 text-green-800 border-green-200">
+        <Badge className="bg-green-100 text-green-800 border-green-200 h-5 text-[10px] px-1.5">
           Paid
         </Badge>
       ) : (

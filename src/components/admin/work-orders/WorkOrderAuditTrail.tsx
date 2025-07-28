@@ -42,11 +42,11 @@ const formatStatusChange = (oldValues: Record<string, any> | null, newValues: Re
     return (
       <div className="text-sm">
         Status changed from{" "}
-        <Badge variant="outline" className="mx-1">
+        <Badge variant="outline" className="h-5 text-[10px] px-1.5 mx-1">
           {oldStatus}
         </Badge>
         to{" "}
-        <Badge variant="outline" className="mx-1">
+        <Badge variant="outline" className="h-5 text-[10px] px-1.5 mx-1">
           {newStatus}
         </Badge>
       </div>
@@ -95,7 +95,7 @@ const AuditLogItem = ({ entry }: { entry: AuditLogEntry }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Badge variant="outline" className={getActionColor(entry.action)}>
+            <Badge variant="outline" className={`${getActionColor(entry.action)} h-5 text-[10px] px-1.5`}>
               {entry.action}
             </Badge>
             <div className="flex items-center text-sm text-muted-foreground">

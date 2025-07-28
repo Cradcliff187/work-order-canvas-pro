@@ -195,7 +195,7 @@ export default function AdminWorkOrderDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Badge className={getStatusColor(workOrder.status)}>
+          <Badge className={`${getStatusColor(workOrder.status)} h-5 text-[10px] px-1.5`}>
             {workOrder.status.replace('_', ' ')}
           </Badge>
           {/* Show Submit Report button if assigned to subcontractor and no reports exist */}
@@ -264,7 +264,7 @@ export default function AdminWorkOrderDetail() {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Status</label>
                 <div className="mt-1">
-                  <Badge className={getStatusColor(workOrder.status)}>
+                  <Badge className={`${getStatusColor(workOrder.status)} h-5 text-[10px] px-1.5`}>
                     {workOrder.status.replace('_', ' ')}
                   </Badge>
                 </div>

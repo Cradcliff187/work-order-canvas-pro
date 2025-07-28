@@ -47,7 +47,7 @@ export function ViewUserModal({ user, isOpen, onClose }: ViewUserModalProps) {
                 {user.first_name} {user.last_name}
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className={getUserTypeColor(user.user_type)}>
+                <Badge className={`${getUserTypeColor(user.user_type)} h-5 text-[10px] px-1.5`}>
                   {user.user_type}
                 </Badge>
                 <Badge variant={user.is_active ? 'default' : 'secondary'}>
@@ -121,7 +121,7 @@ export function ViewUserModal({ user, isOpen, onClose }: ViewUserModalProps) {
                     <div key={index} className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{userOrg.organization.name}</span>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="h-5 text-[10px] px-1.5">
                         {userOrg.organization.organization_type}
                       </Badge>
                     </div>

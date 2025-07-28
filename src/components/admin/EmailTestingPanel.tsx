@@ -318,13 +318,13 @@ export function EmailTestingPanel() {
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Delivered</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200 h-5 text-[10px] px-1.5">Delivered</Badge>;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Failed</Badge>;
+        return <Badge className="bg-red-100 text-red-800 border-red-200 h-5 text-[10px] px-1.5">Failed</Badge>;
       case 'sent':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Sent</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200 h-5 text-[10px] px-1.5">Sent</Badge>;
       default:
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 h-5 text-[10px] px-1.5">Pending</Badge>;
     }
   };
 

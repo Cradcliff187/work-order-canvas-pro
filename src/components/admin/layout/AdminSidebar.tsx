@@ -77,7 +77,7 @@ export function AdminSidebar() {
                       <>
                         <span className="flex-1">{item.title}</span>
                         {item.title === 'Approval Center' && totalCount > 0 && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
+                          <Badge variant="secondary" className="h-5 text-[10px] px-1.5 ml-2">
                             {totalCount}
                           </Badge>
                         )}

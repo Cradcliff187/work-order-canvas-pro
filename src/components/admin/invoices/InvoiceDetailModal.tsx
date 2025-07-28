@@ -219,7 +219,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Status
                   </Label>
                   <div className="mt-1">
-                    <Badge className={`${getStatusColor(invoice.status)} capitalize text-sm px-3 py-1`}>
+                    <Badge className={`${getStatusColor(invoice.status)} h-5 text-[10px] px-1.5 capitalize`}>
                       {invoice.status}
                     </Badge>
                   </div>
