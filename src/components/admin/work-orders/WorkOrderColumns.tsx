@@ -293,11 +293,22 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
             </TooltipTrigger>
             <TooltipContent>
               <div className="space-y-1">
-                {assignments.map((assignment, index) => {
+                {assignments.map((assignment) => {
                   const profile = assignment.profiles;
+                  const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
+                  
+                  let displayText = 'Unknown';
+                  if (isPlaceholder && assignment.organizations) {
+                    displayText = assignment.organizations.name;
+                  } else if (profile && profile.user_type === 'subcontractor' && assignment.organizations) {
+                    displayText = assignment.organizations.name;
+                  } else if (profile) {
+                    displayText = `${profile.first_name} ${profile.last_name}`;
+                  }
+                  
                   return (
                     <div key={assignment.id} className="text-sm">
-                      {profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown'}
+                      {displayText}
                       {assignment.assignment_type === 'lead' && ' (Lead)'}
                     </div>
                   );
