@@ -414,16 +414,33 @@ Deno.serve(async (req) => {
           if (assignedToId) {
             const { data: assignee } = await supabase
               .from('profiles')
-              .select('first_name, last_name, email')
+              .select('first_name, last_name, email, user_type')
               .eq('id', assignedToId)
               .single();
             
             if (assignee) {
+              // Check if assignee is a subcontractor and get organization name
+              let displayName = `${assignee.first_name} ${assignee.last_name}`;
+
+              if (assignee.user_type === 'subcontractor') {
+                // Get the organization name for subcontractors
+                const { data: orgData } = await supabase
+                  .from('user_organizations')
+                  .select('organizations(name)')
+                  .eq('user_id', assignedToId)
+                  .single();
+                
+                if (orgData?.organizations?.name) {
+                  displayName = orgData.organizations.name;
+                }
+              }
+
               assigneeData = {
                 first_name: assignee.first_name,
                 last_name: assignee.last_name,
-                assignee_name: `${assignee.first_name} ${assignee.last_name}`,
-                assignee_email: assignee.email
+                assignee_name: displayName,
+                assignee_email: assignee.email,
+                subcontractor_name: displayName // Also update this for compatibility
               };
             }
           }
