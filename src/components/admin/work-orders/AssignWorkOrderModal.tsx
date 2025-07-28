@@ -9,10 +9,10 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { VirtualizedList } from '@/components/VirtualizedList';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
@@ -47,13 +47,8 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   // Tab state
   const [activeTab, setActiveTab] = useState<'individuals' | 'organizations'>('individuals');
   
-  // Search and filter state
+  // Search state for organizations
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeUsersFilter, setActiveUsersFilter] = useState<'all' | 'active' | 'none'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'users'>('name');
-  
-  // Grouping state
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -288,9 +283,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     [subcontractorOrgs, selectedOrganizations]
   );
 
-  // Filter, sort and group subcontractor organizations
-  const groupedSubcontractorOrgs = useMemo(() => {
-    let filtered = [...subcontractorOrgs];
+  // Filter subcontractor organizations - only show those with active users
+  const filteredSubcontractorOrgs = useMemo(() => {
+    let filtered = subcontractorOrgs.filter(org => org.active_user_count > 0);
 
     // Apply search filter
     if (debouncedSearchQuery) {
@@ -302,104 +297,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       );
     }
 
-    // Apply active users filter
-    if (activeUsersFilter === 'active') {
-      filtered = filtered.filter(org => org.active_user_count > 0);
-    } else if (activeUsersFilter === 'none') {
-      filtered = filtered.filter(org => org.active_user_count === 0);
-    }
-
-    // Group by active users status
-    const withUsers = filtered.filter(org => org.active_user_count > 0);
-    const withoutUsers = filtered.filter(org => org.active_user_count === 0);
-
-    // Apply sorting within each group
-    const sortOrgs = (orgs: typeof filtered) => {
-      return orgs.sort((a, b) => {
-        if (sortBy === 'name') {
-          return a.name.localeCompare(b.name);
-        } else {
-          return b.active_user_count - a.active_user_count;
-        }
-      });
-    };
-
-    const sortedWithUsers = sortOrgs([...withUsers]);
-    const sortedWithoutUsers = sortOrgs([...withoutUsers]);
-
-    // Create grouped items for virtual list
-    interface GroupedItem {
-      type: 'header' | 'organization';
-      id: string;
-      data?: typeof filtered[0];
-      groupTitle?: string;
-      count?: number;
-      groupKey?: string;
-    }
-
-    const items: GroupedItem[] = [];
-
-    // Add "With Users" group
-    if (sortedWithUsers.length > 0) {
-      items.push({
-        type: 'header',
-        id: 'header-with-users',
-        groupTitle: 'Organizations with Active Users',
-        count: sortedWithUsers.length,
-        groupKey: 'with-users'
-      });
-
-      if (!collapsedGroups.has('with-users')) {
-        sortedWithUsers.forEach(org => {
-          items.push({
-            type: 'organization',
-            id: org.id,
-            data: org
-          });
-        });
-      }
-    }
-
-    // Add "Without Users" group
-    if (sortedWithoutUsers.length > 0) {
-      items.push({
-        type: 'header',
-        id: 'header-without-users',
-        groupTitle: 'Organizations without Active Users',
-        count: sortedWithoutUsers.length,
-        groupKey: 'without-users'
-      });
-
-      if (!collapsedGroups.has('without-users')) {
-        sortedWithoutUsers.forEach(org => {
-          items.push({
-            type: 'organization',
-            id: org.id,
-            data: org
-          });
-        });
-      }
-    }
-
-    return {
-      items,
-      totalCount: filtered.length,
-      withUsersCount: sortedWithUsers.length,
-      withoutUsersCount: sortedWithoutUsers.length
-    };
-  }, [subcontractorOrgs, debouncedSearchQuery, activeUsersFilter, sortBy, collapsedGroups]);
-
-  const toggleGroup = (groupKey: string) => {
-    setCollapsedGroups(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupKey)) {
-        newSet.delete(groupKey);
-      } else {
-        newSet.add(groupKey);
-      }
-      return newSet;
-    });
-  };
+    // Sort by name
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }, [subcontractorOrgs, debouncedSearchQuery]);
 
   const getWorkloadColor = (workload: number) => {
     if (workload === 0) return 'text-green-600';
@@ -690,185 +590,75 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                         <Building className="h-4 w-4" />
                         <span className="font-medium">Subcontractor Organizations</span>
                         <Badge variant="outline">
-                          {groupedSubcontractorOrgs.totalCount} of {subcontractorOrgs.length} shown
+                          {filteredSubcontractorOrgs.length} available
                         </Badge>
                       </div>
 
-                      {subcontractorOrgs.length === 0 ? (
-                        <div className="p-4 bg-muted/50 border border-dashed rounded-md">
-                          <div className="text-center">
-                            <Building className="h-8 w-8 mx-auto mb-2 opacity-50 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">No subcontractor organizations available</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Create subcontractor organizations to assign work orders
-                            </p>
-                          </div>
+                      {/* Search Input */}
+                      {subcontractorOrgs.length > 0 && (
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search organizations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10"
+                          />
                         </div>
+                      )}
+
+                      {filteredSubcontractorOrgs.length === 0 ? (
+                        subcontractorOrgs.length === 0 ? (
+                          <EmptyTableState
+                            icon={Building}
+                            title="No subcontractor organizations"
+                            description="Create subcontractor organizations to assign work orders"
+                            colSpan={1}
+                          />
+                        ) : (
+                          <EmptyTableState
+                            icon={Filter}
+                            title="No organizations found"
+                            description="No organizations with active users match your search"
+                            colSpan={1}
+                            action={{
+                              label: "Clear search",
+                              onClick: () => setSearchQuery('')
+                            }}
+                          />
+                        )
                       ) : (
                         <Card>
                           <CardContent className="p-0">
-                            {/* Search and Filter Controls */}
-                            <div className="px-6 pt-4 space-y-3">
-                              {/* Search Input */}
-                              <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  placeholder="Search organizations, emails, or lead names..."
-                                  value={searchQuery}
-                                  onChange={(e) => setSearchQuery(e.target.value)}
-                                  className="pl-10"
-                                />
+                            <ScrollArea className="max-h-80 px-6 py-4">
+                              <div className="space-y-2">
+                                {filteredSubcontractorOrgs.map((org) => (
+                                  <div key={org.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent">
+                                    <Checkbox
+                                      id={`org-${org.id}`}
+                                      checked={selectedOrganizations.includes(org.id)}
+                                      onCheckedChange={() => toggleOrganization(org.id)}
+                                    />
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <OrganizationBadge 
+                                          organization={{ 
+                                            name: org.name, 
+                                            organization_type: 'subcontractor' 
+                                          }} 
+                                          size="sm"
+                                          showIcon={false}
+                                          showType={false}
+                                        />
+                                        <span className="font-medium">
+                                          {org.name} ({org.active_user_count} employee{org.active_user_count !== 1 ? 's' : ''})
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                              
-                              {/* Filter and Sort Controls */}
-                              <div className="flex flex-wrap gap-2">
-                                <div className="flex gap-1">
-                                  <Button
-                                    type="button"
-                                    variant={activeUsersFilter === 'all' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setActiveUsersFilter('all')}
-                                  >
-                                    All
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={activeUsersFilter === 'active' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setActiveUsersFilter('active')}
-                                  >
-                                    With Users
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={activeUsersFilter === 'none' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setActiveUsersFilter('none')}
-                                  >
-                                    No Users
-                                  </Button>
-                                </div>
-                                
-                                <Separator orientation="vertical" className="h-8" />
-                                
-                                <div className="flex gap-1">
-                                  <Button
-                                    type="button"
-                                    variant={sortBy === 'name' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setSortBy('name')}
-                                  >
-                                    A-Z
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={sortBy === 'users' ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setSortBy('users')}
-                                  >
-                                    By Users
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Organizations List with Virtual Scrolling */}
-                            <div className="px-6 pb-6">
-                              {groupedSubcontractorOrgs.items.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                  <Filter className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                  <p className="text-sm">No organizations match your filters</p>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSearchQuery('');
-                                      setActiveUsersFilter('all');
-                                      setSortBy('name');
-                                    }}
-                                    className="mt-2"
-                                  >
-                                    Clear Filters
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="mt-4">
-                                  <VirtualizedList
-                                    items={groupedSubcontractorOrgs.items}
-                                    itemHeight={70}
-                                    containerHeight={320}
-                                    overscan={5}
-                                    renderItem={(item, index) => {
-                                      if (item.type === 'header') {
-                                        return (
-                                          <div
-                                            key={item.id}
-                                            className="flex items-center justify-between py-3 px-2 bg-muted/50 rounded-md border-b border-border sticky top-0 z-10"
-                                          >
-                                            <div className="flex items-center gap-2">
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-6 w-6 p-0"
-                                                onClick={() => item.groupKey && toggleGroup(item.groupKey)}
-                                              >
-                                                {item.groupKey && collapsedGroups.has(item.groupKey) ? (
-                                                  <ChevronRight className="h-4 w-4" />
-                                                ) : (
-                                                  <ChevronDown className="h-4 w-4" />
-                                                )}
-                                              </Button>
-                                              <span className="font-medium text-sm">{item.groupTitle}</span>
-                                               <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
-                                                 {item.count}
-                                               </Badge>
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-
-                                      // Organization item
-                                      const org = item.data!;
-                                      return (
-                                        <div
-                                          key={org.id}
-                                          className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent"
-                                        >
-                                          <Checkbox
-                                            id={`org-${org.id}`}
-                                            checked={selectedOrganizations.includes(org.id)}
-                                            onCheckedChange={() => toggleOrganization(org.id)}
-                                          />
-                                          <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-medium">{org.name}</span>
-                                              <Badge variant={org.active_user_count > 0 ? "default" : "secondary"}>
-                                                {org.active_user_count} active user{org.active_user_count !== 1 ? 's' : ''}
-                                              </Badge>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                              {org.contact_email && (
-                                                <div className="flex items-center gap-1">
-                                                  <Mail className="h-3 w-3" />
-                                                  <span>{org.contact_email}</span>
-                                                </div>
-                                              )}
-                                              {org.first_active_user && (
-                                                <span>Lead: {org.first_active_user.full_name}</span>
-                                              )}
-                                              {org.active_user_count === 0 && (
-                                                <span className="text-amber-600">No active users</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </div>
+                            </ScrollArea>
                           </CardContent>
                         </Card>
                       )}
