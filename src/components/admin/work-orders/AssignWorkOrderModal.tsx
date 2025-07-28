@@ -95,21 +95,34 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             .select(`
               assigned_to,
               assigned_organization_id,
+              notes,
               profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
               organizations!work_order_assignments_assigned_organization_id_fkey(id, name)
             `)
             .in('work_order_id', workOrderIds);
 
           if (existingAssignments && existingAssignments.length > 0) {
-            // Pre-select currently assigned users
-            const assignedUserIds = existingAssignments.map(a => a.assigned_to);
-            setSelectedAssignees(assignedUserIds);
+            const individualAssignments: string[] = [];
+            const organizationAssignments: string[] = [];
 
-            // Pre-select currently assigned organizations (if any)
-            const assignedOrgIds = existingAssignments
-              .filter(a => a.assigned_organization_id)
-              .map(a => a.assigned_organization_id!);
-            setSelectedOrganizations(assignedOrgIds);
+            existingAssignments.forEach(assignment => {
+              // Check if this is a placeholder assignment by looking for the placeholder text in notes
+              const isPlaceholder = assignment.notes && assignment.notes.includes('no active users - placeholder assignment');
+              
+              if (isPlaceholder && assignment.assigned_organization_id) {
+                // For placeholder assignments, only select the organization
+                organizationAssignments.push(assignment.assigned_organization_id);
+              } else if (!assignment.assigned_organization_id) {
+                // For individual assignments (no organization), select the user
+                individualAssignments.push(assignment.assigned_to);
+              } else if (assignment.assigned_organization_id && !isPlaceholder) {
+                // For organization assignments with real users, select the organization
+                organizationAssignments.push(assignment.assigned_organization_id);
+              }
+            });
+
+            setSelectedAssignees([...new Set(individualAssignments)]);
+            setSelectedOrganizations([...new Set(organizationAssignments)]);
             setHasExistingAssignments(true);
           } else {
             // No existing assignments
