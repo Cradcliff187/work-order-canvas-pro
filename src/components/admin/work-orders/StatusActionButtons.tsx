@@ -214,7 +214,7 @@ export function StatusActionButtons({
 
   const handleTransitionClick = (transition: StatusTransition) => {
     // Special handling for assign action
-    if (transition.isSpecialAction && transition.status === 'assigned' && workOrder.status === 'received') {
+    if (transition.isSpecialAction && transition.status === 'assigned') {
       setShowAssignModal(true);
       return;
     }
