@@ -82,6 +82,7 @@ export interface WorkOrder {
     id: string;
     assigned_to: string;
     assignment_type: string;
+    notes?: string | null;
     profiles?: {
       id: string;
       first_name: string;

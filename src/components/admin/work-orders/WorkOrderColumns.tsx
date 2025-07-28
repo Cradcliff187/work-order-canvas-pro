@@ -258,10 +258,20 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       }
       
       if (assignments.length === 1) {
-        const assignee = assignments[0].profiles;
+        const assignment = assignments[0];
+        const assignee = assignment.profiles;
+        const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
+
+        let displayText = 'Unknown';
+        if (isPlaceholder && assignment.organizations) {
+          displayText = assignment.organizations.contact_email || assignment.organizations.name;
+        } else if (assignee) {
+          displayText = `${assignee.first_name} ${assignee.last_name}`;
+        }
+
         return (
           <Badge variant="secondary" className="h-5 text-[10px] px-1.5 bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
-            {assignee ? `${assignee.first_name} ${assignee.last_name}` : 'Unknown'}
+            {displayText}
           </Badge>
         );
       }
