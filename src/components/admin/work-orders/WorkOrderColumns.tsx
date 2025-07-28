@@ -3,7 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip } from 'lucide-react';
+import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
@@ -51,7 +51,16 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   },
   {
     accessorKey: 'work_order_number',
-    header: 'Work Order',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Work Order
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     size: 140,
     minSize: 120,
     maxSize: 160,
@@ -97,7 +106,16 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   },
   {
     accessorKey: 'title',
-    header: 'Title',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Title
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="font-medium truncate text-ellipsis">
         {row.getValue('title')}
@@ -105,14 +123,33 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     ),
   },
   {
-    accessorKey: 'organizations.name',
-    header: 'Organization',
+    id: 'organization',
+    accessorFn: (row) => row.organizations?.name,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Organization
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     size: 180,
     cell: ({ row }) => row.original.organizations?.name || 'N/A',
   },
   {
     accessorKey: 'store_location',
-    header: 'Location',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Location
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     size: 150,
     cell: ({ row }) => {
       const workOrder = row.original;
@@ -152,14 +189,33 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     },
   },
   {
-    accessorKey: 'trades.name',
-    header: 'Trade',
+    id: 'trade',
+    accessorFn: (row) => row.trades?.name,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Trade
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     size: 120,
     cell: ({ row }) => row.original.trades?.name || 'N/A',
   },
   {
     accessorKey: 'status',
-    header: 'Status',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Status
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     size: 100,
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
@@ -171,8 +227,24 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     },
   },
   {
-    accessorKey: 'work_order_assignments',
-    header: 'Assigned To',
+    id: 'assigned_to',
+    accessorFn: (row) => {
+      const assignments = row.work_order_assignments || [];
+      if (assignments.length === 0) return 'Unassigned';
+      const lead = assignments.find(a => a.assignment_type === 'lead') || assignments[0];
+      const profile = lead.profiles;
+      return profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown';
+    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Assigned To
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     size: 120,
     cell: ({ row }) => {
       const assignments = row.original.work_order_assignments || [];
@@ -227,20 +299,20 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
   },
   {
     accessorKey: 'date_submitted',
-    header: 'Date Submitted',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Date Submitted
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     size: 100,
     cell: ({ row }) => {
       const date = new Date(row.getValue('date_submitted'));
       return date.toLocaleDateString();
-    },
-  },
-  {
-    accessorKey: 'due_date',
-    header: 'Due Date',
-    size: 80,
-    cell: ({ row }) => {
-      const date = row.getValue('due_date');
-      return date ? new Date(date as string).toLocaleDateString() : 'N/A';
     },
   },
   {
