@@ -88,6 +88,7 @@ export interface WorkOrder {
       first_name: string;
       last_name: string;
       email: string;
+      user_type: 'admin' | 'employee' | 'partner' | 'subcontractor';
     } | null;
     organizations?: {
       id: string;
@@ -137,7 +138,8 @@ export function useWorkOrders(
               id,
               first_name,
               last_name,
-              email
+              email,
+              user_type
             ),
             organizations!work_order_assignments_assigned_organization_id_fkey(
               id,
@@ -225,7 +227,8 @@ export function useWorkOrder(id: string) {
               id,
               first_name,
               last_name,
-              email
+              email,
+              user_type
             ),
             organizations!work_order_assignments_assigned_organization_id_fkey(
               id,
