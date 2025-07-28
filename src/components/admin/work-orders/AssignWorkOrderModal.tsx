@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { VirtualizedList } from '@/components/VirtualizedList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, Briefcase, Clock, Mail, UserCheck, Info, AlertCircle, RefreshCw, Building, User, Search, Filter, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAllAssignees, type AssigneeData } from '@/hooks/useEmployeesForAssignment';
 import { useWorkOrderAssignmentMutations } from '@/hooks/useWorkOrderAssignments';
@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
@@ -68,6 +69,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   // Check if any work orders have existing assignments
   const [hasExistingAssignments, setHasExistingAssignments] = useState(false);
   
+  // State for current assignments display
+  const [currentAssignments, setCurrentAssignments] = useState<any[]>([]);
+  
 
   useEffect(() => {
     if (isOpen) {
@@ -87,17 +91,30 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
           const { data: existingAssignments } = await supabase
             .from('work_order_assignments')
             .select(`
+              id,
               assigned_to,
               assigned_organization_id,
+              assignment_type,
               notes,
               profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
-              organizations!work_order_assignments_assigned_organization_id_fkey(id, name)
+              organizations!work_order_assignments_assigned_organization_id_fkey(id, name, organization_type)
             `)
             .in('work_order_id', workOrderIds);
 
           if (existingAssignments && existingAssignments.length > 0) {
             const individualAssignments: string[] = [];
             const organizationAssignments: string[] = [];
+            
+            // Transform assignments for display
+            const formattedAssignments = existingAssignments.map(assignment => ({
+              id: assignment.id,
+              assigned_to: assignment.assigned_to,
+              assignment_type: assignment.assignment_type || 'assigned',
+              assignee_profile: assignment.profiles,
+              assigned_organization: assignment.organizations
+            }));
+            
+            setCurrentAssignments(formattedAssignments);
 
             existingAssignments.forEach(assignment => {
               // Check if this is a placeholder assignment by looking for the placeholder text in notes
@@ -120,11 +137,13 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             setHasExistingAssignments(true);
           } else {
             // No existing assignments
+            setCurrentAssignments([]);
             setSelectedAssignees([]);
             setSelectedOrganizations([]);
             setHasExistingAssignments(false);
           }
         } catch (error) {
+          setCurrentAssignments([]);
           setSelectedAssignees([]);
           setSelectedOrganizations([]);
           setHasExistingAssignments(false);
@@ -394,6 +413,45 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     return 'Very Busy';
   };
 
+  const removeCurrentAssignment = async (assignmentId: string) => {
+    try {
+      await supabase
+        .from('work_order_assignments')
+        .delete()
+        .eq('id', assignmentId);
+      
+      // Refresh assignments by re-fetching
+      const workOrderIds = workOrders.map(wo => wo.id);
+      const { data: existingAssignments } = await supabase
+        .from('work_order_assignments')
+        .select(`
+          id,
+          assigned_to,
+          assigned_organization_id,
+          assignment_type,
+          notes,
+          profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
+          organizations!work_order_assignments_assigned_organization_id_fkey(id, name, organization_type)
+        `)
+        .in('work_order_id', workOrderIds);
+
+      if (existingAssignments && existingAssignments.length > 0) {
+        const formattedAssignments = existingAssignments.map(assignment => ({
+          id: assignment.id,
+          assigned_to: assignment.assigned_to,
+          assignment_type: assignment.assignment_type || 'assigned',
+          assignee_profile: assignment.profiles,
+          assigned_organization: assignment.organizations
+        }));
+        setCurrentAssignments(formattedAssignments);
+      } else {
+        setCurrentAssignments([]);
+      }
+    } catch (error) {
+      console.error('Failed to remove assignment:', error);
+    }
+  };
+
   return (
     <ErrorBoundary fallback={
       <div className="p-4 text-center">
@@ -509,6 +567,46 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               {/* Content when loaded */}
               {!isLoading && !isLoadingOrgs && (
                 <>
+                  {/* Current Assignments Section */}
+                  {currentAssignments && currentAssignments.length > 0 ? (
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <UserCheck className="h-4 w-4" />
+                          <span className="font-medium">Current Assignments</span>
+                        </div>
+                        <div className="space-y-2">
+                          {currentAssignments.map((assignment) => (
+                            <div key={assignment.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                              <AssigneeDisplay assignments={[assignment]} showIcons={false} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeCurrentAssignment(assignment.id)}
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                title="Remove assignment"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <UserCheck className="h-4 w-4" />
+                          <span className="font-medium">Current Assignments</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Not yet assigned
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Assignment Tabs */}
                   <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'individuals' | 'organizations')} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
