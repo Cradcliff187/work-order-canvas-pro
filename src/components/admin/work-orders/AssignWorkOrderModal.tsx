@@ -217,15 +217,13 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
           const assignedTo = org.first_active_user_id || profile.id;
           
           const isPlaceholder = !org.first_active_user_id;
-          const orgNotes = isPlaceholder 
-            ? `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name} (no active users - placeholder assignment)`
-            : `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name}`;
+          const orgNotes = notes || `Assigned to organization ${org.name}`;
 
           assignments.push({
             work_order_id: wo.id,
             assigned_to: assignedTo,
             assigned_organization_id: orgId, // Always set for organization assignments
-            assignment_type: 'assigned' as const,
+            assignment_type: isPlaceholder ? 'placeholder' as const : 'assigned' as const,
             notes: orgNotes
           });
         }
