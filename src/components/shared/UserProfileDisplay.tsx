@@ -1,94 +1,102 @@
 import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Building2, Home, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Profile {
+interface Organization {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
-  avatar_url?: string | null;
-  company_name?: string | null;
+  name: string;
+  organization_type: 'partner' | 'subcontractor' | 'internal';
+  initials?: string;
 }
 
-interface UserProfileDisplayProps {
-  profile: Profile | null;
-  showAvatar?: boolean;
-  showUserType?: boolean;
-  showCompany?: boolean;
-  layout?: 'horizontal' | 'vertical';
-  avatarSize?: 'sm' | 'md' | 'lg';
+interface OrganizationBadgeProps {
+  organization: Organization | null | undefined;
+  showIcon?: boolean;
+  showName?: boolean;
+  showType?: boolean;
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-export function UserProfileDisplay({
-  profile,
-  showAvatar = true,
-  showUserType = true,
-  showCompany = false,
-  layout = 'horizontal',
-  avatarSize = 'md',
+export function OrganizationBadge({
+  organization,
+  showIcon = true,
+  showName = true,
+  showType = false,
+  size = 'md',
   className
-}: UserProfileDisplayProps) {
-  if (!profile) {
+}: OrganizationBadgeProps) {
+  if (!organization) {
     return null;
   }
 
-  const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
-  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-
-  const avatarSizes = {
-    sm: 'h-6 w-6',
-    md: 'h-8 w-8',
-    lg: 'h-10 w-10'
+  // Get badge variant based on organization type
+  const getVariant = () => {
+    switch (organization.organization_type) {
+      case 'internal':
+        return 'default';
+      case 'partner':
+        return 'secondary';
+      case 'subcontractor':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
   };
 
-  const textSizes = {
-    sm: 'text-sm',
-    md: 'text-sm',
-    lg: 'text-base'
+  // Get icon based on organization type
+  const getIcon = () => {
+    const iconClass = cn(
+      size === 'sm' ? 'h-3 w-3' : size === 'md' ? 'h-3.5 w-3.5' : 'h-4 w-4'
+    );
+    
+    switch (organization.organization_type) {
+      case 'internal':
+        return <Home className={iconClass} />;
+      case 'partner':
+        return <Building2 className={iconClass} />;
+      case 'subcontractor':
+        return <Wrench className={iconClass} />;
+      default:
+        return <Building2 className={iconClass} />;
+    }
   };
 
-  const layoutClasses = {
-    horizontal: 'flex items-center gap-3',
-    vertical: 'flex flex-col items-center gap-2 text-center'
+  // Size classes
+  const sizeClasses = {
+    sm: 'h-5 text-[10px] px-1.5 gap-1',
+    md: 'h-6 text-xs px-2 gap-1.5',
+    lg: 'h-7 text-sm px-2.5 gap-2'
+  };
+
+  // Determine display text
+  const displayText = () => {
+    if (showName && showType) {
+      return `${organization.name} (${organization.organization_type})`;
+    }
+    if (showName) {
+      return organization.name;
+    }
+    if (showType) {
+      return organization.organization_type;
+    }
+    return organization.initials || organization.name.slice(0, 3).toUpperCase();
   };
 
   return (
-    <div className={cn(layoutClasses[layout], className)}>
-      {showAvatar && (
-        <Avatar className={avatarSizes[avatarSize]}>
-          <AvatarImage src={profile.avatar_url || undefined} alt={fullName} />
-          <AvatarFallback className="bg-primary/10 text-primary font-medium">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+    <Badge
+      variant={getVariant()}
+      className={cn(
+        sizeClasses[size],
+        'inline-flex items-center font-medium',
+        className
       )}
-      
-      <div className={cn(
-        'min-w-0 flex-1',
-        layout === 'vertical' ? 'text-center' : ''
-      )}>
-        <p className={cn(
-          'font-medium truncate',
-          textSizes[avatarSize]
-        )}>
-          {fullName}
-        </p>
-        
-        {showUserType && (
-          <p className="text-xs text-muted-foreground capitalize">
-            {profile.user_type}
-          </p>
-        )}
-        
-        {showCompany && profile.company_name && (
-          <p className="text-xs text-muted-foreground truncate">
-            {profile.company_name}
-          </p>
-        )}
-      </div>
-    </div>
+    >
+      {showIcon && getIcon()}
+      <span className="truncate max-w-[200px]">
+        {displayText()}
+      </span>
+    </Badge>
   );
 }
