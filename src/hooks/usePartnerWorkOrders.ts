@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
+import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -32,24 +34,40 @@ interface WorkOrderFilters {
 
 export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
   const { profile } = useAuth();
+  const permissions = useEnhancedPermissions();
+  const useOrgWorkOrders = isFeatureEnabled('useOrganizationWorkOrders');
 
   return useQuery({
-    queryKey: ['partner-work-orders', filters, profile?.id],
+    queryKey: ['partner-work-orders', filters, profile?.id, useOrgWorkOrders],
     queryFn: async () => {
-      if (!profile?.id) throw new Error('No user profile');
+      let organizationIds: string[];
 
-      // Get user's organizations first
-      const { data: userOrgs, error: userOrgsError } = await supabase
-        .from('user_organizations')
-        .select('organization_id')
-        .eq('user_id', profile.id);
+      if (useOrgWorkOrders && permissions.user) {
+        // Use organization-based access
+        const userOrganizations = permissions.user.organization_memberships?.map(
+          (membership: any) => membership.organization_id
+        ) || [];
+        
+        if (userOrganizations.length === 0) {
+          return { data: [], totalCount: 0 };
+        }
+        organizationIds = userOrganizations;
+      } else {
+        // Legacy user_type based access
+        if (!profile?.id) throw new Error('No user profile');
 
-      if (userOrgsError) throw userOrgsError;
-      
-      const organizationIds = userOrgs.map(org => org.organization_id);
-      
-      if (organizationIds.length === 0) {
-        return { data: [], totalCount: 0 };
+        const { data: userOrgs, error: userOrgsError } = await supabase
+          .from('user_organizations')
+          .select('organization_id')
+          .eq('user_id', profile.id);
+
+        if (userOrgsError) throw userOrgsError;
+        
+        organizationIds = userOrgs.map(org => org.organization_id);
+        
+        if (organizationIds.length === 0) {
+          return { data: [], totalCount: 0 };
+        }
       }
 
       let query = supabase
@@ -100,35 +118,56 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
         totalCount: count || 0,
       };
     },
-    enabled: !!profile?.id,
+    enabled: useOrgWorkOrders ? !!permissions.user : !!profile?.id,
   });
 }
 
 export function usePartnerWorkOrderStats() {
   const { profile } = useAuth();
+  const permissions = useEnhancedPermissions();
+  const useOrgWorkOrders = isFeatureEnabled('useOrganizationWorkOrders');
 
   return useQuery({
-    queryKey: ['partner-work-order-stats', profile?.id],
+    queryKey: ['partner-work-order-stats', profile?.id, useOrgWorkOrders],
     queryFn: async () => {
-      if (!profile?.id) throw new Error('No user profile');
+      let organizationIds: string[];
 
-      // Get user's organizations first
-      const { data: userOrgs, error: userOrgsError } = await supabase
-        .from('user_organizations')
-        .select('organization_id')
-        .eq('user_id', profile.id);
+      if (useOrgWorkOrders && permissions.user) {
+        // Use organization-based access
+        const userOrganizations = permissions.user.organization_memberships?.map(
+          (membership: any) => membership.organization_id
+        ) || [];
+        
+        if (userOrganizations.length === 0) {
+          return {
+            total: 0,
+            active: 0,
+            completedThisMonth: 0,
+            avgCompletionDays: 0
+          };
+        }
+        organizationIds = userOrganizations;
+      } else {
+        // Legacy user_type based access
+        if (!profile?.id) throw new Error('No user profile');
 
-      if (userOrgsError) throw userOrgsError;
-      
-      const organizationIds = userOrgs.map(org => org.organization_id);
-      
-      if (organizationIds.length === 0) {
-        return {
-          total: 0,
-          active: 0,
-          completedThisMonth: 0,
-          avgCompletionDays: 0
-        };
+        const { data: userOrgs, error: userOrgsError } = await supabase
+          .from('user_organizations')
+          .select('organization_id')
+          .eq('user_id', profile.id);
+
+        if (userOrgsError) throw userOrgsError;
+        
+        organizationIds = userOrgs.map(org => org.organization_id);
+        
+        if (organizationIds.length === 0) {
+          return {
+            total: 0,
+            active: 0,
+            completedThisMonth: 0,
+            avgCompletionDays: 0
+          };
+        }
       }
 
       // Get all work orders for user's organizations
@@ -178,7 +217,7 @@ export function usePartnerWorkOrderStats() {
         avgCompletionDays
       };
     },
-    enabled: !!profile?.id,
+    enabled: useOrgWorkOrders ? !!permissions.user : !!profile?.id,
   });
 }
 

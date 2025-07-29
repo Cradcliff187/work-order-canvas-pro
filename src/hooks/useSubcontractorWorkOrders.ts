@@ -2,19 +2,28 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useEnhancedPermissions } from "@/hooks/useEnhancedPermissions";
+import { isFeatureEnabled } from "@/lib/migration/featureFlags";
 
 export function useSubcontractorWorkOrders() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const permissions = useEnhancedPermissions();
+  const useOrgWorkOrders = isFeatureEnabled('useOrganizationWorkOrders');
+
   // Company-level access: RLS policies automatically filter to company work orders
   const assignedWorkOrders = useQuery({
-    queryKey: ["subcontractor-work-orders", user?.id],
+    queryKey: ["subcontractor-work-orders", user?.id, useOrgWorkOrders],
     queryFn: async () => {
-      if (!user) return [];
+      if (useOrgWorkOrders && !permissions.user) {
+        return [];
+      } else if (!useOrgWorkOrders && !user) {
+        return [];
+      }
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("work_orders")
         .select(`
           *,
@@ -33,8 +42,24 @@ export function useSubcontractorWorkOrders() {
             profiles!work_order_assignments_assigned_to_fkey (first_name, last_name),
             assigned_organization:organizations!assigned_organization_id(name, organization_type)
           )
-        `)
-        .order("created_at", { ascending: false });
+        `);
+
+      // Apply organization-based filtering if feature is enabled
+      if (useOrgWorkOrders && permissions.user) {
+        const userOrganizations = permissions.user.organization_memberships?.map(
+          (membership: any) => membership.organization_id
+        ) || [];
+        
+        if (userOrganizations.length > 0) {
+          query = query.in('assigned_organization_id', userOrganizations);
+        } else {
+          return [];
+        }
+      }
+
+      query = query.order("created_at", { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -46,7 +71,7 @@ export function useSubcontractorWorkOrders() {
       
       return transformedData;
     },
-    enabled: !!user,
+    enabled: useOrgWorkOrders ? !!permissions.user : !!user,
   });
 
   // Company-wide dashboard stats: RLS policies provide company-level access

@@ -25,8 +25,8 @@ export const MIGRATION_FLAGS: MigrationFlags = {
   // Phase 4: Navigation migration (ACTIVE)
   useOrganizationNavigation: true,
   
-  // Phase 5: Work order system migration (PREPARED)
-  useOrganizationWorkOrders: false,
+  // Phase 5: Work order system migration (ACTIVE)
+  useOrganizationWorkOrders: true,
 };
 
 // Helper to check if feature is enabled
