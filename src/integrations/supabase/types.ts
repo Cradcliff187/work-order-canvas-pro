@@ -1533,6 +1533,10 @@ export type Database = {
         Args: { p_email?: string; p_user_id?: string }
         Returns: Json
       }
+      emergency_auth_bypass: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       ensure_single_organization_assignment: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1688,6 +1692,10 @@ export type Database = {
       }
       setup_bulletproof_test_data: {
         Args: Record<PropertyKey, never> | { admin_user_id?: string }
+        Returns: Json
+      }
+      sync_user_auth_metadata: {
+        Args: { target_user_id?: string }
         Returns: Json
       }
       test_user_creation: {
