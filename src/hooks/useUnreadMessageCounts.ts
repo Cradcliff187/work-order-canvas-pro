@@ -69,21 +69,22 @@ export function useUnreadMessageCounts(workOrderIds: string[]) {
         return {};
       }
 
-      // Use optimized SQL function for single-query performance
-      const { data, error } = await supabase.rpc('get_unread_message_counts', {
-        p_work_order_ids: workOrderIds,
-        p_user_id: profile.id,
-        p_user_type: profile.user_type
-      });
+      // Use the database function (no parameters needed - uses auth context)
+      const { data, error } = await supabase.rpc('get_unread_message_counts');
 
       if (error) throw error;
 
       // Transform result to Record<string, number> format for backward compatibility
       const unreadCounts: Record<string, number> = {};
       
-      data?.forEach((row: { work_order_id: string; unread_count: number }) => {
-        unreadCounts[row.work_order_id] = Number(row.unread_count);
-      });
+      if (data && Array.isArray(data)) {
+        data.forEach((row: { work_order_id: string; unread_count: number }) => {
+          // Only include counts for work orders we're tracking
+          if (workOrderIds.includes(row.work_order_id)) {
+            unreadCounts[row.work_order_id] = Number(row.unread_count);
+          }
+        });
+      }
 
       return unreadCounts;
     },

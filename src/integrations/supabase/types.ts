@@ -740,6 +740,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          company_name: string | null
           created_at: string
           email: string
           first_name: string
@@ -752,9 +753,11 @@ export type Database = {
           phone: string | null
           updated_at: string
           user_id: string
+          user_type: Database["public"]["Enums"]["user_type"] | null
         }
         Insert: {
           avatar_url?: string | null
+          company_name?: string | null
           created_at?: string
           email: string
           first_name: string
@@ -767,9 +770,11 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Update: {
           avatar_url?: string | null
+          company_name?: string | null
           created_at?: string
           email?: string
           first_name?: string
@@ -782,6 +787,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Relationships: []
       }
@@ -1571,6 +1577,10 @@ export type Database = {
         Args: { org_id: string; location_code?: string }
         Returns: string
       }
+      get_current_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_type"]
+      }
       get_geographic_distribution: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
@@ -1583,6 +1593,13 @@ export type Database = {
       get_profile_id_direct: {
         Args: { p_user_id: string }
         Returns: string
+      }
+      get_unread_message_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          work_order_id: string
+          unread_count: number
+        }[]
       }
       get_user_org_type: {
         Args: Record<PropertyKey, never>
@@ -1617,6 +1634,10 @@ export type Database = {
       initialize_all_user_jwt_metadata: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       is_valid_transition: {
         Args: {
@@ -1718,6 +1739,7 @@ export type Database = {
       organization_role: "owner" | "admin" | "manager" | "employee" | "member"
       organization_type: "partner" | "subcontractor" | "internal"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
+      user_type: "admin" | "partner" | "subcontractor" | "employee"
       work_order_status:
         | "received"
         | "assigned"
@@ -1859,6 +1881,7 @@ export const Constants = {
       organization_role: ["owner", "admin", "manager", "employee", "member"],
       organization_type: ["partner", "subcontractor", "internal"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
+      user_type: ["admin", "partner", "subcontractor", "employee"],
       work_order_status: [
         "received",
         "assigned",

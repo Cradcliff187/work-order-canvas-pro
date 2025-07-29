@@ -128,8 +128,8 @@ const DevTools = () => {
     console.log(`📊 Found ${data.length} active users`);
     
     // Filter and prioritize test users
-    const testUsers = data.filter(u => u?.email?.includes('@workorderpro.test'));
-    const otherUsers = data.filter(u => u?.email && !u.email.includes('@workorderpro.test'));
+    const testUsers = data.filter(u => u && u.email?.includes('@workorderpro.test'));
+    const otherUsers = data.filter(u => u && u.email && !u.email.includes('@workorderpro.test'));
     
     console.log(`🧪 Test users found: ${testUsers.length}, Other users: ${otherUsers.length}`);
 

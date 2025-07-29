@@ -126,7 +126,7 @@ export default function AdminSubmitReport() {
 
       toast({
         title: "Report Submitted",
-        description: `Report submitted successfully on behalf of ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}.`,
+        description: `Report submitted successfully on behalf of ${assignedSubcontractor?.first_name || 'Unknown'} ${assignedSubcontractor?.last_name || 'User'}.`,
       });
 
       navigate(`/admin/work-orders/${workOrderId}`);
@@ -167,7 +167,7 @@ export default function AdminSubmitReport() {
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            You are about to submit a work report on behalf of <strong>{assignedSubcontractor.first_name} {assignedSubcontractor.last_name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.
+            You are about to submit a work report on behalf of <strong>{assignedSubcontractor?.first_name || 'Unknown'} {assignedSubcontractor?.last_name || 'User'}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.
           </AlertDescription>
         </Alert>
 
@@ -249,7 +249,7 @@ export default function AdminSubmitReport() {
         <div>
           <h1 className="text-2xl font-bold">Submit Work Report</h1>
           <p className="text-muted-foreground">
-            For {assignedSubcontractor.first_name} {assignedSubcontractor.last_name} • {workOrder.work_order_number}
+            For {assignedSubcontractor?.first_name || 'Unknown'} {assignedSubcontractor?.last_name || 'User'} • {workOrder.work_order_number}
           </p>
         </div>
       </div>
