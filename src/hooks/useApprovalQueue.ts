@@ -42,8 +42,7 @@ export const useApprovalQueue = (): ApprovalQueueData => {
           ),
           subcontractor:profiles!subcontractor_user_id (
             first_name,
-            last_name,
-            company_name
+            last_name
           )
         `)
         .eq('status', 'submitted')
@@ -85,8 +84,7 @@ export const useApprovalQueue = (): ApprovalQueueData => {
         title: report.work_orders?.work_order_number 
           ? `${report.work_orders.work_order_number} - ${report.work_orders.title}`
           : 'Unknown Work Order',
-        submittedBy: report.subcontractor?.company_name 
-          || (report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'Unknown Organization'),
+        submittedBy: report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'Unknown Organization',
         submittedAt: report.submitted_at,
         urgency: isUrgent(report.submitted_at)
       }));

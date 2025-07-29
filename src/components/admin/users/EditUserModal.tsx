@@ -70,7 +70,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
-        user_type: data.user_type,
+        // user_type removed during migration
       });
 
       // Update organization if needed

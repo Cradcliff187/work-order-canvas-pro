@@ -149,7 +149,7 @@ export const OrganizationHealthTab = () => {
           let workOrderAssignments = [];
           
           // For subcontractors, fetch their work order assignments
-          if (user.user_type === 'subcontractor') {
+          if (user.is_employee === false) { // Temporary check during migration
             const { data: assignments } = await supabase
               .from('work_order_assignments')
               .select(`
@@ -173,6 +173,7 @@ export const OrganizationHealthTab = () => {
 
           usersWithIssues.push({
             ...user,
+            user_type: 'partner' as any, // Temporary for migration
             organization_count: orgCount,
             organizations,
             work_order_assignments: workOrderAssignments

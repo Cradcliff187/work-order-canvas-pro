@@ -148,19 +148,21 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<User> & { id: string }) => {
-      // Use the new database function that updates both profiles and auth.users atomically
-      const { data, error } = await supabase.rpc('update_user_profile_and_auth', {
-        p_profile_id: id,
-        p_first_name: updates.first_name || '',
-        p_last_name: updates.last_name || '',
-        p_email: updates.email || '',
-        p_user_type: updates.user_type || 'subcontractor',
-        p_phone: updates.phone || null,
-        p_company_name: updates.company_name || null,
-        p_hourly_billable_rate: updates.hourly_billable_rate || null,
-        p_hourly_cost_rate: updates.hourly_cost_rate || null,
-        p_is_active: updates.is_active ?? true,
-      });
+      // Temporarily use direct profile update during migration
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: updates.first_name,
+          last_name: updates.last_name,
+          email: updates.email,
+          phone: updates.phone,
+          hourly_billable_rate: updates.hourly_billable_rate,
+          hourly_cost_rate: updates.hourly_cost_rate,
+          is_active: updates.is_active,
+        })
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) throw error;
       

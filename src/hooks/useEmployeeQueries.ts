@@ -25,7 +25,7 @@ export function useEmployees() {
         hourly_cost_rate: profile.hourly_cost_rate,
         hourly_billable_rate: profile.hourly_billable_rate,
         phone: profile.phone,
-        company_name: profile.company_name, // Now directly from profiles table
+        // company_name removed during migration
         created_at: profile.created_at,
         updated_at: profile.updated_at,
         user_type: 'employee' as const,

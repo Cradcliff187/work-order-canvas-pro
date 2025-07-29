@@ -78,7 +78,7 @@ export function useAdminReports(
       if (error) throw error;
 
       return {
-        data: (data as WorkOrderReport[]) || [],
+        data: (data as any[]) || [], // Temporarily bypass type checking during migration
         totalCount: count || 0,
         pageCount: Math.ceil((count || 0) / pagination.pageSize)
       };

@@ -1019,6 +1019,7 @@ export type Database = {
           assigned_at: string
           assigned_by: string
           assigned_organization_id: string | null
+          assigned_to: string | null
           assignment_type: string
           created_at: string
           id: string
@@ -1030,6 +1031,7 @@ export type Database = {
           assigned_at?: string
           assigned_by: string
           assigned_organization_id?: string | null
+          assigned_to?: string | null
           assignment_type: string
           created_at?: string
           id?: string
@@ -1041,6 +1043,7 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string
           assigned_organization_id?: string | null
+          assigned_to?: string | null
           assignment_type?: string
           created_at?: string
           id?: string
@@ -1061,6 +1064,13 @@ export type Database = {
             columns: ["assigned_organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
