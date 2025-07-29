@@ -22,7 +22,7 @@ export const MIGRATION_FLAGS: MigrationFlags = {
   // Phase 3: Permission system migration (COMPLETED)
   useOrganizationPermissions: true,
   
-  // Phase 4: Navigation migration (READY FOR TESTING)
+  // Phase 4: Navigation migration (ACTIVE)
   useOrganizationNavigation: true,
   
   // Phase 5: Work order system migration (PREPARED)

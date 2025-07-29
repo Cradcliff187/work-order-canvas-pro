@@ -41,6 +41,8 @@ import {
   ClipboardList,
   MapPin,
 } from 'lucide-react';
+import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
+import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 const sidebarItems = [
   { title: 'Dashboard', url: '/partner/dashboard', icon: BarChart3 },
@@ -57,6 +59,8 @@ function PartnerSidebar() {
   const { assets } = useBranding();
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
+  const organizationNavItems = useOrganizationNavigation();
+  const useOrgNavigation = isFeatureEnabled('useOrganizationNavigation');
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -94,20 +98,38 @@ function PartnerSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {sidebarItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild
-                    isActive={isActive(item.url)}
-                    className={isActive(item.url) ? "bg-sidebar-accent" : ""}
-                  >
-                    <Link to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {useOrgNavigation ? (
+                // Organization-based navigation
+                organizationNavItems.filter(item => item.visible).map((item) => (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={isActive(item.path)}
+                      className={isActive(item.path) ? "bg-sidebar-accent" : ""}
+                    >
+                      <Link to={item.path} className="flex items-center gap-2">
+                        {!collapsed && <span>{item.label}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))
+              ) : (
+                // Legacy navigation
+                sidebarItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={isActive(item.url)}
+                      className={isActive(item.url) ? "bg-sidebar-accent" : ""}
+                    >
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -24,6 +24,7 @@ import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } fr
 import { UserProfileDropdown } from './UserProfileDropdown';
 import { useMigrationContext } from '@/components/MigrationWrapper';
 import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
+import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
 export function AdminSidebar() {
   const location = useLocation();
@@ -31,6 +32,7 @@ export function AdminSidebar() {
   const { profile } = useAuth();
   const { permissions, migrationFlags } = useMigrationContext();
   const enhancedPermissions = useEnhancedPermissions();
+  const organizationNavItems = useOrganizationNavigation();
   const { totalCount } = useApprovalQueue();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
@@ -129,11 +131,44 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {renderSidebarSection('Operations', sidebarSections.OPERATIONS)}
-        {renderSidebarSection('Financial', sidebarSections.FINANCIAL)}
-        {renderSidebarSection('Management', sidebarSections.MANAGEMENT)}
-        {renderSidebarSection('Insights', sidebarSections.INSIGHTS)}
-        {renderSidebarSection('System', sidebarSections.SYSTEM)}
+        {migrationFlags.useOrganizationNavigation ? (
+          // Organization-based navigation
+          <SidebarGroup>
+            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {organizationNavItems.filter(item => item.visible).map((item) => (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton 
+                      asChild
+                      isActive={isActive(item.path)}
+                      className={isActive(item.path) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
+                      tooltip={collapsed ? item.label : undefined}
+                    >
+                      <Link to={item.path} className="flex items-center gap-2">
+                        <span className="flex-1">{item.label}</span>
+                        {item.label === 'Approval Center' && totalCount > 0 && (
+                          <Badge variant="secondary" className="h-5 text-[10px] px-1.5 ml-2">
+                            {totalCount}
+                          </Badge>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : (
+          // Legacy navigation
+          <>
+            {renderSidebarSection('Operations', sidebarSections.OPERATIONS)}
+            {renderSidebarSection('Financial', sidebarSections.FINANCIAL)}
+            {renderSidebarSection('Management', sidebarSections.MANAGEMENT)}
+            {renderSidebarSection('Insights', sidebarSections.INSIGHTS)}
+            {renderSidebarSection('System', sidebarSections.SYSTEM)}
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">

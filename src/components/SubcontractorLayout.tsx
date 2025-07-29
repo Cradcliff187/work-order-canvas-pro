@@ -8,6 +8,8 @@ import { SingleOrganizationGuard } from "@/components/SingleOrganizationGuard";
 import { SubcontractorSidebar } from "@/components/subcontractor/SubcontractorSidebar";
 import { StandardHeader } from "@/components/layout/StandardHeader";
 import { Plus, Home, ClipboardList, Receipt, User } from "lucide-react";
+import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
+import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 interface SubcontractorLayoutProps {
   children: ReactNode;
@@ -17,6 +19,8 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const { signOut } = useAuth();
   const isMobile = useIsMobile();
   const { draftCount } = useInvoiceDrafts();
+  const organizationNavItems = useOrganizationNavigation();
+  const useOrgNavigation = isFeatureEnabled('useOrganizationNavigation');
 
   // Convert navigation items to mobile navigation format
   const subcontractorNavItems = [
