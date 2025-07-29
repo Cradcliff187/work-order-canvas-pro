@@ -14,15 +14,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, CheckCircle } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { supabase } from '@/integrations/supabase/client';
-// Organization filtering will be handled by RLS policies
 
-// Remove password from schema - system will handle it
+// Phase 7: Organization-based user creation (no user_type)
 const createUserSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
-  user_type: z.enum(['admin', 'partner', 'subcontractor', 'employee']),
-  organization_id: z.string().optional(),
+  organization_id: z.string().min(1, 'Organization is required'),
+  organization_role: z.enum(['admin', 'manager', 'employee', 'member']),
   phone: z.string().optional(),
 });
 
@@ -45,21 +44,11 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       first_name: '',
       last_name: '',
       email: '',
-      user_type: undefined,
-      organization_id: undefined,
+      organization_id: '',
+      organization_role: 'member',
       phone: '',
     },
   });
-
-  // Reset organization when user type changes
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'user_type') {
-        form.setValue('organization_id', undefined);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
 
   const onSubmit = async (data: CreateUserFormData) => {
     const debugId = `USER_CREATE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -67,15 +56,14 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
     try {
       setIsLoading(true);
       
-      console.group(`🔧 [FRONTEND DEBUG ${debugId}] User Creation Flow Started`);
+      console.group(`🔧 [FRONTEND DEBUG ${debugId}] Organization-based User Creation Started`);
       console.log('📋 Form Data Received:', {
         email: data.email,
         firstName: data.first_name,
         lastName: data.last_name,
-        userType: data.user_type,
-        phone: data.phone,
         organizationId: data.organization_id,
-        organizationProvided: data.organization_id && data.organization_id !== 'none',
+        organizationRole: data.organization_role,
+        phone: data.phone,
         timestamp: new Date().toISOString()
       });
 
@@ -84,72 +72,54 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
           email: data.email,
           first_name: data.first_name,
           last_name: data.last_name,
-          user_type: data.user_type,
           phone: data.phone || '',
-          organization_ids: data.organization_id && data.organization_id !== 'none' ? [data.organization_id] : [],
+          organization_id: data.organization_id,
+          organization_role: data.organization_role,
         },
       };
 
       console.log('📤 Sending to create-admin-user edge function:', requestPayload);
-      console.log('🎯 Organization processing:', {
-        rawOrganizationId: data.organization_id,
-        isNone: data.organization_id === 'none',
-        finalOrganizationIds: requestPayload.userData.organization_ids,
-        organizationIdsLength: requestPayload.userData.organization_ids.length
-      });
-      
-      // Use the existing edge function to create user properly
-      // Database trigger will automatically handle profile creation and welcome email
+
       const { data: result, error } = await supabase.functions.invoke('create-admin-user', {
         body: requestPayload,
       });
 
-      console.log('📥 Edge function response:', {
+      console.log('📥 Edge Function Response:', {
+        success: !error,
         result,
-        error,
-        hasResult: !!result,
-        hasError: !!error,
-        resultSuccess: result?.success,
-        resultMessage: result?.message
+        error: error?.message,
+        timestamp: new Date().toISOString()
       });
 
       if (error) {
-        console.error('❌ Edge function error:', error);
-        throw error;
-      }
-      
-      if (!result.success) {
-        console.error('❌ Edge function returned failure:', result);
-        throw new Error(result.message || 'Failed to create user');
+        console.error('❌ Edge Function Error:', error);
+        throw new Error(error.message || 'Failed to create user');
       }
 
-      console.log('✅ User creation successful:', result);
+      if (!result?.success) {
+        console.error('❌ Edge Function Failed:', result);
+        throw new Error(result?.error || 'User creation failed');
+      }
+
+      console.log('✅ User created successfully:', result.data);
       console.groupEnd();
 
-      // Show success state
       setShowSuccess(true);
       
-      // Close modal after showing success
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+
+      // Auto-close after 2 seconds
       setTimeout(() => {
-        form.reset();
         setShowSuccess(false);
         onOpenChange(false);
-        
-        // Show toast after modal closes
-        toast({
-          title: "User created successfully",
-          description: `Welcome email sent to ${data.email}`,
-        });
+        form.reset();
       }, 2000);
-      
+
     } catch (error: any) {
-      console.error(`❌ [FRONTEND DEBUG ${debugId}] User creation failed:`, {
-        error: error.message,
-        errorCode: error.code,
-        errorDetails: error.details,
-        fullError: error,
-        timestamp: new Date().toISOString()
-      });
+      console.error('❌ User creation failed:', error);
       console.groupEnd();
       
       toast({
@@ -157,21 +127,53 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
         title: "Error",
         description: error.message || "Failed to create user",
       });
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const watchedUserType = form.watch('user_type');
-  // All organizations are available - RLS policies handle access control
-  const filteredOrganizations = organizations || [];
+  const watchedOrgId = form.watch('organization_id');
+  const selectedOrg = organizations?.find(org => org.id === watchedOrgId);
 
-  // Show organization field for non-admin users
-  const showOrganizationField = watchedUserType !== 'admin';
+  // Get available roles based on organization type
+  const getAvailableRoles = (orgType: string) => {
+    switch (orgType) {
+      case 'internal':
+        return [
+          { value: 'admin', label: 'Admin' },
+          { value: 'manager', label: 'Manager' },
+          { value: 'employee', label: 'Employee' }
+        ];
+      case 'partner':
+        return [
+          { value: 'admin', label: 'Admin' },
+          { value: 'manager', label: 'Manager' },
+          { value: 'member', label: 'Member' }
+        ];
+      case 'subcontractor':
+        return [
+          { value: 'admin', label: 'Admin' },
+          { value: 'member', label: 'Member' }
+        ];
+      default:
+        return [{ value: 'member', label: 'Member' }];
+    }
+  };
+
+  const availableRoles = selectedOrg ? getAvailableRoles(selectedOrg.organization_type) : [];
+
+  // Reset role when organization changes
+  useEffect(() => {
+    if (selectedOrg) {
+      const firstAvailableRole = availableRoles[availableRoles.length - 1]?.value || 'member';
+      form.setValue('organization_role', firstAvailableRole as any);
+    }
+  }, [selectedOrg, availableRoles, form]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             Create New User
@@ -179,29 +181,27 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
         </DialogHeader>
 
         {showSuccess ? (
-          <div className="py-8 text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">User Created Successfully!</h3>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <CheckCircle className="h-12 w-12 text-green-500" />
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-green-700">User Created Successfully!</h3>
               <p className="text-sm text-muted-foreground">
-                A welcome email has been sent with login instructions.
+                The user has been created and added to the selected organization.
               </p>
             </div>
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-              <ScrollArea className="flex-1 pr-6 h-[calc(90vh-200px)]">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <ScrollArea className="max-h-[400px] pr-4">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="first_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name *</FormLabel>
+                          <FormLabel>First Name</FormLabel>
                           <FormControl>
                             <Input placeholder="John" {...field} />
                           </FormControl>
@@ -209,13 +209,12 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="last_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last Name *</FormLabel>
+                          <FormLabel>Last Name</FormLabel>
                           <FormControl>
                             <Input placeholder="Doe" {...field} />
                           </FormControl>
@@ -230,7 +229,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email *</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
                           <Input type="email" placeholder="john@example.com" {...field} />
                         </FormControl>
@@ -246,7 +245,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                       <FormItem>
                         <FormLabel>Phone (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="(555) 123-4567" {...field} />
+                          <Input placeholder="(555) 123-4567" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -255,21 +254,22 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
 
                   <FormField
                     control={form.control}
-                    name="user_type"
+                    name="organization_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>User Type *</FormLabel>
+                        <FormLabel>Organization</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select user type" />
+                              <SelectValue placeholder="Select organization" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="partner">Partner</SelectItem>
-                            <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                            <SelectItem value="employee">Employee</SelectItem>
+                            {organizations?.map((org) => (
+                              <SelectItem key={org.id} value={org.id}>
+                                {org.name} ({org.organization_type})
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -277,24 +277,23 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                     )}
                   />
 
-                  {showOrganizationField && (
+                  {selectedOrg && (
                     <FormField
                       control={form.control}
-                      name="organization_id"
+                      name="organization_role"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Organization</FormLabel>
+                          <FormLabel>Role in {selectedOrg.name}</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select organization (optional)" />
+                                <SelectValue placeholder="Select role" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="none">No organization</SelectItem>
-                              {filteredOrganizations?.map((org) => (
-                                <SelectItem key={org.id} value={org.id}>
-                                  {org.name}
+                              {availableRoles.map((role) => (
+                                <SelectItem key={role.value} value={role.value}>
+                                  {role.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -305,37 +304,29 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                     />
                   )}
 
-                  <Alert>
-                    <AlertDescription>
-                      The new user will receive an email with instructions to set up their password and access the system.
-                    </AlertDescription>
-                  </Alert>
+                  {selectedOrg && (
+                    <Alert>
+                      <AlertDescription>
+                        User will be created in the <strong>{selectedOrg.organization_type}</strong> organization "{selectedOrg.name}" 
+                        with the role of <strong>{form.watch('organization_role')}</strong>.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </ScrollArea>
 
-              <DialogFooter className="flex-shrink-0 mt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isLoading}
-                >
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                >
+                <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating...
                     </>
                   ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create User
-                    </>
+                    'Create User'
                   )}
                 </Button>
               </DialogFooter>
@@ -345,4 +336,4 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
       </DialogContent>
     </Dialog>
   );
-} 
+}

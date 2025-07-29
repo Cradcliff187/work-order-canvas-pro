@@ -1,6 +1,7 @@
 /**
- * Migration Feature Flags
- * Controls the gradual migration from user_type to organization-based auth
+ * Phase 7: Legacy System Cleanup - COMPLETE
+ * Organization-based authentication system is now fully active
+ * All legacy flags maintained for backward compatibility but set to true
  */
 
 export interface MigrationFlags {
@@ -10,27 +11,23 @@ export interface MigrationFlags {
   useOrganizationWorkOrders: boolean;
   useOrganizationAuthentication: boolean;
   enableDualTypeSupport: boolean;
+  // Phase 7 additions
+  useOrganizationSystem: boolean;
+  migrationComplete: boolean;
 }
 
-// Feature flags for migration phases
+// All migration phases complete - organization system is now the primary system
 export const MIGRATION_FLAGS: MigrationFlags = {
-  // Phase 1: Dual type system foundation
+  // All legacy flags set to true (migration complete)
   enableDualTypeSupport: true,
-  
-  // Phase 2: Core auth migration
   useOrganizationAuth: true,
-  
-  // Phase 3: Permission system migration (COMPLETED)
   useOrganizationPermissions: true,
-  
-  // Phase 4: Navigation migration (COMPLETED)
   useOrganizationNavigation: true,
-  
-  // Phase 5: Work order system migration (COMPLETED)
   useOrganizationWorkOrders: true,
-  
-  // Phase 6: Authentication system migration (ACTIVE)
   useOrganizationAuthentication: true,
+  // Phase 7: Legacy system cleanup complete
+  useOrganizationSystem: true,
+  migrationComplete: true,
 };
 
 // Helper to check if feature is enabled
@@ -38,15 +35,11 @@ export const isFeatureEnabled = (feature: keyof MigrationFlags): boolean => {
   return MIGRATION_FLAGS[feature];
 };
 
-// Migration phase helpers
-export const isMigrationPhase = (phase: number): boolean => {
-  switch (phase) {
-    case 1: return MIGRATION_FLAGS.enableDualTypeSupport;
-    case 2: return MIGRATION_FLAGS.useOrganizationAuth;
-    case 3: return MIGRATION_FLAGS.useOrganizationPermissions;
-    case 4: return MIGRATION_FLAGS.useOrganizationNavigation;
-    case 5: return MIGRATION_FLAGS.useOrganizationWorkOrders;
-    case 6: return MIGRATION_FLAGS.useOrganizationAuthentication;
-    default: return false;
-  }
+// Legacy compatibility helpers
+export const isOrganizationSystemEnabled = (): boolean => {
+  return MIGRATION_FLAGS.useOrganizationSystem;
+};
+
+export const isMigrationComplete = (): boolean => {
+  return MIGRATION_FLAGS.migrationComplete;
 };

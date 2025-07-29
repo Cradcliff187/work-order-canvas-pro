@@ -1,67 +1,29 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useMigrationContext } from '@/components/MigrationWrapper';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
+import { isMigrationComplete } from '@/lib/migration/featureFlags';
 
-// Try to use enhanced auth context if available
-let useEnhancedAuth: any = null;
-try {
-  const enhancedAuthModule = require('@/contexts/EnhancedAuthContext');
-  useEnhancedAuth = enhancedAuthModule.useEnhancedAuth;
-} catch {
-  // Enhanced auth not available, continue with legacy
-}
-
+// Organization-based user profile hook - Phase 7 complete
 export const useUserProfile = () => {
-  const legacyAuth = useAuth();
+  const { profile, loading, isImpersonating } = useAuth();
   
-  // Try to use enhanced auth if available and authentication migration is enabled
-  let enhancedAuth = null;
-  if (useEnhancedAuth && isFeatureEnabled('useOrganizationAuthentication')) {
-    try {
-      enhancedAuth = useEnhancedAuth();
-    } catch {
-      // Enhanced auth not available, use legacy
-    }
-  }
-  
-  // Choose which auth system to use
-  const { profile, loading, isImpersonating } = enhancedAuth || legacyAuth;
-  
-  // Try to use migration context for enhanced permissions
+  // Use migration context for organization-based permissions
   let migrationPermissions = null;
   try {
-    const { enhancedPermissions, migrationFlags } = useMigrationContext();
-    if (migrationFlags.useOrganizationPermissions) {
-      migrationPermissions = enhancedPermissions;
-    }
+    const { enhancedPermissions } = useMigrationContext();
+    migrationPermissions = enhancedPermissions;
   } catch {
-    // Not wrapped in MigrationWrapper, use legacy behavior
+    // Not wrapped in MigrationWrapper, fallback to basic profile checks
   }
 
-  const isAdmin = () => migrationPermissions?.isAdmin || profile?.user_type === 'admin';
-  const isEmployee = () => migrationPermissions?.isEmployee || profile?.user_type === 'employee';
-  const isPartner = () => migrationPermissions?.isPartner || profile?.user_type === 'partner';
-  const isSubcontractor = () => migrationPermissions?.isSubcontractor || profile?.user_type === 'subcontractor';
+  // Organization-based permission checks
+  const isAdmin = () => migrationPermissions?.isAdmin ?? false;
+  const isEmployee = () => migrationPermissions?.isEmployee ?? false;
+  const isPartner = () => migrationPermissions?.isPartner ?? false;
+  const isSubcontractor = () => migrationPermissions?.isSubcontractor ?? false;
 
   const hasPermission = (requiredUserType: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
-    if (!profile) return false;
+    if (!profile || !migrationPermissions) return false;
     
-    // Use enhanced permissions if available
-    if (migrationPermissions) {
-      const userTypeHierarchy = {
-        'admin': 4,
-        'employee': 3,
-        'partner': 2,
-        'subcontractor': 1
-      };
-
-      const userLevel = userTypeHierarchy[migrationPermissions.getUserType() as keyof typeof userTypeHierarchy];
-      const requiredLevel = userTypeHierarchy[requiredUserType];
-
-      return userLevel >= requiredLevel;
-    }
-    
-    // Fallback to legacy behavior
     const userTypeHierarchy = {
       'admin': 4,
       'employee': 3,
@@ -69,7 +31,7 @@ export const useUserProfile = () => {
       'subcontractor': 1
     };
 
-    const userLevel = userTypeHierarchy[profile.user_type];
+    const userLevel = userTypeHierarchy[migrationPermissions.getUserType() as keyof typeof userTypeHierarchy];
     const requiredLevel = userTypeHierarchy[requiredUserType];
 
     return userLevel >= requiredLevel;
@@ -83,7 +45,7 @@ export const useUserProfile = () => {
     isPartner,
     isSubcontractor,
     hasPermission,
-    userType: migrationPermissions?.getUserType() || profile?.user_type,
+    userType: migrationPermissions?.getUserType() || 'subcontractor',
     isImpersonating
   };
 };
