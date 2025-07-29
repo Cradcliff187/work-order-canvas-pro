@@ -31,9 +31,9 @@ export const DevTools = () => {
     fetchCounts
   } = useDevTools();
   
-  const { user, profile } = useAuth();
+  const { user, profile, permissions } = useAuth();
 
-  const isAdmin = profile?.user_type === 'admin';
+  const isAdmin = permissions?.hasInternalRole && permissions.hasInternalRole(['admin']);
 
   if (!isAdmin) {
     return (
@@ -224,8 +224,8 @@ export const DevTools = () => {
                 <span>{user?.email || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium">User Type:</span>
-                <span className="capitalize">{profile?.user_type || 'N/A'}</span>
+                <span className="font-medium">Organization Type:</span>
+                <span className="capitalize">{permissions?.organizationType || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Admin Access:</span>

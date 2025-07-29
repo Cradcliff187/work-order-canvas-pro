@@ -26,13 +26,13 @@ import { UserProfileDropdown } from './UserProfileDropdown';
 export function AdminSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
-  const { profile } = useAuth();
+  const { profile, permissions } = useAuth();
   const { totalCount } = useApprovalQueue();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
   
-  const isAdmin = profile?.user_type === 'admin';
+  const isAdmin = permissions?.hasInternalRole && permissions.hasInternalRole(['admin']);
   const isEmployee = profile?.is_employee === true;
 
   const isActive = (path: string) => location.pathname === path;

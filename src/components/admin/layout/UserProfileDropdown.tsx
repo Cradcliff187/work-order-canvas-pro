@@ -20,7 +20,7 @@ interface UserProfileDropdownProps {
 }
 
 export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownProps) {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, permissions } = useAuth();
   const navigate = useNavigate();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -139,7 +139,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
             </div>
             <div className="flex flex-col items-start text-xs">
               <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-              <span className="text-muted-foreground capitalize">{profile?.user_type}</span>
+              <span className="text-muted-foreground capitalize">{permissions?.organizationType}</span>
             </div>
           </Button>
         </DropdownMenuTrigger>
