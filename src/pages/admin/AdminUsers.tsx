@@ -254,14 +254,26 @@ export default function AdminUsers() {
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => {
                     const user = row.original;
-                    const getRoleVariant = (userType: string) => {
-                      switch (userType) {
-                        case 'admin': return 'destructive';
-                        case 'partner': return 'default';
-                        case 'subcontractor': return 'secondary';
-                        case 'employee': return 'outline';
-                        default: return 'secondary';
+                    const getPrimaryRole = () => {
+                      if (user.organization_memberships && user.organization_memberships.length > 0) {
+                        const primaryMembership = user.organization_memberships[0];
+                        return `${primaryMembership.role} - ${primaryMembership.organization?.organization_type || 'Unknown'}`;
                       }
+                      return 'No Organization';
+                    };
+                    
+                    const getRoleVariant = () => {
+                      if (user.organization_memberships && user.organization_memberships.length > 0) {
+                        const primaryMembership = user.organization_memberships[0];
+                        const orgType = primaryMembership.organization?.organization_type;
+                        switch (orgType) {
+                          case 'internal': return primaryMembership.role === 'admin' ? 'destructive' : 'outline';
+                          case 'partner': return 'default';
+                          case 'subcontractor': return 'secondary';
+                          default: return 'secondary';
+                        }
+                      }
+                      return 'secondary';
                     };
                     
                     return (
@@ -270,8 +282,8 @@ export default function AdminUsers() {
                         title={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
                         subtitle={user.email || 'No email'}
                         status={
-                          <Badge variant={getRoleVariant(user.user_type)} className="h-5 text-[10px] px-1.5">
-                            {user.user_type?.toUpperCase() || 'UNKNOWN'}
+                          <Badge variant={getRoleVariant()} className="h-5 text-[10px] px-1.5">
+                            {getPrimaryRole().toUpperCase()}
                           </Badge>
                         }
                         onClick={() => {
@@ -279,9 +291,9 @@ export default function AdminUsers() {
                           setViewUserModalOpen(true);
                         }}
                       >
-                        {(user as any).organizations && (user as any).organizations.length > 0 && (
+                        {user.organization_memberships && user.organization_memberships.length > 0 && (
                           <div className="text-xs text-muted-foreground">
-                            {(user as any).organizations.map((org: any) => org.name).join(', ')}
+                            {user.organization_memberships.map((membership) => membership.organization?.name).filter(Boolean).join(', ')}
                           </div>
                         )}
                       </MobileTableCard>

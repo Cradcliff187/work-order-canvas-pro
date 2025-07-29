@@ -18,31 +18,39 @@ export const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Get user profile to determine redirect
+        // Get user organization memberships to determine redirect
         supabase
-          .from('profiles')
-          .select('user_type')
+          .from('organization_members')
+          .select(`
+            role,
+            organization:organizations(
+              organization_type
+            )
+          `)
           .eq('user_id', session.user.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
           .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              const userType = profile.user_type;
-              switch (userType) {
-                case 'admin':
-                  navigate('/admin/dashboard');
-                  break;
-                case 'partner':
-                  navigate('/partner/dashboard');
-                  break;
-                case 'subcontractor':
-                  navigate('/subcontractor/dashboard');
-                  break;
-                case 'employee':
-                  navigate('/employee/dashboard');
-                  break;
-                default:
-                  navigate('/admin/dashboard');
+          .then(({ data: membership, error }) => {
+            if (error || !membership?.organization) {
+              // No organization membership found, default to admin dashboard
+              navigate('/admin/dashboard');
+              return;
+            }
+            
+            const orgType = membership.organization.organization_type;
+            const role = membership.role;
+            
+            if (orgType === 'internal') {
+              if (role === 'admin') {
+                navigate('/admin/dashboard');
+              } else {
+                navigate('/admin/employee-dashboard');
               }
+            } else if (orgType === 'partner') {
+              navigate('/partner/dashboard');
+            } else if (orgType === 'subcontractor') {
+              navigate('/subcontractor/dashboard');
             } else {
               navigate('/admin/dashboard');
             }

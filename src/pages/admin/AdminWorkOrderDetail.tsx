@@ -405,7 +405,7 @@ export default function AdminWorkOrderDetail() {
                             
                             if (isPlaceholder && assignment.assigned_organization) {
                               return assignment.assigned_organization.name;
-                            } else if (assignment.assignee.user_type === 'subcontractor' && assignment.assigned_organization) {
+                            } else if (assignment.assigned_organization) {
                               return assignment.assigned_organization.name;
                             } else {
                               return `${assignment.assignee.first_name} ${assignment.assignee.last_name}`;

@@ -18,8 +18,7 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({ onBack }) => {
     email: '',
     password: '',
     firstName: '',
-    lastName: '',
-    userType: 'partner'
+    lastName: ''
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -37,8 +36,7 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({ onBack }) => {
         options: {
           data: {
             first_name: formData.firstName,
-            last_name: formData.lastName,
-            user_type: formData.userType
+            last_name: formData.lastName
           }
         }
       });
@@ -134,20 +132,12 @@ export const CreateUserForm: React.FC<CreateUserFormProps> = ({ onBack }) => {
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="userType">User Type</Label>
-            <Select value={formData.userType} onValueChange={(value) => setFormData(prev => ({ ...prev, userType: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select user type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="partner">Partner</SelectItem>
-                <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              User will be assigned to an organization by an administrator after account creation.
+            </AlertDescription>
+          </Alert>
           
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Creating User...' : 'Create User'}
