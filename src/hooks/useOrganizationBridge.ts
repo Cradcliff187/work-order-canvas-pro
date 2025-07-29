@@ -1,11 +1,11 @@
 /**
  * Organization Data Bridge Hook
- * Fetches and manages organization membership data for migration
+ * Fetches and manages organization membership data
  */
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// Migration complete - using organization system exclusively
+// Organization-based data access
 import type { OrganizationMember } from '@/types/auth.types';
 
 interface OrganizationBridgeData {
@@ -35,7 +35,7 @@ export const useOrganizationBridge = (profileId?: string): OrganizationBridgeDat
     try {
       console.log('Organization bridge: Fetching data for profile', profileId);
       
-      // Use organization_members table (migration complete)
+      // Use organization_members table for user organization data
       const useOrganizationMembers = true;
       
       let data, error;

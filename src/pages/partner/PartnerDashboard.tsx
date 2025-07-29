@@ -12,7 +12,7 @@ import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2, Clipboa
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
-// Organization validation no longer needed - migration complete
+// Organization-based access control handled by RLS
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
 import { MobileOrganizationSelector } from '@/components/layout/MobileOrganizationSelector';
@@ -92,7 +92,7 @@ const PartnerDashboard = () => {
         )}
       </div>
 
-      {/* Organization validation no longer needed - migration complete */}
+      {/* Organization access validated via RLS */}
 
       {/* Organization Context */}
       {primaryOrganization && userOrganizations && (

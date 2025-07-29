@@ -1,7 +1,7 @@
 
-# WorkOrderPortal
+# Work Order Portal
 
-A comprehensive construction work order management system that facilitates workflows between Partners (Property Management), WorkOrderPortal (General Contractor), and Subcontractors (Trade Companies). Features company-level access control, multi-organization architecture, and complete financial privacy between organizations.
+A comprehensive work order management system built with React, TypeScript, and Supabase. Features organization-based authentication, role-based access control, and real-time collaboration between internal teams, partners, and subcontractors.
 
 ## 🎯 Features
 

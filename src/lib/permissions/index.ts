@@ -1,6 +1,6 @@
 /**
- * Phase 2: Permission System Main Export
- * Provides the unified abstraction layer for both legacy and organization-based permissions
+ * Organization-Based Permission System
+ * Unified permission system using organization memberships
  */
 
 // Export types
@@ -31,11 +31,7 @@ export {
   permissionCheckers
 } from './permissionEngine';
 
-/**
- * MIGRATION COMPATIBILITY LAYER
- * These functions provide drop-in replacements for existing hooks and components
- */
-
+// Core imports
 import { 
   userTypeCheckers, 
   createEnhancedUser, 
@@ -44,7 +40,7 @@ import {
 import { permissionCheckers, hasPermission } from './permissionEngine';
 import type { LegacyUserType, Permission, PermissionContext } from './types';
 
-// Legacy-compatible user type checking (works with both old and new systems)
+// User type checking functions
 export function isAdmin(user: any): boolean {
   if (!user) return false;
   return userTypeCheckers.isAdmin(createEnhancedUser(user));
@@ -70,7 +66,7 @@ export function hasInternalAccess(user: any): boolean {
   return userTypeCheckers.hasInternalAccess(createEnhancedUser(user));
 }
 
-// Permission checking helpers that work with existing code
+// Permission checking functions
 export function canManageUsers(user: any): boolean {
   if (!user) return false;
   return permissionCheckers.canManageUsers(createEnhancedUser(user));
@@ -92,8 +88,7 @@ export function canViewSystemHealth(user: any): boolean {
 }
 
 /**
- * Enhanced user profile hook replacement
- * This can gradually replace useUserProfile throughout the app
+ * Enhanced user profile hook for organization-based permissions
  */
 export function useEnhancedUserProfile(profile: any, organizationData?: any) {
   if (!profile) {

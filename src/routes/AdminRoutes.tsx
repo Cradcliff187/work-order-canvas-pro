@@ -31,7 +31,7 @@ import {
   AdminUtilities,
   AdminApprovals,
   DevTools,
-  // MigrationDashboard removed - migration complete
+  // Organization-based routes only
   
 } from '@/pages/LazyPages';
 
@@ -287,7 +287,7 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    {/* Migration dashboard removed - migration complete */}
+    {/* All routes use organization-based authentication */}
     
   </>
 );
