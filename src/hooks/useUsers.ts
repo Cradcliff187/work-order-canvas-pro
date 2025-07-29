@@ -77,8 +77,8 @@ export function useCreateUser() {
       password: string;
       first_name: string;
       last_name: string;
-      user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
-      organization_id?: string;
+      organization_id: string;
+      role?: 'admin' | 'employee' | 'member';
     }) => {
       // Create user in auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -87,7 +87,6 @@ export function useCreateUser() {
         user_metadata: {
           first_name: userData.first_name,
           last_name: userData.last_name,
-          user_type: userData.user_type,
         },
       });
 
@@ -101,27 +100,25 @@ export function useCreateUser() {
           email: userData.email,
           first_name: userData.first_name,
           last_name: userData.last_name,
-          user_type: userData.user_type,
         })
         .select()
         .single();
 
       if (profileError) throw profileError;
 
-      // Link to organization if provided
-      if (userData.organization_id) {
-        const { error: orgError } = await supabase
-          .from('user_organizations')
-          .insert({
-            user_id: profileData.id,
-            organization_id: userData.organization_id,
-          });
+      // Create organization membership
+      const { error: orgError } = await supabase
+        .from('organization_members')
+        .insert({
+          user_id: profileData.id,
+          organization_id: userData.organization_id,
+          role: userData.role || 'member',
+        });
 
-        if (orgError) throw orgError;
+      if (orgError) throw orgError;
 
-        // Sync JWT metadata after organization assignment
-        await onOrganizationChange(authData.user.id);
-      }
+      // Sync JWT metadata after organization assignment
+      await onOrganizationChange(authData.user.id);
 
       return profileData;
     },

@@ -34,7 +34,6 @@ export const useMigrationStatus = () => {
         .select(`
           id,
           email,
-          user_type,
           organization_memberships:organization_members(
             id,
             organization_id,
@@ -58,31 +57,6 @@ export const useMigrationStatus = () => {
         
         if (hasOrganizations) {
           profilesWithOrganizations++;
-          
-          // Check for type consistency
-          const orgTypes = profile.organization_memberships.map(
-            (membership: any) => membership.organization?.organization_type
-          );
-          
-          if (profile.user_type === 'partner' && !orgTypes.includes('partner')) {
-            inconsistencies.push({
-              profileId: profile.id,
-              email: profile.email,
-              issue: 'Partner user_type but no partner organization membership'
-            });
-          } else if (profile.user_type === 'subcontractor' && !orgTypes.includes('subcontractor')) {
-            inconsistencies.push({
-              profileId: profile.id,
-              email: profile.email,
-              issue: 'Subcontractor user_type but no subcontractor organization membership'
-            });
-          } else if ((profile.user_type === 'admin' || profile.user_type === 'employee') && !orgTypes.includes('internal')) {
-            inconsistencies.push({
-              profileId: profile.id,
-              email: profile.email,
-              issue: 'Admin/Employee user_type but no internal organization membership'
-            });
-          }
         } else {
           profilesWithoutOrganizations++;
           inconsistencies.push({

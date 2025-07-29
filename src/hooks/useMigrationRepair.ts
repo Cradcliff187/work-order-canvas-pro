@@ -7,78 +7,45 @@ export const useMigrationRepair = () => {
 
   const repairProfileMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      // Get profile details
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, user_type, email')
-        .eq('id', profileId)
-        .single();
+      // Get profile details to check if already has organization
+      const { data: existingMembership, error: membershipError } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('user_id', profileId)
+        .limit(1);
 
-      if (profileError) throw profileError;
+      if (membershipError) throw membershipError;
 
-      // Determine correct organization based on user_type
-      let organizationType: 'internal' | 'partner' | 'subcontractor';
-      let role: 'admin' | 'employee' | 'member';
-
-      switch (profile.user_type) {
-        case 'admin':
-          organizationType = 'internal';
-          role = 'admin';
-          break;
-        case 'employee':
-          organizationType = 'internal';
-          role = 'employee';
-          break;
-        case 'partner':
-          organizationType = 'partner';
-          role = 'member';
-          break;
-        case 'subcontractor':
-          organizationType = 'subcontractor';
-          role = 'member';
-          break;
-        default:
-          throw new Error(`Unknown user_type: ${profile.user_type}`);
+      // Skip if already has organization membership
+      if (existingMembership && existingMembership.length > 0) {
+        return { profileId, skipped: true };
       }
 
-      // Find or create appropriate organization
-      let { data: organization, error: orgError } = await supabase
+      // Create default organization membership for users without any
+      const { data: defaultOrg, error: orgError } = await supabase
         .from('organizations')
         .select('id')
-        .eq('organization_type', organizationType)
+        .eq('organization_type', 'internal')
         .limit(1);
 
       if (orgError) throw orgError;
 
-      if (!organization || organization.length === 0) {
-        // Create default organization if none exists
-        const { data: newOrg, error: createError } = await supabase
-          .from('organizations')
-          .insert({
-            name: `Default ${organizationType.charAt(0).toUpperCase() + organizationType.slice(1)}`,
-            contact_email: `admin@${organizationType}.com`,
-            organization_type: organizationType,
-            initials: organizationType.substring(0, 3).toUpperCase()
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        organization = [newOrg];
+      if (!defaultOrg || defaultOrg.length === 0) {
+        throw new Error('No internal organization found for assignment');
       }
 
-      // Create organization membership
-      const { error: membershipError } = await supabase
+      // Create organization membership with member role as default
+      const { error: insertError } = await supabase
         .from('organization_members')
         .insert({
           user_id: profileId,
-          organization_id: organization[0].id,
-          role: role
+          organization_id: defaultOrg[0].id,
+          role: 'member'
         });
 
-      if (membershipError) throw membershipError;
+      if (insertError) throw insertError;
 
-      return { profileId, organizationType, role };
+      return { profileId, organizationId: defaultOrg[0].id, role: 'member' };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['migration-status'] });
@@ -95,8 +62,7 @@ export const useMigrationRepair = () => {
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select(`
-          id, 
-          user_type,
+          id,
           organization_memberships:organization_members(id)
         `);
 

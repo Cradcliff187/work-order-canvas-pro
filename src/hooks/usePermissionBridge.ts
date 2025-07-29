@@ -68,12 +68,9 @@ export const usePermissionBridge = (user: DualCompatUser | null): PermissionBrid
     const isSubcontractor = dualPermissionCheck.isSubcontractor(user);
 
     // Organization type checks
-    const isInternalOrg = primaryOrg?.organization?.organization_type === 'internal' || 
-                         (!primaryOrg && (user.user_type === 'admin' || user.user_type === 'employee'));
-    const isPartnerOrg = primaryOrg?.organization?.organization_type === 'partner' || 
-                        (!primaryOrg && user.user_type === 'partner');
-    const isSubcontractorOrg = primaryOrg?.organization?.organization_type === 'subcontractor' || 
-                              (!primaryOrg && user.user_type === 'subcontractor');
+    const isInternalOrg = primaryOrg?.organization?.organization_type === 'internal';
+    const isPartnerOrg = primaryOrg?.organization?.organization_type === 'partner';
+    const isSubcontractorOrg = primaryOrg?.organization?.organization_type === 'subcontractor';
 
     // Permission helpers
     const hasInternalAccess = isAdmin || isEmployee;
@@ -83,18 +80,11 @@ export const usePermissionBridge = (user: DualCompatUser | null): PermissionBrid
 
     // Advanced role checks
     const hasInternalRole = (roles: OrganizationRole[]): boolean => {
-      if (usingOrganizationAuth && primaryOrg) {
+      if (primaryOrg) {
         return primaryOrg.organization?.organization_type === 'internal' && 
                roles.includes(primaryOrg.role);
       }
-      // Fallback to user_type
-      const legacyMapping: Record<LegacyUserType, OrganizationRole> = {
-        admin: 'admin',
-        employee: 'employee',
-        partner: 'member',
-        subcontractor: 'member',
-      };
-      return user.user_type ? roles.includes(legacyMapping[user.user_type]) : false;
+      return false;
     };
 
     const hasRoleInOrganization = (organizationId: string, roles: OrganizationRole[]): boolean => {
