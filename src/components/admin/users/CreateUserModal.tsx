@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, CheckCircle } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { supabase } from '@/integrations/supabase/client';
-// Removed user_type based organization filtering - will be replaced with organization-role based filtering
+import { filterOrganizationsByUserType } from '@/lib/utils/userOrgMapping';
 
 // Remove password from schema - system will handle it
 const createUserSchema = z.object({
@@ -162,8 +162,9 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
   };
 
   const watchedUserType = form.watch('user_type');
-  // Temporarily show all organizations - will be replaced with role-based filtering in later phases
-  const filteredOrganizations = organizations || [];
+  const filteredOrganizations = watchedUserType && organizations 
+    ? filterOrganizationsByUserType(organizations, watchedUserType)
+    : [];
 
   // Show organization field for non-admin users
   const showOrganizationField = watchedUserType !== 'admin';

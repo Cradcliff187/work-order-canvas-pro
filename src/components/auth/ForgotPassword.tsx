@@ -23,11 +23,12 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
     setLoading(true);
     setError('');
 
-    try {
-      await forgotPassword(email);
-      setSuccess(true);
-    } catch (error: any) {
+    const { error } = await forgotPassword(email);
+    
+    if (error) {
       setError(error.message);
+    } else {
+      setSuccess(true);
     }
     
     setLoading(false);

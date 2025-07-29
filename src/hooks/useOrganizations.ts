@@ -6,10 +6,6 @@ import type { Database } from '@/integrations/supabase/types';
 
 export type Organization = Database['public']['Tables']['organizations']['Row'];
 
-// Re-export for backward compatibility
-export type { UserOrganization } from './useUserOrganization';
-export { useUserOrganization } from './useUserOrganization';
-
 export function useOrganizations() {
   return useQuery({
     queryKey: ['organizations'],

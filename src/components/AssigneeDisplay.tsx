@@ -11,7 +11,6 @@ interface Assignment {
     last_name: string;
   } | null;
   assigned_organization?: {
-    id?: string; // Optional id for compatibility
     name: string;
     organization_type?: string;
   } | null;
@@ -119,13 +118,12 @@ export function AssigneeDisplay({
               {showOrganization && organizations.length > 0 && (
                 <div className="flex gap-1">
                   {organizations.slice(0, 2).map((org, idx) => org && (
-                    <React.Fragment key={`${org.name}-${idx}`}>
-                      <OrganizationBadge 
-                        organization={org}
-                        size="sm"
-                        showIcon={false}
-                      />
-                    </React.Fragment>
+                    <OrganizationBadge 
+                      key={`${org.name}-${idx}`}
+                      organization={org}
+                      size="sm"
+                      showIcon={false}
+                    />
                   ))}
                   {organizations.length > 2 && (
                     <span className="text-xs text-muted-foreground">+{organizations.length - 2}</span>
@@ -164,13 +162,12 @@ export function AssigneeDisplay({
             {showOrganization && organizations.length > 0 && (
               <div className="flex gap-1">
                 {organizations.slice(0, 2).map((org, idx) => org && (
-                  <React.Fragment key={`${org.name}-${idx}`}>
-                    <OrganizationBadge 
-                      organization={org}
-                      size="sm"
-                      showIcon={false}
-                    />
-                  </React.Fragment>
+                  <OrganizationBadge 
+                    key={`${org.name}-${idx}`}
+                    organization={org}
+                    size="sm"
+                    showIcon={false}
+                  />
                 ))}
                 {organizations.length > 2 && (
                   <span className="text-xs text-muted-foreground">+{organizations.length - 2}</span>

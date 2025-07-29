@@ -18,7 +18,7 @@ const editUserSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
-  role: z.enum(['owner', 'admin', 'manager', 'employee', 'member']),
+  user_type: z.enum(['admin', 'partner', 'subcontractor', 'employee']),
   organization_id: z.string().optional(),
 });
 
@@ -42,8 +42,8 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
       first_name: user?.first_name || '',
       last_name: user?.last_name || '',
       email: user?.email || '',
-      role: user?.organization_members?.[0]?.role || 'member',
-      organization_id: user?.organization_members?.[0]?.organization_id || '',
+      user_type: user?.user_type || 'subcontractor',
+      organization_id: user?.user_organizations?.[0]?.organization_id || '',
     },
   });
 
@@ -54,8 +54,8 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email || '',
-        role: user.organization_members?.[0]?.role || 'member',
-        organization_id: user.organization_members?.[0]?.organization_id || '',
+        user_type: user.user_type || 'subcontractor',
+        organization_id: user.user_organizations?.[0]?.organization_id || '',
       });
     }
   }, [user, form]);
@@ -70,11 +70,11 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
-        
+        user_type: data.user_type,
       });
 
       // Update organization if needed
-      if (data.role !== 'admin' && data.organization_id) {
+      if (data.user_type !== 'admin' && data.organization_id) {
         await updateUserOrganization.mutateAsync({
           userId: user.user_id,
           profileId: user.id,
@@ -94,11 +94,13 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
     }
   };
 
-  const watchedRole = form.watch('role');
+  const watchedUserType = form.watch('user_type');
   const filteredOrganizations = organizations?.filter(org => {
-    switch (watchedRole) {
-      case 'member':
-        return org.organization_type === 'partner' || org.organization_type === 'subcontractor';
+    switch (watchedUserType) {
+      case 'partner':
+        return org.organization_type === 'partner';
+      case 'subcontractor':
+        return org.organization_type === 'subcontractor';
       case 'employee':
         return org.organization_type === 'internal';
       default:
@@ -166,21 +168,21 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
 
             <FormField
               control={form.control}
-              name="role"
+              name="user_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role *</FormLabel>
+                  <FormLabel>User Type *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder="Select user type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="partner">Partner</SelectItem>
+                      <SelectItem value="subcontractor">Subcontractor</SelectItem>
                       <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="member">Member</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -188,7 +190,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
               )}
             />
 
-            {watchedRole !== 'admin' && (
+            {watchedUserType !== 'admin' && (
               <FormField
                 control={form.control}
                 name="organization_id"

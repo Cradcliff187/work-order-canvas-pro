@@ -25,6 +25,7 @@ interface UserIssue {
   email: string;
   first_name: string;
   last_name: string;
+  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   is_active: boolean;
   organization_count: number;
   organizations: Array<{ id: string; name: string }>;
@@ -74,24 +75,47 @@ export const OrganizationHealthTab = () => {
   const fetchDiagnostics = async () => {
     setIsLoading(true);
     try {
-      // Get organization counts per user from organization_members
+      // Query users with organization count != 1 (excluding admins)
+      const { data: usersQuery, error: usersError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          first_name,
+          last_name,
+          user_type,
+          is_active,
+          user_organizations!inner (
+            organization_id,
+            organizations (
+              id,
+              name
+            )
+          )
+        `)
+        .neq('user_type', 'admin');
+
+      if (usersError) throw usersError;
+
+      // Get organization counts per user
       const { data: orgCounts, error: countsError } = await supabase
-        .from('organization_members')
+        .from('user_organizations')
         .select('user_id')
         .then(({ data }) => {
           const counts: Record<string, number> = {};
-          data?.forEach(om => {
-            counts[om.user_id] = (counts[om.user_id] || 0) + 1;
+          data?.forEach(uo => {
+            counts[uo.user_id] = (counts[uo.user_id] || 0) + 1;
           });
           return { data: counts, error: null };
         });
 
       if (countsError) throw countsError;
 
-      // Get all users (excluding internal org admins)
+      // Get all non-admin users
       const { data: allUsers, error: allUsersError } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .neq('user_type', 'admin');
 
       if (allUsersError) throw allUsersError;
 
@@ -105,9 +129,9 @@ export const OrganizationHealthTab = () => {
         const orgCount = orgCounts[user.id] || 0;
         
         if (orgCount !== 1) {
-          // Get user's organizations from organization_members
+          // Get user's organizations
           const { data: userOrgs } = await supabase
-            .from('organization_members')
+            .from('user_organizations')
             .select(`
               organization_id,
               organizations (
@@ -117,14 +141,15 @@ export const OrganizationHealthTab = () => {
             `)
             .eq('user_id', user.id);
 
-          const organizations = userOrgs?.map(om => ({
-            id: om.organizations.id,
-            name: om.organizations.name
+          const organizations = userOrgs?.map(uo => ({
+            id: uo.organizations.id,
+            name: uo.organizations.name
           })) || [];
 
           let workOrderAssignments = [];
           
-          // Check for work order assignments for any user type
+          // For subcontractors, fetch their work order assignments
+          if (user.user_type === 'subcontractor') {
             const { data: assignments } = await supabase
               .from('work_order_assignments')
               .select(`
@@ -143,8 +168,8 @@ export const OrganizationHealthTab = () => {
               organization_name: a.organizations?.name || 'Unknown'
             })) || [];
 
-            // Count as subcontractor issue if they have org assignments
-            if (orgCount !== 1 && workOrderAssignments.length > 0) subcontractorIssueCount++;
+            if (orgCount !== 1) subcontractorIssueCount++;
+          }
 
           usersWithIssues.push({
             ...user,
@@ -210,7 +235,7 @@ export const OrganizationHealthTab = () => {
     try {
       // Use the AuthContext auto-fix logic for individual user
       const { data: orgCheck } = await supabase
-        .from('organization_members')
+        .from('user_organizations')
         .select('organization_id')
         .eq('user_id', userId)
         .maybeSingle();
@@ -227,11 +252,10 @@ export const OrganizationHealthTab = () => {
         
         if (assignment?.assigned_organization_id) {
           await supabase
-            .from('organization_members')
+            .from('user_organizations')
             .insert({
               user_id: userId,
-              organization_id: assignment.assigned_organization_id,
-              role: 'member'
+              organization_id: assignment.assigned_organization_id
             });
           
           toast({
@@ -261,14 +285,14 @@ export const OrganizationHealthTab = () => {
   const exportDiagnostics = () => {
     const csvContent = [
       ['Email', 'Name', 'User Type', 'Organization Count', 'Organizations', 'Work Order Assignments'].join(','),
-        ...usersWithIssues.map(user => [
-          user.email,
-          `${user.first_name} ${user.last_name}`,
-          'user',  // Generic user type since we no longer have user_type
-          user.organization_count.toString(),
-          user.organizations.map(org => org.name).join('; '),
-          user.work_order_assignments?.map(a => a.organization_name).join('; ') || ''
-        ].join(','))
+      ...usersWithIssues.map(user => [
+        user.email,
+        `${user.first_name} ${user.last_name}`,
+        user.user_type,
+        user.organization_count.toString(),
+        user.organizations.map(org => org.name).join('; '),
+        user.work_order_assignments?.map(a => a.organization_name).join('; ') || ''
+      ].join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -366,7 +390,7 @@ export const OrganizationHealthTab = () => {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">User Type:</span>
-                <Badge>User</Badge>
+                <Badge>{currentUserInfo.profile?.user_type}</Badge>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Full Name:</span>
@@ -512,7 +536,7 @@ export const OrganizationHealthTab = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          User
+                          {user.user_type.charAt(0).toUpperCase() + user.user_type.slice(1)}
                         </Badge>
                       </TableCell>
                       <TableCell>

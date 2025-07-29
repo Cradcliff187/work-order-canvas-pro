@@ -20,7 +20,7 @@ interface UseUserOrganizationReturn {
 }
 
 export const useUserOrganization = (): UseUserOrganizationReturn => {
-  const { user, profile, organizationMember, permissions } = useAuth();
+  const { user, profile } = useAuth();
 
   const { data: organization, isLoading, error } = useQuery({
     queryKey: ['user-organization', user?.id],
@@ -32,21 +32,15 @@ export const useUserOrganization = (): UseUserOrganizationReturn => {
         return null;
       }
 
-      // Use organizationMember from AuthContext if available
-      if (organizationMember && organizationMember.organization) {
-        console.log('🔍 useUserOrganization: Using organization from AuthContext');
-        return organizationMember.organization as UserOrganization;
-      }
-
-      // Admins might not have a specific organization if viewing multiple
-      if (permissions?.isInternal && permissions?.hasInternalRole(['admin', 'owner'])) {
-        console.log('🔍 useUserOrganization: Admin user without specific org, returning null');
+      // Admins see all organizations, so they don't have a specific organization
+      if (profile.user_type === 'admin') {
+        console.log('🔍 useUserOrganization: Admin user, returning null');
         return null;
       }
 
       console.log('🔍 useUserOrganization: Fetching profile ID for user:', user.id);
       
-      // Get the profile ID first, then query organization_members
+      // Get the profile ID first, then query user_organizations
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id')
@@ -63,7 +57,7 @@ export const useUserOrganization = (): UseUserOrganizationReturn => {
       console.log('🔍 useUserOrganization: Fetching organization for profile:', profileData.id);
 
       const { data, error } = await supabase
-        .from('organization_members')
+        .from('user_organizations')
         .select(`
           organization:organizations (
             id,

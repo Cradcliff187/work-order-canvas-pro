@@ -45,17 +45,49 @@ export function UnreadMessagesDropdown({
   });
 
   const handleWorkOrderClick = (workOrderId: string) => {
-    // For now, route all users to admin interface since we don't have user context here
-    const route = `/admin/work-orders/${workOrderId}`;
-    navigate(route);
-    onClose();
+    if (!profile?.user_type) return;
+
+    let route = '';
+    switch (profile.user_type) {
+      case 'admin':
+      case 'employee':
+        route = `/admin/work-orders/${workOrderId}`;
+        break;
+      case 'partner':
+        route = `/partner/work-orders/${workOrderId}`;
+        break;
+      case 'subcontractor':
+        route = `/subcontractor/work-orders/${workOrderId}`;
+        break;
+    }
+
+    if (route) {
+      navigate(route);
+      onClose();
+    }
   };
 
   const handleViewAll = () => {
-    // For now, route all users to admin interface since we don't have user context here
-    const route = '/admin/work-orders';
-    navigate(route);
-    onClose();
+    if (!profile?.user_type) return;
+
+    let route = '';
+    switch (profile.user_type) {
+      case 'admin':
+      case 'employee':
+        route = '/admin/work-orders';
+        break;
+      case 'partner':
+        route = '/partner/work-orders';
+        break;
+      case 'subcontractor':
+        route = '/subcontractor/work-orders';
+        break;
+    }
+
+    if (route) {
+      navigate(route);
+      onClose();
+    }
   };
 
   // Don't render if not visible or no unread messages

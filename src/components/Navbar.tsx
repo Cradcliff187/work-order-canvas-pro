@@ -16,7 +16,7 @@ import { useBranding } from '@/hooks/useBranding';
 import { LogOut, Settings, User } from 'lucide-react';
 
 const Navbar = () => {
-  const { viewingProfile, signOut, permissions } = useAuth();
+  const { viewingProfile, signOut } = useAuth();
   const { getProductDisplayName, getCompanyDisplayName, assets } = useBranding();
 
   const handleSignOut = async () => {
@@ -42,16 +42,13 @@ const Navbar = () => {
   };
 
   const getProfilePath = () => {
-    if (permissions?.hasInternalRole && permissions.hasInternalRole(['admin', 'manager', 'employee'])) {
-      return '/admin/profile';
+    switch (viewingProfile?.user_type) {
+      case 'admin': return '/admin/profile';
+      case 'employee': return '/admin/profile';
+      case 'partner': return '/partner/profile';
+      case 'subcontractor': return '/subcontractor/profile';
+      default: return '/admin/profile';
     }
-    if (permissions?.isOrganizationType && permissions.isOrganizationType('partner')) {
-      return '/partner/profile';
-    }
-    if (permissions?.isOrganizationType && permissions.isOrganizationType('subcontractor')) {
-      return '/subcontractor/profile';
-    }
-    return '/admin/profile';
   };
 
   return (
@@ -94,8 +91,8 @@ const Navbar = () => {
                 <p className="text-xs leading-none text-muted-foreground">
                   {viewingProfile?.email}
                 </p>
-                <p className={`text-xs leading-none font-medium ${getUserTypeColor(permissions?.organizationType || '')}`}>
-                  {formatUserType(permissions?.organizationType || '')}
+                <p className={`text-xs leading-none font-medium ${getUserTypeColor(viewingProfile?.user_type || '')}`}>
+                  {formatUserType(viewingProfile?.user_type || '')}
                 </p>
               </div>
             </DropdownMenuLabel>

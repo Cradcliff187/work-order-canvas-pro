@@ -5,9 +5,8 @@ import { onOrganizationChange, syncUserMetadataToJWT } from '@/lib/auth/jwtSync'
 import type { Database } from '@/integrations/supabase/types';
 
 export type User = Database['public']['Tables']['profiles']['Row'] & {
-  organization_members: Array<{
+  user_organizations: Array<{
     organization_id: string;
-    role: string;
     organization: {
       id: string;
       name: string;
@@ -24,9 +23,8 @@ export function useUsers() {
         .from('profiles')
         .select(`
           *,
-          organization_members(
+          user_organizations(
             organization_id,
-            role,
             organization:organizations(
               id,
               name,
@@ -50,9 +48,8 @@ export function useUser(id: string) {
         .from('profiles')
         .select(`
           *,
-          organization_members(
+          user_organizations(
             organization_id,
-            role,
             organization:organizations(
               id,
               name,
@@ -80,6 +77,7 @@ export function useCreateUser() {
       password: string;
       first_name: string;
       last_name: string;
+      user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
       organization_id?: string;
     }) => {
       // Create user in auth
@@ -89,6 +87,7 @@ export function useCreateUser() {
         user_metadata: {
           first_name: userData.first_name,
           last_name: userData.last_name,
+          user_type: userData.user_type,
         },
       });
 
@@ -102,6 +101,7 @@ export function useCreateUser() {
           email: userData.email,
           first_name: userData.first_name,
           last_name: userData.last_name,
+          user_type: userData.user_type,
         })
         .select()
         .single();
@@ -111,11 +111,10 @@ export function useCreateUser() {
       // Link to organization if provided
       if (userData.organization_id) {
         const { error: orgError } = await supabase
-          .from('organization_members')
+          .from('user_organizations')
           .insert({
             user_id: profileData.id,
             organization_id: userData.organization_id,
-            role: 'member'
           });
 
         if (orgError) throw orgError;
@@ -149,24 +148,31 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<User> & { id: string }) => {
-      // Update only the profile fields that exist in the database
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: updates.first_name,
-          last_name: updates.last_name,
-          email: updates.email,
-          phone: updates.phone,
-          hourly_billable_rate: updates.hourly_billable_rate,
-          hourly_cost_rate: updates.hourly_cost_rate,
-          is_active: updates.is_active,
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      // Use the new database function that updates both profiles and auth.users atomically
+      const { data, error } = await supabase.rpc('update_user_profile_and_auth', {
+        p_profile_id: id,
+        p_first_name: updates.first_name || '',
+        p_last_name: updates.last_name || '',
+        p_email: updates.email || '',
+        p_user_type: updates.user_type || 'subcontractor',
+        p_phone: updates.phone || null,
+        p_company_name: updates.company_name || null,
+        p_hourly_billable_rate: updates.hourly_billable_rate || null,
+        p_hourly_cost_rate: updates.hourly_cost_rate || null,
+        p_is_active: updates.is_active ?? true,
+      });
 
       if (error) throw error;
-      return data;
+      
+      // Type the response properly
+      const result = data as any;
+      
+      // Check if the function returned success
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to update user profile and auth metadata');
+      }
+      
+      return result.profile;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -261,7 +267,7 @@ export function useUpdateUserOrganization() {
     }) => {
       // First, remove any existing organizations
       const { error: deleteError } = await supabase
-        .from('organization_members')
+        .from('user_organizations')
         .delete()
         .eq('user_id', profileId);
 
@@ -270,11 +276,10 @@ export function useUpdateUserOrganization() {
       // Then add the new organization if provided
       if (organizationId) {
         const { error: insertError } = await supabase
-          .from('organization_members')
+          .from('user_organizations')
           .insert({
             user_id: profileId,
             organization_id: organizationId,
-            role: 'member'
           });
 
         if (insertError) throw insertError;
@@ -287,7 +292,7 @@ export function useUpdateUserOrganization() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['organization-members'] });
+      queryClient.invalidateQueries({ queryKey: ['user-organizations'] });
       toast({
         title: 'Success',
         description: 'User organization updated successfully',

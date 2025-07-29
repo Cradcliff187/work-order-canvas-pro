@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserOrganization } from '@/hooks/useUserOrganizations';
+import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBranding } from '@/hooks/useBranding';

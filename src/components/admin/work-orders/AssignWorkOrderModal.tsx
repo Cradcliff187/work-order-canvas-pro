@@ -109,10 +109,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
   // State for current assignments display
   interface CurrentAssignment {
     id: string;
-    assigned_organization_id: string | null;
+    assigned_to: string;
     assignment_type: string;
-    assigned_by: string;
-    notes: string | null;
+    assignee_profile: { id: string; first_name: string; last_name: string } | null;
+    assigned_organization: { id: string; name: string; organization_type: string } | null;
   }
   const [currentAssignments, setCurrentAssignments] = useState<CurrentAssignment[]>([]);
   
@@ -136,10 +136,12 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             .from('work_order_assignments')
             .select(`
               id,
+              assigned_to,
               assigned_organization_id,
               assignment_type,
               notes,
-              assigned_by
+              profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
+              organizations!work_order_assignments_assigned_organization_id_fkey(id, name, organization_type)
             `)
             .in('work_order_id', workOrderIds);
 
@@ -150,10 +152,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
             // Transform assignments for display
             const formattedAssignments = existingAssignments.map(assignment => ({
               id: assignment.id,
-              assigned_organization_id: assignment.assigned_organization_id,
+              assigned_to: assignment.assigned_to,
               assignment_type: assignment.assignment_type || 'assigned',
-              assigned_by: assignment.assigned_by,
-              notes: assignment.notes
+              assignee_profile: assignment.profiles,
+              assigned_organization: assignment.organizations
             }));
             
             setCurrentAssignments(formattedAssignments);
@@ -162,8 +164,14 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
               // Check if this is a placeholder assignment by looking for the placeholder text in notes
               const isPlaceholder = assignment.notes && assignment.notes.includes('no active users - placeholder assignment');
               
-              if (assignment.assigned_organization_id) {
-                // Organization assignment
+              if (isPlaceholder && assignment.assigned_organization_id) {
+                // For placeholder assignments, only select the organization
+                organizationAssignments.push(assignment.assigned_organization_id);
+              } else if (!assignment.assigned_organization_id) {
+                // For individual assignments (no organization), select the user
+                individualAssignments.push(assignment.assigned_to);
+              } else if (assignment.assigned_organization_id && !isPlaceholder) {
+                // For organization assignments with real users, select the organization
                 organizationAssignments.push(assignment.assigned_organization_id);
               }
             });
@@ -373,20 +381,22 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
         .from('work_order_assignments')
         .select(`
           id,
+          assigned_to,
           assigned_organization_id,
           assignment_type,
           notes,
-          assigned_by
+          profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name),
+          organizations!work_order_assignments_assigned_organization_id_fkey(id, name, organization_type)
         `)
         .in('work_order_id', workOrderIds);
 
       if (existingAssignments && existingAssignments.length > 0) {
         const formattedAssignments = existingAssignments.map(assignment => ({
           id: assignment.id,
-          assigned_organization_id: assignment.assigned_organization_id,
+          assigned_to: assignment.assigned_to,
           assignment_type: assignment.assignment_type || 'assigned',
-          assigned_by: assignment.assigned_by,
-          notes: assignment.notes
+          assignee_profile: assignment.profiles,
+          assigned_organization: assignment.organizations
         }));
         setCurrentAssignments(formattedAssignments);
       } else {
@@ -494,14 +504,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
                 <div className="space-y-2">
                   {currentAssignments.map((assignment) => (
                     <div key={assignment.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                      <div className="text-sm">
-                        {assignment.assigned_organization_id ? 'Organization Assignment' : 'Assignment'}
-                        {assignment.notes && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {assignment.notes}
-                          </div>
-                        )}
-                      </div>
+                      <AssigneeDisplay assignments={[assignment]} showIcons={false} />
                       <Button
                         variant="ghost"
                         size="sm"

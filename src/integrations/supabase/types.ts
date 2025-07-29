@@ -188,6 +188,7 @@ export type Database = {
           created_at: string
           id: string
           receives_email: boolean
+          role: Database["public"]["Enums"]["user_type"]
           template_name: string
           updated_at: string
         }
@@ -195,6 +196,7 @@ export type Database = {
           created_at?: string
           id?: string
           receives_email?: boolean
+          role: Database["public"]["Enums"]["user_type"]
           template_name: string
           updated_at?: string
         }
@@ -202,6 +204,7 @@ export type Database = {
           created_at?: string
           id?: string
           receives_email?: boolean
+          role?: Database["public"]["Enums"]["user_type"]
           template_name?: string
           updated_at?: string
         }
@@ -591,45 +594,6 @@ export type Database = {
           },
         ]
       }
-      organization_members: {
-        Row: {
-          created_at: string | null
-          id: string
-          organization_id: string
-          role: Database["public"]["Enums"]["organization_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          organization_id: string
-          role?: Database["public"]["Enums"]["organization_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          organization_id?: string
-          role?: Database["public"]["Enums"]["organization_role"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_members_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       organizations: {
         Row: {
           address: string | null
@@ -740,6 +704,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          company_name: string | null
           created_at: string
           email: string
           first_name: string
@@ -752,9 +717,11 @@ export type Database = {
           phone: string | null
           updated_at: string
           user_id: string
+          user_type: Database["public"]["Enums"]["user_type"]
         }
         Insert: {
           avatar_url?: string | null
+          company_name?: string | null
           created_at?: string
           email: string
           first_name: string
@@ -767,9 +734,11 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id: string
+          user_type?: Database["public"]["Enums"]["user_type"]
         }
         Update: {
           avatar_url?: string | null
+          company_name?: string | null
           created_at?: string
           email?: string
           first_name?: string
@@ -782,6 +751,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
         }
         Relationships: []
       }
@@ -978,11 +948,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_organizations: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_organizations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_organizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_assignments: {
         Row: {
           assigned_at: string
           assigned_by: string
           assigned_organization_id: string | null
+          assigned_to: string
           assignment_type: string
           created_at: string
           id: string
@@ -994,6 +1001,7 @@ export type Database = {
           assigned_at?: string
           assigned_by: string
           assigned_organization_id?: string | null
+          assigned_to: string
           assignment_type: string
           created_at?: string
           id?: string
@@ -1005,6 +1013,7 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string
           assigned_organization_id?: string | null
+          assigned_to?: string
           assignment_type?: string
           created_at?: string
           id?: string
@@ -1025,6 +1034,13 @@ export type Database = {
             columns: ["assigned_organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_assignments_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1401,10 +1417,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      auth_profile_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       auth_user_belongs_to_organization: {
         Args: { p_organization_id: string }
         Returns: boolean
@@ -1422,6 +1434,10 @@ export type Database = {
         Returns: {
           work_order_id: string
         }[]
+      }
+      auth_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_type"]
       }
       calculate_completion_time_by_trade: {
         Args: { start_date?: string; end_date?: string }
@@ -1444,14 +1460,6 @@ export type Database = {
           context_data?: Json
         }
         Returns: undefined
-      }
-      can_manage_work_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      can_view_financial_data: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
       }
       check_assignment_completion_status: {
         Args: { work_order_id: string }
@@ -1525,6 +1533,10 @@ export type Database = {
         Args: { org_id: string; location_code?: string }
         Returns: string
       }
+      get_current_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_type"]
+      }
       get_geographic_distribution: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
@@ -1538,9 +1550,16 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string
       }
-      get_user_org_type: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["organization_type"]
+      get_unread_message_counts: {
+        Args: {
+          p_work_order_ids: string[]
+          p_user_id: string
+          p_user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Returns: {
+          work_order_id: string
+          unread_count: number
+        }[]
       }
       get_user_organization_ids_direct: {
         Args: { p_user_id: string }
@@ -1554,23 +1573,17 @@ export type Database = {
           organization_id: string
         }[]
       }
-      get_user_organizations_with_roles: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          organization_id: string
-          organization_type: Database["public"]["Enums"]["organization_type"]
-          role: Database["public"]["Enums"]["organization_role"]
-        }[]
-      }
-      has_internal_role: {
-        Args: {
-          allowed_roles: Database["public"]["Enums"]["organization_role"][]
-        }
-        Returns: boolean
+      get_user_type_secure: {
+        Args: { user_uuid?: string }
+        Returns: Database["public"]["Enums"]["user_type"]
       }
       initialize_all_user_jwt_metadata: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       is_valid_transition: {
         Args: {
@@ -1594,6 +1607,10 @@ export type Database = {
       jwt_profile_id_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      jwt_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_type"]
       }
       monitor_email_queue: {
         Args: Record<PropertyKey, never>
@@ -1648,6 +1665,21 @@ export type Database = {
         Args: { template_name: string; record_id: string; record_type: string }
         Returns: undefined
       }
+      update_user_profile_and_auth: {
+        Args: {
+          p_profile_id: string
+          p_first_name: string
+          p_last_name: string
+          p_email: string
+          p_user_type: Database["public"]["Enums"]["user_type"]
+          p_phone?: string
+          p_company_name?: string
+          p_hourly_billable_rate?: number
+          p_hourly_cost_rate?: number
+          p_is_active?: boolean
+        }
+        Returns: Json
+      }
       user_assigned_to_work_order: {
         Args: { wo_id: string }
         Returns: boolean
@@ -1669,9 +1701,9 @@ export type Database = {
       assignment_type: "internal" | "subcontractor"
       email_status: "sent" | "delivered" | "failed" | "bounced"
       file_type: "photo" | "invoice" | "document"
-      organization_role: "owner" | "admin" | "manager" | "employee" | "member"
       organization_type: "partner" | "subcontractor" | "internal"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
+      user_type: "admin" | "partner" | "subcontractor" | "employee"
       work_order_status:
         | "received"
         | "assigned"
@@ -1810,9 +1842,9 @@ export const Constants = {
       assignment_type: ["internal", "subcontractor"],
       email_status: ["sent", "delivered", "failed", "bounced"],
       file_type: ["photo", "invoice", "document"],
-      organization_role: ["owner", "admin", "manager", "employee", "member"],
       organization_type: ["partner", "subcontractor", "internal"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
+      user_type: ["admin", "partner", "subcontractor", "employee"],
       work_order_status: [
         "received",
         "assigned",
