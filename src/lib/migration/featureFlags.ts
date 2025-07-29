@@ -19,13 +19,13 @@ export const MIGRATION_FLAGS: MigrationFlags = {
   // Phase 2: Core auth migration
   useOrganizationAuth: true,
   
-  // Phase 3: Permission system migration (ENABLED FOR TESTING)
+  // Phase 3: Permission system migration (COMPLETED)
   useOrganizationPermissions: true,
   
-  // Phase 4: Navigation migration
-  useOrganizationNavigation: false,
+  // Phase 4: Navigation migration (READY FOR TESTING)
+  useOrganizationNavigation: true,
   
-  // Phase 5: Work order system migration
+  // Phase 5: Work order system migration (PREPARED)
   useOrganizationWorkOrders: false,
 };
 

@@ -23,6 +23,7 @@ export interface SidebarItem {
 export const sidebarItems: SidebarItem[] = [
   { title: 'Admin Dashboard', url: '/admin/dashboard', icon: BarChart3 },
   { title: 'Employee Dashboard', url: '/admin/employee-dashboard', icon: BarChart3 },
+  { title: 'Migration Dashboard', url: '/admin/migration-dashboard', icon: Settings },
   { title: 'Work Orders', url: '/admin/work-orders', icon: FileText },
   { title: 'Approval Center', url: '/admin/approvals', icon: ClipboardCheck },
   { title: 'Reports', url: '/admin/reports', icon: ClipboardList },
@@ -42,12 +43,12 @@ export const sidebarItems: SidebarItem[] = [
 ];
 
 export const sidebarSections = {
-  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Approval Center', 'Reports', 'Time Reports'],
+  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Migration Dashboard', 'Work Orders', 'Approval Center', 'Reports', 'Time Reports'],
   FINANCIAL: ['Receipts', 'Invoices'],
   MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
   SYSTEM: ['Settings', 'System Health', 'Email Testing', 'Dev Tools']
 };
 
-export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Email Testing', 'Dev Tools'];
+export const adminOnlyItems = ['Admin Dashboard', 'Migration Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Email Testing', 'Dev Tools'];
 export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Approval Center', 'Time Reports', 'Receipts'];
