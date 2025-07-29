@@ -19,7 +19,7 @@ import { getEffectiveUserType } from '@/lib/migration/dualTypeAuth';
 
 const Navbar = () => {
   const { viewingProfile, signOut } = useAuth();
-  const { user } = useMigrationContext();
+  const { user, enhancedPermissions } = useMigrationContext();
   const { getProductDisplayName, getCompanyDisplayName, assets } = useBranding();
 
   const handleSignOut = async () => {
@@ -45,14 +45,14 @@ const Navbar = () => {
   };
 
   const getProfilePath = () => {
-    const effectiveUserType = user ? getEffectiveUserType(user) : viewingProfile?.user_type;
-    switch (effectiveUserType) {
-      case 'admin': return '/admin/profile';
-      case 'employee': return '/admin/profile';
-      case 'partner': return '/partner/profile';
-      case 'subcontractor': return '/subcontractor/profile';
-      default: return '/admin/profile';
+    if (enhancedPermissions?.isAdmin || enhancedPermissions?.isEmployee) {
+      return '/admin/profile';
+    } else if (enhancedPermissions?.isPartner) {
+      return '/partner/profile';
+    } else if (enhancedPermissions?.isSubcontractor) {
+      return '/subcontractor/profile';
     }
+    return '/admin/profile';
   };
 
   return (
@@ -95,8 +95,8 @@ const Navbar = () => {
                 <p className="text-xs leading-none text-muted-foreground">
                   {viewingProfile?.email}
                 </p>
-                <p className={`text-xs leading-none font-medium ${getUserTypeColor(user ? getEffectiveUserType(user) : viewingProfile?.user_type || '')}`}>
-                  {formatUserType(user ? getEffectiveUserType(user) : viewingProfile?.user_type || '')}
+                <p className={`text-xs leading-none font-medium ${getUserTypeColor(enhancedPermissions?.getUserType() || '')}`}>
+                  {formatUserType(enhancedPermissions?.getUserType() || '')}
                 </p>
               </div>
             </DropdownMenuLabel>

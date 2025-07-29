@@ -23,7 +23,7 @@ export const useMigrationAuth = () => {
     email: profile.email,
     first_name: profile.first_name,
     last_name: profile.last_name,
-    user_type: profile.user_type as LegacyUserType,
+    user_type: undefined, // Derived from organization data
     organization_memberships: organizationMemberships,
     primary_organization: primaryOrganization,
   } : null;

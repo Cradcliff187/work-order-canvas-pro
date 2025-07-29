@@ -1,13 +1,15 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from './useUserProfile';
 
 export const useAutoOrganization = () => {
-  const { profile, userOrganization } = useAuth();
+  const { userOrganization } = useAuth();
+  const { isAdmin } = useUserProfile();
   
   return {
     organizationId: userOrganization?.id,
-    shouldShowSelector: profile?.user_type === 'admin',
+    shouldShowSelector: isAdmin,
     organizationType: userOrganization?.organization_type,
     organization: userOrganization,
-    isLoading: !profile // Consider loading if we don't have profile yet
+    isLoading: false // Profile loading is handled by useUserProfile
   };
 };

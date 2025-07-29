@@ -32,10 +32,16 @@ export const useUserOrganization = (): UseUserOrganizationReturn => {
         return null;
       }
 
-      // Admins see all organizations, so they don't have a specific organization
-      if (profile.user_type === 'admin') {
-        console.log('🔍 useUserOrganization: Admin user, returning null');
-        return null;
+      // Check if user has admin access through organization system
+      try {
+        const { useMigrationContext } = require('@/components/MigrationWrapper');
+        const { enhancedPermissions } = useMigrationContext();
+        if (enhancedPermissions?.isAdmin) {
+          console.log('🔍 useUserOrganization: Admin user, returning null');
+          return null;
+        }
+      } catch {
+        // Migration context not available, continue with normal flow
       }
 
       console.log('🔍 useUserOrganization: Fetching profile ID for user:', user.id);

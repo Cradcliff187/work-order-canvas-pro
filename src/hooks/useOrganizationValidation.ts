@@ -34,9 +34,18 @@ export const useOrganizationValidation = () => {
       
       return user.organization_memberships && user.organization_memberships.length > 1;
     } else {
-      // Using legacy authentication
+      // Using legacy authentication - check for admin through migration context
       const profile = legacyAuth.profile;
-      if (!profile || profile.user_type === 'admin') return false;
+      if (!profile) return false;
+      
+      // Check if user has admin access through organization system
+      try {
+        const { useMigrationContext } = require('@/components/MigrationWrapper');
+        const { enhancedPermissions } = useMigrationContext();
+        if (enhancedPermissions?.isAdmin) return false;
+      } catch {
+        // Migration context not available, continue
+      }
       
       return userOrganizations && userOrganizations.length > 1;
     }
@@ -59,7 +68,8 @@ export const useOrganizationValidation = () => {
       userType = 'partner';
     }
   } else {
-    userType = legacyAuth.profile?.user_type || 'subcontractor';
+    // Legacy fallback - determine from organization data or default
+    userType = 'subcontractor';
   }
   
   return {

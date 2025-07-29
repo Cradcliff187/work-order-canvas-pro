@@ -233,8 +233,8 @@ export function useSubcontractorWorkOrders() {
         notes: reportData.notes,
       };
 
-      // Only include hours_worked for employees
-      if (profile.user_type === 'employee' && reportData.hoursWorked !== undefined) {
+      // Include hours_worked if provided (for tracking purposes)
+      if (reportData.hoursWorked !== undefined) {
         reportInsert.hours_worked = reportData.hoursWorked;
       }
 

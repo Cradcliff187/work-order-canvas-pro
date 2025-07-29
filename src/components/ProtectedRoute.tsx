@@ -44,7 +44,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
     if (!requiredUserType) return true;
     
     // When impersonating, check real profile permissions but allow admin override
-    if (isImpersonating && realProfile?.user_type === 'admin') {
+    if (isImpersonating && enhancedPermissions.isAdmin) {
       console.log('ProtectedRoute - Admin impersonating - allowing access');
       return true;
     }
@@ -83,14 +83,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
   if (!hasRequiredPermission()) {
     console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
     
-    // Redirect based on effective user type
-    const effectiveUserType = migrationUser ? getEffectiveUserType(migrationUser) : 
-                              (viewingProfile || profile)?.user_type;
-    const redirectPath = effectiveUserType === 'admin' ? '/admin/dashboard' :
-                         effectiveUserType === 'partner' ? '/partner/dashboard' :
-                         effectiveUserType === 'subcontractor' ? '/subcontractor/dashboard' :
-                         effectiveUserType === 'employee' ? '/admin/employee-dashboard' :
-                         '/auth';
+    // Redirect based on effective user type from organization permissions
+    let redirectPath = '/auth';
+    if (enhancedPermissions.isAdmin) {
+      redirectPath = '/admin/dashboard';
+    } else if (enhancedPermissions.isEmployee) {
+      redirectPath = '/admin/employee-dashboard';
+    } else if (enhancedPermissions.isPartner) {
+      redirectPath = '/partner/dashboard';
+    } else if (enhancedPermissions.isSubcontractor) {
+      redirectPath = '/subcontractor/dashboard';
+    }
     return <Navigate to={redirectPath} replace />;
   }
 

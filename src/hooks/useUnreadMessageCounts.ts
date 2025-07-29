@@ -65,7 +65,7 @@ export function useUnreadMessageCounts(workOrderIds: string[]) {
   return useQuery({
     queryKey: ['unread-message-counts', workOrderIds, profile?.id],
     queryFn: async () => {
-      if (!workOrderIds.length || !profile?.id || !profile?.user_type) {
+      if (!workOrderIds.length || !profile?.id) {
         return {};
       }
 

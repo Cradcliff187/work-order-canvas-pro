@@ -58,8 +58,8 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     user: null, // Legacy system doesn't provide UserWithOrganizations format
     isLoading: legacyAuth.loading,
     primaryOrganization: null,
-    hasInternalAccess: legacyAuth.profile?.user_type === 'admin' || legacyAuth.profile?.user_type === 'employee',
-    hasAdminAccess: legacyAuth.profile?.user_type === 'admin'
+    hasInternalAccess: false, // Will be determined by organization system
+    hasAdminAccess: false // Will be determined by organization system
   };
 
   const value: EnhancedAuthContextType = {

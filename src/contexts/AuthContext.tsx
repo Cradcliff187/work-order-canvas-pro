@@ -22,9 +22,6 @@ interface Profile {
   hourly_billable_rate?: number;
   created_at?: string;
   updated_at?: string;
-  // Legacy compatibility - computed from organization data
-  user_type?: 'admin' | 'partner' | 'subcontractor' | 'employee';
-  company_name?: string;
 }
 
 interface AuthContextType {
@@ -218,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const mapOrganizationToLegacyUserType = (memberships: OrganizationMember[]): 'admin' | 'partner' | 'subcontractor' | 'employee' => {
+  const getUserTypeFromMemberships = (memberships: OrganizationMember[]): string => {
     if (!memberships || memberships.length === 0) {
       return 'subcontractor'; // Default fallback
     }
@@ -236,16 +233,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const enhanceProfileWithLegacyData = (profile: any, memberships: OrganizationMember[]): Profile => {
+  const enhanceProfile = (profile: any, memberships: OrganizationMember[]): Profile => {
     if (!profile) return profile;
-
-    const user_type = mapOrganizationToLegacyUserType(memberships);
-    const primaryMembership = memberships.find(m => m.organization?.organization_type === 'internal') || memberships[0];
     
     return {
-      ...profile,
-      user_type,
-      company_name: primaryMembership?.organization?.name || undefined
+      ...profile
     };
   };
 
@@ -335,20 +327,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fetchProfile(session.user.id).then(async (profileData) => {
             if (!mounted) return;
             
-            // Fetch organization memberships and enhance profile with legacy data
+            // Fetch organization memberships and enhance profile
             let enhancedProfile = profileData;
+            let currentMemberships: OrganizationMember[] = [];
+            
             if (profileData) {
               setOrganizationLoading(true);
               
-              const memberships = await fetchOrganizationMemberships(profileData.id);
-              setOrganizationMemberships(memberships);
+              currentMemberships = await fetchOrganizationMemberships(profileData.id);
+              setOrganizationMemberships(currentMemberships);
               
-              // Enhance profile with legacy user_type and company_name for backward compatibility
-              enhancedProfile = enhanceProfileWithLegacyData(profileData, memberships);
+              // Enhance profile
+              enhancedProfile = enhanceProfile(profileData, currentMemberships);
               setProfile(enhancedProfile);
               
-              // Auto-fix subcontractor organizations if needed
-              if (enhancedProfile.user_type === 'subcontractor') {
+              // Auto-fix subcontractor organizations if needed (using organization type)
+              const isSubcontractor = currentMemberships.some(m => m.organization?.organization_type === 'subcontractor');
+              if (isSubcontractor) {
                 await checkAndFixSubcontractorOrganization(profileData.id);
               }
               
@@ -364,27 +359,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Prevent redirects during password reset flow using the new method
             const preventRedirect = shouldPreventRedirect();
             const shouldRedirect = event === 'SIGNED_IN' && 
-                                  enhancedProfile?.user_type && 
+                                  currentMemberships.length > 0 && 
                                   !preventRedirect &&
                                   (window.location.pathname === '/' || window.location.pathname === '/auth');
             
             console.log('Auth state change:', {
               event,
               pathname: window.location.pathname,
-              userType: enhancedProfile?.user_type,
+              memberships: currentMemberships.length,
               preventRedirect,
               shouldRedirect
             });
             
             if (shouldRedirect) {
-              const redirectPaths = {
-                'admin': '/admin/dashboard',
-                'employee': '/admin/employee-dashboard',
-                'partner': '/partner/dashboard',
-                'subcontractor': '/subcontractor/dashboard'
-              };
-              const redirectPath = redirectPaths[enhancedProfile.user_type!];
-              if (redirectPath) {
+              // Determine redirect path from organization memberships
+              const internalOrg = currentMemberships.find(m => m.organization?.organization_type === 'internal');
+              const primaryMembership = internalOrg || currentMemberships[0];
+              
+              let redirectPath = '/auth';
+              if (primaryMembership?.organization?.organization_type === 'internal') {
+                redirectPath = primaryMembership.role === 'admin' ? '/admin/dashboard' : '/admin/employee-dashboard';
+              } else if (primaryMembership?.organization?.organization_type === 'partner') {
+                redirectPath = '/partner/dashboard';
+              } else if (primaryMembership?.organization?.organization_type === 'subcontractor') {
+                redirectPath = '/subcontractor/dashboard';
+              }
+              
+              if (redirectPath !== '/auth') {
                 setTimeout(() => navigate(redirectPath, { replace: true }), 0);
               }
             }
@@ -419,12 +420,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const memberships = await fetchOrganizationMemberships(profileData.id);
             setOrganizationMemberships(memberships);
             
-            // Enhance profile with legacy user_type and company_name for backward compatibility
-            const enhancedProfile = enhanceProfileWithLegacyData(profileData, memberships);
+            // Enhance profile
+            const enhancedProfile = enhanceProfile(profileData, memberships);
             setProfile(enhancedProfile);
             
             // Auto-fix subcontractor organizations if needed
-            if (enhancedProfile.user_type === 'subcontractor') {
+            const isSubcontractor = memberships.some(m => m.organization?.organization_type === 'subcontractor');
+            if (isSubcontractor) {
               await checkAndFixSubcontractorOrganization(profileData.id);
             }
             

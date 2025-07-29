@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from './useUserProfile';
 
 export interface LocationHistoryItem {
   store_location: string;
@@ -10,6 +11,7 @@ export interface LocationHistoryItem {
 
 export function useLocationHistory(organizationId?: string) {
   const { profile } = useAuth();
+  const { isPartner } = useUserProfile();
   
   return useQuery({
     queryKey: ['location-history', organizationId || profile?.id],
@@ -22,7 +24,7 @@ export function useLocationHistory(organizationId?: string) {
       // Otherwise, for partners, filter by their organizations
       if (organizationId) {
         query = query.eq('organization_id', organizationId);
-      } else if (profile?.user_type === 'partner') {
+      } else if (isPartner && profile?.id) {
         const { data: userOrgs } = await supabase
           .from('user_organizations')
           .select('organization_id')
