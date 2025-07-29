@@ -4,12 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
-import { SingleOrganizationGuard } from "@/components/SingleOrganizationGuard";
 import { SubcontractorSidebar } from "@/components/subcontractor/SubcontractorSidebar";
 import { StandardHeader } from "@/components/layout/StandardHeader";
 import { Plus, Home, ClipboardList, Receipt, User } from "lucide-react";
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 interface SubcontractorLayoutProps {
   children: ReactNode;
@@ -20,7 +18,7 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const isMobile = useIsMobile();
   const { draftCount } = useInvoiceDrafts();
   const organizationNavItems = useOrganizationNavigation();
-  const useOrgNavigation = isFeatureEnabled('useOrganizationNavigation');
+  const useOrgNavigation = true; // Always use organization navigation
 
   // Convert navigation items to mobile navigation format
   const subcontractorNavItems = [
@@ -70,11 +68,9 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
 
           {/* Main Content */}
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
-            <SingleOrganizationGuard userType="subcontractor">
-              <div className="container mx-auto p-4 md:p-6 max-w-7xl">
-                {children}
-              </div>
-            </SingleOrganizationGuard>
+            <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+              {children}
+            </div>
           </main>
         </div>
 

@@ -14,12 +14,11 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranding } from '@/hooks/useBranding';
 import { LogOut, Settings, User } from 'lucide-react';
-import { useMigrationContext } from '@/components/MigrationWrapper';
-import { getEffectiveUserType } from '@/lib/migration/dualTypeAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 const Navbar = () => {
   const { viewingProfile, signOut } = useAuth();
-  const { user, enhancedPermissions } = useMigrationContext();
+  const { userType, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
   const { getProductDisplayName, getCompanyDisplayName, assets } = useBranding();
 
   const handleSignOut = async () => {
@@ -45,11 +44,11 @@ const Navbar = () => {
   };
 
   const getProfilePath = () => {
-    if (enhancedPermissions?.isAdmin || enhancedPermissions?.isEmployee) {
+    if (isAdmin() || isEmployee()) {
       return '/admin/profile';
-    } else if (enhancedPermissions?.isPartner) {
+    } else if (isPartner()) {
       return '/partner/profile';
-    } else if (enhancedPermissions?.isSubcontractor) {
+    } else if (isSubcontractor()) {
       return '/subcontractor/profile';
     }
     return '/admin/profile';
@@ -95,8 +94,8 @@ const Navbar = () => {
                 <p className="text-xs leading-none text-muted-foreground">
                   {viewingProfile?.email}
                 </p>
-                <p className={`text-xs leading-none font-medium ${getUserTypeColor(enhancedPermissions?.getUserType() || '')}`}>
-                  {formatUserType(enhancedPermissions?.getUserType() || '')}
+                <p className={`text-xs leading-none font-medium ${getUserTypeColor(userType)}`}>
+                  {formatUserType(userType)}
                 </p>
               </div>
             </DropdownMenuLabel>

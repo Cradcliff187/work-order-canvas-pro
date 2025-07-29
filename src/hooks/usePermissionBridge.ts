@@ -1,13 +1,12 @@
 /**
- * Permission Bridge Hook
- * Provides unified permission checking during migration
+ * Permission Bridge Hook - DEPRECATED
+ * This hook has been replaced by direct organization-based permissions
+ * Use useUserProfile() instead for permission checking
  */
 
 import { useMemo } from 'react';
-import type { DualCompatUser, LegacyUserType } from '@/lib/migration/dualTypeAuth';
 import type { OrganizationMember, OrganizationType, OrganizationRole } from '@/types/auth.types';
-import { dualPermissionCheck } from '@/lib/migration/dualTypeAuth';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
+import { useUserProfile } from './useUserProfile';
 
 export interface PermissionBridge {
   // Core role checks
@@ -36,82 +35,35 @@ export interface PermissionBridge {
   primaryOrganization: OrganizationMember | null;
 }
 
-export const usePermissionBridge = (user: DualCompatUser | null): PermissionBridge => {
+export const usePermissionBridge = (user?: any): PermissionBridge => {
+  const { isAdmin, isEmployee, isPartner, isSubcontractor, profile } = useUserProfile();
+  
   return useMemo(() => {
-    if (!user) {
-      return {
-        isAdmin: false,
-        isEmployee: false,
-        isPartner: false,
-        isSubcontractor: false,
-        isInternalOrg: false,
-        isPartnerOrg: false,
-        isSubcontractorOrg: false,
-        hasInternalAccess: false,
-        canManageUsers: false,
-        canViewFinancials: false,
-        canManageWorkOrders: false,
-        hasInternalRole: () => false,
-        hasRoleInOrganization: () => false,
-        usingOrganizationAuth: false,
-        primaryOrganization: null,
-      };
-    }
-
-    const usingOrganizationAuth = isFeatureEnabled('useOrganizationAuth');
-    const primaryOrg = user.primary_organization;
-
-    // Core role checks using dual permission system
-    const isAdmin = dualPermissionCheck.isAdmin(user);
-    const isEmployee = dualPermissionCheck.isEmployee(user);
-    const isPartner = dualPermissionCheck.isPartner(user);
-    const isSubcontractor = dualPermissionCheck.isSubcontractor(user);
-
-    // Organization type checks
-    const isInternalOrg = primaryOrg?.organization?.organization_type === 'internal';
-    const isPartnerOrg = primaryOrg?.organization?.organization_type === 'partner';
-    const isSubcontractorOrg = primaryOrg?.organization?.organization_type === 'subcontractor';
-
-    // Permission helpers
-    const hasInternalAccess = isAdmin || isEmployee;
-    const canManageUsers = isAdmin;
+    // All organization auth now
+    const usingOrganizationAuth = true;
+    
+    // Basic permission checks
+    const hasInternalAccess = isAdmin() || isEmployee();
+    const canManageUsers = isAdmin();
     const canViewFinancials = hasInternalAccess;
     const canManageWorkOrders = hasInternalAccess;
 
-    // Advanced role checks
-    const hasInternalRole = (roles: OrganizationRole[]): boolean => {
-      if (primaryOrg) {
-        return primaryOrg.organization?.organization_type === 'internal' && 
-               roles.includes(primaryOrg.role);
-      }
-      return false;
-    };
-
-    const hasRoleInOrganization = (organizationId: string, roles: OrganizationRole[]): boolean => {
-      if (!user.organization_memberships) return false;
-      
-      const membership = user.organization_memberships.find(
-        m => m.organization_id === organizationId
-      );
-      return membership ? roles.includes(membership.role) : false;
-    };
-
     return {
-      isAdmin,
-      isEmployee,
-      isPartner,
-      isSubcontractor,
-      isInternalOrg,
-      isPartnerOrg,
-      isSubcontractorOrg,
+      isAdmin: isAdmin(),
+      isEmployee: isEmployee(),
+      isPartner: isPartner(),
+      isSubcontractor: isSubcontractor(),
+      isInternalOrg: isAdmin() || isEmployee(),
+      isPartnerOrg: isPartner(),
+      isSubcontractorOrg: isSubcontractor(),
       hasInternalAccess,
       canManageUsers,
       canViewFinancials,
       canManageWorkOrders,
-      hasInternalRole,
-      hasRoleInOrganization,
+      hasInternalRole: () => false, // TODO: Implement with organization membership data
+      hasRoleInOrganization: () => false, // TODO: Implement with organization membership data
       usingOrganizationAuth,
-      primaryOrganization: primaryOrg,
+      primaryOrganization: null, // TODO: Get from profile
     };
-  }, [user]);
+  }, [isAdmin, isEmployee, isPartner, isSubcontractor, profile]);
 };

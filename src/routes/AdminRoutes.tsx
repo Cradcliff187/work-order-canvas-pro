@@ -31,7 +31,7 @@ import {
   AdminUtilities,
   AdminApprovals,
   DevTools,
-  MigrationDashboard,
+  // MigrationDashboard removed - migration complete
   
 } from '@/pages/LazyPages';
 
@@ -287,15 +287,7 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/admin/migration-dashboard" element={
-      <ProtectedRoute requiredUserType="admin">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <MigrationDashboard />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
+    {/* Migration dashboard removed - migration complete */}
     
   </>
 );

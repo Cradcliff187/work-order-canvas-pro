@@ -6,7 +6,6 @@
 import { EnhancedUser, Permission, PermissionResult, PermissionContext } from './types';
 import type { OrganizationType, OrganizationRole } from '@/types/auth.types';
 import { userTypeCheckers, getUserType } from './userUtils';
-import { isFeatureEnabled } from '../migration/featureFlags';
 
 /**
  * Central permission checking function
@@ -25,15 +24,12 @@ export function hasPermission(
     };
   }
 
-  // Try organization-based permission check first (if enabled)
-  if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-    const orgResult = checkOrganizationPermission(user, permission, context);
-    if (orgResult.granted !== undefined) {
-      return orgResult;
-    }
+  // Use organization-based permission check (Phase 8: full migration)
+  if (user.primary_organization) {
+    return checkOrganizationPermission(user, permission, context);
   }
 
-  // Fall back to legacy permission checking
+  // Fall back to legacy permission checking if no organization
   return checkLegacyPermission(user, permission, context);
 }
 

@@ -6,7 +6,6 @@ import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useBranding } from '@/hooks/useBranding';
-import { SingleOrganizationGuard } from '@/components/SingleOrganizationGuard';
 import { StandardHeader } from '@/components/layout/StandardHeader';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import {
@@ -42,7 +41,6 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 const sidebarItems = [
   { title: 'Dashboard', url: '/partner/dashboard', icon: BarChart3 },
@@ -60,7 +58,7 @@ function PartnerSidebar() {
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
   const organizationNavItems = useOrganizationNavigation();
-  const useOrgNavigation = isFeatureEnabled('useOrganizationNavigation');
+  const useOrgNavigation = true; // Always use organization navigation
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -218,11 +216,9 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
           {isMobile ? <MobileHeader /> : <StandardHeader />}
 
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
-            <SingleOrganizationGuard userType="partner">
-              <div className="container mx-auto p-4 md:p-6 max-w-7xl">
-                {children}
-              </div>
-            </SingleOrganizationGuard>
+            <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+              {children}
+            </div>
           </main>
         </div>
         

@@ -12,7 +12,7 @@ import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2, Clipboa
 import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
-import { OrganizationValidationAlert } from '@/components/OrganizationValidationAlert';
+// Organization validation no longer needed - migration complete
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
 import { MobileOrganizationSelector } from '@/components/layout/MobileOrganizationSelector';
@@ -92,8 +92,7 @@ const PartnerDashboard = () => {
         )}
       </div>
 
-      {/* Organization Validation Alert */}
-      <OrganizationValidationAlert className="mb-6" />
+      {/* Organization validation no longer needed - migration complete */}
 
       {/* Organization Context */}
       {primaryOrganization && userOrganizations && (

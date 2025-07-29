@@ -31,6 +31,7 @@ interface AuthContextType {
   realProfile: Profile | null;
   viewingProfile: Profile | null;
   userOrganization: UserOrganization | null;
+  userOrganizations: OrganizationMember[];
   loading: boolean;
   organizationLoading: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string, organizationId?: string, phone?: string) => Promise<{ error: any; data?: any }>;
@@ -646,6 +647,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     realProfile: profile,
     viewingProfile: impersonatedProfile || profile,
     userOrganization,
+    userOrganizations: organizationMemberships,
     loading: loading || initializing,
     organizationLoading,
     signUp,

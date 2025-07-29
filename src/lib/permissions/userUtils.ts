@@ -5,7 +5,6 @@
 
 import type { EnhancedUser, LegacyUserType } from './types';
 import type { OrganizationType, OrganizationRole, OrganizationMember } from '@/types/auth.types';
-import { isFeatureEnabled } from '../migration/featureFlags';
 
 /**
  * Gets the effective user type - organization-based system only
