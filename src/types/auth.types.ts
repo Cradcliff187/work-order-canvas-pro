@@ -97,4 +97,13 @@ export interface AuthContextValue {
   realProfile?: Profile | null;
   realUserId?: string | null;
   viewingProfile?: Profile | null;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (password: string) => Promise<void>;
+  // Backward compatibility
+  userOrganization?: any;
+  organizationLoading?: boolean;
+  setImpersonation?: any;
+  clearImpersonation?: () => void;
+  impersonatedProfile?: Profile | null;
+  refreshOrganization?: () => Promise<void>;
 }
