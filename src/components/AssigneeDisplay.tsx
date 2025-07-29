@@ -1,7 +1,7 @@
 import React from 'react';
-import { UserCheck, Users } from 'lucide-react';
+import { UserCheck, Users, Building2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { OrganizationBadge } from '@/components/OrganizationBadge';
+import { OrganizationBadge } from '@/components/shared/OrganizationBadge';
 
 interface Assignment {
   assigned_to: string;
@@ -11,8 +11,10 @@ interface Assignment {
     last_name: string;
   } | null;
   assigned_organization?: {
+    id: string;
     name: string;
-    organization_type?: string;
+    organization_type: 'partner' | 'subcontractor' | 'internal';
+    initials?: string;
   } | null;
 }
 
@@ -39,14 +41,20 @@ export function AssigneeDisplay({
   const hasAssignments = assignments && assignments.length > 0;
   const assignees = hasAssignments ? assignments : [];
 
+  // Check if this is primarily an organization assignment
+  const isOrganizationAssignment = assignees.some(a => a.assigned_organization);
+
   // Helper function to get display name with lead indicator
   const getDisplayName = (assignment: Assignment) => {
+    // If organization assignment without specific user
+    if (assignment.assigned_organization && !assignment.assignee_profile) {
+      return null; // Will show organization badge instead
+    }
+    
     if (!assignment.assignee_profile) {
-      if (assignment.assigned_organization) {
-        return 'Organization Assignment';
-      }
       return 'Unassigned';
     }
+    
     const { first_name, last_name } = assignment.assignee_profile;
     const shortName = `${first_name} ${last_name.charAt(0)}.`;
     return assignment.assignment_type === 'lead' ? `${shortName} (L)` : shortName;
@@ -54,14 +62,17 @@ export function AssigneeDisplay({
 
   // Helper function to get full name for tooltip
   const getFullName = (assignment: Assignment) => {
+    if (assignment.assigned_organization && !assignment.assignee_profile) {
+      return `Assigned to ${assignment.assigned_organization.name} (Organization)`;
+    }
+    
     if (!assignment.assignee_profile) {
-      if (assignment.assigned_organization) {
-        return `Assigned to ${assignment.assigned_organization.name}`;
-      }
       return 'Unassigned';
     }
+    
     const { first_name, last_name } = assignment.assignee_profile;
-    return `${first_name} ${last_name}${assignment.assignment_type === 'lead' ? ' (Lead)' : ''}`;
+    const orgInfo = assignment.assigned_organization ? ` - ${assignment.assigned_organization.name}` : '';
+    return `${first_name} ${last_name}${assignment.assignment_type === 'lead' ? ' (Lead)' : ''}${orgInfo}`;
   };
 
   // Render unassigned state
@@ -77,6 +88,22 @@ export function AssigneeDisplay({
   // Render single assignment
   if (assignees.length === 1) {
     const assignment = assignees[0];
+    const displayName = getDisplayName(assignment);
+    
+    // Organization-only assignment
+    if (assignment.assigned_organization && !displayName) {
+      return (
+        <div className={`flex items-center gap-2 ${className}`}>
+          {showIcons && <Building2 className="h-4 w-4" />}
+          <OrganizationBadge 
+            organization={assignment.assigned_organization}
+            size="sm"
+            showIcon={true}
+          />
+        </div>
+      );
+    }
+    
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <div className="flex items-center gap-1">
@@ -85,36 +112,47 @@ export function AssigneeDisplay({
               <UserCheck className="h-4 w-4" /> : 
               <Users className="h-4 w-4" />
           )}
-          <span>{getDisplayName(assignment)}</span>
+          {displayName && <span>{displayName}</span>}
         </div>
         {showOrganization && assignment.assigned_organization && (
           <OrganizationBadge 
             organization={assignment.assigned_organization}
             size="sm"
             showIcon={false}
+            showName={false}
           />
         )}
       </div>
     );
   }
 
+  // Get unique organizations
+  const organizations = assignees
+    .map(a => a.assigned_organization)
+    .filter((org, index, arr) => org && arr.findIndex(o => o?.name === org.name) === index);
+
   // Render multiple assignments (2-3 shown, 4+ with "more")
   if (assignees.length <= 3) {
-    const displayText = assignees.map(assignment => getDisplayName(assignment)).join(', ');
+    const displayNames = assignees
+      .map(assignment => getDisplayName(assignment))
+      .filter(name => name);
+    const displayText = displayNames.length > 0 ? displayNames.join(', ') : null;
     const tooltipText = assignees.map(assignment => getFullName(assignment)).join('\n');
-    const organizations = assignees
-      .map(a => a.assigned_organization)
-      .filter((org, index, arr) => org && arr.findIndex(o => o?.name === org.name) === index);
 
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <div className={`flex items-center gap-2 cursor-help ${className}`}>
-              <div className="flex items-center gap-1">
-                {showIcons && <Users className="h-4 w-4" />}
-                <span>{displayText}</span>
-              </div>
+              {displayText && (
+                <div className="flex items-center gap-1">
+                  {showIcons && <Users className="h-4 w-4" />}
+                  <span>{displayText}</span>
+                </div>
+              )}
+              {!displayText && showIcons && organizations.length > 0 && (
+                <Building2 className="h-4 w-4" />
+              )}
               {showOrganization && organizations.length > 0 && (
                 <div className="flex gap-1">
                   {organizations.slice(0, 2).map((org, idx) => org && (
@@ -122,7 +160,7 @@ export function AssigneeDisplay({
                       key={`${org.name}-${idx}`}
                       organization={org}
                       size="sm"
-                      showIcon={false}
+                      showIcon={!displayText}
                     />
                   ))}
                   {organizations.length > 2 && (
@@ -142,23 +180,26 @@ export function AssigneeDisplay({
 
   // Render 4+ assignments with "more" indicator
   const firstAssignee = assignees[0];
+  const firstDisplayName = getDisplayName(firstAssignee);
   const remainingCount = assignees.length - 1;
   const allAssignees = assignees.map(assignment => getFullName(assignment)).join('\n');
-  const organizations = assignees
-    .map(a => a.assigned_organization)
-    .filter((org, index, arr) => org && arr.findIndex(o => o?.name === org.name) === index);
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className={`flex items-center gap-2 cursor-help ${className}`}>
-            <div className="flex items-center gap-1">
-              {showIcons && <Users className="h-4 w-4" />}
-              <span>
-                {getDisplayName(firstAssignee)} + {remainingCount} more
-              </span>
-            </div>
+            {firstDisplayName && (
+              <div className="flex items-center gap-1">
+                {showIcons && <Users className="h-4 w-4" />}
+                <span>
+                  {firstDisplayName} + {remainingCount} more
+                </span>
+              </div>
+            )}
+            {!firstDisplayName && showIcons && organizations.length > 0 && (
+              <Building2 className="h-4 w-4" />
+            )}
             {showOrganization && organizations.length > 0 && (
               <div className="flex gap-1">
                 {organizations.slice(0, 2).map((org, idx) => org && (
@@ -166,11 +207,11 @@ export function AssigneeDisplay({
                     key={`${org.name}-${idx}`}
                     organization={org}
                     size="sm"
-                    showIcon={false}
+                    showIcon={!firstDisplayName}
                   />
                 ))}
                 {organizations.length > 2 && (
-                  <span className="text-xs text-muted-foreground">+{organizations.length - 2}</span>
+                  <span className="text-xs text-muted-foreground">+{organizations.length - 2} orgs</span>
                 )}
               </div>
             )}
