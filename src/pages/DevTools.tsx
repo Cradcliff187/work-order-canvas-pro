@@ -26,6 +26,7 @@ import {
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, ColumnDef, flexRender, SortingState, ColumnFiltersState } from '@tanstack/react-table';
 import { useDevTools } from '@/hooks/useDevTools';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
@@ -87,7 +88,7 @@ const DevTools = () => {
 
   // Check if we're in development
   const isDevelopment = import.meta.env.MODE === 'development';
-  const isAdmin = profile?.user_type === 'admin';
+  const { isAdmin, userType } = useUserProfile();
 
   useEffect(() => {
     if (isDevelopment && isAdmin) {
@@ -137,7 +138,7 @@ const DevTools = () => {
       .filter(user => user && user.email)
       .map(user => ({
         ...user,
-        organization_name: user.company_name || 'No Organization'
+        organization_name: 'No Organization' // Company name removed from profiles
       } as ImpersonationUser));
 
     console.log(`✅ Processed ${usersWithOrganizations.length} users for impersonation`);
@@ -145,15 +146,14 @@ const DevTools = () => {
   };
 
   const handleImpersonate = (user: ImpersonationUser) => {
-    setImpersonation({
-      id: user.id,
-      user_id: user.id,
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      user_type: user.user_type,
-      is_active: true
-    });
+      setImpersonation({
+        id: user.id,
+        user_id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        is_active: true
+      });
     
     toast({
       title: "Impersonation Started",
@@ -353,7 +353,7 @@ const DevTools = () => {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
             <span>
-              <strong>Viewing as:</strong> {impersonatedProfile.first_name} {impersonatedProfile.last_name} ({impersonatedProfile.user_type})
+              <strong>Viewing as:</strong> {impersonatedProfile.first_name} {impersonatedProfile.last_name} ({userType})
             </span>
             <Button 
               size="sm" 

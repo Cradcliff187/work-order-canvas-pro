@@ -8,11 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, User, Lock } from 'lucide-react';
 
 const PartnerProfile = () => {
   const { profile, updateProfile } = useAuth();
+  const { userType } = useUserProfile();
+  const { organization } = useUserOrganization();
+  const organizationName = organization?.name;
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -149,8 +154,8 @@ const PartnerProfile = () => {
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   </Label>
                   <Input
-                    id="company_name"
-                    value={profile?.company_name || 'No organization assigned'}
+                    id="organization"
+                    value={organizationName || 'No organization assigned'}
                     disabled
                     className="bg-muted cursor-not-allowed"
                   />
@@ -169,7 +174,7 @@ const PartnerProfile = () => {
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">User Type</Label>
                     <p className="text-sm font-medium text-primary capitalize">
-                      {profile?.user_type}
+                      {userType}
                     </p>
                   </div>
                   <div>

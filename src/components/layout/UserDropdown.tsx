@@ -11,12 +11,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Settings, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserAccessibleWorkOrders } from '@/hooks/useUserAccessibleWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
 
 export function UserDropdown() {
   const { profile, signOut } = useAuth();
+  const { userType } = useUserProfile();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -82,7 +84,7 @@ export function UserDropdown() {
             </div>
             <div className="flex flex-col items-start text-xs">
               <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-              <span className="text-muted-foreground capitalize">{profile?.user_type}</span>
+              <span className="text-muted-foreground capitalize">{userType}</span>
             </div>
           </Button>
         </DropdownMenuTrigger>

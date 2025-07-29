@@ -20,6 +20,7 @@ import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
 import { WorkOrderReviewSummary } from '@/components/WorkOrderReviewSummary';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateWorkOrder } from '@/hooks/usePartnerWorkOrders';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
@@ -126,7 +127,7 @@ export default function SubmitWorkOrder() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Determine if user is admin
-  const isAdmin = profile?.user_type === 'admin';
+  const { isAdmin } = useUserProfile();
 
   // User organization hook
   const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();

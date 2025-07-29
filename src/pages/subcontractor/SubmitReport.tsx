@@ -15,6 +15,7 @@ import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { MobileFileUpload } from '@/components/MobileFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FileUpload } from '@/components/FileUpload';
@@ -33,6 +34,7 @@ export default function SubmitReport() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { userType } = useUserProfile();
   const { submitReport } = useSubcontractorWorkOrders();
   const { saveDraft, getDrafts } = useOfflineStorage();
   const isMobile = useIsMobile();
@@ -71,7 +73,7 @@ export default function SubmitReport() {
       return;
     }
 
-    if (!formData.workPerformed.trim() || (profile?.user_type === 'employee' && !formData.hoursWorked.trim())) {
+    if (!formData.workPerformed.trim() || (userType === 'employee' && !formData.hoursWorked.trim())) {
       toast({
         title: "Missing Required Fields",
         description: "Please fill in all required fields before submitting.",
@@ -86,7 +88,7 @@ export default function SubmitReport() {
         workOrderId,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
-        hoursWorked: profile?.user_type === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+        hoursWorked: userType === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
         notes: formData.notes || undefined,
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
@@ -154,7 +156,7 @@ export default function SubmitReport() {
         {
           workPerformed: formData.workPerformed,
           materialsUsed: formData.materialsUsed,
-          hoursWorked: profile?.user_type === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+          hoursWorked: userType === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
           notes: formData.notes,
         },
         photoAttachments,
@@ -321,7 +323,7 @@ export default function SubmitReport() {
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
-          {profile?.user_type === 'employee' && (
+          {userType === 'employee' && (
             <StandardFormLayout.Section 
               title="Time Tracking"
               description="Record hours worked for this assignment"

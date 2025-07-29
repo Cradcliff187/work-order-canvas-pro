@@ -19,7 +19,7 @@ export function UnreadMessagesDropdown({
   onClose 
 }: UnreadMessagesDropdownProps) {
   const navigate = useNavigate();
-  const { profile } = useUserProfile();
+  const { userType } = useUserProfile();
   const [isHovered, setIsHovered] = useState(false);
 
   // Get work order IDs that have unread messages
@@ -45,10 +45,10 @@ export function UnreadMessagesDropdown({
   });
 
   const handleWorkOrderClick = (workOrderId: string) => {
-    if (!profile?.user_type) return;
+    if (!userType) return;
 
     let route = '';
-    switch (profile.user_type) {
+    switch (userType) {
       case 'admin':
       case 'employee':
         route = `/admin/work-orders/${workOrderId}`;
@@ -68,10 +68,10 @@ export function UnreadMessagesDropdown({
   };
 
   const handleViewAll = () => {
-    if (!profile?.user_type) return;
+    if (!userType) return;
 
     let route = '';
-    switch (profile.user_type) {
+    switch (userType) {
       case 'admin':
       case 'employee':
         route = '/admin/work-orders';

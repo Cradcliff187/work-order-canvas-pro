@@ -20,6 +20,7 @@ import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
 import { WorkOrderNumberPreview } from '@/components/WorkOrderNumberPreview';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateWorkOrder } from '@/hooks/useAdminWorkOrders';
 import { useWorkOrderNumberGeneration } from '@/hooks/useWorkOrderNumberGeneration';
@@ -131,7 +132,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
   );
   
   // Check if user is admin to show organization selection
-  const isAdmin = viewingProfile?.user_type === 'admin';
+  const { isAdmin } = useUserProfile();
 
   // Form setup with comprehensive validation
   const form = useForm<FormData>({

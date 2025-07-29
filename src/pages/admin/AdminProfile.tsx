@@ -8,11 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, User } from 'lucide-react';
 
 const AdminProfile = () => {
   const { profile, updateProfile } = useAuth();
+  const { userType } = useUserProfile();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,7 +22,6 @@ const AdminProfile = () => {
     last_name: profile?.last_name || '',
     email: profile?.email || '',
     phone: profile?.phone || '',
-    company_name: profile?.company_name || '',
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -144,13 +145,16 @@ const AdminProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company_name">Company/Organization</Label>
+                  <Label htmlFor="organization">Organization</Label>
                   <Input
-                    id="company_name"
-                    value={formData.company_name}
-                    onChange={(e) => handleInputChange('company_name', e.target.value)}
-                    placeholder="Enter company or organization name"
+                    id="organization"
+                    value="Internal Organization (Admin Access)"
+                    disabled
+                    className="bg-muted cursor-not-allowed"
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Organization assignment is managed automatically for admin users.
+                  </p>
                 </div>
               </div>
 
@@ -163,7 +167,7 @@ const AdminProfile = () => {
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">User Type</Label>
                     <p className="text-sm font-medium text-destructive capitalize">
-                      {profile?.user_type}
+                      {userType}
                     </p>
                   </div>
                   <div>

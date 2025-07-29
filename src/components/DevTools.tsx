@@ -7,6 +7,7 @@ import { AlertCircle, Database, Users, CheckCircle2, XCircle, Loader2 } from "lu
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDevTools } from "@/hooks/useDevTools";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 interface DevToolsResponse {
   success: boolean;
@@ -32,8 +33,7 @@ export const DevTools = () => {
   } = useDevTools();
   
   const { user, profile } = useAuth();
-
-  const isAdmin = profile?.user_type === 'admin';
+  const { isAdmin, userType } = useUserProfile();
 
   if (!isAdmin) {
     return (
@@ -83,7 +83,7 @@ export const DevTools = () => {
               {result.users.map((user: any, index: number) => (
                 <li key={index} className="flex justify-between">
                   <span>{user.email}</span>
-                  <span className="text-gray-500">({user.user_type})</span>
+                  <span className="text-gray-500">({user.organization_role || 'No role'})</span>
                 </li>
               ))}
             </ul>
@@ -225,7 +225,7 @@ export const DevTools = () => {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">User Type:</span>
-                <span className="capitalize">{profile?.user_type || 'N/A'}</span>
+                <span className="capitalize">{userType || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Admin Access:</span>
