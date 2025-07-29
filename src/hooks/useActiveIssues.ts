@@ -39,11 +39,9 @@ export const useActiveIssues = () => {
             email,
             first_name,
             last_name,
-            user_type,
-            user_organizations!left(organization_id)
+            organization_members!left(organization_id)
           `)
-          .neq('user_type', 'admin')
-          .is('user_organizations.organization_id', null);
+          .is('organization_members.organization_id', null);
 
         if (noOrgsError) throw noOrgsError;
 
@@ -58,7 +56,7 @@ export const useActiveIssues = () => {
 
         // Get users with multiple organizations
         const { data: userOrgCounts, error: multiOrgsError } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .select('user_id');
 
         if (multiOrgsError) throw multiOrgsError;

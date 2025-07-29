@@ -47,8 +47,8 @@ export function ViewUserModal({ user, isOpen, onClose }: ViewUserModalProps) {
                 {user.first_name} {user.last_name}
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className={`${getUserTypeColor(user.user_type)} h-5 text-[10px] px-1.5`}>
-                  {user.user_type}
+                <Badge className="bg-blue-100 text-blue-800 h-5 text-[10px] px-1.5">
+                  User Profile
                 </Badge>
                 <Badge variant={user.is_active ? 'default' : 'secondary'}>
                   {user.is_active ? (
@@ -78,12 +78,6 @@ export function ViewUserModal({ user, isOpen, onClose }: ViewUserModalProps) {
                     <span className="text-sm">{user.phone}</span>
                   </div>
                 )}
-                {user.company_name && (
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{user.company_name}</span>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -110,19 +104,22 @@ export function ViewUserModal({ user, isOpen, onClose }: ViewUserModalProps) {
             </Card>
           </div>
 
-          {user.user_organizations && user.user_organizations.length > 0 && (
+          {user.organization_members && user.organization_members.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Organizations</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {user.user_organizations.map((userOrg, index) => (
+                  {user.organization_members.map((member, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{userOrg.organization.name}</span>
+                      <span className="text-sm">{member.organization?.name}</span>
                       <Badge variant="outline" className="h-5 text-[10px] px-1.5">
-                        {userOrg.organization.organization_type}
+                        {member.organization?.organization_type}
+                      </Badge>
+                      <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
+                        {member.role}
                       </Badge>
                     </div>
                   ))}

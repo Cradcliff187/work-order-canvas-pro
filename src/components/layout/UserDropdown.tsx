@@ -82,7 +82,7 @@ export function UserDropdown() {
             </div>
             <div className="flex flex-col items-start text-xs">
               <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-              <span className="text-muted-foreground capitalize">{profile?.user_type}</span>
+              <span className="text-muted-foreground capitalize">User</span>
             </div>
           </Button>
         </DropdownMenuTrigger>
