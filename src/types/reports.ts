@@ -28,7 +28,7 @@ export type WorkOrderReport = Database['public']['Tables']['work_order_reports']
   submitted_by?: {
     first_name: string;
     last_name: string;
-    user_type: string;
+    email: string;
   } | null;
 };
 

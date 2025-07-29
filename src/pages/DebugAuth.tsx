@@ -55,20 +55,26 @@ const DebugAuth = () => {
     };
 
     try {
-      // Test current user type function
+      // Test organization-based admin access
       try {
-        const { data: userTypeResult } = await supabase.rpc('get_current_user_type');
-        info.currentUserType = userTypeResult;
+        const { data: adminResult } = await supabase.rpc('jwt_is_admin');
+        info.currentUserType = adminResult ? 'admin' : 'non-admin';
       } catch (error) {
-        info.errors.push(`get_current_user_type failed: ${error.message}`);
+        info.errors.push(`jwt_is_admin failed: ${error.message}`);
       }
 
-      // Test is_admin function
+      // Test organization membership
       try {
-        const { data: adminResult } = await supabase.rpc('is_admin');
-        info.isAdminResult = adminResult;
+        const { data: orgMembers } = await supabase
+          .from('organization_members')
+          .select('*, organizations(organization_type)')
+          .eq('user_id', profile?.id);
+        info.isAdminResult = orgMembers?.some(m => 
+          m.organizations?.organization_type === 'internal' && 
+          ['admin', 'owner'].includes(m.role)
+        ) || false;
       } catch (error) {
-        info.errors.push(`is_admin failed: ${error.message}`);
+        info.errors.push(`organization membership check failed: ${error.message}`);
       }
 
       // Test RLS on various tables with individual calls for type safety
@@ -123,16 +129,16 @@ const DebugAuth = () => {
   const fixMyAccess = async () => {
     setFixing(true);
     try {
-      // First, ensure the user's profile exists and is set as admin
+      // First, ensure the user's profile exists
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert({
           user_id: user?.id,
           email: user?.email,
-          user_type: 'admin',
           first_name: user?.user_metadata?.first_name || 'Admin',
           last_name: user?.user_metadata?.last_name || 'User',
-          is_active: true
+          is_active: true,
+          is_employee: true
         }, {
           onConflict: 'user_id'
         });
@@ -290,7 +296,7 @@ const DebugAuth = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <StatusIcon success={debugInfo.currentUserType !== null} />
-                <label className="text-sm font-medium">get_current_user_type()</label>
+                <label className="text-sm font-medium">jwt_is_admin()</label>
               </div>
               <div className="p-2 bg-muted rounded font-mono text-sm">
                 {debugInfo.currentUserType || 'null'}
@@ -299,7 +305,7 @@ const DebugAuth = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <StatusIcon success={debugInfo.isAdminResult !== null} />
-                <label className="text-sm font-medium">is_admin()</label>
+                <label className="text-sm font-medium">Organization Admin Check</label>
               </div>
               <div className="p-2 bg-muted rounded font-mono text-sm">
                 {debugInfo.isAdminResult?.toString() || 'null'}
@@ -375,7 +381,7 @@ const DebugAuth = () => {
                 <span className="text-sm">Profile not found in context. This may indicate RLS issues.</span>
               </div>
             )}
-            {debugInfo.currentUserType !== 'admin' && debugInfo.userEmail === 'cradcliff@austinkunzconstruction.com' && (
+            {!debugInfo.isAdminResult && debugInfo.userEmail === 'cradcliff@austinkunzconstruction.com' && (
               <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded">
                 <XCircle className="h-4 w-4 text-destructive" />
                 <span className="text-sm">Admin user not recognized. Use "Fix My Access" button.</span>
@@ -384,7 +390,7 @@ const DebugAuth = () => {
             {debugInfo.isAdminResult === false && (
               <div className="flex items-center gap-2 p-3 bg-warning/10 rounded">
                 <AlertTriangle className="h-4 w-4 text-warning" />
-                <span className="text-sm">is_admin() returns false. Check user_type in profile.</span>
+                <span className="text-sm">Organization admin check returns false. Check organization membership.</span>
               </div>
             )}
             {Object.values(debugInfo.rlsTests).some(test => !test.success) && (

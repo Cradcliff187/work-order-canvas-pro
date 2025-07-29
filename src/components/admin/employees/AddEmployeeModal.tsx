@@ -19,7 +19,7 @@ const createEmployeeSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   phone: z.string().optional(),
-  organization_id: z.string().optional(), // Reference to organization instead of company_name
+  organization_id: z.string().optional(), // Organization assignment for employee
   hourly_cost_rate: z.number().min(0, 'Cost rate must be positive').optional().or(z.literal('')),
   hourly_billable_rate: z.number().min(0, 'Billable rate must be positive').optional().or(z.literal('')),
 });
@@ -71,7 +71,7 @@ export function AddEmployeeModal({ open, onOpenChange, onSuccess }: AddEmployeeM
         first_name: data.first_name!,
         last_name: data.last_name!,
         phone: data.phone,
-        organization_id: data.organization_id, // Updated to use organization_id
+        organization_id: data.organization_id, // Organization assignment
         hourly_cost_rate: data.hourly_cost_rate === '' ? undefined : Number(data.hourly_cost_rate),
         hourly_billable_rate: data.hourly_billable_rate === '' ? undefined : Number(data.hourly_billable_rate),
         
