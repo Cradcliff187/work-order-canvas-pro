@@ -1,75 +1,100 @@
-/**
- * Organization-based permission types for the work order management system
- * 
- * This file defines the core types used for organization-centric authentication
- * and authorization, replacing the previous user_type based system.
- */
+import type { Database } from '@/integrations/supabase/types';
 
-// Core organization types matching database enums
-export type OrganizationType = 'internal' | 'partner' | 'subcontractor';
-export type OrganizationRole = 'owner' | 'admin' | 'manager' | 'employee' | 'member';
+// Organization types from database enum
+export type OrganizationType = Database['public']['Enums']['organization_type'];
 
-/**
- * Organization member relationship
- */
+// Organization roles from database enum  
+export type OrganizationRole = Database['public']['Enums']['organization_role'];
+
+// Profile type without user_type
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+
+// Organization type
+export type Organization = Database['public']['Tables']['organizations']['Row'];
+
+// Organization member relationship
 export interface OrganizationMember {
   id: string;
   user_id: string;
   organization_id: string;
   role: OrganizationRole;
-  created_at: string;
+  created_at: string | null;
+  organization?: Organization;
+  profile?: Profile;
 }
 
-/**
- * Organization context for user sessions
- */
-export interface OrganizationContext {
-  id: string;
-  name: string;
-  organization_type: OrganizationType;
-  member_role?: OrganizationRole;
-  initials?: string;
-  contact_email: string;
-  contact_phone?: string;
-  address?: string;
+// Enhanced profile with organization membership
+export interface ProfileWithOrganization extends Profile {
+  organization_members?: OrganizationMember[];
 }
 
-/**
- * Permission matrix based on organization role and type
- */
-export interface OrganizationPermissions {
-  // User management
-  canManageUsers: boolean;
-  canViewAllUsers: boolean;
-  canCreateUsers: boolean;
-  
-  // Financial data
-  canViewFinancialData: boolean;
-  canManageInvoices: boolean;
-  canViewCosts: boolean;
-  
-  // Work order management
-  canSubmitWorkOrders: boolean;
-  canAssignWork: boolean;
-  canApproveWork: boolean;
-  canViewAllWorkOrders: boolean;
-  canManageWorkOrders: boolean;
-  
-  // Organization management
-  canManageOrganization: boolean;
-  canViewOrganizationSettings: boolean;
-  
-  // System administration
-  canManageSystem: boolean;
-  canViewSystemHealth: boolean;
-  canManageEmailTemplates: boolean;
+// Permission helper types
+export interface UserPermissions {
+  isInternal: boolean;
+  isPartner: boolean;
+  isSubcontractor: boolean;
+  hasInternalRole: (roles: OrganizationRole[]) => boolean;
+  isOrganizationType: (type: OrganizationType) => boolean;
+  organizationType: OrganizationType | null;
+  organizationRole: OrganizationRole | null;
+  organizationId: string | null;
+  organizationName: string | null;
 }
 
-/**
- * Helper type for organization-based access control
- */
-export interface AccessControlContext {
-  userOrganizations: OrganizationContext[];
-  currentOrganization?: OrganizationContext;
-  permissions: OrganizationPermissions;
+// Legacy user type mapping for backward compatibility during migration
+export function mapOrganizationToLegacyUserType(
+  organizationType: OrganizationType | null,
+  role: OrganizationRole | null
+): 'admin' | 'partner' | 'subcontractor' | 'employee' | null {
+  if (!organizationType) return null;
+  
+  if (organizationType === 'internal') {
+    if (role === 'admin' || role === 'owner') return 'admin';
+    if (role === 'employee') return 'employee';
+    return 'admin'; // Default for internal
+  }
+  
+  if (organizationType === 'partner') return 'partner';
+  if (organizationType === 'subcontractor') return 'subcontractor';
+  
+  return null;
+}
+
+// Helper to check if user has specific internal roles
+export function hasInternalRole(
+  organizationType: OrganizationType | null,
+  userRole: OrganizationRole | null,
+  requiredRoles: OrganizationRole[]
+): boolean {
+  if (organizationType !== 'internal') return false;
+  if (!userRole) return false;
+  return requiredRoles.includes(userRole);
+}
+
+// Helper to check organization type
+export function isOrganizationType(
+  userOrgType: OrganizationType | null,
+  checkType: OrganizationType
+): boolean {
+  return userOrgType === checkType;
+}
+
+// Auth context value type
+export interface AuthContextValue {
+  user: any; // Supabase user
+  profile: Profile | null;
+  organizationMember: OrganizationMember | null;
+  permissions: UserPermissions;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (data: any) => Promise<void>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  impersonateUser?: (userId: string) => Promise<void>;
+  stopImpersonating?: () => void;
+  isImpersonating?: boolean;
+  realProfile?: Profile | null;
+  realUserId?: string | null;
+  viewingProfile?: Profile | null;
 }
