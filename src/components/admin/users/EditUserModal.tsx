@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -14,12 +12,13 @@ import { Loader2, Edit } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useUserMutations } from '@/hooks/useUsers';
 
+// Phase 7: Organization-based user editing (no user_type)
 const editUserSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
-  user_type: z.enum(['admin', 'partner', 'subcontractor', 'employee']),
   organization_id: z.string().optional(),
+  organization_role: z.enum(['admin', 'manager', 'employee', 'member']).optional(),
 });
 
 type EditUserFormData = z.infer<typeof editUserSchema>;
@@ -36,26 +35,31 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
   const { data: organizations } = useOrganizations();
   const { updateUser, updateUserOrganization } = useUserMutations();
 
+  // Get current organization info
+  const currentOrgMembership = user?.organization_memberships?.[0];
+  const currentOrg = currentOrgMembership?.organization;
+
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
       first_name: user?.first_name || '',
       last_name: user?.last_name || '',
       email: user?.email || '',
-      user_type: user?.user_type || 'subcontractor',
-      organization_id: user?.user_organizations?.[0]?.organization_id || '',
+      organization_id: currentOrg?.id || '',
+      organization_role: currentOrgMembership?.role || 'member',
     },
   });
 
   // Reset form when user changes
   React.useEffect(() => {
     if (user) {
+      const orgMembership = user.organization_memberships?.[0];
       form.reset({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email || '',
-        user_type: user.user_type || 'subcontractor',
-        organization_id: user.user_organizations?.[0]?.organization_id || '',
+        organization_id: orgMembership?.organization?.id || '',
+        organization_role: orgMembership?.role || 'member',
       });
     }
   }, [user, form]);
@@ -70,17 +74,21 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
-        // user_type removed during migration
       });
 
-      // Update organization if needed
-      if (data.user_type !== 'admin' && data.organization_id) {
+      // Update organization membership if changed
+      if (data.organization_id && data.organization_id !== currentOrg?.id) {
         await updateUserOrganization.mutateAsync({
           userId: user.user_id,
           profileId: user.id,
           organizationId: data.organization_id,
         });
       }
+      
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
       
       onOpenChange(false);
     } catch (error: any) {
@@ -94,21 +102,35 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
     }
   };
 
-  const watchedUserType = form.watch('user_type');
-  const filteredOrganizations = organizations?.filter(org => {
-    switch (watchedUserType) {
-      case 'partner':
-        return org.organization_type === 'partner';
-      case 'subcontractor':
-        return org.organization_type === 'subcontractor';
-      case 'employee':
-        return org.organization_type === 'internal';
-      default:
-        return true;
-    }
-  });
+  const watchedOrgId = form.watch('organization_id');
+  const selectedOrg = organizations?.find(org => org.id === watchedOrgId);
 
-  if (!user) return null;
+  // Get available roles based on organization type
+  const getAvailableRoles = (orgType: string) => {
+    switch (orgType) {
+      case 'internal':
+        return [
+          { value: 'admin', label: 'Admin' },
+          { value: 'manager', label: 'Manager' },
+          { value: 'employee', label: 'Employee' }
+        ];
+      case 'partner':
+        return [
+          { value: 'admin', label: 'Admin' },
+          { value: 'manager', label: 'Manager' },
+          { value: 'member', label: 'Member' }
+        ];
+      case 'subcontractor':
+        return [
+          { value: 'admin', label: 'Admin' },
+          { value: 'member', label: 'Member' }
+        ];
+      default:
+        return [{ value: 'member', label: 'Member' }];
+    }
+  };
+
+  const availableRoles = selectedOrg ? getAvailableRoles(selectedOrg.organization_type) : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -122,13 +144,13 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="first_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First Name *</FormLabel>
+                    <FormLabel>First Name</FormLabel>
                     <FormControl>
                       <Input placeholder="John" {...field} />
                     </FormControl>
@@ -136,13 +158,12 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="last_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last Name *</FormLabel>
+                    <FormLabel>Last Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Doe" {...field} />
                     </FormControl>
@@ -157,7 +178,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email *</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="john@example.com" {...field} />
                   </FormControl>
@@ -168,21 +189,22 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
 
             <FormField
               control={form.control}
-              name="user_type"
+              name="organization_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>User Type *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>Organization</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select user type" />
+                        <SelectValue placeholder="Select organization" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="partner">Partner</SelectItem>
-                      <SelectItem value="subcontractor">Subcontractor</SelectItem>
-                      <SelectItem value="employee">Employee</SelectItem>
+                      {organizations?.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name} ({org.organization_type})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -190,23 +212,23 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
               )}
             />
 
-            {watchedUserType !== 'admin' && (
+            {selectedOrg && (
               <FormField
                 control={form.control}
-                name="organization_id"
+                name="organization_role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Organization</FormLabel>
+                    <FormLabel>Role in {selectedOrg.name}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select organization" />
+                          <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {filteredOrganizations?.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
-                            {org.name}
+                        {availableRoles.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -218,27 +240,17 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
             )}
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-              >
+              <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Updating...
                   </>
                 ) : (
-                  <>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Update User
-                  </>
+                  'Update User'
                 )}
               </Button>
             </DialogFooter>

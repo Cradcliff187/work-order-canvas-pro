@@ -3,14 +3,21 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useMigrationContext } from '@/components/MigrationWrapper';
-import { getEffectiveUserType } from '@/lib/migration/dualTypeAuth';
 
 const DashboardRouter: React.FC = () => {
   const { profile, loading, isImpersonating } = useAuth();
-  const { user, enhancedPermissions, migrationFlags } = useMigrationContext();
+
+  // Use organization-based routing
+  let enhancedPermissions = null;
+  try {
+    const { enhancedPermissions: perms } = useMigrationContext();
+    enhancedPermissions = perms;
+  } catch {
+    // No migration context available
+  }
 
   console.log('DashboardRouter - Profile:', profile);
-  console.log('DashboardRouter - Migration User:', user);
+  console.log('DashboardRouter - Enhanced Permissions:', enhancedPermissions);
   console.log('DashboardRouter - Is Impersonating:', isImpersonating);
 
   if (loading) {
@@ -25,25 +32,20 @@ const DashboardRouter: React.FC = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect to appropriate dashboard based on effective user type
-  const effectiveUserType = migrationFlags.useOrganizationAuth && enhancedPermissions.user ? 
-    enhancedPermissions.getUserType() : 
-    (user ? getEffectiveUserType(user) : profile.user_type);
-  console.log('DashboardRouter - Effective User Type:', effectiveUserType);
-  
-  switch (effectiveUserType) {
-    case 'admin':
-      return <Navigate to="/admin/dashboard" replace />;
-    case 'partner':
-      console.log('DashboardRouter - Redirecting to partner dashboard');
-      return <Navigate to="/partner/dashboard" replace />;
-    case 'subcontractor':
-      return <Navigate to="/subcontractor/dashboard" replace />;
-    case 'employee':
-      return <Navigate to="/admin/employee-dashboard" replace />;
-    default:
-      console.log('DashboardRouter - Unknown user type, redirecting to auth');
-      return <Navigate to="/auth" replace />;
+  // Route based on organization permissions
+  if (enhancedPermissions?.isAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
+  } else if (enhancedPermissions?.isEmployee) {
+    return <Navigate to="/admin/employee-dashboard" replace />;
+  } else if (enhancedPermissions?.isPartner) {
+    console.log('DashboardRouter - Redirecting to partner dashboard');
+    return <Navigate to="/partner/dashboard" replace />;
+  } else if (enhancedPermissions?.isSubcontractor) {
+    return <Navigate to="/subcontractor/dashboard" replace />;
+  } else {
+    // Default fallback for users without organization permissions
+    console.log('DashboardRouter - No organization permissions, redirecting to auth');
+    return <Navigate to="/auth" replace />;
   }
 };
 

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
+import { useMigrationContext } from '@/components/MigrationWrapper';
 
 export interface OrganizationGuardResult {
   shouldBlock: boolean;
@@ -18,9 +19,18 @@ export const useOrganizationGuard = (): OrganizationGuardResult => {
   const { profile } = useAuth();
   const { data: userOrganizations, isLoading } = useUserOrganizations();
   
+  // Use enhanced permissions for admin check
+  let isAdmin = false;
+  try {
+    const { enhancedPermissions } = useMigrationContext();
+    isAdmin = enhancedPermissions?.isAdmin || false;
+  } catch {
+    // No migration context available
+  }
+  
   return useMemo(() => {
     // Admins can bypass guard
-    if (!profile || profile.user_type === 'admin') {
+    if (!profile || isAdmin) {
       return {
         shouldBlock: false,
         isLoading: false,
@@ -45,5 +55,5 @@ export const useOrganizationGuard = (): OrganizationGuardResult => {
       organizationCount: orgCount,
       organizations: userOrganizations || [],
     };
-  }, [profile, userOrganizations, isLoading]);
+  }, [profile, userOrganizations, isLoading, isAdmin]);
 };
