@@ -32,13 +32,59 @@ export const useOrganizationBridge = (profileId?: string): OrganizationBridgeDat
     setError(null);
 
     try {
-      // For now, we'll return empty arrays since organization_members table 
-      // isn't fully implemented in the schema yet. This is part of the bridge
-      // functionality that will be populated as we progress through migration.
       console.log('Organization bridge: Fetching data for profile', profileId);
       
-      setOrganizationMemberships([]);
-      setPrimaryOrganization(null);
+      // Fetch organization memberships from user_organizations table
+      const { data, error } = await supabase
+        .from('user_organizations')
+        .select(`
+          organization_id,
+          organizations (
+            id,
+            name,
+            organization_type,
+            initials,
+            contact_email,
+            contact_phone,
+            address,
+            uses_partner_location_numbers,
+            is_active
+          )
+        `)
+        .eq('user_id', profileId);
+
+      if (error) {
+        console.error('Error fetching organization memberships:', error);
+        setOrganizationMemberships([]);
+        setPrimaryOrganization(null);
+        return;
+      }
+
+      // Transform data into OrganizationMember format
+      const memberships: OrganizationMember[] = data?.map((item: any) => ({
+        id: `${profileId}-${item.organization_id}`,
+        user_id: profileId,
+        organization_id: item.organization_id,
+        role: 'member' as any, // Default role
+        created_at: new Date().toISOString(),
+        organization: item.organizations ? {
+          id: item.organizations.id,
+          name: item.organizations.name,
+          organization_type: item.organizations.organization_type,
+          initials: item.organizations.initials || '',
+          contact_email: item.organizations.contact_email,
+          contact_phone: item.organizations.contact_phone || '',
+          address: item.organizations.address || '',
+          uses_partner_location_numbers: item.organizations.uses_partner_location_numbers || false,
+          is_active: item.organizations.is_active
+        } : undefined
+      })).filter(m => m.organization) || [];
+
+      setOrganizationMemberships(memberships);
+      
+      // Set primary organization (prefer internal, then first in list)
+      const internalOrg = memberships.find(m => m.organization?.organization_type === 'internal');
+      setPrimaryOrganization(internalOrg || memberships[0] || null);
 
     } catch (err) {
       console.error('Error fetching organization data:', err);

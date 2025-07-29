@@ -17,7 +17,7 @@ export const MIGRATION_FLAGS: MigrationFlags = {
   enableDualTypeSupport: true,
   
   // Phase 2: Core auth migration
-  useOrganizationAuth: false,
+  useOrganizationAuth: true,
   
   // Phase 3: Permission system migration  
   useOrganizationPermissions: false,

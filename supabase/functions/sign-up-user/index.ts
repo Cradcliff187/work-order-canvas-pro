@@ -21,9 +21,8 @@ interface SignUpRequest {
   password: string;
   first_name: string;
   last_name: string;
-  user_type?: 'admin' | 'partner' | 'subcontractor' | 'employee';
+  organization_id?: string;
   phone?: string;
-  company_name?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -55,8 +54,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Default user_type to subcontractor if not specified
-    const user_type = requestData.user_type || 'subcontractor';
+    // Default organization will be determined by organization_id or defaulted later
+    const organization_id = requestData.organization_id;
 
     // Check if user already exists
     const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -90,7 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
         last_name: requestData.last_name,
       },
       app_metadata: {
-        user_type: user_type,
+        organization_id: organization_id,
       }
     });
 
@@ -159,8 +158,6 @@ const handler = async (req: Request): Promise<Response> => {
     // Update profile with additional fields if provided
     const updateFields: any = {};
     if (requestData.phone) updateFields.phone = requestData.phone;
-    if (requestData.company_name) updateFields.company_name = requestData.company_name;
-    if (user_type === 'employee') updateFields.is_employee = true;
 
     if (Object.keys(updateFields).length > 0) {
       const { data: updatedProfile, error: updateError } = await supabaseAdmin
@@ -173,6 +170,22 @@ const handler = async (req: Request): Promise<Response> => {
       if (!updateError && updatedProfile) {
         profile = updatedProfile;
         console.log('Profile updated with additional fields');
+      }
+    }
+
+    // Create organization membership if organization_id provided
+    if (organization_id) {
+      const { error: orgMembershipError } = await supabaseAdmin
+        .from('user_organizations')
+        .insert({
+          user_id: profile.id,
+          organization_id: organization_id
+        });
+      
+      if (orgMembershipError) {
+        console.error('Failed to create organization membership:', orgMembershipError);
+      } else {
+        console.log('Organization membership created');
       }
     }
 

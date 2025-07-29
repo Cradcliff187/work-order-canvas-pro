@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getUserPrimaryOrganization } from '@/lib/utils/organizationValidation';
 import { hasJWTMetadata, syncUserMetadataToJWT, onProfileUpdate, onOrganizationChange } from '@/lib/auth/jwtSync';
 import type { UserOrganization } from '@/hooks/useUserOrganization';
+import type { OrganizationMember } from '@/types/auth.types';
 
 interface Profile {
   id: string;
@@ -12,12 +13,17 @@ interface Profile {
   email: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
-  company_name?: string;
   phone?: string;
   avatar_url?: string;
   is_active?: boolean;
   is_employee?: boolean;
+  hourly_cost_rate?: number;
+  hourly_billable_rate?: number;
+  created_at?: string;
+  updated_at?: string;
+  // Legacy compatibility - computed from organization data
+  user_type?: 'admin' | 'partner' | 'subcontractor' | 'employee';
+  company_name?: string;
 }
 
 interface AuthContextType {
@@ -29,7 +35,7 @@ interface AuthContextType {
   userOrganization: UserOrganization | null;
   loading: boolean;
   organizationLoading: boolean;
-  signUp: (email: string, password: string, firstName: string, lastName: string, userType?: 'admin' | 'partner' | 'subcontractor' | 'employee', phone?: string, companyName?: string) => Promise<{ error: any; data?: any }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, organizationId?: string, phone?: string) => Promise<{ error: any; data?: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
@@ -62,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrganization, setUserOrganization] = useState<UserOrganization | null>(null);
+  const [organizationMemberships, setOrganizationMemberships] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [organizationLoading, setOrganizationLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
@@ -94,6 +101,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error fetching profile:', error);
       return null;
     }
+  };
+
+  const fetchOrganizationMemberships = async (profileId: string): Promise<OrganizationMember[]> => {
+    try {
+      // Query organization_members with organization data using direct SQL
+      const { data, error } = await supabase
+        .from('user_organizations')
+        .select(`
+          organization_id,
+          organizations (
+            id,
+            name,
+            organization_type,
+            initials,
+            contact_email,
+            contact_phone,
+            address,
+            uses_partner_location_numbers,
+            is_active
+          )
+        `)
+        .eq('user_id', profileId);
+
+      if (error) {
+        console.error('Error fetching organization memberships:', error);
+        return [];
+      }
+
+      // Transform the result into OrganizationMember format
+      const memberships: OrganizationMember[] = data?.map((item: any) => ({
+        id: `${profileId}-${item.organization_id}`, // Generate composite ID
+        user_id: profileId,
+        organization_id: item.organization_id,
+        role: 'member' as any, // Default role since user_organizations doesn't have role yet
+        created_at: new Date().toISOString(),
+        organization: item.organizations ? {
+          id: item.organizations.id,
+          name: item.organizations.name,
+          organization_type: item.organizations.organization_type,
+          initials: item.organizations.initials || '',
+          contact_email: item.organizations.contact_email,
+          contact_phone: item.organizations.contact_phone || '',
+          address: item.organizations.address || '',
+          uses_partner_location_numbers: item.organizations.uses_partner_location_numbers || false,
+          is_active: item.organizations.is_active
+        } : undefined
+      })).filter(m => m.organization) || [];
+
+      return memberships;
+    } catch (error) {
+      console.error('Error fetching organization memberships:', error);
+      return [];
+    }
+  };
+
+  const mapOrganizationToLegacyUserType = (memberships: OrganizationMember[]): 'admin' | 'partner' | 'subcontractor' | 'employee' => {
+    if (!memberships || memberships.length === 0) {
+      return 'subcontractor'; // Default fallback
+    }
+
+    // Find primary organization (first internal, then first in list)
+    const internalOrg = memberships.find(m => m.organization?.organization_type === 'internal');
+    const primaryMembership = internalOrg || memberships[0];
+
+    if (primaryMembership?.organization?.organization_type === 'internal') {
+      return primaryMembership.role === 'admin' ? 'admin' : 'employee';
+    } else if (primaryMembership?.organization?.organization_type === 'partner') {
+      return 'partner';
+    } else {
+      return 'subcontractor';
+    }
+  };
+
+  const enhanceProfileWithLegacyData = (profile: any, memberships: OrganizationMember[]): Profile => {
+    if (!profile) return profile;
+
+    const user_type = mapOrganizationToLegacyUserType(memberships);
+    const primaryMembership = memberships.find(m => m.organization?.organization_type === 'internal') || memberships[0];
+    
+    return {
+      ...profile,
+      user_type,
+      company_name: primaryMembership?.organization?.name || undefined
+    };
   };
 
   const fetchUserOrganization = async (userId: string): Promise<UserOrganization | null> => {
@@ -182,14 +273,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fetchProfile(session.user.id).then(async (profileData) => {
             if (!mounted) return;
             
-            setProfile(profileData);
-            
-            // Fetch organization data if user has a profile
+            // Fetch organization memberships and enhance profile with legacy data
+            let enhancedProfile = profileData;
             if (profileData) {
               setOrganizationLoading(true);
               
+              const memberships = await fetchOrganizationMemberships(profileData.id);
+              setOrganizationMemberships(memberships);
+              
+              // Enhance profile with legacy user_type and company_name for backward compatibility
+              enhancedProfile = enhanceProfileWithLegacyData(profileData, memberships);
+              setProfile(enhancedProfile);
+              
               // Auto-fix subcontractor organizations if needed
-              if (profileData.user_type === 'subcontractor') {
+              if (enhancedProfile.user_type === 'subcontractor') {
                 await checkAndFixSubcontractorOrganization(profileData.id);
               }
               
@@ -198,19 +295,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setUserOrganization(organizationData);
                 setOrganizationLoading(false);
               }
+            } else {
+              setProfile(profileData);
             }
             
             // Prevent redirects during password reset flow using the new method
             const preventRedirect = shouldPreventRedirect();
             const shouldRedirect = event === 'SIGNED_IN' && 
-                                  profileData?.user_type && 
+                                  enhancedProfile?.user_type && 
                                   !preventRedirect &&
                                   (window.location.pathname === '/' || window.location.pathname === '/auth');
             
             console.log('Auth state change:', {
               event,
               pathname: window.location.pathname,
-              userType: profileData?.user_type,
+              userType: enhancedProfile?.user_type,
               preventRedirect,
               shouldRedirect
             });
@@ -222,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 'partner': '/partner/dashboard',
                 'subcontractor': '/subcontractor/dashboard'
               };
-              const redirectPath = redirectPaths[profileData.user_type];
+              const redirectPath = redirectPaths[enhancedProfile.user_type!];
               if (redirectPath) {
                 setTimeout(() => navigate(redirectPath, { replace: true }), 0);
               }
@@ -250,14 +349,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         fetchProfile(session.user.id).then(async (profileData) => {
           if (!mounted) return;
-          setProfile(profileData);
           
-          // Fetch organization data if user has a profile
+          // Fetch organization memberships and enhance profile with legacy data
           if (profileData) {
             setOrganizationLoading(true);
             
+            const memberships = await fetchOrganizationMemberships(profileData.id);
+            setOrganizationMemberships(memberships);
+            
+            // Enhance profile with legacy user_type and company_name for backward compatibility
+            const enhancedProfile = enhanceProfileWithLegacyData(profileData, memberships);
+            setProfile(enhancedProfile);
+            
             // Auto-fix subcontractor organizations if needed
-            if (profileData.user_type === 'subcontractor') {
+            if (enhancedProfile.user_type === 'subcontractor') {
               await checkAndFixSubcontractorOrganization(profileData.id);
             }
             
@@ -266,6 +371,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUserOrganization(organizationData);
               setOrganizationLoading(false);
             }
+          } else {
+            setProfile(profileData);
           }
           
           setLoading(false);
@@ -293,7 +400,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [impersonatedProfile]);
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string, userType: 'admin' | 'partner' | 'subcontractor' | 'employee' = 'subcontractor', phone?: string, companyName?: string) => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, organizationId?: string, phone?: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('sign-up-user', {
         body: {
@@ -301,9 +408,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           password,
           first_name: firstName,
           last_name: lastName,
-          user_type: userType,
-          phone,
-          company_name: companyName
+          organization_id: organizationId,
+          phone
         }
       });
 
