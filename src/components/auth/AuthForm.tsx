@@ -28,22 +28,19 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
 
     try {
       if (view === 'sign_in') {
-        const { error } = await signIn(email, password);
-        if (error) {
-          setError(error.message);
-          setLoading(false); // Only set loading false on error
-        }
+        await signIn(email, password);
         // Don't set loading false on success - let navigation handle it
       } else {
-        const { error } = await signUp(email, password, firstName, lastName);
-        if (error) {
-          setError(error.message);
-          setLoading(false); // Only set loading false on error
-        }
+        await signUp({
+          email,
+          password,
+          firstName,
+          lastName
+        });
         // Don't set loading false on success - let navigation handle it
       }
-    } catch (err) {
-      setError('An unexpected error occurred');
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
       setLoading(false); // Set loading false on exception
     }
   };

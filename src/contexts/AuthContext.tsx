@@ -495,7 +495,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Legacy properties for backward compatibility
   const viewingProfile = impersonatedProfile || profile;
   
-  // Add legacy user_type to viewing profile for components that haven't been updated yet
+  // Add legacy user_type to ALL profiles for backward compatibility
+  const profileWithLegacy = profile ? {
+    ...profile,
+    // @ts-ignore - Adding for backward compatibility
+    user_type: mapOrganizationToLegacyUserType(
+      organizationMember?.organization?.organization_type || null,
+      organizationMember?.role || null
+    )
+  } : null;
+  
   const viewingProfileWithLegacy = viewingProfile ? {
     ...viewingProfile,
     // @ts-ignore - Adding for backward compatibility
@@ -509,7 +518,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     // @ts-ignore - Maintaining backward compatibility
     session,
-    profile: profile,
+    profile: profileWithLegacy,
     organizationMember,
     permissions,
     loading: loading || initializing,
@@ -523,7 +532,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     impersonateUser,
     stopImpersonating,
     isImpersonating: !!impersonatedProfile,
-    realProfile: profile,
+    realProfile: profileWithLegacy,
     realUserId: user?.id || null,
     viewingProfile: viewingProfileWithLegacy,
     // Legacy properties for backward compatibility
