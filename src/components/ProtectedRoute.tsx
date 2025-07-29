@@ -2,6 +2,8 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { useMigrationContext } from '@/components/MigrationWrapper';
+import { dualPermissionCheck, getEffectiveUserType } from '@/lib/migration/dualTypeAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,6 +12,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
   const { user, profile, realProfile, viewingProfile, loading, isImpersonating } = useAuth();
+  const { user: migrationUser, permissions } = useMigrationContext();
 
   console.log('ProtectedRoute - Real Profile:', realProfile);
   console.log('ProtectedRoute - Viewing Profile:', viewingProfile);
@@ -36,46 +39,42 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
     return <>{children}</>;
   }
 
-  // FIXED: When impersonating, use the REAL profile for permission checks
-  // This allows admins to maintain their elevated access while viewing as other users
-  const profileForPermissionCheck = isImpersonating ? realProfile : profile;
-
-  if (profileForPermissionCheck?.user_type !== requiredUserType) {
-    console.log('ProtectedRoute - User type mismatch. Profile type:', profileForPermissionCheck?.user_type, 'Required:', requiredUserType);
+  // Use migration bridge for permission checks
+  const hasRequiredPermission = () => {
+    if (!requiredUserType) return true;
     
-    // Check hierarchy for permission escalation
-    const userTypeHierarchy = {
-      'admin': 4,
-      'employee': 3,
-      'partner': 2,
-      'subcontractor': 1
-    };
-
-    const userLevel = userTypeHierarchy[profileForPermissionCheck?.user_type || 'subcontractor'];
-    const requiredLevel = userTypeHierarchy[requiredUserType];
-    
-    console.log('ProtectedRoute - User level:', userLevel, 'Required level:', requiredLevel);
-
-    if (userLevel < requiredLevel) {
-      console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
-      
-      // When impersonating, allow admins to stay on restricted pages
-      if (isImpersonating && realProfile?.user_type === 'admin') {
-        console.log('ProtectedRoute - Admin impersonating - allowing access');
-        return <>{children}</>;
-      }
-      
-      // Redirect based on the viewing profile (what they're impersonating as)
-      const redirectProfile = viewingProfile || profile;
-      const redirectPath = redirectProfile?.user_type === 'admin' ? '/admin/dashboard' :
-                           redirectProfile?.user_type === 'partner' ? '/partner/dashboard' :
-                           redirectProfile?.user_type === 'subcontractor' ? '/subcontractor/dashboard' :
-                           redirectProfile?.user_type === 'employee' ? '/admin/employee-dashboard' :
-                           '/auth';
-      return <Navigate to={redirectPath} replace />;
-    } else {
-      console.log('ProtectedRoute - Access granted via hierarchy');
+    // When impersonating, check real profile permissions but allow admin override
+    if (isImpersonating && realProfile?.user_type === 'admin') {
+      console.log('ProtectedRoute - Admin impersonating - allowing access');
+      return true;
     }
+    
+    switch (requiredUserType) {
+      case 'admin':
+        return permissions.isAdmin;
+      case 'employee':
+        return permissions.isEmployee || permissions.isAdmin;
+      case 'partner':
+        return permissions.isPartner || permissions.hasInternalAccess;
+      case 'subcontractor':
+        return permissions.isSubcontractor || permissions.hasInternalAccess;
+      default:
+        return false;
+    }
+  };
+
+  if (!hasRequiredPermission()) {
+    console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
+    
+    // Redirect based on effective user type
+    const effectiveUserType = migrationUser ? getEffectiveUserType(migrationUser) : 
+                              (viewingProfile || profile)?.user_type;
+    const redirectPath = effectiveUserType === 'admin' ? '/admin/dashboard' :
+                         effectiveUserType === 'partner' ? '/partner/dashboard' :
+                         effectiveUserType === 'subcontractor' ? '/subcontractor/dashboard' :
+                         effectiveUserType === 'employee' ? '/admin/employee-dashboard' :
+                         '/auth';
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;

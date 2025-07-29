@@ -11,6 +11,7 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { StorageDebugPanel } from "./components/StorageDebugPanel";
+import { MigrationWrapper } from "./components/MigrationWrapper";
 
 
 const queryClient = new QueryClient();
@@ -43,20 +44,22 @@ const App = () => {
       <TooltipProvider>
         <BrowserRouter>
           <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <OfflineIndicator />
-            <PWAUpdateNotification />
-            {/* <PWAInstallPrompt /> */}
-            <AppContent />
-            {process.env.NODE_ENV !== 'production' && (
-              <>
-                <StorageDebugPanel 
-                  isOpen={showDebugPanel} 
-                  onClose={() => setShowDebugPanel(false)} 
-                />
-              </>
-            )}
+            <MigrationWrapper>
+              <Toaster />
+              <Sonner />
+              <OfflineIndicator />
+              <PWAUpdateNotification />
+              {/* <PWAInstallPrompt /> */}
+              <AppContent />
+              {process.env.NODE_ENV !== 'production' && (
+                <>
+                  <StorageDebugPanel 
+                    isOpen={showDebugPanel} 
+                    onClose={() => setShowDebugPanel(false)} 
+                  />
+                </>
+              )}
+            </MigrationWrapper>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

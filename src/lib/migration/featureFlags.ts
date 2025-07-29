@@ -20,7 +20,7 @@ export const MIGRATION_FLAGS: MigrationFlags = {
   useOrganizationAuth: true,
   
   // Phase 3: Permission system migration  
-  useOrganizationPermissions: false,
+  useOrganizationPermissions: true,
   
   // Phase 4: Navigation migration
   useOrganizationNavigation: false,
