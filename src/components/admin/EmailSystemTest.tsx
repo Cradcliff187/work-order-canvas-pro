@@ -33,7 +33,12 @@ export function EmailSystemTest() {
       // Get test organization and trade
       const { data: org } = await supabase.from('organizations').select('id').eq('organization_type', 'partner').limit(1).single();
       const { data: trade } = await supabase.from('trades').select('id').limit(1).single();
-      const { data: admin } = await supabase.from('profiles').select('id').eq('user_type', 'admin').limit(1).single();
+      const { data: profileId } = await supabase.rpc('auth_profile_id');
+      const { data: admin } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', profileId)
+        .single();
 
       if (org && trade && admin) {
         // Create work order (triggers work_order_created email)

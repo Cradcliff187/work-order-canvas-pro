@@ -43,7 +43,7 @@ export const ExecutiveSummary = () => {
 
   const handleActiveUsersClick = () => {
     const params = new URLSearchParams();
-    params.set('user_type', 'subcontractor');
+    params.set('organization_type', 'subcontractor');
     params.set('is_active', 'true');
     navigate(`/admin/users?${params.toString()}`);
   };

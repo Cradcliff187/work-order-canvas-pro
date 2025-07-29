@@ -48,8 +48,16 @@ interface ImpersonationUser {
   email: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
+  is_employee: boolean;
   organization_name: string;
+  organization_members?: Array<{
+    organization_id: string;
+    role: string;
+    organizations: {
+      name: string;
+      organization_type: string;
+    };
+  }>;
 }
 
 const DevTools = () => {
@@ -109,11 +117,18 @@ const DevTools = () => {
         email,
         first_name,
         last_name,
-        user_type,
-        company_name
+        is_employee,
+        organization_members (
+          organization_id,
+          role,
+          organizations (
+            name,
+            organization_type
+          )
+        )
       `)
       .eq('is_active', true)
-      .order('user_type')
+      .order('is_employee')
       .order('first_name');
 
     if (error) {
@@ -157,7 +172,7 @@ const DevTools = () => {
     
     toast({
       title: "Impersonation Started",
-      description: `Now viewing as ${user.first_name} ${user.last_name} (${user.user_type})`,
+      description: `Now viewing as ${user.first_name} ${user.last_name} (${user.is_employee ? 'Employee' : 'External User'})`,
     });
   };
 
@@ -247,19 +262,31 @@ const DevTools = () => {
       ),
     },
     {
-      accessorKey: 'user_type',
+      accessorKey: 'is_employee',
       header: 'Type',
       cell: ({ row }) => {
-        const type = row.original.user_type;
-        const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-          admin: "destructive",
-          employee: "outline",
-          partner: "default",
-          subcontractor: "secondary"
+        const user = row.original;
+        const isEmployee = user.is_employee;
+        const orgType = (user as any).organization_members?.[0]?.organizations?.organization_type;
+        
+        const getVariant = () => {
+          if (isEmployee) return "outline";
+          switch (orgType) {
+            case "internal": return "destructive";
+            case "partner": return "default";
+            case "subcontractor": return "secondary";
+            default: return "outline";
+          }
         };
+        
+        const getLabel = () => {
+          if (isEmployee) return "Employee";
+          return orgType ? orgType.charAt(0).toUpperCase() + orgType.slice(1) : "Unassigned";
+        };
+        
         return (
-          <Badge variant={variants[type] || "outline"}>
-            {type.charAt(0).toUpperCase() + type.slice(1)}
+          <Badge variant={getVariant()}>
+            {getLabel()}
           </Badge>
         );
       },

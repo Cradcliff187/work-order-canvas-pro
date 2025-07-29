@@ -146,13 +146,15 @@ export default function AdminReports() {
             <div className="font-medium">
               {subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}
             </div>
-            {submittedBy && submittedBy.user_type !== 'subcontractor' && (
+            {submittedBy && (submittedBy as any)?.organization_memberships?.some((om: any) => om.organization.organization_type === 'internal') && (
               <div className="text-xs text-orange-600 font-medium">
-                Submitted by {submittedBy.user_type}: {submittedBy.first_name} {submittedBy.last_name}
+                Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
               </div>
             )}
-            {subcontractor?.company_name && (
-              <div className="text-sm text-muted-foreground">{subcontractor.company_name}</div>
+            {(subcontractor as any)?.organization_memberships?.[0]?.organization?.name && (
+              <div className="text-sm text-muted-foreground">
+                {(subcontractor as any).organization_memberships[0].organization.name}
+              </div>
             )}
           </div>
         );

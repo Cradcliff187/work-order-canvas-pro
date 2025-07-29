@@ -25,14 +25,19 @@ interface UserIssue {
   email: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   is_active: boolean;
+  is_employee: boolean;
   organization_count: number;
-  organizations: Array<{ id: string; name: string }>;
+  organizations: Array<{ id: string; name: string; organization_type: string }>;
   work_order_assignments?: Array<{ 
     work_order_id: string; 
     assigned_organization_id: string; 
     organization_name: string; 
+  }>;
+  organization_memberships?: Array<{
+    organization_id: string;
+    role: string;
+    organization: { name: string; organization_type: string };
   }>;
 }
 
@@ -75,7 +80,7 @@ export const OrganizationHealthTab = () => {
   const fetchDiagnostics = async () => {
     setIsLoading(true);
     try {
-      // Query users with organization count != 1 (excluding admins)
+      // Query all non-internal users
       const { data: usersQuery, error: usersError } = await supabase
         .from('profiles')
         .select(`
@@ -83,17 +88,17 @@ export const OrganizationHealthTab = () => {
           email,
           first_name,
           last_name,
-          user_type,
           is_active,
+          is_employee,
           user_organizations!inner (
             organization_id,
             organizations (
               id,
-              name
+              name,
+              organization_type
             )
           )
-        `)
-        .neq('user_type', 'admin');
+        `);
 
       if (usersError) throw usersError;
 
@@ -111,11 +116,20 @@ export const OrganizationHealthTab = () => {
 
       if (countsError) throw countsError;
 
-      // Get all non-admin users
+      // Get all users (filter out internal organization members during processing)
       const { data: allUsers, error: allUsersError } = await supabase
         .from('profiles')
-        .select('*')
-        .neq('user_type', 'admin');
+        .select(`
+          *,
+          organization_members (
+            organization_id,
+            role,
+            organizations (
+              name,
+              organization_type
+            )
+          )
+        `);
 
       if (allUsersError) throw allUsersError;
 
@@ -126,6 +140,12 @@ export const OrganizationHealthTab = () => {
       let subcontractorIssueCount = 0;
 
       for (const user of allUsers) {
+        // Skip internal organization members (admins/employees)
+        const hasInternalOrg = user.organization_members?.some(
+          (om: any) => om.organizations?.organization_type === 'internal'
+        );
+        if (hasInternalOrg) continue;
+
         const orgCount = orgCounts[user.id] || 0;
         
         if (orgCount !== 1) {
@@ -136,20 +156,22 @@ export const OrganizationHealthTab = () => {
               organization_id,
               organizations (
                 id,
-                name
+                name,
+                organization_type
               )
             `)
             .eq('user_id', user.id);
 
           const organizations = userOrgs?.map(uo => ({
             id: uo.organizations.id,
-            name: uo.organizations.name
+            name: uo.organizations.name,
+            organization_type: uo.organizations.organization_type
           })) || [];
 
           let workOrderAssignments = [];
           
-          // For subcontractors, fetch their work order assignments
-          if (user.is_employee === false) { // Temporary check during migration
+          // For non-employees, fetch their work order assignments
+          if (!user.is_employee) {
             const { data: assignments } = await supabase
               .from('work_order_assignments')
               .select(`
@@ -173,10 +195,14 @@ export const OrganizationHealthTab = () => {
 
           usersWithIssues.push({
             ...user,
-            user_type: 'partner' as any, // Temporary for migration
             organization_count: orgCount,
             organizations,
-            work_order_assignments: workOrderAssignments
+            work_order_assignments: workOrderAssignments,
+            organization_memberships: user.organization_members?.map((om: any) => ({
+              organization_id: om.organization_id,
+              role: om.role,
+              organization: { name: om.organizations.name, organization_type: om.organizations.organization_type }
+            }))
           });
 
           if (orgCount === 0) noOrgCount++;
@@ -289,7 +315,7 @@ export const OrganizationHealthTab = () => {
       ...usersWithIssues.map(user => [
         user.email,
         `${user.first_name} ${user.last_name}`,
-        user.user_type,
+        user.is_employee ? 'Employee' : 'External User',
         user.organization_count.toString(),
         user.organizations.map(org => org.name).join('; '),
         user.work_order_assignments?.map(a => a.organization_name).join('; ') || ''
@@ -391,7 +417,9 @@ export const OrganizationHealthTab = () => {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">User Type:</span>
-                <Badge>{currentUserInfo.profile?.user_type}</Badge>
+                <Badge>
+                  {currentUserInfo.profile?.is_employee ? 'Employee' : 'External User'}
+                </Badge>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Full Name:</span>
@@ -537,7 +565,11 @@ export const OrganizationHealthTab = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {user.user_type.charAt(0).toUpperCase() + user.user_type.slice(1)}
+                          {user.is_employee ? 'Employee' : 
+                           user.organizations.length > 0 ? 
+                           user.organizations[0].organization_type.charAt(0).toUpperCase() + 
+                           user.organizations[0].organization_type.slice(1) : 'Unassigned'
+                          }
                         </Badge>
                       </TableCell>
                       <TableCell>

@@ -34,7 +34,7 @@ const SubcontractorProfile = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Exclude company_name from updates - only admins can change organization
+      // Organization changes handled by admin - only update profile data
       const { error } = await updateProfile(formData);
       
       if (error) {
@@ -149,8 +149,8 @@ const SubcontractorProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company_name" className="flex items-center gap-2">
-                    Company/Business Name
+                  <Label htmlFor="organization" className="flex items-center gap-2">
+                    Organization
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   </Label>
                   <Input

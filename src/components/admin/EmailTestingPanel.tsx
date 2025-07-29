@@ -193,10 +193,11 @@ export function EmailTestingPanel() {
       .select('id, name')
       .limit(1);
 
+    const { data: profileId } = await supabase.rpc('auth_profile_id');
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_type', 'admin')
+      .eq('id', profileId)
       .limit(1);
 
     const orgId = organizations?.[0]?.id;
