@@ -31,7 +31,7 @@ export const useActiveIssues = () => {
       const issues = [];
 
       try {
-        // Get users without organizations (excluding admins)
+        // Get users without organizations (excluding internal organization members)
         const { data: usersWithoutOrgs, error: noOrgsError } = await supabase
           .from('profiles')
           .select(`
@@ -39,10 +39,8 @@ export const useActiveIssues = () => {
             email,
             first_name,
             last_name,
-            user_type,
             user_organizations!left(organization_id)
           `)
-          .neq('user_type', 'admin')
           .is('user_organizations.organization_id', null);
 
         if (noOrgsError) throw noOrgsError;

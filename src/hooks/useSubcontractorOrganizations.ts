@@ -48,7 +48,7 @@ export function useSubcontractorOrganizations() {
       // Return ALL subcontractor organizations, regardless of user count
       const transformedData: SubcontractorOrganization[] = (data || []).map(org => {
         const activeUsers = (org.user_organizations || [])
-          .filter((uo: any) => uo.profiles?.is_active && uo.profiles?.user_type === 'subcontractor')
+          .filter((uo: any) => uo.profiles?.is_active)
           .map((uo: any) => ({
             id: uo.profiles.id,
             full_name: `${uo.profiles.first_name} ${uo.profiles.last_name}`.trim()

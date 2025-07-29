@@ -39,8 +39,7 @@ export function useAdminReports(
           ),
           submitted_by:profiles!submitted_by_user_id(
             first_name,
-            last_name,
-            user_type
+            last_name
           )
         `, { count: 'exact' });
 

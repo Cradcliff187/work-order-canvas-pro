@@ -7,8 +7,18 @@ export function useSubcontractors() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, company_name')
-        .eq('user_type', 'subcontractor')
+        .select(`
+          id, 
+          first_name, 
+          last_name,
+          organization_memberships!inner(
+            organization:organizations!inner(
+              name,
+              organization_type
+            )
+          )
+        `)
+        .eq('organization_memberships.organizations.organization_type', 'subcontractor')
         .eq('is_active', true)
         .order('first_name');
       

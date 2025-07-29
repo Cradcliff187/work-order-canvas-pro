@@ -85,11 +85,18 @@ export const useAnalytics = (dateRange: DateRange) => {
         .gte('date_submitted', prevStartDate)
         .lte('date_submitted', prevEndDate);
 
-      // Get active subcontractors
+      // Get active subcontractors via organization membership
       const { data: activeSubcontractors } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('user_type', 'subcontractor')
+        .select(`
+          id,
+          organization_memberships!inner(
+            organization:organizations!inner(
+              organization_type
+            )
+          )
+        `)
+        .eq('organization_memberships.organizations.organization_type', 'subcontractor')
         .eq('is_active', true);
 
       // Calculate metrics

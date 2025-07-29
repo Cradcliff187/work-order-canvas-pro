@@ -21,7 +21,6 @@ export interface Assignment {
     first_name: string;
     last_name: string;
     email: string;
-    user_type: any; // Temporary during migration
   };
   assigned_organization: {
     id: string;
@@ -77,7 +76,7 @@ export function useWorkOrderAssignments(workOrderId?: string) {
         .from('work_order_assignments')
         .select(`
           *,
-          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email, user_type),
+          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email),
           assigned_organization:organizations!assigned_organization_id(id, name, organization_type),
           assigned_by_user:profiles!assigned_by(id, first_name, last_name)
         `)
@@ -125,7 +124,7 @@ export function useOrganizationAssignments(organizationId?: string) {
         .from('work_order_assignments')
         .select(`
           *,
-          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email, user_type),
+          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email),
           work_order:work_orders!work_order_id(id, work_order_number, title, status),
           assigned_by_user:profiles!assigned_by(id, first_name, last_name)
         `)
@@ -171,7 +170,7 @@ export function useWorkOrderAssignmentMutations() {
         })
         .select(`
           *,
-          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email, user_type),
+          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email),
           assigned_organization:organizations!assigned_organization_id(id, name, organization_type),
           assigned_by_user:profiles!assigned_by(id, first_name, last_name)
         `)
@@ -245,7 +244,7 @@ export function useWorkOrderAssignmentMutations() {
         .eq('assigned_to', userId)
         .select(`
           *,
-          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email, user_type),
+          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email),
           assigned_organization:organizations!assigned_organization_id(id, name, organization_type),
           assigned_by_user:profiles!assigned_by(id, first_name, last_name)
         `)
@@ -301,7 +300,7 @@ export function useWorkOrderAssignmentMutations() {
         .insert(assignmentsWithAssigner)
         .select(`
           *,
-          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email, user_type),
+          assignee:profiles!work_order_assignments_assigned_to_fkey(id, first_name, last_name, email),
           assigned_organization:organizations!assigned_organization_id(id, name, organization_type),
           assigned_by_user:profiles!assigned_by(id, first_name, last_name)
         `);

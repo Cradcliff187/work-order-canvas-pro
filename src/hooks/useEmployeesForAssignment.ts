@@ -18,11 +18,20 @@ export function useEmployeesForAssignment() {
   return useQuery({
     queryKey: ['employees-for-assignment'],
     queryFn: async (): Promise<AssigneeData[]> => {
-      // Get active employees
+      // Get active employees from internal organizations
       const { data: employees, error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('user_type', 'employee')
+        .select(`
+          *,
+          organization_memberships!inner(
+            organization:organizations!inner(
+              name,
+              organization_type
+            )
+          )
+        `)
+        .eq('organization_memberships.organizations.organization_type', 'internal')
+        .eq('is_employee', true)
         .eq('is_active', true)
         .order('first_name');
 
@@ -47,17 +56,20 @@ export function useEmployeesForAssignment() {
         return acc;
       }, {} as Record<string, number>);
 
-      return employees.map(emp => ({
-        id: emp.id,
-        first_name: emp.first_name,
-        last_name: emp.last_name,
-        type: 'employee' as const,
-        organization: 'Internal',
-        organization_id: undefined,
-        workload: workloadMap[emp.id] || 0,
-        is_active: emp.is_active,
-        email: emp.email
-      }));
+      return employees.map(emp => {
+        const primaryOrg = (emp as any).organization_memberships?.[0]?.organization;
+        return {
+          id: emp.id,
+          first_name: emp.first_name,
+          last_name: emp.last_name,
+          type: 'employee' as const,
+          organization: primaryOrg?.name || 'Internal',
+          organization_id: primaryOrg?.id,
+          workload: workloadMap[emp.id] || 0,
+          is_active: emp.is_active,
+          email: emp.email
+        };
+      });
     },
   });
 }

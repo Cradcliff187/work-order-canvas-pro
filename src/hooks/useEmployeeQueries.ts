@@ -8,8 +8,16 @@ export function useEmployees() {
     queryFn: async (): Promise<EmployeesData> => {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('user_type', 'employee')
+        .select(`
+          *,
+          organization_memberships!inner(
+            organization:organizations!inner(
+              organization_type
+            )
+          )
+        `)
+        .eq('organization_memberships.organizations.organization_type', 'internal')
+        .eq('is_employee', true)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -25,10 +33,8 @@ export function useEmployees() {
         hourly_cost_rate: profile.hourly_cost_rate,
         hourly_billable_rate: profile.hourly_billable_rate,
         phone: profile.phone,
-        // company_name removed during migration
         created_at: profile.created_at,
         updated_at: profile.updated_at,
-        user_type: 'employee' as const,
         is_employee: profile.is_employee,
       })) || [];
 
@@ -54,9 +60,17 @@ export function useEmployee(employeeId: string) {
     queryFn: async () => {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organization_memberships!inner(
+            organization:organizations!inner(
+              organization_type
+            )
+          )
+        `)
         .eq('id', employeeId)
-        .eq('user_type', 'employee')
+        .eq('organization_memberships.organizations.organization_type', 'internal')
+        .eq('is_employee', true)
         .single();
 
       if (error) {
