@@ -4,12 +4,18 @@
  */
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganizationBridge } from './useOrganizationBridge';
 import type { DualCompatUser, LegacyUserType } from '@/lib/migration/dualTypeAuth';
 import { getEffectiveUserType, dualPermissionCheck } from '@/lib/migration/dualTypeAuth';
 import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 export const useMigrationAuth = () => {
   const { profile, userOrganization, loading } = useAuth();
+  const { 
+    organizationMemberships, 
+    primaryOrganization, 
+    isLoading: orgLoading 
+  } = useOrganizationBridge(profile?.id);
 
   // Create dual-compatible user object
   const dualUser: DualCompatUser | null = profile ? {
@@ -18,8 +24,8 @@ export const useMigrationAuth = () => {
     first_name: profile.first_name,
     last_name: profile.last_name,
     user_type: profile.user_type as LegacyUserType,
-    organization_memberships: [], // TODO: Populate when organization members are implemented
-    primary_organization: undefined, // TODO: Map from userOrganization when available
+    organization_memberships: organizationMemberships,
+    primary_organization: primaryOrganization,
   } : null;
 
   const effectiveUserType = dualUser ? getEffectiveUserType(dualUser) : null;
@@ -27,7 +33,7 @@ export const useMigrationAuth = () => {
   return {
     // Core auth state
     user: dualUser,
-    loading,
+    loading: loading || orgLoading,
     effectiveUserType,
     
     // Dual-compatible permission checks
