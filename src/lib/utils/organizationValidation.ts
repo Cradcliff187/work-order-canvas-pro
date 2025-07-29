@@ -1,11 +1,12 @@
 import { supabase } from '@/integrations/supabase/client';
-import { getUserTypeOrganizationTypes } from './userOrgMapping';
-import type { UserOrganization } from '@/hooks/useUserOrganization';
+import type { Database } from '@/integrations/supabase/types';
+import type { OrganizationType, OrganizationRole } from '@/types/auth.types';
 
-type UserType = 'admin' | 'partner' | 'subcontractor' | 'employee';
-type OrganizationType = 'partner' | 'subcontractor' | 'internal';
+type Organization = Database['public']['Tables']['organizations']['Row'];
 
-// Custom error types for validation failures
+/**
+ * Custom error class for organization validation failures
+ */
 export class OrganizationValidationError extends Error {
   constructor(message: string, public code: string) {
     super(message);
@@ -13,7 +14,9 @@ export class OrganizationValidationError extends Error {
   }
 }
 
-// Validation result interface
+/**
+ * Result of organization validation checks
+ */
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
@@ -21,99 +24,71 @@ export interface ValidationResult {
 }
 
 /**
- * Validates if a user type can belong to an organization type
+ * Gets all valid organization types for a given role
  */
-export function validateUserOrganizationType(
-  userType: UserType, 
-  organizationType: OrganizationType
-): boolean {
-  const allowedTypes = getUserTypeOrganizationTypes(userType);
-  return allowedTypes.includes(organizationType);
-}
-
-/**
- * Returns the expected organization type for a user type
- */
-export function getUserExpectedOrganizationType(userType: UserType): OrganizationType | null {
-  switch (userType) {
-    case 'partner':
-      return 'partner';
-    case 'subcontractor':
-      return 'subcontractor';
-    case 'employee':
-      return 'internal';
+export function getOrganizationTypesForRole(role: OrganizationRole): OrganizationType[] {
+  switch (role) {
+    case 'owner':
     case 'admin':
-      return null; // Admins don't have a specific org type
+      return ['partner', 'subcontractor', 'internal']; // Can access all organization types
+    case 'manager':
+      return ['partner', 'subcontractor', 'internal']; // Managers can access all types
+    case 'employee':
+      return ['internal']; // Employees typically only in internal organizations
+    case 'member':
+      return ['partner', 'subcontractor']; // Members in partner/subcontractor orgs
     default:
-      return null;
+      return [];
   }
 }
 
 /**
- * Boolean check for type compatibility
+ * Validates if a role is allowed for a specific organization type
  */
-export function isValidUserTypeForOrganization(
-  userType: UserType, 
+export function validateRoleOrganizationType(
+  role: OrganizationRole,
   organizationType: OrganizationType
 ): boolean {
-  return validateUserOrganizationType(userType, organizationType);
+  const allowedOrgTypes = getOrganizationTypesForRole(role);
+  return allowedOrgTypes.includes(organizationType);
 }
 
 /**
- * Validates if a specific user can belong to a specific organization
+ * Validates an organization membership relationship
  */
-export function validateUserOrganization(
-  user: { user_type: UserType }, 
+export function validateOrganizationMembership(
+  role: OrganizationRole,
   organization: { organization_type: OrganizationType }
 ): ValidationResult {
-  if (!user || !organization) {
+  if (!validateRoleOrganizationType(role, organization.organization_type)) {
     return {
       isValid: false,
-      error: 'User or organization is missing',
-      code: 'MISSING_DATA'
-    };
-  }
-
-  const isValid = validateUserOrganizationType(user.user_type, organization.organization_type);
-  
-  if (!isValid) {
-    const expectedType = getUserExpectedOrganizationType(user.user_type);
-    return {
-      isValid: false,
-      error: `User type '${user.user_type}' cannot belong to organization type '${organization.organization_type}'. Expected: ${expectedType || 'any'}`,
-      code: 'TYPE_MISMATCH'
+      error: `Role '${role}' is not compatible with organization type '${organization.organization_type}'`,
+      code: 'INCOMPATIBLE_ROLE_TYPE'
     };
   }
 
   return { isValid: true };
 }
 
+interface UserOrganization {
+  id: string;
+  name: string;
+  organization_type: OrganizationType;
+  member_role?: OrganizationRole;
+  initials?: string;
+  contact_email: string;
+  contact_phone?: string;
+  address?: string;
+}
+
 /**
- * Async function to get user's single organization
+ * Fetches a user's organizations from Supabase through user_organizations (legacy table)
+ * TODO: Replace with organization_members table in later migration phases
  */
-export async function getUserSingleOrganization(userId: string): Promise<UserOrganization | null> {
+export async function getUserOrganizations(userId: string): Promise<UserOrganization[]> {
   try {
-    // First get the profile to check user type
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, user_type')
-      .eq('user_id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      throw new OrganizationValidationError(
-        `Failed to fetch user profile: ${profileError?.message}`,
-        'PROFILE_NOT_FOUND'
-      );
-    }
-
-    // Admins don't have a specific organization
-    if (profile.user_type === 'admin') {
-      return null;
-    }
-
-    // Get the user's organization
-    const { data, error } = await supabase
+    const { data: organizationData, error } = await supabase
       .from('user_organizations')
       .select(`
         organization:organizations (
@@ -123,52 +98,84 @@ export async function getUserSingleOrganization(userId: string): Promise<UserOrg
           initials,
           contact_email,
           contact_phone,
-          address,
-          uses_partner_location_numbers
+          address
         )
       `)
-      .eq('user_id', profile.id)
-      .limit(1)
-      .single();
+      .eq('user_id', userId);
 
     if (error) {
+      console.error('Failed to fetch user organizations:', error);
       throw new OrganizationValidationError(
-        `Failed to fetch user organization: ${error.message}`,
-        'ORGANIZATION_NOT_FOUND'
+        `Failed to fetch user organizations: ${error.message}`,
+        'FETCH_ERROR'
       );
     }
 
-    const organization = data?.organization as UserOrganization;
-    
-    // Validate that the user type matches organization type
-    if (organization) {
-      const validation = validateUserOrganization(
-        { user_type: profile.user_type }, 
-        { organization_type: organization.organization_type }
-      );
-      
-      if (!validation.isValid) {
-        throw new OrganizationValidationError(
-          validation.error || 'Invalid user-organization type combination',
-          validation.code || 'VALIDATION_FAILED'
-        );
-      }
+    if (!organizationData || organizationData.length === 0) {
+      console.log('No organizations found for user:', userId);
+      return [];
     }
 
-    return organization || null;
+    return organizationData
+      .filter(item => item.organization)
+      .map(item => ({
+        id: item.organization!.id,
+        name: item.organization!.name,
+        organization_type: item.organization!.organization_type,
+        member_role: 'member' as OrganizationRole, // Default role until migration complete
+        initials: item.organization!.initials || undefined,
+        contact_email: item.organization!.contact_email,
+        contact_phone: item.organization!.contact_phone || undefined,
+        address: item.organization!.address || undefined
+      }));
   } catch (error) {
     if (error instanceof OrganizationValidationError) {
       throw error;
     }
+    
+    console.error('Unexpected error in getUserOrganizations:', error);
     throw new OrganizationValidationError(
-      `Failed to get user organization: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      'FETCH_ERROR'
+      'Unexpected error fetching user organizations',
+      'UNKNOWN_ERROR'
     );
   }
 }
 
 /**
- * Validates current authenticated user's organization
+ * Fetches a user's single organization (for users who should only have one)
+ */
+export async function getUserSingleOrganization(userId: string): Promise<UserOrganization | null> {
+  try {
+    const organizations = await getUserOrganizations(userId);
+
+    if (organizations.length === 0) {
+      return null;
+    }
+
+    if (organizations.length > 1) {
+      console.warn('User has multiple organizations - cannot determine single organization:', userId);
+      throw new OrganizationValidationError(
+        'User has multiple organizations',
+        'MULTIPLE_ORGANIZATIONS'
+      );
+    }
+
+    return organizations[0];
+  } catch (error) {
+    if (error instanceof OrganizationValidationError) {
+      throw error;
+    }
+    
+    console.error('Unexpected error in getUserSingleOrganization:', error);
+    throw new OrganizationValidationError(
+      'Unexpected error fetching user organization',
+      'UNKNOWN_ERROR'
+    );
+  }
+}
+
+/**
+ * Validates the current user's organization status
  */
 export async function validateCurrentUserOrganization(): Promise<ValidationResult> {
   try {
@@ -177,46 +184,52 @@ export async function validateCurrentUserOrganization(): Promise<ValidationResul
     if (!user) {
       return {
         isValid: false,
-        error: 'No authenticated user',
-        code: 'NO_AUTH'
+        error: 'No authenticated user found',
+        code: 'NO_USER'
       };
     }
 
-    const organization = await getUserSingleOrganization(user.id);
-    
-    // For admins, having no organization is valid
-    const { data: profile } = await supabase
+    // Get the user's profile
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('user_type')
+      .select('id')
       .eq('user_id', user.id)
       .single();
 
-    if (profile?.user_type === 'admin') {
-      return { isValid: true };
-    }
-
-    // For non-admins, they should have an organization
-    if (!organization) {
+    if (profileError || !profile) {
       return {
         isValid: false,
-        error: 'User has no associated organization',
+        error: 'User profile not found',
+        code: 'NO_PROFILE'
+      };
+    }
+
+    // Check user's organization memberships
+    const organizations = await getUserOrganizations(profile.id);
+    
+    if (organizations.length === 0) {
+      return {
+        isValid: false,
+        error: 'User must be associated with at least one organization',
         code: 'NO_ORGANIZATION'
       };
     }
 
     return { isValid: true };
   } catch (error) {
+    if (error instanceof OrganizationValidationError) {
+      return {
+        isValid: false,
+        error: error.message,
+        code: error.code
+      };
+    }
+
+    console.error('Unexpected error in validateCurrentUserOrganization:', error);
     return {
       isValid: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      code: 'VALIDATION_ERROR'
+      error: 'Unexpected error during validation',
+      code: 'UNKNOWN_ERROR'
     };
   }
-}
-
-/**
- * Returns all valid organization types for a user type (reusing existing logic)
- */
-export function getOrganizationTypesForUserType(userType: UserType): OrganizationType[] {
-  return getUserTypeOrganizationTypes(userType);
 }

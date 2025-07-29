@@ -11,7 +11,6 @@ export interface Employee {
   organization_id?: string; // From organization relationship via view
   created_at: string;
   updated_at: string;
-  user_type: 'employee';
   is_employee: boolean;
 }
 
