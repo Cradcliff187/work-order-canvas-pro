@@ -60,8 +60,7 @@ export const useCompanyAccessVerification = () => {
               id,
               email,
               first_name,
-              last_name,
-              user_type
+              last_name
             )
           )
         `);
@@ -290,8 +289,7 @@ export const useCompanyAccessVerification = () => {
           assigned_to,
           work_order_id,
           assignee_profile:profiles!work_order_assignments_assigned_to_fkey (
-            id,
-            user_type
+            id
           )
         `);
 

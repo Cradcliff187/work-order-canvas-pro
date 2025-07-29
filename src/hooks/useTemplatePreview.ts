@@ -42,7 +42,6 @@ export const TEMPLATE_VARIABLES = {
     'admin_name': 'Mike Johnson',
     'user_email': 'john.smith@pipesmore.test',
     'user_phone': '(555) 123-4567',
-    'company_name': 'Pipes & More Plumbing',
   },
   organization: {
     // Organization Details (matches organizations table)

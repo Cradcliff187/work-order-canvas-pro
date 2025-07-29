@@ -70,7 +70,6 @@ export function useEmployeeMutations() {
           email: employeeData.email,
           first_name: employeeData.first_name,
           last_name: employeeData.last_name,
-          user_type: 'employee',
           is_employee: true,
           phone: employeeData.phone,
           hourly_cost_rate: employeeData.hourly_cost_rate,

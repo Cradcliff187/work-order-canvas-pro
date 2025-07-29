@@ -51,7 +51,6 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
       first_name: string;
       last_name: string;
       email: string;
-      user_type: string;
     } | null;
     assigned_organization: {
       name: string;
@@ -123,8 +122,7 @@ export function useWorkOrderDetail(id: string) {
             profiles!work_order_assignments_assigned_to_fkey(
               first_name,
               last_name,
-              email,
-              user_type
+              email
             ),
             assigned_organization:organizations!assigned_organization_id(
               name,

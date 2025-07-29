@@ -34,7 +34,6 @@ export function useSubcontractorOrganizations() {
               id,
               first_name,
               last_name,
-              user_type,
               is_active
             )
           )

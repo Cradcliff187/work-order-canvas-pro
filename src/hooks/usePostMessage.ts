@@ -97,8 +97,7 @@ export function usePostMessage() {
           sender:profiles!sender_id(
             first_name,
             last_name,
-            email,
-            user_type
+            email
           )
         `)
         .single();

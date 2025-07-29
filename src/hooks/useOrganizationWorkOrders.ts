@@ -50,40 +50,6 @@ export const useOrganizationWorkOrders = () => {
             return [];
           }
         }
-      } else {
-        // Legacy user_type based filtering
-        const userType = permissions.userType;
-        
-        if (userType === 'admin' || userType === 'employee') {
-          // Internal users see all work orders
-          query = query.order('created_at', { ascending: false });
-        } else if (userType === 'partner') {
-          // Partners see their organization's work orders
-          const { data: userOrg } = await supabase
-            .from('user_organizations')
-            .select('organization_id')
-            .eq('user_id', permissions.profile?.id);
-          
-          if (userOrg && userOrg.length > 0) {
-            const orgIds = userOrg.map(uo => uo.organization_id);
-            query = query.in('organization_id', orgIds);
-          } else {
-            return [];
-          }
-        } else if (userType === 'subcontractor') {
-          // Subcontractors see assigned work orders
-          const { data: userOrg } = await supabase
-            .from('user_organizations')
-            .select('organization_id')
-            .eq('user_id', permissions.profile?.id);
-          
-          if (userOrg && userOrg.length > 0) {
-            const orgIds = userOrg.map(uo => uo.organization_id);
-            query = query.in('assigned_organization_id', orgIds);
-          } else {
-            return [];
-          }
-        }
       }
 
       const { data, error } = await query;

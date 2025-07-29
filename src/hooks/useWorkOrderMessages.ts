@@ -22,7 +22,6 @@ export interface WorkOrderMessage {
     first_name: string;
     last_name: string;
     email: string;
-    user_type: string;
   } | null;
   sender_organization: {
     name: string;
@@ -68,8 +67,7 @@ export function useWorkOrderMessages(
           sender:profiles!sender_id(
             first_name,
             last_name,
-            email,
-            user_type
+            email
           )
         `, { count: 'exact' })
         .eq('work_order_id', workOrderId)

@@ -47,40 +47,6 @@ export const useOrganizationNavigation = () => {
           { label: 'Invoices', path: '/subcontractor/invoices', visible: true },
         ];
       }
-    } else {
-      // Legacy user_type based navigation
-      const userType = permissions.userType;
-      
-      if (userType === 'admin') {
-        return [
-          { label: 'Dashboard', path: '/admin/dashboard', visible: true },
-          { label: 'Work Orders', path: '/admin/work-orders', visible: true },
-          { label: 'Users', path: '/admin/users', visible: true },
-          { label: 'Organizations', path: '/admin/organizations', visible: true },
-          { label: 'Analytics', path: '/admin/analytics', visible: true },
-          { label: 'System Health', path: '/admin/system-health', visible: true },
-        ];
-      } else if (userType === 'employee') {
-        return [
-          { label: 'Dashboard', path: '/admin/employee-dashboard', visible: true },
-          { label: 'Work Orders', path: '/admin/work-orders', visible: true },
-          { label: 'Reports', path: '/admin/reports', visible: true },
-        ];
-      } else if (userType === 'partner') {
-        return [
-          { label: 'Dashboard', path: '/partner/dashboard', visible: true },
-          { label: 'Submit Work Order', path: '/partner/submit', visible: true },
-          { label: 'Work Orders', path: '/partner/work-orders', visible: true },
-          { label: 'Reports', path: '/partner/reports', visible: true },
-        ];
-      } else if (userType === 'subcontractor') {
-        return [
-          { label: 'Dashboard', path: '/subcontractor/dashboard', visible: true },
-          { label: 'Work Orders', path: '/subcontractor/work-orders', visible: true },
-          { label: 'Submit Report', path: '/subcontractor/submit-report', visible: true },
-          { label: 'Invoices', path: '/subcontractor/invoices', visible: true },
-        ];
-      }
     }
 
     return [];

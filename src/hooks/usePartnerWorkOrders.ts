@@ -53,7 +53,7 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
         }
         organizationIds = userOrganizations;
       } else {
-        // Legacy user_type based access
+        // Fallback access using legacy user organization lookup
         if (!profile?.id) throw new Error('No user profile');
 
         const { data: userOrgs, error: userOrgsError } = await supabase
@@ -148,7 +148,7 @@ export function usePartnerWorkOrderStats() {
         }
         organizationIds = userOrganizations;
       } else {
-        // Legacy user_type based access
+        // Fallback access using legacy user organization lookup
         if (!profile?.id) throw new Error('No user profile');
 
         const { data: userOrgs, error: userOrgsError } = await supabase
