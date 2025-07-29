@@ -7,11 +7,9 @@ export interface Employee {
   hourly_cost_rate?: number;
   hourly_billable_rate?: number;
   phone?: string;
-  company_name?: string; // From organization relationship via view
-  organization_id?: string; // From organization relationship via view
+  organization_id?: string; // From organization relationship
   created_at: string;
   updated_at: string;
-  user_type: 'employee';
   is_employee: boolean;
 }
 
@@ -25,7 +23,7 @@ export interface CreateEmployeeData {
   first_name: string;
   last_name: string;
   phone?: string;
-  organization_id?: string; // Reference to organization instead of company_name
+  organization_id?: string; // Reference to organization
   hourly_cost_rate?: number;
   hourly_billable_rate?: number;
 }

@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, CheckCircle } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { supabase } from '@/integrations/supabase/client';
-import { filterOrganizationsByUserType } from '@/lib/utils/userOrgMapping';
+// Organization filtering will be handled by RLS policies
 
 // Remove password from schema - system will handle it
 const createUserSchema = z.object({
@@ -162,9 +162,8 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
   };
 
   const watchedUserType = form.watch('user_type');
-  const filteredOrganizations = watchedUserType && organizations 
-    ? filterOrganizationsByUserType(organizations, watchedUserType)
-    : [];
+  // All organizations are available - RLS policies handle access control
+  const filteredOrganizations = organizations || [];
 
   // Show organization field for non-admin users
   const showOrganizationField = watchedUserType !== 'admin';

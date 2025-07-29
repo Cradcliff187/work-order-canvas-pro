@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { getUserSingleOrganization } from '@/lib/utils/organizationValidation';
+import { getUserPrimaryOrganization } from '@/lib/utils/organizationValidation';
 import { hasJWTMetadata, syncUserMetadataToJWT, onProfileUpdate, onOrganizationChange } from '@/lib/auth/jwtSync';
 import type { UserOrganization } from '@/hooks/useUserOrganization';
 
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserOrganization = async (userId: string): Promise<UserOrganization | null> => {
     try {
-      const organization = await getUserSingleOrganization(userId);
+      const organization = await getUserPrimaryOrganization(userId);
       return organization;
     } catch (error) {
       console.error('Error fetching user organization:', error);
