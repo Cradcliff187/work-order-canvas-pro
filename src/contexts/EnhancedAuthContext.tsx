@@ -7,7 +7,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useAuth } from './AuthContext';
 import { useOrganizationAuth } from '@/hooks/useOrganizationAuth';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 import type { UserWithOrganizations, OrganizationMember, AuthState } from '@/types/auth.types';
 
 interface EnhancedAuthContextType extends AuthState {
@@ -41,29 +40,21 @@ export const useEnhancedAuth = () => {
 };
 
 export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isUsingOrganizationAuth = isFeatureEnabled('useOrganizationAuthentication');
-  
-  // Get data from both systems
+  // Use organization-based authentication as the default
   const legacyAuth = useAuth();
   const organizationAuth = useOrganizationAuth();
 
-  // Choose which system to use based on feature flag
-  const authState = isUsingOrganizationAuth ? {
+  // Use organization auth as primary, with legacy as fallback
+  const authState = {
     user: organizationAuth.user,
     isLoading: organizationAuth.isLoading,
     primaryOrganization: organizationAuth.primaryOrganization,
     hasInternalAccess: organizationAuth.hasInternalAccess,
     hasAdminAccess: organizationAuth.hasAdminAccess
-  } : {
-    user: null, // Legacy system doesn't provide UserWithOrganizations format
-    isLoading: legacyAuth.loading,
-    primaryOrganization: null,
-    hasInternalAccess: false, // Will be determined by organization system
-    hasAdminAccess: false // Will be determined by organization system
   };
 
   const value: EnhancedAuthContextType = {
-    // Core auth state (using selected system)
+    // Core auth state (organization-based)
     user: authState.user,
     isLoading: authState.isLoading,
     primaryOrganization: authState.primaryOrganization,
@@ -84,8 +75,8 @@ export const EnhancedAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setImpersonation: legacyAuth.setImpersonation,
     clearImpersonation: legacyAuth.clearImpersonation,
     
-    // Migration state
-    isUsingOrganizationAuth,
+    // Migration state (always true now)
+    isUsingOrganizationAuth: true,
     legacyProfile: legacyAuth.profile
   };
 

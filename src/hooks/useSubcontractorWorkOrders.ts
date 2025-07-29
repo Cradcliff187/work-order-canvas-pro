@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEnhancedPermissions } from "@/hooks/useEnhancedPermissions";
-import { isFeatureEnabled } from "@/lib/migration/featureFlags";
 
 export function useSubcontractorWorkOrders() {
   const { user, profile } = useAuth();
@@ -11,15 +10,12 @@ export function useSubcontractorWorkOrders() {
   const queryClient = useQueryClient();
 
   const permissions = useEnhancedPermissions();
-  const useOrgWorkOrders = isFeatureEnabled('useOrganizationWorkOrders');
 
   // Company-level access: RLS policies automatically filter to company work orders
   const assignedWorkOrders = useQuery({
-    queryKey: ["subcontractor-work-orders", user?.id, useOrgWorkOrders],
+    queryKey: ["subcontractor-work-orders", user?.id],
     queryFn: async () => {
-      if (useOrgWorkOrders && !permissions.user) {
-        return [];
-      } else if (!useOrgWorkOrders && !user) {
+      if (!permissions.user && !user) {
         return [];
       }
       
@@ -44,8 +40,8 @@ export function useSubcontractorWorkOrders() {
           )
         `);
 
-      // Apply organization-based filtering if feature is enabled
-      if (useOrgWorkOrders && permissions.user) {
+      // Apply organization-based filtering
+      if (permissions.user) {
         const userOrganizations = permissions.user.organization_memberships?.map(
           (membership: any) => membership.organization_id
         ) || [];
@@ -71,7 +67,7 @@ export function useSubcontractorWorkOrders() {
       
       return transformedData;
     },
-    enabled: useOrgWorkOrders ? !!permissions.user : !!user,
+    enabled: !!permissions.user || !!user,
   });
 
   // Company-wide dashboard stats: RLS policies provide company-level access

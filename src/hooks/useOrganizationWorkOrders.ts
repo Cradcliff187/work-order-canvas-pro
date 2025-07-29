@@ -1,14 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 export const useOrganizationWorkOrders = () => {
   const permissions = useEnhancedPermissions();
-  const useOrgWorkOrders = isFeatureEnabled('useOrganizationWorkOrders');
 
   return useQuery({
-    queryKey: ['organization-work-orders', permissions.user?.id, useOrgWorkOrders],
+    queryKey: ['organization-work-orders', permissions.user?.id],
     queryFn: async () => {
       if (!permissions.user) throw new Error('No user found');
 
@@ -20,35 +18,33 @@ export const useOrganizationWorkOrders = () => {
         creator:profiles!work_orders_created_by_fkey(*)
       `);
 
-      if (useOrgWorkOrders) {
-        // Organization-based filtering
-        if (permissions.hasInternalAccess) {
-          // Internal users see all work orders
-          query = query.order('created_at', { ascending: false });
-        } else if (permissions.isPartner) {
-          // Partners see only their organization's work orders
-          const userOrganizations = permissions.user.organization_memberships?.map(
-            (membership: any) => membership.organization_id
-          ) || [];
-          
-          if (userOrganizations.length > 0) {
-            query = query.in('organization_id', userOrganizations);
-          } else {
-            // No organizations, return empty
-            return [];
-          }
-        } else if (permissions.isSubcontractor) {
-          // Subcontractors see only assigned work orders
-          const userOrganizations = permissions.user.organization_memberships?.map(
-            (membership: any) => membership.organization_id
-          ) || [];
-          
-          if (userOrganizations.length > 0) {
-            query = query.in('assigned_organization_id', userOrganizations);
-          } else {
-            // No organizations, return empty
-            return [];
-          }
+      // Organization-based filtering
+      if (permissions.hasInternalAccess) {
+        // Internal users see all work orders
+        query = query.order('created_at', { ascending: false });
+      } else if (permissions.isPartner) {
+        // Partners see only their organization's work orders
+        const userOrganizations = permissions.user.organization_memberships?.map(
+          (membership: any) => membership.organization_id
+        ) || [];
+        
+        if (userOrganizations.length > 0) {
+          query = query.in('organization_id', userOrganizations);
+        } else {
+          // No organizations, return empty
+          return [];
+        }
+      } else if (permissions.isSubcontractor) {
+        // Subcontractors see only assigned work orders
+        const userOrganizations = permissions.user.organization_memberships?.map(
+          (membership: any) => membership.organization_id
+        ) || [];
+        
+        if (userOrganizations.length > 0) {
+          query = query.in('assigned_organization_id', userOrganizations);
+        } else {
+          // No organizations, return empty
+          return [];
         }
       }
 

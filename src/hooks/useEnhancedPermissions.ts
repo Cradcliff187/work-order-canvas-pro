@@ -3,41 +3,49 @@
  * Drop-in replacement for useUserProfile that supports the new permission system
  */
 
-import { useMigrationContext } from '@/components/MigrationWrapper';
-import { Permission } from '@/lib/permissions';
+import { useAuth } from '@/contexts/AuthContext';
+import { userTypeCheckers, createEnhancedUser, getUserType } from '@/lib/permissions/userUtils';
+import { Permission, hasPermission, permissionCheckers } from '@/lib/permissions';
 import type { PermissionContext } from '@/lib/permissions';
 
 /**
- * Enhanced permissions hook that provides unified access to both legacy and new permission systems
+ * Enhanced permissions hook that provides unified access to organization-based permissions
  */
 export function useEnhancedPermissions() {
-  const { enhancedPermissions, permissions, migrationFlags, legacyProfile } = useMigrationContext();
+  const { profile, loading, isImpersonating, userOrganizations } = useAuth();
+  
+  // Create enhanced user for permission checking
+  const enhancedUser = profile ? createEnhancedUser(profile, userOrganizations) : null;
 
   return {
     // User information
-    profile: legacyProfile,
-    user: enhancedPermissions.user,
-    userType: enhancedPermissions.getUserType(),
+    profile,
+    user: enhancedUser,
+    userType: enhancedUser ? getUserType(enhancedUser) : 'subcontractor',
     
-    // Basic type checks (works with both systems)
-    isAdmin: enhancedPermissions.isAdmin,
-    isEmployee: enhancedPermissions.isEmployee,
-    isPartner: enhancedPermissions.isPartner,
-    isSubcontractor: enhancedPermissions.isSubcontractor,
-    hasInternalAccess: enhancedPermissions.hasInternalAccess,
+    // Basic type checks
+    isAdmin: enhancedUser ? userTypeCheckers.isAdmin(enhancedUser) : false,
+    isEmployee: enhancedUser ? userTypeCheckers.isEmployee(enhancedUser) : false,
+    isPartner: enhancedUser ? userTypeCheckers.isPartner(enhancedUser) : false,
+    isSubcontractor: enhancedUser ? userTypeCheckers.isSubcontractor(enhancedUser) : false,
+    hasInternalAccess: enhancedUser ? userTypeCheckers.hasInternalAccess(enhancedUser) : false,
     
     // Permission checking functions
-    canManageUsers: enhancedPermissions.canManageUsers,
-    canManageWorkOrders: enhancedPermissions.canManageWorkOrders,
-    canViewFinancialData: enhancedPermissions.canViewFinancialData,
-    canViewSystemHealth: enhancedPermissions.canViewSystemHealth,
-    canManageOrganizations: enhancedPermissions.canManageOrganizations,
+    canManageUsers: enhancedUser ? permissionCheckers.canManageUsers(enhancedUser) : false,
+    canManageWorkOrders: enhancedUser ? permissionCheckers.canManageWorkOrders(enhancedUser) : false,
+    canViewFinancialData: enhancedUser ? permissionCheckers.canViewFinancialData(enhancedUser) : false,
+    canViewSystemHealth: enhancedUser ? permissionCheckers.canViewSystemHealth(enhancedUser) : false,
+    canManageOrganizations: enhancedUser ? permissionCheckers.canManageOrganizations(enhancedUser) : false,
     
     // Advanced permission checking
-    hasPermission: enhancedPermissions.hasPermission,
+    hasPermission: (permission: Permission, context?: Partial<PermissionContext>) => {
+      return enhancedUser ? hasPermission(enhancedUser, permission, context) : { hasAccess: false, reason: 'No user' };
+    },
     
     // Legacy compatibility method
     hasLegacyPermission: (requiredUserType: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
+      if (!profile || !enhancedUser) return false;
+      
       const userTypeHierarchy = {
         'admin': 4,
         'employee': 3,
@@ -45,7 +53,8 @@ export function useEnhancedPermissions() {
         'subcontractor': 1
       };
 
-      const userLevel = userTypeHierarchy[enhancedPermissions.getUserType() as keyof typeof userTypeHierarchy];
+      const currentUserType = getUserType(enhancedUser);
+      const userLevel = userTypeHierarchy[currentUserType as keyof typeof userTypeHierarchy];
       const requiredLevel = userTypeHierarchy[requiredUserType];
 
       return userLevel >= requiredLevel;
@@ -53,12 +62,12 @@ export function useEnhancedPermissions() {
     
     // Utility function for checking specific permissions with context
     checkPermission: (permission: Permission, context?: Partial<PermissionContext>) => {
-      return enhancedPermissions.hasPermission(permission, context);
+      return enhancedUser ? hasPermission(enhancedUser, permission, context) : { hasAccess: false, reason: 'No user' };
     },
     
-    // Migration state
-    isUsingOrganizationAuth: migrationFlags.useOrganizationAuth,
-    isUsingOrganizationPermissions: migrationFlags.useOrganizationPermissions,
+    // Migration state (always true now)
+    isUsingOrganizationAuth: true,
+    isUsingOrganizationPermissions: true,
   };
 }
 

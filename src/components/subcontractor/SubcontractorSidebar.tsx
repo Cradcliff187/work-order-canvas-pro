@@ -39,7 +39,6 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 const sidebarItems = [
   { title: 'Dashboard', url: '/subcontractor/dashboard', icon: Home },
@@ -59,7 +58,6 @@ export function SubcontractorSidebar() {
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
   const organizationNavItems = useOrganizationNavigation();
-  const useOrgNavigation = isFeatureEnabled('useOrganizationNavigation');
   
   // Count work orders that need reports (assigned or in_progress status)
   const pendingReportsCount = assignedWorkOrders.data?.filter(
@@ -102,66 +100,34 @@ export function SubcontractorSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {useOrgNavigation ? (
-                // Organization-based navigation
-                organizationNavItems.filter(item => item.visible).map((item) => (
-                  <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton 
-                      asChild
-                      isActive={isActive(item.path)}
-                      className={isActive(item.path) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
-                    >
-                      <Link to={item.path} className="flex items-center gap-2">
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1">{item.label}</span>
-                            {item.label === 'Invoices' && draftCount > 0 && (
-                              <Badge variant="secondary" className="ml-2 text-xs">
-                                {draftCount}
-                              </Badge>
-                            )}
-                            {item.label === 'Work Orders' && pendingReportsCount > 0 && (
-                              <Badge variant="default" className="ml-2 text-xs">
-                                {pendingReportsCount}
-                              </Badge>
-                            )}
-                          </>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))
-              ) : (
-                // Legacy navigation
-                sidebarItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild
-                      isActive={isActive(item.url)}
-                      className={isActive(item.url) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
-                    >
-                      <Link to={item.url} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1">{item.title}</span>
-                            {item.hasBadge && draftCount > 0 && (
-                              <Badge variant="secondary" className="ml-2 text-xs">
-                                {draftCount}
-                              </Badge>
-                            )}
-                            {item.hasWorkOrderBadge && pendingReportsCount > 0 && (
-                              <Badge variant="default" className="ml-2 text-xs">
-                                {pendingReportsCount}
-                              </Badge>
-                            )}
-                          </>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))
-              )}
+              {/* Organization-based navigation */}
+              {organizationNavItems.filter(item => item.visible).map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton 
+                    asChild
+                    isActive={isActive(item.path)}
+                    className={isActive(item.path) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
+                  >
+                    <Link to={item.path} className="flex items-center gap-2">
+                      {!collapsed && (
+                        <>
+                          <span className="flex-1">{item.label}</span>
+                          {item.label === 'Invoices' && draftCount > 0 && (
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {draftCount}
+                            </Badge>
+                          )}
+                          {item.label === 'Work Orders' && pendingReportsCount > 0 && (
+                            <Badge variant="default" className="ml-2 text-xs">
+                              {pendingReportsCount}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

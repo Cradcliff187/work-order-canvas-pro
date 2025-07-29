@@ -5,7 +5,6 @@ import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -35,14 +34,13 @@ interface WorkOrderFilters {
 export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
   const { profile } = useAuth();
   const permissions = useEnhancedPermissions();
-  const useOrgWorkOrders = isFeatureEnabled('useOrganizationWorkOrders');
 
   return useQuery({
-    queryKey: ['partner-work-orders', filters, profile?.id, useOrgWorkOrders],
+    queryKey: ['partner-work-orders', filters, profile?.id],
     queryFn: async () => {
       let organizationIds: string[];
 
-      if (useOrgWorkOrders && permissions.user) {
+      if (permissions.user) {
         // Use organization-based access
         const userOrganizations = permissions.user.organization_memberships?.map(
           (membership: any) => membership.organization_id
@@ -118,21 +116,20 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
         totalCount: count || 0,
       };
     },
-    enabled: useOrgWorkOrders ? !!permissions.user : !!profile?.id,
+    enabled: !!permissions.user || !!profile?.id,
   });
 }
 
 export function usePartnerWorkOrderStats() {
   const { profile } = useAuth();
   const permissions = useEnhancedPermissions();
-  const useOrgWorkOrders = isFeatureEnabled('useOrganizationWorkOrders');
 
   return useQuery({
-    queryKey: ['partner-work-order-stats', profile?.id, useOrgWorkOrders],
+    queryKey: ['partner-work-order-stats', profile?.id],
     queryFn: async () => {
       let organizationIds: string[];
 
-      if (useOrgWorkOrders && permissions.user) {
+      if (permissions.user) {
         // Use organization-based access
         const userOrganizations = permissions.user.organization_memberships?.map(
           (membership: any) => membership.organization_id
@@ -217,7 +214,7 @@ export function usePartnerWorkOrderStats() {
         avgCompletionDays
       };
     },
-    enabled: useOrgWorkOrders ? !!permissions.user : !!profile?.id,
+    enabled: !!permissions.user || !!profile?.id,
   });
 }
 
