@@ -23,19 +23,24 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
 import { UserProfileDropdown } from './UserProfileDropdown';
 import { useMigrationContext } from '@/components/MigrationWrapper';
+import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
 
 export function AdminSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { profile } = useAuth();
-  const { permissions } = useMigrationContext();
+  const { permissions, migrationFlags } = useMigrationContext();
+  const enhancedPermissions = useEnhancedPermissions();
   const { totalCount } = useApprovalQueue();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
   
-  const isAdmin = permissions.isAdmin;
-  const isEmployee = permissions.isEmployee;
+  // Use enhanced permissions when available, fallback to bridge
+  const isAdmin = migrationFlags.useOrganizationPermissions ? 
+    enhancedPermissions.isAdmin : permissions.isAdmin;
+  const isEmployee = migrationFlags.useOrganizationPermissions ? 
+    enhancedPermissions.isEmployee : permissions.isEmployee;
 
   const isActive = (path: string) => location.pathname === path;
 

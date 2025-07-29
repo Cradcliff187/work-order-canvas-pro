@@ -6,6 +6,7 @@
 import React, { createContext, useContext } from 'react';
 import { useMigrationAuth } from '@/hooks/useMigrationAuth';
 import { usePermissionBridge } from '@/hooks/usePermissionBridge';
+import { useEnhancedUserProfile } from '@/lib/permissions';
 import type { DualCompatUser } from '@/lib/migration/dualTypeAuth';
 import type { PermissionBridge } from '@/hooks/usePermissionBridge';
 
@@ -14,8 +15,11 @@ interface MigrationContextType {
   user: DualCompatUser | null;
   loading: boolean;
   
-  // Permission bridge
+  // Permission bridge (legacy)
   permissions: PermissionBridge;
+  
+  // Enhanced permission system
+  enhancedPermissions: ReturnType<typeof useEnhancedUserProfile>;
   
   // Legacy compatibility (for components not yet migrated)
   legacyProfile: any; // Original profile from AuthContext
@@ -47,11 +51,18 @@ interface MigrationWrapperProps {
 export const MigrationWrapper: React.FC<MigrationWrapperProps> = ({ children }) => {
   const migrationAuth = useMigrationAuth();
   const permissions = usePermissionBridge(migrationAuth.user);
+  
+  // Create enhanced user profile for new permission system
+  const enhancedPermissions = useEnhancedUserProfile(
+    migrationAuth.profile,
+    migrationAuth.user?.organization_memberships
+  );
 
   const contextValue: MigrationContextType = {
     user: migrationAuth.user,
     loading: migrationAuth.loading,
     permissions,
+    enhancedPermissions,
     legacyProfile: migrationAuth.profile,
     legacyUserOrganization: migrationAuth.userOrganization,
     migrationFlags: migrationAuth.migrationFlags,
@@ -83,14 +94,14 @@ export const withMigrationBridge = <P extends object>(
  * Hook for components that need both old and new APIs during migration
  */
 export const useLegacyCompatibility = () => {
-  const { legacyProfile, legacyUserOrganization, permissions, migrationFlags } = useMigrationContext();
+  const { legacyProfile, legacyUserOrganization, permissions, enhancedPermissions, migrationFlags } = useMigrationContext();
   
   return {
     // Legacy API (for backward compatibility)
     profile: legacyProfile,
     userOrganization: legacyUserOrganization,
     
-    // New API (for migrated components)
+    // Bridge API (current)
     isAdmin: permissions.isAdmin,
     isEmployee: permissions.isEmployee,
     isPartner: permissions.isPartner,
@@ -98,6 +109,13 @@ export const useLegacyCompatibility = () => {
     hasInternalAccess: permissions.hasInternalAccess,
     canManageUsers: permissions.canManageUsers,
     canViewFinancials: permissions.canViewFinancials,
+    
+    // Enhanced API (new)
+    enhancedIsAdmin: enhancedPermissions.isAdmin,
+    enhancedCanManageUsers: enhancedPermissions.canManageUsers,
+    enhancedCanManageWorkOrders: enhancedPermissions.canManageWorkOrders,
+    enhancedCanViewFinancialData: enhancedPermissions.canViewFinancialData,
+    enhancedHasPermission: enhancedPermissions.hasPermission,
     
     // Migration state
     isUsingOrganizationAuth: migrationFlags.useOrganizationAuth,

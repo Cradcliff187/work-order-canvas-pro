@@ -7,7 +7,7 @@ import { getEffectiveUserType } from '@/lib/migration/dualTypeAuth';
 
 const DashboardRouter: React.FC = () => {
   const { profile, loading, isImpersonating } = useAuth();
-  const { user } = useMigrationContext();
+  const { user, enhancedPermissions, migrationFlags } = useMigrationContext();
 
   console.log('DashboardRouter - Profile:', profile);
   console.log('DashboardRouter - Migration User:', user);
@@ -26,7 +26,9 @@ const DashboardRouter: React.FC = () => {
   }
 
   // Redirect to appropriate dashboard based on effective user type
-  const effectiveUserType = user ? getEffectiveUserType(user) : profile.user_type;
+  const effectiveUserType = migrationFlags.useOrganizationAuth && enhancedPermissions.user ? 
+    enhancedPermissions.getUserType() : 
+    (user ? getEffectiveUserType(user) : profile.user_type);
   console.log('DashboardRouter - Effective User Type:', effectiveUserType);
   
   switch (effectiveUserType) {

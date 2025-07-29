@@ -19,7 +19,7 @@ export const MIGRATION_FLAGS: MigrationFlags = {
   // Phase 2: Core auth migration
   useOrganizationAuth: true,
   
-  // Phase 3: Permission system migration  
+  // Phase 3: Permission system migration (ENABLED FOR TESTING)
   useOrganizationPermissions: true,
   
   // Phase 4: Navigation migration

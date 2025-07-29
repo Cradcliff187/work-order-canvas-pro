@@ -12,7 +12,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
   const { user, profile, realProfile, viewingProfile, loading, isImpersonating } = useAuth();
-  const { user: migrationUser, permissions } = useMigrationContext();
+  const { user: migrationUser, permissions, enhancedPermissions, migrationFlags } = useMigrationContext();
 
   console.log('ProtectedRoute - Real Profile:', realProfile);
   console.log('ProtectedRoute - Viewing Profile:', viewingProfile);
@@ -39,7 +39,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
     return <>{children}</>;
   }
 
-  // Use migration bridge for permission checks
+  // Use enhanced permission system when available, fallback to bridge
   const hasRequiredPermission = () => {
     if (!requiredUserType) return true;
     
@@ -49,6 +49,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
       return true;
     }
     
+    // Use enhanced permissions if organization system is enabled
+    if (migrationFlags.useOrganizationPermissions && enhancedPermissions.user) {
+      switch (requiredUserType) {
+        case 'admin':
+          return enhancedPermissions.isAdmin;
+        case 'employee':
+          return enhancedPermissions.isEmployee || enhancedPermissions.isAdmin;
+        case 'partner':
+          return enhancedPermissions.isPartner || enhancedPermissions.hasInternalAccess;
+        case 'subcontractor':
+          return enhancedPermissions.isSubcontractor || enhancedPermissions.hasInternalAccess;
+        default:
+          return false;
+      }
+    }
+    
+    // Fallback to bridge permissions
     switch (requiredUserType) {
       case 'admin':
         return permissions.isAdmin;
