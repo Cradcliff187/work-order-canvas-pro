@@ -2,8 +2,30 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useMigrationContext } from '@/components/MigrationWrapper';
 import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 
+// Try to use enhanced auth context if available
+let useEnhancedAuth: any = null;
+try {
+  const enhancedAuthModule = require('@/contexts/EnhancedAuthContext');
+  useEnhancedAuth = enhancedAuthModule.useEnhancedAuth;
+} catch {
+  // Enhanced auth not available, continue with legacy
+}
+
 export const useUserProfile = () => {
-  const { profile, loading, isImpersonating } = useAuth();
+  const legacyAuth = useAuth();
+  
+  // Try to use enhanced auth if available and authentication migration is enabled
+  let enhancedAuth = null;
+  if (useEnhancedAuth && isFeatureEnabled('useOrganizationAuthentication')) {
+    try {
+      enhancedAuth = useEnhancedAuth();
+    } catch {
+      // Enhanced auth not available, use legacy
+    }
+  }
+  
+  // Choose which auth system to use
+  const { profile, loading, isImpersonating } = enhancedAuth || legacyAuth;
   
   // Try to use migration context for enhanced permissions
   let migrationPermissions = null;

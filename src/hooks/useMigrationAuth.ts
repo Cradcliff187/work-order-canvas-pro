@@ -52,6 +52,7 @@ export const useMigrationAuth = () => {
       useOrganizationPermissions: isFeatureEnabled('useOrganizationPermissions'),
       useOrganizationNavigation: isFeatureEnabled('useOrganizationNavigation'),
       useOrganizationWorkOrders: isFeatureEnabled('useOrganizationWorkOrders'),
+      useOrganizationAuthentication: isFeatureEnabled('useOrganizationAuthentication'),
     },
     
     // Legacy compatibility (for components not yet migrated)

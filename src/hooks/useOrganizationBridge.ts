@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { isFeatureEnabled } from '@/lib/migration/featureFlags';
 import type { OrganizationMember } from '@/types/auth.types';
 
 interface OrganizationBridgeData {
@@ -34,24 +35,60 @@ export const useOrganizationBridge = (profileId?: string): OrganizationBridgeDat
     try {
       console.log('Organization bridge: Fetching data for profile', profileId);
       
-      // Fetch organization memberships from user_organizations table
-      const { data, error } = await supabase
-        .from('user_organizations')
-        .select(`
-          organization_id,
-          organizations (
+      // Use organization_members table if authentication migration is enabled
+      const useOrganizationMembers = isFeatureEnabled('useOrganizationAuthentication');
+      
+      let data, error;
+      
+      if (useOrganizationMembers) {
+        // Fetch from organization_members table (new system)
+        const result = await supabase
+          .from('organization_members')
+          .select(`
             id,
-            name,
-            organization_type,
-            initials,
-            contact_email,
-            contact_phone,
-            address,
-            uses_partner_location_numbers,
-            is_active
-          )
-        `)
-        .eq('user_id', profileId);
+            user_id,
+            organization_id,
+            role,
+            created_at,
+            organizations (
+              id,
+              name,
+              organization_type,
+              initials,
+              contact_email,
+              contact_phone,
+              address,
+              uses_partner_location_numbers,
+              is_active
+            )
+          `)
+          .eq('user_id', profileId);
+        
+        data = result.data;
+        error = result.error;
+      } else {
+        // Fetch from user_organizations table (legacy system)
+        const result = await supabase
+          .from('user_organizations')
+          .select(`
+            organization_id,
+            organizations (
+              id,
+              name,
+              organization_type,
+              initials,
+              contact_email,
+              contact_phone,
+              address,
+              uses_partner_location_numbers,
+              is_active
+            )
+          `)
+          .eq('user_id', profileId);
+        
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) {
         console.error('Error fetching organization memberships:', error);
@@ -61,24 +98,49 @@ export const useOrganizationBridge = (profileId?: string): OrganizationBridgeDat
       }
 
       // Transform data into OrganizationMember format
-      const memberships: OrganizationMember[] = data?.map((item: any) => ({
-        id: `${profileId}-${item.organization_id}`,
-        user_id: profileId,
-        organization_id: item.organization_id,
-        role: 'member' as any, // Default role
-        created_at: new Date().toISOString(),
-        organization: item.organizations ? {
-          id: item.organizations.id,
-          name: item.organizations.name,
-          organization_type: item.organizations.organization_type,
-          initials: item.organizations.initials || '',
-          contact_email: item.organizations.contact_email,
-          contact_phone: item.organizations.contact_phone || '',
-          address: item.organizations.address || '',
-          uses_partner_location_numbers: item.organizations.uses_partner_location_numbers || false,
-          is_active: item.organizations.is_active
-        } : undefined
-      })).filter(m => m.organization) || [];
+      const memberships: OrganizationMember[] = data?.map((item: any) => {
+        if (useOrganizationMembers) {
+          // organization_members table format (has all fields)
+          return {
+            id: item.id,
+            user_id: item.user_id,
+            organization_id: item.organization_id,
+            role: item.role,
+            created_at: item.created_at,
+            organization: item.organizations ? {
+              id: item.organizations.id,
+              name: item.organizations.name,
+              organization_type: item.organizations.organization_type,
+              initials: item.organizations.initials || '',
+              contact_email: item.organizations.contact_email,
+              contact_phone: item.organizations.contact_phone || '',
+              address: item.organizations.address || '',
+              uses_partner_location_numbers: item.organizations.uses_partner_location_numbers || false,
+              is_active: item.organizations.is_active
+            } : undefined
+          };
+        } else {
+          // user_organizations table format (needs transformation)
+          return {
+            id: `${profileId}-${item.organization_id}`,
+            user_id: profileId,
+            organization_id: item.organization_id,
+            role: 'member' as any, // Default role for legacy
+            created_at: new Date().toISOString(),
+            organization: item.organizations ? {
+              id: item.organizations.id,
+              name: item.organizations.name,
+              organization_type: item.organizations.organization_type,
+              initials: item.organizations.initials || '',
+              contact_email: item.organizations.contact_email,
+              contact_phone: item.organizations.contact_phone || '',
+              address: item.organizations.address || '',
+              uses_partner_location_numbers: item.organizations.uses_partner_location_numbers || false,
+              is_active: item.organizations.is_active
+            } : undefined
+          };
+        }
+      }).filter(m => m.organization) || [];
 
       setOrganizationMemberships(memberships);
       

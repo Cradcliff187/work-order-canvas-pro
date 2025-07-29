@@ -8,6 +8,7 @@ export interface MigrationFlags {
   useOrganizationPermissions: boolean;
   useOrganizationNavigation: boolean;
   useOrganizationWorkOrders: boolean;
+  useOrganizationAuthentication: boolean;
   enableDualTypeSupport: boolean;
 }
 
@@ -22,11 +23,14 @@ export const MIGRATION_FLAGS: MigrationFlags = {
   // Phase 3: Permission system migration (COMPLETED)
   useOrganizationPermissions: true,
   
-  // Phase 4: Navigation migration (ACTIVE)
+  // Phase 4: Navigation migration (COMPLETED)
   useOrganizationNavigation: true,
   
-  // Phase 5: Work order system migration (ACTIVE)
+  // Phase 5: Work order system migration (COMPLETED)
   useOrganizationWorkOrders: true,
+  
+  // Phase 6: Authentication system migration (ACTIVE)
+  useOrganizationAuthentication: true,
 };
 
 // Helper to check if feature is enabled
@@ -42,6 +46,7 @@ export const isMigrationPhase = (phase: number): boolean => {
     case 3: return MIGRATION_FLAGS.useOrganizationPermissions;
     case 4: return MIGRATION_FLAGS.useOrganizationNavigation;
     case 5: return MIGRATION_FLAGS.useOrganizationWorkOrders;
+    case 6: return MIGRATION_FLAGS.useOrganizationAuthentication;
     default: return false;
   }
 };
