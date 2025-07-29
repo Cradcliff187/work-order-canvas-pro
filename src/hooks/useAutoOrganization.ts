@@ -5,7 +5,7 @@ export const useAutoOrganization = () => {
   
   return {
     organizationId: userOrganization?.id,
-    shouldShowSelector: profile?.user_type === 'admin',
+    shouldShowSelector: profile?.is_employee === false, // Only non-employees can change organizations
     organizationType: userOrganization?.organization_type,
     organization: userOrganization,
     isLoading: !profile // Consider loading if we don't have profile yet

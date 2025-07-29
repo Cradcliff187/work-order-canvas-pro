@@ -25,15 +25,10 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onBack }) 
     setError('');
 
     try {
-      const { error } = await forgotPassword(email);
-      
-      if (error) {
-        setError(error.message);
-      } else {
-        setSuccess(true);
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
+      await forgotPassword(email);
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
     }
     
     setLoading(false);

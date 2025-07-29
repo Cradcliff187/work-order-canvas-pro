@@ -335,7 +335,7 @@ export const useCompanyAccessVerification = () => {
 
         // Count users
         const { count: userCount } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .select('*', { count: 'exact', head: true })
           .eq('organization_id', org.id);
 
