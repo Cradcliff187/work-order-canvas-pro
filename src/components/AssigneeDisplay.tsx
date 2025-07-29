@@ -19,7 +19,7 @@ interface Assignment {
 interface AssigneeUser {
   first_name: string;
   last_name: string;
-  user_type?: string;
+  organization_role?: string;
 }
 
 interface AssigneeDisplayProps {

@@ -49,13 +49,20 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       },
     },
     {
-      accessorKey: 'user_type',
-      header: 'Type',
+      accessorKey: 'user_organizations',
+      header: 'Role',
       cell: ({ row }) => {
-        const userType = row.getValue('user_type') as string;
+        const orgs = row.original.user_organizations;
+        if (!orgs || orgs.length === 0) {
+          return <span className="text-muted-foreground text-xs">No role</span>;
+        }
+        // Show primary organization role
+        const primaryOrg = orgs[0];
+        const isAdmin = primaryOrg?.organization?.organization_type === 'internal' && 
+                       (primaryOrg?.organization as any)?.role === 'admin';
         return (
-          <Badge variant={userType === 'admin' ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5">
-            {userType}
+          <Badge variant={isAdmin ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5 capitalize">
+            {(primaryOrg?.organization as any)?.role || 'member'}
           </Badge>
         );
       },

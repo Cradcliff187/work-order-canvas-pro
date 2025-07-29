@@ -7,16 +7,21 @@ interface Profile {
   first_name: string;
   last_name: string;
   email: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   avatar_url?: string | null;
-  company_name?: string | null;
+  organization_memberships?: Array<{
+    organization: {
+      name: string;
+      organization_type: 'internal' | 'partner' | 'subcontractor';
+    };
+    role: string;
+  }>;
 }
 
 interface UserProfileDisplayProps {
   profile: Profile | null;
   showAvatar?: boolean;
-  showUserType?: boolean;
-  showCompany?: boolean;
+  showRole?: boolean;
+  showOrganization?: boolean;
   layout?: 'horizontal' | 'vertical';
   avatarSize?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -25,8 +30,8 @@ interface UserProfileDisplayProps {
 export function UserProfileDisplay({
   profile,
   showAvatar = true,
-  showUserType = true,
-  showCompany = false,
+  showRole = true,
+  showOrganization = false,
   layout = 'horizontal',
   avatarSize = 'md',
   className
@@ -37,6 +42,11 @@ export function UserProfileDisplay({
 
   const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
   const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+  
+  // Get primary organization data
+  const primaryOrg = profile.organization_memberships?.[0];
+  const organizationName = primaryOrg?.organization?.name;
+  const organizationRole = primaryOrg?.role;
 
   const avatarSizes = {
     sm: 'h-6 w-6',
@@ -77,15 +87,15 @@ export function UserProfileDisplay({
           {fullName}
         </p>
         
-        {showUserType && (
+        {showRole && organizationRole && (
           <p className="text-xs text-muted-foreground capitalize">
-            {profile.user_type}
+            {organizationRole}
           </p>
         )}
         
-        {showCompany && profile.company_name && (
+        {showOrganization && organizationName && (
           <p className="text-xs text-muted-foreground truncate">
-            {profile.company_name}
+            {organizationName}
           </p>
         )}
       </div>
