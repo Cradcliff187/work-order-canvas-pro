@@ -83,13 +83,12 @@ interface UserOrganization {
 }
 
 /**
- * Fetches a user's organizations from Supabase through user_organizations (legacy table)
- * TODO: Replace with organization_members table in later migration phases
+ * Fetches a user's organizations from Supabase through organization_members table
  */
 export async function getUserOrganizations(userId: string): Promise<UserOrganization[]> {
   try {
     const { data: organizationData, error } = await supabase
-      .from('user_organizations')
+      .from('organization_members')
       .select(`
         organization:organizations (
           id,

@@ -539,7 +539,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // @ts-ignore
     impersonatedProfile,
     // @ts-ignore
-    setImpersonation: impersonateUser,
+    setImpersonation: (profileOrUserId: any) => {
+      // Handle both profile object and userId string for backward compatibility
+      if (typeof profileOrUserId === 'string') {
+        return impersonateUser(profileOrUserId);
+      } else if (profileOrUserId && profileOrUserId.user_id) {
+        // DevTools passes a profile object, extract the user_id
+        setImpersonatedProfile(profileOrUserId);
+      }
+    },
     // @ts-ignore
     clearImpersonation: stopImpersonating,
     // @ts-ignore

@@ -1,141 +1,115 @@
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
+import { useAuth } from '@/contexts/AuthContext';
 
-export type Organization = Database['public']['Tables']['organizations']['Row'];
-
-export function useOrganizations() {
-  return useQuery({
-    queryKey: ['organizations'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      return data;
-    },
-  });
+export interface UserOrganization {
+  id: string;
+  name: string;
+  organization_type: 'partner' | 'subcontractor' | 'internal';
+  initials?: string;
+  contact_email: string;
+  contact_phone?: string;
+  address?: string;
+  uses_partner_location_numbers?: boolean;
 }
 
-export function useOrganization(id: string) {
-  return useQuery({
-    queryKey: ['organization', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', id)
+interface UseUserOrganizationReturn {
+  organization: UserOrganization | null;
+  loading: boolean;
+  error: Error | null;
+}
+
+export const useUserOrganization = (): UseUserOrganizationReturn => {
+  const { user, profile, organizationMember, permissions } = useAuth();
+
+  const { data: organization, isLoading, error } = useQuery({
+    queryKey: ['user-organization', user?.id],
+    queryFn: async (): Promise<UserOrganization | null> => {
+      console.log('🔍 useUserOrganization: Starting query', { user: user?.id, profile: profile?.id });
+      
+      if (!user || !profile) {
+        console.log('🔍 useUserOrganization: No user or profile, returning null');
+        return null;
+      }
+
+      // Use organizationMember from AuthContext if available
+      if (organizationMember && organizationMember.organization) {
+        console.log('🔍 useUserOrganization: Using organization from AuthContext');
+        return organizationMember.organization as UserOrganization;
+      }
+
+      // Admins might not have a specific organization if viewing multiple
+      if (permissions?.isInternal && permissions?.hasInternalRole(['admin', 'owner'])) {
+        console.log('🔍 useUserOrganization: Admin user without specific org, returning null');
+        return null;
+      }
+
+      console.log('🔍 useUserOrganization: Fetching profile ID for user:', user.id);
+      
+      // Get the profile ID first, then query organization_members
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
         .single();
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id,
-  });
-}
+      console.log('🔍 useUserOrganization: Profile query result:', { profileData, profileError });
 
-export function useCreateOrganization() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+      if (profileError || !profileData) {
+        console.error('🔍 useUserOrganization: Failed to fetch profile:', profileError);
+        throw new Error(`Failed to fetch user profile: ${profileError?.message}`);
+      }
 
-  return useMutation({
-    mutationFn: async (organizationData: Omit<Organization, 'id' | 'created_at' | 'updated_at'>) => {
+      console.log('🔍 useUserOrganization: Fetching organization for profile:', profileData.id);
+
       const { data, error } = await supabase
-        .from('organizations')
-        .insert([organizationData])
-        .select()
+        .from('organization_members')
+        .select(`
+          organization:organizations (
+            id,
+            name,
+            organization_type,
+            initials,
+            contact_email,
+            contact_phone,
+            address,
+            uses_partner_location_numbers
+          )
+        `)
+        .eq('user_id', profileData.id)
+        .limit(1)
         .single();
 
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      toast({
-        title: 'Success',
-        description: 'Organization created successfully',
+      console.log('🔍 useUserOrganization: Organization query result:', { 
+        data, 
+        error,
+        organization: data?.organization,
+        uses_partner_location_numbers: data?.organization?.uses_partner_location_numbers
       });
+
+      if (error) {
+        console.error('🔍 useUserOrganization: Failed to fetch organization:', error);
+        throw new Error(`Failed to fetch user organization: ${error.message}`);
+      }
+
+      const result = data?.organization as UserOrganization || null;
+      console.log('🔍 useUserOrganization: Final result:', result);
+      
+      return result;
     },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message,
-      });
-    },
+    enabled: !!user && !!profile,
   });
-}
 
-export function useUpdateOrganization() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Organization> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      toast({
-        title: 'Success',
-        description: 'Organization updated successfully',
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message,
-      });
-    },
+  console.log('🔍 useUserOrganization: Hook return:', { 
+    organization, 
+    loading: isLoading, 
+    error,
+    uses_partner_location_numbers: organization?.uses_partner_location_numbers
   });
-}
 
-export function useDeleteOrganization() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('organizations')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      toast({
-        title: 'Success',
-        description: 'Organization deleted successfully',
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message,
-      });
-    },
-  });
-}
-
-// Export mutations object for backward compatibility
-export const useOrganizationMutations = () => ({
-  createOrganization: useCreateOrganization(),
-  updateOrganization: useUpdateOrganization(),
-  deleteOrganization: useDeleteOrganization(),
-});
+  return {
+    organization: organization || null,
+    loading: isLoading,
+    error: error as Error | null,
+  };
+};
