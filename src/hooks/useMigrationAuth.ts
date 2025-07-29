@@ -1,6 +1,6 @@
 /**
- * Migration-aware authentication hook
- * Provides unified interface during the migration from user_type to organization-based auth
+ * Organization-based authentication hook
+ * Provides organization-based interface - migration to organization system complete
  */
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,14 +44,14 @@ export const useMigrationAuth = () => {
     canManageUsers: dualUser ? dualPermissionCheck.canManageUsers(dualUser) : false,
     canViewFinancials: dualUser ? dualPermissionCheck.canViewFinancials(dualUser) : false,
     
-    // Migration state
-    isUsingOrganizationAuth: isFeatureEnabled('useOrganizationAuth'),
+    // Organization system is now active (migration complete)
+    isUsingOrganizationAuth: true,
     migrationFlags: {
-      useOrganizationAuth: isFeatureEnabled('useOrganizationAuth'),
-      useOrganizationPermissions: isFeatureEnabled('useOrganizationPermissions'),
-      useOrganizationNavigation: isFeatureEnabled('useOrganizationNavigation'),
-      useOrganizationWorkOrders: isFeatureEnabled('useOrganizationWorkOrders'),
-      useOrganizationAuthentication: isFeatureEnabled('useOrganizationAuthentication'),
+      useOrganizationAuth: true,
+      useOrganizationPermissions: true,
+      useOrganizationNavigation: true,
+      useOrganizationWorkOrders: true,
+      useOrganizationAuthentication: true,
     },
     
     // Legacy compatibility (for components not yet migrated)

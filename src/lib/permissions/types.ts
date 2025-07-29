@@ -1,6 +1,6 @@
 /**
- * Phase 2: Permission System Types
- * Defines the types for the new permission system that bridges legacy and organization-based auth
+ * Phase 8 Step 4: Organization-Based Permission System Types
+ * Defines the types for the finalized organization-based authentication system
  */
 
 import type { OrganizationType, OrganizationRole, OrganizationMember } from '@/types/auth.types';
@@ -8,7 +8,7 @@ import type { OrganizationType, OrganizationRole, OrganizationMember } from '@/t
 // Legacy user type (during migration)
 export type LegacyUserType = 'admin' | 'partner' | 'subcontractor' | 'employee';
 
-// Enhanced user interface that supports both systems
+// Organization-based user interface (finalized)
 export interface EnhancedUser {
   id: string;
   user_id: string;
@@ -18,15 +18,11 @@ export interface EnhancedUser {
   is_active: boolean;
   is_employee: boolean;
   
-  // Legacy fields (temporary during migration)
-  user_type?: LegacyUserType;
-  company_name?: string;
-  
-  // New organization fields
+  // Organization-based fields (primary system)
   organization_memberships?: OrganizationMember[];
   primary_organization?: OrganizationMember;
   
-  // Computed fields
+  // Computed fields for compatibility
   effective_user_type?: LegacyUserType;
   has_internal_access?: boolean;
   has_admin_access?: boolean;

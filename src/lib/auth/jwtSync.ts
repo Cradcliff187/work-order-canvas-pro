@@ -12,8 +12,9 @@ interface JWTSyncResponse {
 }
 
 /**
- * Sync user metadata to JWT after profile or organization changes
+ * Sync user organization metadata to JWT after profile or organization changes
  * This triggers the server-side function that updates auth.users.raw_app_meta_data
+ * Note: Still uses legacy database function for compatibility
  */
 export async function syncUserMetadataToJWT(userId?: string) {
   try {

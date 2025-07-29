@@ -8,19 +8,19 @@ import type { OrganizationType, OrganizationRole, OrganizationMember } from '@/t
 import { isFeatureEnabled } from '../migration/featureFlags';
 
 /**
- * Gets the effective user type - prefers organization data when available
+ * Gets the effective user type - organization-based system only
  */
 export function getUserType(user: EnhancedUser): LegacyUserType {
-  // If organization-based auth is enabled and user has organization data
-  if (isFeatureEnabled('useOrganizationAuth') && user.primary_organization?.organization) {
+  // Organization-based auth is now primary
+  if (user.primary_organization?.organization) {
     return mapOrganizationToUserType(
       user.primary_organization.organization.organization_type,
       user.primary_organization.role
     );
   }
   
-  // Fall back to legacy user_type
-  return user.user_type || 'subcontractor';
+  // Default fallback if no organization data
+  return 'subcontractor';
 }
 
 /**
@@ -68,33 +68,21 @@ export function mapUserTypeToOrganization(userType: LegacyUserType): {
  */
 export const userTypeCheckers = {
   isAdmin: (user: EnhancedUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'internal' &&
-             user.primary_organization.role === 'admin';
-    }
-    return getUserType(user) === 'admin';
+    return user.primary_organization?.organization?.organization_type === 'internal' &&
+           user.primary_organization.role === 'admin';
   },
 
   isEmployee: (user: EnhancedUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'internal' &&
-             user.primary_organization.role === 'employee';
-    }
-    return getUserType(user) === 'employee';
+    return user.primary_organization?.organization?.organization_type === 'internal' &&
+           user.primary_organization.role === 'employee';
   },
 
   isPartner: (user: EnhancedUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'partner';
-    }
-    return getUserType(user) === 'partner';
+    return user.primary_organization?.organization?.organization_type === 'partner';
   },
 
   isSubcontractor: (user: EnhancedUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'subcontractor';
-    }
-    return getUserType(user) === 'subcontractor';
+    return user.primary_organization?.organization?.organization_type === 'subcontractor';
   },
 
   hasInternalAccess: (user: EnhancedUser): boolean => {
@@ -150,7 +138,6 @@ export function createEnhancedUser(
       last_name: '',
       is_active: false,
       is_employee: false,
-      user_type: 'subcontractor',
       organization_memberships: [],
       primary_organization: null,
       effective_user_type: 'subcontractor',

@@ -1,6 +1,6 @@
 /**
- * Dual Type Authentication Utilities
- * Provides backward compatibility during migration from user_type to organization-based auth
+ * Organization-Based Authentication Utilities
+ * Migration complete - provides organization-based authentication only
  */
 
 import type { OrganizationType, OrganizationRole, OrganizationMember } from '@/types/auth.types';
@@ -9,15 +9,13 @@ import { isFeatureEnabled } from './featureFlags';
 // Legacy user type (temporary during migration)
 export type LegacyUserType = 'admin' | 'partner' | 'subcontractor' | 'employee';
 
-// Dual-compatible user interface
+// Organization-based user interface (migration complete)
 export interface DualCompatUser {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
-  // Legacy fields (will be phased out)
-  user_type?: LegacyUserType;
-  // New organization fields
+  // Organization-based fields only
   organization_memberships?: OrganizationMember[];
   primary_organization?: OrganizationMember;
 }
@@ -57,50 +55,38 @@ export const mapOrganizationToLegacy = (
 };
 
 /**
- * Gets the effective user type - uses organization data if available, falls back to legacy
+ * Gets the effective user type from organization data
  */
 export const getEffectiveUserType = (user: DualCompatUser): LegacyUserType => {
-  if (isFeatureEnabled('useOrganizationAuth') && user.primary_organization) {
+  if (user.primary_organization?.organization) {
     return mapOrganizationToLegacy(
-      user.primary_organization.organization!.organization_type,
+      user.primary_organization.organization.organization_type,
       user.primary_organization.role
     );
   }
-  return user.user_type || 'subcontractor';
+  return 'subcontractor';
 };
 
 /**
- * Permission checking that works with both old and new systems
+ * Permission checking using organization-based system only
  */
 export const dualPermissionCheck = {
   isAdmin: (user: DualCompatUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'internal' &&
-             user.primary_organization.role === 'admin';
-    }
-    return user.user_type === 'admin';
+    return user.primary_organization?.organization?.organization_type === 'internal' &&
+           user.primary_organization.role === 'admin';
   },
 
   isEmployee: (user: DualCompatUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'internal' &&
-             user.primary_organization.role === 'employee';
-    }
-    return user.user_type === 'employee';
+    return user.primary_organization?.organization?.organization_type === 'internal' &&
+           user.primary_organization.role === 'employee';
   },
 
   isPartner: (user: DualCompatUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'partner';
-    }
-    return user.user_type === 'partner';
+    return user.primary_organization?.organization?.organization_type === 'partner';
   },
 
   isSubcontractor: (user: DualCompatUser): boolean => {
-    if (isFeatureEnabled('useOrganizationPermissions') && user.primary_organization) {
-      return user.primary_organization.organization?.organization_type === 'subcontractor';
-    }
-    return user.user_type === 'subcontractor';
+    return user.primary_organization?.organization?.organization_type === 'subcontractor';
   },
 
   hasInternalAccess: (user: DualCompatUser): boolean => {
