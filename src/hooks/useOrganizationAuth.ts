@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
+// Migration complete - using organization system exclusively
 import { syncUserMetadataToJWT } from '@/lib/auth/jwtSync';
 import type { OrganizationMember, UserWithOrganizations, AuthState } from '@/types/auth.types';
 
@@ -104,11 +104,7 @@ export const useOrganizationAuth = (): AuthState => {
   useEffect(() => {
     let mounted = true;
 
-    // Skip if organization authentication is not enabled
-    if (!isFeatureEnabled('useOrganizationAuthentication')) {
-      setIsLoading(false);
-      return;
-    }
+    // Organization authentication is always enabled (migration complete)
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

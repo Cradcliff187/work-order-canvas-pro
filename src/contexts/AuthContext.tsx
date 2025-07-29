@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserPrimaryOrganization } from '@/lib/utils/organizationValidation';
 import { hasJWTMetadata, syncUserMetadataToJWT, onProfileUpdate, onOrganizationChange } from '@/lib/auth/jwtSync';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
+// Migration complete - using organization system directly
 import type { UserOrganization } from '@/hooks/useUserOrganization';
 import type { OrganizationMember } from '@/types/auth.types';
 
@@ -103,8 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchOrganizationMemberships = async (profileId: string): Promise<OrganizationMember[]> => {
     try {
-      // Use organization_members table if authentication migration is enabled
-      const useOrganizationMembers = isFeatureEnabled('useOrganizationAuthentication');
+      // Use organization_members table (migration complete)
+      const useOrganizationMembers = true;
       
       let data, error;
       

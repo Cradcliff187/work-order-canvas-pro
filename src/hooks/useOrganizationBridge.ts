@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { isFeatureEnabled } from '@/lib/migration/featureFlags';
+// Migration complete - using organization system exclusively
 import type { OrganizationMember } from '@/types/auth.types';
 
 interface OrganizationBridgeData {
@@ -35,8 +35,8 @@ export const useOrganizationBridge = (profileId?: string): OrganizationBridgeDat
     try {
       console.log('Organization bridge: Fetching data for profile', profileId);
       
-      // Use organization_members table if authentication migration is enabled
-      const useOrganizationMembers = isFeatureEnabled('useOrganizationAuthentication');
+      // Use organization_members table (migration complete)
+      const useOrganizationMembers = true;
       
       let data, error;
       
