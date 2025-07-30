@@ -72,8 +72,11 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         return;
       }
 
-      // Fetch organization memberships first to compute user_type
-      const { data: membershipData, error: membershipError } = await supabase
+      // Fetch organization memberships with fallback for migration
+      let membershipData: any[] = [];
+      
+      // First try organization_members (new table)
+      const { data: newMembershipData, error: newMembershipError } = await supabase
         .from('organization_members')
         .select(`
           id,
@@ -95,9 +98,43 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         `)
         .eq('user_id', profileData.id);
 
-      if (membershipError) {
-        console.error('Error fetching organization memberships:', membershipError);
-        return;
+      if (newMembershipData && newMembershipData.length > 0) {
+        membershipData = newMembershipData;
+      } else if (newMembershipError) {
+        console.error('Error fetching from organization_members:', newMembershipError);
+        
+        // Fallback to user_organizations (legacy table)
+        const { data: legacyMembershipData, error: legacyMembershipError } = await supabase
+          .from('user_organizations')
+          .select(`
+            id,
+            user_id,
+            organization_id,
+            created_at,
+            organization:organizations(
+              id,
+              name,
+              organization_type,
+              initials,
+              contact_email,
+              contact_phone,
+              address,
+              uses_partner_location_numbers,
+              is_active
+            )
+          `)
+          .eq('user_id', profileData.id);
+
+        if (legacyMembershipError) {
+          console.error('Error fetching organization memberships from legacy table:', legacyMembershipError);
+          return;
+        }
+
+        // Transform legacy data to match organization_members structure
+        membershipData = (legacyMembershipData || []).map(item => ({
+          ...item,
+          role: profileData.user_type === 'admin' ? 'admin' : 'member'
+        }));
       }
 
       const memberships = membershipData || [];
