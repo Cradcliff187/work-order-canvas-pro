@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEmergencyAuth } from '@/hooks/useEmergencyAuth';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@radix-ui/react-collapsible';
@@ -11,7 +11,7 @@ import { ChevronDown } from 'lucide-react';
 
 export const SessionDebugPanel: React.FC = () => {
   const { session, user, profile, userOrganizations, loading } = useAuth();
-  const emergencyAuth = useEmergencyAuth();
+  
 
   const sessionStatus = session ? 'Active' : 'No Session';
   const sessionColor = session ? 'bg-green-500' : 'bg-red-500';
@@ -74,22 +74,6 @@ export const SessionDebugPanel: React.FC = () => {
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Emergency Auth Status */}
-          <Collapsible>
-            <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium">
-              Emergency Auth <ChevronDown className="h-3 w-3" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="text-xs space-y-1 mt-1">
-              <div>Loading: {emergencyAuth.loading ? 'Yes' : 'No'}</div>
-              <div>Error: {emergencyAuth.error || 'None'}</div>
-              <div>Session Context Available: {emergencyAuth.debugInfo?.session_propagation?.context_available ? 'Yes' : 'No'}</div>
-              <div>Auth UID: {emergencyAuth.debugInfo?.auth_functions?.auth_uid || 'NULL'}</div>
-              <div>JWT Exists: {emergencyAuth.debugInfo?.jwt_analysis?.jwt_exists ? 'Yes' : 'No'}</div>
-              {emergencyAuth.profile && (
-                <div className="text-green-600">Emergency profile accessible</div>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
         </CardContent>
       </Card>
     </div>
