@@ -61,6 +61,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('🔍 Phase 1: Fetching profile for user:', userId);
+      
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -68,14 +70,18 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        console.error('❌ Error fetching profile:', profileError);
+        setLoading(false);
         return;
       }
+
+      console.log('✅ Profile data loaded:', profileData);
 
       // Fetch organization memberships with fallback for migration
       let membershipData: any[] = [];
       
       // First try organization_members (new table)
+      console.log('🔍 Trying organization_members table...');
       const { data: newMembershipData, error: newMembershipError } = await supabase
         .from('organization_members')
         .select(`
@@ -99,9 +105,10 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         .eq('user_id', profileData.id);
 
       if (newMembershipData && newMembershipData.length > 0) {
+        console.log('✅ Found data in organization_members:', newMembershipData);
         membershipData = newMembershipData;
-      } else if (newMembershipError) {
-        console.error('Error fetching from organization_members:', newMembershipError);
+      } else {
+        console.log('⚠️ No data in organization_members, trying fallback...', newMembershipError);
         
         // Fallback to user_organizations (legacy table)
         const { data: legacyMembershipData, error: legacyMembershipError } = await supabase
@@ -126,10 +133,13 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
           .eq('user_id', profileData.id);
 
         if (legacyMembershipError) {
-          console.error('Error fetching organization memberships from legacy table:', legacyMembershipError);
+          console.error('❌ Error fetching from legacy table:', legacyMembershipError);
+          setLoading(false);
           return;
         }
 
+        console.log('📊 Legacy data found:', legacyMembershipData);
+        
         // Transform legacy data to match organization_members structure
         membershipData = (legacyMembershipData || []).map(item => ({
           ...item,
@@ -138,6 +148,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       }
 
       const memberships = membershipData || [];
+      console.log('🏢 Final memberships:', memberships);
       setUserOrganizations(memberships);
 
       // Compute user_type for backward compatibility
@@ -152,9 +163,13 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         computedUserType = 'partner';
       }
 
+      console.log('👤 Computed user type:', computedUserType);
       setProfile({ ...profileData, user_type: computedUserType });
+      console.log('✅ Profile setup complete!');
+      
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      console.error('💥 Error in fetchProfile:', error);
+      setLoading(false);
     }
   };
 
