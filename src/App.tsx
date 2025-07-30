@@ -1,83 +1,61 @@
-import { useState, useEffect } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import { EmergencyAuthProvider } from "./contexts/EmergencyAuthContext";
-import { EmergencyAuthTest } from "./components/EmergencyAuthTest";
-import { AppRouter } from "./routes/AppRouter";
-import { useBrowserTabTitle } from "./hooks/useBrowserTabTitle";
-import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
-import { OfflineIndicator } from "./components/OfflineIndicator";
-import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
-import { StorageDebugPanel } from "./components/StorageDebugPanel";
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from 'sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { PWAUpdateNotification } from '@/components/PWAUpdateNotification';
+import { StorageDebugPanel } from '@/components/StorageDebugPanel';
+import { EmergencyAuthProvider } from '@/contexts/EmergencyAuthContext';
+import { AppRouter } from '@/routes/AppRouter';
+import { useBrowserTabTitle } from '@/hooks/useBrowserTabTitle';
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
-const queryClient = new QueryClient();
-
-const AppContent = () => {
+const AppContent: React.FC = () => {
   useBrowserTabTitle();
   return <AppRouter />;
 };
 
-const App = () => {
+const App: React.FC = () => {
   const [showDebugPanel, setShowDebugPanel] = useState(false);
-  const [useEmergencyAuth, setUseEmergencyAuth] = useState(true); // Test emergency auth
 
-  // Development-only keyboard shortcut for debug panel
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-          e.preventDefault();
-          setShowDebugPanel(prev => !prev);
-        }
-      };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'D' && process.env.NODE_ENV !== 'production') {
+        setShowDebugPanel(prev => !prev);
+      }
+    };
 
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  // Temporarily use Emergency Auth for testing
-  if (useEmergencyAuth) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <BrowserRouter>
-            <EmergencyAuthProvider>
-              <Toaster />
-              <Sonner />
-              <EmergencyAuthTest />
-            </EmergencyAuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-          <AuthProvider>
+          <EmergencyAuthProvider>
             <Toaster />
-            <Sonner />
+            <Sonner richColors closeButton />
             <OfflineIndicator />
             <PWAUpdateNotification />
-            {/* <PWAInstallPrompt /> */}
             <AppContent />
             {process.env.NODE_ENV !== 'production' && (
-              <>
-                <StorageDebugPanel 
-                  isOpen={showDebugPanel} 
-                  onClose={() => setShowDebugPanel(false)} 
-                />
-              </>
+              <StorageDebugPanel 
+                isOpen={showDebugPanel} 
+                onClose={() => setShowDebugPanel(false)} 
+              />
             )}
-          </AuthProvider>
+          </EmergencyAuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

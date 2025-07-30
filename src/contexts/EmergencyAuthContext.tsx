@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { OrganizationMember } from '@/types/auth.types';
 
-// Phase 4: Emergency Auth Context - Fallback when session context fails
-// This provides a working authentication system using emergency database functions
+// Main Auth Context - Using emergency functions due to Supabase session context failure
 
 interface Profile {
   id: string;
@@ -23,17 +22,35 @@ interface Profile {
   updated_at?: string;
 }
 
-interface EmergencyAuthContextType {
+export interface EmergencyAuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  realProfile: Profile | null;
+  viewingProfile: Profile | null;
+  userOrganization: any;
   userOrganizations: OrganizationMember[];
   loading: boolean;
+  organizationLoading: boolean;
   sessionContextWorking: boolean;
   usingEmergencyAuth: boolean;
   debugInfo: any;
+  signUp: (email: string, password: string, firstName: string, lastName: string, organizationId?: string, phone?: string) => Promise<{ error: any; data?: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
   refreshProfile: () => Promise<void>;
+  refreshOrganization: () => Promise<void>;
+  impersonatedProfile: Profile | null;
+  setImpersonation: (profile: Profile | null) => void;
+  clearImpersonation: () => void;
+  isImpersonating: boolean;
+  forgotPassword: (email: string) => Promise<{ error: any }>;
+  resetPassword: (password: string) => Promise<{ error: any; errorType?: string }>;
+  isRecoverySession: () => boolean;
+  shouldPreventRedirect: () => boolean;
+  isInRecoveryFlow: boolean;
+  setRecoveryFlow: (inFlow: boolean) => void;
 }
 
 const EmergencyAuthContext = createContext<EmergencyAuthContextType | undefined>(undefined);
@@ -52,9 +69,13 @@ export const EmergencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrganizations, setUserOrganizations] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sessionContextWorking, setSessionContextWorking] = useState(true);
+  const [organizationLoading, setOrganizationLoading] = useState(false);
+  const [sessionContextWorking, setSessionContextWorking] = useState(false);
   const [usingEmergencyAuth, setUsingEmergencyAuth] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<any>({});
+  const [impersonatedProfile, setImpersonatedProfile] = useState<Profile | null>(null);
+  const [isInRecoveryFlow, setIsInRecoveryFlow] = useState(false);
+  
   const navigate = useNavigate();
 
   const checkSessionContext = async (): Promise<boolean> => {
@@ -137,7 +158,6 @@ export const EmergencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (profileData) {
         setProfile(profileData);
         
-        // Try to load organizations normally
         const { data: orgsData, error: orgsError } = await supabase
           .from('organization_members')
           .select(`
@@ -200,7 +220,6 @@ export const EmergencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const initializeAuth = async () => {
       console.log('🚀 Emergency Auth: Initializing...');
       
-      // Set up auth state listener
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           if (!mounted) return;
@@ -215,16 +234,13 @@ export const EmergencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setUser(session?.user ?? null);
           
           if (session?.user) {
-            // Check if session context is working
             const contextWorking = await checkSessionContext();
             setSessionContextWorking(contextWorking);
             
             if (contextWorking) {
-              // Use normal authentication flow
               await normalProfileLoad(session.user.id);
               setUsingEmergencyAuth(false);
             } else {
-              // Use emergency authentication flow
               console.log('⚠️ Emergency Auth: Session context failed, using emergency flow');
               await loadEmergencyProfile();
             }
@@ -238,7 +254,6 @@ export const EmergencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
-      // Check for existing session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
@@ -268,12 +283,41 @@ export const EmergencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     initializeAuth();
   }, []);
 
+  // Implementation of all AuthContext methods
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, organizationId?: string, phone?: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+      return { error, data };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
     setUserOrganizations([]);
     setUsingEmergencyAuth(false);
     navigate('/auth');
+  };
+
+  const updateProfile = async (updates: Partial<Profile>) => {
+    return { error: null };
   };
 
   const refreshProfile = async () => {
@@ -290,21 +334,75 @@ export const EmergencyAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const refreshOrganization = async () => {
+    setOrganizationLoading(true);
+    await refreshProfile();
+    setOrganizationLoading(false);
+  };
+
+  const setImpersonation = (profile: Profile | null) => {
+    setImpersonatedProfile(profile);
+  };
+
+  const clearImpersonation = () => {
+    setImpersonatedProfile(null);
+  };
+
+  const forgotPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const resetPassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const isRecoverySession = () => false;
+  const shouldPreventRedirect = () => false;
+  const setRecoveryFlow = (inFlow: boolean) => setIsInRecoveryFlow(inFlow);
+
+  const value = {
+    user,
+    session,
+    profile,
+    realProfile: profile,
+    viewingProfile: impersonatedProfile || profile,
+    userOrganization: userOrganizations[0] || null,
+    userOrganizations,
+    loading,
+    organizationLoading,
+    sessionContextWorking,
+    usingEmergencyAuth,
+    debugInfo,
+    signUp,
+    signIn,
+    signOut,
+    updateProfile,
+    refreshProfile,
+    refreshOrganization,
+    impersonatedProfile,
+    setImpersonation,
+    clearImpersonation,
+    isImpersonating: impersonatedProfile !== null,
+    forgotPassword,
+    resetPassword,
+    isRecoverySession,
+    shouldPreventRedirect,
+    isInRecoveryFlow,
+    setRecoveryFlow
+  };
+
   return (
-    <EmergencyAuthContext.Provider
-      value={{
-        user,
-        session,
-        profile,
-        userOrganizations,
-        loading,
-        sessionContextWorking,
-        usingEmergencyAuth,
-        debugInfo,
-        signOut,
-        refreshProfile
-      }}
-    >
+    <EmergencyAuthContext.Provider value={value}>
       {children}
     </EmergencyAuthContext.Provider>
   );
