@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { EmergencyAuthProvider } from "./contexts/EmergencyAuthContext";
+import { EmergencyAuthTest } from "./components/EmergencyAuthTest";
 import { AppRouter } from "./routes/AppRouter";
 import { useBrowserTabTitle } from "./hooks/useBrowserTabTitle";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
@@ -22,6 +24,7 @@ const AppContent = () => {
 
 const App = () => {
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [useEmergencyAuth, setUseEmergencyAuth] = useState(true); // Test emergency auth
 
   // Development-only keyboard shortcut for debug panel
   useEffect(() => {
@@ -37,6 +40,23 @@ const App = () => {
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
   }, []);
+
+  // Temporarily use Emergency Auth for testing
+  if (useEmergencyAuth) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <BrowserRouter>
+            <EmergencyAuthProvider>
+              <Toaster />
+              <Sonner />
+              <EmergencyAuthTest />
+            </EmergencyAuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

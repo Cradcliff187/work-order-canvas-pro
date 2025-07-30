@@ -319,14 +319,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         if (!mounted) return;
 
+        // Phase 3: Frontend Session Debugging
+        console.log('🔐 AuthContext: Auth state change event:', {
+          event,
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+          sessionExpiry: session?.expires_at ? new Date(session.expires_at * 1000) : null,
+          isExpired: session?.expires_at ? new Date(session.expires_at * 1000) < new Date() : null,
+          pathname: window.location.pathname
+        });
+
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log('🔍 AuthContext: Session details:', {
+            userEmail: session.user.email,
+            userConfirmed: session.user.email_confirmed_at,
+            appMetadata: session.user.app_metadata,
+            userMetadata: session.user.user_metadata,
+            aud: session.user.aud,
+            provider: session.user.app_metadata?.provider
+          });
           
           // Fetch profile data asynchronously
           fetchProfile(session.user.id).then(async (profileData) => {
             if (!mounted) return;
+            
+            console.log('👤 AuthContext: Profile fetch result:', {
+              profileFound: !!profileData,
+              profileId: profileData?.id,
+              profileEmail: profileData?.email,
+              profileActive: profileData?.is_active
+            });
             
             // Fetch organization memberships and enhance profile
             let enhancedProfile = profileData;
@@ -335,7 +361,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (profileData) {
               setOrganizationLoading(true);
               
+              console.log('🏢 AuthContext: Fetching organization memberships...');
               currentMemberships = await fetchOrganizationMemberships(profileData.id);
+              console.log('🏢 AuthContext: Organization memberships result:', {
+                membershipCount: currentMemberships.length,
+                organizations: currentMemberships.map(m => ({
+                  id: m.organization?.id,
+                  name: m.organization?.name,
+                  type: m.organization?.organization_type,
+                  role: m.role
+                }))
+              });
               setOrganizationMemberships(currentMemberships);
               
               // Enhance profile

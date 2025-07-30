@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { userTypeCheckers } from '@/lib/permissions/userUtils';
 import { createEnhancedUser } from '@/lib/permissions/userUtils';
+import { SessionDebugPanel } from '@/components/SessionDebugPanel';
 
 const DashboardRouter: React.FC = () => {
   const { profile, loading, isImpersonating, userOrganizations } = useAuth();
@@ -19,12 +20,18 @@ const DashboardRouter: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <LoadingSpinner />
+        <SessionDebugPanel />
       </div>
     );
   }
 
   if (!profile || !enhancedUser) {
-    return <Navigate to="/auth" replace />;
+    return (
+      <>
+        <Navigate to="/auth" replace />
+        <SessionDebugPanel />
+      </>
+    );
   }
 
   // Route based on organization permissions
@@ -40,7 +47,12 @@ const DashboardRouter: React.FC = () => {
   } else {
     // Default fallback for users without organization permissions
     console.log('DashboardRouter - No organization permissions, redirecting to auth');
-    return <Navigate to="/auth" replace />;
+    return (
+      <>
+        <Navigate to="/auth" replace />
+        <SessionDebugPanel />
+      </>
+    );
   }
 };
 
