@@ -1533,6 +1533,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      debug_session_context: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       debug_user_creation_state: {
         Args: { p_email?: string; p_user_id?: string }
         Returns: Json
@@ -1580,6 +1584,14 @@ export type Database = {
       generate_work_order_number_v2: {
         Args: { org_id: string; location_code?: string }
         Returns: string
+      }
+      get_admin_organizations_emergency: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_admin_profile_emergency: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
@@ -1711,6 +1723,10 @@ export type Database = {
         Returns: Json
       }
       test_auth_system: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      test_basic_db_operations: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
