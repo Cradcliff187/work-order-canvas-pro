@@ -42,7 +42,7 @@ export const SubcontractorInvoices = lazy(() => import('@/pages/subcontractor/Su
 
 // Other Pages
 export const Auth = lazy(() => import('@/pages/Auth'));
-export const DevTools = lazy(() => import('@/pages/DevTools'));
+// DevTools removed - no longer needed
 
 
 // Report Pages

@@ -2,57 +2,40 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { userTypeCheckers } from '@/lib/permissions/userUtils';
-import { createEnhancedUser } from '@/lib/permissions/userUtils';
-import { SessionDebugPanel } from '@/components/SessionDebugPanel';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 const DashboardRouter: React.FC = () => {
-  const { profile, loading, isImpersonating, userOrganizations } = useAuth();
-
-  // Create enhanced user for permission checking
-  const enhancedUser = profile ? createEnhancedUser(profile, userOrganizations) : null;
+  const { profile, loading } = useAuth();
+  const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
 
   console.log('DashboardRouter - Profile:', profile);
-  console.log('DashboardRouter - Enhanced User:', enhancedUser);
-  console.log('DashboardRouter - Is Impersonating:', isImpersonating);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <LoadingSpinner />
-        <SessionDebugPanel />
       </div>
     );
   }
 
-  if (!profile || !enhancedUser) {
-    return (
-      <>
-        <Navigate to="/auth" replace />
-        <SessionDebugPanel />
-      </>
-    );
+  if (!profile) {
+    return <Navigate to="/auth" replace />;
   }
 
   // Route based on organization permissions
-  if (userTypeCheckers.isAdmin(enhancedUser)) {
+  if (isAdmin()) {
     return <Navigate to="/admin/dashboard" replace />;
-  } else if (userTypeCheckers.isEmployee(enhancedUser)) {
+  } else if (isEmployee()) {
     return <Navigate to="/admin/employee-dashboard" replace />;
-  } else if (userTypeCheckers.isPartner(enhancedUser)) {
+  } else if (isPartner()) {
     console.log('DashboardRouter - Redirecting to partner dashboard');
     return <Navigate to="/partner/dashboard" replace />;
-  } else if (userTypeCheckers.isSubcontractor(enhancedUser)) {
+  } else if (isSubcontractor()) {
     return <Navigate to="/subcontractor/dashboard" replace />;
   } else {
     // Default fallback for users without organization permissions
     console.log('DashboardRouter - No organization permissions, redirecting to auth');
-    return (
-      <>
-        <Navigate to="/auth" replace />
-        <SessionDebugPanel />
-      </>
-    );
+    return <Navigate to="/auth" replace />;
   }
 };
 

@@ -69,7 +69,7 @@ interface CreateWorkOrderModalProps {
 
 export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWorkOrderCreated }: CreateWorkOrderModalProps) {
   const { toast } = useToast();
-  const { viewingProfile } = useAuth();
+  const { profile } = useAuth();
   const isMobile = useIsMobile();
   const [currentStep, setCurrentStep] = useState(1);
   const [trades, setTrades] = useState<any[]>([]);
@@ -393,7 +393,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
   // Navigation functions
   const handleNext = async () => {
     console.log('🔄 HandleNext called - Current step:', currentStep);
-    console.log('👤 ViewingProfile check:', viewingProfile);
+    console.log('👤 Profile check:', profile);
     console.log('🏢 Organization IDs:', { organizationId, selectedOrganizationId });
     
     const isValid = await validateStep(currentStep);
@@ -427,12 +427,12 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
       console.log('🔧 Work Order Creation Debug - Starting submission...');
       console.log('📝 Form Data:', data);
       console.log('📁 Selected Files:', selectedFiles);
-      console.log('👤 ViewingProfile:', viewingProfile);
+      console.log('👤 Profile:', profile);
       console.log('🏢 Organization ID:', organizationId || selectedOrganizationId);
       console.log('🏪 Selected Organization:', selectedOrganization);
 
       // Validate critical fields
-      if (!viewingProfile?.id) {
+      if (!profile?.id) {
         throw new Error('User profile not found. Please refresh the page and try again.');
       }
 
@@ -476,7 +476,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         location_contact_email: data.location_contact_email || '',
         partner_po_number: data.partner_po_number || '',
         partner_location_number: data.partner_location_number || generatedLocationNumber || '',
-        created_by: viewingProfile.id,
+        created_by: profile.id,
       };
 
       console.log('📤 Submission Data:', submissionData);
@@ -543,7 +543,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
       console.error('🔍 Error details:', {
         message: error.message,
         stack: error.stack,
-        viewingProfile,
+        profile,
         organizationId: organizationId || selectedOrganizationId,
       });
       

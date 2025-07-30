@@ -7,7 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PWAUpdateNotification } from '@/components/PWAUpdateNotification';
 import { StorageDebugPanel } from '@/components/StorageDebugPanel';
-import { EmergencyAuthProvider } from '@/contexts/EmergencyAuthContext';
+import { OrganizationAuthProvider } from '@/contexts/OrganizationAuthContext';
 import { AppRouter } from '@/routes/AppRouter';
 import { useBrowserTabTitle } from '@/hooks/useBrowserTabTitle';
 
@@ -43,7 +43,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-          <EmergencyAuthProvider>
+          <OrganizationAuthProvider>
             <Toaster />
             <Sonner richColors closeButton />
             <OfflineIndicator />
@@ -55,7 +55,7 @@ const App: React.FC = () => {
                 onClose={() => setShowDebugPanel(false)} 
               />
             )}
-          </EmergencyAuthProvider>
+          </OrganizationAuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

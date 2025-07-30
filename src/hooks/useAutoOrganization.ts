@@ -6,10 +6,10 @@ export const useAutoOrganization = () => {
   const { isAdmin } = useUserProfile();
   
   return {
-    organizationId: userOrganization?.id,
-    shouldShowSelector: isAdmin,
-    organizationType: userOrganization?.organization_type,
-    organization: userOrganization,
+    organizationId: userOrganization?.organization_id,
+    shouldShowSelector: isAdmin(),
+    organizationType: userOrganization?.organization?.organization_type,
+    organization: userOrganization?.organization,
     isLoading: false // Profile loading is handled by useUserProfile
   };
 };

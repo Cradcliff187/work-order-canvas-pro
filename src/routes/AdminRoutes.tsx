@@ -30,7 +30,7 @@ import {
   
   AdminUtilities,
   AdminApprovals,
-  DevTools,
+  // DevTools removed
   // Organization-based routes only
   
 } from '@/pages/LazyPages';
@@ -277,15 +277,7 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/dev-tools" element={
-      <ProtectedRoute requiredUserType="admin">
-        <AdminLayout>
-          <Suspense fallback={<LoadingSpinner />}>
-            <DevTools />
-          </Suspense>
-        </AdminLayout>
-      </ProtectedRoute>
-    } />
+    {/* DevTools removed - no longer needed */}
     
     {/* All routes use organization-based authentication */}
     

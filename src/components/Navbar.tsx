@@ -17,7 +17,7 @@ import { LogOut, Settings, User } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
 const Navbar = () => {
-  const { viewingProfile, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const { userType, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
   const { getProductDisplayName, getCompanyDisplayName, assets } = useBranding();
 
@@ -78,9 +78,9 @@ const Navbar = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={viewingProfile?.avatar_url} alt={viewingProfile?.first_name} />
+                <AvatarImage src={profile?.avatar_url} alt={profile?.first_name} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {viewingProfile ? getInitials(viewingProfile.first_name, viewingProfile.last_name) : 'U'}
+                  {profile ? getInitials(profile.first_name, profile.last_name) : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -89,10 +89,10 @@ const Navbar = () => {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">
-                  {viewingProfile?.first_name} {viewingProfile?.last_name}
+                  {profile?.first_name} {profile?.last_name}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {viewingProfile?.email}
+                  {profile?.email}
                 </p>
                 <p className={`text-xs leading-none font-medium ${getUserTypeColor(userType)}`}>
                   {formatUserType(userType)}

@@ -10,13 +10,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
-  const { user, profile, realProfile, viewingProfile, loading, isImpersonating } = useAuth();
+  const { user, profile, loading } = useAuth();
   const { isAdmin, isEmployee, isPartner, isSubcontractor, hasPermission } = useUserProfile();
 
-  console.log('ProtectedRoute - Real Profile:', realProfile);
-  console.log('ProtectedRoute - Viewing Profile:', viewingProfile);
+  console.log('ProtectedRoute - Profile:', profile);
   console.log('ProtectedRoute - Required Type:', requiredUserType);
-  console.log('ProtectedRoute - Is Impersonating:', isImpersonating);
 
   if (loading) {
     return (
@@ -39,20 +37,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
   }
 
   // Check permissions using organization-based system
-  const hasRequiredPermission = () => {
-    if (!requiredUserType) return true;
-    
-    // When impersonating, check real profile permissions but allow admin override
-    if (isImpersonating && isAdmin()) {
-      console.log('ProtectedRoute - Admin impersonating - allowing access');
-      return true;
-    }
-    
-    // Use permission checking method
-    return hasPermission(requiredUserType);
-  };
+  const hasRequiredPermission = hasPermission(requiredUserType);
 
-  if (!hasRequiredPermission()) {
+  if (!hasRequiredPermission) {
     console.log('ProtectedRoute - ACCESS DENIED - Insufficient permissions');
     
     // Redirect based on user type

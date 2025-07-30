@@ -33,7 +33,7 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
-  const { resetPassword, isRecoverySession, setRecoveryFlow } = useAuth();
+  const { resetPassword } = useAuth();
   const branding = useBranding();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -275,7 +275,7 @@ const ResetPassword = () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           console.log('Valid existing session found, proceeding with password reset');
-          setRecoveryFlow(true);
+          // setRecoveryFlow(true); // Not needed in new auth system
           return;
         }
         
@@ -332,7 +332,7 @@ const ResetPassword = () => {
         // Verify this is actually a recovery session and set recovery flow
         if (sessionData.user && sessionData.session) {
           console.log('Recovery session established successfully from URL');
-          setRecoveryFlow(true);
+          // setRecoveryFlow(true); // Not needed in new auth system
         } else {
           console.error('Session verification failed - no user or session data');
           setResetError(categorizeError('Session verification failed', 'session_error'));
@@ -360,7 +360,7 @@ const ResetPassword = () => {
         const isValidRecoverySession = validateRecoverySession(session);
         if (isValidRecoverySession) {
           console.log('Found existing valid recovery session');
-          setRecoveryFlow(true);
+          // setRecoveryFlow(true); // Not needed in new auth system
           return; // Success - no need to process URL parameters
         } else {
           console.log('Existing session is not a valid recovery session');
@@ -540,7 +540,7 @@ const ResetPassword = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isRecoverySession() ? (
+            {true ? ( // Always show reset form in new system
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="password">New Password</Label>
