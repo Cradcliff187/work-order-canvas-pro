@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PWAUpdateNotification } from '@/components/PWAUpdateNotification';
 import { StorageDebugPanel } from '@/components/StorageDebugPanel';
+import { PhaseDebugger } from '@/components/PhaseDebugger';
 import { OrganizationAuthProvider } from '@/contexts/OrganizationAuthContext';
 import { AppRouter } from '@/routes/AppRouter';
 import { useBrowserTabTitle } from '@/hooks/useBrowserTabTitle';
@@ -48,6 +49,7 @@ const App: React.FC = () => {
             <Sonner richColors closeButton />
             <OfflineIndicator />
             <PWAUpdateNotification />
+            <PhaseDebugger />
             <AppContent />
             {process.env.NODE_ENV !== 'production' && (
               <StorageDebugPanel 
