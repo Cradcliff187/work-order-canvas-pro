@@ -1457,6 +1457,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      auth_profile_id_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       auth_user_belongs_to_organization: {
         Args: { p_organization_id: string }
         Returns: boolean
@@ -1594,6 +1598,10 @@ export type Database = {
           avg_completion_hours: number
         }[]
       }
+      get_jwt_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_type"]
+      }
       get_profile_id_direct: {
         Args: { p_user_id: string }
         Returns: string
@@ -1614,6 +1622,10 @@ export type Database = {
         Returns: {
           organization_id: string
         }[]
+      }
+      get_user_organization_ids_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
       }
       get_user_organizations: {
         Args: Record<PropertyKey, never>
@@ -1696,6 +1708,10 @@ export type Database = {
       }
       sync_user_auth_metadata: {
         Args: { target_user_id?: string }
+        Returns: Json
+      }
+      test_auth_system: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       test_user_creation: {
