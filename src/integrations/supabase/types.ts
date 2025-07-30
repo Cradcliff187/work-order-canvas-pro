@@ -1537,10 +1537,6 @@ export type Database = {
         Args: { p_email?: string; p_user_id?: string }
         Returns: Json
       }
-      emergency_auth_bypass: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
       ensure_single_organization_assignment: {
         Args: Record<PropertyKey, never>
         Returns: Json
