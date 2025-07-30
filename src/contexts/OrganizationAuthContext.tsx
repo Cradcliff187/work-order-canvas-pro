@@ -17,8 +17,6 @@ interface Profile {
   hourly_billable_rate?: number;
   created_at: string;
   updated_at: string;
-  // Computed field for backward compatibility
-  user_type?: 'admin' | 'employee' | 'partner' | 'subcontractor';
 }
 
 export interface OrganizationAuthContextType {
@@ -61,7 +59,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
 
   const fetchProfile = async (userId: string) => {
     try {
-      console.log('🔍 Phase 1: Fetching profile for user:', userId);
+      console.log('🔍 Organization-based auth: Fetching profile for user:', userId);
       
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -77,12 +75,9 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
 
       console.log('✅ Profile data loaded:', profileData);
 
-      // Fetch organization memberships with fallback for migration
-      let membershipData: any[] = [];
-      
-      // First try organization_members (new table)
-      console.log('🔍 Trying organization_members table...');
-      const { data: newMembershipData, error: newMembershipError } = await supabase
+      // ORGANIZATION-BASED: Use ONLY organization_members table
+      console.log('🔍 Fetching from organization_members (single source of truth)...');
+      const { data: membershipData, error: membershipError } = await supabase
         .from('organization_members')
         .select(`
           id,
@@ -104,68 +99,19 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         `)
         .eq('user_id', profileData.id);
 
-      if (newMembershipData && newMembershipData.length > 0) {
-        console.log('✅ Found data in organization_members:', newMembershipData);
-        membershipData = newMembershipData;
-      } else {
-        console.log('⚠️ No data in organization_members, trying fallback...', newMembershipError);
-        
-        // Fallback to user_organizations (legacy table)
-        const { data: legacyMembershipData, error: legacyMembershipError } = await supabase
-          .from('user_organizations')
-          .select(`
-            id,
-            user_id,
-            organization_id,
-            created_at,
-            organization:organizations(
-              id,
-              name,
-              organization_type,
-              initials,
-              contact_email,
-              contact_phone,
-              address,
-              uses_partner_location_numbers,
-              is_active
-            )
-          `)
-          .eq('user_id', profileData.id);
-
-        if (legacyMembershipError) {
-          console.error('❌ Error fetching from legacy table:', legacyMembershipError);
-          setLoading(false);
-          return;
-        }
-
-        console.log('📊 Legacy data found:', legacyMembershipData);
-        
-        // Transform legacy data to match organization_members structure
-        membershipData = (legacyMembershipData || []).map(item => ({
-          ...item,
-          role: profileData.user_type === 'admin' ? 'admin' : 'member'
-        }));
+      if (membershipError) {
+        console.error('❌ Error fetching organization memberships:', membershipError);
+        setLoading(false);
+        return;
       }
 
       const memberships = membershipData || [];
-      console.log('🏢 Final memberships:', memberships);
+      console.log('🏢 Organization memberships:', memberships);
       setUserOrganizations(memberships);
 
-      // Compute user_type for backward compatibility
-      let computedUserType: 'admin' | 'employee' | 'partner' | 'subcontractor' = 'subcontractor';
-      
-      const internalMembership = memberships.find(m => m.organization?.organization_type === 'internal');
-      if (internalMembership?.role === 'admin') {
-        computedUserType = 'admin';
-      } else if (internalMembership) {
-        computedUserType = 'employee';
-      } else if (memberships.find(m => m.organization?.organization_type === 'partner')) {
-        computedUserType = 'partner';
-      }
-
-      console.log('👤 Computed user type:', computedUserType);
-      setProfile({ ...profileData, user_type: computedUserType });
-      console.log('✅ Profile setup complete!');
+      // Remove user_type computation - use organization data directly
+      setProfile(profileData);
+      console.log('✅ Organization-based profile setup complete!');
       
     } catch (error) {
       console.error('💥 Error in fetchProfile:', error);

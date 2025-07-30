@@ -5,10 +5,11 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
 const DashboardRouter: React.FC = () => {
-  const { profile, loading } = useAuth();
-  const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
+  const { profile, loading, userOrganizations } = useAuth();
+  const { isAdmin, isEmployee, isPartner, isSubcontractor, primaryRole } = useUserProfile();
 
-  console.log('DashboardRouter - Profile:', profile);
+  console.log('DashboardRouter - Organization memberships:', userOrganizations);
+  console.log('DashboardRouter - Primary role:', primaryRole);
 
   if (loading) {
     return (
@@ -22,21 +23,30 @@ const DashboardRouter: React.FC = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Route based on organization permissions
+  // Organization-based routing - no fallbacks, clear paths
   if (isAdmin()) {
+    console.log('DashboardRouter - Admin access granted');
     return <Navigate to="/admin/dashboard" replace />;
-  } else if (isEmployee()) {
+  } 
+  
+  if (isEmployee()) {
+    console.log('DashboardRouter - Employee access granted');
     return <Navigate to="/admin/employee-dashboard" replace />;
-  } else if (isPartner()) {
-    console.log('DashboardRouter - Redirecting to partner dashboard');
+  } 
+  
+  if (isPartner()) {
+    console.log('DashboardRouter - Partner access granted');
     return <Navigate to="/partner/dashboard" replace />;
-  } else if (isSubcontractor()) {
+  } 
+  
+  if (isSubcontractor()) {
+    console.log('DashboardRouter - Subcontractor access granted');
     return <Navigate to="/subcontractor/dashboard" replace />;
-  } else {
-    // Default fallback for users without organization permissions
-    console.log('DashboardRouter - No organization permissions, redirecting to auth');
-    return <Navigate to="/auth" replace />;
   }
+
+  // No valid organization membership - redirect to auth
+  console.log('DashboardRouter - No valid organization membership, redirecting to auth');
+  return <Navigate to="/auth" replace />;
 };
 
 export default DashboardRouter;
