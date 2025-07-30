@@ -99,7 +99,7 @@ export function useEnhancedUserProfile(profile: any, organizationData?: any) {
       isPartner: false,
       isSubcontractor: false,
       hasInternalAccess: false,
-      getUserType: () => 'subcontractor' as LegacyUserType,
+      getUserType: () => 'subcontractor',
       canManageUsers: false,
       canManageWorkOrders: false,
       canViewFinancialData: false,
@@ -120,6 +120,7 @@ export function useEnhancedUserProfile(profile: any, organizationData?: any) {
     
     // Utility functions
     getUserType: () => getUserType(enhancedUser),
+    userType: enhancedUser.userType,
     
     // Permission checking
     canManageUsers: permissionCheckers.canManageUsers(enhancedUser),

@@ -23,7 +23,7 @@ export interface EnhancedUser {
   primary_organization?: OrganizationMember;
   
   // Computed fields for compatibility
-  effective_user_type?: LegacyUserType;
+  userType?: LegacyUserType;
   has_internal_access?: boolean;
   has_admin_access?: boolean;
 }

@@ -139,7 +139,7 @@ export function createEnhancedUser(
       is_employee: false,
       organization_memberships: [],
       primary_organization: null,
-      effective_user_type: 'subcontractor',
+      userType: 'subcontractor',
       has_internal_access: false,
       has_admin_access: false,
     };
@@ -156,7 +156,7 @@ export function createEnhancedUser(
   };
 
   // Compute derived properties
-  enhancedUser.effective_user_type = getUserType(enhancedUser);
+  enhancedUser.userType = getUserType(enhancedUser);
   enhancedUser.has_internal_access = userTypeCheckers.hasInternalAccess(enhancedUser);
   enhancedUser.has_admin_access = userTypeCheckers.isAdmin(enhancedUser);
 

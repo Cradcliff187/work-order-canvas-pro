@@ -4,9 +4,9 @@ interface JWTSyncResponse {
   success: boolean;
   error?: string;
   metadata?: {
-    user_type: string;
     profile_id: string;
     organization_ids: string[];
+    organization_types: string[];
     is_active: boolean;
   };
 }
@@ -74,8 +74,8 @@ export function getUserContextFromJWT(session: any) {
   const metadata = session?.user?.app_metadata;
   return {
     profileId: metadata?.profile_id,
-    userType: metadata?.user_type,
     organizationIds: metadata?.organization_ids || [],
+    organizationTypes: metadata?.organization_types || [],
     isActive: metadata?.is_active ?? true
   };
 }

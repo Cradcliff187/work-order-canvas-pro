@@ -68,7 +68,7 @@ function checkOrganizationPermission(
 }
 
 /**
- * Legacy user_type-based permission checking
+ * Legacy fallback permission checking (deprecated)
  */
 function checkLegacyPermission(
   user: EnhancedUser,

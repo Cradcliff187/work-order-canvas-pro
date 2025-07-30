@@ -36,19 +36,25 @@ export function useWorkOrderLifecycleTesting() {
       updateResult('Partner Work Order Creation', 'running');
       const { data: partnerUser } = await supabase
         .from('profiles')
-        .select('id, user_organizations(organization_id)')
-        .eq('user_type', 'partner')
+        .select(`
+          id, 
+          organization_members!inner(
+            organization_id,
+            organizations!inner(organization_type)
+          )
+        `)
+        .eq('organization_members.organizations.organization_type', 'partner')
         .limit(1)
         .single();
 
-      if (!partnerUser || !partnerUser.user_organizations?.[0]) {
+      if (!partnerUser || !partnerUser.organization_members?.[0]) {
         updateResult('Partner Work Order Creation', 'fail', 'No partner user with organization found');
       } else {
         // Get partner organization
         const { data: partnerOrg } = await supabase
           .from('organizations')
           .select('*')
-          .eq('id', partnerUser.user_organizations[0].organization_id)
+          .eq('id', partnerUser.organization_members[0].organization_id)
           .single();
 
         // Create a test work order
@@ -88,8 +94,14 @@ export function useWorkOrderLifecycleTesting() {
           } else {
             const { data: subcontractorUser } = await supabase
               .from('profiles')
-              .select('id, user_organizations(organization_id)')
-              .eq('user_type', 'subcontractor')
+              .select(`
+                id, 
+                organization_members!inner(
+                  organization_id,
+                  organizations!inner(organization_type)
+                )
+              `)
+              .eq('organization_members.organizations.organization_type', 'subcontractor')
               .limit(1)
               .single();
 
@@ -99,8 +111,15 @@ export function useWorkOrderLifecycleTesting() {
               // Create assignment
               const { data: adminUser } = await supabase
                 .from('profiles')
-                .select('id')
-                .eq('user_type', 'admin')
+                .select(`
+                  id,
+                  organization_members!inner(
+                    role,
+                    organizations!inner(organization_type)
+                  )
+                `)
+                .eq('organization_members.organizations.organization_type', 'internal')
+                .eq('organization_members.role', 'admin')
                 .limit(1)
                 .single();
 

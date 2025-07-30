@@ -17,6 +17,8 @@ interface Profile {
   hourly_billable_rate?: number;
   created_at: string;
   updated_at: string;
+  // Computed field for backward compatibility
+  user_type?: 'admin' | 'employee' | 'partner' | 'subcontractor';
 }
 
 export interface OrganizationAuthContextType {
@@ -70,9 +72,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         return;
       }
 
-      setProfile(profileData);
-
-      // Fetch organization memberships
+      // Fetch organization memberships first to compute user_type
       const { data: membershipData, error: membershipError } = await supabase
         .from('organization_members')
         .select(`
@@ -100,7 +100,22 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         return;
       }
 
-      setUserOrganizations(membershipData || []);
+      const memberships = membershipData || [];
+      setUserOrganizations(memberships);
+
+      // Compute user_type for backward compatibility
+      let computedUserType: 'admin' | 'employee' | 'partner' | 'subcontractor' = 'subcontractor';
+      
+      const internalMembership = memberships.find(m => m.organization?.organization_type === 'internal');
+      if (internalMembership?.role === 'admin') {
+        computedUserType = 'admin';
+      } else if (internalMembership) {
+        computedUserType = 'employee';
+      } else if (memberships.find(m => m.organization?.organization_type === 'partner')) {
+        computedUserType = 'partner';
+      }
+
+      setProfile({ ...profileData, user_type: computedUserType });
     } catch (error) {
       console.error('Error in fetchProfile:', error);
     }
