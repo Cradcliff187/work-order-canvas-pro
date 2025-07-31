@@ -65,8 +65,17 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     
     try {
       console.log('4. Calling get_user_profile function...');
-      const { data: profileData, error: profileError } = await supabase
-        .rpc('get_user_profile', { user_uuid: userId });
+      
+      // Add timeout to prevent infinite hanging
+      const profilePromise = supabase.rpc('get_user_profile', { user_uuid: userId });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      );
+      
+      const { data: profileData, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as any;
         
       console.log('5. Profile function result:', { profileData, profileError });
 
