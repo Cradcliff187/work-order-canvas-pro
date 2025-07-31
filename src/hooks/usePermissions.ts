@@ -37,6 +37,7 @@ export function usePermissions() {
     // User information
     user: profile,
     userType,
+    primaryRole: userType,
     
     // Basic type checks
     isAdmin,
@@ -57,9 +58,9 @@ export function usePermissions() {
     canManageOrganizations: isAdmin,
     
     // Core permission checking
-    hasPermission: (requiredUserType: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
+    hasPermission: (requiredRole: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
       return hasOrganizationPermission(
-        requiredUserType,
+        requiredRole,
         internalMembership,
         partnerMemberships,
         subcontractorMemberships
@@ -78,6 +79,7 @@ export function useUserPermissions() {
   return {
     profile: permissions.user,
     userType: permissions.userType,
+    primaryRole: permissions.primaryRole,
     isAdmin: permissions.isAdmin,
     isEmployee: permissions.isEmployee,
     isPartner: permissions.isPartner,

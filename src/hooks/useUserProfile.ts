@@ -46,7 +46,7 @@ export const useUserProfile = () => {
     isPartner,
     isSubcontractor,
     hasPermission,
-    userType: getUserPrimaryRole(), // Keep for backward compatibility
+    userType: getUserPrimaryRole(), // Backward compatibility
     primaryRole: getUserPrimaryRole(),
     internalMembership,
     partnerMemberships,

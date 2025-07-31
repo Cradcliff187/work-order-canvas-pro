@@ -1598,10 +1598,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      get_current_user_type: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["user_type"]
-      }
       get_geographic_distribution: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
@@ -1610,10 +1606,6 @@ export type Database = {
           work_order_count: number
           avg_completion_hours: number
         }[]
-      }
-      get_jwt_user_type: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["user_type"]
       }
       get_profile_id_direct: {
         Args: { p_user_id: string }
@@ -1802,7 +1794,6 @@ export type Database = {
       organization_role: "owner" | "admin" | "manager" | "employee" | "member"
       organization_type: "partner" | "subcontractor" | "internal"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
-      user_type: "admin" | "partner" | "subcontractor" | "employee"
       work_order_status:
         | "received"
         | "assigned"
@@ -1944,7 +1935,6 @@ export const Constants = {
       organization_role: ["owner", "admin", "manager", "employee", "member"],
       organization_type: ["partner", "subcontractor", "internal"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
-      user_type: ["admin", "partner", "subcontractor", "employee"],
       work_order_status: [
         "received",
         "assigned",
