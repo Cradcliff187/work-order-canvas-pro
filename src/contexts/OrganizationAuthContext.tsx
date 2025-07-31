@@ -61,13 +61,18 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     console.log('=== FETCH PROFILE DEBUG START ===');
     console.log('1. Starting fetchProfile for userId:', userId);
     console.log('2. Current loading state:', loading);
+    console.log('3. About to execute profile query...');
     
     try {
-      const { data: profileData, error: profileError } = await supabase
+      console.log('4. Creating profile query...');
+      const profileQuery = supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
+      
+      console.log('5. Profile query created, now executing...');
+      const { data: profileData, error: profileError } = await profileQuery;
 
       console.log('3. Profile query result:', { profileData, profileError });
 
