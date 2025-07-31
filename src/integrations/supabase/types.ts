@@ -1594,6 +1594,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_profile_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_current_user_type: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_type"]
@@ -1759,10 +1763,6 @@ export type Database = {
       user_belongs_to_organization: {
         Args: { org_id: string }
         Returns: boolean
-      }
-      user_profile_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
       }
       validate_security_setup: {
         Args: Record<PropertyKey, never>
