@@ -1,50 +1,41 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  organizationCheckers, 
+  hasOrganizationPermission, 
+  getPrimaryRole,
+  filterMembershipsByType,
+  getInternalMembership
+} from '@/lib/permissions';
 
-// ORGANIZATION-BASED: Pure organization role system
+// ORGANIZATION-BASED: Pure organization role system using clean permission library
 export const useUserProfile = () => {
   const { profile, loading, userOrganizations } = useAuth();
   
   // Get organization memberships for permission checking
-  const internalMembership = userOrganizations.find(org => 
-    org.organization?.organization_type === 'internal'
-  );
-  const partnerMemberships = userOrganizations.filter(org => 
-    org.organization?.organization_type === 'partner'
-  );
-  const subcontractorMemberships = userOrganizations.filter(org => 
-    org.organization?.organization_type === 'subcontractor'
-  );
+  const internalMembership = getInternalMembership(userOrganizations);
+  const partnerMemberships = filterMembershipsByType(userOrganizations, 'partner');
+  const subcontractorMemberships = filterMembershipsByType(userOrganizations, 'subcontractor');
 
-  // Pure organization-based permission checks
-  const isAdmin = () => internalMembership?.role === 'admin';
-  const isEmployee = () => internalMembership && ['employee', 'manager'].includes(internalMembership.role);
-  const isPartner = () => partnerMemberships.length > 0;
-  const isSubcontractor = () => subcontractorMemberships.length > 0;
+  // Pure organization-based permission checks using clean library
+  const isAdmin = () => organizationCheckers.isAdmin(internalMembership);
+  const isEmployee = () => organizationCheckers.isEmployee(internalMembership);
+  const isPartner = () => organizationCheckers.isPartner(partnerMemberships);
+  const isSubcontractor = () => organizationCheckers.isSubcontractor(subcontractorMemberships);
 
   const hasPermission = (requiredRole: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
     if (!profile) return false;
     
-    switch (requiredRole) {
-      case 'admin':
-        return isAdmin();
-      case 'employee':
-        return isAdmin() || isEmployee();
-      case 'partner':
-        return isAdmin() || isEmployee() || isPartner();
-      case 'subcontractor':
-        return true; // All authenticated users can access subcontractor features
-      default:
-        return false;
-    }
+    return hasOrganizationPermission(
+      requiredRole,
+      internalMembership,
+      partnerMemberships,
+      subcontractorMemberships
+    );
   };
 
   // Determine primary role based on organization memberships
-  const getPrimaryRole = () => {
-    if (isAdmin()) return 'admin';
-    if (isEmployee()) return 'employee';
-    if (isPartner()) return 'partner';
-    if (isSubcontractor()) return 'subcontractor';
-    return null; // No valid organization membership
+  const getUserPrimaryRole = () => {
+    return getPrimaryRole(internalMembership, partnerMemberships, subcontractorMemberships);
   };
 
   return {
@@ -55,8 +46,8 @@ export const useUserProfile = () => {
     isPartner,
     isSubcontractor,
     hasPermission,
-    userType: getPrimaryRole(), // Keep for backward compatibility
-    primaryRole: getPrimaryRole(),
+    userType: getUserPrimaryRole(), // Keep for backward compatibility
+    primaryRole: getUserPrimaryRole(),
     internalMembership,
     partnerMemberships,
     subcontractorMemberships,

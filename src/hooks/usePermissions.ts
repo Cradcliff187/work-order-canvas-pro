@@ -1,52 +1,69 @@
 /**
- * Phase 2: Enhanced Permissions Hook
- * Demonstrates how to use the new permission system in components
+ * Clean Organization-Based Permissions Hook
+ * Uses the clean permission system - no legacy compatibility layers
  */
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrganizationBridge } from './useOrganizationBridge';
-import { useEnhancedUserProfile, Permission, type PermissionContext } from '@/lib/permissions';
+import { 
+  organizationCheckers,
+  hasOrganizationPermission,
+  getPrimaryRole,
+  filterMembershipsByType,
+  getInternalMembership,
+  type OrganizationMember
+} from '@/lib/permissions';
 
 /**
- * Main permissions hook that provides both legacy and organization-based permission checking
+ * Main permissions hook using clean organization-based system
  */
 export function usePermissions() {
-  const { profile } = useAuth();
-  const { organizationMemberships, primaryOrganization } = useOrganizationBridge(profile?.id);
+  const { profile, userOrganizations } = useAuth();
 
-  // Create enhanced user profile with organization data
-  const enhancedProfile = useEnhancedUserProfile(profile, organizationMemberships);
+  // Filter memberships by type
+  const internalMembership = getInternalMembership(userOrganizations);
+  const partnerMemberships = filterMembershipsByType(userOrganizations, 'partner');
+  const subcontractorMemberships = filterMembershipsByType(userOrganizations, 'subcontractor');
 
-  // Return comprehensive permission interface
+  // Role checks
+  const isAdmin = organizationCheckers.isAdmin(internalMembership);
+  const isEmployee = organizationCheckers.isEmployee(internalMembership);
+  const isPartner = organizationCheckers.isPartner(partnerMemberships);
+  const isSubcontractor = organizationCheckers.isSubcontractor(subcontractorMemberships);
+  
+  const userType = getPrimaryRole(internalMembership, partnerMemberships, subcontractorMemberships);
+  const hasInternalAccess = isAdmin || isEmployee;
+
   return {
     // User information
-    user: enhancedProfile.user,
-    userType: enhancedProfile.getUserType(),
+    user: profile,
+    userType,
     
-    // Basic type checks (legacy compatible)
-    isAdmin: enhancedProfile.isAdmin,
-    isEmployee: enhancedProfile.isEmployee,
-    isPartner: enhancedProfile.isPartner,
-    isSubcontractor: enhancedProfile.isSubcontractor,
-    hasInternalAccess: enhancedProfile.hasInternalAccess,
+    // Basic type checks
+    isAdmin,
+    isEmployee,
+    isPartner,
+    isSubcontractor,
+    hasInternalAccess,
     
     // Organization information
-    primaryOrganization,
-    organizations: organizationMemberships,
+    primaryOrganization: internalMembership || partnerMemberships[0] || subcontractorMemberships[0] || null,
+    organizations: userOrganizations,
     
     // Permission checking functions
-    canManageUsers: enhancedProfile.canManageUsers,
-    canManageWorkOrders: enhancedProfile.canManageWorkOrders,
-    canViewFinancialData: enhancedProfile.canViewFinancialData,
-    canViewSystemHealth: enhancedProfile.canViewSystemHealth,
-    canManageOrganizations: enhancedProfile.canManageOrganizations,
+    canManageUsers: isAdmin,
+    canManageWorkOrders: hasInternalAccess,
+    canViewFinancialData: hasInternalAccess,
+    canViewSystemHealth: hasInternalAccess,
+    canManageOrganizations: isAdmin,
     
-    // Advanced permission checking
-    hasPermission: enhancedProfile.hasPermission,
-    
-    // Utility function for checking specific permissions
-    checkPermission: (permission: Permission, context?: Partial<PermissionContext>) => {
-      return enhancedProfile.hasPermission(permission, context);
+    // Core permission checking
+    hasPermission: (requiredUserType: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
+      return hasOrganizationPermission(
+        requiredUserType,
+        internalMembership,
+        partnerMemberships,
+        subcontractorMemberships
+      );
     },
   };
 }
@@ -67,19 +84,7 @@ export function useUserPermissions() {
     isSubcontractor: permissions.isSubcontractor,
     hasInternalAccess: permissions.hasInternalAccess,
     
-    // Legacy permission methods
-    hasPermission: (requiredUserType: 'admin' | 'partner' | 'subcontractor' | 'employee') => {
-      const userTypeHierarchy = {
-        'admin': 4,
-        'employee': 3,
-        'partner': 2,
-        'subcontractor': 1
-      };
-
-      const userLevel = userTypeHierarchy[permissions.userType as keyof typeof userTypeHierarchy];
-      const requiredLevel = userTypeHierarchy[requiredUserType];
-
-      return userLevel >= requiredLevel;
-    },
+    // Legacy permission methods using clean system
+    hasPermission: permissions.hasPermission,
   };
 }
