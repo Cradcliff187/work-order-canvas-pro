@@ -145,9 +145,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         } else {
           setProfile(null);
           setUserOrganizations([]);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
