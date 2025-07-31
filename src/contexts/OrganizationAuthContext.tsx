@@ -67,7 +67,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       console.log('3. Profile query result:', { profileData, profileError });
 
