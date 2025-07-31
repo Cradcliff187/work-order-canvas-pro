@@ -18,28 +18,46 @@ export const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Get user organization memberships to determine redirect
-        supabase
-          .from('organization_members')
-          .select(`
-            role,
-            organization:organizations(
-              organization_type
-            )
-          `)
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .single()
-          .then(({ data: membership, error }) => {
+        // First get the user's profile ID, then get organization memberships
+        const handleAuthentication = async () => {
+          try {
+            // Get user profile
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .single();
+
+            if (profileError || !profile) {
+              console.error('Profile lookup failed:', profileError);
+              navigate('/admin/dashboard');
+              return;
+            }
+
+            // Get organization memberships using the profile ID
+            const { data: membership, error } = await supabase
+              .from('organization_members')
+              .select(`
+                role,
+                organization:organizations(
+                  organization_type
+                )
+              `)
+              .eq('user_id', profile.id)
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .single();
+
             if (error || !membership?.organization) {
-              // No organization membership found, default to admin dashboard
+              console.error('Organization membership lookup failed:', error);
               navigate('/admin/dashboard');
               return;
             }
             
             const orgType = membership.organization.organization_type;
             const role = membership.role;
+            
+            console.log('User organization routing:', { orgType, role });
             
             if (orgType === 'internal') {
               if (role === 'admin') {
@@ -54,7 +72,13 @@ export const Auth = () => {
             } else {
               navigate('/admin/dashboard');
             }
-          });
+          } catch (error) {
+            console.error('Authentication routing error:', error);
+            navigate('/admin/dashboard');
+          }
+        };
+
+        handleAuthentication();
       }
       
       if (event === 'PASSWORD_RECOVERY') {
