@@ -1641,7 +1641,7 @@ export type Database = {
         Returns: string[]
       }
       get_user_organizations: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { profile_uuid: string }
         Returns: {
           organization_id: string
         }[]
@@ -1652,6 +1652,24 @@ export type Database = {
           organization_id: string
           organization_type: Database["public"]["Enums"]["organization_type"]
           role: Database["public"]["Enums"]["organization_role"]
+        }[]
+      }
+      get_user_profile: {
+        Args: { user_uuid: string }
+        Returns: {
+          id: string
+          user_id: string
+          email: string
+          first_name: string
+          last_name: string
+          phone: string
+          avatar_url: string
+          is_active: boolean
+          is_employee: boolean
+          hourly_cost_rate: number
+          hourly_billable_rate: number
+          created_at: string
+          updated_at: string
         }[]
       }
       has_internal_role: {

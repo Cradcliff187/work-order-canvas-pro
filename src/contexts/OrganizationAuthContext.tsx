@@ -64,80 +64,66 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     console.log('3. About to execute profile query...');
     
     try {
-      console.log('4. Creating profile query...');
-      const profileQuery = supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      console.log('5. Profile query created, now executing...');
-      const { data: profileData, error: profileError } = await profileQuery;
+      console.log('4. Calling get_user_profile function...');
+      const { data: profileData, error: profileError } = await supabase
+        .rpc('get_user_profile', { user_uuid: userId });
+        
+      console.log('5. Profile function result:', { profileData, profileError });
 
       console.log('3. Profile query result:', { profileData, profileError });
 
-      if (profileError) {
+      if (profileError || !profileData || profileData.length === 0) {
         console.error('❌ Error fetching profile:', profileError);
-        console.log('4. RLS Policy Error Details:', {
-          message: profileError.message,
-          code: profileError.code,
-          details: profileError.details,
-          hint: profileError.hint
-        });
         setLoading(false);
         return;
       }
 
-      console.log('✅ Profile data loaded:', profileData);
+      // RPC returns an array, get first item
+      const profile = profileData[0];
+      console.log('✅ Profile data loaded:', profile);
+      setProfile(profile);
 
-      // ORGANIZATION-BASED: Use ONLY organization_members table
-      console.log('🔍 Fetching from organization_members (single source of truth)...');
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('organization_members')
-        .select(`
-          id,
-          role,
-          created_at,
-          user_id,
-          organization_id,
-          organization:organizations(
-            id,
-            name,
-            organization_type,
-            initials,
-            contact_email,
-            contact_phone,
-            address,
-            uses_partner_location_numbers,
-            is_active
-          )
-        `)
-        .eq('user_id', profileData.id);
-
-      console.log('4.5. Organization query result:', { membershipData, membershipError });
-
-      if (membershipError) {
-        console.error('❌ Error fetching organization memberships:', membershipError);
-        console.log('5. Organization RLS Error Details:', {
-          message: membershipError.message,
-          code: membershipError.code,
-          details: membershipError.details,
-          hint: membershipError.hint
-        });
+      // Fetch organizations using function
+      console.log('6. Calling get_user_organizations...');
+      const { data: orgData, error: orgError } = await supabase
+        .rpc('get_user_organizations', { profile_uuid: profile.id });
+        
+      console.log('7. Organization function result:', { orgData, orgError });
+      
+      if (orgError) {
+        console.error('❌ Error fetching organizations:', orgError);
         setLoading(false);
         return;
       }
+      
+      // Transform organization data to match expected format
+      const memberships = (orgData || []).map((org: any) => ({
+        id: org.id,
+        user_id: org.user_id,
+        organization_id: org.organization_id,
+        role: org.role,
+        created_at: org.created_at,
+        organization: {
+          id: org.organization_id,
+          name: org.org_name,
+          organization_type: org.org_type,
+          initials: org.org_initials,
+          contact_email: '',
+          contact_phone: '',
+          address: '',
+          uses_partner_location_numbers: false,
+          is_active: org.org_active
+        }
+      }));
 
-      const memberships = membershipData || [];
-      console.log('6. Final state before completion:', {
-        profile: profileData,
+      console.log('8. Final state before completion:', {
+        profile: profile,
         membershipCount: memberships.length,
         memberships: memberships,
         willSetLoading: 'false'
       });
-      
+
       setUserOrganizations(memberships);
-      setProfile(profileData);
       console.log('=== FETCH PROFILE DEBUG END - SUCCESS ===');
       
     } catch (error) {
