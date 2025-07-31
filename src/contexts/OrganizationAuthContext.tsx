@@ -63,29 +63,38 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     const startTime = Date.now();
     
     try {
-      // Profile fetch with timing
+      // Profile fetch with timing - using correct table name
       const profileStart = Date.now();
-      console.log('📍 Step 2: Fetching profile directly from table...');
+      console.log('📍 Step 2: Fetching profile directly from profiles table...');
       
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
       const profileTime = Date.now() - profileStart;
       console.log(`✅ Step 2 Complete: Profile fetched in ${profileTime}ms`, profileData);
       
-      if (profileError || !profileData) {
+      if (profileError) {
         console.error('❌ Profile fetch failed:', profileError);
         setProfile(null);
         setUserOrganizations([]);
+        setLoading(false);
+        return;
+      }
+
+      if (!profileData) {
+        console.warn('⚠️ No profile found for user:', userId);
+        setProfile(null);
+        setUserOrganizations([]);
+        setLoading(false);
         return;
       }
       
-      setProfile(profileData);
+      setProfile(profileData as Profile);
       
-      // Organization fetch with timing
+      // Organization fetch with timing - using profile.id not user.id
       const orgStart = Date.now();
       console.log('📍 Step 3: Fetching organizations directly from table...');
       
@@ -107,19 +116,24 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       if (orgError) {
         console.error('❌ Organization fetch failed:', orgError);
         setUserOrganizations([]);
+        setLoading(false);
         return;
       }
       
-      const memberships = orgData || [];
+      const memberships = (orgData || []) as OrganizationMember[];
       setUserOrganizations(memberships);
       
       const totalTime = Date.now() - startTime;
       console.log(`🎉 === FIX VERIFICATION COMPLETE ===`);
       console.log(`✅ Total time: ${totalTime}ms`);
-      console.log(`✅ Profile: ${profileData.first_name} ${profileData.last_name}`);
+      if (profileData.first_name && profileData.last_name) {
+        console.log(`✅ Profile: ${profileData.first_name} ${profileData.last_name}`);
+      }
       console.log(`✅ Organizations: ${memberships.length}`);
       memberships.forEach(m => {
-        console.log(`  • ${m.organization?.name} (${m.role})`);
+        if (m.organization?.name && m.role) {
+          console.log(`  • ${m.organization.name} (${m.role})`);
+        }
       });
       
     } catch (error) {
