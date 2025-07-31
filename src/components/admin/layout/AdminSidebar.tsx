@@ -127,33 +127,12 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Organization-based navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {organizationNavItems.filter(item => item.visible).map((item) => (
-                <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton 
-                    asChild
-                    isActive={isActive(item.path)}
-                    className={isActive(item.path) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
-                    tooltip={collapsed ? item.label : undefined}
-                  >
-                    <Link to={item.path} className="flex items-center gap-2">
-                      <span className="flex-1">{item.label}</span>
-                      {item.label === 'Approval Center' && totalCount > 0 && (
-                        <Badge variant="secondary" className="h-5 text-[10px] px-1.5 ml-2">
-                          {totalCount}
-                        </Badge>
-                      )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Render all sections from sidebarConfig */}
+        {renderSidebarSection('OPERATIONS', sidebarSections.OPERATIONS)}
+        {renderSidebarSection('FINANCIAL', sidebarSections.FINANCIAL)}
+        {renderSidebarSection('MANAGEMENT', sidebarSections.MANAGEMENT)}
+        {renderSidebarSection('INSIGHTS', sidebarSections.INSIGHTS)}
+        {renderSidebarSection('SYSTEM', sidebarSections.SYSTEM)}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
