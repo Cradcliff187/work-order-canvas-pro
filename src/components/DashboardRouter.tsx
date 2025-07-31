@@ -8,10 +8,29 @@ const DashboardRouter: React.FC = () => {
   const { profile, loading, userOrganizations } = useAuth();
   const { isAdmin, isEmployee, isPartner, isSubcontractor, primaryRole } = useUserProfile();
 
+  // DEBUG LOGGING
+  console.log('=== DASHBOARD ROUTER DEBUG ===');
+  console.log('1. Auth Context State:', {
+    loading,
+    hasProfile: !!profile,
+    profileEmail: profile?.email,
+    organizationCount: userOrganizations?.length
+  });
+  console.log('2. User Role Checks:', {
+    isAdmin: isAdmin(),
+    isEmployee: isEmployee(),
+    isPartner: isPartner(),
+    isSubcontractor: isSubcontractor(),
+    primaryRole
+  });
+  console.log('3. Organizations:', userOrganizations);
+  // END DEBUG
+
   console.log('DashboardRouter - Organization memberships:', userOrganizations);
   console.log('DashboardRouter - Primary role:', primaryRole);
 
   if (loading) {
+    console.log('4. Still loading - showing spinner');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <LoadingSpinner />

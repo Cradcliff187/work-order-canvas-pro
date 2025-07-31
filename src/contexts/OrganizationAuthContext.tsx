@@ -58,17 +58,27 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     : null;
 
   const fetchProfile = async (userId: string) => {
+    console.log('=== FETCH PROFILE DEBUG START ===');
+    console.log('1. Starting fetchProfile for userId:', userId);
+    console.log('2. Current loading state:', loading);
+    
     try {
-      console.log('🔍 Organization-based auth: Fetching profile for user:', userId);
-      
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
 
+      console.log('3. Profile query result:', { profileData, profileError });
+
       if (profileError) {
         console.error('❌ Error fetching profile:', profileError);
+        console.log('4. RLS Policy Error Details:', {
+          message: profileError.message,
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint
+        });
         setLoading(false);
         return;
       }
@@ -99,23 +109,36 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         `)
         .eq('user_id', profileData.id);
 
+      console.log('4.5. Organization query result:', { membershipData, membershipError });
+
       if (membershipError) {
         console.error('❌ Error fetching organization memberships:', membershipError);
+        console.log('5. Organization RLS Error Details:', {
+          message: membershipError.message,
+          code: membershipError.code,
+          details: membershipError.details,
+          hint: membershipError.hint
+        });
         setLoading(false);
         return;
       }
 
       const memberships = membershipData || [];
-      console.log('🏢 Organization memberships:', memberships);
+      console.log('6. Final state before completion:', {
+        profile: profileData,
+        membershipCount: memberships.length,
+        memberships: memberships,
+        willSetLoading: 'false'
+      });
+      
       setUserOrganizations(memberships);
-
-      // Remove user_type computation - use organization data directly
       setProfile(profileData);
-      console.log('✅ Organization-based profile setup complete!');
+      console.log('=== FETCH PROFILE DEBUG END - SUCCESS ===');
       
     } catch (error) {
-      console.error('💥 Error in fetchProfile:', error);
+      console.error('=== FETCH PROFILE DEBUG END - ERROR ===', error);
     } finally {
+      console.log('7. Setting loading to false in finally block');
       setLoading(false);  // ALWAYS set loading to false
     }
   };
