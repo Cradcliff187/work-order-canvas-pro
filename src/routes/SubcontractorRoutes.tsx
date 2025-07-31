@@ -1,4 +1,3 @@
-
 import React, { Suspense } from 'react';
 import { Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -18,7 +17,6 @@ import {
 
 export const SubcontractorRoutes = () => (
   <>
-    {/* Redirect from /subcontractor to /subcontractor/dashboard */}
     <Route path="/subcontractor" element={<Navigate to="/subcontractor/dashboard" replace />} />
     
     <Route path="/subcontractor/dashboard" element={
