@@ -58,86 +58,117 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     : null;
 
   const fetchProfile = async (userId: string) => {
-    console.log('🔍 === ORGANIZATION FIX VERIFICATION ===');
+    console.log('🔍 === PROFILE FETCH DEBUG ===');
     console.log('📍 Step 1: Starting fetchProfile for userId:', userId);
     const startTime = Date.now();
     
     try {
-      // Profile fetch with timing - using correct table name
-      const profileStart = Date.now();
-      console.log('📍 Step 2: Fetching profile directly from profiles table...');
-      
-      const { data: profileData, error: profileError } = await supabase
+      // Add timeout wrapper for the profile query
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle();
+        .maybeSingle(); // Use maybeSingle instead of single to handle missing records
       
-      const profileTime = Date.now() - profileStart;
-      console.log(`✅ Step 2 Complete: Profile fetched in ${profileTime}ms`, profileData);
+      // Set a 5 second timeout for the query
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile query timeout')), 5000)
+      );
+      
+      const result = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]).catch(error => ({ data: null, error }));
+      
+      const { data: profileData, error: profileError } = result as { data: any; error: any };
+      
+      console.log('✅ Profile query completed:', { profileData, profileError });
       
       if (profileError) {
-        console.error('❌ Profile fetch failed:', profileError);
-        setProfile(null);
-        setUserOrganizations([]);
-        setLoading(false);
-        return;
-      }
-
-      if (!profileData) {
-        console.warn('⚠️ No profile found for user:', userId);
-        setProfile(null);
-        setUserOrganizations([]);
-        setLoading(false);
-        return;
-      }
-      
-      setProfile(profileData as Profile);
-      
-      // Organization fetch with timing - using profile.id not user.id
-      const orgStart = Date.now();
-      console.log('📍 Step 3: Fetching organizations directly from table...');
-      
-      const { data: orgData, error: orgError } = await supabase
-        .from('organization_members')
-        .select(`
-          id,
-          user_id,
-          organization_id,
-          role,
-          created_at,
-          organization:organizations (*)
-        `)
-        .eq('user_id', profileData.id);
-      
-      const orgTime = Date.now() - orgStart;
-      console.log(`✅ Step 3 Complete: Organizations fetched in ${orgTime}ms`, orgData);
-      
-      if (orgError) {
-        console.error('❌ Organization fetch failed:', orgError);
-        setUserOrganizations([]);
-        setLoading(false);
-        return;
-      }
-      
-      const memberships = (orgData || []) as OrganizationMember[];
-      setUserOrganizations(memberships);
-      
-      const totalTime = Date.now() - startTime;
-      console.log(`🎉 === FIX VERIFICATION COMPLETE ===`);
-      console.log(`✅ Total time: ${totalTime}ms`);
-      if (profileData.first_name && profileData.last_name) {
-        console.log(`✅ Profile: ${profileData.first_name} ${profileData.last_name}`);
-      }
-      console.log(`✅ Organizations: ${memberships.length}`);
-      memberships.forEach(m => {
-        if (m.organization?.name && m.role) {
-          console.log(`  • ${m.organization.name} (${m.role})`);
+        console.error('❌ Profile fetch error:', profileError);
+        
+        // If profile doesn't exist, try to create one
+        if (profileError.message?.includes('Row not found') || profileError.code === 'PGRST116') {
+          console.log('📍 Creating new profile for user...');
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              user_id: userId,
+              email: user?.email || '',
+              first_name: user?.user_metadata?.first_name || '',
+              last_name: user?.user_metadata?.last_name || '',
+              is_active: true,
+              is_employee: false
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('❌ Profile creation failed:', createError);
+            setProfile(null);
+            setUserOrganizations([]);
+            return;
+          }
+          
+          setProfile(newProfile);
+        } else {
+          // Other errors - just log and continue
+          setProfile(null);
+          setUserOrganizations([]);
+          return;
         }
-      });
+      } else if (!profileData) {
+        console.log('⚠️ No profile found - creating one...');
+        
+        // Create profile if missing
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: userId,
+            email: user?.email || '',
+            first_name: user?.user_metadata?.first_name || '',
+            last_name: user?.user_metadata?.last_name || '',
+            is_active: true,
+            is_employee: false
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error('❌ Profile creation failed:', createError);
+          setProfile(null);
+          setUserOrganizations([]);
+          return;
+        }
+        
+        setProfile(newProfile);
+      } else {
+        setProfile(profileData);
+      }
+      
+      // Continue with organization fetch...
+      const currentProfile = profileData || profile;
+      if (currentProfile) {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organization_members')
+          .select(`
+            id,
+            user_id,
+            organization_id,
+            role,
+            created_at,
+            organization:organizations (*)
+          `)
+          .eq('user_id', currentProfile.id);
+        
+        if (!orgError) {
+          setUserOrganizations(orgData || []);
+        }
+      }
       
     } catch (error) {
-      console.error('❌ === FIX VERIFICATION FAILED ===', error);
+      console.error('❌ Fatal error in fetchProfile:', error);
       setProfile(null);
       setUserOrganizations([]);
     } finally {
