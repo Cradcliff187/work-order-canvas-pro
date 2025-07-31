@@ -6,7 +6,7 @@ import { AuthForm } from "@/components/auth/AuthForm";
 import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
 import { CreateUserForm } from "@/components/auth/CreateUserForm";
 import { useBranding } from "@/hooks/useBranding";
-import { supabase } from "@/integrations/supabase/client";
+import { useOrganizationAuth } from "@/hooks/useOrganizationAuth";
 import { useToast } from "@/hooks/use-toast";
 
 export const Auth = () => {
@@ -14,83 +14,32 @@ export const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const branding = useBranding();
+  const { user, profile, userOrganizations, loading } = useOrganizationAuth();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // First get the user's profile ID, then get organization memberships
-        const handleAuthentication = async () => {
-          try {
-            // Get user profile
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('user_id', session.user.id)
-              .single();
-
-            if (profileError || !profile) {
-              console.error('Profile lookup failed:', profileError);
-              navigate('/admin/dashboard');
-              return;
-            }
-
-            // Get organization memberships using the profile ID
-            const { data: membership, error } = await supabase
-              .from('organization_members')
-              .select(`
-                role,
-                organization:organizations(
-                  organization_type
-                )
-              `)
-              .eq('user_id', profile.id)
-              .order('created_at', { ascending: true })
-              .limit(1)
-              .single();
-
-            if (error || !membership?.organization) {
-              console.error('Organization membership lookup failed:', error);
-              navigate('/admin/dashboard');
-              return;
-            }
-            
-            const orgType = membership.organization.organization_type;
-            const role = membership.role;
-            
-            console.log('User organization routing:', { orgType, role });
-            
-            if (orgType === 'internal') {
-              if (role === 'admin') {
-                navigate('/admin/dashboard');
-              } else {
-                navigate('/admin/employee-dashboard');
-              }
-            } else if (orgType === 'partner') {
-              navigate('/partner/dashboard');
-            } else if (orgType === 'subcontractor') {
-              navigate('/subcontractor/dashboard');
-            } else {
-              navigate('/admin/dashboard');
-            }
-          } catch (error) {
-            console.error('Authentication routing error:', error);
-            navigate('/admin/dashboard');
-          }
-        };
-
-        handleAuthentication();
-      }
+    // If user is authenticated and we have profile data, navigate to appropriate dashboard
+    if (user && profile && userOrganizations && userOrganizations.length > 0 && !loading) {
+      const primaryOrg = userOrganizations[0];
+      const orgType = primaryOrg.organization?.organization_type;
+      const role = primaryOrg.role;
       
-      if (event === 'PASSWORD_RECOVERY') {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a password reset link.",
-        });
+      console.log('User organization routing:', { orgType, role });
+      
+      if (orgType === 'internal') {
+        if (role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/admin/employee-dashboard');
+        }
+      } else if (orgType === 'partner') {
+        navigate('/partner/dashboard');
+      } else if (orgType === 'subcontractor') {
+        navigate('/subcontractor/dashboard');
+      } else {
+        navigate('/admin/dashboard');
       }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+    }
+  }, [user, profile, userOrganizations, loading, navigate]);
 
   const getTitle = () => {
     switch (view) {
