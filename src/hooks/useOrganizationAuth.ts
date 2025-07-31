@@ -17,20 +17,31 @@ export const useOrganizationAuth = (): AuthState => {
 
   const fetchUserWithOrganizations = async (authUser: User): Promise<UserWithOrganizations | null> => {
     try {
-      // Fetch user profile
-      const { data: profile, error: profileError } = await supabase
+      console.log('🔍 useOrganizationAuth: Fetching profile with timeout for user:', authUser.id);
+      
+      // Fetch user profile with timeout
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('user_id', authUser.id)
         .maybeSingle();
 
+      const profileTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      );
+
+      const profileResult = await Promise.race([profilePromise, profileTimeout]);
+      const { data: profile, error: profileError } = profileResult as any;
+
       if (profileError || !profile) {
-        console.error('Error fetching profile:', profileError);
+        console.error('🔍 useOrganizationAuth: Error fetching profile:', profileError);
         return null;
       }
 
-      // Fetch organization memberships
-      const { data: memberships, error: membershipError } = await supabase
+      console.log('🔍 useOrganizationAuth: Profile loaded, fetching memberships...');
+
+      // Fetch organization memberships with timeout
+      const membershipPromise = supabase
         .from('organization_members')
         .select(`
           id,
@@ -52,10 +63,19 @@ export const useOrganizationAuth = (): AuthState => {
         `)
         .eq('user_id', profile.id);
 
+      const membershipTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Membership fetch timeout')), 5000)
+      );
+
+      const membershipResult = await Promise.race([membershipPromise, membershipTimeout]);
+      const { data: memberships, error: membershipError } = membershipResult as any;
+
       if (membershipError) {
-        console.error('Error fetching organization memberships:', membershipError);
+        console.error('🔍 useOrganizationAuth: Error fetching organization memberships:', membershipError);
         return null;
       }
+
+      console.log('🔍 useOrganizationAuth: Successfully loaded', memberships?.length || 0, 'organization memberships');
 
       // Create UserWithOrganizations object
       const userWithOrgs: UserWithOrganizations = {
@@ -77,7 +97,12 @@ export const useOrganizationAuth = (): AuthState => {
 
       return userWithOrgs;
     } catch (error) {
-      console.error('Error fetching user with organizations:', error);
+      console.error('🔍 useOrganizationAuth: Error in fetchUserWithOrganizations:', error);
+      
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.error('🕐 useOrganizationAuth: Timeout - User data fetch took too long');
+      }
+      
       return null;
     }
   };

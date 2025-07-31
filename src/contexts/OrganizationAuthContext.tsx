@@ -60,86 +60,99 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   const fetchProfile = async (userId: string) => {
     console.log('=== FETCH PROFILE DEBUG START ===');
     console.log('1. Starting fetchProfile for userId:', userId);
-    console.log('2. Current loading state:', loading);
-    console.log('3. About to execute profile query...');
     
     try {
-      console.log('4. Calling get_user_profile function...');
+      // Fetch profile with direct query and timeout handling
+      console.log('2. Fetching profile with direct query...');
       
-      // Add timeout to prevent infinite hanging
-      const profilePromise = supabase.rpc('get_user_profile', { user_uuid: userId });
+      const profilePromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       );
-      
-      const { data: profileData, error: profileError } = await Promise.race([
-        profilePromise,
-        timeoutPromise
-      ]) as any;
-        
-      console.log('5. Profile function result:', { profileData, profileError });
 
+      const profileResult = await Promise.race([profilePromise, timeoutPromise]);
+      const { data: profileData, error: profileError } = profileResult as any;
+      
       console.log('3. Profile query result:', { profileData, profileError });
 
-      if (profileError || !profileData || profileData.length === 0) {
-        console.error('❌ Error fetching profile:', profileError);
-        setLoading(false);
-        return;
+      if (profileError || !profileData) {
+        console.error('❌ Error fetching profile:', profileError || 'No profile data');
+        throw new Error(profileError?.message || 'Profile not found');
       }
 
-      // RPC returns an array, get first item
-      const profile = profileData[0];
-      console.log('✅ Profile data loaded:', profile);
-      setProfile(profile);
+      console.log('✅ Profile data loaded:', profileData);
+      setProfile(profileData);
 
-      // Fetch organizations using function
-      console.log('6. Calling get_user_organizations...');
-      const { data: orgData, error: orgError } = await supabase
-        .rpc('get_user_organizations', { profile_uuid: profile.id });
-        
-      console.log('7. Organization function result:', { orgData, orgError });
+      // Fetch organization memberships with timeout
+      console.log('4. Fetching organization memberships...');
       
-      if (orgError) {
-        console.error('❌ Error fetching organizations:', orgError);
-        setLoading(false);
-        return;
-      }
-      
-      // Transform organization data to match expected format
-      const memberships = (orgData || []).map((org: any) => ({
-        id: org.id,
-        user_id: org.user_id,
-        organization_id: org.organization_id,
-        role: org.role,
-        created_at: org.created_at,
-        organization: {
-          id: org.organization_id,
-          name: org.org_name,
-          organization_type: org.org_type,
-          initials: org.org_initials,
-          contact_email: '',
-          contact_phone: '',
-          address: '',
-          uses_partner_location_numbers: false,
-          is_active: org.org_active
-        }
-      }));
+      const membershipPromise = supabase
+        .from('organization_members')
+        .select(`
+          id,
+          user_id,
+          organization_id,
+          role,
+          created_at,
+          organization:organizations (
+            id,
+            name,
+            organization_type,
+            initials,
+            contact_email,
+            contact_phone,
+            address,
+            uses_partner_location_numbers,
+            is_active
+          )
+        `)
+        .eq('user_id', profileData.id);
 
-      console.log('8. Final state before completion:', {
-        profile: profile,
-        membershipCount: memberships.length,
-        memberships: memberships,
-        willSetLoading: 'false'
+      const membershipTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Organization fetch timeout')), 5000)
+      );
+
+      const membershipResult = await Promise.race([membershipPromise, membershipTimeoutPromise]);
+      const { data: memberships, error: membershipError } = membershipResult as any;
+      
+      console.log('5. Organization memberships result:', { 
+        membershipCount: memberships?.length || 0, 
+        membershipError 
       });
+      
+      if (membershipError) {
+        console.error('❌ Error fetching organization memberships:', membershipError);
+        // Don't throw here - user might not have organizations yet
+        setUserOrganizations([]);
+      } else {
+        setUserOrganizations(memberships || []);
+      }
 
-      setUserOrganizations(memberships);
-      console.log('=== FETCH PROFILE DEBUG END - SUCCESS ===');
+      console.log('6. Profile fetch completed successfully');
       
     } catch (error) {
       console.error('=== FETCH PROFILE DEBUG END - ERROR ===', error);
+      
+      // Set error state or fallback behavior
+      setProfile(null);
+      setUserOrganizations([]);
+      
+      // Show user-friendly error message
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          console.error('🕐 Timeout: Profile fetch took too long. Please try again.');
+        } else {
+          console.error('❌ Login failed:', error.message);
+        }
+      }
     } finally {
       console.log('7. Setting loading to false in finally block');
-      setLoading(false);  // ALWAYS set loading to false
+      setLoading(false);
     }
   };
 
