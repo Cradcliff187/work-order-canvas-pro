@@ -58,12 +58,14 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     : null;
 
   const fetchProfile = async (userId: string) => {
-    console.log('=== FETCH PROFILE DEBUG START ===');
-    console.log('1. Starting fetchProfile for userId:', userId);
+    console.log('🔍 === ORGANIZATION FIX VERIFICATION ===');
+    console.log('📍 Step 1: Starting fetchProfile for userId:', userId);
+    const startTime = Date.now();
     
     try {
-      // Fetch profile with direct query and timeout handling
-      console.log('2. Fetching profile with direct query...');
+      // Profile fetch with timing
+      const profileStart = Date.now();
+      console.log('📍 Step 2: Fetching profile directly from table...');
       
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -71,20 +73,23 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         .eq('user_id', userId)
         .single();
       
-      console.log('3. Profile query result:', { profileData, profileError });
-
-      if (profileError || !profileData) {
-        console.error('❌ Error fetching profile:', profileError || 'No profile data');
-        throw new Error(profileError?.message || 'Profile not found');
-      }
-
-      console.log('✅ Profile data loaded:', profileData);
-      setProfile(profileData);
-
-      // Fetch organization memberships with timeout
-      console.log('4. Fetching organization memberships...');
+      const profileTime = Date.now() - profileStart;
+      console.log(`✅ Step 2 Complete: Profile fetched in ${profileTime}ms`, profileData);
       
-      const { data: memberships, error: membershipError } = await supabase
+      if (profileError || !profileData) {
+        console.error('❌ Profile fetch failed:', profileError);
+        setProfile(null);
+        setUserOrganizations([]);
+        return;
+      }
+      
+      setProfile(profileData);
+      
+      // Organization fetch with timing
+      const orgStart = Date.now();
+      console.log('📍 Step 3: Fetching organizations directly from table...');
+      
+      const { data: orgData, error: orgError } = await supabase
         .from('organization_members')
         .select(`
           id,
@@ -96,38 +101,32 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         `)
         .eq('user_id', profileData.id);
       
-      console.log('5. Organization memberships result:', { 
-        membershipCount: memberships?.length || 0, 
-        membershipError 
+      const orgTime = Date.now() - orgStart;
+      console.log(`✅ Step 3 Complete: Organizations fetched in ${orgTime}ms`, orgData);
+      
+      if (orgError) {
+        console.error('❌ Organization fetch failed:', orgError);
+        setUserOrganizations([]);
+        return;
+      }
+      
+      const memberships = orgData || [];
+      setUserOrganizations(memberships);
+      
+      const totalTime = Date.now() - startTime;
+      console.log(`🎉 === FIX VERIFICATION COMPLETE ===`);
+      console.log(`✅ Total time: ${totalTime}ms`);
+      console.log(`✅ Profile: ${profileData.first_name} ${profileData.last_name}`);
+      console.log(`✅ Organizations: ${memberships.length}`);
+      memberships.forEach(m => {
+        console.log(`  • ${m.organization?.name} (${m.role})`);
       });
       
-      if (membershipError) {
-        console.error('❌ Error fetching organization memberships:', membershipError);
-        // Don't throw here - user might not have organizations yet
-        setUserOrganizations([]);
-      } else {
-        setUserOrganizations(memberships || []);
-      }
-
-      console.log('6. Profile fetch completed successfully');
-      
     } catch (error) {
-      console.error('=== FETCH PROFILE DEBUG END - ERROR ===', error);
-      
-      // Set error state or fallback behavior
+      console.error('❌ === FIX VERIFICATION FAILED ===', error);
       setProfile(null);
       setUserOrganizations([]);
-      
-      // Show user-friendly error message
-      if (error instanceof Error) {
-        if (error.message.includes('timeout')) {
-          console.error('🕐 Timeout: Profile fetch took too long. Please try again.');
-        } else {
-          console.error('❌ Login failed:', error.message);
-        }
-      }
     } finally {
-      console.log('7. Setting loading to false in finally block');
       setLoading(false);
     }
   };
