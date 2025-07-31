@@ -115,7 +115,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       
     } catch (error) {
       console.error('💥 Error in fetchProfile:', error);
-      setLoading(false);
+    } finally {
+      setLoading(false);  // ALWAYS set loading to false
     }
   };
 
