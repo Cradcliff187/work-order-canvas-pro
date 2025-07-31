@@ -14,7 +14,7 @@ import { Loader2, Save, User } from 'lucide-react';
 
 const AdminProfile = () => {
   const { profile, updateProfile } = useAuth();
-  const { userType } = useUserProfile();
+  const { primaryRole } = useUserProfile();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -167,7 +167,7 @@ const AdminProfile = () => {
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">User Type</Label>
                     <p className="text-sm font-medium text-destructive capitalize">
-                      {userType}
+                      {primaryRole}
                     </p>
                   </div>
                   <div>

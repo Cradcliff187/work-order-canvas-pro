@@ -71,7 +71,7 @@ interface MobileWorkOrderCardProps {
   showLocationNumber?: boolean;
   showDaysOld?: boolean;
   fieldsToShow?: Array<FieldType>;
-  userType?: 'partner' | 'subcontractor' | 'admin';
+  viewerRole?: 'partner' | 'subcontractor' | 'admin';
 }
 
 const statusColors = {
@@ -96,7 +96,7 @@ export function MobileWorkOrderCard({
   showLocationNumber = false,
   showDaysOld = false,
   fieldsToShow,
-  userType = 'subcontractor'
+  viewerRole = 'subcontractor'
 }: MobileWorkOrderCardProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
@@ -268,7 +268,7 @@ export function MobileWorkOrderCard({
           {/* Show submitting organization for subcontractors, assigned organization for partners */}
           {shouldShowField('organization') && (
             <>
-              {userType === 'subcontractor' && workOrder.organizations && (
+              {viewerRole === 'subcontractor' && workOrder.organizations && (
                 <div className="flex items-center gap-2 text-sm">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground">From:</span>
@@ -279,7 +279,7 @@ export function MobileWorkOrderCard({
                   />
                 </div>
               )}
-              {userType === 'partner' && workOrder.assigned_organizations && (
+              {viewerRole === 'partner' && workOrder.assigned_organizations && (
                 <div className="flex items-center gap-2 text-sm">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground">Assigned to:</span>
@@ -327,17 +327,17 @@ export function MobileWorkOrderCard({
             <Button size="default" variant="outline" className="flex-1 min-h-[44px]">
               View Details
             </Button>
-            {userType === 'subcontractor' && workOrder.status === 'assigned' && (
+            {viewerRole === 'subcontractor' && workOrder.status === 'assigned' && (
               <Button size="default" className="flex-1 min-h-[44px]">
                 Start Work
               </Button>
             )}
-            {userType === 'subcontractor' && workOrder.status === 'in_progress' && (
+            {viewerRole === 'subcontractor' && workOrder.status === 'in_progress' && (
               <Button size="default" className="flex-1 min-h-[44px]">
                 Submit Report
               </Button>
             )}
-            {userType === 'partner' && workOrder.status === 'received' && (
+            {viewerRole === 'partner' && workOrder.status === 'received' && (
               <Button size="default" className="flex-1 min-h-[44px]">
                 Assign
               </Button>

@@ -11,18 +11,18 @@ interface OrganizationErrorScreenProps {
     name: string;
     organization_type: string;
   }>;
-  userType: 'partner' | 'subcontractor';
+  primaryRole: 'partner' | 'subcontractor';
 }
 
 export const OrganizationErrorScreen: React.FC<OrganizationErrorScreenProps> = ({
   type,
   organizations,
-  userType,
+  primaryRole,
 }) => {
   const navigate = useNavigate();
 
   const handleBackToDashboard = () => {
-    navigate(`/${userType}/dashboard`);
+    navigate(`/${primaryRole}/dashboard`);
   };
 
   const handleContactAdmin = () => {

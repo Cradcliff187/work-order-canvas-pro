@@ -18,7 +18,7 @@ import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
 
 export function UserDropdown() {
   const { profile, signOut } = useAuth();
-  const { userType } = useUserProfile();
+  const { primaryRole } = useUserProfile();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -84,7 +84,7 @@ export function UserDropdown() {
             </div>
             <div className="flex flex-col items-start text-xs">
               <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
-              <span className="text-muted-foreground capitalize">{userType}</span>
+              <span className="text-muted-foreground capitalize">{primaryRole}</span>
             </div>
           </Button>
         </DropdownMenuTrigger>

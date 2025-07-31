@@ -34,7 +34,7 @@ export default function SubmitReport() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile } = useAuth();
-  const { userType } = useUserProfile();
+  const { isEmployee } = useUserProfile();
   const { submitReport } = useSubcontractorWorkOrders();
   const { saveDraft, getDrafts } = useOfflineStorage();
   const isMobile = useIsMobile();
@@ -73,7 +73,7 @@ export default function SubmitReport() {
       return;
     }
 
-    if (!formData.workPerformed.trim() || (userType === 'employee' && !formData.hoursWorked.trim())) {
+    if (!formData.workPerformed.trim() || (isEmployee() && !formData.hoursWorked.trim())) {
       toast({
         title: "Missing Required Fields",
         description: "Please fill in all required fields before submitting.",
@@ -88,7 +88,7 @@ export default function SubmitReport() {
         workOrderId,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
-        hoursWorked: userType === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+        hoursWorked: isEmployee() && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
         notes: formData.notes || undefined,
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
@@ -156,7 +156,7 @@ export default function SubmitReport() {
         {
           workPerformed: formData.workPerformed,
           materialsUsed: formData.materialsUsed,
-          hoursWorked: userType === 'employee' && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
+          hoursWorked: isEmployee() && formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
           notes: formData.notes,
         },
         photoAttachments,
@@ -323,7 +323,7 @@ export default function SubmitReport() {
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
-          {userType === 'employee' && (
+          {isEmployee() && (
             <StandardFormLayout.Section 
               title="Time Tracking"
               description="Record hours worked for this assignment"

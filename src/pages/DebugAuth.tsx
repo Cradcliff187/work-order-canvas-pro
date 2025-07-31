@@ -13,7 +13,7 @@ interface DebugInfo {
   authUid: string | null;
   userEmail: string | null;
   profileData: any;
-  currentUserType: string | null;
+  currentRole: string | null;
   isAdminResult: boolean | null;
   rlsTests: Record<string, any>;
   errors: string[];
@@ -26,7 +26,7 @@ const DebugAuth = () => {
     authUid: null,
     userEmail: null,
     profileData: null,
-    currentUserType: null,
+    currentRole: null,
     isAdminResult: null,
     rlsTests: {},
     errors: []
@@ -48,7 +48,7 @@ const DebugAuth = () => {
       authUid: user?.id || null,
       userEmail: user?.email || null,
       profileData: profile,
-      currentUserType: null,
+      currentRole: null,
       isAdminResult: null,
       rlsTests: {},
       errors: []
@@ -58,7 +58,7 @@ const DebugAuth = () => {
       // Test organization-based admin access
       try {
         const { data: adminResult } = await supabase.rpc('jwt_is_admin');
-        info.currentUserType = adminResult ? 'admin' : 'non-admin';
+        info.currentRole = adminResult ? 'admin' : 'non-admin';
       } catch (error) {
         info.errors.push(`jwt_is_admin failed: ${error.message}`);
       }
@@ -295,11 +295,11 @@ const DebugAuth = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <StatusIcon success={debugInfo.currentUserType !== null} />
+                <StatusIcon success={debugInfo.currentRole !== null} />
                 <label className="text-sm font-medium">jwt_is_admin()</label>
               </div>
               <div className="p-2 bg-muted rounded font-mono text-sm">
-                {debugInfo.currentUserType || 'null'}
+                {debugInfo.currentRole || 'null'}
               </div>
             </div>
             <div>

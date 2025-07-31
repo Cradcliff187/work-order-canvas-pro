@@ -19,7 +19,7 @@ export function UnreadMessagesDropdown({
   onClose 
 }: UnreadMessagesDropdownProps) {
   const navigate = useNavigate();
-  const { userType } = useUserProfile();
+  const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
   const [isHovered, setIsHovered] = useState(false);
 
   // Get work order IDs that have unread messages
@@ -45,22 +45,17 @@ export function UnreadMessagesDropdown({
   });
 
   const handleWorkOrderClick = (workOrderId: string) => {
-    if (!userType) return;
-
     let route = '';
-    switch (userType) {
-      case 'admin':
-      case 'employee':
-        route = `/admin/work-orders/${workOrderId}`;
-        break;
-      case 'partner':
-        route = `/partner/work-orders/${workOrderId}`;
-        break;
-      case 'subcontractor':
-        route = `/subcontractor/work-orders/${workOrderId}`;
-        break;
+    if (isAdmin() || isEmployee()) {
+      route = `/admin/work-orders/${workOrderId}`;
+    } else if (isPartner()) {
+      route = `/partner/work-orders/${workOrderId}`;
+    } else if (isSubcontractor()) {
+      route = `/subcontractor/work-orders/${workOrderId}`;
+    } else {
+      return; // No valid route found
     }
-
+    
     if (route) {
       navigate(route);
       onClose();
@@ -68,22 +63,17 @@ export function UnreadMessagesDropdown({
   };
 
   const handleViewAll = () => {
-    if (!userType) return;
-
     let route = '';
-    switch (userType) {
-      case 'admin':
-      case 'employee':
-        route = '/admin/work-orders';
-        break;
-      case 'partner':
-        route = '/partner/work-orders';
-        break;
-      case 'subcontractor':
-        route = '/subcontractor/work-orders';
-        break;
+    if (isAdmin() || isEmployee()) {
+      route = '/admin/work-orders';
+    } else if (isPartner()) {
+      route = '/partner/work-orders';
+    } else if (isSubcontractor()) {
+      route = '/subcontractor/work-orders';
+    } else {
+      return; // No valid route found
     }
-
+    
     if (route) {
       navigate(route);
       onClose();

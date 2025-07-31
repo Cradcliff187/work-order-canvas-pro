@@ -15,8 +15,8 @@ interface ViewUserModalProps {
 export function ViewUserModal({ user, isOpen, onClose }: ViewUserModalProps) {
   if (!user) return null;
 
-  const getUserTypeColor = (userType: string) => {
-    switch (userType) {
+  const getRoleColor = (role: string) => {
+    switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800';
       case 'partner':

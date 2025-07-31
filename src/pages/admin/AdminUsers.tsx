@@ -33,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface UserFilters {
   search?: string;
-  userType?: string;
+  roleFilter?: string;
   organizationId?: string;
   status?: string;
 }
@@ -54,7 +54,7 @@ export default function AdminUsers() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [filters, setFilters] = useState<UserFilters>({
     search: '',
-    userType: '',
+    roleFilter: '',
     organizationId: '',
     status: '',
   });
@@ -108,7 +108,7 @@ export default function AdminUsers() {
   const handleClearFilters = () => {
     setFilters({
       search: '',
-      userType: '',
+      roleFilter: '',
       organizationId: '',
       status: '',
     });

@@ -18,7 +18,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 
 const Navbar = () => {
   const { profile, signOut } = useAuth();
-  const { userType, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
+  const { primaryRole, isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
   const { getProductDisplayName, getCompanyDisplayName, assets } = useBranding();
 
   const handleSignOut = async () => {
@@ -29,18 +29,16 @@ const Navbar = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
-  const getUserTypeColor = (userType: string) => {
-    switch (userType) {
-      case 'admin': return 'text-destructive';
-      case 'employee': return 'text-blue-600';
-      case 'partner': return 'text-primary';
-      case 'subcontractor': return 'text-secondary';
-      default: return 'text-muted-foreground';
-    }
+  const getRoleColor = () => {
+    if (isAdmin()) return 'text-destructive';
+    if (isEmployee()) return 'text-blue-600';
+    if (isPartner()) return 'text-primary';
+    if (isSubcontractor()) return 'text-secondary';
+    return 'text-muted-foreground';
   };
 
-  const formatUserType = (userType: string) => {
-    return userType.charAt(0).toUpperCase() + userType.slice(1);
+  const formatRole = () => {
+    return primaryRole ? primaryRole.charAt(0).toUpperCase() + primaryRole.slice(1) : 'Unknown';
   };
 
   const getProfilePath = () => {
@@ -94,8 +92,8 @@ const Navbar = () => {
                 <p className="text-xs leading-none text-muted-foreground">
                   {profile?.email}
                 </p>
-                <p className={`text-xs leading-none font-medium ${getUserTypeColor(userType)}`}>
-                  {formatUserType(userType)}
+                <p className={`text-xs leading-none font-medium ${getRoleColor()}`}>
+                  {formatRole()}
                 </p>
               </div>
             </DropdownMenuLabel>

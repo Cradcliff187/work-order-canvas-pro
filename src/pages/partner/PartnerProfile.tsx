@@ -15,7 +15,7 @@ import { Loader2, Save, User, Lock } from 'lucide-react';
 
 const PartnerProfile = () => {
   const { profile, updateProfile } = useAuth();
-  const { userType } = useUserProfile();
+  const { primaryRole } = useUserProfile();
   const { organization } = useUserOrganization();
   const organizationName = organization?.name;
   const { toast } = useToast();
@@ -174,7 +174,7 @@ const PartnerProfile = () => {
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">User Type</Label>
                     <p className="text-sm font-medium text-primary capitalize">
-                      {userType}
+                      {primaryRole}
                     </p>
                   </div>
                   <div>

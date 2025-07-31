@@ -33,7 +33,7 @@ export const DevTools = () => {
   } = useDevTools();
   
   const { user, profile } = useAuth();
-  const { isAdmin, userType } = useUserProfile();
+  const { isAdmin, primaryRole } = useUserProfile();
 
   if (!isAdmin) {
     return (
@@ -225,7 +225,7 @@ export const DevTools = () => {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">User Type:</span>
-                <span className="capitalize">{userType || 'N/A'}</span>
+                <span className="capitalize">{primaryRole || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Admin Access:</span>

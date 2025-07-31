@@ -10,7 +10,7 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 interface UserFiltersProps {
   filters: {
     search: string;
-    userType: string;
+    roleFilter: string;
     organizationId: string;
     status: string;
   };
@@ -68,10 +68,10 @@ export function UserFilters({ filters, onFiltersChange, onClearFilters }: UserFi
 
         {/* User Type */}
         <div className="space-y-2">
-          <Label htmlFor="userType">User Type</Label>
+          <Label htmlFor="roleFilter">Role Filter</Label>
           <Select
-            value={filters.userType}
-            onValueChange={(value) => handleFilterChange('userType', value)}
+            value={filters.roleFilter}
+            onValueChange={(value) => handleFilterChange('roleFilter', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All types" />

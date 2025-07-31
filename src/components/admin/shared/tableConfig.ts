@@ -106,6 +106,6 @@ export const tableUtils = {
 // Export types for type safety
 export type EntityType = keyof typeof statusConfig;
 export type WorkOrderStatus = keyof typeof statusConfig.workOrder;
-export type UserType = keyof typeof statusConfig.user;
+export type RoleType = keyof typeof statusConfig.user;
 export type ReportStatus = keyof typeof statusConfig.report;
 export type ActiveStatus = keyof typeof statusConfig.activeStatus;
