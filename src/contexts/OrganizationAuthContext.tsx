@@ -65,18 +65,11 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       // Fetch profile with direct query and timeout handling
       console.log('2. Fetching profile with direct query...');
       
-      const profilePromise = supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle();
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-      );
-
-      const profileResult = await Promise.race([profilePromise, timeoutPromise]);
-      const { data: profileData, error: profileError } = profileResult as any;
+        .single();
       
       console.log('3. Profile query result:', { profileData, profileError });
 
@@ -91,7 +84,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       // Fetch organization memberships with timeout
       console.log('4. Fetching organization memberships...');
       
-      const membershipPromise = supabase
+      const { data: memberships, error: membershipError } = await supabase
         .from('organization_members')
         .select(`
           id,
@@ -99,26 +92,9 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
           organization_id,
           role,
           created_at,
-          organization:organizations (
-            id,
-            name,
-            organization_type,
-            initials,
-            contact_email,
-            contact_phone,
-            address,
-            uses_partner_location_numbers,
-            is_active
-          )
+          organization:organizations (*)
         `)
         .eq('user_id', profileData.id);
-
-      const membershipTimeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Organization fetch timeout')), 5000)
-      );
-
-      const membershipResult = await Promise.race([membershipPromise, membershipTimeoutPromise]);
-      const { data: memberships, error: membershipError } = membershipResult as any;
       
       console.log('5. Organization memberships result:', { 
         membershipCount: memberships?.length || 0, 
