@@ -6,6 +6,19 @@ import { handleCors, createCorsResponse, createCorsErrorResponse } from "../_sha
 // Organization validation utilities
 type UserType = 'admin' | 'partner' | 'subcontractor' | 'employee';
 type OrganizationType = 'partner' | 'subcontractor' | 'internal';
+type OrganizationRole = 'admin' | 'manager' | 'employee' | 'member';
+
+// Interface for the expected request payload
+interface CreateUserRequest {
+  userData: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    organization_id: string;  // Single org selected by admin
+    organization_role: OrganizationRole;  // Role selected by admin
+  };
+}
 
 function getUserTypeOrganizationTypes(userType: UserType): OrganizationType[] {
   switch (userType) {
@@ -168,33 +181,24 @@ serve(async (req) => {
 
     console.log(`[${requestId}] 📝 Processing user creation request:`, { 
       email: userData.email, 
-      userType: userData.user_type,
+      organizationId: userData.organization_id,
+      organizationRole: userData.organization_role,
       firstName: userData.first_name,
       lastName: userData.last_name,
       phone: userData.phone,
-      organizationIds: userData.organization_ids,
-      hasOrganizations: !!(userData.organization_ids?.length),
-      organizationIdsLength: userData.organization_ids?.length || 0,
       fullUserData: userData
     });
 
-    console.log(`[${requestId}] 🔍 Debug - Raw organization_ids analysis:`, {
-      rawOrganizationIds: userData.organization_ids,
-      isArray: Array.isArray(userData.organization_ids),
-      length: userData.organization_ids?.length,
-      firstElement: userData.organization_ids?.[0],
-      isEmpty: !userData.organization_ids || userData.organization_ids.length === 0
-    });
-
-    // Validate required fields
-    if (!userData.email || !userData.first_name || !userData.last_name || !userData.user_type) {
+    // Validate required fields - using new interface
+    if (!userData.email || !userData.first_name || !userData.last_name || !userData.organization_id || !userData.organization_role) {
       console.error(`[${requestId}] ❌ Missing required fields:`, {
         hasEmail: !!userData.email,
         hasFirstName: !!userData.first_name,
         hasLastName: !!userData.last_name,
-        hasUserType: !!userData.user_type
+        hasOrganizationId: !!userData.organization_id,
+        hasOrganizationRole: !!userData.organization_role
       });
-      return createCorsErrorResponse('Missing required fields', 400);
+      return createCorsErrorResponse('Missing required fields: email, first_name, last_name, organization_id, and organization_role are required', 400);
     }
 
     // Create admin client with service role
@@ -278,7 +282,8 @@ serve(async (req) => {
           last_name: userData.last_name,
         },
         app_metadata: {
-          user_type: userData.user_type,
+          organization_id: userData.organization_id,
+          organization_role: userData.organization_role,
         }
       };
 
@@ -288,7 +293,8 @@ serve(async (req) => {
         emailConfirm: authUserPayload.email_confirm,
         userMetadata: authUserPayload.user_metadata,
         appMetadata: authUserPayload.app_metadata,
-        userTypeInMetadata: authUserPayload.app_metadata.user_type
+        organizationId: authUserPayload.app_metadata.organization_id,
+        organizationRole: authUserPayload.app_metadata.organization_role
       });
 
       const result = await supabaseAdmin.auth.admin.createUser(authUserPayload);
@@ -387,8 +393,7 @@ serve(async (req) => {
     
     const updateFields: any = {};
     if (userData.phone) updateFields.phone = userData.phone;
-    if (userData.user_type === 'employee') updateFields.is_employee = true;
-    updateFields.user_type = userData.user_type;  // Fix the user_type from trigger default
+    // Remove legacy user_type handling since we're using organization-based permissions now
     
     if (Object.keys(updateFields).length > 0) {
       const { data: updatedProfile, error: updateError } = await supabaseAdmin
@@ -439,7 +444,7 @@ serve(async (req) => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             email: userData.email,
-            user_type: userData.user_type,
+            organization_role: userData.organization_role,
             confirmation_link: linkData.properties.action_link
           }
         }
@@ -456,147 +461,88 @@ serve(async (req) => {
       // Don't throw error - user creation should succeed even if email fails
     }
 
-    // Handle organization relationships with validation and auto-assignment
-    let finalOrganizationIds: string[] = [];
-    let autoAssignedOrganizations: any[] = [];
-    
-    console.log(`[${requestId}] 🏢 DEBUG - Organization assignment analysis:`, {
-      providedOrganizationIds: userData.organization_ids,
-      hasOrganizationIds: !!(userData.organization_ids && userData.organization_ids.length > 0),
-      organizationIdsLength: userData.organization_ids?.length || 0,
-      userType: userData.user_type,
-      needsOrganization: userData.user_type !== 'admin'
+    // Handle organization assignment - using single org from admin selection
+    console.log(`[${requestId}] 🏢 Organization assignment:`, {
+      organizationId: userData.organization_id,
+      organizationRole: userData.organization_role
     });
     
-    if (userData.organization_ids && userData.organization_ids.length > 0) {
-      // Validate provided organizations
-      console.log(`[${requestId}] 🔍 Validating provided organizations:`, userData.organization_ids);
-      const { validOrganizations, errors } = await validateAndProcessOrganizations(
-        supabaseAdmin,
-        userData.user_type,
-        userData.organization_ids
-      );
+    // Validate the organization exists and is active
+    const { data: organization, error: orgValidationError } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name, organization_type, is_active')
+      .eq('id', userData.organization_id)
+      .single();
+      
+    if (orgValidationError || !organization) {
+      console.error(`[${requestId}] ❌ Organization validation failed:`, orgValidationError);
+      throw new Error(`Invalid organization: ${orgValidationError?.message || 'Organization not found'}`);
+    }
+    
+    if (!organization.is_active) {
+      throw new Error(`Organization '${organization.name}' is not active`);
+    }
+    
+    console.log(`[${requestId}] ✅ Organization validated:`, {
+      id: organization.id,
+      name: organization.name,
+      type: organization.organization_type
+    });
 
-      console.log(`[${requestId}] 📊 Organization validation results:`, {
-        validOrganizations: validOrganizations.map(org => ({ id: org.id, name: org.name, type: org.organization_type })),
-        validCount: validOrganizations.length,
-        errors: errors,
-        errorCount: errors.length
+    // Create organization membership using admin's selection
+    console.log(`[${requestId}] 🏢 Creating organization membership...`);
+    
+    const membershipData = {
+      user_id: newProfile.id,
+      organization_id: userData.organization_id,
+      role: userData.organization_role  // Use the role selected by admin
+    };
+
+    console.log(`[${requestId}] 📝 Inserting organization membership:`, membershipData);
+
+    const { data: insertedMembership, error: membershipError } = await supabaseAdmin
+      .from('organization_members')
+      .insert(membershipData)
+      .select();
+
+    if (membershipError) {
+      console.error(`[${requestId}] ❌ Organization membership creation failed:`, {
+        error: membershipError,
+        message: membershipError.message,
+        details: membershipError.details,
+        membershipData: membershipData,
+        profileId: newProfile.id
       });
-
-      if (errors.length > 0) {
-        console.error(`[${requestId}] ❌ Organization validation failed:`, errors);
-        throw new Error(`Organization validation failed: ${errors.join(', ')}`);
+      
+      // Clean up created user on organization assignment failure
+      console.log(`[${requestId}] 🧹 Cleaning up auth user due to membership creation failure...`);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+        console.log(`[${requestId}] ✅ Auth user cleanup completed`);
+      } catch (cleanupError) {
+        console.error(`[${requestId}] ❌ Failed to cleanup auth user:`, cleanupError);
       }
-
-      finalOrganizationIds = validOrganizations.map(org => org.id);
-      console.log(`[${requestId}] ✅ Validated organizations:`, validOrganizations.map(org => org.name));
-    } else {
-      // Auto-assign organizations for partner, subcontractor, and employee users
-      if (userData.user_type !== 'admin') {
-        console.log(`[${requestId}] 🔄 Auto-assigning organizations for user type:`, userData.user_type);
-        const expectedOrgType = getUserExpectedOrganizationType(userData.user_type);
-        console.log(`[${requestId}] 🎯 Expected organization type:`, expectedOrgType);
-        
-        const availableOrganizations = await getOrganizationsForAutoAssignment(supabaseAdmin, userData.user_type);
-        
-        console.log(`[${requestId}] 📋 Available organizations for auto-assignment:`, {
-          organizationCount: availableOrganizations.length,
-          organizations: availableOrganizations.map(org => ({ 
-            id: org.id, 
-            name: org.name, 
-            type: org.organization_type,
-            isActive: org.is_active 
-          })),
-          expectedType: expectedOrgType
-        });
-        
-        if (availableOrganizations.length === 0) {
-          const expectedType = getUserExpectedOrganizationType(userData.user_type);
-          console.error(`[${requestId}] ❌ No organizations available for auto-assignment`, {
-            userType: userData.user_type,
-            expectedType: expectedType
-          });
-          throw new Error(`No ${expectedType} organizations available for auto-assignment. Please create a ${expectedType} organization first.`);
-        }
-        
-        // Auto-assign to the first available organization
-        const selectedOrg = availableOrganizations[0];
-        finalOrganizationIds = [selectedOrg.id];
-        autoAssignedOrganizations = [selectedOrg];
-        console.log(`[${requestId}] ✅ Auto-assigned to organization:`, {
-          id: selectedOrg.id,
-          name: selectedOrg.name,
-          type: selectedOrg.organization_type
-        });
-      } else {
-        console.log(`[${requestId}] ℹ️ Admin user - no organization assignment needed`);
-      }
+      
+      throw new Error(`Failed to create organization membership: ${membershipError.message}`);
     }
 
-    // Create organization relationships
-    if (finalOrganizationIds.length > 0) {
-      console.log(`[${requestId}] 🏢 Creating organization relationships...`);
-      console.log(`[${requestId}] Organization IDs:`, finalOrganizationIds);
+    console.log(`[${requestId}] ✅ Organization membership created successfully:`, insertedMembership);
+    
+    // Sync JWT metadata after successful creation
+    try {
+      console.log(`[${requestId}] 🔄 Syncing JWT metadata...`);
+      const { data: syncResult, error: syncError } = await supabaseAdmin.rpc(
+        'trigger_jwt_metadata_sync', 
+        { p_user_id: authUser.user.id }
+      );
       
-      const orgRelationships = finalOrganizationIds.map((orgId: string) => ({
-        user_id: newProfile.id,
-        organization_id: orgId,
-        role: 'member'  // Default role for organization_members table
-      }));
-
-      console.log(`[${requestId}] Inserting organization relationships:`, orgRelationships);
-
-      console.log(`[${requestId}] 📝 About to insert organization relationships:`, orgRelationships);
-
-      const { data: insertedRelationships, error: orgError } = await supabaseAdmin
-        .from('organization_members')
-        .insert(orgRelationships)
-        .select();
-
-      if (orgError) {
-        console.error(`[${requestId}] ❌ Organization relationship creation failed:`, {
-          error: orgError,
-          message: orgError.message,
-          details: orgError.details,
-          hint: orgError.hint,
-          code: orgError.code,
-          sqlState: orgError.code,
-          orgRelationships: orgRelationships,
-          profileId: newProfile.id,
-          orgIds: finalOrganizationIds
-        });
-        
-        // Clean up created user on organization assignment failure
-        console.log(`[${requestId}] 🧹 Cleaning up auth user due to organization assignment failure...`);
-        try {
-          await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-          console.log(`[${requestId}] ✅ Auth user cleanup completed`);
-        } catch (cleanupError) {
-          console.error(`[${requestId}] ❌ Failed to cleanup auth user:`, cleanupError);
-        }
-        
-        throw new Error(`Failed to assign user to organization: ${orgError.message}. Please check if the organization_members table exists and has proper permissions.`);
+      if (syncError) {
+        console.warn(`[${requestId}] ⚠️ JWT metadata sync failed (non-critical):`, syncError);
+      } else {
+        console.log(`[${requestId}] ✅ JWT metadata synced:`, syncResult);
       }
-
-      console.log(`[${requestId}] ✅ Organization relationships created successfully:`, insertedRelationships);
-      
-      // Sync JWT metadata after successful creation
-      try {
-        console.log(`[${requestId}] 🔄 Syncing JWT metadata...`);
-        const { data: syncResult, error: syncError } = await supabaseAdmin.rpc(
-          'trigger_jwt_metadata_sync', 
-          { p_user_id: authUser.user.id }
-        );
-        
-        if (syncError) {
-          console.warn(`[${requestId}] ⚠️ JWT metadata sync failed (non-critical):`, syncError);
-        } else {
-          console.log(`[${requestId}] ✅ JWT metadata synced:`, syncResult);
-        }
-      } catch (syncErr) {
-        console.warn(`[${requestId}] ⚠️ JWT metadata sync error (non-critical):`, syncErr);
-      }
+    } catch (syncErr) {
+      console.warn(`[${requestId}] ⚠️ JWT metadata sync error (non-critical):`, syncErr);
     }
 
     // Return success response
