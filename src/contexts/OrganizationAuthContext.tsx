@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { OrganizationMember } from '@/types/auth.types';
@@ -51,6 +51,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrganizations, setUserOrganizations] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef<string | null>(null);
 
   // Get primary organization (first internal org for admin/employee, or first org for others)
   const userOrganization = userOrganizations.length > 0 
@@ -62,6 +63,13 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     console.log('📍 Step 1: Starting fetchProfile for userId:', userId);
     const startTime = Date.now();
     
+    // Prevent duplicate fetches
+    if (fetchingRef.current === userId) {
+      console.log('⏭️ Fetch already in progress for user:', userId);
+      return;
+    }
+    fetchingRef.current = userId;
+    
     try {
       // Add timeout wrapper for the profile query
       const profilePromise = supabase
@@ -70,9 +78,9 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         .eq('user_id', userId)
         .maybeSingle(); // Use maybeSingle instead of single to handle missing records
       
-      // Set a 5 second timeout for the query
+      // Set a 10 second timeout for the query (increased for cold starts)
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 5000)
+        setTimeout(() => reject(new Error('Profile query timeout')), 10000)
       );
       
       const result = await Promise.race([
@@ -149,10 +157,12 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       
       // Continue with organization fetch...
       const currentProfile = profileData || profile;
+      let orgData: any[] = [];
+      
       if (currentProfile) {
         console.log('📍 Step 2: Fetching organization memberships for profile:', currentProfile.id);
         
-        const { data: orgData, error: orgError } = await supabase
+        const { data: fetchedOrgData, error: orgError } = await supabase
           .from('organization_members')
           .select(`
             id,
@@ -167,16 +177,17 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         console.log('📍 Step 3: Organization query result:', {
           success: !orgError,
           error: orgError,
-          dataCount: orgData?.length || 0,
-          data: orgData
+          dataCount: fetchedOrgData?.length || 0,
+          data: fetchedOrgData
         });
         
         if (orgError) {
           console.error('❌ Failed to fetch organization memberships:', orgError);
           setUserOrganizations([]);
         } else {
-          setUserOrganizations(orgData || []);
-          console.log('✅ Organization memberships loaded:', orgData?.length || 0, 'organizations');
+          orgData = fetchedOrgData || [];
+          setUserOrganizations(orgData);
+          console.log('✅ Organization memberships loaded:', orgData.length, 'organizations');
         }
       } else {
         console.log('⚠️ No profile available for organization fetch');
@@ -184,8 +195,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       }
       
       console.log('📊 Profile fetch complete:', {
-        profileLoaded: !!profile || !!profileData,
-        organizationsLoaded: userOrganizations.length,
+        profileLoaded: !!currentProfile,
+        organizationsLoaded: orgData.length,
         timeTaken: `${Date.now() - startTime}ms`
       });
       
@@ -194,6 +205,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       setProfile(null);
       setUserOrganizations([]);
     } finally {
+      fetchingRef.current = null;
       setLoading(false);
     }
   };
