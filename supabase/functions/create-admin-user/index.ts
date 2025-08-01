@@ -3,12 +3,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCors, createCorsResponse, createCorsErrorResponse } from "../_shared/cors.ts";
 
-// Organization validation utilities
-type UserType = 'admin' | 'partner' | 'subcontractor' | 'employee';
+// Types for organization management
 type OrganizationType = 'partner' | 'subcontractor' | 'internal';
 type OrganizationRole = 'admin' | 'manager' | 'employee' | 'member';
 
-// Interface for the expected request payload
+// Interface for the admin user creation request payload
 interface CreateUserRequest {
   userData: {
     email: string;
@@ -18,92 +17,6 @@ interface CreateUserRequest {
     organization_id: string;  // Single org selected by admin
     organization_role: OrganizationRole;  // Role selected by admin
   };
-}
-
-function getUserTypeOrganizationTypes(userType: UserType): OrganizationType[] {
-  switch (userType) {
-    case 'partner':
-      return ['partner'];
-    case 'subcontractor':
-      return ['subcontractor'];
-    case 'employee':
-      return ['internal'];
-    case 'admin':
-      return ['partner', 'subcontractor', 'internal']; // Admins can see all
-    default:
-      return [];
-  }
-}
-
-function getUserExpectedOrganizationType(userType: UserType): OrganizationType | null {
-  switch (userType) {
-    case 'partner':
-      return 'partner';
-    case 'subcontractor':
-      return 'subcontractor';
-    case 'employee':
-      return 'internal';
-    case 'admin':
-      return null; // Admins don't have a specific org type
-    default:
-      return null;
-  }
-}
-
-function validateUserOrganizationType(userType: UserType, organizationType: OrganizationType): boolean {
-  const allowedTypes = getUserTypeOrganizationTypes(userType);
-  return allowedTypes.includes(organizationType);
-}
-
-async function getOrganizationsForAutoAssignment(supabaseAdmin: any, userType: UserType): Promise<any[]> {
-  const expectedOrgType = getUserExpectedOrganizationType(userType);
-  if (!expectedOrgType) {
-    return [];
-  }
-
-  const { data: organizations, error } = await supabaseAdmin
-    .from('organizations')
-    .select('*')
-    .eq('organization_type', expectedOrgType)
-    .eq('is_active', true)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    console.error('Failed to fetch organizations for auto-assignment:', error);
-    return [];
-  }
-
-  return organizations || [];
-}
-
-async function validateAndProcessOrganizations(
-  supabaseAdmin: any, 
-  userType: UserType, 
-  organizationIds: string[]
-): Promise<{ validOrganizations: any[], errors: string[] }> {
-  const validOrganizations = [];
-  const errors = [];
-
-  // Fetch all provided organizations
-  const { data: organizations, error } = await supabaseAdmin
-    .from('organizations')
-    .select('*')
-    .in('id', organizationIds);
-
-  if (error) {
-    throw new Error(`Failed to fetch organizations: ${error.message}`);
-  }
-
-  // Validate each organization
-  for (const org of organizations || []) {
-    if (!validateUserOrganizationType(userType, org.organization_type)) {
-      errors.push(`User type '${userType}' cannot belong to organization type '${org.organization_type}' (${org.name})`);
-    } else {
-      validOrganizations.push(org);
-    }
-  }
-
-  return { validOrganizations, errors };
 }
 
 serve(async (req) => {
