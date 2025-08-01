@@ -100,12 +100,12 @@ export function useWorkOrderMessages(
           // Check if current user has read this message
           let isRead = false;
           if (profile?.id) {
-            const { data: readReceipt } = await supabase
-              .from('message_read_receipts')
-              .select('id')
-              .eq('message_id', message.id)
-              .eq('user_id', profile.id)
-              .limit(1);
+          const { data: readReceipt } = await supabase
+            .from('message_read_receipts')
+            .select('message_id')
+            .eq('message_id', message.id)
+            .eq('user_id', profile.id)
+            .limit(1);
             
             isRead = !!readReceipt?.length;
           }
