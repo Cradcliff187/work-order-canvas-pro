@@ -407,19 +407,21 @@ export default function AdminWorkOrderDetail() {
                               return assignment.assigned_organization.name;
                             } else if (assignment.assigned_organization) {
                               return assignment.assigned_organization.name;
-                            } else {
-                              return `${assignment.assignee.first_name} ${assignment.assignee.last_name}`;
-                            }
+                             } else if (assignment.assignee) {
+                               return `${assignment.assignee.first_name} ${assignment.assignee.last_name}`;
+                             } else {
+                               return 'No individual assignee';
+                             }
                           })()}
                         </p>
                         <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
                           {assignment.assignment_type}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <Mail className="h-3 w-3" />
-                        {assignment.assignee.email}
-                      </div>
+                       <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                         <Mail className="h-3 w-3" />
+                         {assignment.assignee?.email || assignment.assigned_organization?.name || 'No individual assignee'}
+                       </div>
                       {assignment.notes && (
                         <p className="text-sm text-muted-foreground mt-2 italic">{assignment.notes}</p>
                       )}

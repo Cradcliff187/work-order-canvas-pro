@@ -16,12 +16,12 @@ export interface Assignment {
   created_at: string;
   updated_at: string;
   // Joined data
-  assignee: {
+  assignee?: {
     id: string;
     first_name: string;
     last_name: string;
     email: string;
-  };
+  } | null;
   assigned_organization: {
     id: string;
     name: string;
