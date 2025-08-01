@@ -176,10 +176,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Create organization membership if organization_id provided
     if (organization_id) {
       const { error: orgMembershipError } = await supabaseAdmin
-        .from('user_organizations')
+        .from('organization_members')
         .insert({
           user_id: profile.id,
-          organization_id: organization_id
+          organization_id: organization_id,
+          role: 'member'  // Default role
         });
       
       if (orgMembershipError) {

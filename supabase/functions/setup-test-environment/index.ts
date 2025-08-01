@@ -349,8 +349,11 @@ Deno.serve(async (req) => {
     }
 
     const { error: userOrgError } = await supabaseAdmin
-      .from('user_organizations')
-      .insert(userOrgRelationships)
+      .from('organization_members')
+      .insert(userOrgRelationships.map(rel => ({
+        ...rel,
+        role: 'member'  // Default role
+      })))
 
     if (userOrgError) {
       console.error('❌ Failed to create user-organization relationships:', userOrgError)

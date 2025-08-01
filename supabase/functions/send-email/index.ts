@@ -108,7 +108,7 @@ async function handleWorkOrderMessageNotification(
       
       // Get partner organization users
       const { data: partnerUsers } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select(`
           user_id,
           profiles!inner(email, is_active)
@@ -425,7 +425,7 @@ Deno.serve(async (req) => {
               if (assignee.user_type === 'subcontractor') {
                 // Get the organization name for subcontractors
                 const { data: orgData } = await supabase
-                  .from('user_organizations')
+                  .from('organization_members')
                   .select('organizations(name)')
                   .eq('user_id', assignedToId)
                   .single();

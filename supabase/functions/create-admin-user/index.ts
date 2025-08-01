@@ -220,15 +220,15 @@ serve(async (req) => {
         return createCorsErrorResponse('Database profiles access error: ' + profileError.message, 500);
       }
 
-      // Test user_organizations table specifically
-      const { data: userOrgTest, error: userOrgError } = await supabaseAdmin
-        .from('user_organizations')
+      // Test organization_members table specifically
+      const { data: orgMemberTest, error: orgMemberError } = await supabaseAdmin
+        .from('organization_members')
         .select('id')
         .limit(1);
 
-      if (userOrgError) {
-        console.error(`[${requestId}] ❌ user_organizations table access failed:`, userOrgError);
-        return createCorsErrorResponse('Database user_organizations access error: ' + userOrgError.message, 500);
+      if (orgMemberError) {
+        console.error(`[${requestId}] ❌ organization_members table access failed:`, orgMemberError);
+        return createCorsErrorResponse('Database organization_members access error: ' + orgMemberError.message, 500);
       }
 
       // Test organizations table
@@ -542,6 +542,7 @@ serve(async (req) => {
       const orgRelationships = finalOrganizationIds.map((orgId: string) => ({
         user_id: newProfile.id,
         organization_id: orgId,
+        role: 'member'  // Default role for organization_members table
       }));
 
       console.log(`[${requestId}] Inserting organization relationships:`, orgRelationships);
@@ -549,7 +550,7 @@ serve(async (req) => {
       console.log(`[${requestId}] 📝 About to insert organization relationships:`, orgRelationships);
 
       const { data: insertedRelationships, error: orgError } = await supabaseAdmin
-        .from('user_organizations')
+        .from('organization_members')
         .insert(orgRelationships)
         .select();
 
@@ -575,7 +576,7 @@ serve(async (req) => {
           console.error(`[${requestId}] ❌ Failed to cleanup auth user:`, cleanupError);
         }
         
-        throw new Error(`Failed to assign user to organization: ${orgError.message}. Please check if the user_organizations table exists and has proper permissions.`);
+        throw new Error(`Failed to assign user to organization: ${orgError.message}. Please check if the organization_members table exists and has proper permissions.`);
       }
 
       console.log(`[${requestId}] ✅ Organization relationships created successfully:`, insertedRelationships);

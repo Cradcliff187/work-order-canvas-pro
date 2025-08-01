@@ -44,9 +44,10 @@ serve(async (req) => {
         
         // Get organization relationships
         const { data: userOrgs, error: userOrgsError } = await supabaseAdmin
-          .from('user_organizations')
+          .from('organization_members')
           .select(`
             organization_id,
+            role,
             organization:organizations(*)
           `)
           .eq('user_id', profile?.id);
@@ -133,7 +134,7 @@ serve(async (req) => {
       case 'user-orgs':
         // Get all user-organization relationships
         const { data: allUserOrgs, error: allUserOrgsError } = await supabaseAdmin
-          .from('user_organizations')
+          .from('organization_members')
           .select(`
             *,
             user:profiles(*),
