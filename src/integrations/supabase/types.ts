@@ -981,42 +981,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_organizations: {
-        Row: {
-          created_at: string | null
-          id: string
-          organization_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          organization_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          organization_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_organizations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_organizations_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       work_order_assignments: {
         Row: {
           assigned_at: string
@@ -1450,6 +1414,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       auth_profile_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1457,6 +1425,10 @@ export type Database = {
       auth_profile_id_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      auth_user_assigned_to_work_order: {
+        Args: { work_order_id: string }
+        Returns: boolean
       }
       auth_user_belongs_to_organization: {
         Args: { p_organization_id: string }
@@ -1475,6 +1447,10 @@ export type Database = {
         Returns: {
           work_order_id: string
         }[]
+      }
+      auth_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       calculate_completion_time_by_trade: {
         Args: { start_date?: string; end_date?: string }
@@ -1582,14 +1558,6 @@ export type Database = {
         Args: { org_id: string; location_code?: string }
         Returns: string
       }
-      get_admin_organizations_emergency: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_admin_profile_emergency: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1633,9 +1601,17 @@ export type Database = {
         Returns: string[]
       }
       get_user_organizations: {
-        Args: Record<PropertyKey, never> | { profile_uuid: string }
+        Args: { profile_uuid: string }
         Returns: {
+          id: string
+          user_id: string
           organization_id: string
+          role: string
+          created_at: string
+          org_name: string
+          org_type: string
+          org_initials: string
+          org_active: boolean
         }[]
       }
       get_user_organizations_with_roles: {
@@ -1673,10 +1649,6 @@ export type Database = {
       initialize_all_user_jwt_metadata: {
         Args: Record<PropertyKey, never>
         Returns: Json
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
       }
       is_valid_transition: {
         Args: {
@@ -1765,14 +1737,6 @@ export type Database = {
       trigger_send_email: {
         Args: { template_name: string; record_id: string; record_type: string }
         Returns: undefined
-      }
-      user_assigned_to_work_order: {
-        Args: { wo_id: string }
-        Returns: boolean
-      }
-      user_belongs_to_organization: {
-        Args: { org_id: string }
-        Returns: boolean
       }
       validate_security_setup: {
         Args: Record<PropertyKey, never>
