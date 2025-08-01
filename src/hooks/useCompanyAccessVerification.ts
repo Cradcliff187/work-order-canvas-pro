@@ -372,7 +372,7 @@ export const useCompanyAccessVerification = () => {
         'work_order_reports table has proper user restrictions',
         'invoices table has company-level restrictions',
         'profiles table allows basic info access',
-        'user_organizations table restricts user relationships'
+        'organization_members table restricts user relationships'
       ];
 
       // Verify basic data structure supports RLS

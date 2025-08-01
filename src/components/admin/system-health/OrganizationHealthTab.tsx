@@ -90,7 +90,7 @@ export const OrganizationHealthTab = () => {
           last_name,
           is_active,
           is_employee,
-          user_organizations!inner (
+          organization_members!inner (
             organization_id,
             organizations (
               id,

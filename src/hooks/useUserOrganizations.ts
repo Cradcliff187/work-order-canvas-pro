@@ -20,7 +20,7 @@ export const useUserOrganizations = () => {
     queryFn: async () => {
       if (!user) return [];
 
-      // Get the profile ID first, then query user_organizations
+      // Get the profile ID first, then query organization_members
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id')

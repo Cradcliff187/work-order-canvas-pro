@@ -29,7 +29,7 @@ export const useUserOrganization = (): UseUserOrganizationReturn => {
         return null;
       }
       
-      // Get the profile ID first, then query user_organizations
+      // Get the profile ID first, then query organization_members
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id')
