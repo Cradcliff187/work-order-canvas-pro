@@ -28,7 +28,7 @@ export function useSubcontractorOrganizations() {
           contact_email,
           contact_phone,
           is_active,
-          user_organizations!left(
+          organization_members!left(
             user_id,
             profiles!left(
               id,
@@ -46,11 +46,11 @@ export function useSubcontractorOrganizations() {
 
       // Return ALL subcontractor organizations, regardless of user count
       const transformedData: SubcontractorOrganization[] = (data || []).map(org => {
-        const activeUsers = (org.user_organizations || [])
-          .filter((uo: any) => uo.profiles?.is_active)
-          .map((uo: any) => ({
-            id: uo.profiles.id,
-            full_name: `${uo.profiles.first_name} ${uo.profiles.last_name}`.trim()
+        const activeUsers = (org.organization_members || [])
+          .filter((om: any) => om.profiles?.is_active)
+          .map((om: any) => ({
+            id: om.profiles.id,
+            full_name: `${om.profiles.first_name} ${om.profiles.last_name}`.trim()
           }));
 
         const firstActiveUser = activeUsers[0] || null;

@@ -21,7 +21,7 @@ export function useUserAccessibleWorkOrders() {
       } else if (isPartner) {
         // Partners can only see work orders from their organization
         const { data: userOrgs } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .select('organization_id')
           .eq('user_id', profile.id);
         

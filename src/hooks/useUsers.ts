@@ -269,7 +269,7 @@ export function useUpdateUserOrganization() {
     }) => {
       // First, remove any existing organizations
       const { error: deleteError } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .delete()
         .eq('user_id', profileId);
 
@@ -278,10 +278,11 @@ export function useUpdateUserOrganization() {
       // Then add the new organization if provided
       if (organizationId) {
         const { error: insertError } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .insert({
             user_id: profileId,
             organization_id: organizationId,
+            role: 'member'
           });
 
         if (insertError) throw insertError;

@@ -100,7 +100,7 @@ const DebugAuth = () => {
         testTable('organizations', async () => await supabase.from('organizations').select('*').limit(1)),
         testTable('work_orders', async () => await supabase.from('work_orders').select('*').limit(1)),
         testTable('trades', async () => await supabase.from('trades').select('*').limit(1)),
-        testTable('user_organizations', async () => await supabase.from('user_organizations').select('*').limit(1)),
+        testTable('organization_members', async () => await supabase.from('organization_members').select('*').limit(1)),
         testTable('work_order_reports', async () => await supabase.from('work_order_reports').select('*').limit(1)),
         testTable('work_order_attachments', async () => await supabase.from('work_order_attachments').select('*').limit(1))
       ]);

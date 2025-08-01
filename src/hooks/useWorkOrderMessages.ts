@@ -88,7 +88,7 @@ export function useWorkOrderMessages(
         (data || []).map(async (message) => {
           // Get organization for the sender
           const { data: userOrg } = await supabase
-            .from('user_organizations')
+            .from('organization_members')
             .select(`
               organization:organizations!organization_id(
                 name
@@ -135,14 +135,14 @@ export function useWorkOrderMessages(
             
             if (workOrder) {
               const { data: orgUsers } = await supabase
-                .from('user_organizations')
+                .from('organization_members')
                 .select('user_id')
                 .eq('organization_id', workOrder.organization_id);
               
               const uniqueUsers = new Set([
                 workOrder.created_by,
                 ...(assignments?.map(a => a.assigned_to) || []),
-                ...(orgUsers?.map(u => u.user_id) || [])
+                ...(orgUsers?.map(om => om.user_id) || [])
               ]);
               
               totalRecipients = Math.max(uniqueUsers.size - 1, 0); // Exclude sender

@@ -50,12 +50,12 @@ export const useSystemMetrics = () => {
 
       // Check for organization issues by looking for users without organizations
       const { data: userOrgs, error: userOrgsError } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select('user_id');
 
       if (userOrgsError) throw userOrgsError;
 
-      const usersWithOrgs = new Set(userOrgs?.map(uo => uo.user_id) || []);
+      const usersWithOrgs = new Set(userOrgs?.map(om => om.user_id) || []);
       const usersWithoutOrgs = users?.filter(u => !usersWithOrgs.has(u.id)).length || 0;
 
       // Fetch work order metrics

@@ -53,7 +53,7 @@ export const useUserOrganization = (): UseUserOrganizationReturn => {
       console.log('🔍 useUserOrganization: Fetching organization for profile:', profileData.id);
 
       const { data, error } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select(`
           organization:organizations (
             id,

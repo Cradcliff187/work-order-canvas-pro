@@ -55,7 +55,7 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
         if (!profile?.id) throw new Error('No user profile');
 
         const { data: userOrgs, error: userOrgsError } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .select('organization_id')
           .eq('user_id', profile.id);
 
@@ -149,7 +149,7 @@ export function usePartnerWorkOrderStats() {
         if (!profile?.id) throw new Error('No user profile');
 
         const { data: userOrgs, error: userOrgsError } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .select('organization_id')
           .eq('user_id', profile.id);
 
@@ -475,7 +475,7 @@ export function useWorkOrderById(id: string) {
 
       // Get user's organizations first
       const { data: userOrgs, error: userOrgsError } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select('organization_id')
         .eq('user_id', profile.id);
 

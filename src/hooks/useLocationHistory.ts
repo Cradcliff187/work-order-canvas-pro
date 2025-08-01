@@ -26,7 +26,7 @@ export function useLocationHistory(organizationId?: string) {
         query = query.eq('organization_id', organizationId);
       } else if (isPartner && profile?.id) {
         const { data: userOrgs } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .select('organization_id')
           .eq('user_id', profile.id);
         

@@ -21,7 +21,7 @@ export function useProfile() {
         .from('profiles')
         .select(`
           *,
-          user_organizations!inner(
+          organization_members!inner(
             organization_id
           )
         `)
@@ -30,9 +30,9 @@ export function useProfile() {
 
       if (error) throw error;
 
-      // Extract organization_id from user_organizations
-      const userOrganizations = profile.user_organizations as any[];
-      const organizationId = userOrganizations?.[0]?.organization_id;
+      // Extract organization_id from organization_members
+      const organizationMembers = profile.organization_members as any[];
+      const organizationId = organizationMembers?.[0]?.organization_id;
 
       return {
         ...profile,
