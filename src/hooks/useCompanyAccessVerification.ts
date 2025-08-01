@@ -54,7 +54,7 @@ export const useCompanyAccessVerification = () => {
           id,
           name,
           organization_type,
-          user_organizations (
+          organization_members (
             user_id,
             profiles (
               id,
@@ -159,7 +159,7 @@ export const useCompanyAccessVerification = () => {
   };
 
   const verifyCompanyAccess = async (organization: any): Promise<CompanyAccessVerification> => {
-    const users = organization.user_organizations?.map((uo: any) => uo.profiles) || [];
+    const users = organization.organization_members?.map((om: any) => om.profiles) || [];
     
     // Get work orders for this organization
     const { data: workOrders } = await supabase

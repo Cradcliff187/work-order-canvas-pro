@@ -31,11 +31,7 @@ export const useUserOrganizations = () => {
         throw new Error(`Failed to fetch user profile: ${profileError?.message}`);
       }
 
-      console.log('[useUserOrganizations] Debug:', {
-        userId: user.id,
-        profileId: profileData.id,
-        profileFound: !!profileData
-      });
+      // Organization_members query with organizations join
 
       const { data, error } = await supabase
         .from('organization_members')
@@ -56,11 +52,7 @@ export const useUserOrganizations = () => {
         throw new Error(`Failed to fetch user organizations: ${error.message}`);
       }
 
-      console.log('[useUserOrganizations] Query result:', {
-        rawData: data,
-        mappedOrgs: data?.map(item => item.organization).filter(Boolean),
-        count: data?.length || 0
-      });
+      // Return mapped organization data
 
       return data?.map(item => item.organization).filter(Boolean) as UserOrganization[] || [];
     },

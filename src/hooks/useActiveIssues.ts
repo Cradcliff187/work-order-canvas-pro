@@ -39,9 +39,9 @@ export const useActiveIssues = () => {
             email,
             first_name,
             last_name,
-            user_organizations!left(organization_id)
+            organization_members!left(organization_id)
           `)
-          .is('user_organizations.organization_id', null);
+          .is('organization_members.organization_id', null);
 
         if (noOrgsError) throw noOrgsError;
 

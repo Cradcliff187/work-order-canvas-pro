@@ -461,36 +461,25 @@ export const useDevTools = () => {
     try {
       setLoading(true);
       
-      console.log('🔧 Fixing user-organization relationships...');
+      console.log('🔧 Organization migration already completed - this function is no longer needed');
       
-      const { data, error } = await supabase.rpc('fix_existing_test_user_organizations');
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if ((data as any)?.success) {
-        toast({
-          title: "User Organizations Fixed!",
-          description: `Fixed ${(data as any).user_organizations_fixed} user-organization relationships`,
-          variant: "default",
-        });
-        
-        // Refresh counts
-        await fetchCounts();
-      } else {
-        toast({
-          title: "Fix Failed", 
-          description: (data as any)?.error || 'Unknown error occurred',
-          variant: "destructive",
-        });
-      }
-      
-      return data;
-    } catch (error: any) {
-      console.error('Fix user organizations error:', error);
       toast({
-        title: "Fix Failed",
+        title: "Migration Complete",
+        description: "Organization migration has already been completed. All users are now using organization_members table.",
+        variant: "default",
+      });
+      
+      // Refresh counts
+      await fetchCounts();
+      
+      return {
+        success: true,
+        message: "Migration already completed"
+      };
+    } catch (error: any) {
+      console.error('Migration check error:', error);
+      toast({
+        title: "Check Failed",
         description: error.message,
         variant: "destructive",
       });
