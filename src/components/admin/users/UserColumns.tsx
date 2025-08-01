@@ -49,7 +49,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       },
     },
     {
-      accessorKey: 'organization_members',
+      accessorKey: 'user_role',
       header: 'Role',
       cell: ({ row }) => {
         const orgs = row.original.organization_members;
@@ -68,7 +68,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       },
     },
     {
-      accessorKey: 'organization_members',
+      accessorKey: 'user_organization',
       header: 'Organization',
       cell: ({ row }) => {
         const orgs = row.original.organization_members;
