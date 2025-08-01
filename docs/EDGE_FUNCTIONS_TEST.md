@@ -34,11 +34,23 @@ supabase status
 project_id = "inudoymofztrvxhrlrek"
 
 # Confirm function configurations
-[functions.seed-database]
+[functions.create-admin-user]
 verify_jwt = true
 
-[functions.clear-test-data]  
-verify_jwt = true
+[functions.setup-test-environment]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.password-reset-email]
+verify_jwt = false
+
+[functions.process-email-queue]
+verify_jwt = false
+
+[functions.sign-up-user]
+verify_jwt = false
 ```
 
 **Environment Variables**:
@@ -96,52 +108,18 @@ supabase functions list
 ```
 
 **Expected Functions**:
-- `seed-database` - Database seeding (protected)
-- `clear-test-data` - Test data cleanup (protected)
-- `create-test-users` - Test user creation (protected)
 - `create-admin-user` - Admin user creation (protected)
+- `setup-test-environment` - Complete test environment setup (public)
+- `send-email` - Email sending handler (public)
+- `password-reset-email` - Password reset handling (public)
+- `process-email-queue` - Email queue processing (public)
+- `sign-up-user` - User registration (public)
 
 ### 2. Individual Function Testing
 
 **Test Protected Functions**:
 ```bash
-# Test seed-database function
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-  -d '{
-    "admin_key": "dev-admin-key",
-    "options": {
-      "clear_existing": false,
-      "include_test_data": true,
-      "organization_count": 2,
-      "user_count": 5,
-      "work_order_count": 10
-    }
-  }'
-
-# Test clear-test-data function (dry run)
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/clear-test-data \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-  -d '{
-    "admin_key": "dev-admin-key",
-    "dry_run": true,
-    "include_summary": true
-  }'
-```
-
-**Test User Creation Functions**:
-```bash
-# Test create-test-users function
-curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/create-test-users \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-  -d '{
-    "admin_key": "test-admin-key"
-  }'
-
-# Test create-admin-user function
+# Test create-admin-user function (requires admin authentication)
 curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/create-admin-user \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SESSION_TOKEN" \
@@ -150,9 +128,45 @@ curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/create-admin-
       "email": "test@example.com",
       "first_name": "Test",
       "last_name": "User",
-      "user_type": "admin"
+      "organization_id": "uuid-of-organization",
+      "organization_role": "admin"
     },
     "send_welcome_email": true
+  }'
+```
+
+**Test Public Functions**:
+```bash
+# Test setup-test-environment function (no auth required)
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/setup-test-environment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "options": {
+      "clear_existing": false,
+      "include_test_data": true
+    }
+  }'
+
+# Test password-reset-email function (no auth required)
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/password-reset-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com"
+  }'
+
+# Test process-email-queue function (no auth required)
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/process-email-queue \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+# Test send-email function (no auth required)
+curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/send-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_name": "test_email",
+    "record_id": "test-record-id",
+    "test_mode": true,
+    "test_recipient": "test@example.com"
   }'
 ```
 
@@ -425,12 +439,19 @@ Error: duplicate key value violates unique constraint
 
 **Concurrent Function Calls**:
 ```bash
-# Test multiple concurrent seeding operations
-for i in {1..5}; do
-  curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-database \
+# Test multiple concurrent setup operations
+for i in {1..3}; do
+  curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/setup-test-environment \
     -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-    -d '{"admin_key": "dev-admin-key", "options": {"organization_count": 1}}' &
+    -d '{"options": {"clear_existing": false}}' &
+done
+wait
+
+# Test concurrent email processing
+for i in {1..5}; do
+  curl -X POST https://inudoymofztrvxhrlrek.supabase.co/functions/v1/process-email-queue \
+    -H "Content-Type: application/json" \
+    -d '{}' &
 done
 wait
 ```
@@ -453,10 +474,11 @@ console.log('Memory after operation:', getMemoryUsage());
 ### 2. Performance Benchmarks
 
 **Expected Performance Targets**:
-- `seed-database`: < 10 seconds for 50 work orders
-- `clear-test-data`: < 5 seconds for cleanup
-- Email functions: < 2 seconds per email
-- Webhook functions: < 1 second per webhook
+- `setup-test-environment`: < 15 seconds for complete setup
+- `create-admin-user`: < 3 seconds per user creation
+- `send-email`: < 2 seconds per email
+- `process-email-queue`: < 5 seconds per batch
+- `password-reset-email`: < 3 seconds per request
 
 **Database Query Optimization**:
 ```sql

@@ -71,7 +71,7 @@ Authorization: Bearer <token>
 **Configuration**: 
 ```toml
 [functions.process-email-queue]
-# verify_jwt = true (default) - requires authentication
+verify_jwt = false  # Public access for automated pg_cron execution
 ```
 
 ### send-email
@@ -196,7 +196,7 @@ verify_jwt = false  # Public access for unauthenticated users
 
 ### create-admin-user
 
-**Purpose**: Create individual user accounts through admin interface with manual confirmation email handling
+**Purpose**: Create individual user accounts through admin interface with role-based organization assignment
 
 **File**: `supabase/functions/create-admin-user/index.ts`
 
@@ -204,7 +204,7 @@ verify_jwt = false  # Public access for unauthenticated users
 - **Admin Authentication**: Requires authenticated admin user via Bearer token
 - **Manual Email Confirmation**: Bypasses Supabase SMTP, uses Resend via `send-email` function
 - **Magic Link Generation**: Creates secure confirmation links using Supabase Admin API
-- **Organization Assignment**: Automatically assigns users to specified organizations
+- **Single Organization Assignment**: Assigns users to admin-selected organization with specific role
 - **Profile Management**: Creates comprehensive user profiles with business data
 - **Email Control**: Optional email sending via `send_welcome_email` parameter
 - **Audit Logging**: Tracks email events in `email_logs` table
@@ -245,12 +245,12 @@ interface CreateAdminUserRequest {
     email: string;
     first_name: string;
     last_name: string;
-    user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
+    organization_id: string;  // Single organization selected by admin
+    organization_role: 'admin' | 'manager' | 'employee' | 'member';  // Role within organization
     company_name?: string;
     phone?: string;
     hourly_cost_rate?: number;
     hourly_billable_rate?: number;
-    organization_ids?: string[];
   };
   send_welcome_email?: boolean; // Default: true
 }
@@ -264,29 +264,41 @@ interface CreateAdminUserRequest {
 5. Logs email delivery attempt in `email_logs` table
 6. User creation succeeds regardless of email delivery status
 
-### create-test-users
+### setup-test-environment
 
-**Purpose**: Create authenticated test users for comprehensive role-based testing
+**Purpose**: Complete test environment setup with database seeding and user creation
 
-**File**: `supabase/functions/create-test-users/index.ts`
+**File**: `supabase/functions/setup-test-environment/index.ts`
 
 **Function Features**:
-- **Service Role Authentication**: Uses `SUPABASE_SERVICE_ROLE_KEY` for user creation
-- **Multiple Security Validation Methods**: API key, Bearer token, or development mode bypass
-- **Organization Integration**: Automatically links users to appropriate organizations  
-- **Comprehensive User Creation**: Creates 5 test users across all roles and organizations
-- **Error Resilience**: Continues processing on individual failures with detailed error reporting
+- **Public Access**: No authentication required (configured with `verify_jwt = false`)
+- **Complete Environment Setup**: Seeds database and creates test users in one operation
+- **Error Resilience**: Continues setup even if individual components fail
+- **Comprehensive Logging**: Detailed success/failure reporting for all operations
 
-**Created Test Users**:
-| Email | Role | Organization | Password |
-|-------|------|--------------|----------|
-| partner1@abc.com | partner | ABC Property Management | Test123! |
-| partner2@xyz.com | partner | XYZ Commercial Properties | Test123! |
-| sub1@pipes.com | subcontractor | Pipes & More Plumbing | Test123! |
-| sub2@sparks.com | subcontractor | Sparks Electric | Test123! |
-| employee1@workorderportal.com | employee | WorkOrderPortal Internal | Test123! |
+**Configuration**: 
+```toml
+[functions.setup-test-environment]
+verify_jwt = false  # Public access for easy development setup
+```
 
-**Usage**: Integrated with DevTools UI for easy test environment setup
+### sign-up-user
+
+**Purpose**: Handle user registration and signup process
+
+**File**: `supabase/functions/sign-up-user/index.ts`
+
+**Function Features**:
+- **Public Access**: No authentication required (configured with `verify_jwt = false`)  
+- **User Registration**: Creates new user accounts through public signup flow
+- **Email Integration**: Sends confirmation emails via `send-email` function
+- **Organization Assignment**: Links users to appropriate organizations based on signup data
+
+**Configuration**: 
+```toml
+[functions.sign-up-user]
+verify_jwt = false  # Public access for user registration
+```
 
 ## Email System Configuration
 
@@ -313,17 +325,23 @@ PUBLIC_SITE_URL=https://workorderportal.com
 ### Function Configuration (supabase/config.toml)
 
 ```toml
+[functions.create-admin-user]
+verify_jwt = true  # Requires admin authentication
+
+[functions.setup-test-environment]
+verify_jwt = false  # Public access for development setup
+
+[functions.send-email]
+verify_jwt = false  # Public access for email processing
+
 [functions.password-reset-email]
 verify_jwt = false  # Public access for password resets
 
-[functions.send-email]
-# verify_jwt = true (default) - requires authentication
+[functions.process-email-queue]
+verify_jwt = false  # Public access for automated processing
 
-[functions.create-admin-user]  
-# verify_jwt = true (default) - requires admin authentication
-
-[functions.create-test-users]
-# verify_jwt = true (default) - requires admin authentication
+[functions.sign-up-user]
+verify_jwt = false  # Public access for user registration
 ```
 
 ## Email Testing and Monitoring
