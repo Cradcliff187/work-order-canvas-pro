@@ -219,41 +219,83 @@ serve(async (req) => {
       }
     }
 
-    // Now fix user-organization relationships
-    console.log('Fixing user-organization relationships...');
+    // Set up organization memberships using organization_members table
+    console.log('Setting up organization memberships...');
     
-    const { data: fixResult, error: fixError } = await supabaseClient
-      .rpc('fix_existing_test_user_organizations');
-
-    if (fixError) {
-      console.error('Error fixing user organizations:', fixError);
-      errors.push({
-        action: 'fix_user_organizations',
-        error: fixError.message
-      });
-    }
-
-    // Run cleanup to ensure single organization assignments
-    console.log('Ensuring single organization assignments...');
+    let membershipsCreated = 0;
     
-    const { data: cleanupResult, error: cleanupError } = await supabaseClient
-      .rpc('ensure_single_organization_assignment');
-
-    if (cleanupError) {
-      console.error('Error in cleanup:', cleanupError);
-      errors.push({
-        action: 'cleanup_organizations',
-        error: cleanupError.message
-      });
+    for (const user of created_users) {
+      if (user.action === 'created_new' && user.user_id) {
+        try {
+          // Get profile ID for the user
+          const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('id')
+            .eq('user_id', user.user_id)
+            .single();
+            
+          if (profile) {
+            // Find matching test user to get company name
+            const testUser = TEST_USERS.find(tu => tu.email === user.email);
+            if (testUser?.company_name) {
+              // Find organization by name
+              const { data: org } = await supabaseClient
+                .from('organizations')
+                .select('id, organization_type')
+                .eq('name', testUser.company_name)
+                .single();
+                
+              if (org) {
+                // Check if membership already exists
+                const { data: existing } = await supabaseClient
+                  .from('organization_members')
+                  .select('id')
+                  .eq('user_id', profile.id)
+                  .eq('organization_id', org.id)
+                  .single();
+                  
+                if (!existing) {
+                  // Create organization membership
+                  const { error: memberError } = await supabaseClient
+                    .from('organization_members')
+                    .insert({
+                      user_id: profile.id,
+                      organization_id: org.id,
+                      role: org.organization_type === 'internal' ? 'admin' : 'member'
+                    });
+                    
+                  if (memberError) {
+                    console.error(`Error creating membership for ${user.email}:`, memberError);
+                    errors.push({
+                      email: user.email,
+                      error: memberError.message,
+                      action: 'create_membership'
+                    });
+                  } else {
+                    membershipsCreated++;
+                    console.log(`Created membership for ${user.email} in ${testUser.company_name}`);
+                  }
+                }
+              }
+            }
+          }
+        } catch (membershipError) {
+          console.error(`Error setting up membership for ${user.email}:`, membershipError);
+          errors.push({
+            email: user.email,
+            error: membershipError.message,
+            action: 'setup_membership'
+          });
+        }
+      }
     }
 
     const response = {
       success: true,
-      message: `Test user creation completed. Created/updated ${created_users.length} users.`,
+      message: `Test user creation completed. Created/updated ${created_users.length} users, ${membershipsCreated} memberships.`,
       created_users,
       errors,
-      fix_organizations_result: fixResult,
-      cleanup_result: cleanupResult,
+      memberships_created: membershipsCreated,
       test_credentials: {
         note: 'All test users use password: TestPass123!',
         users: TEST_USERS.map(u => ({
