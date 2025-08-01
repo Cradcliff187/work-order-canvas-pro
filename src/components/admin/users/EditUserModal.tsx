@@ -36,7 +36,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
   const { updateUser, updateUserOrganization } = useUserMutations();
 
   // Get current organization info
-  const currentOrgMembership = user?.organization_memberships?.[0];
+  const currentOrgMembership = user?.organization_members?.[0];
   const currentOrg = currentOrgMembership?.organization;
 
   const form = useForm<EditUserFormData>({
@@ -53,7 +53,7 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
   // Reset form when user changes
   React.useEffect(() => {
     if (user) {
-      const orgMembership = user.organization_memberships?.[0];
+      const orgMembership = user.organization_members?.[0];
       form.reset({
         first_name: user.first_name || '',
         last_name: user.last_name || '',

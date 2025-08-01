@@ -90,13 +90,13 @@ export const useAnalytics = (dateRange: DateRange) => {
         .from('profiles')
         .select(`
           id,
-          organization_memberships!inner(
+          organization_members!inner(
             organization:organizations!inner(
               organization_type
             )
           )
         `)
-        .eq('organization_memberships.organizations.organization_type', 'subcontractor')
+        .eq('organization_members.organizations.organization_type', 'subcontractor')
         .eq('is_active', true);
 
       // Calculate metrics

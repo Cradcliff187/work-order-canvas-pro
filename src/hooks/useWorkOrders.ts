@@ -159,7 +159,7 @@ export function useWorkOrders(
         // Internal users see all work orders - no additional filtering needed
       } else if (permissions.isPartner) {
         // Partners see only their organization's work orders
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         
@@ -171,7 +171,7 @@ export function useWorkOrders(
         }
       } else if (permissions.isSubcontractor) {
         // Subcontractors see only assigned work orders
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         
@@ -280,7 +280,7 @@ export function useWorkOrder(id: string) {
         // Internal users can access any work order
       } else if (permissions.isPartner) {
         // Partners can only access their organization's work orders
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         
@@ -291,7 +291,7 @@ export function useWorkOrder(id: string) {
         }
       } else if (permissions.isSubcontractor) {
         // Subcontractors can only access assigned work orders
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         

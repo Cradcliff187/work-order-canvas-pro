@@ -8,7 +8,7 @@ interface Profile {
   last_name: string;
   email: string;
   avatar_url?: string | null;
-  organization_memberships?: Array<{
+  organization_members?: Array<{
     organization: {
       name: string;
       organization_type: 'internal' | 'partner' | 'subcontractor';
@@ -44,7 +44,7 @@ export function UserProfileDisplay({
   const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
   
   // Get primary organization data
-  const primaryOrg = profile.organization_memberships?.[0];
+  const primaryOrg = profile.organization_members?.[0];
   const organizationName = primaryOrg?.organization?.name;
   const organizationRole = primaryOrg?.role;
 

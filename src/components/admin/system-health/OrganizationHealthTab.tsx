@@ -34,7 +34,7 @@ interface UserIssue {
     assigned_organization_id: string; 
     organization_name: string; 
   }>;
-  organization_memberships?: Array<{
+  organization_members?: Array<{
     organization_id: string;
     role: string;
     organization: { name: string; organization_type: string };
@@ -198,7 +198,7 @@ export const OrganizationHealthTab = () => {
             organization_count: orgCount,
             organizations,
             work_order_assignments: workOrderAssignments,
-            organization_memberships: user.organization_members?.map((om: any) => ({
+            organization_members: user.organization_members?.map((om: any) => ({
               organization_id: om.organization_id,
               role: om.role,
               organization: { name: om.organizations.name, organization_type: om.organizations.organization_type }

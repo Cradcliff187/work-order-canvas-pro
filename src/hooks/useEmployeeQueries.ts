@@ -10,13 +10,13 @@ export function useEmployees() {
         .from('profiles')
         .select(`
           *,
-          organization_memberships!inner(
+          organization_members!inner(
             organization:organizations!inner(
               organization_type
             )
           )
         `)
-        .eq('organization_memberships.organizations.organization_type', 'internal')
+        .eq('organization_members.organizations.organization_type', 'internal')
         .eq('is_employee', true)
         .order('created_at', { ascending: false });
 
@@ -62,14 +62,14 @@ export function useEmployee(employeeId: string) {
         .from('profiles')
         .select(`
           *,
-          organization_memberships!inner(
+          organization_members!inner(
             organization:organizations!inner(
               organization_type
             )
           )
         `)
         .eq('id', employeeId)
-        .eq('organization_memberships.organizations.organization_type', 'internal')
+        .eq('organization_members.organizations.organization_type', 'internal')
         .eq('is_employee', true)
         .single();
 

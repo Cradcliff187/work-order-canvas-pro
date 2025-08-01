@@ -255,16 +255,16 @@ export default function AdminUsers() {
                   table.getRowModel().rows.map((row) => {
                     const user = row.original;
                     const getPrimaryRole = () => {
-                      if (user.organization_memberships && user.organization_memberships.length > 0) {
-                        const primaryMembership = user.organization_memberships[0];
+                      if (user.organization_members && user.organization_members.length > 0) {
+                        const primaryMembership = user.organization_members[0];
                         return `${primaryMembership.role} - ${primaryMembership.organization?.organization_type || 'Unknown'}`;
                       }
                       return 'No Organization';
                     };
                     
                     const getRoleVariant = () => {
-                      if (user.organization_memberships && user.organization_memberships.length > 0) {
-                        const primaryMembership = user.organization_memberships[0];
+                      if (user.organization_members && user.organization_members.length > 0) {
+                        const primaryMembership = user.organization_members[0];
                         const orgType = primaryMembership.organization?.organization_type;
                         switch (orgType) {
                           case 'internal': return primaryMembership.role === 'admin' ? 'destructive' : 'outline';
@@ -291,9 +291,9 @@ export default function AdminUsers() {
                           setViewUserModalOpen(true);
                         }}
                       >
-                        {user.organization_memberships && user.organization_memberships.length > 0 && (
+                        {user.organization_members && user.organization_members.length > 0 && (
                           <div className="text-xs text-muted-foreground">
-                            {user.organization_memberships.map((membership) => membership.organization?.name).filter(Boolean).join(', ')}
+                            {user.organization_members.map((membership) => membership.organization?.name).filter(Boolean).join(', ')}
                           </div>
                         )}
                       </MobileTableCard>

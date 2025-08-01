@@ -24,7 +24,7 @@ export const useOrganizationWorkOrders = () => {
         query = query.order('created_at', { ascending: false });
       } else if (permissions.isPartner) {
         // Partners see only their organization's work orders
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         
@@ -36,7 +36,7 @@ export const useOrganizationWorkOrders = () => {
         }
       } else if (permissions.isSubcontractor) {
         // Subcontractors see only assigned work orders
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         

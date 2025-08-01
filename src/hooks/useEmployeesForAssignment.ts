@@ -23,14 +23,14 @@ export function useEmployeesForAssignment() {
         .from('profiles')
         .select(`
           *,
-          organization_memberships!inner(
+          organization_members!inner(
             organization:organizations!inner(
               name,
               organization_type
             )
           )
         `)
-        .eq('organization_memberships.organizations.organization_type', 'internal')
+        .eq('organization_members.organizations.organization_type', 'internal')
         .eq('is_employee', true)
         .eq('is_active', true)
         .order('first_name');
@@ -57,7 +57,7 @@ export function useEmployeesForAssignment() {
       }, {} as Record<string, number>);
 
       return employees.map(emp => {
-        const primaryOrg = (emp as any).organization_memberships?.[0]?.organization;
+        const primaryOrg = (emp as any).organization_members?.[0]?.organization;
         return {
           id: emp.id,
           first_name: emp.first_name,

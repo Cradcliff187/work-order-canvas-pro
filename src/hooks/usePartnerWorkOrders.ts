@@ -42,7 +42,7 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
 
       if (permissions.user) {
         // Use organization-based access
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         
@@ -131,7 +131,7 @@ export function usePartnerWorkOrderStats() {
 
       if (permissions.user) {
         // Use organization-based access
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         

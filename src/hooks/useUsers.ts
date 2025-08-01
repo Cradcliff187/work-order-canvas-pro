@@ -13,7 +13,7 @@ export type User = Database['public']['Tables']['profiles']['Row'] & {
       organization_type: 'partner' | 'subcontractor' | 'internal';
     };
   }>;
-  organization_memberships?: Array<{
+  organization_members?: Array<{
     id: string;
     role: string;
     organization?: {
@@ -40,7 +40,7 @@ export function useUsers() {
               organization_type
             )
           ),
-          organization_memberships:organization_members(
+          organization_members(
             id,
             role,
             organization:organizations(

@@ -42,7 +42,7 @@ export function useSubcontractorWorkOrders() {
 
       // Apply organization-based filtering
       if (permissions.user) {
-        const userOrganizations = permissions.user.organization_memberships?.map(
+        const userOrganizations = permissions.user.organization_members?.map(
           (membership: any) => membership.organization_id
         ) || [];
         

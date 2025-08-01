@@ -48,7 +48,7 @@ export interface UserWithOrganizations {
   avatar_url?: string;
   created_at: string;
   updated_at: string;
-  organization_memberships: OrganizationMember[];
+  organization_members: OrganizationMember[];
 }
 
 // Organization context for permission checking

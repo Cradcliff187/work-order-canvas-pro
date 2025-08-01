@@ -7,7 +7,7 @@ export const useEnhancedPermissions = () => {
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
 
   // Create enhanced user object with organization memberships
-  const enhancedUser = user ? { ...user, organization_memberships: userOrganizations } : null;
+  const enhancedUser = user ? { ...user, organization_members: userOrganizations } : null;
 
   return {
     user: enhancedUser,

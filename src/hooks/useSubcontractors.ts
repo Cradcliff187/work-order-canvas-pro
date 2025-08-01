@@ -11,14 +11,14 @@ export function useSubcontractors() {
           id, 
           first_name, 
           last_name,
-          organization_memberships!inner(
+          organization_members!inner(
             organization:organizations!inner(
               name,
               organization_type
             )
           )
         `)
-        .eq('organization_memberships.organizations.organization_type', 'subcontractor')
+        .eq('organization_members.organizations.organization_type', 'subcontractor')
         .eq('is_active', true)
         .order('first_name');
       
