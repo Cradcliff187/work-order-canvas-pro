@@ -58,9 +58,9 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     ? userOrganizations.find(org => org.organization?.organization_type === 'internal') || userOrganizations[0]
     : null;
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, retryCount = 0) => {
     console.log('🔍 === PROFILE FETCH DEBUG ===');
-    console.log('📍 Step 1: Starting fetchProfile for userId:', userId);
+    console.log('📍 Step 1: Starting fetchProfile for userId:', userId, `(attempt ${retryCount + 1})`);
     const startTime = Date.now();
     
     // Prevent duplicate fetches
@@ -71,32 +71,26 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     fetchingRef.current = userId;
     
     try {
-      // Add timeout wrapper for the profile query
-      const profilePromise = supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to handle missing records
+      // Use AbortController for better timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // Increased to 30 seconds
       
-      // Set a 10 second timeout for the query (increased for cold starts)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 10000)
-      );
-      
-      const result = await Promise.race([
-        profilePromise,
-        timeoutPromise
-      ]).catch(error => ({ data: null, error }));
-      
-      const { data: profileData, error: profileError } = result as { data: any; error: any };
-      
-      console.log('✅ Profile query completed:', { profileData, profileError });
-      
-      if (profileError) {
-        console.error('❌ Profile fetch error:', profileError);
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .abortSignal(controller.signal)
+          .maybeSingle(); // Use maybeSingle instead of single to handle missing records
         
-        // If profile doesn't exist, try to create one
-        if (profileError.message?.includes('Row not found') || profileError.code === 'PGRST116') {
+        clearTimeout(timeoutId);
+        console.log('✅ Profile query completed:', { profileData, profileError });
+        
+        if (profileError) {
+          console.error('❌ Profile fetch error:', profileError);
+          
+          // If profile doesn't exist, try to create one
+          if (profileError.message?.includes('Row not found') || profileError.code === 'PGRST116') {
           console.log('📍 Creating new profile for user...');
           
           const { data: newProfile, error: createError } = await supabase
@@ -200,6 +194,26 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         timeTaken: `${Date.now() - startTime}ms`
       });
       
+      } catch (abortError) {
+        clearTimeout(timeoutId);
+        
+        // Handle timeout/abort errors with retry logic
+        if (abortError.name === 'AbortError' && retryCount < 2) {
+          console.log(`⏰ Profile query timeout, retrying... (attempt ${retryCount + 2}/3)`);
+          
+          // Exponential backoff: 1s, 2s delays
+          const delay = Math.pow(2, retryCount) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          // Clear the fetching ref to allow retry
+          fetchingRef.current = null;
+          return fetchProfile(userId, retryCount + 1);
+        }
+        
+        console.error('❌ Profile query failed after retries:', abortError);
+        throw abortError;
+      }
+      
     } catch (error) {
       console.error('❌ Fatal error in fetchProfile:', error);
       setProfile(null);
@@ -263,7 +277,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         console.error('Auth loading timeout - forcing completion');
         setLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 45000); // 45 second timeout to account for retries
 
     initializeAuth();
 
