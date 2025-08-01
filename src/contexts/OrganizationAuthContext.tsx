@@ -150,6 +150,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       // Continue with organization fetch...
       const currentProfile = profileData || profile;
       if (currentProfile) {
+        console.log('📍 Step 2: Fetching organization memberships for profile:', currentProfile.id);
+        
         const { data: orgData, error: orgError } = await supabase
           .from('organization_members')
           .select(`
@@ -162,10 +164,30 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
           `)
           .eq('user_id', currentProfile.id);
         
-        if (!orgError) {
+        console.log('📍 Step 3: Organization query result:', {
+          success: !orgError,
+          error: orgError,
+          dataCount: orgData?.length || 0,
+          data: orgData
+        });
+        
+        if (orgError) {
+          console.error('❌ Failed to fetch organization memberships:', orgError);
+          setUserOrganizations([]);
+        } else {
           setUserOrganizations(orgData || []);
+          console.log('✅ Organization memberships loaded:', orgData?.length || 0, 'organizations');
         }
+      } else {
+        console.log('⚠️ No profile available for organization fetch');
+        setUserOrganizations([]);
       }
+      
+      console.log('📊 Profile fetch complete:', {
+        profileLoaded: !!profile || !!profileData,
+        organizationsLoaded: userOrganizations.length,
+        timeTaken: `${Date.now() - startTime}ms`
+      });
       
     } catch (error) {
       console.error('❌ Fatal error in fetchProfile:', error);

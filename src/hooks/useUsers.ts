@@ -5,18 +5,10 @@ import { onOrganizationChange, syncUserMetadataToJWT } from '@/lib/auth/jwtSync'
 import type { Database } from '@/integrations/supabase/types';
 
 export type User = Database['public']['Tables']['profiles']['Row'] & {
-  user_organizations?: Array<{
-    organization_id: string;
-    organization: {
-      id: string;
-      name: string;
-      organization_type: 'partner' | 'subcontractor' | 'internal';
-    };
-  }>;
-  organization_members?: Array<{
+  organization_members: Array<{
     id: string;
     role: string;
-    organization?: {
+    organization: {
       id: string;
       name: string;
       organization_type: 'partner' | 'subcontractor' | 'internal';
@@ -32,14 +24,6 @@ export function useUsers() {
         .from('profiles')
         .select(`
           *,
-          user_organizations(
-            organization_id,
-            organization:organizations(
-              id,
-              name,
-              organization_type
-            )
-          ),
           organization_members(
             id,
             role,
@@ -66,8 +50,9 @@ export function useUser(id: string) {
         .from('profiles')
         .select(`
           *,
-          user_organizations(
-            organization_id,
+          organization_members(
+            id,
+            role,
             organization:organizations(
               id,
               name,

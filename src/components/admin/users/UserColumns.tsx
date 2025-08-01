@@ -49,36 +49,36 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       },
     },
     {
-      accessorKey: 'user_organizations',
+      accessorKey: 'organization_members',
       header: 'Role',
       cell: ({ row }) => {
-        const orgs = row.original.user_organizations;
+        const orgs = row.original.organization_members;
         if (!orgs || orgs.length === 0) {
           return <span className="text-muted-foreground text-xs">No role</span>;
         }
         // Show primary organization role
         const primaryOrg = orgs[0];
         const isAdmin = primaryOrg?.organization?.organization_type === 'internal' && 
-                       (primaryOrg?.organization as any)?.role === 'admin';
+                       primaryOrg?.role === 'admin';
         return (
           <Badge variant={isAdmin ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5 capitalize">
-            {(primaryOrg?.organization as any)?.role || 'member'}
+            {primaryOrg?.role || 'member'}
           </Badge>
         );
       },
     },
     {
-      accessorKey: 'user_organizations',
+      accessorKey: 'organization_members',
       header: 'Organization',
       cell: ({ row }) => {
-        const orgs = row.original.user_organizations;
+        const orgs = row.original.organization_members;
         if (!orgs || orgs.length === 0) {
           return <span className="text-muted-foreground">No organization</span>;
         }
         return (
           <div className="flex flex-col gap-1">
             {orgs.map((org) => (
-              <Badge key={org.organization_id} variant="outline" className="h-5 text-[10px] px-1.5">
+              <Badge key={org.id} variant="outline" className="h-5 text-[10px] px-1.5">
                 {org.organization.name}
               </Badge>
             ))}
