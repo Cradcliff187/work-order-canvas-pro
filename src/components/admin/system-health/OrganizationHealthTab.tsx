@@ -104,12 +104,12 @@ export const OrganizationHealthTab = () => {
 
       // Get organization counts per user
       const { data: orgCounts, error: countsError } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select('user_id')
         .then(({ data }) => {
           const counts: Record<string, number> = {};
-          data?.forEach(uo => {
-            counts[uo.user_id] = (counts[uo.user_id] || 0) + 1;
+          data?.forEach(om => {
+            counts[om.user_id] = (counts[om.user_id] || 0) + 1;
           });
           return { data: counts, error: null };
         });
@@ -151,10 +151,10 @@ export const OrganizationHealthTab = () => {
         if (orgCount !== 1) {
           // Get user's organizations
           const { data: userOrgs } = await supabase
-            .from('user_organizations')
+            .from('organization_members')
             .select(`
               organization_id,
-              organizations (
+              organization:organizations (
                 id,
                 name,
                 organization_type
@@ -162,10 +162,10 @@ export const OrganizationHealthTab = () => {
             `)
             .eq('user_id', user.id);
 
-          const organizations = userOrgs?.map(uo => ({
-            id: uo.organizations.id,
-            name: uo.organizations.name,
-            organization_type: uo.organizations.organization_type
+          const organizations = userOrgs?.map(om => ({
+            id: om.organization.id,
+            name: om.organization.name,
+            organization_type: om.organization.organization_type
           })) || [];
 
           let workOrderAssignments = [];
@@ -262,7 +262,7 @@ export const OrganizationHealthTab = () => {
     try {
       // Use the AuthContext auto-fix logic for individual user
       const { data: orgCheck } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select('organization_id')
         .eq('user_id', userId)
         .maybeSingle();
@@ -279,10 +279,11 @@ export const OrganizationHealthTab = () => {
         
         if (assignment?.assigned_organization_id) {
           await supabase
-            .from('user_organizations')
+            .from('organization_members')
             .insert({
               user_id: userId,
-              organization_id: assignment.assigned_organization_id
+              organization_id: assignment.assigned_organization_id,
+              role: 'member'
             });
           
           toast({

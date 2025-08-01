@@ -257,7 +257,7 @@ export const useInvoiceDrafts = () => {
       if (!profile) throw new Error('Profile not found');
 
       const { data: userOrg } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select('organization_id')
         .eq('user_id', profile.id)
         .single();

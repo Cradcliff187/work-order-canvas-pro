@@ -31,7 +31,7 @@ export const useInvoiceSubmission = () => {
 
       // Get user's organization
       const { data: userOrg, error: userOrgError } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .select('organization_id')
         .eq('user_id', profile.id)
         .single();

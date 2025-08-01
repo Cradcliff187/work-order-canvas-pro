@@ -17,7 +17,7 @@ interface TableCounts {
   receipt_work_orders: number;
   employee_reports: number;
   partner_locations: number;
-  user_organizations: number;
+  organization_members: number;
   
   // Reference data tables
   trades: number;
@@ -122,7 +122,7 @@ export const useDevTools = () => {
         supabase.from('receipt_work_orders').select('*', { count: 'exact', head: true }),
         supabase.from('employee_reports').select('*', { count: 'exact', head: true }),
         supabase.from('partner_locations').select('*', { count: 'exact', head: true }),
-        supabase.from('user_organizations').select('*', { count: 'exact', head: true }),
+        supabase.from('organization_members').select('*', { count: 'exact', head: true }),
         
         // Reference data tables
         supabase.from('trades').select('*', { count: 'exact', head: true }),
@@ -150,7 +150,7 @@ export const useDevTools = () => {
         receipt_work_orders: receiptOrders.count || 0,
         employee_reports: employeeReports.count || 0,
         partner_locations: partnerLocations.count || 0,
-        user_organizations: userOrgs.count || 0,
+        organization_members: userOrgs.count || 0,
         
         // Reference data tables
         trades: trades.count || 0,

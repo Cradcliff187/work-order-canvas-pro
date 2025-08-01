@@ -26,6 +26,8 @@ export interface OrganizationAuthContextType {
   userOrganizations: OrganizationMember[];
   userOrganization: OrganizationMember | null;
   loading: boolean;
+  authError: string | null;
+  retryAuth: () => Promise<void>;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any; data?: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -51,79 +53,33 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrganizations, setUserOrganizations] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const fetchingRef = useRef<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Get primary organization (first internal org for admin/employee, or first org for others)
   const userOrganization = userOrganizations.length > 0 
     ? userOrganizations.find(org => org.organization?.organization_type === 'internal') || userOrganizations[0]
     : null;
 
-  const fetchProfile = async (userId: string, retryCount = 0) => {
-    console.log('🔍 === PROFILE FETCH DEBUG ===');
-    console.log('📍 Step 1: Starting fetchProfile for userId:', userId, `(attempt ${retryCount + 1})`);
-    const startTime = Date.now();
-    
-    // Prevent duplicate fetches
-    if (fetchingRef.current === userId) {
-      console.log('⏭️ Fetch already in progress for user:', userId);
-      return;
-    }
-    fetchingRef.current = userId;
+  const fetchProfile = async (userId: string) => {
+    console.log('🔍 Fetching profile for userId:', userId);
     
     try {
-      // Use AbortController for better timeout handling
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // Increased to 30 seconds
+      // Simplified profile fetch without complex retry logic
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
       
-      try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .abortSignal(controller.signal)
-          .maybeSingle(); // Use maybeSingle instead of single to handle missing records
-        
-        clearTimeout(timeoutId);
-        console.log('✅ Profile query completed:', { profileData, profileError });
-        
-        if (profileError) {
-          console.error('❌ Profile fetch error:', profileError);
-          
-          // If profile doesn't exist, try to create one
-          if (profileError.message?.includes('Row not found') || profileError.code === 'PGRST116') {
-          console.log('📍 Creating new profile for user...');
-          
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              user_id: userId,
-              email: user?.email || '',
-              first_name: user?.user_metadata?.first_name || '',
-              last_name: user?.user_metadata?.last_name || '',
-              is_active: true,
-              is_employee: false
-            })
-            .select()
-            .single();
-          
-          if (createError) {
-            console.error('❌ Profile creation failed:', createError);
-            setProfile(null);
-            setUserOrganizations([]);
-            return;
-          }
-          
-          setProfile(newProfile);
-        } else {
-          // Other errors - just log and continue
-          setProfile(null);
-          setUserOrganizations([]);
-          return;
-        }
-      } else if (!profileData) {
-        console.log('⚠️ No profile found - creating one...');
-        
-        // Create profile if missing
+      if (profileError) {
+        console.error('❌ Profile fetch error:', profileError);
+        setProfile(null);
+        setUserOrganizations([]);
+        return;
+      }
+
+      if (!profileData) {
+        console.log('⚠️ No profile found - creating basic profile...');
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -145,73 +101,31 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         }
         
         setProfile(newProfile);
-      } else {
-        setProfile(profileData);
-      }
-      
-      // Continue with organization fetch...
-      const currentProfile = profileData || profile;
-      let orgData: any[] = [];
-      
-      if (currentProfile) {
-        console.log('📍 Step 2: Fetching organization memberships for profile:', currentProfile.id);
-        
-        const { data: fetchedOrgData, error: orgError } = await supabase
-          .from('organization_members')
-          .select(`
-            id,
-            user_id,
-            organization_id,
-            role,
-            created_at,
-            organization:organizations (*)
-          `)
-          .eq('user_id', currentProfile.id);
-        
-        console.log('📍 Step 3: Organization query result:', {
-          success: !orgError,
-          error: orgError,
-          dataCount: fetchedOrgData?.length || 0,
-          data: fetchedOrgData
-        });
-        
-        if (orgError) {
-          console.error('❌ Failed to fetch organization memberships:', orgError);
-          setUserOrganizations([]);
-        } else {
-          orgData = fetchedOrgData || [];
-          setUserOrganizations(orgData);
-          console.log('✅ Organization memberships loaded:', orgData.length, 'organizations');
-        }
-      } else {
-        console.log('⚠️ No profile available for organization fetch');
+        // Skip organization fetch for now if profile creation is needed
         setUserOrganizations([]);
+        return;
       }
+
+      setProfile(profileData);
       
-      console.log('📊 Profile fetch complete:', {
-        profileLoaded: !!currentProfile,
-        organizationsLoaded: orgData.length,
-        timeTaken: `${Date.now() - startTime}ms`
-      });
+      // Simplified organization fetch
+      const { data: orgData, error: orgError } = await supabase
+        .from('organization_members')
+        .select(`
+          id,
+          user_id,
+          organization_id,
+          role,
+          created_at,
+          organization:organizations (*)
+        `)
+        .eq('user_id', profileData.id);
       
-      } catch (abortError) {
-        clearTimeout(timeoutId);
-        
-        // Handle timeout/abort errors with retry logic
-        if (abortError.name === 'AbortError' && retryCount < 2) {
-          console.log(`⏰ Profile query timeout, retrying... (attempt ${retryCount + 2}/3)`);
-          
-          // Exponential backoff: 1s, 2s delays
-          const delay = Math.pow(2, retryCount) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          
-          // Clear the fetching ref to allow retry
-          fetchingRef.current = null;
-          return fetchProfile(userId, retryCount + 1);
-        }
-        
-        console.error('❌ Profile query failed after retries:', abortError);
-        throw abortError;
+      if (orgError) {
+        console.error('❌ Organization fetch error:', orgError);
+        setUserOrganizations([]);
+      } else {
+        setUserOrganizations(orgData || []);
       }
       
     } catch (error) {
@@ -219,7 +133,6 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       setProfile(null);
       setUserOrganizations([]);
     } finally {
-      fetchingRef.current = null;
       setLoading(false);
     }
   };
@@ -261,23 +174,25 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         if (session?.user && mounted) {
           setSession(session);
           setUser(session.user);
+          setAuthError(null);
           await fetchProfile(session.user.id);
         } else {
           if (mounted) setLoading(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        setAuthError('Failed to initialize authentication');
         if (mounted) setLoading(false);
       }
     };
 
-    // Add timeout protection
+    // Add timeout protection - reduced from 45s to 15s
     const timeoutId = setTimeout(() => {
       if (loading && mounted) {
         console.error('Auth loading timeout - forcing completion');
         setLoading(false);
       }
-    }, 45000); // 45 second timeout to account for retries
+    }, 15000); // 15 second timeout
 
     initializeAuth();
 
@@ -384,6 +299,14 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
+  const retryAuth = async () => {
+    if (user) {
+      setLoading(true);
+      setAuthError(null);
+      await fetchProfile(user.id);
+    }
+  };
+
   const value: OrganizationAuthContextType = {
     user,
     session,
@@ -391,6 +314,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     userOrganizations,
     userOrganization,
     loading,
+    authError,
+    retryAuth,
     signUp,
     signIn,
     signOut,

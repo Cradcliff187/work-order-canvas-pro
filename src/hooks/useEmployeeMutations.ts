@@ -85,10 +85,11 @@ export function useEmployeeMutations() {
       // Create organization relationship if organization_id provided
       if (employeeData.organization_id) {
         const { error: orgError } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .insert({
             user_id: profile.id,
             organization_id: employeeData.organization_id,
+            role: 'employee',
           });
 
         if (orgError) {
@@ -208,7 +209,7 @@ export function useEmployeeMutations() {
     }) => {
       // First, remove any existing organizations
       const { error: deleteError } = await supabase
-        .from('user_organizations')
+        .from('organization_members')
         .delete()
         .eq('user_id', employeeId);
 
@@ -217,10 +218,11 @@ export function useEmployeeMutations() {
       // Then add the new organization if provided
       if (organizationId) {
         const { error: insertError } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .insert({
             user_id: employeeId,
             organization_id: organizationId,
+            role: 'employee',
           });
 
         if (insertError) throw insertError;

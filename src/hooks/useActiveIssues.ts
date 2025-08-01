@@ -56,7 +56,7 @@ export const useActiveIssues = () => {
 
         // Get users with multiple organizations
         const { data: userOrgCounts, error: multiOrgsError } = await supabase
-          .from('user_organizations')
+          .from('organization_members')
           .select('user_id');
 
         if (multiOrgsError) throw multiOrgsError;

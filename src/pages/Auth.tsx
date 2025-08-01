@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HardHat } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
 import { CreateUserForm } from "@/components/auth/CreateUserForm";
@@ -14,28 +15,34 @@ export const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const branding = useBranding();
-  const { user, profile, userOrganizations, loading } = useOrganizationAuth();
+  const { user, profile, userOrganizations, loading, authError, retryAuth } = useOrganizationAuth();
 
   useEffect(() => {
     // If user is authenticated and we have profile data, navigate to appropriate dashboard
-    if (user && profile && userOrganizations && userOrganizations.length > 0 && !loading) {
-      const primaryOrg = userOrganizations[0];
-      const orgType = primaryOrg.organization?.organization_type;
-      const role = primaryOrg.role;
-      
-      console.log('User organization routing:', { orgType, role });
-      
-      if (orgType === 'internal') {
-        if (role === 'admin') {
-          navigate('/admin/dashboard');
+    if (user && profile && !loading) {
+      // Allow navigation even without organization data
+      if (userOrganizations && userOrganizations.length > 0) {
+        const primaryOrg = userOrganizations[0];
+        const orgType = primaryOrg.organization?.organization_type;
+        const role = primaryOrg.role;
+        
+        console.log('User organization routing:', { orgType, role });
+        
+        if (orgType === 'internal') {
+          if (role === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            navigate('/admin/employee-dashboard');
+          }
+        } else if (orgType === 'partner') {
+          navigate('/partner/dashboard');
+        } else if (orgType === 'subcontractor') {
+          navigate('/subcontractor/dashboard');
         } else {
-          navigate('/admin/employee-dashboard');
+          navigate('/admin/dashboard');
         }
-      } else if (orgType === 'partner') {
-        navigate('/partner/dashboard');
-      } else if (orgType === 'subcontractor') {
-        navigate('/subcontractor/dashboard');
       } else {
+        // Default to admin dashboard if no organization data
         navigate('/admin/dashboard');
       }
     }
@@ -103,6 +110,40 @@ export const Auth = () => {
               view={view} 
               onViewChange={setView}
             />
+          )}
+          
+          {/* Debug info and retry button for stuck users */}
+          {user && loading && (
+            <div className="mt-4 p-4 bg-muted rounded-md text-sm">
+              <p className="text-muted-foreground mb-2">
+                {authError ? `Error: ${authError}` : 'Loading your profile...'}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={retryAuth}
+                className="w-full"
+              >
+                Retry Loading Profile
+              </Button>
+            </div>
+          )}
+          
+          {/* Force navigation button for emergencies */}
+          {user && !loading && !profile && (
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm">
+              <p className="text-yellow-800 mb-2">
+                Profile loading failed. You can continue to the dashboard anyway.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/admin/dashboard')}
+                className="w-full"
+              >
+                Continue to Dashboard
+              </Button>
+            </div>
           )}
         </div>
 
