@@ -21,7 +21,7 @@ export function useProfile() {
         .from('profiles')
         .select(`
           *,
-          organization_members!inner(
+          organization_members(
             organization_id
           )
         `)

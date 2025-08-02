@@ -62,8 +62,8 @@ export function useEmployee(employeeId: string) {
         .from('profiles')
         .select(`
           *,
-          organization_members!inner(
-            organization:organizations!inner(
+          organization_members(
+            organization:organizations(
               organization_type
             )
           )
