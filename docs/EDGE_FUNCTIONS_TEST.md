@@ -48,9 +48,6 @@ verify_jwt = false
 
 [functions.process-email-queue]
 verify_jwt = false
-
-[functions.sign-up-user]
-verify_jwt = false
 ```
 
 **Environment Variables**:
@@ -113,7 +110,6 @@ supabase functions list
 - `send-email` - Email sending handler (public)
 - `password-reset-email` - Password reset handling (public)
 - `process-email-queue` - Email queue processing (public)
-- `sign-up-user` - User registration (public)
 
 ### 2. Individual Function Testing
 

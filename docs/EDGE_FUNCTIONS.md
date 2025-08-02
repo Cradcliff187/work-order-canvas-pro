@@ -282,23 +282,6 @@ interface CreateAdminUserRequest {
 verify_jwt = false  # Public access for easy development setup
 ```
 
-### sign-up-user
-
-**Purpose**: Handle user registration and signup process
-
-**File**: `supabase/functions/sign-up-user/index.ts`
-
-**Function Features**:
-- **Public Access**: No authentication required (configured with `verify_jwt = false`)  
-- **User Registration**: Creates new user accounts through public signup flow
-- **Email Integration**: Sends confirmation emails via `send-email` function
-- **Organization Assignment**: Links users to appropriate organizations based on signup data
-
-**Configuration**: 
-```toml
-[functions.sign-up-user]
-verify_jwt = false  # Public access for user registration
-```
 
 ## Email System Configuration
 
@@ -339,9 +322,6 @@ verify_jwt = false  # Public access for password resets
 
 [functions.process-email-queue]
 verify_jwt = false  # Public access for automated processing
-
-[functions.sign-up-user]
-verify_jwt = false  # Public access for user registration
 ```
 
 ## Email Testing and Monitoring
