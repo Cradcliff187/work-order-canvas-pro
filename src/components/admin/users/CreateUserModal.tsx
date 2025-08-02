@@ -131,14 +131,8 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
           { value: 'employee', label: 'Employee' }
         ];
       case 'partner':
-        return [
-          { value: 'admin', label: 'Admin' },
-          { value: 'manager', label: 'Manager' },
-          { value: 'member', label: 'Member' }
-        ];
       case 'subcontractor':
         return [
-          { value: 'admin', label: 'Admin' },
           { value: 'member', label: 'Member' }
         ];
       default:
@@ -172,7 +166,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
             <div className="text-center">
               <h3 className="text-lg font-semibold text-green-700">User Created Successfully!</h3>
               <p className="text-sm text-muted-foreground">
-                The user has been created and added to the selected organization.
+                The user has been created and will receive an email with instructions to set their password.
               </p>
             </div>
           </div>
@@ -295,6 +289,9 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                       <AlertDescription>
                         User will be created in the <strong>{selectedOrg.organization_type}</strong> organization "{selectedOrg.name}" 
                         with the role of <strong>{form.watch('organization_role')}</strong>.
+                        {selectedOrg.organization_type !== 'internal' && (
+                          <><br /><strong>Note:</strong> {selectedOrg.organization_type} organizations can only have member roles.</>
+                        )}
                       </AlertDescription>
                     </Alert>
                   )}

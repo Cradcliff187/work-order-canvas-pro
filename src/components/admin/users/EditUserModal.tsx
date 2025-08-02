@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Edit } from 'lucide-react';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useUserMutations } from '@/hooks/useUsers';
+import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Phase 7: Organization-based user editing (no user_type)
 const editUserSchema = z.object({
@@ -85,6 +87,17 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
         });
       }
       
+      // Update role if changed
+      if (data.organization_role && data.organization_role !== currentOrgMembership?.role) {
+        const { error } = await supabase
+          .from('organization_members')
+          .update({ role: data.organization_role })
+          .eq('user_id', user.id)
+          .eq('organization_id', data.organization_id || currentOrg?.id);
+          
+        if (error) throw error;
+      }
+      
       toast({
         title: "Success",
         description: "User updated successfully",
@@ -115,14 +128,8 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
           { value: 'employee', label: 'Employee' }
         ];
       case 'partner':
-        return [
-          { value: 'admin', label: 'Admin' },
-          { value: 'manager', label: 'Manager' },
-          { value: 'member', label: 'Member' }
-        ];
       case 'subcontractor':
         return [
-          { value: 'admin', label: 'Admin' },
           { value: 'member', label: 'Member' }
         ];
       default:
@@ -237,6 +244,18 @@ export function EditUserModal({ open, onOpenChange, user }: EditUserModalProps) 
                   </FormItem>
                 )}
               />
+            )}
+
+            {selectedOrg && (
+              <Alert>
+                <AlertDescription>
+                  User will be updated in the <strong>{selectedOrg.organization_type}</strong> organization "{selectedOrg.name}" 
+                  with the role of <strong>{form.watch('organization_role')}</strong>.
+                  {selectedOrg.organization_type !== 'internal' && (
+                    <><br /><strong>Note:</strong> {selectedOrg.organization_type} organizations can only have member roles.</>
+                  )}
+                </AlertDescription>
+              </Alert>
             )}
 
             <DialogFooter>
