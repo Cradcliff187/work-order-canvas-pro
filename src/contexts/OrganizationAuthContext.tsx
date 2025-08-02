@@ -107,31 +107,55 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         return;
       }
 
-      // Now fetch organization memberships separately
-      const { data: orgData, error: orgError } = await supabase
+      // Fetch organization memberships separately (without nested join)
+      const { data: memberData, error: memberError } = await supabase
         .from('organization_members')
         .select(`
           id,
           user_id,
           organization_id,
           role,
-          created_at,
-          organization:organizations (*)
+          created_at
         `)
         .eq('user_id', profileData.id);
       
-      if (orgError) {
-        setAuthError(`Organization fetch failed: ${orgError.message}`);
+      if (memberError) {
+        setAuthError(`Organization membership fetch failed: ${memberError.message}`);
         setProfile(null);
         setUserOrganizations([]);
         setLoading(false);
         return;
       }
 
+      // If user has organization memberships, fetch the organization details
+      let orgMembersWithOrgs: any[] = [];
+      if (memberData && memberData.length > 0) {
+        const orgIds = memberData.map(member => member.organization_id);
+        
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .select('*')
+          .in('id', orgIds);
+        
+        if (orgError) {
+          setAuthError(`Organization details fetch failed: ${orgError.message}`);
+          setProfile(null);
+          setUserOrganizations([]);
+          setLoading(false);
+          return;
+        }
+
+        // Manually join the data
+        orgMembersWithOrgs = memberData.map(member => ({
+          ...member,
+          organization: orgData?.find(org => org.id === member.organization_id)
+        }));
+      }
+
       // Update all state at once
       setProfile(profileData);
-      setUserOrganizations(orgData || []);
-      setAuthError(orgData?.length === 0 
+      setUserOrganizations(orgMembersWithOrgs);
+      setAuthError(orgMembersWithOrgs.length === 0 
         ? 'No organization access found. Please contact your administrator.' 
         : null);
       setLoading(false);
