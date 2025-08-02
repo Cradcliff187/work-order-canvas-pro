@@ -64,34 +64,22 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     : null;
 
   const fetchProfile = async (userId: string) => {
-    // Prevent duplicate fetching for the same user
     if (fetchingProfileRef.current === userId) {
-      console.log('🔐 Profile fetch already in progress for user:', userId);
       return;
     }
     
     fetchingProfileRef.current = userId;
     
     try {
-      console.log('🔐 Fetching profile for user:', userId);
-      
-      // Fetch profile first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      
-      if (profileError) {
-        setAuthError(`Authentication failed: ${profileError.message}`);
-        setProfile(null);
-        setUserOrganizations([]);
-        setLoading(false);
-        return;
-      }
+
+      if (profileError) throw profileError;
 
       if (!profileData) {
-        // Create profile if it doesn't exist
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -104,85 +92,53 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
           })
           .select()
           .single();
-        
-        if (createError) {
-          setAuthError(`Profile creation failed: ${createError.message}`);
-          setProfile(null);
-          setUserOrganizations([]);
-          setLoading(false);
-          return;
-        }
-        
+
+        if (createError) throw createError;
         setProfile(newProfile);
         setUserOrganizations([]);
         setAuthError(null);
-        setLoading(false);
         return;
       }
 
-      // Fetch organization memberships separately (without nested join)
-      const { data: memberData, error: memberError } = await supabase
-        .from('organization_members')
-        .select(`
-          id,
-          user_id,
-          organization_id,
-          role,
-          created_at
-        `)
-        .eq('user_id', profileData.id);
-      
-      if (memberError) {
-        setAuthError(`Organization membership fetch failed: ${memberError.message}`);
-        setProfile(null);
-        setUserOrganizations([]);
-        setLoading(false);
-        return;
-      }
-
-      // If user has organization memberships, fetch the organization details
-      let orgMembersWithOrgs: any[] = [];
-      if (memberData && memberData.length > 0) {
-        const orgIds = memberData.map(member => member.organization_id);
-        
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .select('*')
-          .in('id', orgIds);
-        
-        if (orgError) {
-          setAuthError(`Organization details fetch failed: ${orgError.message}`);
-          setProfile(null);
-          setUserOrganizations([]);
-          setLoading(false);
-          return;
-        }
-
-        // Manually join the data
-        orgMembersWithOrgs = memberData.map(member => ({
-          ...member,
-          organization: orgData?.find(org => org.id === member.organization_id)
-        }));
-      }
-
-      // Update all state at once
       setProfile(profileData);
-      setUserOrganizations(orgMembersWithOrgs);
-      setAuthError(orgMembersWithOrgs.length === 0 
-        ? 'No organization access found. Please contact your administrator.' 
-        : null);
-      setLoading(false);
-      
-      console.log('🔐 Profile fetch completed for user:', userId);
+
+      const { data: membersData, error: membersError } = await supabase
+        .from('organization_members')
+        .select('id, user_id, organization_id, role, created_at')
+        .eq('user_id', profileData.id);
+
+      if (membersError) throw membersError;
+
+      if (!membersData || membersData.length === 0) {
+        setAuthError('No organization access found. Please contact your administrator.');
+        setUserOrganizations([]);
+        return;
+      }
+
+      const orgIds = membersData.map(m => m.organization_id);
+      const { data: orgsData, error: orgsError } = await supabase
+        .from('organizations')
+        .select('*')
+        .in('id', orgIds);
+
+      if (orgsError) throw orgsError;
+
+      const combinedOrgs = membersData.map(member => ({
+        ...member,
+        organization: orgsData?.find(org => org.id === member.organization_id) || null
+      })).filter(org => org.organization !== null);
+
+      setUserOrganizations(combinedOrgs);
+      setAuthError(null);
       
     } catch (error) {
-      setAuthError('Authentication system error. Please try again.');
+      console.error('Profile fetch error:', error);
+      setAuthError('Authentication error. Please try again.');
       setProfile(null);
       setUserOrganizations([]);
-      setLoading(false);
     } finally {
-      // Clear the fetching reference when done
       fetchingProfileRef.current = null;
+      setLoading(false);
     }
   };
 
