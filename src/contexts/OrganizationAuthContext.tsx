@@ -61,28 +61,34 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     : null;
 
   const fetchProfile = async (userId: string) => {
-    console.log('🔍 Fetching profile for userId:', userId);
-    
     try {
-      // Step 1: Fetch profile with comprehensive debugging
-      console.log('📋 Attempting profile query...');
+      // Single query to get profile and organizations in one call
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organization_members (
+            id,
+            user_id,
+            organization_id,
+            role,
+            created_at,
+            organization:organizations (*)
+          )
+        `)
         .eq('user_id', userId)
         .maybeSingle();
       
       if (profileError) {
-        console.error('❌ Profile fetch error:', profileError);
-        console.error('Profile error details:', { code: profileError.code, message: profileError.message, hint: profileError.hint });
-        setAuthError(`Profile fetch failed: ${profileError.message}`);
+        setAuthError(`Authentication failed: ${profileError.message}`);
         setProfile(null);
         setUserOrganizations([]);
+        setLoading(false);
         return;
       }
 
       if (!profileData) {
-        console.log('⚠️ No profile found - creating basic profile...');
+        // Create profile if it doesn't exist
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -97,68 +103,33 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
           .single();
         
         if (createError) {
-          console.error('❌ Profile creation failed:', createError);
           setAuthError(`Profile creation failed: ${createError.message}`);
           setProfile(null);
           setUserOrganizations([]);
+          setLoading(false);
           return;
         }
         
-        console.log('✅ Profile created successfully:', newProfile.id);
+        // Batch state updates
         setProfile(newProfile);
         setUserOrganizations([]);
         setAuthError(null);
+        setLoading(false);
         return;
       }
 
-      console.log('✅ Profile found:', { id: profileData.id, email: profileData.email });
+      // Batch all state updates at once
       setProfile(profileData);
-      
-      // Step 2: Fetch organizations with comprehensive debugging
-      console.log('🏢 Attempting organization fetch...');
-      const { data: orgData, error: orgError } = await supabase
-        .from('organization_members')
-        .select(`
-          id,
-          user_id,
-          organization_id,
-          role,
-          created_at,
-          organization:organizations (*)
-        `)
-        .eq('user_id', profileData.id);
-      
-      if (orgError) {
-        console.error('❌ Organization fetch error:', orgError);
-        console.error('Organization error details:', { code: orgError.code, message: orgError.message, hint: orgError.hint });
-        setAuthError(`Organization fetch failed: ${orgError.message}`);
-        setUserOrganizations([]);
-      } else {
-        const orgCount = orgData?.length || 0;
-        console.log(`✅ Organizations fetched: ${orgCount} found`);
-        
-        if (orgCount === 0) {
-          console.warn('⚠️ User has no organization memberships');
-          setAuthError('No organization access found. Please contact your administrator.');
-        } else {
-          console.log('📊 Organization details:', orgData?.map(org => ({
-            id: org.organization?.id,
-            name: org.organization?.name,
-            type: org.organization?.organization_type,
-            role: org.role
-          })));
-          setAuthError(null);
-        }
-        
-        setUserOrganizations(orgData || []);
-      }
+      setUserOrganizations(profileData.organization_members || []);
+      setAuthError(profileData.organization_members?.length === 0 
+        ? 'No organization access found. Please contact your administrator.' 
+        : null);
+      setLoading(false);
       
     } catch (error) {
-      console.error('💥 Fatal error in fetchProfile:', error);
-      setAuthError(`Critical authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setAuthError('Authentication system error. Please try again.');
       setProfile(null);
       setUserOrganizations([]);
-    } finally {
       setLoading(false);
     }
   };
