@@ -1705,6 +1705,10 @@ export type Database = {
         Args: { target_user_id?: string }
         Returns: Json
       }
+      sync_user_organization_metadata: {
+        Args: { target_user_id?: string }
+        Returns: Json
+      }
       test_auth_context: {
         Args: { user_uuid: string }
         Returns: {
