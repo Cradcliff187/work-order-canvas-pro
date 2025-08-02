@@ -29,7 +29,7 @@ The cleanup function will remove:
 - Invoices
 - Work orders
 - Partner locations
-- User organization relationships (except real admin)
+- Organization memberships (except real admin)
 - Test email templates
 - Test trades
 

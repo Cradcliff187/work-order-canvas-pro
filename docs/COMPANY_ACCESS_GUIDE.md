@@ -275,7 +275,7 @@ A: Currently, any organization member can submit reports. Consider implementing 
 ### Access Issues
 
 **Problem**: Team member cannot see organization work orders
-**Solution**: Verify user is properly assigned to organization in user_organizations table
+**Solution**: Verify user is properly assigned to organization in organization_members table
 
 **Problem**: User sees work from wrong organization  
 **Solution**: Check user organization assignments - users should only belong to their own organization

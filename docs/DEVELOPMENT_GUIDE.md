@@ -215,7 +215,7 @@ if (!session) {
 **Issue**: RLS policy testing
 ```sql
 -- Test user belongs to organization
-SELECT * FROM auth_user_organizations();
+SELECT * FROM get_user_organizations_with_roles();
 -- Test assignment-based access
 SELECT * FROM auth_user_organization_assignments();
 ```
@@ -403,7 +403,7 @@ useEffect(() => {
 **Authentication Issues:**
 1. Verify user session: `await supabase.auth.getUser()`
 2. Check profile table: `SELECT * FROM profiles WHERE user_id = ?`
-3. Test organization membership: `SELECT * FROM auth_user_organizations()`
+3. Test organization membership: `SELECT * FROM get_user_organizations_with_roles()`
 
 **Performance Issues:**
 1. Use browser dev tools Network tab

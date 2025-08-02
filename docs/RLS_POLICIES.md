@@ -47,11 +47,11 @@ WorkOrderPortal supports both individual access (backward compatibility) and com
 ### Permission denied errors
 - **Verify**: User is authenticated (auth.uid() returns UUID)
 - **Check**: User type assignment in profiles table
-- **Verify**: Organization relationships in user_organizations table
+- **Verify**: Organization relationships in organization_members table
 
 ### User creation and authentication failures
 - **Missing profile record**: Ensure profile creation follows auth user creation
-- **Organization access denied**: Missing user_organizations relationship
+- **Organization access denied**: Missing organization_members relationship
 - **Invalid user types**: Check enum values match system requirements
 
 ## Access Rules by Table
@@ -230,14 +230,14 @@ The WorkOrderPortal messaging system enables secure communication between differ
 - Partners and Subcontractors: Can view active trades for work order creation
 **Security Notes**: Read access enables proper work categorization
 
-### Table: user_organizations
-**Purpose**: Links users to their organizations for access control
+### Table: organization_members
+**Purpose**: Links users to their organizations with role-based access control
 **Migration**: 20250710162019-bb5da63a-ae41-496a-9614-5056c64eb672.sql
 **Access Rules**:
-- Admins: Full management of all user-organization relationships
-- Users: Can view their own organization relationships
-- Partners: Can manage relationships within their organizations
-**Security Notes**: Foundation for organization-based access control
+- Admins: Full management of all organization memberships
+- Users: Can view their own organization memberships
+- Partners: Can manage memberships within their organizations (with role restrictions)
+**Security Notes**: Foundation for role-based organization access control
 
 ### Table: work_order_assignments
 **Purpose**: Tracks who is assigned to work on specific work orders
@@ -285,7 +285,7 @@ User creation must be performed through Edge Functions using the service role ke
 Database functions validate admin access using existing authentication mechanisms. The system uses SECURITY DEFINER functions to safely bypass RLS when necessary for administrative operations.
 
 ### Organization Relationships
-Access control heavily relies on user_organizations table relationships. Missing relationships are a common cause of permission issues.
+Access control heavily relies on organization_members table relationships. Missing relationships are a common cause of permission issues.
 
 ## Financial Data Access Patterns
 
@@ -307,7 +307,7 @@ Access control heavily relies on user_organizations table relationships. Missing
 ## Performance Considerations
 
 **Key Indexes Supporting RLS Performance**:
-- Organization membership lookups on user_organizations table
+- Organization membership lookups on organization_members table
 - Work order assignments and organization relationships
 - Profile lookups by user_id and user_type
 - Financial table performance indexes for status and organization queries

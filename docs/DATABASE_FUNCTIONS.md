@@ -55,11 +55,11 @@ These functions avoid infinite recursion in RLS policies by providing secure acc
 **Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
 **Usage**: Simplified admin access checks in RLS policies
 
-### auth_user_organizations()
-**Purpose**: Get all organizations the current user belongs to  
-**Returns**: Table of organization UUIDs  
+### get_user_organizations_with_roles()
+**Purpose**: Get all organizations the current user belongs to with their roles  
+**Returns**: Table of organization IDs, types, and user roles  
 **Migration**: `20250711000000_fix_rls_infinite_recursion.sql`  
-**Usage**: Multi-tenant access control for partners
+**Usage**: Role-based multi-tenant access control for partners
 
 ### auth_user_belongs_to_organization(org_id uuid)
 **Purpose**: Check if current user belongs to a specific organization  
@@ -288,13 +288,12 @@ These functions use `call_send_email_trigger()` to call the unified send-email E
 **Audit System**: Comprehensive change tracking with user attribution and timestamp logging  
 **Analytics**: Real-time business intelligence with materialized views for performance  
 **Testing Framework**: Complete test data lifecycle with safety checks and realistic scenarios
-  "users": [
+  "memberships_created": 15,
+  "organizations": [
     {
-      "email": "partner1@abc.com",
-      "password": "Test123!",
-      "user_type": "partner",
-      "organization": "ABC Property Management",
-      "created": true
+      "name": "ABC Property Management",
+      "type": "partner",
+      "member_count": 3
     }
   ],
   "summary": {

@@ -161,7 +161,7 @@ CREATE INDEX CONCURRENTLY idx_work_orders_status_org ON work_orders(status, orga
 CREATE INDEX CONCURRENTLY idx_work_orders_assigned ON work_orders(assigned_to, status);
 
 -- User organization lookups
-CREATE INDEX CONCURRENTLY idx_user_org_active ON user_organizations(user_id, organization_id);
+CREATE INDEX CONCURRENTLY idx_org_members_active ON organization_members(user_id, organization_id);
 
 -- Report filtering
 CREATE INDEX CONCURRENTLY idx_reports_status ON work_order_reports(status, submitted_at);

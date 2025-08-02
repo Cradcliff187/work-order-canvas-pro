@@ -217,7 +217,7 @@ ORDER BY CASE i.status
 ### Core Relationships
 ```
 Organizations (8)
-├── Users (14) via user_organizations
+├── Users (14) via organization_members
 ├── Partner Locations (10) for partners only
 └── Work Orders (16) created by partners/admins
 
@@ -425,8 +425,8 @@ SELECT
   m.created_at
 FROM work_order_messages m
 JOIN profiles p ON p.id = m.sender_id
-LEFT JOIN user_organizations uo ON uo.user_id = p.id
-LEFT JOIN organizations o ON o.id = uo.organization_id
+LEFT JOIN organization_members om ON om.user_id = p.id
+LEFT JOIN organizations o ON o.id = om.organization_id
 WHERE m.work_order_id = (SELECT id FROM work_orders WHERE work_order_number = 'ABC-001-001')
 ORDER BY m.created_at;
 ```

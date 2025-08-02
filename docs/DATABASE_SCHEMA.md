@@ -48,14 +48,16 @@ Stores company/organization information for partners and subcontractors.
 - updated_at (timestamp)
 ```
 
-### user_organizations
-Junction table linking users to organizations with validation.
+### organization_members
+Junction table linking users to organizations with role-based membership.
 
 ```sql
 - id (UUID, primary key)
 - user_id (UUID, references profiles.id)
 - organization_id (UUID, references organizations.id)
+- role (enum: 'admin', 'manager', 'member')
 - created_at (timestamp)
+- updated_at (timestamp)
 ```
 
 ### trades

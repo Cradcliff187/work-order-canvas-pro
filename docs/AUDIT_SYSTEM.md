@@ -11,7 +11,7 @@ WorkOrderPortal implements a comprehensive audit logging system that automatical
 The audit system automatically tracks changes to 11 core business tables:
 
 1. **organizations** - Company and partner information
-2. **user_organizations** - User-to-organization relationships
+2. **organization_members** - User-to-organization relationships with roles
 3. **profiles** - User profile information
 4. **trades** - Service categories and specializations
 5. **work_orders** - Job requests and assignments
@@ -86,8 +86,8 @@ SELECT
   p.first_name || ' ' || p.last_name as team_member
 FROM audit_logs al
 JOIN profiles p ON p.id = al.user_id
-JOIN user_organizations uo ON uo.user_id = p.id
-WHERE uo.organization_id = 'your-organization-id'
+JOIN organization_members om ON om.user_id = p.id
+WHERE om.organization_id = 'your-organization-id'
   AND al.created_at >= NOW() - INTERVAL '30 days'
 GROUP BY al.action, p.first_name, p.last_name
 ORDER BY total_changes DESC;
