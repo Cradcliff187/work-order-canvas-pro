@@ -147,7 +147,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     
     // Set up auth state listener - this will handle both initial session and changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('🔐 Auth state change:', event, session?.user?.id);
         
         if (!mounted) return;
@@ -156,7 +156,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          // Don't await here to prevent blocking the auth state callback
+          fetchProfile(session.user.id);
         } else {
           setProfile(null);
           setUserOrganizations([]);
@@ -166,17 +167,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       }
     );
 
-    // Add timeout protection - if auth doesn't complete in 15s, complete loading
-    const timeoutId = setTimeout(() => {
-      if (loading && mounted) {
-        console.warn('Auth loading timeout after 15s - completing with current state');
-        setLoading(false);
-      }
-    }, 15000);
-
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
