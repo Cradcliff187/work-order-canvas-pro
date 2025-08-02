@@ -20,40 +20,24 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const organizationNavItems = useOrganizationNavigation();
   const useOrgNavigation = true; // Always use organization navigation
 
-  // Convert navigation items to mobile navigation format
-  const subcontractorNavItems = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: Home,
-      path: '/subcontractor/dashboard'
-    },
-    {
-      id: 'work-orders',
-      label: 'Work Orders',
-      icon: ClipboardList,
-      path: '/subcontractor/work-orders'
-    },
-    {
-      id: 'submit',
-      label: 'Submit',
-      icon: Plus,
-      path: '/subcontractor/submit-invoice'
-    },
-    {
-      id: 'invoices',
-      label: 'Invoices',
-      icon: Receipt,
-      path: '/subcontractor/invoices',
-      badge: draftCount
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: User,
-      path: '/subcontractor/profile'
-    }
-  ];
+  // Convert organization navigation items to mobile navigation format with icons
+  const iconMap = {
+    'Dashboard': Home,
+    'Work Orders': ClipboardList,
+    'Reports': ClipboardList,
+    'Submit Report': Plus,
+    'Invoices': Receipt,
+  };
+
+  const subcontractorNavItems = organizationNavItems
+    .filter(item => item.visible)
+    .map(item => ({
+      id: item.path.split('/').pop() || item.label.toLowerCase().replace(' ', '-'),
+      label: item.label === 'Submit Report' ? 'Submit' : item.label,
+      icon: iconMap[item.label as keyof typeof iconMap] || ClipboardList,
+      path: item.path,
+      badge: item.label === 'Invoices' ? draftCount : undefined
+    }));
 
   return (
     <SidebarProvider>

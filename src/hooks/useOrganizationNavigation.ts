@@ -40,6 +40,7 @@ export const useOrganizationNavigation = () => {
       return [
         { label: 'Dashboard', path: '/subcontractor/dashboard', visible: true },
         { label: 'Work Orders', path: '/subcontractor/work-orders', visible: true },
+        { label: 'Reports', path: '/subcontractor/reports', visible: true },
         { label: 'Submit Report', path: '/subcontractor/submit-report', visible: true },
         { label: 'Invoices', path: '/subcontractor/invoices', visible: true },
       ];
