@@ -300,7 +300,7 @@ export function attachDebugUtilities(manager: IndexedDBManager): void {
     }
     
     try {
-      await indexedDB.deleteDatabase('WorkOrderProDB');
+      await indexedDB.deleteDatabase('WorkOrderPortalDB');
       localStorage.removeItem('workorder-fallback-storage');
       console.log('✅ Storage reset complete - refresh the page');
     } catch (error) {
@@ -308,11 +308,11 @@ export function attachDebugUtilities(manager: IndexedDBManager): void {
     }
   };
 
-  // Expose WorkOrderPro namespace for enhanced debugging
-  if (!(window as any).WorkOrderPro) {
-    (window as any).WorkOrderPro = {};
+  // Expose WorkOrderPortal namespace for enhanced debugging
+  if (!(window as any).WorkOrderPortal) {
+    (window as any).WorkOrderPortal = {};
   }
-  (window as any).WorkOrderPro.storage = {
+  (window as any).WorkOrderPortal.storage = {
     manager,
     schema: EXPECTED_SCHEMA,
     validateSchema: () => manager.validateSchema(),
@@ -328,5 +328,5 @@ export function attachDebugUtilities(manager: IndexedDBManager): void {
   console.log('  - window.__validateSchema() - Validate database schema');
   console.log('  - window.__showExpectedSchema() - Show expected schema');
   console.log('  - window.__resetStorage() - Reset all storage (DESTRUCTIVE)');
-  console.log('  - window.WorkOrderPro.storage - Enhanced storage API');
+  console.log('  - window.WorkOrderPortal.storage - Enhanced storage API');
 }

@@ -63,7 +63,7 @@ export function useBiometric() {
       const createOptions: PublicKeyCredentialCreationOptions = {
         challenge,
         rp: {
-          name: "WorkOrderPro",
+          name: "WorkOrderPortal",
           id: window.location.hostname
         },
         user: {

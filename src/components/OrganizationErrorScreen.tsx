@@ -27,7 +27,7 @@ export const OrganizationErrorScreen: React.FC<OrganizationErrorScreenProps> = (
 
   const handleContactAdmin = () => {
     // In a real app, this could open email client or redirect to support
-    window.location.href = 'mailto:admin@workorderpro.com?subject=Organization Assignment Issue';
+    window.location.href = 'mailto:admin@workorderportal.com?subject=Organization Assignment Issue';
   };
 
   return (

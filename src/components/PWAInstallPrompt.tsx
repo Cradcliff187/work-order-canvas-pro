@@ -28,7 +28,7 @@ export function PWAInstallPrompt() {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Install WorkOrderPro</CardTitle>
+            <CardTitle className="text-base">Install WorkOrderPortal</CardTitle>
           </div>
           <Button
             variant="ghost"

@@ -1,4 +1,4 @@
-// Generic CSV export utilities for WorkOrderPro
+// Generic CSV export utilities for WorkOrderPortal
 
 export interface ExportColumn {
   key: string;

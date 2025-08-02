@@ -51,7 +51,7 @@ export const TEMPLATE_VARIABLES = {
   },
   system: {
     // System Variables
-    'system_url': 'https://workorderpro.com',
+    'system_url': 'https://workorderportal.com',
     'current_date': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
   },
   report: {

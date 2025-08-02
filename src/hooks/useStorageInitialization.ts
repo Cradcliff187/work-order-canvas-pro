@@ -44,7 +44,7 @@ export function useStorageInitialization() {
       if ('databases' in indexedDB) {
         const databases = await indexedDB.databases();
         const workOrderDBs = databases.filter(db => 
-          db.name?.includes('WorkOrderPro') || db.name?.includes('workorder')
+          db.name?.includes('WorkOrderPortal') || db.name?.includes('workorder')
         );
         
         // Check for version conflicts and force reset if needed
@@ -197,7 +197,7 @@ export function useStorageInitialization() {
     try {
       setInitializationState('initializing');
       
-      await indexedDB.deleteDatabase('WorkOrderProDB');
+      await indexedDB.deleteDatabase('WorkOrderPortalDB');
       localStorage.removeItem('workorder-fallback-storage');
       
       await initializeStorageWithRetry();
