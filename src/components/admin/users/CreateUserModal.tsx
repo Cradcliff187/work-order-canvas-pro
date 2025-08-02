@@ -51,58 +51,39 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
   });
 
   const onSubmit = async (data: CreateUserFormData) => {
-    const debugId = `USER_CREATE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
     try {
       setIsLoading(true);
       
-      console.group(`🔧 [FRONTEND DEBUG ${debugId}] Organization-based User Creation Started`);
-      console.log('📋 Form Data Received:', {
+      console.log('🔧 Creating user with new database function:', {
         email: data.email,
         firstName: data.first_name,
         lastName: data.last_name,
         organizationId: data.organization_id,
         organizationRole: data.organization_role,
         phone: data.phone,
-        timestamp: new Date().toISOString()
       });
 
-      const requestPayload = {
-        userData: {
-          email: data.email,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          phone: data.phone || '',
-          organization_id: data.organization_id,
-          organization_role: data.organization_role,
-        },
-      };
-
-      console.log('📤 Sending to create-admin-user edge function:', requestPayload);
-
-      const { data: result, error } = await supabase.functions.invoke('create-admin-user', {
-        body: requestPayload,
-      });
-
-      console.log('📥 Edge Function Response:', {
-        success: !error,
-        result,
-        error: error?.message,
-        timestamp: new Date().toISOString()
+      // Call the new database function directly
+      const { data: result, error } = await supabase.rpc('create_new_user', {
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone || null,
+        organization_id: data.organization_id,
+        organization_role: data.organization_role,
       });
 
       if (error) {
-        console.error('❌ Edge Function Error:', error);
+        console.error('❌ Database function error:', error);
         throw new Error(error.message || 'Failed to create user');
       }
 
-      if (!result?.success) {
-        console.error('❌ Edge Function Failed:', result);
-        throw new Error(result?.error || 'User creation failed');
+      if (!result || !(result as any)?.success) {
+        console.error('❌ Database function failed:', result);
+        throw new Error((result as any)?.message || 'User creation failed');
       }
 
-      console.log('✅ User created successfully:', result.data);
-      console.groupEnd();
+      console.log('✅ User created successfully:', result);
 
       setShowSuccess(true);
       
@@ -120,7 +101,6 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
 
     } catch (error: any) {
       console.error('❌ User creation failed:', error);
-      console.groupEnd();
       
       toast({
         variant: "destructive",

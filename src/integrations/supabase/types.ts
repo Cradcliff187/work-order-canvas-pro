@@ -1508,6 +1508,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      create_new_user: {
+        Args: {
+          email: string
+          first_name: string
+          last_name: string
+          organization_id: string
+          organization_role: string
+          phone?: string
+        }
+        Returns: Json
+      }
       debug_auth_state: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1659,6 +1670,10 @@ export type Database = {
       initialize_all_user_jwt_metadata: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      is_admin: {
+        Args: { p_user_id: string }
+        Returns: boolean
       }
       is_valid_transition: {
         Args: {
