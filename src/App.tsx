@@ -22,8 +22,12 @@ const queryClient = new QueryClient({
 });
 
 const AppContent: React.FC = () => {
-  useBrowserTabTitle();
   return <AppRouter />;
+};
+
+const AppWithBrowserTitle: React.FC = () => {
+  useBrowserTabTitle();
+  return <AppContent />;
 };
 
 const App: React.FC = () => {
@@ -50,7 +54,7 @@ const App: React.FC = () => {
             <OfflineIndicator />
             <PWAUpdateNotification />
             
-            <AppContent />
+            <AppWithBrowserTitle />
             {process.env.NODE_ENV !== 'production' && (
               <StorageDebugPanel 
                 isOpen={showDebugPanel} 
