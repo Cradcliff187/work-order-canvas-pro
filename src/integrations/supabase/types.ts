@@ -1705,6 +1705,14 @@ export type Database = {
         Args: { target_user_id?: string }
         Returns: Json
       }
+      test_auth_context: {
+        Args: { user_uuid: string }
+        Returns: {
+          auth_uid: string
+          profile_found: boolean
+          org_count: number
+        }[]
+      }
       test_auth_system: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -1712,6 +1720,16 @@ export type Database = {
       test_basic_db_operations: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      test_rls_for_user: {
+        Args: { test_email: string }
+        Returns: {
+          user_type: string
+          test_scenario: string
+          expected_access: string
+          actual_result: boolean
+          pass_fail: string
+        }[]
       }
       test_user_creation: {
         Args: { test_email?: string }
