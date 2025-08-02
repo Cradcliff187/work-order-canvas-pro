@@ -10,12 +10,20 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserType }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, userOrganizations } = useAuth();
   const { isAdmin, isEmployee, isPartner, isSubcontractor, hasPermission } = useUserProfile();
 
-  console.log('ProtectedRoute - Profile:', profile);
-  console.log('ProtectedRoute - Required Type:', requiredUserType);
+  // Enhanced debugging for auth state
+  console.log('ProtectedRoute DEBUG:', {
+    user: !!user,
+    profile: !!profile,
+    loading,
+    userOrganizations: userOrganizations?.length || 0,
+    requiredUserType,
+    hasPermissionResult: requiredUserType ? hasPermission(requiredUserType) : 'N/A'
+  });
 
+  // Show loading if authentication is still in progress
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -27,8 +35,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredUserT
     );
   }
 
+  // If no user, redirect to auth
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Show loading if user exists but organizations are still loading
+  // This prevents permission checks from running before data is ready
+  if (user && (!userOrganizations || userOrganizations.length === 0)) {
+    console.log('ProtectedRoute - Waiting for organization data to load...');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading permissions...</p>
+        </div>
+      </div>
+    );
   }
 
   // No required user type - allow access
