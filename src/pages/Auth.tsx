@@ -112,23 +112,6 @@ export const Auth = () => {
             />
           )}
           
-          {/* Debug info and retry button for stuck users */}
-          {user && loading && (
-            <div className="mt-4 p-4 bg-muted rounded-md text-sm">
-              <p className="text-muted-foreground mb-2">
-                {authError ? `Error: ${authError}` : 'Loading your profile...'}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={retryAuth}
-                className="w-full"
-              >
-                Retry Loading Profile
-              </Button>
-            </div>
-          )}
-          
         </div>
 
         <div className="text-center text-sm text-muted-foreground">
