@@ -108,24 +108,24 @@ export function SubcontractorSidebar() {
                     isActive={isActive(item.path)}
                     className={isActive(item.path) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
                   >
-                    <Link to={item.path} className="flex items-center gap-2">
-                      {item.icon && <item.icon className="h-4 w-4" />}
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1">{item.label}</span>
-                          {item.label === 'Invoices' && draftCount > 0 && (
-                            <Badge variant="secondary" className="ml-2 text-xs">
-                              {draftCount}
-                            </Badge>
-                          )}
-                          {item.label === 'Work Orders' && pendingReportsCount > 0 && (
-                            <Badge variant="default" className="ml-2 text-xs">
-                              {pendingReportsCount}
-                            </Badge>
-                          )}
-                        </>
-                      )}
-                    </Link>
+                     <Link to={item.path} className="flex items-center gap-2">
+                       <item.icon className="h-4 w-4" />
+                       {!collapsed && (
+                         <>
+                           <span className="flex-1">{item.label}</span>
+                           {item.label === 'Submit Invoice' && draftCount > 0 && (
+                             <Badge variant="secondary" className="ml-2 text-xs">
+                               {draftCount}
+                             </Badge>
+                           )}
+                           {item.label === 'Work Orders' && pendingReportsCount > 0 && (
+                             <Badge variant="default" className="ml-2 text-xs">
+                               {pendingReportsCount}
+                             </Badge>
+                           )}
+                         </>
+                       )}
+                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
