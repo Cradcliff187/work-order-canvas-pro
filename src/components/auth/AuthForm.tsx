@@ -28,23 +28,32 @@ export const AuthForm: React.FC<AuthFormProps> = ({ view, onViewChange }) => {
 
     try {
       if (view === 'sign_in') {
+        console.log('🔐 Attempting sign in for:', email);
         const { error } = await signIn(email, password);
         if (error) {
+          console.error('❌ Sign in failed:', error.message);
           setError(error.message);
-          setLoading(false); // Only set loading false on error
+          setLoading(false);
+        } else {
+          console.log('✅ Sign in successful, waiting for auth context...');
+          // Loading will be cleared by auth context or timeout
         }
-        // Don't set loading false on success - let navigation handle it
       } else {
+        console.log('📝 Attempting sign up for:', email);
         const { error } = await signUp(email, password, firstName, lastName);
         if (error) {
+          console.error('❌ Sign up failed:', error.message);
           setError(error.message);
-          setLoading(false); // Only set loading false on error
+          setLoading(false);
+        } else {
+          console.log('✅ Sign up successful, waiting for auth context...');
+          // Loading will be cleared by auth context or timeout
         }
-        // Don't set loading false on success - let navigation handle it
       }
     } catch (err) {
-      setError('An unexpected error occurred');
-      setLoading(false); // Set loading false on exception
+      console.error('💥 Auth form critical error:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setLoading(false);
     }
   };
 

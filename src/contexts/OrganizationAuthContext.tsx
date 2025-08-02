@@ -64,7 +64,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     console.log('🔍 Fetching profile for userId:', userId);
     
     try {
-      // Simplified profile fetch without complex retry logic
+      // Step 1: Fetch profile with comprehensive debugging
+      console.log('📋 Attempting profile query...');
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -73,6 +74,8 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       
       if (profileError) {
         console.error('❌ Profile fetch error:', profileError);
+        console.error('Profile error details:', { code: profileError.code, message: profileError.message, hint: profileError.hint });
+        setAuthError(`Profile fetch failed: ${profileError.message}`);
         setProfile(null);
         setUserOrganizations([]);
         return;
@@ -95,20 +98,24 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         
         if (createError) {
           console.error('❌ Profile creation failed:', createError);
+          setAuthError(`Profile creation failed: ${createError.message}`);
           setProfile(null);
           setUserOrganizations([]);
           return;
         }
         
+        console.log('✅ Profile created successfully:', newProfile.id);
         setProfile(newProfile);
-        // Skip organization fetch for now if profile creation is needed
         setUserOrganizations([]);
+        setAuthError(null);
         return;
       }
 
+      console.log('✅ Profile found:', { id: profileData.id, email: profileData.email });
       setProfile(profileData);
       
-      // Simplified organization fetch
+      // Step 2: Fetch organizations with comprehensive debugging
+      console.log('🏢 Attempting organization fetch...');
       const { data: orgData, error: orgError } = await supabase
         .from('organization_members')
         .select(`
@@ -123,13 +130,32 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       
       if (orgError) {
         console.error('❌ Organization fetch error:', orgError);
+        console.error('Organization error details:', { code: orgError.code, message: orgError.message, hint: orgError.hint });
+        setAuthError(`Organization fetch failed: ${orgError.message}`);
         setUserOrganizations([]);
       } else {
+        const orgCount = orgData?.length || 0;
+        console.log(`✅ Organizations fetched: ${orgCount} found`);
+        
+        if (orgCount === 0) {
+          console.warn('⚠️ User has no organization memberships');
+          setAuthError('No organization access found. Please contact your administrator.');
+        } else {
+          console.log('📊 Organization details:', orgData?.map(org => ({
+            id: org.organization?.id,
+            name: org.organization?.name,
+            type: org.organization?.organization_type,
+            role: org.role
+          })));
+          setAuthError(null);
+        }
+        
         setUserOrganizations(orgData || []);
       }
       
     } catch (error) {
-      console.error('❌ Fatal error in fetchProfile:', error);
+      console.error('💥 Fatal error in fetchProfile:', error);
+      setAuthError(`Critical authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setProfile(null);
       setUserOrganizations([]);
     } finally {
