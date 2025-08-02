@@ -54,6 +54,9 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   const [userOrganizations, setUserOrganizations] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  
+  // Ref to prevent duplicate profile fetching
+  const fetchingProfileRef = useRef<string | null>(null);
 
   // Get primary organization (first internal org for admin/employee, or first org for others)
   const userOrganization = userOrganizations.length > 0 
@@ -61,7 +64,17 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     : null;
 
   const fetchProfile = async (userId: string) => {
+    // Prevent duplicate fetching for the same user
+    if (fetchingProfileRef.current === userId) {
+      console.log('🔐 Profile fetch already in progress for user:', userId);
+      return;
+    }
+    
+    fetchingProfileRef.current = userId;
+    
     try {
+      console.log('🔐 Fetching profile for user:', userId);
+      
       // Fetch profile first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -160,18 +173,23 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         : null);
       setLoading(false);
       
+      console.log('🔐 Profile fetch completed for user:', userId);
+      
     } catch (error) {
       setAuthError('Authentication system error. Please try again.');
       setProfile(null);
       setUserOrganizations([]);
       setLoading(false);
+    } finally {
+      // Clear the fetching reference when done
+      fetchingProfileRef.current = null;
     }
   };
 
   useEffect(() => {
     let mounted = true;
     
-    // Set up auth state listener
+    // Set up auth state listener - this will handle both initial session and changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔐 Auth state change:', event, session?.user?.id);
@@ -186,47 +204,19 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         } else {
           setProfile(null);
           setUserOrganizations([]);
+          setAuthError(null);
           setLoading(false);
         }
       }
     );
 
-    // Get initial session with error handling
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          if (mounted) setLoading(false);
-          return;
-        }
-        
-        if (session?.user && mounted) {
-          setSession(session);
-          setUser(session.user);
-          setAuthError(null);
-          await fetchProfile(session.user.id);
-        } else {
-          if (mounted) setLoading(false);
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        setAuthError('Failed to initialize authentication');
-        if (mounted) setLoading(false);
-      }
-    };
-
-    // Add timeout protection - extended to 20s for better reliability
+    // Add timeout protection - if auth doesn't complete in 15s, complete loading
     const timeoutId = setTimeout(() => {
       if (loading && mounted) {
-        console.warn('Auth loading timeout after 20s - completing with current state');
+        console.warn('Auth loading timeout after 15s - completing with current state');
         setLoading(false);
-        // Don't set error state - just complete loading
       }
-    }, 20000); // 20 second timeout for full auth flow
-
-    initializeAuth();
+    }, 15000);
 
     return () => {
       mounted = false;
