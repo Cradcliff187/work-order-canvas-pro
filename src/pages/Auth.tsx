@@ -129,22 +129,6 @@ export const Auth = () => {
             </div>
           )}
           
-          {/* Force navigation button for emergencies */}
-          {user && !loading && !profile && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm">
-              <p className="text-yellow-800 mb-2">
-                Profile loading failed. You can continue to the dashboard anyway.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/admin/dashboard')}
-                className="w-full"
-              >
-                Continue to Dashboard
-              </Button>
-            </div>
-          )}
         </div>
 
         <div className="text-center text-sm text-muted-foreground">
