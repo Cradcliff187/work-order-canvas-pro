@@ -11,7 +11,7 @@ export function useSubcontractorWorkOrders() {
 
   const permissions = useEnhancedPermissions();
 
-  // Individual-level access: Filter to work orders specifically assigned to this user
+  // Organization-level access: Filter to work orders assigned to user's subcontractor organizations
   const assignedWorkOrders = useQuery({
     queryKey: ["subcontractor-work-orders", user?.id, profile?.id],
     queryFn: async () => {
@@ -19,8 +19,15 @@ export function useSubcontractorWorkOrders() {
         return [];
       }
       
-      // Get work orders where this specific user is assigned
-      let query = supabase
+      const organizationIds = permissions.user?.organization_members
+        ?.map((m: any) => m.organization_id) || [];
+      
+      if (organizationIds.length === 0) {
+        return [];
+      }
+      
+      // Get work orders assigned to user's subcontractor organizations
+      const { data, error } = await supabase
         .from("work_orders")
         .select(`
           *,
@@ -39,21 +46,13 @@ export function useSubcontractorWorkOrders() {
             profiles!work_order_assignments_assigned_to_fkey (first_name, last_name),
             assigned_organization:organizations!assigned_organization_id(name, organization_type)
           )
-        `);
-
-      // Filter to work orders specifically assigned to this user
-      // Check both individual assignment (assigned_to) and organization-level assignment
-      query = query.or(`work_order_assignments.assigned_to.eq.${profile.id},and(assigned_organization_id.in.(${
-        permissions.user?.organization_members?.map((m: any) => m.organization_id).join(',') || ''
-      }),work_order_assignments.assigned_to.is.null)`);
-
-      query = query.order("created_at", { ascending: false });
-
-      const { data, error } = await query;
+        `)
+        .in("assigned_organization_id", organizationIds)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Transform data to include attachment count and filter for individual assignment
+      // Transform data to include attachment count
       const transformedData = (data || []).map((wo: any) => ({
         ...wo,
         attachment_count: wo.work_order_attachments?.[0]?.count || 0
@@ -64,13 +63,25 @@ export function useSubcontractorWorkOrders() {
     enabled: !!profile?.id,
   });
 
-  // Individual dashboard stats: Only show this user's metrics
+  // Organization dashboard stats: Show metrics for all work assigned to user's organizations
   const dashboardStats = useQuery({
     queryKey: ["subcontractor-dashboard", user?.id, profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null;
 
-      // Get work orders assigned to this specific user (using the same logic as assignedWorkOrders)
+      const organizationIds = permissions.user?.organization_members
+        ?.map((m: any) => m.organization_id) || [];
+      
+      if (organizationIds.length === 0) {
+        return {
+          activeAssignments: 0,
+          pendingReports: 0,
+          completedThisMonth: 0,
+          reportsThisMonth: 0,
+        };
+      }
+
+      // Get work orders assigned to user's organizations
       const { data: workOrders, error: workOrdersError } = await supabase
         .from("work_orders")
         .select(`
@@ -80,26 +91,25 @@ export function useSubcontractorWorkOrders() {
             status,
             submitted_at,
             subcontractor_user_id
-          ),
-          work_order_assignments (
-            assigned_to
           )
         `)
-        .or(`work_order_assignments.assigned_to.eq.${profile.id},and(assigned_organization_id.in.(${
-          permissions.user?.organization_members?.map((m: any) => m.organization_id).join(',') || ''
-        }),work_order_assignments.assigned_to.is.null)`);
+        .in("assigned_organization_id", organizationIds);
 
       if (workOrdersError) throw workOrdersError;
 
-      // Get current month's reports submitted by this user only
+      // Get current month's reports from user's organizations
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
+      const userIdsInOrganization = permissions.user?.organization_members
+        ?.filter((m: any) => organizationIds.includes(m.organization_id))
+        .map((m: any) => m.user_id) || [];
+
       const { data: monthlyReports, error: reportsError } = await supabase
         .from("work_order_reports")
         .select("*")
-        .eq("subcontractor_user_id", profile.id)
+        .in("subcontractor_user_id", userIdsInOrganization.length > 0 ? userIdsInOrganization : [profile.id])
         .gte("submitted_at", startOfMonth.toISOString());
 
       if (reportsError) throw reportsError;
@@ -111,7 +121,7 @@ export function useSubcontractorWorkOrders() {
       const pendingReports = workOrders?.filter(wo => 
         wo.status === "in_progress" && 
         !wo.work_order_reports?.some(report => 
-          report.status !== "rejected" && report.subcontractor_user_id === profile.id
+          report.status !== "rejected"
         )
       ).length || 0;
 
@@ -186,23 +196,32 @@ export function useSubcontractorWorkOrders() {
     });
   };
 
-  // Get reports submitted by this specific user only
+  // Get reports for work orders assigned to user's organizations
   const reports = useQuery({
     queryKey: ["subcontractor-reports", user?.id, profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
 
+      const organizationIds = permissions.user?.organization_members
+        ?.map((m: any) => m.organization_id) || [];
+      
+      if (organizationIds.length === 0) {
+        return [];
+      }
+
+      // Get reports for work orders assigned to user's organizations
       const { data, error } = await supabase
         .from("work_order_reports")
         .select(`
           *,
-          work_orders (
+          work_orders!inner (
             work_order_number,
             title,
-            store_location
+            store_location,
+            assigned_organization_id
           )
         `)
-        .eq("subcontractor_user_id", profile.id)
+        .in("work_orders.assigned_organization_id", organizationIds)
         .order("submitted_at", { ascending: false });
 
       if (error) throw error;
@@ -322,11 +341,18 @@ export function useSubcontractorWorkOrders() {
     },
   });
 
-  // Individual completed work orders: Only work completed by this user
+  // Organization completed work orders: All completed work for user's organizations
   const completedWorkOrdersForInvoicing = useQuery({
     queryKey: ["completed-work-orders-for-invoicing", user?.id, profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
+      
+      const organizationIds = permissions.user?.organization_members
+        ?.map((m: any) => m.organization_id) || [];
+      
+      if (organizationIds.length === 0) {
+        return [];
+      }
       
       const { data, error } = await supabase
         .from("work_orders")
@@ -337,6 +363,7 @@ export function useSubcontractorWorkOrders() {
           description,
           actual_completion_date,
           date_completed,
+          assigned_organization_id,
           invoice_work_orders (
             id,
             invoice_id
@@ -348,25 +375,15 @@ export function useSubcontractorWorkOrders() {
             hours_worked,
             status,
             subcontractor_user_id
-          ),
-          work_order_assignments (
-            assigned_to
           )
         `)
         .eq("status", "completed")
-        .or(`work_order_assignments.assigned_to.eq.${profile.id},and(assigned_organization_id.in.(${
-          permissions.user?.organization_members?.map((m: any) => m.organization_id).join(',') || ''
-        }),work_order_assignments.assigned_to.is.null)`)
+        .in("assigned_organization_id", organizationIds)
         .order("actual_completion_date", { ascending: false });
 
       if (error) throw error;
       
-      // Filter to only include work orders with reports from this user
-      const filteredData = (data || []).filter(wo => 
-        wo.work_order_reports?.some(report => report.subcontractor_user_id === profile.id)
-      );
-      
-      return filteredData;
+      return data || [];
     },
     enabled: !!profile?.id,
   });
