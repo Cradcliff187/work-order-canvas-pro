@@ -18,14 +18,14 @@ export const useOrganizationNavigation = () => {
 
   return useMemo(() => {
     console.log('useOrganizationNavigation - permissions:', {
-      isAdmin: permissions.isAdmin(),
-      isEmployee: permissions.isEmployee(),
-      isPartner: permissions.isPartner(),
-      isSubcontractor: permissions.isSubcontractor()
+      isAdmin: permissions.isAdmin,
+      isEmployee: permissions.isEmployee,
+      isPartner: permissions.isPartner,
+      isSubcontractor: permissions.isSubcontractor
     });
 
     // Organization-based navigation
-    if (permissions.isAdmin()) {
+    if (permissions.isAdmin) {
       return [
         { label: 'Dashboard', path: '/admin/dashboard', icon: BarChart3, visible: true },
         { label: 'Work Orders', path: '/admin/work-orders', icon: ClipboardList, visible: permissions.canManageWorkOrders() },
@@ -34,13 +34,13 @@ export const useOrganizationNavigation = () => {
         { label: 'Analytics', path: '/admin/analytics', icon: BarChart3, visible: permissions.canViewFinancialData() },
         { label: 'System Health', path: '/admin/system-health', icon: Activity, visible: permissions.canViewSystemHealth() },
       ];
-    } else if (permissions.isEmployee()) {
+    } else if (permissions.isEmployee) {
       return [
         { label: 'Dashboard', path: '/admin/employee-dashboard', icon: Home, visible: true },
         { label: 'Work Orders', path: '/admin/work-orders', icon: ClipboardList, visible: permissions.canManageWorkOrders() },
         { label: 'Reports', path: '/admin/reports', icon: FileText, visible: true },
       ];
-    } else if (permissions.isPartner()) {
+    } else if (permissions.isPartner) {
       return [
         { label: 'Dashboard', path: '/partner/dashboard', icon: BarChart3, visible: true },
         { label: 'Submit Work Order', path: '/partner/work-orders/new', icon: Plus, visible: true },
@@ -49,7 +49,7 @@ export const useOrganizationNavigation = () => {
         { label: 'Reports', path: '/partner/reports', icon: ClipboardList, visible: true },
         { label: 'Profile', path: '/partner/profile', icon: User, visible: true },
       ];
-    } else if (permissions.isSubcontractor()) {
+    } else if (permissions.isSubcontractor) {
       return [
         { label: 'Dashboard', path: '/subcontractor/dashboard', icon: Home, visible: true },
         { label: 'Work Orders', path: '/subcontractor/work-orders', icon: ClipboardList, visible: true },

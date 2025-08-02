@@ -11,10 +11,10 @@ export const useEnhancedPermissions = () => {
 
   return {
     user: enhancedUser,
-    isAdmin,
-    isEmployee, 
-    isPartner,
-    isSubcontractor,
+    isAdmin: isAdmin(),
+    isEmployee: isEmployee(), 
+    isPartner: isPartner(),
+    isSubcontractor: isSubcontractor(),
     hasInternalAccess: () => isAdmin() || isEmployee(),
     hasPartnerAccess: () => isPartner() || isAdmin() || isEmployee(),
     canManageWorkOrders: () => isAdmin() || isEmployee(),
