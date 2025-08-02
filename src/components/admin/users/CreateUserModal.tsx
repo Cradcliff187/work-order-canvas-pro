@@ -54,42 +54,48 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
     try {
       setIsLoading(true);
       
-      console.log('🔧 Creating user with new database function:', {
+      console.log('🔧 Creating user via Edge Function:', {
         email: data.email,
         firstName: data.first_name,
         lastName: data.last_name,
         organizationId: data.organization_id,
         organizationRole: data.organization_role,
-        phone: data.phone,
       });
 
-      // Call the new database function directly
-      const { data: result, error } = await supabase.rpc('create_new_user', {
-        email: data.email,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        phone: data.phone || null,
-        organization_id: data.organization_id,
-        organization_role: data.organization_role,
+      // Call the Edge Function instead of database function
+      const response = await supabase.functions.invoke('create-admin-user', {
+        body: {
+          userData: {
+            email: data.email,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            organization_id: data.organization_id,
+            organization_role: data.organization_role,
+            phone: data.phone || undefined,
+          }
+        }
       });
 
-      if (error) {
-        console.error('❌ Database function error:', error);
-        throw new Error(error.message || 'Failed to create user');
+      // Handle Edge Function response
+      if (response.error) {
+        console.error('❌ Edge Function error:', response.error);
+        throw new Error(response.error.message || 'Failed to create user');
       }
 
-      if (!result || !(result as any)?.success) {
-        console.error('❌ Database function failed:', result);
-        throw new Error((result as any)?.message || 'User creation failed');
+      // Check the response data
+      const responseData = response.data;
+      if (!responseData?.success) {
+        console.error('❌ User creation failed:', responseData);
+        throw new Error(responseData?.message || 'User creation failed');
       }
 
-      console.log('✅ User created successfully:', result);
+      console.log('✅ User created successfully:', responseData);
 
       setShowSuccess(true);
       
       toast({
         title: "Success",
-        description: "User created successfully",
+        description: responseData.message || "User created successfully. They will receive an email to set their password.",
       });
 
       // Auto-close after 2 seconds
