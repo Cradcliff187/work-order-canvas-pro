@@ -5,12 +5,17 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardList, MapPin, Clock } from 'lucide-react';
+import { OrganizationActivityCard } from '@/components/mobile/OrganizationActivityCard';
+import { useOrganizationTeamData } from '@/hooks/useOrganizationTeamData';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ClipboardList, MapPin, Clock, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function SubcontractorSubmitReport() {
   const navigate = useNavigate();
   const { assignedWorkOrders } = useSubcontractorWorkOrders();
+  const { organizationActivity } = useOrganizationTeamData();
+  const isMobile = useIsMobile();
 
   if (assignedWorkOrders.isLoading) {
     return <LoadingSpinner />;
@@ -29,6 +34,14 @@ export default function SubcontractorSubmitReport() {
           Submit completion reports for your assigned work orders
         </p>
       </div>
+
+      {/* Show team activity for mobile users when there are pending reports */}
+      {isMobile && workOrdersNeedingReports.length > 0 && organizationActivity.length > 0 && (
+        <OrganizationActivityCard 
+          activities={organizationActivity} 
+          className="mb-6"
+        />
+      )}
 
       {workOrdersNeedingReports.length === 0 ? (
         <Card>

@@ -18,12 +18,19 @@ import {
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
-
+import { OrganizationActivityCard } from '@/components/mobile/OrganizationActivityCard';
+import { OrganizationMembersCard } from '@/components/mobile/OrganizationMembersCard';
+import { useOrganizationTeamData } from '@/hooks/useOrganizationTeamData';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
 import { format } from 'date-fns';
 
 const SubcontractorDashboard = () => {
   const navigate = useNavigate();
   const { assignedWorkOrders, reports, dashboardStats } = useSubcontractorWorkOrders();
+  const { organizationMembers, organizationActivity, isLoading: teamDataLoading } = useOrganizationTeamData();
+  const isMobile = useIsMobile();
+  const permissions = useEnhancedPermissions();
 
   // Get recent work orders (last 5)
   const recentWorkOrders = assignedWorkOrders.data?.slice(0, 5) || [];
@@ -66,6 +73,21 @@ const SubcontractorDashboard = () => {
 
       {/* Summary Cards */}
       <StandardDashboardStats stats={statsData} loading={assignedWorkOrders.isLoading} className="mb-8" />
+
+      {/* Organization Team Context - Mobile Only */}
+      {isMobile && (
+        <div className="grid grid-cols-1 gap-4 mb-8">
+          {!teamDataLoading && organizationActivity.length > 0 && (
+            <OrganizationActivityCard activities={organizationActivity} />
+          )}
+          {!teamDataLoading && organizationMembers.length > 1 && (
+            <OrganizationMembersCard 
+              members={organizationMembers}
+              currentUserId={permissions.user?.id}
+            />
+          )}
+        </div>
+      )}
 
       {/* Recent Work Orders */}
       <Card>
