@@ -152,153 +152,181 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent 
+        className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col"
+        aria-describedby="create-user-description"
+      >
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
             Create New User
           </DialogTitle>
+          <p id="create-user-description" className="text-sm text-muted-foreground">
+            Add a new user to your organization with appropriate permissions.
+          </p>
         </DialogHeader>
 
         {showSuccess ? (
-          <div className="flex flex-col items-center justify-center py-8 space-y-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-green-700">User Created Successfully!</h3>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-12 space-y-6">
+            <CheckCircle className="h-16 w-16 text-green-500" />
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold text-green-700">User Created Successfully!</h3>
+              <p className="text-sm text-muted-foreground max-w-md">
                 The user has been created and will receive an email with instructions to set their password.
               </p>
             </div>
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <ScrollArea className="max-h-[400px] pr-4">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="first_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="last_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+              <ScrollArea className="flex-1 overflow-auto pr-6">
+                <div className="space-y-6 pb-6">
+                  {/* Personal Information Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Personal Information
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="first_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="last_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="john@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="(555) 123-4567" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="organization_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Organization</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select organization" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {organizations?.map((org) => (
-                              <SelectItem key={org.id} value={org.id}>
-                                {org.name} ({org.organization_type})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {selectedOrg && (
-                    <FormField
-                      control={form.control}
-                      name="organization_role"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Role in {selectedOrg.name}</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                  {/* Contact Information Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Contact Information
+                    </h4>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select role" />
-                              </SelectTrigger>
+                              <Input type="email" placeholder="john@example.com" {...field} />
                             </FormControl>
-                            <SelectContent>
-                              {availableRoles.map((role) => (
-                                <SelectItem key={role.value} value={role.value}>
-                                  {role.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {selectedOrg && (
-                    <Alert>
-                      <AlertDescription>
-                        User will be created in the <strong>{selectedOrg.organization_type}</strong> organization "{selectedOrg.name}" 
-                        with the role of <strong>{form.watch('organization_role')}</strong>.
-                        {selectedOrg.organization_type !== 'internal' && (
-                          <><br /><strong>Note:</strong> {selectedOrg.organization_type} organizations can only have member roles.</>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="(555) 123-4567" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Organization Assignment Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      Organization Assignment
+                    </h4>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="organization_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Organization</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select organization" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {organizations?.map((org) => (
+                                  <SelectItem key={org.id} value={org.id}>
+                                    {org.name} ({org.organization_type})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {selectedOrg && (
+                        <FormField
+                          control={form.control}
+                          name="organization_role"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Role in {selectedOrg.name}</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {availableRoles.map((role) => (
+                                    <SelectItem key={role.value} value={role.value}>
+                                      {role.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {selectedOrg && (
+                        <Alert>
+                          <AlertDescription>
+                            User will be created in the <strong>{selectedOrg.organization_type}</strong> organization "{selectedOrg.name}" 
+                            with the role of <strong>{form.watch('organization_role')}</strong>.
+                            {selectedOrg.organization_type !== 'internal' && (
+                              <><br /><strong>Note:</strong> {selectedOrg.organization_type} organizations can only have member roles.</>
+                            )}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </ScrollArea>
 
-              <DialogFooter>
+              <DialogFooter className="flex-shrink-0 pt-6">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
