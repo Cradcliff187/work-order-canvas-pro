@@ -1448,6 +1448,12 @@ export type Database = {
           work_order_id: string
         }[]
       }
+      auth_user_organizations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          organization_id: string
+        }[]
+      }
       auth_user_type: {
         Args: Record<PropertyKey, never>
         Returns: string
