@@ -16,12 +16,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/utils/imageCompression';
-import { useCamera } from '@/hooks/useCamera';
-import { useIsMobile } from '@/hooks/use-mobile';
 import type { UploadProgress } from '@/hooks/useFileUpload';
-import { getCameraAttribute, isMobileBrowser } from '@/utils/mobileDetection';
-import CameraPermissionHelper from './CameraPermissionHelper';
-import { CameraDebugPanel } from './CameraDebugPanel';
+import { getCameraAttribute } from '@/utils/mobileDetection';
 
 interface MobileFileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -57,24 +53,10 @@ export function MobileFileUpload({
 }: MobileFileUploadProps) {
   const [previews, setPreviews] = useState<FilePreview[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [showPermissionHelper, setShowPermissionHelper] = useState(false);
-  const [permissionError, setPermissionError] = useState<'denied' | 'unavailable' | 'not_supported'>();
-  const [isCapturing, setIsCapturing] = useState(false);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
-  
-  const { 
-    checkCameraPermission,
-    debugMode,
-    debugInfo,
-    errors,
-    enableDebug,
-    disableDebug,
-    collectDebugInfo
-  } = useCamera();
-  const isMobile = useIsMobile();
 
   // Helper functions
   const getFileType = (file: File): 'image' | 'document' => {
@@ -154,16 +136,8 @@ export function MobileFileUpload({
     }
   }, [validateFiles, previews, onFilesSelected]);
 
-  // Camera capture with permission check
-  const handleCameraCapture = async () => {
-    const permissionState = await checkCameraPermission();
-    
-    if (!permissionState.granted) {
-      setPermissionError(permissionState.error);
-      setShowPermissionHelper(true);
-      return;
-    }
-    
+  // Camera capture
+  const handleCameraCapture = () => {
     if (cameraInputRef.current) {
       const captureValue = getCameraAttribute();
       if (captureValue) {
@@ -280,7 +254,7 @@ export function MobileFileUpload({
               variant="outline"
               size="sm"
               onClick={handleCameraCapture}
-              disabled={disabled || isCapturing}
+              disabled={disabled}
               className="flex-1"
             >
               <Camera className="w-4 h-4 mr-2" />
@@ -508,29 +482,6 @@ export function MobileFileUpload({
         </Card>
       )}
 
-      {/* Debug Panel */}
-      <CameraDebugPanel
-        debugMode={debugMode}
-        debugInfo={debugInfo}
-        errors={errors}
-        onToggleDebug={debugMode ? disableDebug : enableDebug}
-        onRefreshInfo={collectDebugInfo}
-      />
-
-      <CameraPermissionHelper
-        isVisible={showPermissionHelper}
-        onClose={() => setShowPermissionHelper(false)}
-        onRetry={async () => {
-          setShowPermissionHelper(false);
-          handleCameraCapture();
-        }}
-        permissionDeniedReason={permissionError}
-        showFallbackOption={true}
-        onUseFallback={() => {
-          setShowPermissionHelper(false);
-          galleryInputRef.current?.click();
-        }}
-      />
     </div>
   );
 }

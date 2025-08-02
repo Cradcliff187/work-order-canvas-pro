@@ -16,12 +16,9 @@ import {
   Plus
 } from "lucide-react";
 import { formatFileSize, isSupportedImageType, isValidFileSize } from "@/utils/imageCompression";
-import { useCamera } from "@/hooks/useCamera";
 import { cn } from "@/lib/utils";
 import type { UploadProgress } from "@/hooks/useFileUpload";
 import { getCameraAttribute } from "@/utils/mobileDetection";
-import CameraPermissionHelper from "./CameraPermissionHelper";
-import { CameraDebugPanel } from "./CameraDebugPanel";
 
 interface MobileMediaUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -59,24 +56,10 @@ export function MobileMediaUpload({
 }: MobileMediaUploadProps) {
   const [previews, setPreviews] = useState<FilePreview[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [showPermissionHelper, setShowPermissionHelper] = useState(false);
-  const [permissionError, setPermissionError] = useState<'denied' | 'unavailable' | 'not_supported'>();
-  const [isCapturing, setIsCapturing] = useState(false);
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
-  
-  const {
-    isSupported: cameraSupported,
-    checkCameraPermission,
-    debugMode,
-    debugInfo,
-    errors,
-    enableDebug,
-    disableDebug,
-    collectDebugInfo
-  } = useCamera();
 
   const getFileType = (file: File): 'image' | 'document' => {
     return file.type.startsWith('image/') ? 'image' : 'document';
@@ -156,38 +139,17 @@ export function MobileMediaUpload({
     }
   }, [validateFiles, previews, onFilesSelected]);
 
-  const handleCameraCapture = useCallback(async () => {
-    if (!cameraSupported) return;
-    
-    setIsCapturing(true);
-    
-    try {
-      const permissionState = await checkCameraPermission();
-      
-      if (!permissionState.granted) {
-        setPermissionError(permissionState.error);
-        setShowPermissionHelper(true);
-        setIsCapturing(false);
-        return;
+  const handleCameraCapture = useCallback(() => {
+    if (cameraInputRef.current) {
+      const captureValue = getCameraAttribute();
+      if (captureValue) {
+        cameraInputRef.current.setAttribute('capture', captureValue);
+      } else {
+        cameraInputRef.current.removeAttribute('capture');
       }
-      
-      // Dynamically set capture attribute based on platform
-      if (cameraInputRef.current) {
-        const captureValue = getCameraAttribute();
-        if (captureValue) {
-          cameraInputRef.current.setAttribute('capture', captureValue);
-        } else {
-          cameraInputRef.current.removeAttribute('capture');
-        }
-      }
-      
-      cameraInputRef.current?.click();
-    } catch (error) {
-      console.error('Camera capture failed:', error);
-    } finally {
-      setIsCapturing(false);
+      cameraInputRef.current.click();
     }
-  }, [cameraSupported, checkCameraPermission]);
+  }, []);
 
   const handleGallerySelect = useCallback(() => {
     galleryInputRef.current?.click();
@@ -291,7 +253,7 @@ export function MobileMediaUpload({
         "flex gap-2",
         compactView ? "flex-col" : "flex-row"
       )}>
-        {showCamera && cameraSupported && (
+        {showCamera && (
           <Button
             size="lg"
             variant="default"
@@ -300,13 +262,9 @@ export function MobileMediaUpload({
               compactView && "w-full"
             )}
             onClick={handleCameraCapture}
-            disabled={disabled || isCapturing}
+            disabled={disabled}
           >
-            {isCapturing ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
-              <Camera className="w-5 h-5 mr-2" />
-            )}
+            <Camera className="w-5 h-5 mr-2" />
             Camera
           </Button>
         )}
@@ -515,31 +473,6 @@ export function MobileMediaUpload({
         </Card>
       )}
 
-      <CameraPermissionHelper
-        isVisible={showPermissionHelper}
-        onClose={() => setShowPermissionHelper(false)}
-        onRetry={async () => {
-          setShowPermissionHelper(false);
-          handleCameraCapture();
-        }}
-        permissionDeniedReason={permissionError}
-        showFallbackOption={true}
-        onUseFallback={() => {
-          setShowPermissionHelper(false);
-          galleryInputRef.current?.click();
-        }}
-      />
-
-      {/* Debug Panel - Development Only */}
-      {import.meta.env.MODE === 'development' && (
-        <CameraDebugPanel
-          debugMode={debugMode}
-          debugInfo={debugInfo}
-          errors={errors}
-          onToggleDebug={() => debugMode ? disableDebug() : enableDebug()}
-          onRefreshInfo={collectDebugInfo}
-        />
-      )}
     </div>
   );
 }
