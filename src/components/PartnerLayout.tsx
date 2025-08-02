@@ -106,6 +106,7 @@ function PartnerSidebar() {
                       className={isActive(item.path) ? "bg-sidebar-accent" : ""}
                     >
                       <Link to={item.path} className="flex items-center gap-2">
+                        {item.icon && <item.icon className="h-4 w-4" />}
                         {!collapsed && <span>{item.label}</span>}
                       </Link>
                     </SidebarMenuButton>

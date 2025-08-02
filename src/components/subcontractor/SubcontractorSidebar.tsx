@@ -109,6 +109,7 @@ export function SubcontractorSidebar() {
                     className={isActive(item.path) ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
                   >
                     <Link to={item.path} className="flex items-center gap-2">
+                      {item.icon && <item.icon className="h-4 w-4" />}
                       {!collapsed && (
                         <>
                           <span className="flex-1">{item.label}</span>
