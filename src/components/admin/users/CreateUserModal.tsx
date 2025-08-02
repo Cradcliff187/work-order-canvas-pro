@@ -148,7 +148,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col"
+        className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col"
         aria-describedby="create-user-description"
       >
         <DialogHeader className="flex-shrink-0">
@@ -174,7 +174,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-              <ScrollArea className="flex-1 overflow-auto pr-6">
+              <ScrollArea className="flex-1 min-h-0 overflow-auto pr-6">
                 <div className="space-y-6 pb-6">
                   {/* Personal Information Section */}
                   <div className="space-y-4">
