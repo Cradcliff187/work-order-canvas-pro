@@ -186,13 +186,14 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       }
     };
 
-    // Add timeout protection - reduced from 45s to 15s
+    // Add timeout protection - reduced from 15s to 10s for better UX
     const timeoutId = setTimeout(() => {
       if (loading && mounted) {
-        console.error('Auth loading timeout - forcing completion');
+        console.warn('Auth loading timeout - completing with current state');
         setLoading(false);
+        // Don't set error state - just complete loading
       }
-    }, 15000); // 15 second timeout
+    }, 10000); // 10 second timeout
 
     initializeAuth();
 
