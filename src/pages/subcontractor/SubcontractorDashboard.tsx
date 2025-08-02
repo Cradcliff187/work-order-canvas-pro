@@ -28,29 +28,29 @@ const SubcontractorDashboard = () => {
   // Get recent work orders (last 5)
   const recentWorkOrders = assignedWorkOrders.data?.slice(0, 5) || [];
 
-  // Map stats data to StatCard format
+  // Map stats data to StatCard format - Individual metrics only
   const statsData: StatCard[] = [
     {
       icon: FileText,
-      label: "Available Work Orders",
+      label: "My Assigned Work Orders",
       value: assignedWorkOrders.data?.length || 0,
-      description: "Assigned to you"
+      description: "Assigned to me"
     },
     {
       icon: Clock,
-      label: "Active Work Orders",
+      label: "My Active Work",
       value: assignedWorkOrders.data?.filter(wo => wo.status === 'assigned' || wo.status === 'in_progress').length || 0,
       description: "In progress"
     },
     {
       icon: CheckCircle,
-      label: "Completed This Month",
+      label: "My Completed This Month",
       value: dashboardStats.data?.completedThisMonth || 0,
       description: "This month"
     },
     {
       icon: TrendingUp,
-      label: "Reports Submitted",
+      label: "My Reports Submitted",
       value: reports.data?.length || 0,
       description: "All time"
     }
