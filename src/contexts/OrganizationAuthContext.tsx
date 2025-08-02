@@ -62,20 +62,10 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Single query to get profile and organizations in one call
+      // Fetch profile first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          organization_members (
-            id,
-            user_id,
-            organization_id,
-            role,
-            created_at,
-            organization:organizations (*)
-          )
-        `)
+        .select('*')
         .eq('user_id', userId)
         .maybeSingle();
       
@@ -110,7 +100,6 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
           return;
         }
         
-        // Batch state updates
         setProfile(newProfile);
         setUserOrganizations([]);
         setAuthError(null);
@@ -118,10 +107,31 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         return;
       }
 
-      // Batch all state updates at once
+      // Now fetch organization memberships separately
+      const { data: orgData, error: orgError } = await supabase
+        .from('organization_members')
+        .select(`
+          id,
+          user_id,
+          organization_id,
+          role,
+          created_at,
+          organization:organizations (*)
+        `)
+        .eq('user_id', profileData.id);
+      
+      if (orgError) {
+        setAuthError(`Organization fetch failed: ${orgError.message}`);
+        setProfile(null);
+        setUserOrganizations([]);
+        setLoading(false);
+        return;
+      }
+
+      // Update all state at once
       setProfile(profileData);
-      setUserOrganizations(profileData.organization_members || []);
-      setAuthError(profileData.organization_members?.length === 0 
+      setUserOrganizations(orgData || []);
+      setAuthError(orgData?.length === 0 
         ? 'No organization access found. Please contact your administrator.' 
         : null);
       setLoading(false);
