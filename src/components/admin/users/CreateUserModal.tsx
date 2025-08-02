@@ -173,102 +173,127 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-              <ScrollArea className="flex-1 min-h-0 overflow-auto pr-6">
-                <div className="space-y-6 pb-6">
-                  {/* Personal Information Section */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                      Personal Information
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="first_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="last_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Doe" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+            <ScrollArea className="flex-1 min-h-0 overflow-auto pr-6">
+              <div className="space-y-6 pb-8">
+                {/* Personal Information Section */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Personal Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
+                </div>
 
-                  {/* Contact Information Section */}
+                {/* Contact Information Section */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Contact Information
+                  </h4>
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                      Contact Information
-                    </h4>
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email Address</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="john@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="john@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number (Optional)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="(555) 123-4567" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(555) 123-4567" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
+                </div>
 
-                  {/* Organization Assignment Section */}
+                {/* Organization Assignment Section */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Organization Assignment
+                  </h4>
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                      Organization Assignment
-                    </h4>
-                    <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="organization_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Organization</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select organization" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {organizations?.map((org) => (
+                                <SelectItem key={org.id} value={org.id}>
+                                  {org.name} ({org.organization_type})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {selectedOrg && (
                       <FormField
                         control={form.control}
-                        name="organization_id"
+                        name="organization_role"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Organization</FormLabel>
+                            <FormLabel>Role in {selectedOrg.name}</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select organization" />
+                                  <SelectValue placeholder="Select role" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {organizations?.map((org) => (
-                                  <SelectItem key={org.id} value={org.id}>
-                                    {org.name} ({org.organization_type})
+                                {availableRoles.map((role) => (
+                                  <SelectItem key={role.value} value={role.value}>
+                                    {role.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -277,54 +302,27 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                           </FormItem>
                         )}
                       />
+                    )}
 
-                      {selectedOrg && (
-                        <FormField
-                          control={form.control}
-                          name="organization_role"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Role in {selectedOrg.name}</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select role" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {availableRoles.map((role) => (
-                                    <SelectItem key={role.value} value={role.value}>
-                                      {role.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
+                    {selectedOrg && (
+                      <Alert>
+                        <AlertDescription>
+                          User will be created in the <strong>{selectedOrg.organization_type}</strong> organization "{selectedOrg.name}" 
+                          with the role of <strong>{form.watch('organization_role')}</strong>.
+                          {selectedOrg.organization_type !== 'internal' && (
+                            <><br /><strong>Note:</strong> {selectedOrg.organization_type} organizations can only have member roles.</>
                           )}
-                        />
-                      )}
-
-                      {selectedOrg && (
-                        <Alert>
-                          <AlertDescription>
-                            User will be created in the <strong>{selectedOrg.organization_type}</strong> organization "{selectedOrg.name}" 
-                            with the role of <strong>{form.watch('organization_role')}</strong>.
-                            {selectedOrg.organization_type !== 'internal' && (
-                              <><br /><strong>Note:</strong> {selectedOrg.organization_type} organizations can only have member roles.</>
-                            )}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </div>
-              </ScrollArea>
-            </form>
+              </div>
+            </ScrollArea>
           </Form>
         )}
 
-        <DialogFooter className="flex-shrink-0 pt-6">
+        <DialogFooter className="flex-shrink-0 pt-6 border-t">
           {showSuccess ? (
             <Button type="button" onClick={() => {
               setShowSuccess(false);
@@ -339,7 +337,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                 Cancel
               </Button>
               <Button 
-                type="submit" 
+                type="button" 
                 disabled={isLoading}
                 onClick={form.handleSubmit(onSubmit)}
               >
