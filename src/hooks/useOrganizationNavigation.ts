@@ -32,17 +32,20 @@ export const useOrganizationNavigation = () => {
     } else if (permissions.isPartner) {
       return [
         { label: 'Dashboard', path: '/partner/dashboard', visible: true },
-        { label: 'Submit Work Order', path: '/partner/submit', visible: true },
+        { label: 'Submit Work Order', path: '/partner/work-orders/new', visible: true },
         { label: 'Work Orders', path: '/partner/work-orders', visible: true },
+        { label: 'Locations', path: '/partner/locations', visible: true },
         { label: 'Reports', path: '/partner/reports', visible: true },
+        { label: 'Profile', path: '/partner/profile', visible: true },
       ];
     } else if (permissions.isSubcontractor) {
       return [
         { label: 'Dashboard', path: '/subcontractor/dashboard', visible: true },
         { label: 'Work Orders', path: '/subcontractor/work-orders', visible: true },
-        { label: 'Reports', path: '/subcontractor/reports', visible: true },
-        { label: 'Submit Report', path: '/subcontractor/submit-report', visible: true },
+        { label: 'Submit Invoice', path: '/subcontractor/submit-invoice', visible: true },
         { label: 'Invoices', path: '/subcontractor/invoices', visible: true },
+        { label: 'Report History', path: '/subcontractor/reports', visible: true },
+        { label: 'Profile', path: '/subcontractor/profile', visible: true },
       ];
     }
 
