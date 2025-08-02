@@ -98,12 +98,7 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
         description: responseData.message || "User created successfully. They will receive an email to set their password.",
       });
 
-      // Auto-close after 2 seconds
-      setTimeout(() => {
-        setShowSuccess(false);
-        onOpenChange(false);
-        form.reset();
-      }, 2000);
+      // Don't auto-close, let user manually close
 
     } catch (error: any) {
       console.error('❌ User creation failed:', error);
@@ -325,25 +320,41 @@ export function CreateUserModal({ open, onOpenChange }: CreateUserModalProps) {
                   </div>
                 </div>
               </ScrollArea>
-
-              <DialogFooter className="flex-shrink-0 pt-6">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create User'
-                  )}
-                </Button>
-              </DialogFooter>
             </form>
           </Form>
         )}
+
+        <DialogFooter className="flex-shrink-0 pt-6">
+          {showSuccess ? (
+            <Button type="button" onClick={() => {
+              setShowSuccess(false);
+              onOpenChange(false);
+              form.reset();
+            }}>
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                onClick={form.handleSubmit(onSubmit)}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create User'
+                )}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
