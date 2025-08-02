@@ -24,7 +24,6 @@ export interface Profile {
   email: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
   company_name?: string;
   phone?: string;
   is_active?: boolean;

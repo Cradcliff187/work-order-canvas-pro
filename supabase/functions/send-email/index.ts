@@ -89,16 +89,26 @@ async function handleWorkOrderMessageNotification(
         recipients.push(...subcontractorEmails);
       }
       
-      // Get internal team (admins + employees, exclude sender)
+      // Get internal team (organization members with internal org access, exclude sender)
       const { data: internalUsers } = await supabase
-        .from('profiles')
-        .select('email')
-        .in('user_type', ['admin', 'employee'])
-        .eq('is_active', true)
-        .neq('id', senderId);
+        .from('organization_members')
+        .select(`
+          user_id,
+          profiles!inner(email, is_active)
+        `)
+        .in('organization_id', 
+          (await supabase
+            .from('organizations')
+            .select('id')
+            .eq('organization_type', 'internal')
+          ).data?.map(org => org.id) || []
+        )
+        .neq('user_id', senderId);
       
       if (internalUsers) {
-        const internalEmails = internalUsers.map((u: any) => u.email);
+        const internalEmails = internalUsers
+          .filter((u: any) => u.profiles?.is_active)
+          .map((u: any) => u.profiles.email);
         recipients.push(...internalEmails);
       }
       
@@ -122,16 +132,26 @@ async function handleWorkOrderMessageNotification(
         recipients.push(...partnerEmails);
       }
       
-      // Get internal team (admins + employees, exclude sender)
+      // Get internal team (organization members with internal org access, exclude sender)
       const { data: internalUsers } = await supabase
-        .from('profiles')
-        .select('email')
-        .in('user_type', ['admin', 'employee'])
-        .eq('is_active', true)
-        .neq('id', senderId);
+        .from('organization_members')
+        .select(`
+          user_id,
+          profiles!inner(email, is_active)
+        `)
+        .in('organization_id', 
+          (await supabase
+            .from('organizations')
+            .select('id')
+            .eq('organization_type', 'internal')
+          ).data?.map(org => org.id) || []
+        )
+        .neq('user_id', senderId);
       
       if (internalUsers) {
-        const internalEmails = internalUsers.map((u: any) => u.email);
+        const internalEmails = internalUsers
+          .filter((u: any) => u.profiles?.is_active)
+          .map((u: any) => u.profiles.email);
         recipients.push(...internalEmails);
       }
     }
@@ -414,25 +434,27 @@ Deno.serve(async (req) => {
           if (assignedToId) {
             const { data: assignee } = await supabase
               .from('profiles')
-              .select('first_name, last_name, email, user_type')
+              .select('first_name, last_name, email')
               .eq('id', assignedToId)
               .single();
             
             if (assignee) {
-              // Check if assignee is a subcontractor and get organization name
+              // Get organization info to determine display name
               let displayName = `${assignee.first_name} ${assignee.last_name}`;
 
-              if (assignee.user_type === 'subcontractor') {
-                // Get the organization name for subcontractors
-                const { data: orgData } = await supabase
-                  .from('organization_members')
-                  .select('organizations(name)')
-                  .eq('user_id', assignedToId)
-                  .single();
-                
-                if (orgData?.organizations?.name) {
-                  displayName = orgData.organizations.name;
-                }
+              const { data: orgData } = await supabase
+                .from('organization_members')
+                .select(`
+                  organizations(
+                    name,
+                    organization_type
+                  )
+                `)
+                .eq('user_id', assignedToId)
+                .single();
+              
+              if (orgData?.organizations?.name && orgData.organizations.organization_type === 'subcontractor') {
+                displayName = orgData.organizations.name;
               }
 
               assigneeData = {

@@ -76,14 +76,29 @@ serve(async (req) => {
       return createCorsErrorResponse('Unauthorized', 401);
     }
 
+    // Check if user has admin access via organization membership
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('user_type')
+      .select(`
+        id,
+        organization_members!inner(
+          role,
+          organization:organizations!inner(
+            organization_type
+          )
+        )
+      `)
       .eq('user_id', user.id)
       .single();
 
-    if (profile?.user_type !== 'admin') {
-      console.error(`[${requestId}] ❌ Non-admin user attempted access:`, { userId: user.id, userType: profile?.user_type });
+    const hasAdminAccess = profile?.organization_members?.some(
+      (member: any) => 
+        member.organization?.organization_type === 'internal' && 
+        member.role === 'admin'
+    );
+
+    if (!hasAdminAccess) {
+      console.error(`[${requestId}] ❌ Non-admin user attempted access:`, { userId: user.id });
       return createCorsErrorResponse('Only admins can create users', 403);
     }
 
@@ -277,10 +292,7 @@ serve(async (req) => {
         profileFound: !!newProfile,
         profileError: profileError,
         profileData: newProfile,
-        profileUserType: newProfile?.user_type,
         profileEmail: newProfile?.email,
-        expectedUserType: userData.user_type,
-        userTypeMatches: newProfile?.user_type === userData.user_type,
         retriesNeeded: retryCount
     });
     

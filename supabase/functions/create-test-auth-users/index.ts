@@ -6,8 +6,8 @@ interface TestUser {
   password: string;
   first_name: string;
   last_name: string;
-  user_type: 'admin' | 'partner' | 'subcontractor' | 'employee';
-  company_name?: string;
+  organization_name: string;
+  role: 'admin' | 'manager' | 'employee' | 'member';
 }
 
 const corsHeaders = {
@@ -15,79 +15,79 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Test users with single organization assignments
+// Test users with organization assignments
 const TEST_USERS: TestUser[] = [
   {
     email: 'partner1@abc.com',
     password: 'TestPass123!',
     first_name: 'Sarah',
     last_name: 'Johnson',
-    user_type: 'partner',
-    company_name: 'ABC Property Management'
+    organization_name: 'ABC Property Management',
+    role: 'member'
   },
   {
     email: 'partner2@xyz.com', 
     password: 'TestPass123!',
     first_name: 'Mike',
     last_name: 'Chen',
-    user_type: 'partner',
-    company_name: 'XYZ Commercial Properties'
+    organization_name: 'XYZ Commercial Properties',
+    role: 'member'
   },
   {
     email: 'partner3@premium.com',
     password: 'TestPass123!',
     first_name: 'Emily', 
     last_name: 'Rodriguez',
-    user_type: 'partner',
-    company_name: 'Premium Facilities Group'
+    organization_name: 'Premium Facilities Group',
+    role: 'member'
   },
   {
     email: 'plumber@pipesmore.com',
     password: 'TestPass123!',
     first_name: 'Tom',
     last_name: 'Wilson', 
-    user_type: 'subcontractor',
-    company_name: 'Pipes & More Plumbing'
+    organization_name: 'Pipes & More Plumbing',
+    role: 'member'
   },
   {
     email: 'electrician@sparks.com',
     password: 'TestPass123!',
     first_name: 'Lisa',
     last_name: 'Anderson',
-    user_type: 'subcontractor', 
-    company_name: 'Sparks Electric'
+    organization_name: 'Sparks Electric',
+    role: 'member'
   },
   {
     email: 'hvac@coolair.com',
     password: 'TestPass123!',
     first_name: 'David',
     last_name: 'Martinez',
-    user_type: 'subcontractor',
-    company_name: 'Cool Air HVAC'
+    organization_name: 'Cool Air HVAC',
+    role: 'member'
   },
   {
     email: 'carpenter@woodworks.com',
     password: 'TestPass123!',
     first_name: 'Jessica',
     last_name: 'Taylor',
-    user_type: 'subcontractor',
-    company_name: 'Wood Works Carpentry'
+    organization_name: 'Wood Works Carpentry',
+    role: 'member'
   },
   {
     email: 'maintenance@workorderpro.com',
     password: 'TestPass123!',
     first_name: 'Alex',
     last_name: 'Thompson',
-    user_type: 'employee',
-    company_name: 'WorkOrderPortal'
+    organization_name: 'WorkOrderPro Internal',
+    role: 'employee'
   },
   {
     email: 'supervisor@workorderpro.com',
     password: 'TestPass123!',
     first_name: 'Jordan',
     last_name: 'Lee',
-    user_type: 'employee',
-    company_name: 'WorkOrderPortal'
+    organization_name: 'WorkOrderPro Internal',
+    role: 'admin'
   }
 ];
 
@@ -117,13 +117,10 @@ serve(async (req) => {
         email: testUser.email,
         password: testUser.password,
         email_confirm: true,
-        app_metadata: {  // Security data (admin-only)
-          user_type: testUser.user_type
-        },
         user_metadata: {  // Non-security data (user-editable)
           first_name: testUser.first_name,
           last_name: testUser.last_name,
-          company_name: testUser.company_name
+          organization_name: testUser.organization_name
         }
       });
 
@@ -142,8 +139,7 @@ serve(async (req) => {
                 .update({
                   first_name: testUser.first_name,
                   last_name: testUser.last_name,
-                  user_type: testUser.user_type,
-                  company_name: testUser.company_name,
+                  company_name: testUser.organization_name,
                   is_active: true,
                   updated_at: new Date().toISOString()
                 })
@@ -160,7 +156,7 @@ serve(async (req) => {
                 created_users.push({
                   email: testUser.email,
                   action: 'updated_existing',
-                  user_type: testUser.user_type
+                  organization_name: testUser.organization_name
                 });
               }
             }
@@ -186,10 +182,9 @@ serve(async (req) => {
               email: testUser.email,
               first_name: testUser.first_name,
               last_name: testUser.last_name,
-              user_type: testUser.user_type,
-              company_name: testUser.company_name,
+              company_name: testUser.organization_name,
               is_active: true,
-              is_employee: testUser.user_type === 'employee'
+              is_employee: testUser.role === 'employee'
             });
 
           if (profileError) {
@@ -204,7 +199,7 @@ serve(async (req) => {
               email: testUser.email,
               user_id: authData.user.id,
               action: 'created_new',
-              user_type: testUser.user_type
+              organization_name: testUser.organization_name
             });
           }
         }
@@ -235,14 +230,14 @@ serve(async (req) => {
             .single();
             
           if (profile) {
-            // Find matching test user to get company name
+            // Find matching test user to get organization name
             const testUser = TEST_USERS.find(tu => tu.email === user.email);
-            if (testUser?.company_name) {
+            if (testUser?.organization_name) {
               // Find organization by name
               const { data: org } = await supabaseClient
                 .from('organizations')
                 .select('id, organization_type')
-                .eq('name', testUser.company_name)
+                .eq('name', testUser.organization_name)
                 .single();
                 
               if (org) {
@@ -261,7 +256,7 @@ serve(async (req) => {
                     .insert({
                       user_id: profile.id,
                       organization_id: org.id,
-                      role: org.organization_type === 'internal' ? 'admin' : 'member'
+                      role: testUser.role
                     });
                     
                   if (memberError) {
@@ -273,7 +268,7 @@ serve(async (req) => {
                     });
                   } else {
                     membershipsCreated++;
-                    console.log(`Created membership for ${user.email} in ${testUser.company_name}`);
+                    console.log(`Created membership for ${user.email} in ${testUser.organization_name}`);
                   }
                 }
               }
@@ -300,8 +295,8 @@ serve(async (req) => {
         note: 'All test users use password: TestPass123!',
         users: TEST_USERS.map(u => ({
           email: u.email,
-          user_type: u.user_type,
-          company: u.company_name
+          organization_name: u.organization_name,
+          role: u.role
         }))
       }
     };
