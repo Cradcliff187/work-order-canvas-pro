@@ -1566,6 +1566,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_type: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_geographic_distribution: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
