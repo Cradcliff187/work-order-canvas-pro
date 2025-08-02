@@ -1431,7 +1431,7 @@ export type Database = {
         Returns: boolean
       }
       auth_user_belongs_to_organization: {
-        Args: { p_organization_id: string }
+        Args: { org_id: string }
         Returns: boolean
       }
       auth_user_can_view_assignment: {
