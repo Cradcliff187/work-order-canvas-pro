@@ -194,8 +194,20 @@ export function FileUpload({
     e.preventDefault();
     e.stopPropagation();
     console.log('Browse files clicked, opening file picker...');
-    if (open && !disabled) {
-      open();
+    
+    // Try dropzone open first, fallback to file input
+    try {
+      if (open && !disabled) {
+        open();
+      } else if (fileInputRef.current && !disabled) {
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Failed to open file picker:', error);
+      // Fallback to file input
+      if (fileInputRef.current && !disabled) {
+        fileInputRef.current.click();
+      }
     }
   }, [open, disabled]);
 
@@ -257,6 +269,22 @@ export function FileUpload({
 
   return (
     <div className={cn("space-y-4", className)}>
+      {/* Hidden fallback file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={Object.keys(getDropzoneAccept()).join(',')}
+        onChange={(e) => {
+          const files = Array.from(e.target.files || []);
+          if (files.length > 0) {
+            handleFilesSelected(files);
+          }
+        }}
+        style={{ display: 'none' }}
+        disabled={disabled}
+      />
+      
       {/* Drop Zone */}
       <Card className={cn(
         "border-2 border-dashed transition-colors",

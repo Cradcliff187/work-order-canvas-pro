@@ -192,47 +192,55 @@ export default function SubcontractorWorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Attachments */}
-          <AttachmentSection
-            attachments={(workOrder.work_order_attachments || []).map((attachment): AttachmentItem => ({
-              id: attachment.id,
-              file_name: attachment.file_name,
-              file_url: attachment.file_url,
-              file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
-              file_size: attachment.file_size || 0,
-              uploaded_at: attachment.uploaded_at,
-              uploader_name: attachment.uploaded_by_user ? 
-                `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
-                'Unknown',
-              uploader_email: '' // Email not available in current schema
-            }))}
-            workOrderId={workOrder.id}
-            canUpload={false}
-            onView={(attachment) => {
-              const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-              window.open(data.publicUrl, '_blank');
-            }}
-            onDownload={(attachment) => {
-              const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-              const link = document.createElement('a');
-              link.href = data.publicUrl;
-              link.download = attachment.file_name;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
-            maxFileSize={50 * 1024 * 1024} // 50MB
-            maxFiles={10}
-          />
+          {/* Attachments - View Only for Subcontractors */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Files</CardTitle>
+              <CardDescription>View and download files related to this work order</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AttachmentSection
+                attachments={(workOrder.work_order_attachments || []).map((attachment): AttachmentItem => ({
+                  id: attachment.id,
+                  file_name: attachment.file_name,
+                  file_url: attachment.file_url,
+                  file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
+                  file_size: attachment.file_size || 0,
+                  uploaded_at: attachment.uploaded_at,
+                  uploader_name: attachment.uploaded_by_user ? 
+                    `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
+                    'Unknown',
+                  uploader_email: '' // Email not available in current schema
+                }))}
+                workOrderId={workOrder.id}
+                canUpload={false} // Subcontractors cannot upload files directly - use messages for communication
+                onView={(attachment) => {
+                  const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                  window.open(data.publicUrl, '_blank');
+                }}
+                onDownload={(attachment) => {
+                  const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                  const link = document.createElement('a');
+                  link.href = data.publicUrl;
+                  link.download = attachment.file_name;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                maxFileSize={50 * 1024 * 1024} // 50MB
+                maxFiles={10}
+              />
+            </CardContent>
+          </Card>
 
-          {/* Messages Section */}
+          {/* Messages Section - Primary Communication Channel */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" />
                 Messages
               </CardTitle>
-              <CardDescription>Communicate with the team about this work order</CardDescription>
+              <CardDescription>Communicate with the team and share updates about this work order</CardDescription>
             </CardHeader>
             <CardContent>
               <MessageErrorBoundary>

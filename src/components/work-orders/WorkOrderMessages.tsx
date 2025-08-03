@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -16,8 +15,6 @@ import {
   Lock, 
   Circle, 
   Clock, 
-  Paperclip, 
-  X, 
   HardHat,
   File,
   FileText,
@@ -30,16 +27,12 @@ import {
   Music
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult, WorkOrderAttachment } from '@/hooks/useWorkOrderMessages';
+import { useWorkOrderMessages, WorkOrderMessage, WorkOrderAttachment } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
 import { useMessageSubscription } from '@/hooks/useMessageSubscription';
 import { useOfflineMessageSync } from '@/hooks/useOfflineMessageSync';
 import { useToast } from '@/hooks/use-toast';
-import { useFileUpload } from '@/hooks/useFileUpload';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { FileUpload } from '@/components/FileUpload';
-import { MobileFileUpload } from '@/components/MobileFileUpload';
-import { ALL_SUPPORTED_TYPES, getSupportedFormatsText, getFileIcon, formatFileSize, isImageFile } from '@/utils/fileUtils';
+import { isImageFile, getFileIcon } from '@/utils/fileUtils';
 
 interface WorkOrderMessagesProps {
   workOrderId: string;
@@ -55,15 +48,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const [newMessage, setNewMessage] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [showFileUpload, setShowFileUpload] = useState(false);
   const [crewMemberName, setCrewMemberName] = useState('');
-  
-  const isMobile = useIsMobile();
-  const { uploadFiles, uploadProgress, isUploading } = useFileUpload({
-    maxFiles: 3,
-    maxSizeBytes: 10 * 1024 * 1024, // 10MB
-  });
 
   // File type icon mapping
   const FILE_TYPE_ICONS = {
@@ -265,53 +250,26 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     };
   }, [allPublicMessages, allInternalMessages, profile?.id, isLoadingPublic, isLoadingInternal]);
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage && selectedFiles.length === 0 && !crewMemberName.trim()) return;
+    if (!newMessage.trim() && !crewMemberName.trim()) return;
 
     try {
-      let attachmentIds: string[] = [];
-      
-      // Upload files first if any are selected
-      if (selectedFiles.length > 0) {
-        const uploadResults = await uploadFiles(selectedFiles, workOrderId);
-        attachmentIds = uploadResults.map(result => result.id);
-      }
-
-      const result = await postMessage.mutateAsync({
+      await postMessage.mutateAsync({
         workOrderId,
         message: newMessage,
         isInternal: isSubcontractor() || (isInternal && (isAdmin() || isEmployee())),
-        attachmentIds,
+        attachmentIds: [], // No file attachments in messages anymore
         crewMemberName: crewMemberName.trim() || undefined,
       });
-
-      // Update work_order_attachments to link back to the message
-      if (attachmentIds.length > 0 && result?.data?.id) {
-        await supabase
-          .from('work_order_attachments')
-          .update({ work_order_message_id: result.data.id })
-          .in('id', attachmentIds);
-      }
       
       setNewMessage('');
       setIsInternal(false);
-      setSelectedFiles([]);
-      setShowFileUpload(false);
       setCrewMemberName('');
     } catch (error) {
       // Error is handled by the mutation hook
       console.error('Failed to post message:', error);
     }
-  };
-
-  const handleFilesSelected = (files: File[]) => {
-    setSelectedFiles(files);
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const renderAttachments = (attachments: WorkOrderAttachment[] | undefined) => {
@@ -410,7 +368,6 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           </div>
         )}
         
-        
         {message.message && (
           <p className={`text-sm text-foreground whitespace-pre-wrap ${isUnread ? 'font-medium' : 'font-normal'}`}>
             {message.message}
@@ -503,7 +460,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               onChange={(e) => setCrewMemberName(e.target.value)}
               placeholder="Who from your team is doing this work?"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={postMessage.isPending || isUploading}
+              disabled={postMessage.isPending}
             />
             <p className="text-xs text-muted-foreground mt-1">Optional - Tag which team member is performing this work</p>
           </div>
@@ -514,72 +471,8 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder={forInternal ? "Add an internal note..." : "Type your message..."}
           className="min-h-[100px] resize-none"
-          disabled={postMessage.isPending || isUploading}
+          disabled={postMessage.isPending}
         />
-
-        {/* Selected Files Preview */}
-        {selectedFiles.length > 0 && (
-          <div className="border rounded-lg p-3 bg-muted/50">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Selected Files ({selectedFiles.length})</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedFiles([])}
-                disabled={postMessage.isPending || isUploading}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {selectedFiles.map((file, index) => {
-                const isImage = isImageFile(file.name, file.type);
-                const iconName = getFileIcon(file.name, file.type);
-                const IconComponent = FILE_TYPE_ICONS[iconName as keyof typeof FILE_TYPE_ICONS] || File;
-                
-                return (
-                  <div key={index} className="relative">
-                    {isImage ? (
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="w-16 h-16 object-cover rounded border"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-muted rounded border flex flex-col items-center justify-center p-1">
-                        <IconComponent className="h-6 w-6 text-muted-foreground mb-1" />
-                        <span className="text-xs text-muted-foreground text-center leading-tight truncate w-full">
-                          {file.name.split('.').pop()?.toUpperCase()}
-                        </span>
-                      </div>
-                    )}
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute -top-1 -right-1 h-5 w-5 p-0"
-                      onClick={() => handleRemoveFile(index)}
-                      disabled={postMessage.isPending || isUploading}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="text-xs text-muted-foreground mt-2">
-              {getSupportedFormatsText()}
-            </div>
-          </div>
-        )}
-
-        {/* File Upload Progress */}
-        {isUploading && (
-          <div className="text-sm text-muted-foreground">
-            Uploading files...
-          </div>
-        )}
         
         {(isAdmin() || isEmployee()) && !forInternal && (
           <div className="flex items-center space-x-2">
@@ -587,7 +480,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               id="internal-note"
               checked={isInternal}
               onCheckedChange={(checked) => setIsInternal(checked as boolean)}
-              disabled={postMessage.isPending || isUploading}
+              disabled={postMessage.isPending}
             />
             <Label htmlFor="internal-note" className="text-sm font-medium">
               Make this an internal note (only visible to team and subcontractors)
@@ -596,80 +489,26 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         )}
         
         <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setNewMessage('');
-                setIsInternal(false);
-                setSelectedFiles([]);
-              }}
-              disabled={postMessage.isPending || isUploading || (!newMessage && selectedFiles.length === 0 && !crewMemberName.trim())}
-            >
-              Clear
-            </Button>
-            
-            {/* File Attachment Button */}
-            {isMobile ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowFileUpload(!showFileUpload)}
-                disabled={postMessage.isPending || isUploading}
-                className="flex items-center gap-2"
-              >
-                <Paperclip className="h-4 w-4" />
-                Files
-              </Button>
-            ) : (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={postMessage.isPending || isUploading}
-                    className="flex items-center gap-2"
-                  >
-                    <Paperclip className="h-4 w-4" />
-                    Add Files
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Files</DialogTitle>
-                  </DialogHeader>
-                  <FileUpload
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={3}
-                    maxSizeBytes={10 * 1024 * 1024}
-                    acceptedTypes={ALL_SUPPORTED_TYPES}
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setNewMessage('');
+              setIsInternal(false);
+              setCrewMemberName('');
+            }}
+            disabled={postMessage.isPending || (!newMessage.trim() && !crewMemberName.trim())}
+          >
+            Clear
+          </Button>
           
           <Button
             type="submit"
-            disabled={postMessage.isPending || isUploading || (!newMessage && selectedFiles.length === 0 && !crewMemberName.trim())}
+            disabled={postMessage.isPending || (!newMessage.trim() && !crewMemberName.trim())}
           >
-            {postMessage.isPending ? 'Posting...' : isUploading ? 'Uploading...' : 'Post Message'}
+            {postMessage.isPending ? 'Posting...' : 'Post Message'}
           </Button>
         </div>
-
-        {/* Mobile File Upload */}
-        {isMobile && showFileUpload && (
-          <div className="border rounded-lg p-4 bg-background">
-            <MobileFileUpload
-              onFilesSelected={handleFilesSelected}
-              maxFiles={3}
-              maxSizeBytes={10 * 1024 * 1024}
-              acceptedTypes={ALL_SUPPORTED_TYPES}
-              showDocumentButton={true}
-            />
-          </div>
-        )}
       </form>
     );
   };
