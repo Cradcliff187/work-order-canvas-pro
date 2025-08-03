@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, Lock, Circle, Clock, Camera, X, Image } from 'lucide-react';
+import { MessageCircle, Users, Lock, Circle, Clock, Camera, X, Image, HardHat } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult, WorkOrderAttachment } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
@@ -354,28 +354,24 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
             <Badge variant="outline" className="text-xs">
               {message.sender_organization?.name || 'Internal Team'}
             </Badge>
-            {message.crew_member_name && (
-              <span className="text-xs text-muted-foreground">
-                Crew: {message.crew_member_name}
-              </span>
-            )}
-            {message.is_internal && (
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                <Lock className="h-3 w-3" />
-                Internal
-              </Badge>
-            )}
-            {isQueued && (
-              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-amber-50 text-amber-700 border-amber-200">
-                <Clock className="h-3 w-3" />
-                Queued
-              </Badge>
-            )}
           </div>
           <span className="text-xs text-muted-foreground">
             {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
           </span>
         </div>
+        
+        {/* Crew Member Info Display - Prominent */}
+        {message.crew_member_name && (
+          <div className="mb-2 bg-blue-50 dark:bg-blue-950/20 rounded-md px-3 py-2 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+              <HardHat className="h-4 w-4" />
+              <span className="font-medium">On Site:</span>
+              <span>{message.crew_member_name}</span>
+            </div>
+          </div>
+        )}
+        
+        
         {message.message && (
           <p className={`text-sm text-foreground whitespace-pre-wrap ${isUnread ? 'font-medium' : 'font-normal'}`}>
             {message.message}
@@ -454,6 +450,26 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Crew Member Input (Subcontractors only) - Moved to top for better UX */}
+        {isSubcontractor() && (
+          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+            <Label htmlFor="crew-member" className="text-sm font-medium flex items-center gap-2 mb-2">
+              <HardHat className="h-4 w-4 text-blue-600" />
+              On-Site Crew Member
+            </Label>
+            <input
+              id="crew-member"
+              type="text"
+              value={crewMemberName}
+              onChange={(e) => setCrewMemberName(e.target.value)}
+              placeholder="Who from your team is doing this work?"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={postMessage.isPending || isUploading}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Optional - Tag which team member is performing this work</p>
+          </div>
+        )}
+
         <Textarea
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
@@ -461,24 +477,6 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           className="min-h-[100px] resize-none"
           disabled={postMessage.isPending || isUploading}
         />
-
-        {/* Crew Member Input (Subcontractors only) */}
-        {isSubcontractor() && (
-          <div className="space-y-2">
-            <Label htmlFor="crew-member" className="text-sm font-medium">
-              Crew Member Name (Optional)
-            </Label>
-            <input
-              id="crew-member"
-              type="text"
-              value={crewMemberName}
-              onChange={(e) => setCrewMemberName(e.target.value)}
-              placeholder="Enter crew member name..."
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={postMessage.isPending || isUploading}
-            />
-          </div>
-        )}
 
         {/* Selected Files Preview */}
         {selectedFiles.length > 0 && (
