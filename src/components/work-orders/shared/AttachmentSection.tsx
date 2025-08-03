@@ -11,6 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { AttachmentGrid, type AttachmentItem } from './AttachmentGrid';
+
+// Export the AttachmentItem type for use in other components
+export type { AttachmentItem };
 import { AttachmentTable } from './AttachmentTable';
 import { AttachmentList } from './AttachmentList';
 import { AttachmentUpload } from './AttachmentUpload';

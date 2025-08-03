@@ -6,20 +6,26 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, Paperclip, Download, Eye, MessageCircle, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, MessageCircle } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { formatDate } from '@/lib/utils/date';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
 import { MessageErrorBoundary } from '@/components/work-orders/MessageErrorBoundary';
+import { AttachmentSection } from '@/components/work-orders/shared/AttachmentSection';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useAuth } from '@/contexts/AuthContext';
+import type { AttachmentItem } from '@/components/work-orders/shared/AttachmentSection';
 
 
 export default function WorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const { data: workOrder, isLoading, isError, error } = useWorkOrderDetail(id!);
+  const { data: workOrder, isLoading, isError, error, refetch } = useWorkOrderDetail(id!);
+  const { uploadFiles } = useFileUpload();
 
   if (isLoading) {
     return <div>Loading work order details...</div>;
@@ -166,78 +172,45 @@ export default function WorkOrderDetail() {
           </Card>
 
           {/* Attachments */}
-          {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Paperclip className="h-5 w-5" />
-                  Attachments ({workOrder.work_order_attachments.length})
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Files and photos attached to this work order
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {workOrder.work_order_attachments.map((attachment) => (
-                    <div key={attachment.id} className="border rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
-                          {attachment.file_type === 'photo' ? (
-                            <ImageIcon className="h-8 w-8 text-blue-500" />
-                          ) : (
-                            <FileText className="h-8 w-8 text-gray-500" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {attachment.file_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {attachment.file_type}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(attachment.uploaded_at)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-                            window.open(data.publicUrl, '_blank');
-                          }}
-                          aria-label={`View ${attachment.file_name}`}
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-                            const link = document.createElement('a');
-                            link.href = data.publicUrl;
-                            link.download = attachment.file_name;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }}
-                          aria-label={`Download ${attachment.file_name}`}
-                        >
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <AttachmentSection
+            attachments={(workOrder.work_order_attachments || []).map((attachment): AttachmentItem => ({
+              id: attachment.id,
+              file_name: attachment.file_name,
+              file_url: attachment.file_url,
+              file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
+              file_size: 0, // File size not available in current schema
+              uploaded_at: attachment.uploaded_at,
+              uploader_name: attachment.uploaded_by_user ? 
+                `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
+                'Unknown',
+              uploader_email: '' // Email not available in current schema
+            }))}
+            workOrderId={workOrder.id}
+            canUpload={workOrder.status !== 'completed'}
+            onUpload={async (files) => {
+              try {
+                await uploadFiles(files, workOrder.id);
+                await refetch();
+              } catch (error) {
+                console.error('Upload failed:', error);
+              }
+            }}
+            onView={(attachment) => {
+              const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+              window.open(data.publicUrl, '_blank');
+            }}
+            onDownload={(attachment) => {
+              const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+              const link = document.createElement('a');
+              link.href = data.publicUrl;
+              link.download = attachment.file_name;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            maxFileSize={50 * 1024 * 1024} // 50MB
+            maxFiles={10}
+          />
 
           {/* Messages Section */}
           <Card>
