@@ -15,7 +15,7 @@ import {
   File
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatFileSize } from '@/utils/imageCompression';
+import { formatFileSize, getSupportedFormatsText, isSupportedFileType, getFileTypeForStorage } from '@/utils/fileUtils';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 import { getCameraAttribute } from '@/utils/mobileDetection';
 

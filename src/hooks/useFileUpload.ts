@@ -8,7 +8,7 @@ import {
   getFileTypeForStorage, 
   isImageFile, 
   getSupportedFormatsText 
-} from "@/utils/fileTypeUtils";
+} from "@/utils/fileUtils";
 
 export interface UploadProgress {
   fileId: string;
@@ -140,7 +140,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     let compressionRatio = 1;
 
     // Only compress images, pass documents through directly
-    if (isImageFile(file)) {
+    if (isImageFile(file.name, file.type)) {
       if (fileId) updateProgress(fileId, { status: 'compressing', progress: 0 });
       
       let compressionResult: CompressionResult;

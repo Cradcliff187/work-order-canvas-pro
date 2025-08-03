@@ -15,7 +15,7 @@ import {
   File,
   Plus
 } from "lucide-react";
-import { formatFileSize, isSupportedImageType, isValidFileSize } from "@/utils/imageCompression";
+import { formatFileSize, getSupportedFormatsText, isSupportedFileType, getFileTypeForStorage } from '@/utils/fileUtils';
 import { cn } from "@/lib/utils";
 import type { UploadProgress } from "@/hooks/useFileUpload";
 import { getCameraAttribute } from "@/utils/mobileDetection";
@@ -104,7 +104,7 @@ export function MobileMediaUpload({
       }
 
       // Check file size
-      if (!isValidFileSize(file, maxSizeBytes)) {
+      if (file.size > maxSizeBytes) {
         const maxMB = Math.round(maxSizeBytes / 1024 / 1024);
         errors.push(`${file.name}: File size exceeds ${maxMB}MB limit`);
         return;

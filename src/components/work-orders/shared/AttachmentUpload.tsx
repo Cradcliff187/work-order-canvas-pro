@@ -15,8 +15,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { formatFileSize } from '@/utils/imageCompression';
-import { getFileIcon } from '@/lib/file-utils';
+import { formatFileSize, getFileIcon, getSupportedFormatsText, isSupportedFileType, getFileTypeForStorage } from '@/utils/fileUtils';
 import { cn } from '@/lib/utils';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 

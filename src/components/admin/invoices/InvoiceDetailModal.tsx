@@ -43,7 +43,7 @@ import {
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
-import { formatFileSize } from '@/utils/imageCompression';
+import { formatFileSize } from '@/utils/fileUtils';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InvoiceDetailModalProps {

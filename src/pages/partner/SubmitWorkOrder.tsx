@@ -31,8 +31,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FileUpload } from '@/components/FileUpload';
 import { MobileFileUpload } from '@/components/MobileFileUpload';
-import { getFileTypeForStorage } from '@/utils/fileTypeUtils';
-import { formatFileSize } from '@/utils/imageCompression';
+import { getFileTypeForStorage, formatFileSize } from '@/utils/fileUtils';
 
 // Unified form schema with improved error messages
 const workOrderFormSchema = z.object({

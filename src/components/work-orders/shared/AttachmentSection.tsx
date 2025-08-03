@@ -17,7 +17,7 @@ export type { AttachmentItem };
 import { AttachmentTable } from './AttachmentTable';
 import { AttachmentList } from './AttachmentList';
 import { AttachmentUpload } from './AttachmentUpload';
-import { getFileExtension } from '@/utils/fileTypeUtils';
+import { getFileExtension } from '@/utils/fileUtils';
 
 interface AttachmentSectionProps {
   attachments: AttachmentItem[];

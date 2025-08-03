@@ -35,7 +35,7 @@ import { MessageErrorBoundary } from '@/components/work-orders/MessageErrorBound
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
-import { formatFileSize } from '@/utils/imageCompression';
+import { formatFileSize } from '@/utils/fileUtils';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 

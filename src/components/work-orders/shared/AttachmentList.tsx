@@ -17,8 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { TableActionsDropdown, type TableAction } from '@/components/ui/table-actions-dropdown';
-import { getFileIcon, getFileExtension } from '@/utils/fileTypeUtils';
-import { formatFileSize } from '@/utils/imageCompression';
+import { getFileIcon, getFileExtension, formatFileSize } from '@/utils/fileUtils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 

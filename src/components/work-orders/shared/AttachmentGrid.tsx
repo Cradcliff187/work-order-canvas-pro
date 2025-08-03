@@ -15,8 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LazyImage } from '@/components/LazyImage';
 import { TableActionsDropdown, type TableAction } from '@/components/ui/table-actions-dropdown';
-import { getFileIcon, getFileExtension } from '@/utils/fileTypeUtils';
-import { formatFileSize } from '@/utils/imageCompression';
+import { getFileIcon, getFileExtension, formatFileSize, getImageUrl, isImageFile } from '@/utils/fileUtils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -64,14 +63,8 @@ export function AttachmentGrid({
     return IconComponent;
   };
 
-  const isImageFile = (fileName: string) => {
-    const extension = getFileExtension(fileName);
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(extension);
-  };
-
-  const getDisplayUrl = (attachment: AttachmentItem) => {
-    // For Supabase storage URLs, construct the full public URL
-    return `/api/storage/${attachment.file_url}`;
+  const isImage = (attachment: AttachmentItem) => {
+    return isImageFile(attachment.file_name, attachment.file_type);
   };
 
   if (isLoading) {
@@ -106,8 +99,8 @@ export function AttachmentGrid({
     <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
       {attachments.map((attachment) => {
         const IconComponent = getFileTypeIcon(attachment.file_name, attachment.file_type);
-        const isImage = isImageFile(attachment.file_name);
-        const displayUrl = getDisplayUrl(attachment);
+        const isImageAttachment = isImage(attachment);
+        const imageUrl = getImageUrl(attachment.file_url);
 
         const actions: TableAction[] = [
           {
@@ -138,9 +131,9 @@ export function AttachmentGrid({
             onClick={() => onView?.(attachment)}
           >
             <div className="aspect-video bg-muted relative">
-              {isImage ? (
+              {isImageAttachment ? (
                 <LazyImage
-                  src={displayUrl}
+                  src={imageUrl}
                   alt={attachment.file_name}
                   className="w-full h-full object-cover"
                   fallback="/placeholder.svg"
