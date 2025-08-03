@@ -246,6 +246,30 @@ export default function WorkOrderDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Contact Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Contact Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
+                <p className="text-sm">{workOrder.location_contact_name || 'Not available'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                <p className="text-sm">{workOrder.location_contact_phone || 'Not available'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                <p className="text-sm">{workOrder.location_contact_email || 'Not available'}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

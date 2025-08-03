@@ -310,15 +310,15 @@ export default function SubcontractorWorkOrderDetail() {
             <CardContent className="space-y-3">
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
-                <p className="text-sm">John Smith</p>
+                <p className="text-sm">{workOrder.location_contact_name || 'Not available'}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
-                <p className="text-sm">555-123-4567</p>
+                <p className="text-sm">{workOrder.location_contact_phone || 'Not available'}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Email</Label>
-                <p className="text-sm">john.smith@example.com</p>
+                <p className="text-sm">{workOrder.location_contact_email || 'Not available'}</p>
               </div>
             </CardContent>
           </Card>
