@@ -70,13 +70,13 @@ function PartnerSidebar() {
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-3 py-2">
+        <div className="flex items-center gap-2 px-3 py-2 min-h-[3rem]">
           {collapsed || isMobile ? (
-            <div className="flex items-center justify-center w-full">
+            <div className="flex items-center justify-center w-full h-8">
               <img 
                 src={assets.logos.square} 
                 alt="AKC Logo" 
-                className="h-6 w-6 object-contain"
+                className="h-6 w-6 object-contain flex-shrink-0"
               />
             </div>
           ) : (
