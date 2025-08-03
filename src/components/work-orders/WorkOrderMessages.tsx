@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -53,6 +53,9 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   
   // Track which message IDs have been marked as read to prevent re-processing
   const [markedAsReadIds, setMarkedAsReadIds] = useState<Set<string>>(new Set());
+  
+  // Track previous work order ID to detect actual changes
+  const previousWorkOrderId = useRef<string | null>(null);
 
   // Fetch messages using custom hooks
   const { data: publicData, isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false, publicPage);
@@ -125,13 +128,17 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     }
   }, [internalData, internalPage]);
 
-  // Reset pagination when work order changes
+  // Reset pagination only when work order ID actually changes
   useEffect(() => {
-    setPublicPage(1);
-    setInternalPage(1);
-    setAllPublicMessages([]);
-    setAllInternalMessages([]);
-    setMarkedAsReadIds(new Set());
+    if (previousWorkOrderId.current !== null && previousWorkOrderId.current !== workOrderId) {
+      // Work order ID has changed, reset state
+      setPublicPage(1);
+      setInternalPage(1);
+      setAllPublicMessages([]);
+      setAllInternalMessages([]);
+      setMarkedAsReadIds(new Set());
+    }
+    previousWorkOrderId.current = workOrderId;
   }, [workOrderId]);
 
   // Load more messages functions
