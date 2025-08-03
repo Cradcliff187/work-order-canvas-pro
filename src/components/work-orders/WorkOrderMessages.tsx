@@ -236,7 +236,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage && selectedFiles.length === 0) return;
+    if (!newMessage && selectedFiles.length === 0 && !crewMemberName.trim()) return;
 
     try {
       let attachmentIds: string[] = [];
@@ -548,7 +548,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                 setIsInternal(false);
                 setSelectedFiles([]);
               }}
-              disabled={postMessage.isPending || isUploading || (!newMessage && selectedFiles.length === 0)}
+              disabled={postMessage.isPending || isUploading || (!newMessage && selectedFiles.length === 0 && !crewMemberName.trim())}
             >
               Clear
             </Button>
@@ -595,7 +595,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           
           <Button
             type="submit"
-            disabled={postMessage.isPending || isUploading || (!newMessage && selectedFiles.length === 0)}
+            disabled={postMessage.isPending || isUploading || (!newMessage && selectedFiles.length === 0 && !crewMemberName.trim())}
           >
             {postMessage.isPending ? 'Posting...' : isUploading ? 'Uploading...' : 'Post Message'}
           </Button>
