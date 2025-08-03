@@ -22,7 +22,18 @@ const PartnerDashboard = () => {
   const isMobile = useIsMobile();
   const { data: stats, isLoading: statsLoading } = usePartnerWorkOrderStats();
   const { data: userOrganizations, isLoading: orgLoading } = useUserOrganizations();
-  const { activities, isLoading: activitiesLoading, error: activitiesError } = usePartnerSubcontractorActivityFeed('partner');
+  const { activities, isLoading: activitiesLoading, error: activitiesError, refetch: refetchActivities } = usePartnerSubcontractorActivityFeed('partner');
+  
+  // Refetch activities when component mounts or when user returns to dashboard
+  React.useEffect(() => {
+    const handleFocus = () => {
+      console.log('Partner dashboard focused - refetching activities');
+      refetchActivities();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refetchActivities]);
   
   // Get primary organization
   const primaryOrganization = userOrganizations?.[0];

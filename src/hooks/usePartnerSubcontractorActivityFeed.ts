@@ -344,13 +344,24 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
     queryKey: ['partner-subcontractor-activity-feed', role, profile?.id],
     queryFn: fetchActivities,
     enabled: !!profile?.id && ((role === 'partner' && isPartner()) || (role === 'subcontractor' && isSubcontractor())),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 30 * 1000, // 30 seconds - shorter for faster updates
     gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true, // Refetch when user returns to dashboard
+    refetchOnMount: true, // Always refetch on mount
   });
 
   // Set up real-time subscriptions
   useEffect(() => {
     if (!profile?.id) return;
+
+    const queryKey = ['partner-subcontractor-activity-feed', role, profile.id];
+    
+    // Force refetch function for immediate updates
+    const forceRefetch = async () => {
+      console.log('Activity feed: forcing immediate refetch due to read receipt change');
+      await queryClient.invalidateQueries({ queryKey });
+      await queryClient.refetchQueries({ queryKey });
+    };
 
     const channels = [
       // Messages
@@ -361,9 +372,7 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
           schema: 'public',
           table: 'work_order_messages'
         }, () => {
-          queryClient.invalidateQueries({
-            queryKey: ['partner-subcontractor-activity-feed', role, profile.id]
-          });
+          queryClient.invalidateQueries({ queryKey });
         }),
 
       // Audit logs for status changes
@@ -374,9 +383,7 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
           schema: 'public',
           table: 'audit_logs'
         }, () => {
-          queryClient.invalidateQueries({
-            queryKey: ['partner-subcontractor-activity-feed', role, profile.id]
-          });
+          queryClient.invalidateQueries({ queryKey });
         }),
 
       // Assignments
@@ -387,9 +394,7 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
           schema: 'public',
           table: 'work_order_assignments'
         }, () => {
-          queryClient.invalidateQueries({
-            queryKey: ['partner-subcontractor-activity-feed', role, profile.id]
-          });
+          queryClient.invalidateQueries({ queryKey });
         }),
 
       // Reports
@@ -400,23 +405,21 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
           schema: 'public',
           table: 'work_order_reports'
         }, () => {
-          queryClient.invalidateQueries({
-            queryKey: ['partner-subcontractor-activity-feed', role, profile.id]
-          });
+          queryClient.invalidateQueries({ queryKey });
         }),
 
-      // Message read receipts - to update "New" status when messages are read
+      // Message read receipts - IMMEDIATE REFETCH for "New" status updates
       supabase
         .channel('activity-read-receipts')
         .on('postgres_changes', {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'message_read_receipts',
           filter: `user_id=eq.${profile.id}`
-        }, () => {
-          queryClient.invalidateQueries({
-            queryKey: ['partner-subcontractor-activity-feed', role, profile.id]
-          });
+        }, (payload) => {
+          console.log('Activity feed: read receipt detected for user', profile.id, payload);
+          // Force immediate refetch instead of just invalidating
+          forceRefetch();
         })
     ];
 
@@ -431,6 +434,7 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
     activities: query.data || [],
     isLoading: query.isLoading,
     error: query.error,
-    refetch: query.refetch
+    refetch: query.refetch,
+    queryKey: ['partner-subcontractor-activity-feed', role, profile?.id]
   };
 }

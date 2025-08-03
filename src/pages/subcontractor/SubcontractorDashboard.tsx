@@ -27,7 +27,18 @@ const SubcontractorDashboard = () => {
   const { organizationMembers, organizationActivity, isLoading: teamDataLoading } = useOrganizationTeamData();
   const isMobile = useIsMobile();
   const permissions = useEnhancedPermissions();
-  const { activities, isLoading: activitiesLoading, error: activitiesError } = usePartnerSubcontractorActivityFeed('subcontractor');
+  const { activities, isLoading: activitiesLoading, error: activitiesError, refetch: refetchActivities } = usePartnerSubcontractorActivityFeed('subcontractor');
+  
+  // Refetch activities when component mounts or when user returns to dashboard
+  React.useEffect(() => {
+    const handleFocus = () => {
+      console.log('Subcontractor dashboard focused - refetching activities');
+      refetchActivities();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refetchActivities]);
 
   // Map stats data to StatCard format - Individual metrics only
   const statsData: StatCard[] = [
