@@ -203,7 +203,7 @@ export function MobileWorkOrderCard({
     <div className="relative mb-4 overflow-hidden">
       {/* Swipe Action Background */}
       {showActionsState && (
-        <div className="absolute inset-y-0 right-0 flex items-center bg-gradient-to-l from-primary to-primary-glow text-primary-foreground px-4 z-10">
+        <div className="absolute inset-y-0 right-0 flex items-center bg-primary text-primary-foreground px-4 z-10">
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -227,7 +227,7 @@ export function MobileWorkOrderCard({
       )}
       
       <Card 
-        className="touch-manipulation active:scale-95 transition-all duration-150 min-h-[48px] card-hover touch-action-pan-y"
+        className="touch-manipulation active:scale-95 transition-all duration-200 min-h-[48px] card-hover touch-action-pan-y"
         style={{
           transform: `translateX(-${swipeOffset}px)`,
           transition: isSwipeActive ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
