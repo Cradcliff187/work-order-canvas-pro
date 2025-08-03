@@ -3,6 +3,13 @@ import { motion, PanInfo } from 'framer-motion';
 import { Trash2 } from 'lucide-react';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
+interface SwipeAction {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  color: 'default' | 'destructive' | 'success';
+  confirmMessage?: string;
+}
+
 interface SwipeableListItemProps {
   children: React.ReactNode;
   onDelete?: () => void;
@@ -11,6 +18,11 @@ interface SwipeableListItemProps {
   className?: string;
   itemName?: string;
   itemType?: string;
+  // Enhanced props
+  onSwipeRight?: () => void;
+  onSwipeLeft?: () => void;
+  rightAction?: SwipeAction;
+  leftAction?: SwipeAction;
 }
 
 export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
@@ -20,18 +32,42 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
   disabled = false,
   className = "",
   itemName = "item",
-  itemType = "item"
+  itemType = "item",
+  onSwipeRight,
+  onSwipeLeft,
+  rightAction,
+  leftAction
 }) => {
   const [dragX, setDragX] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Default left action to delete if onDelete is provided
+  const effectiveLeftAction = leftAction || (onDelete ? {
+    icon: Trash2,
+    label: deleteLabel,
+    color: 'destructive' as const,
+    confirmMessage: `Delete ${itemType} "${itemName}"?`
+  } : undefined);
+
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 100;
+    const leftThreshold = -80;
+    const rightThreshold = 60;
     
-    if (info.offset.x < -threshold && onDelete && !disabled) {
-      // Swiped left beyond threshold - show delete confirmation
-      setShowDeleteConfirm(true);
+    if (info.offset.x < leftThreshold && (effectiveLeftAction || onSwipeLeft) && !disabled) {
+      // Swiped left beyond threshold
+      if (effectiveLeftAction?.confirmMessage || onDelete) {
+        setShowDeleteConfirm(true);
+      } else if (onSwipeLeft) {
+        onSwipeLeft();
+      }
+    } else if (info.offset.x > rightThreshold && (rightAction || onSwipeRight) && !disabled) {
+      // Swiped right beyond threshold
+      if (rightAction?.confirmMessage) {
+        // Could add right action confirmation here
+      } else if (onSwipeRight) {
+        onSwipeRight();
+      }
     }
     
     // Reset position
@@ -39,38 +75,84 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
   };
 
   const handleDelete = async () => {
-    if (!onDelete) return;
+    if (!onDelete && !onSwipeLeft) return;
     
     setIsDeleting(true);
     try {
-      await onDelete();
+      if (onDelete) {
+        await onDelete();
+      } else if (onSwipeLeft) {
+        await onSwipeLeft();
+      }
       setShowDeleteConfirm(false);
     } catch (error) {
-      console.error('Delete failed:', error);
+      console.error('Action failed:', error);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const swipeProgress = Math.abs(dragX) / 100;
-  const deleteOpacity = Math.min(swipeProgress, 1);
+  // Calculate opacity for background reveals
+  const leftSwipeProgress = Math.max(0, -dragX / 120);
+  const rightSwipeProgress = Math.max(0, dragX / 100);
+  const leftOpacity = Math.min(leftSwipeProgress, 1);
+  const rightOpacity = Math.min(rightSwipeProgress, 1);
+
+  // Get background colors based on action type
+  const getActionBackground = (action?: SwipeAction) => {
+    if (!action) return 'bg-muted';
+    switch (action.color) {
+      case 'destructive':
+        return 'bg-destructive';
+      case 'success':
+        return 'bg-green-500';
+      default:
+        return 'bg-primary';
+    }
+  };
+
+  const getActionForeground = (action?: SwipeAction) => {
+    if (!action) return 'text-muted-foreground';
+    switch (action.color) {
+      case 'destructive':
+        return 'text-destructive-foreground';
+      case 'success':
+        return 'text-white';
+      default:
+        return 'text-primary-foreground';
+    }
+  };
 
   return (
     <>
       <div className="relative overflow-hidden">
-        {/* Delete background - appears when swiping left */}
-        {onDelete && !disabled && (
+        {/* Right action background - appears when swiping right */}
+        {(rightAction || onSwipeRight) && !disabled && (
           <div 
-            className="absolute inset-0 bg-destructive flex items-center justify-end px-4 transition-opacity duration-200"
-            style={{ opacity: dragX < 0 ? deleteOpacity : 0 }}
+            className={`absolute inset-0 ${getActionBackground(rightAction)} flex items-center justify-start px-4 transition-opacity duration-200`}
+            style={{ opacity: dragX > 0 ? rightOpacity : 0 }}
           >
-            <Trash2 className="h-5 w-5 text-destructive-foreground" />
+            {rightAction?.icon && (
+              <rightAction.icon className={`h-5 w-5 ${getActionForeground(rightAction)}`} />
+            )}
+          </div>
+        )}
+
+        {/* Left action background - appears when swiping left */}
+        {(effectiveLeftAction || onSwipeLeft) && !disabled && (
+          <div 
+            className={`absolute inset-0 ${getActionBackground(effectiveLeftAction)} flex items-center justify-end px-4 transition-opacity duration-200`}
+            style={{ opacity: dragX < 0 ? leftOpacity : 0 }}
+          >
+            {effectiveLeftAction?.icon && (
+              <effectiveLeftAction.icon className={`h-5 w-5 ${getActionForeground(effectiveLeftAction)}`} />
+            )}
           </div>
         )}
 
         {/* Main content */}
         <motion.div
-          drag={onDelete && !disabled ? "x" : false}
+          drag={(effectiveLeftAction || onSwipeLeft || rightAction || onSwipeRight) && !disabled ? "x" : false}
           dragConstraints={{ left: -120, right: 100 }}
           dragElastic={0.2}
           onDrag={(event, info) => setDragX(info.offset.x)}
