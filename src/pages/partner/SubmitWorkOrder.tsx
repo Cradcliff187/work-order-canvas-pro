@@ -128,9 +128,6 @@ export default function SubmitWorkOrder() {
 
   // Determine if user is admin
   const { isAdmin } = useUserProfile();
-  
-  // DEBUG: Log admin status for Tom Finn investigation
-  console.log('SubmitWorkOrder DEBUG - isAdmin():', isAdmin(), 'for user on partner route');
 
   // User organization hook
   const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();
@@ -607,7 +604,7 @@ export default function SubmitWorkOrder() {
         ...(isAdmin() && { estimated_hours: data.estimated_hours }),
       };
 
-      console.log('📤 Attempting to submit work order with data:', submissionData);
+      
       const workOrderResult = await createWorkOrderMutation.mutateAsync(submissionData);
       console.log('✅ Work order created successfully:', workOrderResult);
 
@@ -1023,15 +1020,6 @@ export default function SubmitWorkOrder() {
                 </Button>
               ) : (
                 <>
-                  {/* DEBUG: Submit Button State */}
-                  <div className="text-xs text-muted-foreground mb-2 p-2 bg-muted rounded">
-                    <strong>🔍 DEBUG INFO:</strong><br/>
-                    Current Step: {currentStep}/3<br/>
-                    Organization ID: {effectiveOrganizationId || 'MISSING'}<br/>
-                    Trade ID: {form.getValues('trade_id') || 'MISSING'}<br/>
-                    Is Pending: {String(createWorkOrderMutation.isPending)}<br/>
-                    Button Disabled: {String(createWorkOrderMutation.isPending || !effectiveOrganizationId || !form.getValues('trade_id'))}<br/>
-                  </div>
                   
                   <Button
                     type="submit"
