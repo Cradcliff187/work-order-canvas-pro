@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Upload, Search, X, Plus } from 'lucide-react';
+import { Upload, Search, X, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode, type ViewModeConfig } from '@/hooks/useViewMode';
+import { useFileUpload } from '@/hooks/useFileUpload';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Progress } from '@/components/ui/progress';
 import { AttachmentGrid, type AttachmentItem } from './AttachmentGrid';
 
 // Export the AttachmentItem type for use in other components
@@ -22,8 +24,10 @@ import { getFileExtension } from '@/utils/fileUtils';
 interface AttachmentSectionProps {
   attachments: AttachmentItem[];
   workOrderId: string;
+  reportId?: string; // Optional for report uploads
   canUpload?: boolean;
   onUpload?: (files: File[]) => Promise<void>;
+  onUploadComplete?: () => void; // Called after successful upload to refresh attachments
   onView?: (attachment: AttachmentItem) => void;
   onDownload?: (attachment: AttachmentItem) => void;
   onDelete?: (attachment: AttachmentItem) => void;
@@ -79,8 +83,10 @@ function buildFileTypeOptions(attachments: AttachmentItem[]) {
 export function AttachmentSection({
   attachments,
   workOrderId,
+  reportId,
   canUpload = false,
   onUpload,
+  onUploadComplete,
   onView,
   onDownload,
   onDelete,
@@ -93,7 +99,26 @@ export function AttachmentSection({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFileType, setSelectedFileType] = useState<string>('all');
   const [isUploadSheetOpen, setIsUploadSheetOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+
+  // Use the fileUpload hook for progress tracking
+  const {
+    uploadFiles,
+    uploadProgress,
+    isUploading,
+    reset: resetUpload
+  } = useFileUpload({
+    maxFiles: maxFiles || 10,
+    maxSizeBytes: maxFileSize || 10 * 1024 * 1024,
+    onComplete: () => {
+      setIsUploadSheetOpen(false);
+      onUploadComplete?.();
+      // Clear progress after a delay
+      setTimeout(resetUpload, 2000);
+    },
+    onError: (error) => {
+      console.error('Upload failed:', error);
+    }
+  });
 
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'attachment-section',
@@ -159,17 +184,64 @@ export function AttachmentSection({
   };
 
   const handleUpload = async (files: File[]) => {
-    if (!onUpload) return;
-    
-    setIsUploading(true);
-    try {
-      await onUpload(files);
-      setIsUploadSheetOpen(false);
-    } catch (error) {
-      console.error('Upload failed:', error);
-    } finally {
-      setIsUploading(false);
+    if (onUpload) {
+      // Use custom upload handler if provided
+      try {
+        await onUpload(files);
+        setIsUploadSheetOpen(false);
+      } catch (error) {
+        console.error('Upload failed:', error);
+      }
+    } else {
+      // Use the built-in file upload hook
+      await uploadFiles(files, workOrderId, reportId);
     }
+  };
+
+  const renderProgressUI = () => {
+    if (uploadProgress.length === 0) return null;
+
+    return (
+      <Card className="mb-4 border-primary/20 bg-primary/5">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-medium">Uploading Files</h4>
+          </div>
+          {uploadProgress.map((file, idx) => (
+            <div key={idx} className="space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="truncate flex-1 mr-2">{file.fileName}</span>
+                <div className="flex items-center gap-2">
+                  {file.status === 'completed' && (
+                    <CheckCircle className="h-4 w-4 text-success" />
+                  )}
+                  {file.status === 'error' && (
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                  )}
+                  <span className="min-w-[40px] text-right">
+                    {file.status === 'completed' ? '100%' : `${file.progress}%`}
+                  </span>
+                </div>
+              </div>
+              <Progress 
+                value={file.progress} 
+                className="h-2"
+              />
+              {file.status === 'error' && file.error && (
+                <p className="text-xs text-destructive">{file.error}</p>
+              )}
+              {file.status === 'compressing' && (
+                <p className="text-xs text-muted-foreground">Compressing image...</p>
+              )}
+              {file.status === 'uploading' && (
+                <p className="text-xs text-muted-foreground">Uploading...</p>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
   };
 
   const renderHeader = () => (
@@ -335,6 +407,7 @@ export function AttachmentSection({
       </CardHeader>
       
       <CardContent>
+        {renderProgressUI()}
         {renderContent()}
       </CardContent>
 
