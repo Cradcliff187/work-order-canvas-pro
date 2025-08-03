@@ -20,7 +20,7 @@ import { formatFileSize } from '@/utils/imageCompression';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-interface AttachmentItem {
+export interface AttachmentItem {
   id: string;
   file_name: string;
   file_url: string;
