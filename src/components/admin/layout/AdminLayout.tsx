@@ -2,7 +2,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Menu } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 
 interface AdminLayoutProps {
@@ -24,9 +23,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex-1 flex flex-col">
           {/* Header with toggle */}
           <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
-            <SidebarTrigger>
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
+            <SidebarTrigger />
           </header>
 
           {/* Main content with consistent container and padding */}

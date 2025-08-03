@@ -20,6 +20,7 @@ import {
   SidebarProvider,
   SidebarHeader,
   SidebarFooter,
+  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -214,7 +215,12 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
         <PartnerSidebar />
         
         <div className="flex-1 flex flex-col">
-          {isMobile ? <MobileHeader /> : <StandardHeader />}
+          {isMobile ? <MobileHeader /> : (
+            <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
+              <SidebarTrigger />
+              <div className="flex-1" />
+            </header>
+          )}
 
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
             <div className="container mx-auto p-4 md:p-6 max-w-screen-xl">

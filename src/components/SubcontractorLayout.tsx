@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -48,7 +48,14 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <StandardHeader />
+          {isMobile ? (
+            <StandardHeader />
+          ) : (
+            <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
+              <SidebarTrigger />
+              <div className="flex-1" />
+            </header>
+          )}
 
           {/* Main Content */}
           <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
