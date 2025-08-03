@@ -89,7 +89,7 @@ export function SubcontractorSidebar() {
                 alt="AKC Logo" 
                 className="h-8 w-auto object-contain"
               />
-              <p className="text-xs text-sidebar-foreground/60 ml-2">Subcontractor Portal</p>
+              <p className="text-xs text-sidebar-foreground/60 ml-2">AKC Portal</p>
             </div>
           )}
         </div>

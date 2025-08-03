@@ -11,14 +11,14 @@ export function useBrowserTabTitle() {
   const title = useMemo(() => {
     // Don't calculate title while loading
     if (isLoadingWorkOrders || isLoadingUnread) {
-      return 'WorkOrderPortal';
+      return 'AKC Portal';
     }
 
     // Calculate total unread count
     const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
     // Return appropriate title
-    return totalUnread > 0 ? `(${totalUnread}) WorkOrderPortal` : 'WorkOrderPortal';
+    return totalUnread > 0 ? `(${totalUnread}) AKC Portal` : 'AKC Portal';
   }, [unreadCounts, isLoadingWorkOrders, isLoadingUnread]);
 
   // Debounce title updates to prevent flicker

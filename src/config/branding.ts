@@ -64,7 +64,7 @@ export const brandingConfig: BrandingConfig = {
     phone: '+1 (555) 123-4567'
   },
   product: {
-    name: 'WorkOrderPortal',
+    name: 'AKC Portal',
     tagline: 'Streamline Your Construction Projects',
     description: 'Professional construction work order management system for commercial projects'
   },
@@ -97,7 +97,7 @@ export const brandingConfig: BrandingConfig = {
     supportsDarkMode: true
   },
   seo: {
-    title: 'WorkOrderPortal - Construction Management by AKC',
+    title: 'AKC Portal - Construction Management by AKC',
     description: 'Professional construction work order management system for commercial projects. Streamline work orders, track progress, and manage subcontractors efficiently.',
     keywords: [
       'construction management',

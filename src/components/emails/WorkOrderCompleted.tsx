@@ -51,7 +51,7 @@ export const WorkOrderCompleted = ({
   logoUrl = '',
   companyName = 'AKC Contracting',
   supportEmail = 'support@akcllc.com',
-  poweredBy = 'Powered by WorkOrderPortal'
+  poweredBy = ''
 }: WorkOrderCompletedProps) => (
   <Html>
     <Head />

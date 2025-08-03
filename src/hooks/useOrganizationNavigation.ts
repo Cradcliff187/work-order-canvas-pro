@@ -43,7 +43,7 @@ export const useOrganizationNavigation = () => {
     } else if (permissions.isPartner) {
       return [
         { label: 'Dashboard', path: '/partner/dashboard', icon: BarChart3, visible: true },
-        { label: 'Submit Work Order', path: '/partner/work-orders/new', icon: Plus, visible: true },
+        { label: 'New Service Request', path: '/partner/work-orders/new', icon: Plus, visible: true },
         { label: 'View Work Orders', path: '/partner/work-orders', icon: FileText, visible: true },
         { label: 'Locations', path: '/partner/locations', icon: MapPin, visible: true },
         { label: 'Reports', path: '/partner/reports', icon: ClipboardList, visible: true },

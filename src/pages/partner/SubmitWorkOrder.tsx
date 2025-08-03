@@ -688,8 +688,8 @@ export default function SubmitWorkOrder() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Submit Work Order</h1>
-          <p className="text-muted-foreground">Create a new work order request</p>
+          <h1 className="text-2xl font-bold">New Service Request</h1>
+          <p className="text-muted-foreground">Create a new service request</p>
         </div>
       </div>
 
@@ -1048,7 +1048,7 @@ export default function SubmitWorkOrder() {
                     ) : (
                       <>
                         <Send className="h-5 w-5 mr-2" />
-                        Submit Work Order
+                        Submit Service Request
                         {selectedFiles.length > 0 && (
                           <Badge variant="secondary" className="ml-2">
                             +{selectedFiles.length} files

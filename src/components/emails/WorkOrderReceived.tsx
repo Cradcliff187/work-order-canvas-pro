@@ -39,7 +39,7 @@ export const WorkOrderReceived = ({
   logoUrl = '',
   companyName = 'AKC Contracting',
   supportEmail = 'support@akcllc.com',
-  poweredBy = 'Powered by WorkOrderPortal'
+  poweredBy = ''
 }: WorkOrderReceivedProps) => (
   <Html>
     <Head />

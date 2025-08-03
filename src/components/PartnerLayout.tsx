@@ -44,7 +44,7 @@ import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
 const sidebarItems = [
   { title: 'Dashboard', url: '/partner/dashboard', icon: BarChart3 },
-  { title: 'Submit Work Order', url: '/partner/work-orders/new', icon: Plus },
+  { title: 'New Service Request', url: '/partner/work-orders/new', icon: Plus },
   { title: 'View Work Orders', url: '/partner/work-orders', icon: FileText },
   { title: 'Locations', url: '/partner/locations', icon: MapPin },
   { title: 'Reports', url: '/partner/reports', icon: ClipboardList },
@@ -85,7 +85,7 @@ function PartnerSidebar() {
                 alt="AKC Logo" 
                 className="h-8 w-auto object-contain"
               />
-              <p className="text-xs text-sidebar-foreground/60 ml-2">Partner Portal</p>
+              <p className="text-xs text-sidebar-foreground/60 ml-2">AKC Portal</p>
             </div>
           )}
         </div>
