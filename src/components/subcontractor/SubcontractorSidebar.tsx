@@ -79,7 +79,7 @@ export function SubcontractorSidebar() {
               <img 
                 src={assets.logos.square} 
                 alt="AKC Logo" 
-                className="h-6 w-6 object-contain flex-shrink-0"
+                className="h-8 w-8 object-contain flex-shrink-0"
               />
             </div>
           ) : (
