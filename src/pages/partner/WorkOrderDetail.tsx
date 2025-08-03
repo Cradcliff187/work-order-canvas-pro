@@ -105,15 +105,16 @@ export default function WorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Location Information */}
+          {/* Location & Contact Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Location Information
+                Location & Contact Information
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Location Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Location Name</Label>
@@ -125,19 +126,40 @@ export default function WorkOrderDetail() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Street Address</Label>
-                  <p className="text-sm">{workOrder.street_address || 'Not specified'}</p>
+                  <p className="text-sm">{workOrder.location_street_address || workOrder.street_address || 'Not specified'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">City</Label>
-                  <p className="text-sm">{workOrder.city || 'Not specified'}</p>
+                  <p className="text-sm">{workOrder.location_city || workOrder.city || 'Not specified'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">State</Label>
-                  <p className="text-sm">{workOrder.state || 'Not specified'}</p>
+                  <p className="text-sm">{workOrder.location_state || workOrder.state || 'Not specified'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">ZIP Code</Label>
-                  <p className="text-sm">{workOrder.zip_code || 'Not specified'}</p>
+                  <p className="text-sm">{workOrder.location_zip_code || workOrder.zip_code || 'Not specified'}</p>
+                </div>
+              </div>
+
+              {/* Contact Details */}
+              <Separator />
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground">Contact Details</p>
+                
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
+                  <p className="text-sm">{workOrder.location_contact_name || 'Not available'}</p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                  <p className="text-sm">{workOrder.location_contact_phone || 'Not available'}</p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                  <p className="text-sm">{workOrder.location_contact_email || 'Not available'}</p>
                 </div>
               </div>
             </CardContent>
@@ -247,29 +269,6 @@ export default function WorkOrderDetail() {
             </Card>
           )}
 
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Contact Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
-                <p className="text-sm">{workOrder.location_contact_name || 'Not available'}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
-                <p className="text-sm">{workOrder.location_contact_phone || 'Not available'}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Email</Label>
-                <p className="text-sm">{workOrder.location_contact_email || 'Not available'}</p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
