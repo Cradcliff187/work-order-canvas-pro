@@ -10,6 +10,7 @@ import { ArrowLeft, Edit, MapPin, Calendar, Clock, User, Building2, Wrench, File
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { formatDate } from '@/lib/utils/date';
+import { StatusIndicator } from '@/components/ui/status-indicator';
 
 export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -62,22 +63,6 @@ export default function AdminWorkOrderDetail() {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'received':
-        return 'bg-blue-100 text-blue-800';
-      case 'assigned':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'in_progress':
-        return 'bg-orange-100 text-orange-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -122,9 +107,12 @@ export default function AdminWorkOrderDetail() {
         </div>
         
         <div className="flex items-center gap-2">
-           <Badge className={`${getStatusColor(workOrder.status)} h-5 text-[10px] px-1.5`}>
-            {getStatusText(workOrder.status)}
-          </Badge>
+          <StatusIndicator
+            status={workOrder.status}
+            type="work_order"
+            mode="badge"
+            size="sm"
+          />
           <Button asChild size="sm">
             <Link to={`/admin/work-orders/${id}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
@@ -319,9 +307,13 @@ export default function AdminWorkOrderDetail() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                           <Badge className={`${getStatusColor(report.status)} h-5 text-[10px] px-1.5`}>
-                            {report.status}
-                          </Badge>
+                          <StatusIndicator
+                            status={report.status}
+                            type="report"
+                            mode="badge"
+                            size="sm"
+                            showIcon={false}
+                          />
                           <span className="text-sm text-muted-foreground">
                             {formatDate(report.submitted_at)}
                           </span>

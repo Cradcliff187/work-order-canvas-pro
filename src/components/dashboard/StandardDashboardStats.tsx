@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { StatusIndicator } from '@/components/ui/status-indicator';
 
 export interface StatCard {
   icon: LucideIcon;
@@ -14,6 +15,8 @@ export interface StatCard {
   description?: string;
   href?: string;
   variant?: 'default' | 'warning' | 'success' | 'destructive';
+  status?: string; // For displaying status indicators
+  statusType?: 'work_order' | 'report' | 'invoice';
 }
 
 interface StandardDashboardStatsProps {
@@ -129,6 +132,17 @@ export function StandardDashboardStats({
             <p className="text-xs text-muted-foreground mt-1">
               {stat.description}
             </p>
+          )}
+          {stat.status && stat.statusType && (
+            <div className="mt-3">
+              <StatusIndicator
+                status={stat.status}
+                type={stat.statusType}
+                mode="full-width"
+                size="sm"
+                showIcon={true}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

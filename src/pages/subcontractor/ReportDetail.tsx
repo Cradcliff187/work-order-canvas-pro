@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Calendar, DollarSign, Clock, FileText, Printer } from "lucide-react";
 import { ReportFileManager } from '@/components/ReportFileManager';
 import { format } from "date-fns";
+import { StatusIndicator } from '@/components/ui/status-indicator';
 
 export default function ReportDetail() {
   const { id } = useParams<{ id: string }>();
@@ -131,20 +132,6 @@ export default function ReportDetail() {
 
   const report = reportQuery.data;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "reviewed":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "approved":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "rejected":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
 
   const formatStatus = (status: string) => {
     return status.charAt(0).toUpperCase() + status.slice(1);
@@ -170,9 +157,12 @@ export default function ReportDetail() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge className={getStatusColor(report.status)}>
-            {formatStatus(report.status)}
-          </Badge>
+          <StatusIndicator
+            status={report.status}
+            type="report"
+            mode="badge"
+            size="sm"
+          />
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
@@ -254,9 +244,13 @@ export default function ReportDetail() {
               
               <div>
                 <h4 className="font-medium text-sm text-muted-foreground mb-1">Status</h4>
-                <Badge className={`${getStatusColor(report.status)} print:bg-transparent print:text-black print:border-black`}>
-                  {formatStatus(report.status)}
-                </Badge>
+                <StatusIndicator
+                  status={report.status}
+                  type="report"
+                  mode="badge"
+                  size="sm"
+                  className="print:bg-transparent print:text-black print:border-black"
+                />
               </div>
             </div>
 

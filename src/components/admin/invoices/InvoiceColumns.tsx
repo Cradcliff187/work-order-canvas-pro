@@ -7,6 +7,7 @@ import { Eye, CheckCircle, XCircle, DollarSign, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/utils/formatting';
+import { StatusIndicator } from '@/components/ui/status-indicator';
 
 interface InvoiceColumnsProps {
   onViewInvoice: (invoice: Invoice) => void;
@@ -107,25 +108,15 @@ export const createInvoiceColumns = ({
     header: 'Status',
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
-      const getStatusColor = () => {
-        switch (status) {
-          case 'submitted':
-            return 'bg-blue-100 text-blue-800 border-blue-200';
-          case 'approved':
-            return 'bg-green-100 text-green-800 border-green-200';
-          case 'rejected':
-            return 'bg-red-100 text-red-800 border-red-200';
-          case 'paid':
-            return 'bg-purple-100 text-purple-800 border-purple-200';
-          default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
-        }
-      };
       
       return (
-        <Badge className={`${getStatusColor()} h-5 text-[10px] px-1.5 capitalize`}>
-          {status}
-        </Badge>
+        <StatusIndicator
+          status={status === 'submitted' ? 'pending' : status}
+          type="invoice"
+          mode="badge"
+          size="sm"
+          showIcon={false}
+        />
       );
     },
   },

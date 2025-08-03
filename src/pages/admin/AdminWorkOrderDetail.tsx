@@ -38,27 +38,7 @@ import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/
 import { formatFileSize } from '@/utils/fileUtils';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'received': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'assigned': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'in_progress': return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-    case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getReportStatusColor = (status: string) => {
-  switch (status) {
-    case 'submitted': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'reviewed': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'approved': return 'bg-green-100 text-green-800 border-green-200';
-    case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
+import { StatusIndicator } from '@/components/ui/status-indicator';
 
 const getFileIcon = (fileType: string, fileName: string) => {
   if (fileType === 'photo' || fileName.match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
@@ -195,9 +175,12 @@ export default function AdminWorkOrderDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Badge className={`${getStatusColor(workOrder.status)} h-5 text-[10px] px-1.5`}>
-            {workOrder.status.replace('_', ' ')}
-          </Badge>
+          <StatusIndicator
+            status={workOrder.status}
+            type="work_order"
+            mode="badge"
+            size="sm"
+          />
           {/* Show Submit Report button if assigned to subcontractor and no reports exist */}
           {assignments.length > 0 && 
            workOrder.status !== 'completed' && 
@@ -264,9 +247,12 @@ export default function AdminWorkOrderDetail() {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Status</label>
                 <div className="mt-1">
-                  <Badge className={`${getStatusColor(workOrder.status)} h-5 text-[10px] px-1.5`}>
-                    {workOrder.status.replace('_', ' ')}
-                  </Badge>
+                  <StatusIndicator
+                    status={workOrder.status}
+                    type="work_order"
+                    mode="badge"
+                    size="sm"
+                  />
                 </div>
               </div>
             </div>
@@ -552,9 +538,13 @@ export default function AdminWorkOrderDetail() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <Badge className={getReportStatusColor(report.status)}>
-                            {report.status}
-                          </Badge>
+                          <StatusIndicator
+                            status={report.status}
+                            type="report"
+                            mode="badge"
+                            size="sm"
+                            showIcon={false}
+                          />
                           {report.hours_worked && (
                             <div className="flex items-center gap-1 text-sm font-medium mt-1">
                               <Clock className="h-3 w-3" />

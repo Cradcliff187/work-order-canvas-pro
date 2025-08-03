@@ -19,6 +19,7 @@ import { WorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { cn } from '@/lib/utils';
+import { StatusIndicator } from '@/components/ui/status-indicator';
 
 interface WorkOrderDetailPanelProps {
   workOrder: WorkOrderDetail;
@@ -27,16 +28,6 @@ interface WorkOrderDetailPanelProps {
   showActionButtons?: boolean;
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'received': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'assigned': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'in_progress': return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-    case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
 
 export function WorkOrderDetailPanel({ 
   workOrder, 
@@ -60,9 +51,12 @@ export function WorkOrderDetailPanel({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{workOrder.work_order_number}</h2>
-          <Badge className={cn("text-xs", getStatusColor(workOrder.status))}>
-            {workOrder.status.replace('_', ' ')}
-          </Badge>
+          <StatusIndicator
+            status={workOrder.status}
+            type="work_order"
+            mode="badge"
+            size="sm"
+          />
         </div>
         <h3 className="text-sm font-medium text-muted-foreground">{workOrder.title}</h3>
       </div>
