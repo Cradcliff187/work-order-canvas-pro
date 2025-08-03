@@ -1,11 +1,10 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, FileText, MapPin, Building, Calendar, MessageCircle } from 'lucide-react';
+import { Eye, FileText, MapPin, Building, Calendar, MessageCircle, ArrowUpDown, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
+import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
 
 export interface WorkOrder {
   id: string;
@@ -27,16 +26,12 @@ interface WorkOrderColumnProps {
   unreadCounts: Record<string, number>;
   onView: (workOrder: WorkOrder) => void;
   onSubmitReport?: (workOrder: WorkOrder) => void;
-  selectedId?: string;
-  onSelectionChange?: (id: string) => void;
 }
 
 export function createSubcontractorWorkOrderColumns({ 
   unreadCounts, 
   onView, 
-  onSubmitReport,
-  selectedId,
-  onSelectionChange 
+  onSubmitReport
 }: WorkOrderColumnProps): ColumnDef<WorkOrder>[] {
   return [
     {
@@ -45,35 +40,24 @@ export function createSubcontractorWorkOrderColumns({
       cell: ({ row }) => {
         const workOrder = row.original;
         const unreadCount = unreadCounts[workOrder.id] || 0;
-        const hasAttachments = workOrder.work_order_attachments && 
-          workOrder.work_order_attachments.length > 0;
-        const isSelected = selectedId === workOrder.id;
+        const attachmentCount = workOrder.work_order_attachments?.length || 0;
 
         return (
-          <div className={cn(
-            "flex items-center gap-2 cursor-pointer p-2 rounded transition-colors",
-            isSelected && "bg-muted/50"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectionChange?.(workOrder.id);
-          }}>
-            <div className="flex flex-col">
-              <span className="font-medium text-sm">{workOrder.work_order_number}</span>
-              <div className="flex items-center gap-1 mt-1">
-                {unreadCount > 0 && (
-                  <Badge variant="default" className="h-5 px-2 text-xs flex items-center gap-1">
-                    <MessageCircle className="h-3 w-3" />
-                    {unreadCount}
-                  </Badge>
-                )}
-                {hasAttachments && (
-                  <Badge variant="outline" className="h-5 px-2 text-xs">
-                    📎
-                  </Badge>
+          <div className="font-medium flex items-center gap-2">
+            {workOrder.work_order_number || 'N/A'}
+            {unreadCount > 0 && (
+              <Badge variant="default">
+                {unreadCount}
+              </Badge>
+            )}
+            {attachmentCount > 0 && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Paperclip className="h-3 w-3" />
+                {attachmentCount > 1 && (
+                  <span className="text-xs">{attachmentCount}</span>
                 )}
               </div>
-            </div>
+            )}
           </div>
         );
       },
@@ -83,19 +67,11 @@ export function createSubcontractorWorkOrderColumns({
       header: 'Title',
       cell: ({ row }) => {
         const workOrder = row.original;
-        const isSelected = selectedId === workOrder.id;
         
         return (
-          <div className={cn(
-            "cursor-pointer p-2 rounded transition-colors",
-            isSelected && "bg-muted/50"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectionChange?.(workOrder.id);
-          }}>
-            <div className="font-medium text-sm">{workOrder.title}</div>
-            <div className="text-xs text-muted-foreground line-clamp-1 mt-1">
+          <div className="max-w-[200px]">
+            <div className="font-medium truncate">{workOrder.title}</div>
+            <div className="text-sm text-muted-foreground truncate mt-1">
               {workOrder.description}
             </div>
           </div>
@@ -104,132 +80,114 @@ export function createSubcontractorWorkOrderColumns({
     },
     {
       accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => {
-        const workOrder = row.original;
-        const isSelected = selectedId === workOrder.id;
-        
-        return (
-          <div className={cn(
-            "cursor-pointer p-2 rounded transition-colors",
-            isSelected && "bg-muted/50"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectionChange?.(workOrder.id);
-          }}>
-            <WorkOrderStatusBadge status={workOrder.status} />
-          </div>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto p-0 font-medium"
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <WorkOrderStatusBadge status={row.getValue('status')} />
+      ),
     },
     {
       accessorKey: 'store_location',
-      header: 'Location',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto p-0 font-medium"
+        >
+          Location
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const workOrder = row.original;
-        const isSelected = selectedId === workOrder.id;
         
         return (
-          <div className={cn(
-            "cursor-pointer p-2 rounded transition-colors",
-            isSelected && "bg-muted/50"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectionChange?.(workOrder.id);
-          }}>
-            <div className="flex items-center gap-1 text-sm">
-              <Building className="h-3 w-3 text-muted-foreground" />
-              <span className="truncate">{workOrder.store_location}</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              <MapPin className="h-3 w-3" />
-              <span className="truncate">{workOrder.city}, {workOrder.state}</span>
-            </div>
+          <div className="max-w-[180px]">
+            <div className="font-medium truncate">{workOrder.store_location || 'N/A'}</div>
+            {workOrder.city && workOrder.state && (
+              <div className="text-sm text-muted-foreground truncate">
+                {workOrder.city}, {workOrder.state}
+              </div>
+            )}
           </div>
         );
       },
     },
     {
-      accessorKey: 'trades.name',
-      header: 'Trade',
-      cell: ({ row }) => {
-        const workOrder = row.original;
-        const isSelected = selectedId === workOrder.id;
-        
-        return (
-          <div className={cn(
-            "cursor-pointer p-2 rounded transition-colors",
-            isSelected && "bg-muted/50"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectionChange?.(workOrder.id);
-          }}>
-            <span className="text-sm">{workOrder.trades?.name || 'N/A'}</span>
-          </div>
-        );
-      },
+      accessorFn: (row) => row.trades?.name,
+      id: 'trade',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto p-0 font-medium"
+        >
+          Trade
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <div className="text-sm">
+          {row.original.trades?.name || 'N/A'}
+        </div>
+      ),
     },
     {
       accessorKey: 'date_submitted',
-      header: 'Submitted',
-      cell: ({ row }) => {
-        const workOrder = row.original;
-        const isSelected = selectedId === workOrder.id;
-        
-        return (
-          <div className={cn(
-            "cursor-pointer p-2 rounded transition-colors",
-            isSelected && "bg-muted/50"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectionChange?.(workOrder.id);
-          }}>
-            <div className="flex items-center gap-1 text-sm">
-              <Calendar className="h-3 w-3 text-muted-foreground" />
-              <span>{format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}</span>
-            </div>
-          </div>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto p-0 font-medium"
+        >
+          Submitted
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <div className="text-sm">
+          {format(new Date(row.getValue('date_submitted')), 'MMM d, yyyy')}
+        </div>
+      ),
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: '',
       cell: ({ row }) => {
         const workOrder = row.original;
         const canSubmitReport = workOrder.status === 'assigned' || workOrder.status === 'in_progress';
         
+        const actions: TableAction[] = [
+          {
+            label: 'View Details',
+            icon: Eye,
+            onClick: () => onView(workOrder),
+          },
+        ];
+
+        if (canSubmitReport && onSubmitReport) {
+          actions.push({
+            label: 'Submit Report',
+            icon: FileText,
+            onClick: () => onSubmitReport(workOrder),
+          });
+        }
+
         return (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onView(workOrder);
-              }}
-              className="h-8 px-2"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            
-            {canSubmitReport && onSubmitReport && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSubmitReport(workOrder);
-                }}
-                className="h-8 px-2"
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-            )}
+          <div onClick={(e) => e.stopPropagation()}>
+            <TableActionsDropdown
+              actions={actions}
+              align="end"
+              itemName={`work order ${workOrder.work_order_number || workOrder.title}`}
+            />
           </div>
         );
       },

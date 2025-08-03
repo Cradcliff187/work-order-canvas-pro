@@ -92,14 +92,12 @@ const SubcontractorWorkOrders = () => {
 
   const hasFilters = searchTerm || statusFilter !== 'all';
 
-  // Table columns with master-detail support
+  // Table columns 
   const columns = useMemo(() => createSubcontractorWorkOrderColumns({ 
     unreadCounts, 
     onView: (workOrder) => navigate(`/subcontractor/work-orders/${workOrder.id}`),
-    onSubmitReport: (workOrder) => navigate(`/subcontractor/work-orders/${workOrder.id}?action=submit-report`),
-    selectedId: selectedWorkOrderId,
-    onSelectionChange: setSelectedWorkOrderId
-  }), [unreadCounts, navigate, selectedWorkOrderId]);
+    onSubmitReport: (workOrder) => navigate(`/subcontractor/work-orders/${workOrder.id}?action=submit-report`)
+  }), [unreadCounts, navigate]);
 
   const table = useReactTable({
     data: filteredWorkOrders,
@@ -122,84 +120,108 @@ const SubcontractorWorkOrders = () => {
 
 
   const renderTableView = () => {
-    const tableContent = (
-      <Card className="overflow-hidden">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {assignedWorkOrders.isLoading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  <div className="flex justify-center">
-                    <Skeleton className="h-8 w-32" />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedWorkOrderId(row.original.id)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+    return (
+      <Card>
+        <CardContent className="p-0">
+          {/* Desktop Master-Detail Layout */}
+          <div className="hidden lg:block">
+            <MasterDetailLayout
+              listContent={
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} className="h-12">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows.map((row) => (
+                        <TableRow 
+                          key={row.id}
+                          className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
+                          onClick={() => setSelectedWorkOrderId(row.original.id)}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              }
+              selectedId={selectedWorkOrderId}
+              onSelectionChange={setSelectedWorkOrderId}
+              detailContent={
+                selectedWorkOrder && (
+                  <WorkOrderDetailPanel
+                    workOrder={selectedWorkOrder}
+                    onViewFull={() => navigate(`/subcontractor/work-orders/${selectedWorkOrderId}`)}
+                    showActionButtons={true}
+                  />
+                )
+              }
+              isLoading={isLoadingDetail}
+              items={filteredWorkOrders.map(wo => ({ id: wo.id }))}
+            />
+          </div>
+
+          {/* Mobile/Tablet Table */}
+          <div className="block lg:hidden">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} className="h-12">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
                   ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     );
-
-    // Desktop: use master-detail layout
-    if (!isMobile) {
-      return (
-        <MasterDetailLayout
-          listContent={tableContent}
-          selectedId={selectedWorkOrderId || ''}
-          onSelectionChange={(id) => setSelectedWorkOrderId(id)}
-          detailContent={selectedWorkOrder && (
-            <WorkOrderDetailPanel
-              workOrder={selectedWorkOrder}
-              onEdit={() => navigate(`/subcontractor/work-orders/${selectedWorkOrder.id}`)}
-              onViewFull={() => navigate(`/subcontractor/work-orders/${selectedWorkOrder.id}`)}
-              showActionButtons={true}
-            />
-          )}
-          isLoading={isLoadingDetail}
-          items={filteredWorkOrders}
-        />
-      );
-    }
-
-    // Mobile: full-width table
-    return tableContent;
   };
 
   const renderCardView = () => {
