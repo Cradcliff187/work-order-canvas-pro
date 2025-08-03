@@ -14,7 +14,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   
   // Use wider layout for work orders pages to accommodate the data-heavy table
   const isWorkOrdersPage = location.pathname.startsWith('/admin/work-orders');
-  const maxWidthClass = isWorkOrdersPage ? 'max-w-full' : 'max-w-7xl';
+  const maxWidthClass = isWorkOrdersPage ? 'max-w-full' : 'max-w-screen-xl';
   
   return (
     <SidebarProvider>

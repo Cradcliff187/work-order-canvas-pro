@@ -30,7 +30,7 @@ export function StandardDashboardStats({
   const isMobile = useIsMobile();
   if (loading) {
     return (
-      <div className={cn("grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4", className)}>
+      <div className={cn("grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6", className)}>
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
@@ -146,7 +146,7 @@ export function StandardDashboardStats({
   };
 
   return (
-    <div className={cn("grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4", className)}>
+    <div className={cn("grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6", className)}>
       {stats.map(renderCard)}
     </div>
   );
