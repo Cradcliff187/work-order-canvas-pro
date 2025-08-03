@@ -26,7 +26,7 @@ import { StorageDebugUtils, attachDebugUtilities } from './debug';
 
 export class IndexedDBManager implements StorageManager {
   private static instance: IndexedDBManager | null = null;
-  private dbName = 'WorkOrderPortalDB';
+  private dbName = 'AKCPortalDB';
   private expectedVersion = 3;
   private actualVersion: number | null = null;
   private db: IDBDatabase | null = null;

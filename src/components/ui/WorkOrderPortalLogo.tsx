@@ -1,21 +1,21 @@
 import React from 'react';
 
-interface WorkOrderPortalLogoProps {
+interface AKCPortalLogoProps {
   size?: 'sm' | 'md';
   iconOnly?: boolean;
   className?: string;
 }
 
-export function WorkOrderPortalLogo({ 
+export function AKCPortalLogo({
   size = 'md', 
   iconOnly = false, 
   className = '' 
-}: WorkOrderPortalLogoProps) {
+}: AKCPortalLogoProps) {
   const height = size === 'sm' ? 24 : 32;
   const width = iconOnly ? height : height * 3.5;
 
   if (iconOnly) {
-    // Icon-only version - just the "WOP" letters in a circle
+    // Icon-only version - just the "AKC" letters in a circle
     return (
       <svg
         width={height}
@@ -42,7 +42,7 @@ export function WorkOrderPortalLogo({
           fill="hsl(var(--primary-foreground))"
           fontFamily="system-ui, sans-serif"
         >
-          WOP
+          AKC
         </text>
       </svg>
     );
@@ -75,12 +75,12 @@ export function WorkOrderPortalLogo({
           fill="hsl(var(--primary-foreground))"
           fontFamily="system-ui, sans-serif"
         >
-          WOP
+          AKC
         </text>
       </svg>
       <div className="flex flex-col">
         <span className="text-lg font-semibold text-sidebar-foreground">
-          WorkOrderPortal
+          AKC Portal
         </span>
       </div>
     </div>

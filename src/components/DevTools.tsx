@@ -106,7 +106,7 @@ export const DevTools = () => {
     <div className="container mx-auto py-8 space-y-6">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-foreground mb-2">
-          WorkOrderPortal Developer Tools
+          AKC Portal Developer Tools
         </h1>
         <p className="text-muted-foreground mb-6">
           Database management and testing utilities for development environments.
@@ -195,9 +195,9 @@ export const DevTools = () => {
               <div className="text-sm text-muted-foreground">
                 <p><strong>Creates authenticated users:</strong></p>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>partner1@workorderportal.test (Partner)</li>
-                  <li>sub1@workorderportal.test (Subcontractor)</li>
-                  <li>employee1@workorderportal.test (Employee)</li>
+                  <li>partner1@akcportal.test (Partner)</li>
+                  <li>sub1@akcportal.test (Subcontractor)</li>
+                  <li>employee1@akcportal.test (Employee)</li>
                 </ul>
                 <p className="mt-2"><strong>Password:</strong> TestPass123!</p>
               </div>

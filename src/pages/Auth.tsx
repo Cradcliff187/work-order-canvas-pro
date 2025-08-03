@@ -64,7 +64,7 @@ export const Auth = () => {
   const getSubtitle = () => {
     switch (view) {
       case 'sign_up':
-        return 'Join WorkOrderPortal to manage your construction projects';
+        return 'Join AKC Portal to manage your construction projects';
       case 'password_reset':
         return 'Enter your email to receive a password reset link';
       case 'create_user':
@@ -114,11 +114,6 @@ export const Auth = () => {
           
         </div>
 
-        <div className="text-center text-sm text-muted-foreground">
-          <p>
-            Powered by WorkOrderPortal
-          </p>
-        </div>
       </div>
     </div>
   );

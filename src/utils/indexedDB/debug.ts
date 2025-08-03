@@ -300,19 +300,19 @@ export function attachDebugUtilities(manager: IndexedDBManager): void {
     }
     
     try {
-      await indexedDB.deleteDatabase('WorkOrderPortalDB');
-      localStorage.removeItem('workorder-fallback-storage');
+      await indexedDB.deleteDatabase('AKCPortalDB');
+      localStorage.removeItem('akcportal-fallback-storage');
       console.log('✅ Storage reset complete - refresh the page');
     } catch (error) {
       console.error('❌ Storage reset failed:', error);
     }
   };
 
-  // Expose WorkOrderPortal namespace for enhanced debugging
-  if (!(window as any).WorkOrderPortal) {
-    (window as any).WorkOrderPortal = {};
+  // Expose AKCPortal namespace for enhanced debugging
+  if (!(window as any).AKCPortal) {
+    (window as any).AKCPortal = {};
   }
-  (window as any).WorkOrderPortal.storage = {
+  (window as any).AKCPortal.storage = {
     manager,
     schema: EXPECTED_SCHEMA,
     validateSchema: () => manager.validateSchema(),
@@ -328,5 +328,5 @@ export function attachDebugUtilities(manager: IndexedDBManager): void {
   console.log('  - window.__validateSchema() - Validate database schema');
   console.log('  - window.__showExpectedSchema() - Show expected schema');
   console.log('  - window.__resetStorage() - Reset all storage (DESTRUCTIVE)');
-  console.log('  - window.WorkOrderPortal.storage - Enhanced storage API');
+  console.log('  - window.AKCPortal.storage - Enhanced storage API');
 }

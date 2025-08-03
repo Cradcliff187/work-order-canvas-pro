@@ -14,7 +14,7 @@ export const StandardHeader = () => {
           className="h-8 w-auto"
         />
         <div className="text-lg font-semibold text-foreground">
-          WorkOrderPortal
+          AKC Portal
         </div>
       </div>
       

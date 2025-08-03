@@ -1,7 +1,7 @@
 
 {
-  "name": "WorkOrderPortal - AKC Construction Management",
-  "short_name": "WorkOrderPortal",
+  "name": "AKC Construction Portal",
+  "short_name": "AKC Portal",
   "description": "Professional construction work order management system for commercial projects",
   "start_url": "/",
   "display": "standalone",
@@ -39,9 +39,9 @@
       "description": "Access admin dashboard and reports"
     },
     {
-      "name": "Submit Work Order",
-      "url": "/partner/submit-work-order",
-      "description": "Submit new work order"
+      "name": "New Service Request",
+      "url": "/partner/submit-work-order", 
+      "description": "Submit new service request"
     },
     {
       "name": "Submit Report",
