@@ -3,32 +3,26 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Plus, FileText, Clock, CheckCircle, TrendingUp, Eye, Building2, ClipboardList } from 'lucide-react';
-import { usePartnerWorkOrders, usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
+import { Plus, FileText, Clock, CheckCircle, TrendingUp, Building2 } from 'lucide-react';
+import { usePartnerWorkOrderStats } from '@/hooks/usePartnerWorkOrders';
+import { usePartnerSubcontractorActivityFeed } from '@/hooks/usePartnerSubcontractorActivityFeed';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
 import { useAuth } from '@/contexts/AuthContext';
 // Organization-based access control handled by RLS
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
+import { DashboardActivityFeed } from '@/components/dashboard/DashboardActivityFeed';
 import { MobileOrganizationSelector } from '@/components/layout/MobileOrganizationSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { format, differenceInDays } from 'date-fns';
+
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const isMobile = useIsMobile();
   const { data: stats, isLoading: statsLoading } = usePartnerWorkOrderStats();
-  const { data: recentWorkOrders, isLoading: workOrdersLoading } = usePartnerWorkOrders();
   const { data: userOrganizations, isLoading: orgLoading } = useUserOrganizations();
-
-  // Get last 10 work orders for recent activity
-  const recentOrders = recentWorkOrders?.data?.slice(0, 10) || [];
+  const { activities, isLoading: activitiesLoading, error: activitiesError } = usePartnerSubcontractorActivityFeed('partner');
   
   // Get primary organization
   const primaryOrganization = userOrganizations?.[0];
@@ -153,116 +147,13 @@ const PartnerDashboard = () => {
       {/* Summary Cards */}
       <StandardDashboardStats stats={statsData} loading={statsLoading} className="mb-8" />
 
-      {/* Recent Work Orders */}
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {workOrdersLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-4 border-b">
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-24" />
-                    <div className="flex gap-4">
-                      <Skeleton className="h-3 w-32" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-8 w-8 rounded" />
-                </div>
-              ))}
-            </div>
-          ) : recentOrders.length === 0 ? (
-            <EmptyState
-              icon={ClipboardList}
-              title="No work orders submitted yet"
-              description="Get started by submitting your first work order to track and manage your organization's maintenance requests."
-              action={{
-                label: "Submit Your First Work Order",
-                onClick: () => navigate('/partner/work-orders/new'),
-                icon: Plus
-              }}
-              variant="full"
-            />
-          ) : (
-            <div className="relative overflow-x-auto">
-              {/* Scroll fade hint for mobile */}
-              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Work Order #</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Trade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Days Old</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentOrders.map((workOrder) => (
-                    <TableRow 
-                      key={workOrder.id}
-                      className="min-h-[60px] border-b border-gray-100 cursor-pointer active:bg-gray-50 transition-colors sm:min-h-auto sm:active:bg-inherit sm:cursor-default"
-                      onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-                    >
-                      <TableCell className="font-medium py-4">
-                        {workOrder.work_order_number}
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
-                          <div className="font-medium">{workOrder.store_location}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {workOrder.city}, {workOrder.state}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center">
-                          <span className="font-medium sm:font-normal">
-                            {workOrder.trades?.name || 'N/A'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <WorkOrderStatusBadge 
-                          status={workOrder.status} 
-                          className="sm:px-2 sm:py-1"
-                        />
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <span className="text-sm text-muted-foreground">
-                          {differenceInDays(new Date(), new Date(workOrder.date_submitted))} days
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
-                      </TableCell>
-                      <TableCell className="text-right py-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="min-w-[44px] min-h-[44px] sm:min-w-auto sm:min-h-auto"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/partner/work-orders/${workOrder.id}`);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Activity Feed */}
+      <DashboardActivityFeed 
+        activities={activities}
+        isLoading={activitiesLoading}
+        error={activitiesError}
+        role="partner"
+      />
     </div>
   );
 };
