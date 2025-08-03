@@ -34,6 +34,7 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     file_name: string;
     file_url: string;
     file_type: string;
+    file_size: number | null;
     uploaded_at: string;
     uploaded_by_user: {
       first_name: string;
@@ -106,6 +107,7 @@ export function useWorkOrderDetail(id: string) {
             file_name,
             file_url,
             file_type,
+            file_size,
             uploaded_at,
             uploaded_by_user:profiles!uploaded_by_user_id(
               first_name,

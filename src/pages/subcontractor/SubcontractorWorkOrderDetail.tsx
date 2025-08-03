@@ -201,7 +201,7 @@ export default function SubcontractorWorkOrderDetail() {
               file_name: attachment.file_name,
               file_url: attachment.file_url,
               file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
-              file_size: 0, // File size not available in current schema
+              file_size: attachment.file_size || 0,
               uploaded_at: attachment.uploaded_at,
               uploader_name: attachment.uploaded_by_user ? 
                 `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
