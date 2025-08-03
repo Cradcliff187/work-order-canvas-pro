@@ -38,7 +38,7 @@ export function usePostMessage() {
         const queuedMessage: QueuedMessage = {
           id: `temp-${Date.now()}`,
           workOrderId,
-          message: message.trim(),
+          message: message,
           isInternal,
           senderId: profile.id,
           queuedAt: Date.now(),
@@ -82,7 +82,7 @@ export function usePostMessage() {
         .from('work_order_messages')
         .insert({
           work_order_id: workOrderId,
-          message: message.trim(),
+          message: message,
           is_internal: isInternal,
           sender_id: profile.id,
           attachment_ids: attachmentIds || [],

@@ -241,7 +241,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
 
       const result = await postMessage.mutateAsync({
         workOrderId,
-        message: newMessage || ' ', // Ensure message is not empty if only attachments
+        message: newMessage,
         isInternal: isSubcontractor() || (isInternal && (isAdmin() || isEmployee())),
         attachmentIds,
       });
