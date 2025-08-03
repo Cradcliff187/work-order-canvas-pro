@@ -10,7 +10,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, Lock, Circle, Clock, Paperclip, X, HardHat } from 'lucide-react';
+import { 
+  MessageCircle, 
+  Users, 
+  Lock, 
+  Circle, 
+  Clock, 
+  Paperclip, 
+  X, 
+  HardHat,
+  File,
+  FileText,
+  Image,
+  FileSpreadsheet,
+  Presentation,
+  Archive,
+  Code,
+  Film,
+  Music
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult, WorkOrderAttachment } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
@@ -46,6 +64,19 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
     maxFiles: 3,
     maxSizeBytes: 10 * 1024 * 1024, // 10MB
   });
+
+  // File type icon mapping
+  const FILE_TYPE_ICONS = {
+    'file': File,
+    'file-text': FileText,
+    'image': Image,
+    'file-spreadsheet': FileSpreadsheet,
+    'presentation': Presentation,
+    'archive': Archive,
+    'code': Code,
+    'film': Film,
+    'music': Music,
+  };
   
   // Pagination state
   const [publicPage, setPublicPage] = useState(1);
@@ -291,7 +322,8 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         {attachments.map((attachment) => {
           const publicUrl = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url).data.publicUrl;
           const isImage = isImageFile(attachment.file_name, attachment.file_type);
-          const IconComponent = require('lucide-react')[getFileIcon(attachment.file_name, attachment.file_type)] || require('lucide-react').File;
+          const iconName = getFileIcon(attachment.file_name, attachment.file_type);
+          const IconComponent = FILE_TYPE_ICONS[iconName as keyof typeof FILE_TYPE_ICONS] || File;
           
           return (
             <div key={attachment.id} className="relative group">
@@ -503,7 +535,8 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
             <div className="flex flex-wrap gap-2">
               {selectedFiles.map((file, index) => {
                 const isImage = isImageFile(file.name, file.type);
-                const IconComponent = require('lucide-react')[getFileIcon(file.name, file.type)] || require('lucide-react').File;
+                const iconName = getFileIcon(file.name, file.type);
+                const IconComponent = FILE_TYPE_ICONS[iconName as keyof typeof FILE_TYPE_ICONS] || File;
                 
                 return (
                   <div key={index} className="relative">
