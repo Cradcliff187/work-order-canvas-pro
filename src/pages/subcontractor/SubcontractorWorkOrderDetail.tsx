@@ -168,7 +168,7 @@ export default function SubcontractorWorkOrderDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Paperclip className="h-5 w-5" />
-                  Attachments
+                  Attachments ({workOrder.work_order_attachments.length})
                 </CardTitle>
                 <CardDescription>
                   Files and photos attached to this work order
@@ -207,6 +207,7 @@ export default function SubcontractorWorkOrderDetail() {
                             const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
                             window.open(data.publicUrl, '_blank');
                           }}
+                          aria-label={`View ${attachment.file_name}`}
                         >
                           <ExternalLink className="w-3 h-3 mr-1" />
                           View
@@ -219,8 +220,11 @@ export default function SubcontractorWorkOrderDetail() {
                             const link = document.createElement('a');
                             link.href = data.publicUrl;
                             link.download = attachment.file_name;
+                            document.body.appendChild(link);
                             link.click();
+                            document.body.removeChild(link);
                           }}
+                          aria-label={`Download ${attachment.file_name}`}
                         >
                           <Download className="w-3 h-3" />
                         </Button>
