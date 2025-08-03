@@ -8,12 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, Users, Paperclip, Download, ExternalLink, Image as ImageIcon, MessageCircle } from "lucide-react";
+import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, Paperclip, Download, ExternalLink, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
-import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
 import { MessageErrorBoundary } from '@/components/work-orders/MessageErrorBoundary';
@@ -277,27 +276,6 @@ export default function SubcontractorWorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Team Assignment */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Assignment
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AssigneeDisplay 
-                assignments={(workOrder.work_order_assignments || []).map(assignment => ({
-                  assigned_to: assignment.assigned_to,
-                  assignment_type: assignment.assignment_type,
-                  assignee_profile: assignment.profiles,
-                  assigned_organization: assignment.assigned_organization
-                }))}
-                showIcons={true}
-                showOrganization={true}
-              />
-            </CardContent>
-          </Card>
 
           {/* Contact Information */}
           <Card>
