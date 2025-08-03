@@ -16,6 +16,7 @@ export interface WorkOrderMessage {
   sender_id: string;
   work_order_id: string;
   created_at: string;
+  crew_member_name?: string;
   attachment_ids?: string[];
   attachments?: WorkOrderAttachment[];
   sender: {
@@ -63,6 +64,7 @@ export function useWorkOrderMessages(
           sender_id,
           work_order_id,
           created_at,
+          crew_member_name,
           attachment_ids,
           sender:profiles!sender_id(
             first_name,

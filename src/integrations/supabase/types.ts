@@ -1121,6 +1121,7 @@ export type Database = {
         Row: {
           attachment_ids: string[] | null
           created_at: string | null
+          crew_member_name: string | null
           id: string
           is_internal: boolean | null
           message: string
@@ -1131,6 +1132,7 @@ export type Database = {
         Insert: {
           attachment_ids?: string[] | null
           created_at?: string | null
+          crew_member_name?: string | null
           id?: string
           is_internal?: boolean | null
           message: string
@@ -1141,6 +1143,7 @@ export type Database = {
         Update: {
           attachment_ids?: string[] | null
           created_at?: string | null
+          crew_member_name?: string | null
           id?: string
           is_internal?: boolean | null
           message?: string
