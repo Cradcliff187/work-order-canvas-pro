@@ -44,6 +44,9 @@ import { format } from 'date-fns';
 import { createWorkOrderColumns } from '@/components/partner/work-orders/WorkOrderColumns';
 import { ViewToggle } from '@/components/partner/work-orders/ViewToggle';
 import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
+import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
+import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
+import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 
 const workOrderSortOptions = [
   { value: 'submitted-desc', label: 'Newest First' },
@@ -65,12 +68,18 @@ const WorkOrderList = () => {
   const [view, setView] = useState<'card' | 'table'>('table');
   const [sortOption, setSortOption] = useState('submitted-desc');
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
 
   const workOrderList = workOrdersData?.data || [];
   
   // Extract work order IDs for unread message counts
   const workOrderIds = workOrderList.map(wo => wo.id);
   const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
+
+  // Fetch selected work order details for master-detail view
+  const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(
+    selectedWorkOrderId || undefined
+  );
 
   // Filter and sort work orders
   const filteredAndSortedWorkOrders = useMemo(() => {
@@ -300,42 +309,104 @@ const WorkOrderList = () => {
           }}
         />
       ) : view === 'table' ? (
-        /* Table View */
+        /* Table View with Master-Detail on Desktop */
         <Card>
           <CardContent className="p-0">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id} className="h-12">
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            {/* Desktop Master-Detail Layout */}
+            <div className="hidden lg:block">
+              <MasterDetailLayout
+                listContent={
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                          <TableRow key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                              <TableHead key={header.id} className="h-12">
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext()
+                                    )}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {table.getRowModel().rows.map((row) => (
+                          <TableRow 
+                            key={row.id}
+                            className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
+                            onClick={() => setSelectedWorkOrderId(row.original.id)}
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                }
+                selectedId={selectedWorkOrderId}
+                onSelectionChange={setSelectedWorkOrderId}
+                detailContent={
+                  selectedWorkOrder && (
+                    <WorkOrderDetailPanel
+                      workOrder={selectedWorkOrder}
+                      onViewFull={() => navigate(`/partner/work-orders/${selectedWorkOrderId}`)}
+                      showActionButtons={false}
+                    />
+                  )
+                }
+                isLoading={isLoadingDetail}
+                items={filteredAndSortedWorkOrders.map(wo => ({ id: wo.id }))}
+              />
+            </div>
+
+            {/* Mobile/Tablet Table */}
+            <div className="block lg:hidden">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>

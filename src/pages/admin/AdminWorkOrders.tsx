@@ -34,6 +34,9 @@ import { useToast } from '@/hooks/use-toast';
 import { exportWorkOrders } from '@/lib/utils/export';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
+import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
+import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -59,6 +62,7 @@ export default function AdminWorkOrders() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
 
   // Transform sorting state to match the hook's expected format
   const sortingFormatted = useMemo(() => ({
@@ -77,6 +81,11 @@ export default function AdminWorkOrders() {
   // Extract work order IDs for unread message counts
   const workOrderIds = workOrdersData?.data?.map(wo => wo.id) || [];
   const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
+
+  // Fetch selected work order details for master-detail view
+  const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(
+    selectedWorkOrderId || undefined
+  );
 
   // Column definitions with action handlers - Updated with proper type handling
   const columns = useMemo(() => createWorkOrderColumns({
@@ -272,65 +281,85 @@ export default function AdminWorkOrders() {
             />
           ) : (
             <>
-              {/* Desktop Table */}
-              <div className="hidden lg:block rounded-md border">
-                <Table className="admin-table">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          data-state={row.getIsSelected() && "selected"}
-                          onClick={(e) => {
-                            // Don't navigate if clicking interactive elements
-                            const target = e.target as HTMLElement;
-                            if (target instanceof HTMLButtonElement || 
-                                target instanceof HTMLInputElement ||
-                                target.closest('[role="checkbox"]') ||
-                                target.closest('[data-radix-collection-item]') ||
-                                target.closest('.dropdown-trigger')) {
-                              return;
-                            }
-                            navigate(`/admin/work-orders/${row.original.id}`);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
+              {/* Desktop Table with Master-Detail */}
+              <div className="hidden lg:block">
+                <MasterDetailLayout
+                  listContent={
+                    <div className="rounded-md border">
+                      <Table className="admin-table">
+                        <TableHeader>
+                          {table.getHeaderGroups().map((headerGroup) => (
+                            <TableRow key={headerGroup.id}>
+                              {headerGroup.headers.map((header) => (
+                                <TableHead key={header.id} className="h-12">
+                                  {header.isPlaceholder
+                                    ? null
+                                    : flexRender(
+                                        header.column.columnDef.header,
+                                        header.getContext()
+                                      )}
+                                </TableHead>
+                              ))}
+                            </TableRow>
                           ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <EmptyTableState
-                        icon={ClipboardList}
-                        title="No work orders found"
-                        description="Try adjusting your filters or search criteria"
-                        colSpan={columns.length}
+                        </TableHeader>
+                        <TableBody>
+                          {table.getRowModel().rows?.length ? (
+                            table.getRowModel().rows.map((row) => (
+                              <TableRow
+                                key={row.id}
+                                data-state={row.getIsSelected() && "selected"}
+                                className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
+                                onClick={(e) => {
+                                  // Don't navigate if clicking interactive elements
+                                  const target = e.target as HTMLElement;
+                                  if (target instanceof HTMLButtonElement || 
+                                      target instanceof HTMLInputElement ||
+                                      target.closest('[role="checkbox"]') ||
+                                      target.closest('[data-radix-collection-item]') ||
+                                      target.closest('.dropdown-trigger')) {
+                                    return;
+                                  }
+                                  // Set selection for master-detail view on desktop
+                                  setSelectedWorkOrderId(row.original.id);
+                                }}
+                              >
+                                {row.getVisibleCells().map((cell) => (
+                                  <TableCell key={cell.id}>
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext()
+                                    )}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))
+                          ) : (
+                            <EmptyTableState
+                              icon={ClipboardList}
+                              title="No work orders found"
+                              description="Try adjusting your filters or search criteria"
+                              colSpan={columns.length}
+                            />
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  }
+                  selectedId={selectedWorkOrderId}
+                  onSelectionChange={setSelectedWorkOrderId}
+                  detailContent={
+                    selectedWorkOrder && (
+                      <WorkOrderDetailPanel
+                        workOrder={selectedWorkOrder}
+                        onEdit={() => navigate(`/admin/work-orders/${selectedWorkOrderId}/edit`)}
+                        onViewFull={() => navigate(`/admin/work-orders/${selectedWorkOrderId}`)}
                       />
-                    )}
-                  </TableBody>
-                </Table>
+                    )
+                  }
+                  isLoading={isLoadingDetail}
+                  items={workOrdersData?.data?.map(wo => ({ id: wo.id })) || []}
+                />
               </div>
 
               {/* Mobile Cards */}

@@ -160,11 +160,13 @@ export function createWorkOrderColumns({ unreadCounts, onView }: WorkOrderColumn
         ];
 
         return (
-          <TableActionsDropdown
-            actions={actions}
-            align="end"
-            itemName={`work order ${workOrder.work_order_number || workOrder.title}`}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <TableActionsDropdown
+              actions={actions}
+              align="end"
+              itemName={`work order ${workOrder.work_order_number || workOrder.title}`}
+            />
+          </div>
         );
       },
     },
