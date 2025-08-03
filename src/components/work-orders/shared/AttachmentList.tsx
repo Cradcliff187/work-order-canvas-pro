@@ -15,6 +15,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { TableActionsDropdown, type TableAction } from '@/components/ui/table-actions-dropdown';
 import { getFileIcon, getFileExtension } from '@/utils/fileTypeUtils';
 import { formatFileSize } from '@/utils/imageCompression';
@@ -126,71 +127,75 @@ export function AttachmentList({
         ];
 
         return (
-          <Card 
+          <SwipeableListItem
             key={attachment.id}
-            className="hover:shadow-sm transition-shadow"
+            onDelete={onDelete ? () => onDelete(attachment) : undefined}
+            itemName={attachment.file_name}
+            itemType="attachment"
           >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 min-h-[44px]">
-                {/* File Icon */}
-                <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                  <IconComponent className="w-6 h-6 text-muted-foreground" />
-                </div>
-                
-                {/* File Info */}
-                <div 
-                  className="flex-1 min-w-0 cursor-pointer"
-                  onClick={() => onView?.(attachment)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium text-sm truncate" title={attachment.file_name}>
-                      {attachment.file_name}
-                    </h4>
-                    <Badge 
-                      variant={attachment.file_type === 'photo' ? 'default' : 'secondary'}
-                      className="text-xs flex-shrink-0"
-                    >
-                      {getFileExtension(attachment.file_name).toUpperCase()}
-                    </Badge>
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 min-h-[44px]">
+                  {/* File Icon */}
+                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                    <IconComponent className="w-6 h-6 text-muted-foreground" />
                   </div>
                   
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <span>{formatFileSize(attachment.file_size)}</span>
-                      <span>•</span>
-                      <span>{format(new Date(attachment.uploaded_at), 'MMM d, yyyy')}</span>
-                    </div>
-                    {attachment.uploader_name && (
-                      <span className="truncate max-w-[120px]">
-                        By {attachment.uploader_name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Quick Action & Menu */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Quick view button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 hover:bg-muted"
+                  {/* File Info */}
+                  <div 
+                    className="flex-1 min-w-0 cursor-pointer"
                     onClick={() => onView?.(attachment)}
                   >
-                    <Eye className="w-4 h-4" />
-                    <span className="sr-only">View {attachment.file_name}</span>
-                  </Button>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-medium text-sm truncate" title={attachment.file_name}>
+                        {attachment.file_name}
+                      </h4>
+                      <Badge 
+                        variant={attachment.file_type === 'photo' ? 'default' : 'secondary'}
+                        className="text-xs flex-shrink-0"
+                      >
+                        {getFileExtension(attachment.file_name).toUpperCase()}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span>{formatFileSize(attachment.file_size)}</span>
+                        <span>•</span>
+                        <span>{format(new Date(attachment.uploaded_at), 'MMM d, yyyy')}</span>
+                      </div>
+                      {attachment.uploader_name && (
+                        <span className="truncate max-w-[120px]">
+                          By {attachment.uploader_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   
-                  {/* Actions dropdown */}
-                  <TableActionsDropdown 
-                    actions={actions}
-                    itemName={attachment.file_name}
-                    align="end"
-                  />
+                  {/* Quick Action & Menu */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Quick view button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 hover:bg-muted"
+                      onClick={() => onView?.(attachment)}
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="sr-only">View {attachment.file_name}</span>
+                    </Button>
+                    
+                    {/* Actions dropdown */}
+                    <TableActionsDropdown 
+                      actions={actions}
+                      itemName={attachment.file_name}
+                      align="end"
+                    />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </SwipeableListItem>
         );
       })}
     </div>
