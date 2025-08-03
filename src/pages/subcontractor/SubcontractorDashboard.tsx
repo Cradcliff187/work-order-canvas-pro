@@ -69,15 +69,29 @@ const SubcontractorDashboard = () => {
   ];
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="mb-8">
+    <div className="space-y-6">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Subcontractor Dashboard</h1>
         <p className="text-muted-foreground">Manage your assigned work orders and submit reports</p>
       </div>
 
-
-      {/* Summary Cards */}
-      <StandardDashboardStats stats={statsData} loading={assignedWorkOrders.isLoading} className="mb-8" />
+      {/* Summary Cards - 2x2 Grid for Desktop */}
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'}`}>
+        {statsData.map((stat, index) => (
+          <Card key={index}>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <stat.icon className="h-5 w-5 text-primary" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className="text-sm font-medium text-muted-foreground truncate">{stat.label}</div>
+                  <div className="text-xs text-muted-foreground">{stat.description}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       {/* Organization Team Context - Mobile Only */}
       {isMobile && (

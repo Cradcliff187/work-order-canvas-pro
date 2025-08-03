@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import { format } from 'date-fns';
 
 const SubcontractorWorkOrders = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { assignedWorkOrders } = useSubcontractorWorkOrders();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -163,7 +165,7 @@ const SubcontractorWorkOrders = () => {
 
                     <h4 className="font-medium text-foreground">{workOrder.title}</h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                    <div className={`grid gap-3 text-sm text-muted-foreground ${isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'}`}>
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4" />
                         <span>{workOrder.store_location}</span>

@@ -93,7 +93,7 @@ export default function SubcontractorWorkOrderDetail() {
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Work Order Number</Label>
                   <p className="text-sm font-bold">{workOrder.work_order_number || 'N/A'}</p>
