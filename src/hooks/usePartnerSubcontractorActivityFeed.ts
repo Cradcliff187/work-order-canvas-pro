@@ -403,6 +403,20 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
           queryClient.invalidateQueries({
             queryKey: ['partner-subcontractor-activity-feed', role, profile.id]
           });
+        }),
+
+      // Message read receipts - to update "New" status when messages are read
+      supabase
+        .channel('activity-read-receipts')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'message_read_receipts',
+          filter: `user_id=eq.${profile.id}`
+        }, () => {
+          queryClient.invalidateQueries({
+            queryKey: ['partner-subcontractor-activity-feed', role, profile.id]
+          });
         })
     ];
 
