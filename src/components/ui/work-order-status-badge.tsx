@@ -14,31 +14,31 @@ interface WorkOrderStatusBadgeProps {
 export const statusConfig: Record<WorkOrderStatus, { label: string; className: string }> = {
   received: { 
     label: 'Received', 
-    className: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700' 
+    className: 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30 shadow-sm font-semibold px-4 py-2 min-w-[120px] text-center' 
   },
   assigned: { 
     label: 'Assigned', 
-    className: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700' 
+    className: 'bg-gradient-to-r from-warning/20 to-warning/10 text-warning border-warning/30 shadow-sm font-semibold px-4 py-2 min-w-[120px] text-center' 
   },
   estimate_needed: { 
     label: 'Estimate Needed', 
-    className: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-700' 
+    className: 'bg-gradient-to-r from-orange-500/20 to-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 shadow-sm font-semibold px-4 py-2 min-w-[120px] text-center' 
   },
   estimate_approved: { 
     label: 'Estimate Approved', 
-    className: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-700' 
+    className: 'bg-gradient-to-r from-teal-500/20 to-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30 shadow-sm font-semibold px-4 py-2 min-w-[120px] text-center' 
   },
   in_progress: { 
     label: 'In Progress', 
-    className: 'bg-primary/10 text-primary border-primary/20 dark:bg-primary/20 dark:text-primary-foreground dark:border-primary/30' 
+    className: 'bg-gradient-to-r from-primary/30 to-primary/20 text-primary border-primary/40 shadow-md font-bold px-4 py-2 min-w-[120px] text-center animate-pulse' 
   },
   completed: { 
     label: 'Completed', 
-    className: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700' 
+    className: 'bg-gradient-to-r from-success/20 to-success/10 text-success border-success/30 shadow-sm font-semibold px-4 py-2 min-w-[120px] text-center' 
   },
   cancelled: { 
     label: 'Cancelled', 
-    className: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700' 
+    className: 'bg-gradient-to-r from-destructive/20 to-destructive/10 text-destructive border-destructive/30 shadow-sm font-semibold px-4 py-2 min-w-[120px] text-center' 
   },
 };
 
@@ -62,7 +62,7 @@ export const WorkOrderStatusBadge: React.FC<WorkOrderStatusBadgeProps> = ({
   }
   
   return (
-    <Badge variant="outline" className={cn(config.className, "px-3 py-1", className)}>
+    <Badge variant="outline" className={cn(config.className, "rounded-xl transition-all duration-300 hover:scale-105", className)}>
       {config.label}
     </Badge>
   );
