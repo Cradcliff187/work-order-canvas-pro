@@ -232,14 +232,15 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
         });
       }
 
-      // 4. Fetch reports (for partners to see when reports are submitted)
-      if (role === 'partner') {
-        const { data: reports } = await supabase
+      // 4. Fetch reports (role-specific visibility)
+      if (role === 'partner' || role === 'subcontractor') {
+        let reportsQuery = supabase
           .from('work_order_reports')
           .select(`
             id,
             work_order_id,
             submitted_at,
+            reviewed_at,
             status,
             subcontractor_user_id
           `)
@@ -247,6 +248,17 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
           .gte('submitted_at', cutoffDate.toISOString())
           .order('submitted_at', { ascending: false })
           .limit(10);
+
+        // Role-specific filtering
+        if (role === 'partner') {
+          // Partners only see approved reports
+          reportsQuery = reportsQuery.eq('status', 'approved');
+        } else if (role === 'subcontractor') {
+          // Subcontractors see all their own reports
+          reportsQuery = reportsQuery.eq('subcontractor_user_id', profile.id);
+        }
+
+        const { data: reports } = await reportsQuery;
 
         // Get submitter details separately
         const submitterIds = reports?.map(r => r.subcontractor_user_id).filter(Boolean) || [];
@@ -269,18 +281,51 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
             ? `${submitterProfile.first_name} ${submitterProfile.last_name}`
             : 'Subcontractor';
 
-          activities.push({
-            id: `report-${report.id}`,
-            type: report.status === 'approved' ? 'report_approved' : 'report_submitted',
-            work_order_id: report.work_order_id,
-            work_order_number: workOrder.work_order_number,
-            work_order_title: workOrder.title,
-            location: `${workOrder.store_location}, ${workOrder.city}`,
-            timestamp: report.submitted_at,
-            title: report.status === 'approved' ? 'Report approved' : 'Report submitted',
-            description: `${submitterName} ${report.status === 'approved' ? 'had their report approved' : 'submitted a work report'}`,
-            actionUrl: `/${role}/work-orders/${report.work_order_id}`
-          });
+          if (role === 'subcontractor') {
+            // For subcontractors, show submission activity
+            activities.push({
+              id: `report-${report.id}`,
+              type: 'report_submitted',
+              work_order_id: report.work_order_id,
+              work_order_number: workOrder.work_order_number,
+              work_order_title: workOrder.title,
+              location: `${workOrder.store_location}, ${workOrder.city}`,
+              timestamp: report.submitted_at,
+              title: 'Report submitted',
+              description: 'You submitted a work report',
+              actionUrl: `/${role}/work-orders/${report.work_order_id}`
+            });
+
+            // Add approval activity if approved and reviewed_at is different
+            if (report.status === 'approved' && report.reviewed_at && report.reviewed_at !== report.submitted_at) {
+              activities.push({
+                id: `report-approved-${report.id}`,
+                type: 'report_approved',
+                work_order_id: report.work_order_id,
+                work_order_number: workOrder.work_order_number,
+                work_order_title: workOrder.title,
+                location: `${workOrder.store_location}, ${workOrder.city}`,
+                timestamp: report.reviewed_at,
+                title: 'Report approved',
+                description: 'Your report was approved',
+                actionUrl: `/${role}/work-orders/${report.work_order_id}`
+              });
+            }
+          } else if (role === 'partner') {
+            // For partners, only show approved reports
+            activities.push({
+              id: `report-approved-${report.id}`,
+              type: 'report_approved',
+              work_order_id: report.work_order_id,
+              work_order_number: workOrder.work_order_number,
+              work_order_title: workOrder.title,
+              location: `${workOrder.store_location}, ${workOrder.city}`,
+              timestamp: report.reviewed_at || report.submitted_at,
+              title: 'Report approved',
+              description: `${submitterName} had their report approved`,
+              actionUrl: `/${role}/work-orders/${report.work_order_id}`
+            });
+          }
         });
       }
 
