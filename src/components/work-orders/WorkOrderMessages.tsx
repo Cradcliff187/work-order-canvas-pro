@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Users, Lock, Circle, Clock, Camera, X, Image, HardHat } from 'lucide-react';
+import { MessageCircle, Users, Lock, Circle, Clock, Paperclip, X, HardHat } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage, WorkOrderMessagesResult, WorkOrderAttachment } from '@/hooks/useWorkOrderMessages';
 import { usePostMessage } from '@/hooks/usePostMessage';
@@ -21,6 +21,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FileUpload } from '@/components/FileUpload';
 import { MobileFileUpload } from '@/components/MobileFileUpload';
+import { ALL_SUPPORTED_TYPES, getSupportedFormatsText, getFileIcon, formatFileSize, isImageFile } from '@/utils/fileUtils';
 
 interface WorkOrderMessagesProps {
   workOrderId: string;
@@ -289,10 +290,12 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       <div className="mt-3 flex flex-wrap gap-2">
         {attachments.map((attachment) => {
           const publicUrl = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url).data.publicUrl;
+          const isImage = isImageFile(attachment.file_name, attachment.file_type);
+          const IconComponent = require('lucide-react')[getFileIcon(attachment.file_name, attachment.file_type)] || require('lucide-react').File;
           
           return (
             <div key={attachment.id} className="relative group">
-              {attachment.file_type === 'photo' ? (
+              {isImage ? (
                 <img
                   src={publicUrl}
                   alt={attachment.file_name}
@@ -301,10 +304,14 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                 />
               ) : (
                 <div 
-                  className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors"
+                  className="w-20 h-20 bg-muted rounded-lg border flex flex-col items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors p-1"
                   onClick={() => window.open(publicUrl, '_blank')}
+                  title={attachment.file_name}
                 >
-                  <Image className="h-8 w-8 text-muted-foreground" />
+                  <IconComponent className="h-6 w-6 text-muted-foreground mb-1" />
+                  <span className="text-xs text-muted-foreground text-center leading-tight truncate w-full">
+                    {attachment.file_name.split('.').pop()?.toUpperCase()}
+                  </span>
                 </div>
               )}
               {attachments.length > 1 && (
@@ -482,7 +489,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         {selectedFiles.length > 0 && (
           <div className="border rounded-lg p-3 bg-muted/50">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Selected Photos ({selectedFiles.length})</span>
+              <span className="text-sm font-medium">Selected Files ({selectedFiles.length})</span>
               <Button
                 type="button"
                 variant="ghost"
@@ -494,25 +501,42 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {selectedFiles.map((file, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="w-16 h-16 object-cover rounded border"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0"
-                    onClick={() => handleRemoveFile(index)}
-                    disabled={postMessage.isPending || isUploading}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
+              {selectedFiles.map((file, index) => {
+                const isImage = isImageFile(file.name, file.type);
+                const IconComponent = require('lucide-react')[getFileIcon(file.name, file.type)] || require('lucide-react').File;
+                
+                return (
+                  <div key={index} className="relative">
+                    {isImage ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-16 h-16 object-cover rounded border"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-muted rounded border flex flex-col items-center justify-center p-1">
+                        <IconComponent className="h-6 w-6 text-muted-foreground mb-1" />
+                        <span className="text-xs text-muted-foreground text-center leading-tight truncate w-full">
+                          {file.name.split('.').pop()?.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute -top-1 -right-1 h-5 w-5 p-0"
+                      onClick={() => handleRemoveFile(index)}
+                      disabled={postMessage.isPending || isUploading}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              {getSupportedFormatsText()}
             </div>
           </div>
         )}
@@ -520,7 +544,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         {/* File Upload Progress */}
         {isUploading && (
           <div className="text-sm text-muted-foreground">
-            Uploading photos...
+            Uploading files...
           </div>
         )}
         
@@ -553,7 +577,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               Clear
             </Button>
             
-            {/* Camera/Photo Button */}
+            {/* File Attachment Button */}
             {isMobile ? (
               <Button
                 type="button"
@@ -562,8 +586,8 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                 disabled={postMessage.isPending || isUploading}
                 className="flex items-center gap-2"
               >
-                <Camera className="h-4 w-4" />
-                Photos
+                <Paperclip className="h-4 w-4" />
+                Files
               </Button>
             ) : (
               <Dialog>
@@ -574,19 +598,19 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
                     disabled={postMessage.isPending || isUploading}
                     className="flex items-center gap-2"
                   >
-                    <Camera className="h-4 w-4" />
-                    Add Photos
+                    <Paperclip className="h-4 w-4" />
+                    Add Files
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Add Photos</DialogTitle>
+                    <DialogTitle>Add Files</DialogTitle>
                   </DialogHeader>
                   <FileUpload
                     onFilesSelected={handleFilesSelected}
                     maxFiles={3}
                     maxSizeBytes={10 * 1024 * 1024}
-                    acceptedTypes={['image/jpeg', 'image/jpg', 'image/png', 'image/webp']}
+                    acceptedTypes={ALL_SUPPORTED_TYPES}
                   />
                 </DialogContent>
               </Dialog>
@@ -608,8 +632,8 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
               onFilesSelected={handleFilesSelected}
               maxFiles={3}
               maxSizeBytes={10 * 1024 * 1024}
-              acceptedTypes={['image/jpeg', 'image/jpg', 'image/png', 'image/webp']}
-              showDocumentButton={false}
+              acceptedTypes={ALL_SUPPORTED_TYPES}
+              showDocumentButton={true}
             />
           </div>
         )}
