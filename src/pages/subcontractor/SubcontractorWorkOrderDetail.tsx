@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { WorkOrderMessages } from '@/components/work-orders/WorkOrderMessages';
 import { MessageErrorBoundary } from '@/components/work-orders/MessageErrorBoundary';
 import { AttachmentSection } from '@/components/work-orders/shared/AttachmentSection';
+import { useFileUpload } from '@/hooks/useFileUpload';
 import type { AttachmentItem } from '@/components/work-orders/shared/AttachmentSection';
 
 export default function SubcontractorWorkOrderDetail() {
@@ -24,7 +25,8 @@ export default function SubcontractorWorkOrderDetail() {
   const { toast } = useToast();
   const { user, profile } = useAuth();
   
-  const { data: workOrder, isLoading, error } = useWorkOrderDetail(id || '');
+  const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id || '');
+  const { uploadFiles } = useFileUpload();
 
   if (isLoading) {
     return <div>Loading work order details...</div>;
@@ -192,11 +194,11 @@ export default function SubcontractorWorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Attachments - View Only for Subcontractors */}
+          {/* Project Files with Upload Capability */}
           <Card>
             <CardHeader>
               <CardTitle>Project Files</CardTitle>
-              <CardDescription>View and download files related to this work order</CardDescription>
+              <CardDescription>Upload, view and download files related to this work order</CardDescription>
             </CardHeader>
             <CardContent>
               <AttachmentSection
@@ -213,7 +215,15 @@ export default function SubcontractorWorkOrderDetail() {
                   uploader_email: '' // Email not available in current schema
                 }))}
                 workOrderId={workOrder.id}
-                canUpload={false} // Subcontractors cannot upload files directly - use messages for communication
+                canUpload={true}
+                onUpload={async (files) => {
+                  try {
+                    await uploadFiles(files, workOrder.id);
+                    await refetch();
+                  } catch (error) {
+                    console.error('Upload failed:', error);
+                  }
+                }}
                 onView={(attachment) => {
                   const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
                   window.open(data.publicUrl, '_blank');
