@@ -121,31 +121,77 @@ export function useWorkOrderMessages(
             
             readCount = readReceipts?.length || 0;
             
-            // Estimate total recipients based on work order participants
-            const { data: assignments } = await supabase
-              .from('work_order_assignments')
-              .select('assigned_to')
-              .eq('work_order_id', workOrderId);
-            
+            // Calculate total recipients based on message visibility rules
             const { data: workOrder } = await supabase
               .from('work_orders')
-              .select('organization_id, created_by')
+              .select('organization_id, assigned_organization_id')
               .eq('id', workOrderId)
               .single();
             
             if (workOrder) {
-              const { data: orgUsers } = await supabase
-                .from('organization_members')
-                .select('user_id')
-                .eq('organization_id', workOrder.organization_id);
+              const uniqueUsers = new Set<string>();
               
-              const uniqueUsers = new Set([
-                workOrder.created_by,
-                ...(assignments?.map(a => a.assigned_to) || []),
-                ...(orgUsers?.map(om => om.user_id) || [])
-              ]);
+              if (message.is_internal) {
+                // INTERNAL messages: admins + assigned subcontractors + assigned employees only
+                
+                // Get internal organization members (admins + employees)
+                const { data: internalUsers } = await supabase
+                  .from('organization_members')
+                  .select(`
+                    user_id,
+                    role,
+                    organization:organizations!organization_id(organization_type)
+                  `)
+                  .eq('organization.organization_type', 'internal');
+                
+                // Add all internal users (admins and employees)
+                internalUsers?.forEach(user => {
+                  if (user.user_id) uniqueUsers.add(user.user_id);
+                });
+                
+                // Get assigned subcontractors from work order assignments
+                if (workOrder.assigned_organization_id) {
+                  const { data: assignedSubcontractors } = await supabase
+                    .from('organization_members')
+                    .select('user_id')
+                    .eq('organization_id', workOrder.assigned_organization_id);
+                  
+                  assignedSubcontractors?.forEach(user => {
+                    if (user.user_id) uniqueUsers.add(user.user_id);
+                  });
+                }
+                
+              } else {
+                // PUBLIC messages: admins + employees + partner organization members
+                
+                // Get internal organization members (admins + employees)
+                const { data: internalUsers } = await supabase
+                  .from('organization_members')
+                  .select(`
+                    user_id,
+                    organization:organizations!organization_id(organization_type)
+                  `)
+                  .eq('organization.organization_type', 'internal');
+                
+                // Add internal users
+                internalUsers?.forEach(user => {
+                  if (user.user_id) uniqueUsers.add(user.user_id);
+                });
+                
+                // Get partner organization members
+                const { data: partnerUsers } = await supabase
+                  .from('organization_members')
+                  .select('user_id')
+                  .eq('organization_id', workOrder.organization_id);
+                
+                partnerUsers?.forEach(user => {
+                  if (user.user_id) uniqueUsers.add(user.user_id);
+                });
+              }
               
-              totalRecipients = Math.max(uniqueUsers.size - 1, 0); // Exclude sender
+              // Remove sender from count
+              uniqueUsers.delete(message.sender_id);
+              totalRecipients = uniqueUsers.size;
             }
           }
 
