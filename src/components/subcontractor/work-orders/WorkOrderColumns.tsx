@@ -24,12 +24,14 @@ export interface WorkOrder {
 
 interface WorkOrderColumnProps {
   unreadCounts: Record<string, number>;
+  onPreview?: (workOrder: WorkOrder) => void;
   onView: (workOrder: WorkOrder) => void;
   onSubmitReport?: (workOrder: WorkOrder) => void;
 }
 
 export function createSubcontractorWorkOrderColumns({ 
   unreadCounts, 
+  onPreview,
   onView, 
   onSubmitReport
 }: WorkOrderColumnProps): ColumnDef<WorkOrder>[] {

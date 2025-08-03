@@ -94,7 +94,8 @@ const SubcontractorWorkOrders = () => {
 
   // Table columns 
   const columns = useMemo(() => createSubcontractorWorkOrderColumns({ 
-    unreadCounts, 
+    unreadCounts,
+    onPreview: (workOrder) => setSelectedWorkOrderId(workOrder.id),
     onView: (workOrder) => navigate(`/subcontractor/work-orders/${workOrder.id}`),
     onSubmitReport: (workOrder) => navigate(`/subcontractor/work-orders/${workOrder.id}?action=submit-report`)
   }), [unreadCounts, navigate]);
