@@ -88,7 +88,7 @@ export function MobileWorkOrderCard({
   onTap, 
   onSwipeLeft, 
   onSwipeRight,
-  showActions = false,
+  showActions: showActionsDefault = false,
   showAssignee = true,
   showOrganization = true,
   showInvoiceAmount = true,
@@ -100,30 +100,57 @@ export function MobileWorkOrderCard({
 }: MobileWorkOrderCardProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
+  const [swipeOffset, setSwipeOffset] = React.useState(0);
+  const [isSwipeActive, setIsSwipeActive] = React.useState(false);
+  const [showActionsState, setShowActionsState] = React.useState(false);
 
-  const minSwipeDistance = 50;
+  const minSwipeDistance = 80;
+  const maxSwipeDistance = 120;
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
+    setIsSwipeActive(true);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (!touchStart || !isSwipeActive) return;
+    
+    const currentX = e.targetTouches[0].clientX;
+    const distance = touchStart - currentX;
+    
+    // Only allow left swipes for revealing actions
+    if (distance > 0) {
+      const offset = Math.min(distance, maxSwipeDistance);
+      setSwipeOffset(offset);
+    }
+    
+    setTouchEnd(currentX);
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    setIsSwipeActive(false);
+    
+    if (!touchStart || !touchEnd) {
+      setSwipeOffset(0);
+      return;
+    }
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
 
-    if (isLeftSwipe && onSwipeLeft) {
-      onSwipeLeft(workOrder);
-    }
-    if (isRightSwipe && onSwipeRight) {
-      onSwipeRight(workOrder);
+    if (isLeftSwipe) {
+      // Show action buttons
+      setShowActionsState(true);
+      setSwipeOffset(maxSwipeDistance);
+      // Add haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+    } else {
+      // Reset swipe state
+      setShowActionsState(false);
+      setSwipeOffset(0);
     }
   };
 
@@ -173,13 +200,43 @@ export function MobileWorkOrderCard({
   };
 
   return (
-    <Card 
-      className="mb-4 touch-manipulation active:scale-95 transition-transform duration-150 min-h-[44px] card-hover"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onClick={handleTap}
-    >
+    <div className="relative mb-4 overflow-hidden">
+      {/* Swipe Action Background */}
+      {showActionsState && (
+        <div className="absolute inset-y-0 right-0 flex items-center bg-gradient-to-l from-primary to-primary-glow text-primary-foreground px-4 z-10">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-primary-foreground hover:bg-primary-foreground/20 touch-target"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (workOrder.status === 'assigned') {
+                  // Start work action
+                } else if (workOrder.status === 'in_progress') {
+                  // Submit report action
+                }
+                setShowActionsState(false);
+                setSwipeOffset(0);
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      <Card 
+        className="touch-manipulation active:scale-95 transition-all duration-150 min-h-[48px] card-hover touch-action-pan-y"
+        style={{
+          transform: `translateX(-${swipeOffset}px)`,
+          transition: isSwipeActive ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={showActionsState ? undefined : handleTap}
+      >
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
@@ -332,23 +389,24 @@ export function MobileWorkOrderCard({
           )}
         </div>
 
-        {showActions && (
+        {/* Static Action Buttons */}
+        {showActionsDefault && (
           <div className="flex gap-2 mt-3 pt-3 border-t">
-            <Button size="default" variant="outline" className="flex-1 min-h-[44px]">
+            <Button size="default" variant="outline" className="flex-1 mobile-button touch-target">
               View Details
             </Button>
             {viewerRole === 'subcontractor' && workOrder.status === 'assigned' && (
-              <Button size="default" className="flex-1 min-h-[44px]">
+              <Button size="default" className="flex-1 mobile-button touch-target">
                 Start Work
               </Button>
             )}
             {viewerRole === 'subcontractor' && workOrder.status === 'in_progress' && (
-              <Button size="default" className="flex-1 min-h-[44px]">
+              <Button size="default" className="flex-1 mobile-button touch-target">
                 Submit Report
               </Button>
             )}
             {viewerRole === 'partner' && workOrder.status === 'received' && (
-              <Button size="default" className="flex-1 min-h-[44px]">
+              <Button size="default" className="flex-1 mobile-button touch-target">
                 Assign
               </Button>
             )}
@@ -356,5 +414,6 @@ export function MobileWorkOrderCard({
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }

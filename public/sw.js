@@ -1,18 +1,28 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const API_CACHE = `api-${CACHE_VERSION}`;
+const WORK_ORDER_CACHE = `work-orders-${CACHE_VERSION}`;
+const OFFLINE_QUEUE = 'offline-queue';
 
 // Essential resources that we know exist
 const CORE_ASSETS = [
   '/',
-  '/offline.html'
+  '/offline.html',
+  '/manifest.json'
 ];
 
 // Supabase API patterns to cache
 const API_PATTERNS = [
   'supabase.co',
   '/rest/v1/'
+];
+
+// Work order related API endpoints for enhanced caching
+const WORK_ORDER_PATTERNS = [
+  '/rest/v1/work_orders',
+  '/rest/v1/work_order_reports',
+  '/rest/v1/organizations'
 ];
 
 // Install event - initialize caches
@@ -22,8 +32,11 @@ self.addEventListener('install', (event) => {
       caches.open(STATIC_CACHE),
       caches.open(DYNAMIC_CACHE),
       caches.open(API_CACHE),
+      caches.open(WORK_ORDER_CACHE),
       // Pre-cache only essential resources
-      cacheEssentialResources()
+      cacheEssentialResources(),
+      // Initialize offline queue
+      initializeOfflineQueue()
     ])
   );
   self.skipWaiting();
@@ -55,13 +68,23 @@ async function cacheEssentialResources() {
 
 async function cleanupCaches() {
   const cacheNames = await caches.keys();
-  const validCaches = [STATIC_CACHE, DYNAMIC_CACHE, API_CACHE];
+  const validCaches = [STATIC_CACHE, DYNAMIC_CACHE, API_CACHE, WORK_ORDER_CACHE];
   
   return Promise.all(
     cacheNames
       .filter(name => !validCaches.includes(name))
       .map(name => caches.delete(name))
   );
+}
+
+async function initializeOfflineQueue() {
+  // Initialize IndexedDB for offline queue if needed
+  try {
+    const cache = await caches.open(OFFLINE_QUEUE);
+    return cache;
+  } catch (error) {
+    console.log('Failed to initialize offline queue:', error);
+  }
 }
 
 // Fetch event - implement caching strategies
@@ -74,7 +97,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle API requests (Supabase)
+  // Handle work order API requests with enhanced caching
+  if (isWorkOrderRequest(url)) {
+    event.respondWith(networkFirstWithCache(request, WORK_ORDER_CACHE));
+    return;
+  }
+
+  // Handle other API requests (Supabase)
   if (isApiRequest(url)) {
     event.respondWith(networkFirstWithCache(request, API_CACHE));
     return;
@@ -99,6 +128,10 @@ self.addEventListener('fetch', (event) => {
 // Helper functions for request classification
 function isApiRequest(url) {
   return API_PATTERNS.some(pattern => url.href.includes(pattern));
+}
+
+function isWorkOrderRequest(url) {
+  return WORK_ORDER_PATTERNS.some(pattern => url.href.includes(pattern));
 }
 
 function isStaticAsset(url) {
@@ -201,25 +234,61 @@ async function networkFirstWithFallback(request) {
   }
 }
 
-// Background sync for form submissions
+// Enhanced background sync for work order operations
 self.addEventListener('sync', (event) => {
+  console.log('Background sync triggered:', event.tag);
+  
   if (event.tag === 'work-order-report') {
-    event.waitUntil(handleBackgroundSync());
+    event.waitUntil(handleWorkOrderReportSync());
+  } else if (event.tag === 'work-order-submission') {
+    event.waitUntil(handleWorkOrderSubmissionSync());
+  } else if (event.tag === 'offline-actions') {
+    event.waitUntil(handleOfflineActionsSync());
   }
 });
 
-async function handleBackgroundSync() {
-  // Use postMessage to communicate with main thread
+async function handleWorkOrderReportSync() {
   try {
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
       client.postMessage({
         type: 'BACKGROUND_SYNC',
-        tag: 'work-order-report'
+        tag: 'work-order-report',
+        timestamp: Date.now()
       });
     });
   } catch (error) {
-    console.error('Background sync communication failed:', error);
+    console.error('Work order report sync failed:', error);
+  }
+}
+
+async function handleWorkOrderSubmissionSync() {
+  try {
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'BACKGROUND_SYNC',
+        tag: 'work-order-submission',
+        timestamp: Date.now()
+      });
+    });
+  } catch (error) {
+    console.error('Work order submission sync failed:', error);
+  }
+}
+
+async function handleOfflineActionsSync() {
+  try {
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'BACKGROUND_SYNC',
+        tag: 'offline-actions',
+        timestamp: Date.now()
+      });
+    });
+  } catch (error) {
+    console.error('Offline actions sync failed:', error);
   }
 }
 

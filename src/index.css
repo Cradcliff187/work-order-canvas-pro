@@ -120,8 +120,36 @@
     @apply border-border;
   }
 
+  html {
+    /* iOS viewport fix for 100vh issues */
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+
   body {
     @apply bg-background text-foreground;
+    /* Prevent input zoom on iOS */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    /* Support for safe area insets */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Prevent input zoom on iOS by ensuring minimum font size */
+  input, textarea, select {
+    font-size: 16px;
+  }
+
+  /* Touch action optimizations */
+  .touch-action-pan-y {
+    touch-action: pan-y;
+  }
+
+  .touch-action-manipulation {
+    touch-action: manipulation;
   }
 }
 
@@ -234,5 +262,42 @@
     .admin-table tbody tr:hover {
       @apply bg-muted/30;
     }
+  }
+
+  /* Mobile touch targets - ensure 48px minimum */
+  @media (max-width: 767px) {
+    .touch-target {
+      min-height: 48px;
+      min-width: 48px;
+    }
+
+    .mobile-button {
+      min-height: 48px;
+      padding: 12px 16px;
+    }
+
+    .mobile-input {
+      min-height: 48px;
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
+  }
+
+  /* Swipe animations */
+  .swipe-reveal {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .swipe-action {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-primary);
+    color: white;
+    font-weight: 600;
+    z-index: 1;
   }
 }
