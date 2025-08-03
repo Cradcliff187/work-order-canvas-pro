@@ -140,35 +140,25 @@ export default function SubcontractorWorkOrderDetail() {
               </div>
 
               {/* Contact Details */}
-              {(workOrder.location_contact_name || workOrder.location_contact_phone || workOrder.location_contact_email) && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <p className="text-sm font-semibold text-foreground">Contact Details</p>
-                    
-                    {workOrder.location_contact_name && (
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
-                        <p className="text-sm">{workOrder.location_contact_name}</p>
-                      </div>
-                    )}
-                    
-                    {workOrder.location_contact_phone && (
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
-                        <p className="text-sm">{workOrder.location_contact_phone}</p>
-                      </div>
-                    )}
-                    
-                    {workOrder.location_contact_email && (
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Email</Label>
-                        <p className="text-sm">{workOrder.location_contact_email}</p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+              <Separator />
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground">Contact Details</p>
+                
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
+                  <p className="text-sm">{workOrder.location_contact_name || 'Not specified'}</p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                  <p className="text-sm">{workOrder.location_contact_phone || 'Not specified'}</p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                  <p className="text-sm">{workOrder.location_contact_email || 'Not specified'}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
