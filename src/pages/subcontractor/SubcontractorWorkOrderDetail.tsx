@@ -51,6 +51,25 @@ export default function SubcontractorWorkOrderDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Organization Info */}
+          {workOrder.organizations && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-medium">
+                      {workOrder.organizations.name}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {workOrder.organizations.contact_email}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Work Order Details Card */}
           <Card>
             <CardHeader>
@@ -61,6 +80,17 @@ export default function SubcontractorWorkOrderDetail() {
               <CardDescription>
                 Details about this work order
               </CardDescription>
+              {/* Submit Report Button */}
+              {(workOrder.status === 'assigned' || workOrder.status === 'in_progress') && (
+                <div className="mt-4">
+                  <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
+                    <Button className="w-full">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Submit Report
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,43 +296,7 @@ export default function SubcontractorWorkOrderDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Action Buttons */}
-          {workOrder.status === 'assigned' || workOrder.status === 'in_progress' ? (
-            <Card>
-              <CardContent className="p-4">
-                <Link to={`/subcontractor/reports/new/${workOrder.id}`}>
-                  <Button className="w-full">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Submit Report
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {/* Organization Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Organization Info
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src="https://github.com/shadcn.png" alt="Organization Avatar" />
-                  <AvatarFallback>{workOrder.organizations?.name?.substring(0, 2).toUpperCase() || 'N/A'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">{workOrder.organizations?.name || 'N/A'}</div>
-                  <div className="text-sm text-muted-foreground">{workOrder.organizations?.contact_email || 'N/A'}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-
+          {/* Additional sidebar content can go here if needed */}
         </div>
       </div>
     </div>

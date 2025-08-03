@@ -257,19 +257,6 @@ export default function WorkOrderDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Status Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WorkOrderStatusBadge status={workOrder.status} />
-            </CardContent>
-          </Card>
-
           {/* Assigned User */}
           {workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0 && (
             <Card>
@@ -286,7 +273,6 @@ export default function WorkOrderDetail() {
               </CardContent>
             </Card>
           )}
-
         </div>
       </div>
     </div>
