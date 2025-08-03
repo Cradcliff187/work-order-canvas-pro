@@ -162,169 +162,187 @@ export function AttachmentUpload({
     handleFilesSelected(acceptedFiles);
   }, [handleFilesSelected]);
 
-  const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject, open } = useDropzone({
     onDrop,
     accept: { '*/*': [] },
     disabled: disabled || isUploading,
-    multiple: true
+    multiple: true,
+    noClick: false,
+    noKeyboard: false
   });
 
-  const DesktopUpload = () => (
-    <div className={cn("space-y-4", className)}>
-      {/* Drag and drop zone */}
-      <div
-        {...getRootProps()}
-        className={cn(
-          "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
-          isDragActive && "border-primary bg-primary/5",
-          isDragAccept && "border-primary bg-primary/5",
-          isDragReject && "border-destructive bg-destructive/5",
-          !isDragActive && "border-muted-foreground/25 hover:border-muted-foreground/50",
-          (disabled || isUploading) && "opacity-50 cursor-not-allowed"
-        )}
-      >
-        <input {...getInputProps()} />
-        <div className="space-y-4">
-          <Upload className={cn(
-            "w-12 h-12 mx-auto",
-            isDragActive ? "text-primary" : "text-muted-foreground"
-          )} />
-          <div className="space-y-2">
-            <p className="text-lg font-medium">
-              {isDragActive ? "Drop files here" : "Drag & drop files here"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              or click to browse
-            </p>
-            <p className="text-xs text-muted-foreground">
-              All file types supported • Max {formatFileSize(maxFileSize)} per file • Up to {maxFiles} files
-            </p>
-          </div>
-        </div>
-      </div>
+  const DesktopUpload = () => {
+    // Handle explicit click for browse functionality
+    const handleBrowseClick = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!disabled && !isUploading) {
+        open();
+      }
+    }, [disabled, isUploading, open]);
 
-      {/* Errors */}
-      {errors.length > 0 && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-          {errors.map((error, i) => (
-            <p key={i} className="text-sm text-destructive">{error}</p>
-          ))}
-        </div>
-      )}
-
-      {/* Selected files */}
-      {selectedFiles.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">
-                {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Total size: {formatFileSize(totalSize)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearFiles}
-                disabled={isUploading}
-              >
-                Clear All
-              </Button>
-              <Button
-                onClick={handleUpload}
-                disabled={isUploading || selectedFiles.length === 0}
-                size="sm"
-              >
-                {isUploading ? (
-                  <>
-                    <Upload className="w-4 h-4 mr-2 animate-pulse" />
-                    Uploading... {totalProgress}%
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Files
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* File list */}
-          <div className="grid gap-2">
-            {selectedFiles.map((filePreview) => {
-              const progress = getFileProgress(filePreview.file.name);
-              const IconComponent = getFileIcon(filePreview.file.name, filePreview.file.type) === 'image' 
-                ? ImageIcon : File;
-
-              return (
-                <Card key={filePreview.id} className="p-3">
-                  <div className="flex items-center gap-3">
-                    {/* Preview or icon */}
-                    <div className="w-10 h-10 rounded overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                      {filePreview.previewUrl ? (
-                        <img
-                          src={filePreview.previewUrl}
-                          alt={filePreview.file.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <IconComponent className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </div>
-
-                    {/* File info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {filePreview.file.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(filePreview.file.size)}
-                      </p>
-                      {isUploading && progress > 0 && (
-                        <div className="mt-2">
-                          <Progress value={progress} className="h-1" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Remove button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(filePreview.id)}
-                      disabled={isUploading}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Upload progress */}
-      {isUploading && (
-        <Card>
-          <CardContent className="p-4">
+    return (
+      <div className={cn("space-y-4", className)}>
+        {/* Drag and drop zone */}
+        <div
+          {...getRootProps()}
+          className={cn(
+            "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
+            isDragActive && "border-primary bg-primary/5",
+            isDragAccept && "border-primary bg-primary/5",
+            isDragReject && "border-destructive bg-destructive/5",
+            !isDragActive && "border-muted-foreground/25 hover:border-muted-foreground/50",
+            (disabled || isUploading) && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          <input {...getInputProps()} />
+          <div className="space-y-4">
+            <Upload className={cn(
+              "w-12 h-12 mx-auto",
+              isDragActive ? "text-primary" : "text-muted-foreground"
+            )} />
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Uploading files...</span>
-                <span>{totalProgress}%</span>
-              </div>
-              <Progress value={totalProgress} className="h-2" />
+              <p className="text-lg font-medium">
+                {isDragActive ? "Drop files here" : "Drag & drop files here"}
+              </p>
+              <button
+                type="button"
+                onClick={handleBrowseClick}
+                className="text-sm text-primary hover:text-primary/80 underline-offset-4 hover:underline transition-colors"
+                disabled={disabled || isUploading}
+              >
+                or click to browse
+              </button>
+              <p className="text-xs text-muted-foreground">
+                All file types supported • Max {formatFileSize(maxFileSize)} per file • Up to {maxFiles} files
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+          </div>
+        </div>
+
+        {/* Errors */}
+        {errors.length > 0 && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+            {errors.map((error, i) => (
+              <p key={i} className="text-sm text-destructive">{error}</p>
+            ))}
+          </div>
+        )}
+
+        {/* Selected files */}
+        {selectedFiles.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Total size: {formatFileSize(totalSize)}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFiles}
+                  disabled={isUploading}
+                >
+                  Clear All
+                </Button>
+                <Button
+                  onClick={handleUpload}
+                  disabled={isUploading || selectedFiles.length === 0}
+                  size="sm"
+                >
+                  {isUploading ? (
+                    <>
+                      <Upload className="w-4 h-4 mr-2 animate-pulse" />
+                      Uploading... {totalProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Files
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* File list */}
+            <div className="grid gap-2">
+              {selectedFiles.map((filePreview) => {
+                const progress = getFileProgress(filePreview.file.name);
+                const IconComponent = getFileIcon(filePreview.file.name, filePreview.file.type) === 'image' 
+                  ? ImageIcon : File;
+
+                return (
+                  <Card key={filePreview.id} className="p-3">
+                    <div className="flex items-center gap-3">
+                      {/* Preview or icon */}
+                      <div className="w-10 h-10 rounded overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                        {filePreview.previewUrl ? (
+                          <img
+                            src={filePreview.previewUrl}
+                            alt={filePreview.file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <IconComponent className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+
+                      {/* File info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {filePreview.file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(filePreview.file.size)}
+                        </p>
+                        {isUploading && progress > 0 && (
+                          <div className="mt-2">
+                            <Progress value={progress} className="h-1" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Remove button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(filePreview.id)}
+                        disabled={isUploading}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Upload progress */}
+        {isUploading && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Uploading files...</span>
+                  <span>{totalProgress}%</span>
+                </div>
+                <Progress value={totalProgress} className="h-2" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
 
   // Mobile upload options
   const handleCameraCapture = () => {
