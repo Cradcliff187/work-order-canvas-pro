@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* WorkOrderPortal Design System - AKC Construction Management SaaS */
+/* AKC Construction Services Design System - Professional Construction Management */
 
 @layer base {
   :root {
@@ -48,7 +48,7 @@
 
     --radius: 0.5rem;
 
-    /* Professional gradients for WorkOrderPortal */
+    /* Professional gradients for AKC Construction Services */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-surface: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
 
@@ -154,18 +154,11 @@
 }
 
 @layer components {
-  /* Smooth transition utilities */
+  /* Accessibility-first animations with prefers-reduced-motion support */
   .smooth-transition {
     transition: all 200ms ease-in-out;
   }
   
-  @media (prefers-reduced-motion: reduce) {
-    .smooth-transition {
-      transition: none;
-    }
-  }
-  
-  /* Performance optimized variants */
   .smooth-transition-colors {
     transition: color 200ms ease-in-out, background-color 200ms ease-in-out, border-color 200ms ease-in-out;
   }
@@ -174,11 +167,30 @@
     transition: transform 200ms ease-in-out;
     will-change: transform;
   }
-  
+
+  /* Entrance animations */
+  .fade-in-up {
+    animation: fadeInUp 0.4s ease-out;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  /* Respect user's motion preferences */
   @media (prefers-reduced-motion: reduce) {
+    .smooth-transition,
     .smooth-transition-colors,
-    .smooth-transition-transform {
-      transition: none;
+    .smooth-transition-transform,
+    .fade-in-up,
+    .fade-in,
+    .scale-in {
+      animation: none !important;
+      transition: none !important;
       will-change: auto;
     }
   }
@@ -299,5 +311,58 @@
     color: white;
     font-weight: 600;
     z-index: 1;
+  }
+
+  /* Cross-browser compatibility fixes */
+  .no-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* WebKit specific fixes */
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-results-button,
+  input[type="search"]::-webkit-search-results-decoration {
+    display: none;
+  }
+
+  /* Firefox specific fixes */
+  @-moz-document url-prefix() {
+    .firefox-fix {
+      scrollbar-width: thin;
+    }
+  }
+}
+
+/* Keyframes for entrance animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

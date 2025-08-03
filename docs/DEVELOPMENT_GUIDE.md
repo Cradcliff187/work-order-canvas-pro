@@ -156,14 +156,14 @@ const response = await supabase.functions.invoke('create-test-users', {
 ### Test Data Patterns
 
 **Organizations (8 total):**
-- 1 Internal: WorkOrderPortal Internal
+- 1 Internal: AKC Construction Services
 - 3 Partners: ABC Property, XYZ Commercial, Premium Facilities
 - 4 Subcontractors: Pipes & More, Sparks Electric, etc.
 
 **Test Users (5 total):**
 - `partner1@abc.com` / `partner2@xyz.com` - Partner users
 - `sub1@pipes.com` / `sub2@sparks.com` - Subcontractor users
-- `employee1@workorderportal.com` - Internal employee
+- `employee1@akcconstruction.com` - Internal employee
 - **Password**: `Test123!` for all users
 
 ## Common Pitfalls & Solutions

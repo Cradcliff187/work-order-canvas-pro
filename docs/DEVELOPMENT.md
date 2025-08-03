@@ -146,7 +146,7 @@ const response = await fetch('/api/create-test-users', {
 - **partner2@xyz.com** - XYZ Commercial Properties partner user  
 - **sub1@pipes.com** - Pipes & More Plumbing subcontractor
 - **sub2@sparks.com** - Sparks Electric subcontractor
-- **employee1@workorderportal.com** - Internal employee with rates
+- **employee1@akcconstruction.com** - Internal employee with rates
 
 **Default Test Password:** `Test123!` (for all created users)
 
@@ -165,7 +165,7 @@ const testCredentials = {
   partner2: { email: 'partner2@xyz.com', password: 'Test123!' },
   subcontractor1: { email: 'sub1@pipes.com', password: 'Test123!' },
   subcontractor2: { email: 'sub2@sparks.com', password: 'Test123!' },
-  employee: { email: 'employee1@workorderportal.com', password: 'Test123!' }
+  employee: { email: 'employee1@akcconstruction.com', password: 'Test123!' }
 };
 
 // Access via DevTools after user creation

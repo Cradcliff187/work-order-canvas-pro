@@ -224,7 +224,7 @@ Edit the organizations section in the `seed_test_data()` function:
 ```sql
 -- Insert Organizations
 INSERT INTO organizations (id, name, contact_email, organization_type, initials, is_active) VALUES
-  (org_internal_id, 'WorkOrderPortal Internal', 'admin@workorderpro.com', 'internal', 'WOP', true),
+  (org_internal_id, 'AKC Construction Services', 'admin@akcconstruction.com', 'internal', 'AKC', true),
   (org_abc_id, 'ABC Property Management', 'contact@abc-property.com', 'partner', 'ABC', true),
   -- Add more organizations here
 ```
@@ -235,7 +235,7 @@ The current implementation creates only the admin profile to avoid RLS violation
 ```sql
 -- Update/Insert ONLY Admin Profile
 INSERT INTO profiles (id, user_id, email, first_name, last_name, user_type, is_active, is_employee) 
-VALUES (admin_user_id, v_user_id, 'admin@workorderpro.com', 'System', 'Administrator', 'admin', true, true)
+VALUES (admin_user_id, v_user_id, 'admin@akcconstruction.com', 'System', 'Administrator', 'admin', true, true)
 ON CONFLICT (user_id) 
 DO UPDATE SET 
   email = EXCLUDED.email,

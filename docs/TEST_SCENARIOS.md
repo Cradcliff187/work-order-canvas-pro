@@ -7,13 +7,13 @@ This document provides a comprehensive guide to the test data structure and scen
 ## Test Data Summary
 
 ### Organizations (8 total)
-- **1 Internal**: WorkOrderPortal Internal (admin & employee users)
+- **1 Internal**: AKC Construction Services (admin & employee users)
 - **3 Partners**: ABC Property Management, XYZ Commercial Properties, Premium Facilities Group
 - **4 Subcontractors**: Pipes & More Plumbing, Sparks Electric, Cool Air HVAC, Wood Works Carpentry, Brush Strokes Painting, Fix-It Maintenance, Green Thumb Landscaping
 
 ### Users (14 total)
-- **2 Admins**: admin1@workorderportal.com, admin2@workorderportal.com
-- **3 Employees**: employee1@workorderportal.com, employee2@workorderportal.com, employee3@workorderportal.com
+- **2 Admins**: admin1@akcconstruction.com, admin2@akcconstruction.com
+- **3 Employees**: employee1@akcconstruction.com, employee2@akcconstruction.com, employee3@akcconstruction.com
 - **3 Partners**: partner1@abc.com, partner2@abc.com, partner3@xyz.com, partner4@premium.com
 - **6 Subcontractors**: Various trade specialists across multiple companies
 
@@ -94,8 +94,8 @@ WHERE i.subcontractor_organization_id = (SELECT id FROM organizations WHERE name
 
 ### 3. Employee Internal Operations
 
-**Organization**: WorkOrderPortal Internal
-**Test Users**: employee1@workorderportal.com, employee2@workorderportal.com, employee3@workorderportal.com
+**Organization**: AKC Construction Services
+**Test Users**: employee1@akcconstruction.com, employee2@akcconstruction.com, employee3@akcconstruction.com
 **Test Scenario**: Internal employees handling maintenance and oversight
 
 #### Test Coverage:
@@ -248,8 +248,8 @@ Employees (3)
 ```typescript
 // Test all user types can log in
 const testCredentials = [
-  { email: 'admin1@workorderportal.com', type: 'admin' },
-  { email: 'employee1@workorderportal.com', type: 'employee' },
+  { email: 'admin1@akcconstruction.com', type: 'admin' },
+  { email: 'employee1@akcconstruction.com', type: 'employee' },
   { email: 'partner1@abc.com', type: 'partner' },
   { email: 'hvac1@coolairhvac.com', type: 'subcontractor' }
 ];
