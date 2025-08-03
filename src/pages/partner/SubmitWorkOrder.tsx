@@ -128,6 +128,9 @@ export default function SubmitWorkOrder() {
 
   // Determine if user is admin
   const { isAdmin } = useUserProfile();
+  
+  // DEBUG: Log admin status for Tom Finn investigation
+  console.log('SubmitWorkOrder DEBUG - isAdmin():', isAdmin(), 'for user on partner route');
 
   // User organization hook
   const { organization: userOrganization, loading: loadingUserOrg } = useUserOrganization();
@@ -418,7 +421,7 @@ export default function SubmitWorkOrder() {
       switch (step) {
         case 1:
           // For admin users, organization selection is required first
-          if (isAdmin && !selectedOrganizationId) {
+          if (isAdmin() && !selectedOrganizationId) {
             toast({
               variant: "destructive",
               title: "Organization Required",
@@ -520,7 +523,7 @@ export default function SubmitWorkOrder() {
     console.log('- profile?.id:', profile?.id);
     console.log('- selectedOrganizationId (admin):', selectedOrganizationId);
     console.log('- userOrganization:', userOrganization);
-    console.log('- isAdmin:', isAdmin);
+    console.log('- isAdmin():', isAdmin());
     console.log('- selectedFiles.length:', selectedFiles.length);
 
     // Critical validation checks with detailed logging
@@ -600,8 +603,8 @@ export default function SubmitWorkOrder() {
         partner_po_number: data.partner_po_number || '',
         partner_location_number: data.partner_location_number || generatedLocationNumber || '',
         // Only include admin fields if user is admin
-        ...(isAdmin && { due_date: data.due_date }),
-        ...(isAdmin && { estimated_hours: data.estimated_hours }),
+        ...(isAdmin() && { due_date: data.due_date }),
+        ...(isAdmin() && { estimated_hours: data.estimated_hours }),
       };
 
       console.log('📤 Attempting to submit work order with data:', submissionData);
@@ -695,7 +698,7 @@ export default function SubmitWorkOrder() {
       </div>
 
       {/* Organization Selection for Admin Users */}
-      {isAdmin && (
+      {isAdmin() && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -895,7 +898,7 @@ export default function SubmitWorkOrder() {
                     </div>
 
                     {/* Admin-only fields */}
-                    {isAdmin && (
+                    {isAdmin() && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-4">
                         <FormField
                           control={form.control}
