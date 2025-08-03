@@ -82,7 +82,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
               onMouseLeave={handleMouseLeave}
             >
               <div className="relative">
-                <Avatar className="h-6 w-6">
+                <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">
                     {userInitials}
                   </AvatarFallback>

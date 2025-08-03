@@ -139,7 +139,7 @@ export function SubcontractorSidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="w-full p-2">
-                <Avatar className={collapsed ? "h-6 w-6" : "h-8 w-8"}>
+                <Avatar className={collapsed ? "h-8 w-8" : "h-8 w-8"}>
                   <AvatarFallback className="text-xs">
                     {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                   </AvatarFallback>
