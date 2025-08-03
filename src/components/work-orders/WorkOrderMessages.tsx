@@ -38,6 +38,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [crewMemberName, setCrewMemberName] = useState('');
   
   const isMobile = useIsMobile();
   const { uploadFiles, uploadProgress, isUploading } = useFileUpload({
@@ -251,6 +252,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         message: newMessage,
         isInternal: isSubcontractor() || (isInternal && (isAdmin() || isEmployee())),
         attachmentIds,
+        crewMemberName: crewMemberName.trim() || undefined,
       });
 
       // Update work_order_attachments to link back to the message
@@ -265,6 +267,7 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       setIsInternal(false);
       setSelectedFiles([]);
       setShowFileUpload(false);
+      setCrewMemberName('');
     } catch (error) {
       // Error is handled by the mutation hook
       console.error('Failed to post message:', error);
@@ -351,6 +354,11 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
             <Badge variant="outline" className="text-xs">
               {message.sender_organization?.name || 'Internal Team'}
             </Badge>
+            {message.crew_member_name && (
+              <span className="text-xs text-muted-foreground">
+                Crew: {message.crew_member_name}
+              </span>
+            )}
             {message.is_internal && (
               <Badge variant="secondary" className="text-xs flex items-center gap-1">
                 <Lock className="h-3 w-3" />
@@ -453,6 +461,24 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           className="min-h-[100px] resize-none"
           disabled={postMessage.isPending || isUploading}
         />
+
+        {/* Crew Member Input (Subcontractors only) */}
+        {isSubcontractor() && (
+          <div className="space-y-2">
+            <Label htmlFor="crew-member" className="text-sm font-medium">
+              Crew Member Name (Optional)
+            </Label>
+            <input
+              id="crew-member"
+              type="text"
+              value={crewMemberName}
+              onChange={(e) => setCrewMemberName(e.target.value)}
+              placeholder="Enter crew member name..."
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={postMessage.isPending || isUploading}
+            />
+          </div>
+        )}
 
         {/* Selected Files Preview */}
         {selectedFiles.length > 0 && (
