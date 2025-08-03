@@ -50,9 +50,7 @@ export default function SubcontractorWorkOrderDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="space-y-6">
           {/* Organization Info */}
           {workOrder.organizations && (
             <Card>
@@ -95,7 +93,7 @@ export default function SubcontractorWorkOrderDetail() {
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Work Order Number</Label>
                   <p className="text-sm font-bold">{workOrder.work_order_number || 'N/A'}</p>
@@ -144,7 +142,7 @@ export default function SubcontractorWorkOrderDetail() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Location Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Location Name</Label>
                   <p className="text-sm">{workOrder.store_location || 'Not specified'}</p>
@@ -254,12 +252,6 @@ export default function SubcontractorWorkOrderDetail() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Additional sidebar content can go here if needed */}
-        </div>
-      </div>
     </div>
   );
 }
