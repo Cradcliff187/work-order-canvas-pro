@@ -29,6 +29,8 @@ WorkOrderPortal has **TWO COMPLETELY SEPARATE** communication systems:
 
 WorkOrderPortal implements a unified email system using Resend API that handles ALL email communications, including both transactional notifications and authentication emails. This system bypasses Supabase's unreliable SMTP service to provide 100% reliable email delivery with complete control and monitoring.
 
+> **🚀 Automated Processing**: Email queue is automatically processed every 5 minutes via pg_cron. No manual intervention required - the system self-manages with automatic retry and comprehensive monitoring.
+
 ## Architecture
 
 ### Why We Bypassed Supabase Auth Emails
