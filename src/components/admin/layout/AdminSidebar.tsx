@@ -22,23 +22,23 @@ import { useBranding } from '@/hooks/useBranding';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
 import { UserProfileDropdown } from './UserProfileDropdown';
-import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
 export function AdminSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { profile } = useAuth();
-  const enhancedPermissions = useEnhancedPermissions();
+  const userProfile = useUserProfile();
   const organizationNavItems = useOrganizationNavigation();
   const { totalCount } = useApprovalQueue();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
   
-  // Use organization-based permissions
-  const isAdmin = enhancedPermissions.isAdmin;
-  const isEmployee = enhancedPermissions.isEmployee;
+  // Use stable organization-based permissions
+  const isAdmin = userProfile.isAdmin();
+  const isEmployee = userProfile.isEmployee();
 
   const isActive = (path: string) => location.pathname === path;
 

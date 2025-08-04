@@ -19,20 +19,22 @@ import { OrganizationActivityCard } from '@/components/mobile/OrganizationActivi
 import { OrganizationMembersCard } from '@/components/mobile/OrganizationMembersCard';
 import { useOrganizationTeamData } from '@/hooks/useOrganizationTeamData';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 
 const SubcontractorDashboard = () => {
   const navigate = useNavigate();
   const { organizationMembers, organizationActivity, isLoading: teamDataLoading } = useOrganizationTeamData();
   const isMobile = useIsMobile();
-  const permissions = useEnhancedPermissions();
+  const { user, userOrganizations } = useAuth();
+  const { profile } = useUserProfile();
   const { activities, isLoading: activitiesLoading, error: activitiesError, refetch: refetchActivities } = usePartnerSubcontractorActivityFeed('subcontractor');
 
   // Get organization IDs for queries
   const organizationIds = React.useMemo(() => {
-    return permissions.user?.userOrganizations?.map(org => org.organization_id) || [];
-  }, [permissions.user?.userOrganizations]);
+    return userOrganizations?.map(org => org.organization_id) || [];
+  }, [userOrganizations]);
 
   // Fetch assigned work orders
   const { data: assignedWorkOrders = [] } = useQuery({
@@ -55,20 +57,20 @@ const SubcontractorDashboard = () => {
 
   // Fetch reports
   const { data: reports = [] } = useQuery({
-    queryKey: ['subcontractor-reports', permissions.user?.id],
+    queryKey: ['subcontractor-reports', profile?.id],
     queryFn: async () => {
-      if (!permissions.user?.id) return [];
+      if (!profile?.id) return [];
       
       const { data, error } = await supabase
         .from('work_order_reports')
         .select('*')
-        .eq('subcontractor_user_id', permissions.user.id)
+        .eq('subcontractor_user_id', profile.id)
         .order('submitted_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!permissions.user?.id,
+    enabled: !!profile?.id,
     staleTime: 30 * 1000,
   });
 
@@ -157,7 +159,7 @@ const SubcontractorDashboard = () => {
           {!teamDataLoading && organizationMembers.length > 1 && (
             <OrganizationMembersCard 
               members={organizationMembers}
-              currentUserId={permissions.user?.id}
+              currentUserId={profile?.id}
             />
           )}
         </div>

@@ -1,10 +1,14 @@
-// Simplified permissions hook for organization-based auth
+// DEPRECATED: Use useAuth() and useUserProfile() directly instead
+// This hook is kept for backward compatibility but will be removed
 import { useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { organizationCheckers } from '@/lib/permissions';
 
 export const useEnhancedPermissions = () => {
   const { user, userOrganizations } = useAuth();
+  
+  // DEPRECATED WARNING: This hook is deprecated, use useAuth() and useUserProfile() directly
+  console.warn('[DEPRECATED] useEnhancedPermissions is deprecated. Use useAuth() and useUserProfile() directly for better stability.');
   
   console.log('[ENHANCED-PERMS] Render', {
     userId: user?.id,
