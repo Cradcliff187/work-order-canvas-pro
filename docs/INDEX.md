@@ -6,6 +6,7 @@ This documentation map helps developers quickly find the right documentation for
 
 | File | Description | When to Reference |
 |------|-------------|-------------------|
+| [QUICKSTART.md](./QUICKSTART.md) | 10-minute setup guide for running the app locally | Fastest way to get started, immediate app evaluation |
 | [README.md](../README.md) | Project overview, tech stack, and quick start guide | First time setup, project introduction, getting the app running |
 | [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) | Development setup, testing, and workflow procedures | Setting up local environment, understanding dev workflows |
 | [TEST_SCENARIOS.md](./TEST_SCENARIOS.md) | Test data, login credentials, and testing procedures | Finding test user accounts, understanding test data structure |
@@ -22,6 +23,7 @@ This documentation map helps developers quickly find the right documentation for
 
 | File | Description | When to Reference |
 |------|-------------|-------------------|
+| [API_REFERENCE.md](./API_REFERENCE.md) | Complete API reference for database functions and Edge Functions | Looking up function signatures, understanding API endpoints |
 | [DATABASE_FUNCTIONS.md](./DATABASE_FUNCTIONS.md) | Server-side database functions and stored procedures | Writing complex queries, implementing business logic in DB |
 | [RLS_POLICIES.md](./RLS_POLICIES.md) | Row Level Security policies and access control rules | Implementing security features, debugging permission issues |
 | [OFFLINE_STORAGE_GUIDE.md](./OFFLINE_STORAGE_GUIDE.md) | PWA capabilities and offline data management | Adding offline features, troubleshooting sync issues |
@@ -32,6 +34,8 @@ This documentation map helps developers quickly find the right documentation for
 
 | File | Description | When to Reference |
 |------|-------------|-------------------|
+| [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) | Comprehensive production deployment checklist | Pre-deployment verification, post-deployment validation |
+| [SECURITY_REVIEW.md](./SECURITY_REVIEW.md) | Security assessment and quarterly audit checklist | Security reviews, compliance checks, risk assessment |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Production deployment procedures and environment setup | Deploying to production, configuring environments |
 | [SEEDING.md](./SEEDING.md) | Database initialization and test data management | Setting up fresh databases, managing test environments |
 | [AUDIT_SYSTEM.md](./AUDIT_SYSTEM.md) | Change tracking, audit logs, and compliance features | Implementing audit requirements, tracking system changes |
@@ -63,6 +67,7 @@ Focus on: TEST_SCENARIOS.md → EDGE_FUNCTIONS_TEST.md → SEEDING.md
 
 ## 🔄 Maintenance Notes
 
+- **Documentation Standards**: Follow [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md) for consistent file naming and content organization
 - **Update Frequency**: Review and update this index when adding new documentation files
 - **Broken Links**: Check all links quarterly to ensure documentation structure remains intact  
 - **Content Owners**: Each documentation file should have a clear owner responsible for updates
