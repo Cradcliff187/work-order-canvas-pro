@@ -8,8 +8,16 @@ import {
   getInternalMembership
 } from '@/lib/permissions';
 
+const previousMembershipsRef = { current: null };
+
 // ORGANIZATION-BASED: Pure organization role system using clean permission library
 export const useUserProfile = () => {
+  const renderTime = Date.now();
+  console.log('[USER-PROFILE] Start Render', {
+    renderTime,
+    caller: new Error().stack.split('\n')[2] // Shows what called this
+  });
+  
   const { profile, loading, userOrganizations } = useAuth();
   
   console.log('[USER-PROFILE] Render', {
@@ -17,6 +25,7 @@ export const useUserProfile = () => {
     orgsLength: userOrganizations?.length
   });
   
+  console.log('[USER-PROFILE] Computing memberships', { renderTime });
   // Memoize organization memberships for stable references
   const memberships = useMemo(() => ({
     internal: getInternalMembership(userOrganizations),
@@ -24,6 +33,7 @@ export const useUserProfile = () => {
     subcontractor: filterMembershipsByType(userOrganizations, 'subcontractor')
   }), [userOrganizations]);
 
+  console.log('[USER-PROFILE] Computing permissionChecks', { renderTime });
   // Memoize permission checks to prevent unnecessary re-computations
   const permissionChecks = useMemo(() => ({
     isAdmin: organizationCheckers.isAdmin(memberships.internal),
@@ -53,6 +63,12 @@ export const useUserProfile = () => {
   const getUserPrimaryRole = useCallback(() => {
     return getPrimaryRole(memberships.internal, memberships.partner, memberships.subcontractor);
   }, [memberships]);
+
+  console.log('[USER-PROFILE] End Render', { 
+    renderTime,
+    didMembershipsChange: !Object.is(memberships, previousMembershipsRef.current)
+  });
+  previousMembershipsRef.current = memberships;
 
   return useMemo(() => ({
     profile,
