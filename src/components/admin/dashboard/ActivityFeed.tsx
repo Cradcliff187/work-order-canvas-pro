@@ -65,15 +65,16 @@ export const ActivityFeed: React.FC = () => {
   return (
     <Card className="card-hover">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
             Recent Activity
           </CardTitle>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1 sm:gap-2">
             <Button
               variant={activeFilter === 'all' ? 'default' : 'ghost'}
               size="sm"
+              className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3 min-h-[28px] touch-manipulation"
               onClick={() => setActiveFilter('all')}
             >
               All
@@ -81,6 +82,7 @@ export const ActivityFeed: React.FC = () => {
             <Button
               variant={activeFilter === 'work_orders' ? 'default' : 'ghost'}
               size="sm"
+              className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3 min-h-[28px] touch-manipulation"
               onClick={() => setActiveFilter('work_orders')}
             >
               Work Orders
@@ -88,6 +90,7 @@ export const ActivityFeed: React.FC = () => {
             <Button
               variant={activeFilter === 'reports' ? 'default' : 'ghost'}
               size="sm"
+              className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3 min-h-[28px] touch-manipulation"
               onClick={() => setActiveFilter('reports')}
             >
               Reports
@@ -95,6 +98,7 @@ export const ActivityFeed: React.FC = () => {
             <Button
               variant={activeFilter === 'invoices' ? 'default' : 'ghost'}
               size="sm"
+              className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3 min-h-[28px] touch-manipulation"
               onClick={() => setActiveFilter('invoices')}
             >
               Invoices
@@ -128,19 +132,19 @@ export const ActivityFeed: React.FC = () => {
                 return (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    className="flex items-start gap-3 p-3 sm:p-4 rounded-lg hover:bg-muted/50 active:bg-muted/70 cursor-pointer transition-colors min-h-[48px] touch-manipulation"
                     onClick={() => handleActivityClick(activity)}
                   >
-                    <Icon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mt-1 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm leading-tight">
+                      <div className="font-medium text-sm sm:text-base leading-tight">
                         {activity.title}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1 leading-tight">
+                      <div className="text-xs sm:text-sm text-muted-foreground mt-1 leading-tight">
                         {activity.description}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground flex-shrink-0">
+                    <div className="text-xs sm:text-sm text-muted-foreground flex-shrink-0 mt-1">
                       {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                     </div>
                   </div>
