@@ -15,20 +15,23 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { LogOut, Settings, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApprovalQueue } from '@/hooks/useApprovalQueue';
 import { useBranding } from '@/hooks/useBranding';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
-import { UserProfileDropdown } from './UserProfileDropdown';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
 export function AdminSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const userProfile = useUserProfile();
   const organizationNavItems = useOrganizationNavigation();
   const { totalCount } = useApprovalQueue();
@@ -39,6 +42,14 @@ export function AdminSidebar() {
   // Use stable organization-based permissions
   const isAdmin = userProfile.isAdmin();
   const isEmployee = userProfile.isEmployee();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -137,7 +148,48 @@ export function AdminSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="p-3">
-          <UserProfileDropdown collapsed={collapsed} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`w-full ${collapsed ? 'h-8 w-8 p-0' : 'justify-start h-auto p-2'}`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar className="h-6 w-6 flex-shrink-0">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs">
+                      {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!collapsed && (
+                    <div className="flex flex-col items-start min-w-0 flex-1">
+                      <span className="text-sm font-medium truncate">
+                        {profile?.first_name} {profile?.last_name}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {profile?.email}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/admin/profile" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Profile Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2">
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </SidebarFooter>
     </Sidebar>
