@@ -1610,6 +1610,10 @@ export type Database = {
           unread_count: number
         }[]
       }
+      get_user_id_from_legacy_path: {
+        Args: { file_path: string }
+        Returns: string
+      }
       get_user_org_type: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["organization_type"]
@@ -1663,6 +1667,10 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      get_work_order_id_from_path: {
+        Args: { file_path: string }
+        Returns: string
       }
       has_internal_role: {
         Args: {
