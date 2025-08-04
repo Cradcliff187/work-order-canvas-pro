@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAuth } from '@/contexts/AuthContext';
-import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
+import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { Camera, Upload, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -181,15 +181,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       </div>
 
       {/* Upload Sheet */}
-      {showUploadSheet && (
-        <UnifiedFileUpload
-          onFilesSelected={handleFilesSelected}
-          maxFiles={1}
-          maxSizeBytes={5 * 1024 * 1024}
-          acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
-          disabled={isUploading}
-        />
-      )}
+      <UniversalUploadSheet
+        trigger={null}
+        onFilesSelected={handleFilesSelected}
+        accept="image/jpeg,image/png,image/webp"
+        multiple={false}
+      />
     </div>
   );
 };
