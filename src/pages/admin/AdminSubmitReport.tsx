@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAdminReportSubmission } from '@/hooks/useAdminReportSubmission';
-import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
+import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface FormData {
@@ -333,10 +333,23 @@ export default function AdminSubmitReport() {
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label>Upload Files</Label>
-                <UnifiedFileUpload
+                <UniversalUploadSheet
+                  trigger={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+                    >
+                      <div className="text-center">
+                        <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm font-medium">Upload Files</p>
+                        <p className="text-xs text-muted-foreground">Click to select photos & documents</p>
+                      </div>
+                    </Button>
+                  }
                   onFilesSelected={handleFilesSelected}
-                  maxFiles={10}
-                  acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+                  multiple={true}
                 />
                 <p className="text-xs text-muted-foreground">
                   Upload photos, PDF documents, Excel files, or Word documents
