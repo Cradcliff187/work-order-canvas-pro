@@ -66,6 +66,17 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
 export type { WorkOrderDetail };
 
 export function useWorkOrderDetail(id: string) {
+  // Early return for invalid IDs to prevent console spam and unnecessary queries
+  if (!id || id === "undefined") {
+    return {
+      data: null,
+      isLoading: false,
+      error: null,
+      isError: false,
+      isSuccess: true
+    } as any;
+  }
+  
   console.log('🔍 useWorkOrderDetail called with ID:', id);
   return useQuery({
     queryKey: ['work-order-detail', id],

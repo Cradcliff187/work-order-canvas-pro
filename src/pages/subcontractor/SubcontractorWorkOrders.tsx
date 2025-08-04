@@ -75,7 +75,7 @@ const SubcontractorWorkOrders = () => {
 
   // Get selected work order detail
   const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(
-    selectedWorkOrderId || undefined
+    selectedWorkOrderId || ""
   );
 
   const filteredWorkOrders = workOrderList.filter((workOrder) => {
