@@ -181,9 +181,8 @@ export default function AdminWorkOrderDetail() {
             mode="badge"
             size="sm"
           />
-          {/* Show Submit Report button if assigned to subcontractor and no reports exist */}
-          {assignments.length > 0 && 
-           workOrder.status !== 'completed' && 
+          {/* Show Submit Report button if no reports exist and not completed */}
+          {workOrder.status !== 'completed' && 
            (!workOrder.work_order_reports || workOrder.work_order_reports.length === 0) && (
             <Button 
               variant="outline"
