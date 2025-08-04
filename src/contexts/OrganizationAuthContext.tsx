@@ -52,6 +52,11 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrganizations, setUserOrganizations] = useState<OrganizationMember[]>([]);
+  
+  console.log('[AUTH-CONTEXT] Render', { 
+    userOrgsLength: userOrganizations.length,
+    userOrgsIds: userOrganizations.map(o => o.organization_id)
+  });
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   

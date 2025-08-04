@@ -56,11 +56,12 @@ export function useSubcontractorWorkOrders() {
   
   // Debug logging (remove in production)
   useEffect(() => {
-    console.log('useSubcontractorWorkOrders render:', {
+    console.log('[SUBCONTRACTOR-WO] Render:', {
       loading,
       profileId: profile?.id,
       orgIds: organizationIds,
-      isReady
+      isReady,
+      timestamp: Date.now()
     });
   }, [loading, profile?.id, organizationIds, isReady]);
 

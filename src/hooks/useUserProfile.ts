@@ -12,6 +12,11 @@ import {
 export const useUserProfile = () => {
   const { profile, loading, userOrganizations } = useAuth();
   
+  console.log('[USER-PROFILE] Render', {
+    profileId: profile?.id,
+    orgsLength: userOrganizations?.length
+  });
+  
   // Memoize organization memberships for stable references
   const memberships = useMemo(() => ({
     internal: getInternalMembership(userOrganizations),

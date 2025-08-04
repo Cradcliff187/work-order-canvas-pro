@@ -5,6 +5,12 @@ import { useUserProfile } from './useUserProfile';
 
 export const useEnhancedPermissions = () => {
   const { user, userOrganizations } = useAuth();
+  
+  console.log('[ENHANCED-PERMS] Render', {
+    userId: user?.id,
+    orgsLength: userOrganizations?.length,
+    orgsIds: userOrganizations?.map(o => o.organization_id)
+  });
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
 
   // FIX 1: Stabilize enhancedUser with deep equality check to prevent cascading re-renders
