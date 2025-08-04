@@ -107,6 +107,7 @@ interface WorkOrderFilters {
   search?: string;
   date_from?: string;
   date_to?: string;
+  location_filter?: string;
 }
 
 export function useWorkOrders(
@@ -195,7 +196,14 @@ export function useWorkOrders(
           query = query.eq('organization_id', filters.organization_id);
         }
         if (filters.search) {
-          query = query.ilike('title', `%${filters.search}%`);
+          query = query.or(
+            `work_order_number.ilike.%${filters.search}%,` +
+            `title.ilike.%${filters.search}%,` +
+            `store_location.ilike.%${filters.search}%`
+          );
+        }
+        if (filters.location_filter) {
+          query = query.ilike('store_location', `%${filters.location_filter}%`);
         }
         if (filters.date_from) {
           query = query.gte('created_at', filters.date_from);

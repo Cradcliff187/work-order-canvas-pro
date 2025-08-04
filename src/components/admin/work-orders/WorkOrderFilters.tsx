@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface WorkOrderFiltersProps {
   filters: {
@@ -20,6 +22,7 @@ interface WorkOrderFiltersProps {
     search?: string;
     date_from?: string;
     date_to?: string;
+    location_filter?: string;
   };
   onFiltersChange: (filters: any) => void;
   onClearFilters: () => void;
@@ -37,6 +40,28 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const { shouldShowSelector } = useAutoOrganization();
+
+  // Get unique locations for the selected organization
+  const { data: locations } = useQuery({
+    queryKey: ['work-order-locations', filters.organization_id],
+    queryFn: async () => {
+      if (!filters.organization_id) return [];
+      
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('store_location')
+        .eq('organization_id', filters.organization_id)
+        .not('store_location', 'is', null)
+        .not('store_location', 'eq', '');
+      
+      if (error) throw error;
+      
+      // Get unique locations
+      const uniqueLocations = [...new Set(data.map(wo => wo.store_location))].filter(Boolean);
+      return uniqueLocations.sort();
+    },
+    enabled: !!filters.organization_id,
+  });
   const [dateFrom, setDateFrom] = useState<Date | undefined>(
     filters.date_from ? new Date(filters.date_from) : undefined
   );
@@ -88,14 +113,14 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
         )}
       </div>
 
-      <div className={`grid gap-4 ${shouldShowSelector ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+      <div className={`grid gap-4 ${shouldShowSelector ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-5' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
         {/* Search */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Search</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="WO#, title, or location..."
+              placeholder="Search WO#, title, or location..."
               value={filters.search || ''}
               onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
               className="pl-10"
@@ -111,7 +136,8 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
               value={filters.organization_id || 'all-organizations'}
               onValueChange={(value) => onFiltersChange({ 
                 ...filters, 
-                organization_id: value === 'all-organizations' ? undefined : value 
+                organization_id: value === 'all-organizations' ? undefined : value,
+                location_filter: undefined // Clear location filter when organization changes
               })}
             >
               <SelectTrigger>
@@ -122,6 +148,32 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
                 {Array.isArray(organizations) && organizations.map((org) => (
                   <SelectItem key={org.id} value={org.id || `org-${org.name}`}>
                     {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Location Filter - Only show when organization is selected */}
+        {shouldShowSelector && filters.organization_id && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Location</label>
+            <Select
+              value={filters.location_filter || 'all-locations'}
+              onValueChange={(value) => onFiltersChange({ 
+                ...filters, 
+                location_filter: value === 'all-locations' ? undefined : value 
+              })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All Locations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-locations">All Locations</SelectItem>
+                {Array.isArray(locations) && locations.map((location) => (
+                  <SelectItem key={location} value={location}>
+                    {location}
                   </SelectItem>
                 ))}
               </SelectContent>
