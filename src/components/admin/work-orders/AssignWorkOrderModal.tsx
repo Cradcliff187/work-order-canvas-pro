@@ -277,14 +277,10 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
           if (!org) continue;
 
           for (const wo of workOrders) {
-            // For organizations with users, use the first active user
-            // For organizations without users, use current user as placeholder
-            const assignedTo = org.first_active_user_id || profile.id;
+            // For organization assignments, don't assign to a specific user
+            const assignedTo = org.first_active_user_id || null;
             
-            const isPlaceholder = !org.first_active_user_id;
-            const orgNotes = isPlaceholder 
-              ? `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name} (no active users - placeholder assignment)`
-              : `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name}`;
+            const orgNotes = `${notes}${notes ? ' - ' : ''}Assigned to organization ${org.name}`;
 
             assignments.push({
               work_order_id: wo.id,
