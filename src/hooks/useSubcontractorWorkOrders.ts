@@ -12,26 +12,22 @@ export function useSubcontractorWorkOrders() {
 
   const permissions = useEnhancedPermissions();
 
-  // PHASE 1 FIX: Create fully stabilized organization IDs
+  // FIX 2: Ultra-stable organization IDs that only change when actual membership changes
   const organizationIds = useMemo(() => {
     if (!permissions.user?.organization_members || loading) {
       return [];
     }
     
-    // Extract IDs once and sort for consistency
+    // Extract ONLY the organization IDs as strings - no object references
     const orgIds = permissions.user.organization_members
-      .map((m: any) => m.organization_id)
+      .map((m: any) => String(m.organization_id)) // Convert to string
       .filter(Boolean)
-      .sort();
-    
-    // Debug logging to track changes
-    console.log('🔄 organizationIds computed:', orgIds);
+      .sort(); // Sort for stable order
     
     return orgIds;
   }, [
-    // Use stable string comparison instead of object reference
-    permissions.user?.organization_members?.map((m: any) => m.organization_id).sort().join(',') || '',
-    loading
+    // FIX 2: Use only the essential stable string data, not object references
+    loading ? 'loading' : (permissions.user?.organization_members?.map((m: any) => String(m.organization_id)).sort().join(',') || 'empty')
   ]);
 
   // PHASE 1 FIX: Truly stable ready state based only on essential data

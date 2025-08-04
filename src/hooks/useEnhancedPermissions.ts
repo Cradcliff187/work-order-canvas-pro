@@ -1,5 +1,5 @@
 // Simplified permissions hook for organization-based auth
-import { useMemo } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from './useUserProfile';
 
@@ -7,11 +7,32 @@ export const useEnhancedPermissions = () => {
   const { user, userOrganizations } = useAuth();
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
 
-  // Create enhanced user object with organization memberships - memoized to prevent re-renders
-  const enhancedUser = useMemo(() => 
-    user ? { ...user, organization_members: userOrganizations } : null,
-    [user, userOrganizations]
-  );
+  // FIX 1: Stabilize enhancedUser with deep equality check to prevent cascading re-renders
+  const previousUserRef = useRef<any>(null);
+  const previousOrgsRef = useRef<any>(null);
+  
+  const enhancedUser = useMemo(() => {
+    if (!user) return null;
+    
+    // Only create new object if actual data changed (not reference)
+    const userChanged = !previousUserRef.current || 
+      previousUserRef.current.id !== user.id ||
+      previousUserRef.current.email !== user.email;
+    
+    const orgsChanged = !previousOrgsRef.current ||
+      JSON.stringify(previousOrgsRef.current?.map(o => o.organization_id).sort()) !== 
+      JSON.stringify(userOrganizations?.map(o => o.organization_id).sort());
+    
+    if (!userChanged && !orgsChanged && previousUserRef.current) {
+      return previousUserRef.current;
+    }
+    
+    const newUser = { ...user, organization_members: userOrganizations };
+    previousUserRef.current = newUser;
+    previousOrgsRef.current = userOrganizations;
+    
+    return newUser;
+  }, [user?.id, user?.email, userOrganizations?.map(o => o.organization_id).sort().join(',')])
 
   // Memoize role checks to prevent recreation
   const roleChecks = useMemo(() => ({
