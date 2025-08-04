@@ -1,51 +1,74 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useCallback } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEnhancedPermissions } from "@/hooks/useEnhancedPermissions";
 
+/**
+ * Custom hook to provide truly stable organization IDs
+ * This prevents the infinite loop by ensuring the array reference
+ * only changes when the actual organization IDs change
+ */
+function useStableOrganizationIds() {
+  const permissions = useEnhancedPermissions();
+  const previousIdsRef = useRef<string[]>([]);
+  
+  return useMemo(() => {
+    // Early return if no user or no memberships
+    if (!permissions.user?.organization_members) {
+      return [];
+    }
+    
+    // Extract and sort IDs for comparison
+    const newIds = permissions.user.organization_members
+      .map((m: any) => m.organization_id)
+      .filter(Boolean)
+      .sort();
+    
+    // Compare with previous IDs
+    const previousIds = previousIdsRef.current;
+    const hasChanged = 
+      newIds.length !== previousIds.length ||
+      newIds.some((id, index) => id !== previousIds[index]);
+    
+    // Only update reference if actually changed
+    if (hasChanged) {
+      previousIdsRef.current = newIds;
+      return newIds;
+    }
+    
+    // Return previous reference if unchanged
+    return previousIds;
+  }, [permissions.user?.organization_members?.length, permissions.user?.id]);
+}
+
 export function useSubcontractorWorkOrders() {
   const { user, profile, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Use truly stable organization IDs
+  const organizationIds = useStableOrganizationIds();
+  
+  // Create stable ready check
+  const isReady = !loading && !!profile?.id && organizationIds.length > 0;
+  
+  // Debug logging (remove in production)
+  useEffect(() => {
+    console.log('useSubcontractorWorkOrders render:', {
+      loading,
+      profileId: profile?.id,
+      orgIds: organizationIds,
+      isReady
+    });
+  }, [loading, profile?.id, organizationIds, isReady]);
 
-  const permissions = useEnhancedPermissions();
-
-  // FIX 2: Ultra-stable organization IDs that only change when actual membership changes
-  const organizationIds = useMemo(() => {
-    if (!permissions.user?.organization_members || loading) {
-      return [];
-    }
-    
-    // Extract ONLY the organization IDs as strings - no object references
-    const orgIds = permissions.user.organization_members
-      .map((m: any) => String(m.organization_id)) // Convert to string
-      .filter(Boolean)
-      .sort(); // Sort for stable order
-    
-    return orgIds;
-  }, [
-    // FINAL FIX: Use the most stable dependency possible
-    `${loading}:${permissions.user?.organization_members?.map((m: any) => String(m.organization_id)).sort().join(',') || 'none'}`
-  ]);
-
-  // PHASE 1 FIX: Truly stable ready state based only on essential data
-  const isReady = useMemo(() => {
-    const ready = !loading && !!profile?.id && organizationIds.length > 0;
-    console.log('🔄 isReady computed:', ready, { loading, profileId: profile?.id, orgCount: organizationIds.length });
-    return ready;
-  }, [loading, profile?.id, organizationIds.length]);
-
-  // PHASE 1 FIX: Completely stable query keys that never change unless data actually changes
-  const stableProfileId = useMemo(() => profile?.id, [profile?.id]);
-  const stableOrgIdsString = useMemo(() => organizationIds.join(','), [organizationIds]);
-
-  const assignedWorkOrdersQueryKey = useMemo(() => {
-    const key = ["subcontractor-work-orders", stableProfileId, stableOrgIdsString];
-    console.log('🔄 assignedWorkOrdersQueryKey computed:', key);
-    return key;
-  }, [stableProfileId, stableOrgIdsString]);
+  // Stable query key using string representation
+  const assignedWorkOrdersQueryKey = useMemo(() => 
+    ["subcontractor-work-orders", user?.id, profile?.id, ...organizationIds],
+    [user?.id, profile?.id, organizationIds.join(',')]
+  );
 
   // Organization-level access: Filter to work orders assigned to user's subcontractor organizations
   const assignedWorkOrders = useQuery({
@@ -55,7 +78,6 @@ export function useSubcontractorWorkOrders() {
         return [];
       }
       
-      // Get work orders assigned to user's subcontractor organizations
       const { data, error } = await supabase
         .from("work_orders")
         .select(`
@@ -81,7 +103,6 @@ export function useSubcontractorWorkOrders() {
 
       if (error) throw error;
       
-      // Transform data to include attachment count
       const transformedData = (data || []).map((wo: any) => ({
         ...wo,
         attachment_count: wo.work_order_attachments?.[0]?.count || 0
@@ -90,23 +111,19 @@ export function useSubcontractorWorkOrders() {
       return transformedData;
     },
     enabled: isReady,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: (failureCount, error) => {
-      // Don't retry on permission errors
-      if (error?.message?.includes('row-level security')) return false;
-      return failureCount < 3;
-    },
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent refetch on tab focus
+    refetchOnMount: false, // Use cache on mount if available
   });
 
-  // PHASE 1 FIX: Stable query key for dashboard stats
-  const dashboardStatsQueryKey = useMemo(() => {
-    const key = ["subcontractor-dashboard", stableProfileId, stableOrgIdsString];
-    console.log('🔄 dashboardStatsQueryKey computed:', key);
-    return key;
-  }, [stableProfileId, stableOrgIdsString]);
+  // Stable query key for dashboard stats
+  const dashboardStatsQueryKey = useMemo(() => 
+    ["subcontractor-dashboard", user?.id, profile?.id, ...organizationIds],
+    [user?.id, profile?.id, organizationIds.join(',')]
+  );
 
-  // Organization dashboard stats: Show metrics for all work assigned to user's organizations
+  // Organization dashboard stats
   const dashboardStats = useQuery({
     queryKey: dashboardStatsQueryKey,
     queryFn: async () => {
@@ -119,7 +136,6 @@ export function useSubcontractorWorkOrders() {
         };
       }
 
-      // Get work orders assigned to user's organizations
       const { data: workOrders, error: workOrdersError } = await supabase
         .from("work_orders")
         .select(`
@@ -135,14 +151,12 @@ export function useSubcontractorWorkOrders() {
 
       if (workOrdersError) throw workOrdersError;
 
-      // Get current month's reports from user's organizations
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const userIdsInOrganization = permissions.user?.organization_members
-        ?.filter((m: any) => organizationIds.includes(m.organization_id))
-        .map((m: any) => m.user_id) || [];
+      // Use stable organization member IDs
+      const userIdsInOrganization = useStableOrganizationMemberIds(organizationIds);
 
       const { data: monthlyReports, error: reportsError } = await supabase
         .from("work_order_reports")
@@ -177,29 +191,21 @@ export function useSubcontractorWorkOrders() {
       };
     },
     enabled: isReady,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: (failureCount, error) => {
-      if (error?.message?.includes('row-level security')) return false;
-      return failureCount < 3;
-    },
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  // Get work order by ID
+  // Get work order by ID with stable query
   const getWorkOrder = (id: string) => {
-    console.log('🔍 getWorkOrder called with ID:', id);
+    const isValidId = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
     return useQuery({
       queryKey: ["work-order", id],
       queryFn: async () => {
-        console.log('🔍 getWorkOrder queryFn executing for ID:', id);
-        if (!id) throw new Error('Work order ID is required');
-        
-        // Validate UUID format
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-          throw new Error('Invalid work order ID format');
-        }
+        if (!id || !isValidId) throw new Error('Invalid work order ID');
 
-        // Main work order query (one-to-one relationships only)
         const { data: workOrderData, error: workOrderError } = await supabase
           .from("work_orders")
           .select(`
@@ -214,7 +220,6 @@ export function useSubcontractorWorkOrders() {
         if (workOrderError) throw workOrderError;
         if (!workOrderData) throw new Error('Work order not found');
 
-        // Separate query for work order reports (one-to-many relationship)
         const { data: reportsData, error: reportsError } = await supabase
           .from("work_order_reports")
           .select(`
@@ -225,7 +230,6 @@ export function useSubcontractorWorkOrders() {
 
         if (reportsError) throw reportsError;
 
-        // Then get location contact information if available
         let locationContact = null;
         if (workOrderData.partner_location_number && workOrderData.organization_id) {
           const { data: locationData } = await supabase
@@ -246,18 +250,19 @@ export function useSubcontractorWorkOrders() {
           location_contact_email: locationContact?.contact_email,
         };
       },
-      enabled: !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+      enabled: isValidId,
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
     });
   };
 
-  // PHASE 1 FIX: Stable query key for reports
-  const reportsQueryKey = useMemo(() => {
-    const key = ["subcontractor-reports", stableProfileId, stableOrgIdsString];
-    console.log('🔄 reportsQueryKey computed:', key);
-    return key;
-  }, [stableProfileId, stableOrgIdsString]);
+  // Stable query key for reports
+  const reportsQueryKey = useMemo(() => 
+    ["subcontractor-reports", user?.id, profile?.id, ...organizationIds],
+    [user?.id, profile?.id, organizationIds.join(',')]
+  );
 
-  // Get reports for work orders assigned to user's organizations
+  // Get reports for work orders
   const reports = useQuery({
     queryKey: reportsQueryKey,
     queryFn: async () => {
@@ -265,7 +270,6 @@ export function useSubcontractorWorkOrders() {
         return [];
       }
 
-      // Get reports for work orders assigned to user's organizations
       const { data, error } = await supabase
         .from("work_order_reports")
         .select(`
@@ -284,15 +288,13 @@ export function useSubcontractorWorkOrders() {
       return data || [];
     },
     enabled: isReady,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: (failureCount, error) => {
-      if (error?.message?.includes('row-level security')) return false;
-      return failureCount < 3;
-    },
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  // Submit work report
+  // Submit work report mutation
   const submitReport = useMutation({
     mutationFn: async (reportData: {
       workOrderId: string;
@@ -304,7 +306,6 @@ export function useSubcontractorWorkOrders() {
     }) => {
       if (!profile?.id) throw new Error("No user profile");
 
-      // Submit the report - only include hours_worked for employees
       const reportInsert: any = {
         work_order_id: reportData.workOrderId,
         subcontractor_user_id: profile.id,
@@ -313,7 +314,6 @@ export function useSubcontractorWorkOrders() {
         notes: reportData.notes,
       };
 
-      // Include hours_worked if provided (for tracking purposes)
       if (reportData.hoursWorked !== undefined) {
         reportInsert.hours_worked = reportData.hoursWorked;
       }
@@ -328,8 +328,7 @@ export function useSubcontractorWorkOrders() {
       
       const report = reportArray[0];
 
-
-      // Upload photos if provided
+      // Handle photo uploads
       if (reportData.photos && reportData.photos.length > 0) {
         const uploadPromises = reportData.photos.map(async (photo, index) => {
           const fileName = `${profile.id}/${report.id}/${Date.now()}_${index}_${photo.name}`;
@@ -340,7 +339,6 @@ export function useSubcontractorWorkOrders() {
 
           if (uploadError) throw uploadError;
 
-          // Create attachment record
           const { error: attachmentError } = await supabase
             .from("work_order_attachments")
             .insert({
@@ -358,7 +356,6 @@ export function useSubcontractorWorkOrders() {
         await Promise.all(uploadPromises);
       }
 
-      // Update work order status if needed
       await supabase
         .from("work_orders")
         .update({ 
@@ -375,17 +372,17 @@ export function useSubcontractorWorkOrders() {
         title: "Report Submitted",
         description: "Your work report has been submitted successfully.",
       });
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ["subcontractor-work-orders"] });
       queryClient.invalidateQueries({ queryKey: ["subcontractor-reports"] });
       queryClient.invalidateQueries({ queryKey: ["subcontractor-dashboard"] });
     },
-    onError: (error) => {
-      const errorMessage = error.message;
+    onError: (error: any) => {
+      const errorMessage = error.message || "Unknown error";
       
-      // Provide specific feedback for authentication errors
-      if (errorMessage.includes("Authentication session invalid")) {
+      if (errorMessage.includes("JWT") || errorMessage.includes("token")) {
         toast({
-          title: "Authentication Error",
+          title: "Session Expired",
           description: "Your session has expired. Please refresh the page and try again.",
           variant: "destructive",
         });
@@ -406,14 +403,13 @@ export function useSubcontractorWorkOrders() {
     },
   });
 
-  // PHASE 1 FIX: Stable query key for completed work orders
-  const completedWorkOrdersQueryKey = useMemo(() => {
-    const key = ["completed-work-orders-for-invoicing", stableProfileId, stableOrgIdsString];
-    console.log('🔄 completedWorkOrdersQueryKey computed:', key);
-    return key;
-  }, [stableProfileId, stableOrgIdsString]);
+  // Stable query key for completed work orders
+  const completedWorkOrdersQueryKey = useMemo(() => 
+    ["completed-work-orders-for-invoicing", user?.id, profile?.id, ...organizationIds],
+    [user?.id, profile?.id, organizationIds.join(',')]
+  );
 
-  // Organization completed work orders: All completed work for user's organizations
+  // Organization completed work orders
   const completedWorkOrdersForInvoicing = useQuery({
     queryKey: completedWorkOrdersQueryKey,
     queryFn: async () => {
@@ -453,12 +449,10 @@ export function useSubcontractorWorkOrders() {
       return data || [];
     },
     enabled: isReady,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: (failureCount, error) => {
-      if (error?.message?.includes('row-level security')) return false;
-      return failureCount < 3;
-    },
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   return {
@@ -471,6 +465,31 @@ export function useSubcontractorWorkOrders() {
   };
 }
 
+// Helper hook for stable organization member IDs
+function useStableOrganizationMemberIds(organizationIds: string[]) {
+  const permissions = useEnhancedPermissions();
+  const previousIdsRef = useRef<string[]>([]);
+  
+  return useMemo(() => {
+    const newIds = permissions.user?.organization_members
+      ?.filter((m: any) => organizationIds.includes(m.organization_id))
+      .map((m: any) => m.user_id)
+      .filter(Boolean)
+      .sort() || [];
+    
+    const hasChanged = 
+      newIds.length !== previousIdsRef.current.length ||
+      newIds.some((id, index) => id !== previousIdsRef.current[index]);
+    
+    if (hasChanged) {
+      previousIdsRef.current = newIds;
+      return newIds;
+    }
+    
+    return previousIdsRef.current;
+  }, [permissions.user?.organization_members?.length, organizationIds.join(',')]);
+}
+
 // Image compression utility
 export function compressImage(file: File, maxSizeMB = 1): Promise<File> {
   return new Promise((resolve) => {
@@ -479,7 +498,6 @@ export function compressImage(file: File, maxSizeMB = 1): Promise<File> {
     const img = new Image();
 
     img.onload = () => {
-      // Calculate new dimensions
       const maxWidth = 1920;
       const maxHeight = 1080;
       let { width, height } = img;
@@ -499,7 +517,6 @@ export function compressImage(file: File, maxSizeMB = 1): Promise<File> {
       canvas.width = width;
       canvas.height = height;
 
-      // Draw and compress
       ctx?.drawImage(img, 0, 0, width, height);
       
       canvas.toBlob(
