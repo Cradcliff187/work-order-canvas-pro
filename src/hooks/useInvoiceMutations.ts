@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +23,22 @@ export const useInvoiceMutations = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Stabilize success/error callbacks
+  const handleSuccess = useCallback((message: string, description: string) => {
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    queryClient.invalidateQueries({ queryKey: ['invoice'] });
+    toast({ title: message, description });
+  }, [queryClient, toast]);
+
+  const handleError = useCallback((error: any, message: string) => {
+    console.error(`Invoice mutation error:`, error);
+    toast({
+      title: 'Error',
+      description: `${message} Please try again.`,
+      variant: 'destructive',
+    });
+  }, [toast]);
+
   const approveInvoice = useMutation({
     mutationFn: async ({ invoiceId, notes }: ApproveInvoiceData) => {
       const { data, error } = await supabase
@@ -41,22 +58,12 @@ export const useInvoiceMutations = () => {
 
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['invoice'] });
-      toast({
-        title: 'Invoice Approved',
-        description: 'The invoice has been successfully approved and the subcontractor has been notified.',
-      });
-    },
-    onError: (error) => {
-      console.error('Error approving invoice:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to approve invoice. Please try again.',
-        variant: 'destructive',
-      });
-    },
+    onSuccess: () => handleSuccess(
+      'Invoice Approved',
+      'The invoice has been successfully approved and the subcontractor has been notified.'
+    ),
+    onError: (error) => handleError(error, 'Failed to approve invoice.'),
+    retry: 2,
   });
 
   const rejectInvoice = useMutation({
@@ -77,22 +84,12 @@ export const useInvoiceMutations = () => {
 
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['invoice'] });
-      toast({
-        title: 'Invoice Rejected',
-        description: 'The invoice has been rejected and the subcontractor has been notified.',
-      });
-    },
-    onError: (error) => {
-      console.error('Error rejecting invoice:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reject invoice. Please try again.',
-        variant: 'destructive',
-      });
-    },
+    onSuccess: () => handleSuccess(
+      'Invoice Rejected',
+      'The invoice has been rejected and the subcontractor has been notified.'
+    ),
+    onError: (error) => handleError(error, 'Failed to reject invoice.'),
+    retry: 2,
   });
 
   const markAsPaid = useMutation({
@@ -114,22 +111,12 @@ export const useInvoiceMutations = () => {
 
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['invoice'] });
-      toast({
-        title: 'Invoice Marked as Paid',
-        description: 'The invoice has been marked as paid and the subcontractor has been notified.',
-      });
-    },
-    onError: (error) => {
-      console.error('Error marking invoice as paid:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to mark invoice as paid. Please try again.',
-        variant: 'destructive',
-      });
-    },
+    onSuccess: () => handleSuccess(
+      'Invoice Marked as Paid',
+      'The invoice has been marked as paid and the subcontractor has been notified.'
+    ),
+    onError: (error) => handleError(error, 'Failed to mark invoice as paid.'),
+    retry: 2,
   });
 
   return {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingCard } from "@/components/ui/loading-states";
+import { QueryError, QueryErrorBoundary } from "@/components/ui/query-error-boundary";
 import { Plus, Search, DollarSign, Paperclip, FileText, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
@@ -19,15 +21,16 @@ const SubcontractorInvoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
-  const filters = {
+  // Memoize filters to prevent unnecessary re-fetches
+  const filters = useMemo(() => ({
     status: statusFilter && statusFilter !== "all" ? [statusFilter] : undefined,
     paymentStatus: initialPayment as 'paid' | 'unpaid' | undefined,
     search: searchQuery || undefined,
     page,
     limit: 20,
-  };
+  }), [statusFilter, initialPayment, searchQuery, page]);
 
-  const { data: invoicesData, isLoading } = useInvoices(filters);
+  const { data: invoicesData, isLoading, error, refetch } = useInvoices(filters);
   const invoices = invoicesData?.data || [];
   const totalCount = invoicesData?.count || 0;
 
@@ -55,35 +58,58 @@ const SubcontractorInvoices = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 bg-muted rounded animate-pulse" />
+        <div className="flex justify-between items-center">
+          <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+          <div className="h-10 w-36 bg-muted rounded animate-pulse" />
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex gap-4">
+              <div className="flex-1 h-10 bg-muted rounded animate-pulse" />
+              <div className="w-48 h-10 bg-muted rounded animate-pulse" />
+            </div>
+          </CardContent>
+        </Card>
         <div className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  <div className="h-4 bg-muted rounded animate-pulse" />
-                  <div className="h-4 bg-muted rounded animate-pulse w-2/3" />
-                  <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <LoadingCard count={5} showHeader={false} />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Invoices</h1>
-        <Link to="/subcontractor/submit-invoice">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
-        </Link>
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold">Invoices</h1>
+          <Link to="/subcontractor/submit-invoice">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          </Link>
+        </div>
+        <QueryError 
+          error={error as Error}
+          onRetry={refetch}
+          title="Failed to load invoices"
+        />
       </div>
+    );
+  }
+
+  return (
+    <QueryErrorBoundary onRetry={refetch}>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold">Invoices</h1>
+          <Link to="/subcontractor/submit-invoice">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          </Link>
+        </div>
 
       {/* Filters */}
       <Card>
@@ -231,6 +257,7 @@ const SubcontractorInvoices = () => {
         </div>
       )}
     </div>
+    </QueryErrorBoundary>
   );
 };
 

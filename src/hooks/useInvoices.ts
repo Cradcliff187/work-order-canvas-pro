@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface InvoiceFilters {
@@ -62,8 +63,17 @@ export interface Invoice {
 }
 
 export const useInvoices = (filters: InvoiceFilters = {}) => {
+  // Stabilize query key to prevent unnecessary re-fetches
+  const stableQueryKey = useMemo(() => ['invoices', filters], [
+    filters.status?.join(','),
+    filters.paymentStatus,
+    filters.search,
+    filters.page,
+    filters.limit
+  ]);
+
   return useQuery({
-    queryKey: ['invoices', filters],
+    queryKey: stableQueryKey,
     queryFn: async () => {
       const { page = 1, limit = 10, ...otherFilters } = filters;
       const offset = (page - 1) * limit;
@@ -141,12 +151,22 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         count: count || 0,
       };
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry permission errors
+      if (error?.code === 'PGRST116' || error?.message?.includes('permission')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 };
 
 export const useInvoice = (id: string) => {
+  const stableQueryKey = useMemo(() => ['invoice', id], [id]);
+
   return useQuery({
-    queryKey: ['invoice', id],
+    queryKey: stableQueryKey,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
@@ -201,6 +221,13 @@ export const useInvoice = (id: string) => {
 
       return data as Invoice;
     },
-    enabled: !!id,
+    enabled: !!id && id !== 'skip-query',
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: (failureCount, error: any) => {
+      if (error?.code === 'PGRST116' || error?.message?.includes('permission')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 };

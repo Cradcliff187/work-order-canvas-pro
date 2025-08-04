@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryPerformance } from './useQueryPerformance';
 import { Database } from '@/integrations/supabase/types';
 
 type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
@@ -68,8 +70,11 @@ export type { WorkOrderDetail };
 export function useWorkOrderDetail(id: string) {
   console.log('🔍 useWorkOrderDetail called with ID:', id);
   
-  return useQuery({
-    queryKey: ['work-order-detail', id],
+  // Stabilize query key
+  const queryKey = useMemo(() => ['work-order-detail', id], [id]);
+  
+  const query = useQuery({
+    queryKey,
     queryFn: async () => {
       console.log('🔍 useWorkOrderDetail queryFn executing for ID:', id);
       if (!id) throw new Error('Work order ID is required');
@@ -209,6 +214,18 @@ export function useWorkOrderDetail(id: string) {
         location_contact_email: locationContact?.contact_email,
       };
     },
-    enabled: !!id && id !== "undefined" && id !== "skip-query",
+    enabled: !!id && id !== "undefined" && id !== "skip-query" && id.length > 10,
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    retry: (failureCount, error: any) => {
+      if (error?.code === 'PGRST116' || error?.message?.includes('permission')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
+
+  // Track performance
+  useQueryPerformance(queryKey, query.isLoading, query.error, query.data);
+
+  return query;
 }
