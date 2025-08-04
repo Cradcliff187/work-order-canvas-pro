@@ -21,9 +21,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <AdminSidebar />
         
         <div className="flex-1 flex flex-col">
-          {/* Header with single toggle - this should be the only SidebarTrigger */}
-          <header className="h-14 flex items-center border-b border-border px-4 bg-background">
+          {/* Header with single toggle - matches SubcontractorLayout structure */}
+          <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
             <SidebarTrigger />
+            <div className="flex-1" />
           </header>
 
           {/* Main content with consistent container and padding */}
