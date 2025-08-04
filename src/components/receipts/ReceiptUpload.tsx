@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { FileUpload } from "@/components/FileUpload";
+import { UnifiedFileUpload } from "@/components/upload/UnifiedFileUpload";
 import { WorkOrderSelector } from "./WorkOrderSelector";
 import { useReceipts } from "@/hooks/useReceipts";
 import { 
@@ -139,9 +139,10 @@ export function ReceiptUpload() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FileUpload
+              <UnifiedFileUpload
                 onFilesSelected={handleFileSelect}
                 maxFiles={1}
+                acceptedTypes={['image/*']}
               />
               {receiptFile && (
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">

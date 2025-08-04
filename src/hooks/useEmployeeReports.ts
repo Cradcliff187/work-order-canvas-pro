@@ -214,34 +214,7 @@ export function useEmployeeReports() {
         report = newReport;
       }
 
-      // Upload receipts if provided
-      if (reportData.receipts && reportData.receipts.length > 0) {
-        const uploadPromises = reportData.receipts.map(async (receipt, index) => {
-          const fileName = `${user.id}/${report.id}/${Date.now()}_${index}_${receipt.name}`;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("work-order-attachments")
-            .upload(fileName, receipt);
-
-          if (uploadError) throw uploadError;
-
-          // Create attachment record
-          const { error: attachmentError } = await supabase
-            .from("work_order_attachments")
-            .insert({
-              work_order_id: reportData.workOrderId,
-              file_name: receipt.name,
-              file_url: uploadData.path,
-              file_type: "document",
-              file_size: receipt.size,
-              uploaded_by_user_id: profile.id,
-            });
-
-          if (attachmentError) throw attachmentError;
-        });
-
-        await Promise.all(uploadPromises);
-      }
+      // Note: Receipt uploads are now handled separately via the unified upload system
 
       return report;
     },

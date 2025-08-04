@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useInvoiceFileUpload } from './useInvoiceFileUpload';
+import { useFileUpload } from './useFileUpload';
 
 interface SubmitInvoiceData {
   externalInvoiceNumber?: string;
@@ -17,7 +17,7 @@ interface SubmitInvoiceData {
 export const useInvoiceSubmission = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { uploadInvoiceAttachments } = useInvoiceFileUpload();
+  const { uploadFiles } = useFileUpload({ context: 'invoice' });
 
   const submitInvoice = useMutation({
     mutationFn: async (data: SubmitInvoiceData) => {
@@ -72,7 +72,7 @@ export const useInvoiceSubmission = () => {
       // Upload attachments if provided
       if (data.attachments && data.attachments.length > 0) {
         try {
-          await uploadInvoiceAttachments(data.attachments, invoice.id);
+          await uploadFiles(data.attachments);
         } catch (uploadError) {
           console.warn('Failed to upload attachments:', uploadError);
           // Don't fail the entire operation for attachment issues

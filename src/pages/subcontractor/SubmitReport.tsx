@@ -18,9 +18,7 @@ import { useWorkOrderReportSubmission } from '@/hooks/useWorkOrderReportSubmissi
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { MobileFileUpload } from '@/components/MobileFileUpload';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { FileUpload } from '@/components/FileUpload';
+import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
 import type { PhotoAttachment } from '@/types/offline';
 
 interface FormData {
@@ -39,7 +37,7 @@ export default function SubmitReport() {
   const { isEmployee } = useUserProfile();
   const { submitReport } = useWorkOrderReportSubmission();
   const { saveDraft, getDrafts } = useOfflineStorage();
-  const isMobile = useIsMobile();
+  
 
   // Fetch work order details
   const workOrderQuery = useQuery({
@@ -374,22 +372,11 @@ export default function SubmitReport() {
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label>Upload Files</Label>
-                {isMobile ? (
-                  <MobileFileUpload
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={10}
-                    acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
-                    showCameraButton={true}
-                    showGalleryButton={true}
-                    showDocumentButton={true}
-                  />
-                ) : (
-                  <FileUpload
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={10}
-                    acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
-                  />
-                )}
+                <UnifiedFileUpload
+                  onFilesSelected={handleFilesSelected}
+                  maxFiles={10}
+                  acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
+                />
                 <p className="text-xs text-muted-foreground">
                   Upload photos, PDF documents, Excel files, or Word documents
                 </p>

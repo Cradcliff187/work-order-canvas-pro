@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useDropzone } from 'react-dropzone';
+import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { Upload, ArrowLeft, FileText, Loader2, Save } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
@@ -173,18 +173,9 @@ export default function SubmitInvoice() {
     });
   };
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles(prevFiles => [...prevFiles, ...acceptedFiles]);
+  const handleFilesSelected = useCallback((selectedFiles: File[]) => {
+    setFiles(prevFiles => [...prevFiles, ...selectedFiles]);
   }, []);
-
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif'],
-      'application/pdf': ['.pdf'],
-    },
-    maxSize: 10000000, // 10MB
-  });
 
   const handleRemoveFile = (fileToRemove: File) => {
     setFiles(prevFiles => prevFiles.filter(file => file !== fileToRemove));
@@ -282,22 +273,22 @@ export default function SubmitInvoice() {
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label>Upload Documents</Label>
-                <div 
-                  {...getRootProps()} 
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-                    isDragActive ? "border-primary bg-primary/10" : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                  )}
-                >
-                  <input {...getInputProps()} />
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {isDragActive ? "Drop files here..." : "Drag & drop files here, or click to select"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PDF, PNG, JPG up to 10MB each
-                  </p>
-                </div>
+                <UniversalUploadSheet
+                  trigger={
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors border-muted-foreground/25 hover:border-muted-foreground/50">
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Click to select documents
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PDF, PNG, JPG up to 10MB each
+                      </p>
+                    </div>
+                  }
+                  onFilesSelected={handleFilesSelected}
+                  accept="image/*,application/pdf"
+                  multiple={true}
+                />
               </div>
 
               {files.length > 0 && (

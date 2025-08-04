@@ -29,8 +29,7 @@ import { useOrganizationsForWorkOrders } from '@/hooks/useWorkOrders';
 import { usePartnerLocationsForOrganization } from '@/hooks/usePartnerLocationsForOrganization';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { FileUpload } from '@/components/FileUpload';
-import { MobileFileUpload } from '@/components/MobileFileUpload';
+import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
 
 // Form schema with comprehensive validation
 const workOrderFormSchema = z.object({
@@ -785,24 +784,11 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                           </p>
                         </div>
                         
-                        {isMobile ? (
-                          <MobileFileUpload
-                            onFilesSelected={handleFilesSelected}
-                            maxFiles={10}
-                            maxSizeBytes={10 * 1024 * 1024} // 10MB
-                            uploadProgress={uploadProgress}
-                            showCameraButton={true}
-                            showGalleryButton={true}
-                            showDocumentButton={true}
-                          />
-                        ) : (
-                          <FileUpload
-                            onFilesSelected={handleFilesSelected}
-                            maxFiles={10}
-                            maxSizeBytes={10 * 1024 * 1024} // 10MB
-                            uploadProgress={uploadProgress}
-                          />
-                        )}
+                        <UnifiedFileUpload
+                          onFilesSelected={handleFilesSelected}
+                          maxFiles={10}
+                          maxSizeBytes={10 * 1024 * 1024} // 10MB
+                        />
 
                         {/* Selected Files Display */}
                         {selectedFiles.length > 0 && (

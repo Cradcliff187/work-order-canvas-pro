@@ -10,9 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAdminReportSubmission } from '@/hooks/useAdminReportSubmission';
-import { MobileFileUpload } from '@/components/MobileFileUpload';
-import { FileUpload } from '@/components/FileUpload';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface FormData {
@@ -28,7 +26,7 @@ export default function AdminSubmitReport() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile } = useAuth();
-  const isMobile = useIsMobile();
+  
   
   const { data: workOrder, isLoading, error } = useWorkOrderDetail(workOrderId!);
   const { submitReportForSubcontractor, isSubmitting } = useAdminReportSubmission();
@@ -335,22 +333,11 @@ export default function AdminSubmitReport() {
             <StandardFormLayout.FieldGroup>
               <div className="space-y-2">
                 <Label>Upload Files</Label>
-                {isMobile ? (
-                  <MobileFileUpload
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={10}
-                    acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
-                    showCameraButton={true}
-                    showGalleryButton={true}
-                    showDocumentButton={true}
-                  />
-                ) : (
-                  <FileUpload
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={10}
-                    acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
-                  />
-                )}
+                <UnifiedFileUpload
+                  onFilesSelected={handleFilesSelected}
+                  maxFiles={10}
+                  acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
+                />
                 <p className="text-xs text-muted-foreground">
                   Upload photos, PDF documents, Excel files, or Word documents
                 </p>

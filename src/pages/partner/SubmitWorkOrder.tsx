@@ -29,8 +29,7 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { FileUpload } from '@/components/FileUpload';
-import { MobileFileUpload } from '@/components/MobileFileUpload';
+import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
 import { getFileTypeForStorage, formatFileSize } from '@/utils/fileUtils';
 
 // Unified form schema with improved error messages
@@ -869,28 +868,13 @@ export default function SubmitWorkOrder() {
                         Upload images or PDFs to help explain the work needed. Maximum 10 files, 10MB each.
                       </div>
                       
-                      {isMobile ? (
-                        <MobileFileUpload
-                          onFilesSelected={handleFilesSelected}
-                          maxFiles={10}
-                          maxSizeBytes={10 * 1024 * 1024}
-                          uploadProgress={uploadProgress}
-                          disabled={isUploading}
-                          acceptedTypes={['image/*', '.pdf']}
-                          showCameraButton={true}
-                          showGalleryButton={true}
-                          showDocumentButton={true}
-                        />
-                      ) : (
-                        <FileUpload
-                          onFilesSelected={handleFilesSelected}
-                          maxFiles={10}
-                          maxSizeBytes={10 * 1024 * 1024}
-                          uploadProgress={uploadProgress}
-                          disabled={isUploading}
-                          acceptedTypes={['image/*', '.pdf']}
-                        />
-                      )}
+                      <UnifiedFileUpload
+                        onFilesSelected={handleFilesSelected}
+                        maxFiles={10}
+                        maxSizeBytes={10 * 1024 * 1024}
+                        disabled={isUploading}
+                        acceptedTypes={['image/*', '.pdf']}
+                      />
                     </div>
 
                     {/* Admin-only fields */}
