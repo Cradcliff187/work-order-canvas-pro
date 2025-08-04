@@ -17,26 +17,30 @@ export function useProfile() {
         throw new Error('No authenticated user');
       }
 
-      const { data: profile, error } = await supabase
+      // First, get the profile without joins
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          organization_members(
-            organization_id
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .single(); // This will return exactly 1 row
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      // Extract organization_id from organization_members
-      const organizationMembers = profile.organization_members as any[];
-      const organizationId = organizationMembers?.[0]?.organization_id;
+      // Then, separately get organization memberships
+      const { data: orgMemberships, error: orgError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', profile.id);
+
+      if (orgError) throw orgError;
+
+      // Extract first organization_id for backward compatibility
+      const organizationId = orgMemberships?.[0]?.organization_id;
 
       return {
         ...profile,
         organization_id: organizationId,
+        organization_members: orgMemberships, // Include all memberships if needed
       } as Profile;
     },
   });
