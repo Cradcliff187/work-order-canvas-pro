@@ -73,13 +73,13 @@ const SubcontractorWorkOrders = () => {
   const workOrderIds = workOrderList.map(wo => wo.id);
   const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
 
-  // FIX 3: Fix skip-query pattern to prevent unnecessary hook calls and logging spam
-  const skipQuery = !selectedWorkOrderId || selectedWorkOrderId === "skip-query";
-  const workOrderDetailQuery = useWorkOrderDetail(selectedWorkOrderId || "");
+  // FIX 3: Conditional hook pattern to completely prevent unnecessary calls
+  const shouldFetchDetail = Boolean(selectedWorkOrderId && selectedWorkOrderId !== "skip-query");
+  const workOrderDetailQuery = useWorkOrderDetail(shouldFetchDetail ? selectedWorkOrderId! : "");
   
-  // Only use the query data when we have a valid selection
-  const selectedWorkOrder = skipQuery ? null : workOrderDetailQuery.data;
-  const isLoadingDetail = skipQuery ? false : workOrderDetailQuery.isLoading;
+  // Clean data access
+  const selectedWorkOrder = shouldFetchDetail ? workOrderDetailQuery.data : null;
+  const isLoadingDetail = shouldFetchDetail ? workOrderDetailQuery.isLoading : false;
 
   const filteredWorkOrders = workOrderList.filter((workOrder) => {
     const matchesSearch = 

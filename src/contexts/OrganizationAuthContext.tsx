@@ -58,8 +58,23 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   // Ref to prevent duplicate profile fetching
   const fetchingProfileRef = useRef<string | null>(null);
 
-  // Memoize userOrganizations to prevent unnecessary re-renders
-  const memoizedUserOrganizations = useMemo(() => userOrganizations, [userOrganizations]);
+  // ROOT FIX: Stabilize userOrganizations using deep equality check to prevent infinite re-renders
+  const previousOrganizationsRef = useRef<OrganizationMember[]>([]);
+  
+  const memoizedUserOrganizations = useMemo(() => {
+    // Deep equality check - only update if the actual organization data changed
+    const currentOrgIds = userOrganizations.map(o => o.organization_id).sort().join(',');
+    const previousOrgIds = previousOrganizationsRef.current.map(o => o.organization_id).sort().join(',');
+    
+    // If the organization IDs are the same, return the previous reference to maintain stability
+    if (currentOrgIds === previousOrgIds && previousOrganizationsRef.current.length > 0) {
+      return previousOrganizationsRef.current;
+    }
+    
+    // Only update the ref when there's an actual change
+    previousOrganizationsRef.current = userOrganizations;
+    return userOrganizations;
+  }, [userOrganizations.map(o => o.organization_id).sort().join(',')]);
 
   // Get primary organization (first internal org for admin/employee, or first org for others) - memoized
   const userOrganization = useMemo(() => {

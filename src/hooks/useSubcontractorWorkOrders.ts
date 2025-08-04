@@ -26,8 +26,8 @@ export function useSubcontractorWorkOrders() {
     
     return orgIds;
   }, [
-    // FIX 2: Use only the essential stable string data, not object references
-    loading ? 'loading' : (permissions.user?.organization_members?.map((m: any) => String(m.organization_id)).sort().join(',') || 'empty')
+    // FINAL FIX: Use the most stable dependency possible
+    `${loading}:${permissions.user?.organization_members?.map((m: any) => String(m.organization_id)).sort().join(',') || 'none'}`
   ]);
 
   // PHASE 1 FIX: Truly stable ready state based only on essential data

@@ -32,7 +32,7 @@ export const useEnhancedPermissions = () => {
     previousOrgsRef.current = userOrganizations;
     
     return newUser;
-  }, [user?.id, user?.email, userOrganizations?.map(o => o.organization_id).sort().join(',')])
+  }, [user?.id, user?.email, JSON.stringify(userOrganizations?.map(o => o.organization_id).sort() || [])])
 
   // Memoize role checks to prevent recreation
   const roleChecks = useMemo(() => ({
