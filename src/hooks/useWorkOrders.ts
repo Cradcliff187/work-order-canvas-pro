@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -119,8 +120,9 @@ export function useWorkOrders(
   const { sortBy } = sorting;
   const { user, userOrganizations } = useAuth();
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['work-orders', pagination, sorting, filters, user?.id],
     queryFn: async () => {
       if (!user) throw new Error('No user found');
@@ -242,6 +244,60 @@ export function useWorkOrders(
     },
     enabled: !!user,
   });
+
+  // Real-time subscription for work order updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('work-orders-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'work_orders',
+        },
+        (payload) => {
+          console.log('Work order updated via realtime:', payload);
+          
+          // Debounced refetch to prevent excessive API calls
+          const timeoutId = setTimeout(() => {
+            queryClient.invalidateQueries({
+              queryKey: ['work-orders'],
+            });
+          }, 500);
+
+          return () => clearTimeout(timeoutId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'work_orders',
+        },
+        (payload) => {
+          console.log('New work order created via realtime:', payload);
+          
+          const timeoutId = setTimeout(() => {
+            queryClient.invalidateQueries({
+              queryKey: ['work-orders'],
+            });
+          }, 500);
+
+          return () => clearTimeout(timeoutId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
+  return query;
 }
 
 export function useWorkOrder(id: string) {

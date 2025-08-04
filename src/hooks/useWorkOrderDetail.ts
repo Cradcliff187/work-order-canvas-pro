@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryPerformance } from './useQueryPerformance';
 import { Database } from '@/integrations/supabase/types';
@@ -69,6 +69,7 @@ export type { WorkOrderDetail };
 
 export function useWorkOrderDetail(id: string) {
   console.log('🔍 useWorkOrderDetail called with ID:', id);
+  const queryClient = useQueryClient();
   
   // Stabilize query key
   const queryKey = useMemo(() => ['work-order-detail', id], [id]);
@@ -226,6 +227,36 @@ export function useWorkOrderDetail(id: string) {
 
   // Track performance
   useQueryPerformance(queryKey, query.isLoading, query.error, query.data);
+
+  // Real-time subscription for this specific work order
+  useEffect(() => {
+    if (!id || !query.data) return;
+
+    const channel = supabase
+      .channel(`work-order-detail-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'work_orders',
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Work order detail updated via realtime:', payload);
+          
+          // Refetch this specific work order detail
+          queryClient.invalidateQueries({
+            queryKey: ['work-order-detail', id],
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient, query.data]);
 
   return query;
 }
