@@ -1,7 +1,7 @@
 // Simplified permissions hook for organization-based auth
 import { useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserProfile } from './useUserProfile';
+import { organizationCheckers } from '@/lib/permissions';
 
 export const useEnhancedPermissions = () => {
   const { user, userOrganizations } = useAuth();
@@ -11,8 +11,6 @@ export const useEnhancedPermissions = () => {
     orgsLength: userOrganizations?.length,
     orgsIds: userOrganizations?.map(o => o.organization_id)
   });
-  const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
-
   // FIX 1: Stabilize enhancedUser with deep equality check to prevent cascading re-renders
   const previousUserRef = useRef<any>(null);
   const previousOrgsRef = useRef<any>(null);
@@ -40,13 +38,28 @@ export const useEnhancedPermissions = () => {
     return newUser;
   }, [user?.id, user?.email, JSON.stringify(userOrganizations?.map(o => o.organization_id).sort() || [])])
 
-  // Memoize role checks to prevent recreation
-  const roleChecks = useMemo(() => ({
-    isAdmin: isAdmin(),
-    isEmployee: isEmployee(),
-    isPartner: isPartner(),
-    isSubcontractor: isSubcontractor(),
-  }), [isAdmin, isEmployee, isPartner, isSubcontractor]);
+  // Memoize role checks directly without useUserProfile
+  const roleChecks = useMemo(() => {
+    if (!userOrganizations) {
+      return {
+        isAdmin: false,
+        isEmployee: false,
+        isPartner: false,
+        isSubcontractor: false,
+      };
+    }
+    
+    const internalOrg = userOrganizations.find(m => m.organization?.organization_type === 'internal');
+    const partnerOrgs = userOrganizations.filter(m => m.organization?.organization_type === 'partner');
+    const subcontractorOrgs = userOrganizations.filter(m => m.organization?.organization_type === 'subcontractor');
+    
+    return {
+      isAdmin: organizationCheckers.isAdmin(internalOrg),
+      isEmployee: organizationCheckers.isEmployee(internalOrg),
+      isPartner: organizationCheckers.isPartner(partnerOrgs),
+      isSubcontractor: organizationCheckers.isSubcontractor(subcontractorOrgs),
+    };
+  }, [userOrganizations]);
 
   // Memoize permission functions with stable references
   const permissionFunctions = useMemo(() => ({
