@@ -1,28 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEnhancedPermissions } from "@/hooks/useEnhancedPermissions";
 
 export function useSubcontractorWorkOrders() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const permissions = useEnhancedPermissions();
 
+  // Memoize organization IDs to prevent query invalidation
+  const organizationIds = useMemo(() => {
+    return permissions.user?.organization_members?.map((m: any) => m.organization_id) || [];
+  }, [permissions.user?.organization_members]);
+
   // Organization-level access: Filter to work orders assigned to user's subcontractor organizations
   const assignedWorkOrders = useQuery({
-    queryKey: ["subcontractor-work-orders", user?.id, profile?.id],
+    queryKey: ["subcontractor-work-orders", user?.id, profile?.id, organizationIds],
     queryFn: async () => {
-      if (!profile?.id) {
-        return [];
-      }
-      
-      const organizationIds = permissions.user?.organization_members
-        ?.map((m: any) => m.organization_id) || [];
-      
-      if (organizationIds.length === 0) {
+      if (!profile?.id || organizationIds.length === 0) {
         return [];
       }
       
@@ -60,19 +59,14 @@ export function useSubcontractorWorkOrders() {
       
       return transformedData;
     },
-    enabled: !!profile?.id,
+    enabled: !!profile?.id && !loading && organizationIds.length > 0,
   });
 
   // Organization dashboard stats: Show metrics for all work assigned to user's organizations
   const dashboardStats = useQuery({
-    queryKey: ["subcontractor-dashboard", user?.id, profile?.id],
+    queryKey: ["subcontractor-dashboard", user?.id, profile?.id, organizationIds],
     queryFn: async () => {
-      if (!profile?.id) return null;
-
-      const organizationIds = permissions.user?.organization_members
-        ?.map((m: any) => m.organization_id) || [];
-      
-      if (organizationIds.length === 0) {
+      if (!profile?.id || organizationIds.length === 0) {
         return {
           activeAssignments: 0,
           pendingReports: 0,
@@ -138,7 +132,7 @@ export function useSubcontractorWorkOrders() {
         reportsThisMonth,
       };
     },
-    enabled: !!profile?.id,
+    enabled: !!profile?.id && !loading,
   });
 
   // Get work order by ID
@@ -208,14 +202,9 @@ export function useSubcontractorWorkOrders() {
 
   // Get reports for work orders assigned to user's organizations
   const reports = useQuery({
-    queryKey: ["subcontractor-reports", user?.id, profile?.id],
+    queryKey: ["subcontractor-reports", user?.id, profile?.id, organizationIds],
     queryFn: async () => {
-      if (!profile?.id) return [];
-
-      const organizationIds = permissions.user?.organization_members
-        ?.map((m: any) => m.organization_id) || [];
-      
-      if (organizationIds.length === 0) {
+      if (!profile?.id || organizationIds.length === 0) {
         return [];
       }
 
@@ -237,7 +226,7 @@ export function useSubcontractorWorkOrders() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id,
+    enabled: !!profile?.id && !loading,
   });
 
   // Submit work report
@@ -356,14 +345,9 @@ export function useSubcontractorWorkOrders() {
 
   // Organization completed work orders: All completed work for user's organizations
   const completedWorkOrdersForInvoicing = useQuery({
-    queryKey: ["completed-work-orders-for-invoicing", user?.id, profile?.id],
+    queryKey: ["completed-work-orders-for-invoicing", user?.id, profile?.id, organizationIds],
     queryFn: async () => {
-      if (!profile?.id) return [];
-      
-      const organizationIds = permissions.user?.organization_members
-        ?.map((m: any) => m.organization_id) || [];
-      
-      if (organizationIds.length === 0) {
+      if (!profile?.id || organizationIds.length === 0) {
         return [];
       }
       
@@ -398,7 +382,7 @@ export function useSubcontractorWorkOrders() {
       
       return data || [];
     },
-    enabled: !!profile?.id,
+    enabled: !!profile?.id && !loading,
   });
 
   return {

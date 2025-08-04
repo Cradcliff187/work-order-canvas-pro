@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { OrganizationMember } from '@/types/auth.types';
@@ -58,12 +58,17 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
   // Ref to prevent duplicate profile fetching
   const fetchingProfileRef = useRef<string | null>(null);
 
-  // Get primary organization (first internal org for admin/employee, or first org for others)
-  const userOrganization = userOrganizations.length > 0 
-    ? userOrganizations.find(org => org.organization?.organization_type === 'internal') || userOrganizations[0]
-    : null;
+  // Memoize userOrganizations to prevent unnecessary re-renders
+  const memoizedUserOrganizations = useMemo(() => userOrganizations, [userOrganizations]);
 
-  const fetchProfile = async (userId: string) => {
+  // Get primary organization (first internal org for admin/employee, or first org for others) - memoized
+  const userOrganization = useMemo(() => {
+    return memoizedUserOrganizations.length > 0 
+      ? memoizedUserOrganizations.find(org => org.organization?.organization_type === 'internal') || memoizedUserOrganizations[0]
+      : null;
+  }, [memoizedUserOrganizations]);
+
+  const fetchProfile = useCallback(async (userId: string) => {
     if (fetchingProfileRef.current === userId) {
       return;
     }
@@ -169,7 +174,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       fetchingProfileRef.current = null;
       setLoading(false);
     }
-  };
+  }, [user]);
 
   // Helper function to process organization members data
   const processOrganizationMembers = async (membersData: any[], profileId: string) => {
@@ -335,11 +340,11 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
-  const value: OrganizationAuthContextType = {
+  const value: OrganizationAuthContextType = useMemo(() => ({
     user,
     session,
     profile,
-    userOrganizations,
+    userOrganizations: memoizedUserOrganizations,
     userOrganization,
     loading,
     authError,
@@ -351,7 +356,23 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     refreshProfile,
     forgotPassword,
     resetPassword,
-  };
+  }), [
+    user,
+    session,
+    profile,
+    memoizedUserOrganizations,
+    userOrganization,
+    loading,
+    authError,
+    retryAuth,
+    signUp,
+    signIn,
+    signOut,
+    updateProfile,
+    refreshProfile,
+    forgotPassword,
+    resetPassword,
+  ]);
 
   return (
     <OrganizationAuthContext.Provider value={value}>
