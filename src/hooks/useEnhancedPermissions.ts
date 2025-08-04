@@ -66,10 +66,6 @@ export const useEnhancedPermissions = () => {
     isImpersonating: false, // No impersonation in new system
   }), [roleChecks, permissionFunctions]);
 
-  console.log('[ENHANCED-PERMS] Returning', {
-    enhancedUserStable: enhancedUser === previousUserRef.current,
-    roleChecksKeys: Object.keys(roleChecks)
-  });
 
   return {
     user: enhancedUser,

@@ -32,6 +32,7 @@ import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import {
   Select,
@@ -58,6 +59,7 @@ const workOrderSortOptions = [
 
 const WorkOrderList = () => {
   const navigate = useNavigate();
+  const { profile, isEmployee, isAdmin } = useUserProfile();
   const { data: workOrdersData, isLoading } = usePartnerWorkOrders();
   const { organization: userOrganization } = useUserOrganization();
   const { data: locations } = usePartnerLocations(userOrganization?.id);
@@ -74,7 +76,7 @@ const WorkOrderList = () => {
   
   // Extract work order IDs for unread message counts
   const workOrderIds = workOrderList.map(wo => wo.id);
-  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds, profile, isEmployee, isAdmin);
 
   // Fetch selected work order details for master-detail view
   const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(

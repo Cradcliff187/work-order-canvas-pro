@@ -18,13 +18,13 @@ import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
 
 export function UserDropdown() {
   const { profile, signOut } = useAuth();
-  const { primaryRole } = useUserProfile();
+  const { primaryRole, isEmployee, isAdmin } = useUserProfile();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Get accessible work orders and unread counts
   const { data: workOrderIds = [] } = useUserAccessibleWorkOrders();
-  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds, profile, isEmployee, isAdmin);
 
   // Calculate total unread messages
   const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);

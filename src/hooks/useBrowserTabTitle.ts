@@ -1,11 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { useUserAccessibleWorkOrders } from './useUserAccessibleWorkOrders';
 import { useUnreadMessageCounts } from './useUnreadMessageCounts';
+import { useUserProfile } from './useUserProfile';
 import { useDebounce } from './useDebounce';
 
 export function useBrowserTabTitle() {
+  const { profile, isEmployee, isAdmin } = useUserProfile();
   const { data: accessibleWorkOrderIds = [], isLoading: isLoadingWorkOrders } = useUserAccessibleWorkOrders();
-  const { data: unreadCounts = {}, isLoading: isLoadingUnread } = useUnreadMessageCounts(accessibleWorkOrderIds);
+  const { data: unreadCounts = {}, isLoading: isLoadingUnread } = useUnreadMessageCounts(accessibleWorkOrderIds, profile, isEmployee, isAdmin);
 
   // Calculate title string
   const title = useMemo(() => {

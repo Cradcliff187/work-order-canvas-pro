@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserProfile } from './useUserProfile';
 
 // Hook to get assigned work order IDs for employees
 function useEmployeeAssignedWorkOrders(profileId: string | undefined, isEmployee: boolean) {
@@ -20,12 +19,16 @@ function useEmployeeAssignedWorkOrders(profileId: string | undefined, isEmployee
     },
     enabled: !!profileId && isEmployee,
     staleTime: 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes,
   });
 }
 
-export function useUnreadMessageCounts(workOrderIds: string[]) {
-  const { profile, isEmployee, isAdmin } = useUserProfile();
+export function useUnreadMessageCounts(
+  workOrderIds: string[], 
+  profile: any, 
+  isEmployee: () => boolean, 
+  isAdmin: () => boolean
+) {
   const queryClient = useQueryClient();
   
   // For employees (not admins), get their assigned work orders

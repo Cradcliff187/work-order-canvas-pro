@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
@@ -52,6 +53,7 @@ import {
 const SubcontractorWorkOrders = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { profile, isEmployee, isAdmin } = useUserProfile();
   const { assignedWorkOrders } = useSubcontractorWorkOrders();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -71,7 +73,7 @@ const SubcontractorWorkOrders = () => {
   
   // Extract work order IDs for unread message counts
   const workOrderIds = workOrderList.map(wo => wo.id);
-  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds, profile, isEmployee, isAdmin);
 
   // FIX 3: Use proper conditional hook pattern with stable query key
   const workOrderDetailQuery = useWorkOrderDetail(selectedWorkOrderId || "skip-query");

@@ -22,6 +22,7 @@ import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
@@ -51,6 +52,7 @@ export default function AdminWorkOrders() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { profile, isEmployee, isAdmin } = useUserProfile();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -80,7 +82,7 @@ export default function AdminWorkOrders() {
 
   // Extract work order IDs for unread message counts
   const workOrderIds = workOrdersData?.data?.map(wo => wo.id) || [];
-  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds, profile, isEmployee, isAdmin);
 
   // Fetch selected work order details for master-detail view
   const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(
