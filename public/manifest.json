@@ -40,7 +40,7 @@
     },
     {
       "name": "New Service Request",
-      "url": "/partner/submit-work-order", 
+      "url": "/partner/work-orders/new", 
       "description": "Submit new service request"
     },
     {
