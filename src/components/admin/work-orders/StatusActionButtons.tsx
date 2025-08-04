@@ -12,7 +12,16 @@ import {
   FileText
 } from 'lucide-react';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
-import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { AssignWorkOrderModal } from './AssignWorkOrderModal';
 import type { Database } from '@/integrations/supabase/types';
@@ -279,14 +288,25 @@ export function StatusActionButtons({
         })}
       </div>
 
-      <DeleteConfirmationDialog
-        open={confirmDialog.open}
-        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
-        onConfirm={handleConfirmTransition}
-        itemName={confirmDialog.label}
-        itemType="status change"
-        isLoading={isTransitioning}
-      />
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog.message}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isTransitioning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmTransition}
+              disabled={isTransitioning}
+            >
+              {isTransitioning ? 'Processing...' : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {showAssignModal && (
         <AssignWorkOrderModal
