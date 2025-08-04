@@ -264,13 +264,16 @@ export function useSubcontractorWorkOrders() {
         reportInsert.hours_worked = reportData.hoursWorked;
       }
 
-      const { data: report, error: reportError } = await supabase
+      const { data: reportArray, error: reportError } = await supabase
         .from("work_order_reports")
         .insert(reportInsert)
-        .select()
-        .single();
+        .select();
 
       if (reportError) throw reportError;
+      if (!reportArray?.[0]) throw new Error('Failed to create report');
+      
+      const report = reportArray[0];
+
 
       // Upload photos if provided
       if (reportData.photos && reportData.photos.length > 0) {
