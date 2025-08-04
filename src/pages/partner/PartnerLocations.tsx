@@ -43,6 +43,9 @@ import { usePartnerLocations, usePartnerLocationMutations } from '@/hooks/usePar
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { AddLocationModal } from '@/components/partner/AddLocationModal';
 import { EditLocationModal } from '@/components/partner/EditLocationModal';
+import { LocationCard } from '@/components/partner/locations/LocationCard';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { useViewMode } from '@/hooks/useViewMode';
 import type { Tables } from '@/integrations/supabase/types';
 
 type PartnerLocation = Tables<'partner_locations'>;
@@ -55,6 +58,16 @@ const PartnerLocations: React.FC = () => {
   const [editingLocation, setEditingLocation] = useState<PartnerLocation | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingLocation, setDeletingLocation] = useState<PartnerLocation | null>(null);
+
+  // Use responsive view mode hook
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'partner-locations',
+    config: {
+      mobile: ['card'],           // Mobile: cards only
+      desktop: ['table', 'card']  // Desktop: table default, cards optional
+    },
+    defaultMode: 'table'
+  });
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -317,10 +330,17 @@ const PartnerLocations: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Locations</h2>
-          <Button onClick={() => setShowAddModal(true)} aria-label="Add new location">
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Add Location
-          </Button>
+          <div className="flex items-center gap-3">
+            <ViewModeSwitcher 
+              value={viewMode} 
+              onValueChange={setViewMode}
+              allowedModes={allowedModes}
+            />
+            <Button onClick={() => setShowAddModal(true)} aria-label="Add new location">
+              <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+              Add Location
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -379,10 +399,62 @@ const PartnerLocations: React.FC = () => {
         )}
       </div>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table aria-busy={isLoading} aria-label="Partner locations table">
+      {/* Content */}
+      {viewMode === 'card' ? (
+        <div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <div className="h-4 w-32 bg-muted rounded" />
+                    </div>
+                    <div className="h-3 w-20 bg-muted rounded" />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="h-3 w-full bg-muted rounded" />
+                    <div className="h-3 w-24 bg-muted rounded" />
+                    <div className="h-8 w-full bg-muted rounded" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredAndSortedLocations.length === 0 ? (
+            <Card>
+              <CardContent className="p-8">
+                <div className="text-center text-muted-foreground">
+                  {isFilteredView ? (
+                    <div className="space-y-2">
+                      <p>No locations match your current filters.</p>
+                      <Button variant="outline" onClick={clearFilters} size="sm">
+                        Clear filters to see all locations
+                      </Button>
+                    </div>
+                  ) : (
+                    'No locations found.'
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredAndSortedLocations.map((location) => (
+                <LocationCard
+                  key={location.id}
+                  location={location}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table aria-busy={isLoading} aria-label="Partner locations table">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
@@ -455,6 +527,7 @@ const PartnerLocations: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+      )}
 
       {/* Modals */}
       <AddLocationModal 

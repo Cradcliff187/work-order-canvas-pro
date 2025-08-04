@@ -28,7 +28,8 @@ import {
   Filter,
   X
 } from 'lucide-react';
-import { ViewToggle } from '@/components/partner/work-orders/ViewToggle';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { useViewMode } from '@/hooks/useViewMode';
 import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
 import { ReportCard } from '@/components/partner/reports/ReportCard';
 import { usePartnerReports } from '@/hooks/usePartnerReports';
@@ -60,7 +61,15 @@ export default function PartnerReports() {
   const { organization } = useUserOrganization();
   const { data: locations = [] } = usePartnerLocations(organization?.id);
   
-  const [view, setView] = useState<'card' | 'table'>('card');
+  // Use responsive view mode hook
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'partner-reports',
+    config: {
+      mobile: ['card'],           // Mobile: cards only
+      desktop: ['table', 'card']  // Desktop: table default, cards optional
+    },
+    defaultMode: 'table'
+  });
   const [sortBy, setSortBy] = useState('submitted-desc');
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -201,7 +210,7 @@ export default function PartnerReports() {
 
   // Sort reports for card view
   const sortedReports = useMemo(() => {
-    if (!reportsData?.data || view === 'table') return reportsData?.data || [];
+    if (!reportsData?.data || viewMode === 'table') return reportsData?.data || [];
     
     const reports = [...reportsData.data];
     
@@ -223,7 +232,7 @@ export default function PartnerReports() {
       default:
         return reports;
     }
-  }, [reportsData?.data, sortBy, view]);
+  }, [reportsData?.data, sortBy, viewMode]);
 
   const handleFilterChange = (key: keyof ReportFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -393,8 +402,12 @@ export default function PartnerReports() {
       {/* View Controls */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <ViewToggle view={view} onViewChange={setView} />
-          {view === 'card' && (
+          <ViewModeSwitcher 
+            value={viewMode} 
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
+          {viewMode === 'card' && (
             <SortDropdown 
               value={sortBy} 
               onValueChange={setSortBy}
@@ -405,7 +418,7 @@ export default function PartnerReports() {
       </div>
 
       {/* Content */}
-      {view === 'card' ? (
+      {viewMode === 'card' ? (
         <div>
           {isLoading ? (
             renderCardSkeleton()
