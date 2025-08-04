@@ -55,14 +55,13 @@ export const useUserOrganization = (): UseUserOrganizationReturn => {
           )
         `)
         .eq('user_id', profileData.id)
-        .limit(1)
-        .single();
+        .limit(1);
 
       if (error) {
         throw new Error(`Failed to fetch user organization: ${error.message}`);
       }
 
-      return data?.organization as UserOrganization || null;
+      return data?.[0]?.organization as UserOrganization || null;
     },
     enabled: !!user && !!profile,
   });
