@@ -71,13 +71,25 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     fetchingProfileRef.current = userId;
     
     try {
+      // Ensure session exists before making queries
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        console.warn('No active session found during profile fetch');
+        setAuthError('Session expired. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw profileError;
+      }
 
       if (!profileData) {
         const { data: newProfileArray, error: createError } = await supabase
@@ -103,34 +115,50 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
 
       setProfile(profileData);
 
-      const { data: membersData, error: membersError } = await supabase
-        .from('organization_members')
-        .select('id, user_id, organization_id, role, created_at')
-        .eq('user_id', profileData.id);
+      // Resilient organization members query with proper error handling
+      try {
+        const { data: membersData, error: membersError } = await supabase
+          .from('organization_members')
+          .select('id, user_id, organization_id, role, created_at')
+          .eq('user_id', profileData.id);
 
-      if (membersError) throw membersError;
+        if (membersError) {
+          // Handle 406 errors specifically - often caused by RLS policy timing
+          if (membersError.message?.includes('406') || membersError.code === 'PGRST301') {
+            console.warn('406 error fetching organization members, retrying with delay...', membersError);
+            // Wait a bit for auth context to fully establish
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Retry the query once
+            const { data: retryMembersData, error: retryMembersError } = await supabase
+              .from('organization_members')
+              .select('id, user_id, organization_id, role, created_at')
+              .eq('user_id', profileData.id);
+            
+            if (retryMembersError) {
+              console.error('Retry failed for organization members:', retryMembersError);
+              // Don't throw, just set empty organizations and continue
+              setUserOrganizations([]);
+              setAuthError('Unable to load organization data. Some features may be limited.');
+              return;
+            }
+            
+            // Use retry data
+            await processOrganizationMembers(retryMembersData || [], profileData.id);
+            return;
+          }
+          
+          throw membersError;
+        }
 
-      if (!membersData || membersData.length === 0) {
-        setAuthError('No organization access found. Please contact your administrator.');
+        await processOrganizationMembers(membersData || [], profileData.id);
+        
+      } catch (orgError) {
+        console.error('Organization members query error:', orgError);
+        // Don't fail the entire auth process - just set empty organizations
         setUserOrganizations([]);
-        return;
+        setAuthError('Unable to load organization data. Some features may be limited.');
       }
-
-      const orgIds = membersData.map(m => m.organization_id);
-      const { data: orgsData, error: orgsError } = await supabase
-        .from('organizations')
-        .select('*')
-        .in('id', orgIds);
-
-      if (orgsError) throw orgsError;
-
-      const combinedOrgs = membersData.map(member => ({
-        ...member,
-        organization: orgsData?.find(org => org.id === member.organization_id) || null
-      })).filter(org => org.organization !== null);
-
-      setUserOrganizations(combinedOrgs);
-      setAuthError(null);
       
     } catch (error) {
       console.error('Profile fetch error:', error);
@@ -141,6 +169,35 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       fetchingProfileRef.current = null;
       setLoading(false);
     }
+  };
+
+  // Helper function to process organization members data
+  const processOrganizationMembers = async (membersData: any[], profileId: string) => {
+    if (!membersData || membersData.length === 0) {
+      console.warn('No organization memberships found for profile:', profileId);
+      setUserOrganizations([]);
+      // Don't set this as an error - user might not have organizations yet
+      return;
+    }
+
+    const orgIds = membersData.map(m => m.organization_id);
+    const { data: orgsData, error: orgsError } = await supabase
+      .from('organizations')
+      .select('*')
+      .in('id', orgIds);
+
+    if (orgsError) {
+      console.error('Organizations fetch error:', orgsError);
+      throw orgsError;
+    }
+
+    const combinedOrgs = membersData.map(member => ({
+      ...member,
+      organization: orgsData?.find(org => org.id === member.organization_id) || null
+    })).filter(org => org.organization !== null);
+
+    setUserOrganizations(combinedOrgs);
+    setAuthError(null);
   };
 
   useEffect(() => {
