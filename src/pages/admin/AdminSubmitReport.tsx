@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAdminReportSubmission } from '@/hooks/useAdminReportSubmission';
-import { useSubcontractors } from '@/hooks/useSubcontractors';
+import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -21,7 +21,7 @@ interface FormData {
   notes: string;
   hoursWorked: string;
   attachments: File[];
-  selectedSubcontractor: string | null; // For unassigned work orders
+  selectedSubcontractorOrganization: string | null; // For unassigned work orders
 }
 
 export default function AdminSubmitReport() {
@@ -31,7 +31,7 @@ export default function AdminSubmitReport() {
   const { profile } = useAuth();
   
   const { data: workOrder, isLoading, error } = useWorkOrderDetail(workOrderId!);
-  const { data: subcontractors } = useSubcontractors();
+  const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
   const { submitReportForSubcontractor, isSubmitting } = useAdminReportSubmission();
 
   const [formData, setFormData] = useState<FormData>({
@@ -40,7 +40,7 @@ export default function AdminSubmitReport() {
     notes: '',
     hoursWorked: '',
     attachments: [],
-    selectedSubcontractor: null,
+    selectedSubcontractorOrganization: null,
   });
 
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -98,14 +98,23 @@ export default function AdminSubmitReport() {
     }
 
     try {
-      // Determine which subcontractor to use
-      const subcontractorUserId = isUnassigned 
-        ? formData.selectedSubcontractor 
-        : workOrder.work_order_assignments[0].assigned_to;
+      // Determine which organization and user to use
+      let assignedOrganizationId = null;
+      let subcontractorUserId = null;
+
+      if (isUnassigned && formData.selectedSubcontractorOrganization) {
+        const selectedOrg = subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization);
+        assignedOrganizationId = formData.selectedSubcontractorOrganization;
+        subcontractorUserId = selectedOrg?.first_active_user_id || null;
+      } else if (!isUnassigned) {
+        assignedOrganizationId = workOrder.assigned_organization_id;
+        subcontractorUserId = workOrder.work_order_assignments[0].assigned_to;
+      }
 
       await submitReportForSubcontractor.mutateAsync({
         workOrderId,
         subcontractorUserId,
+        assignedOrganizationId,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
         hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
@@ -113,21 +122,21 @@ export default function AdminSubmitReport() {
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
 
-      // Get subcontractor name for toast message
-      const selectedSubcontractor = formData.selectedSubcontractor 
-        ? subcontractors?.find(sub => sub.id === formData.selectedSubcontractor)
+      // Get organization name for toast message
+      const selectedOrg = formData.selectedSubcontractorOrganization 
+        ? subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization)
         : null;
       
-      const subcontractorName = assignedSubcontractor 
+      const organizationName = assignedSubcontractor 
         ? `${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
-        : selectedSubcontractor 
-        ? `${selectedSubcontractor.first_name} ${selectedSubcontractor.last_name}`
+        : selectedOrg 
+        ? selectedOrg.name
         : null;
 
       toast({
         title: "Report Submitted",
-        description: subcontractorName 
-          ? `Report submitted successfully on behalf of ${subcontractorName}.`
+        description: organizationName 
+          ? `Report submitted successfully for ${organizationName}.`
           : "Admin-only report submitted successfully.",
       });
 
@@ -174,10 +183,10 @@ export default function AdminSubmitReport() {
                 return (
                   <>You are about to submit a work report on behalf of <strong>{assignedSubcontractor.first_name} {assignedSubcontractor.last_name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
                 );
-              } else if (formData.selectedSubcontractor) {
-                const selectedSubcontractor = subcontractors?.find(sub => sub.id === formData.selectedSubcontractor);
+              } else if (formData.selectedSubcontractorOrganization) {
+                const selectedOrg = subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization);
                 return (
-                  <>You are about to submit a work report on behalf of <strong>{selectedSubcontractor?.first_name} {selectedSubcontractor?.last_name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
+                  <>You are about to submit a work report for <strong>{selectedOrg?.name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
                 );
               } else {
                 return (
@@ -305,28 +314,28 @@ export default function AdminSubmitReport() {
             >
               <StandardFormLayout.FieldGroup>
                 <div className="space-y-2">
-                  <Label htmlFor="subcontractor">Select Subcontractor (Optional)</Label>
+                  <Label htmlFor="subcontractor">Select Subcontractor Organization (Optional)</Label>
                   <Select
-                    value={formData.selectedSubcontractor || "ADMIN_ONLY"}
+                    value={formData.selectedSubcontractorOrganization || "ADMIN_ONLY"}
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
-                      selectedSubcontractor: value === "ADMIN_ONLY" ? null : value 
+                      selectedSubcontractorOrganization: value === "ADMIN_ONLY" ? null : value 
                     }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a subcontractor or leave blank for admin-only report" />
+                      <SelectValue placeholder="Select an organization or leave blank for admin-only report" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ADMIN_ONLY">Admin-only report (no subcontractor)</SelectItem>
-                      {subcontractors?.map((subcontractor) => (
-                        <SelectItem key={subcontractor.id} value={subcontractor.id}>
-                          {subcontractor.first_name} {subcontractor.last_name} - {subcontractor.organization_members[0]?.organization?.name}
+                      <SelectItem value="ADMIN_ONLY">Admin-only report (no organization)</SelectItem>
+                      {subcontractorOrganizations?.map((organization) => (
+                        <SelectItem key={organization.id} value={organization.id}>
+                          {organization.name} ({organization.active_user_count} employee{organization.active_user_count !== 1 ? 's' : ''})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Choose a subcontractor to attribute this work to, or leave blank to submit as an admin-only report.
+                    Choose an organization to attribute this work to, or leave blank to submit as an admin-only report.
                   </p>
                 </div>
               </StandardFormLayout.FieldGroup>

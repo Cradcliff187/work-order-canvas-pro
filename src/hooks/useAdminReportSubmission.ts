@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface AdminReportSubmissionData {
   workOrderId: string;
   subcontractorUserId: string | null; // Who the report is being submitted for (null for admin-only reports)
+  assignedOrganizationId?: string | null; // Organization to assign the work order to
   workPerformed: string;
   materialsUsed?: string;
   hoursWorked?: number;
@@ -104,14 +105,21 @@ export function useAdminReportSubmission() {
         await Promise.all(uploadPromises);
       }
 
-      // Update work order status
+      // Update work order status and assignment if needed
+      const workOrderUpdate: any = { 
+        status: "completed",
+        subcontractor_report_submitted: true,
+        date_completed: new Date().toISOString()
+      };
+
+      // If we have an assignedOrganizationId, update the work order assignment
+      if (reportData.assignedOrganizationId) {
+        workOrderUpdate.assigned_organization_id = reportData.assignedOrganizationId;
+      }
+
       await supabase
         .from("work_orders")
-        .update({ 
-          status: "completed",
-          subcontractor_report_submitted: true,
-          date_completed: new Date().toISOString()
-        })
+        .update(workOrderUpdate)
         .eq("id", reportData.workOrderId);
 
       return report;
