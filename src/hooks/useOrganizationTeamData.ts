@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OrganizationMember {
   id: string;
@@ -25,17 +25,15 @@ interface OrganizationActivity {
 }
 
 export const useOrganizationTeamData = () => {
-  const permissions = useEnhancedPermissions();
+  const { userOrganizations } = useAuth();
   
-  const userOrganizations = permissions.user?.organization_members?.map(
-    (membership: any) => membership.organization_id
-  ) || [];
+  const userOrgIds = userOrganizations?.map(org => org.organization_id) || [];
 
   // Get organization members
   const organizationMembers = useQuery({
-    queryKey: ['organization-members', userOrganizations],
+    queryKey: ['organization-members', userOrgIds],
     queryFn: async (): Promise<OrganizationMember[]> => {
-      if (userOrganizations.length === 0) return [];
+      if (userOrgIds.length === 0) return [];
 
       const { data, error } = await supabase
         .from('organization_members')
@@ -49,7 +47,7 @@ export const useOrganizationTeamData = () => {
             is_active
           )
         `)
-        .in('organization_id', userOrganizations);
+        .in('organization_id', userOrgIds);
 
       if (error) throw error;
 
@@ -62,7 +60,7 @@ export const useOrganizationTeamData = () => {
           const { count: activeCount } = await supabase
             .from('work_orders')
             .select('*', { count: 'exact', head: true })
-            .in('assigned_organization_id', userOrganizations)
+            .in('assigned_organization_id', userOrgIds)
             .in('status', ['assigned', 'in_progress']);
 
           // Count completed work orders this month
@@ -73,7 +71,7 @@ export const useOrganizationTeamData = () => {
           const { count: completedCount } = await supabase
             .from('work_orders')
             .select('*', { count: 'exact', head: true })
-            .in('assigned_organization_id', userOrganizations)
+            .in('assigned_organization_id', userOrgIds)
             .eq('status', 'completed')
             .gte('date_completed', firstOfMonth.toISOString());
 
@@ -91,14 +89,14 @@ export const useOrganizationTeamData = () => {
 
       return membersWithStats;
     },
-    enabled: userOrganizations.length > 0,
+    enabled: userOrgIds.length > 0,
   });
 
   // Get recent organization activity
   const organizationActivity = useQuery({
-    queryKey: ['organization-activity', userOrganizations],
+    queryKey: ['organization-activity', userOrgIds],
     queryFn: async (): Promise<OrganizationActivity[]> => {
-      if (userOrganizations.length === 0) return [];
+      if (userOrgIds.length === 0) return [];
 
       // Get recent work order reports from organization members
       const { data: recentReports, error } = await supabase
@@ -118,7 +116,7 @@ export const useOrganizationTeamData = () => {
             avatar_url
           )
         `)
-        .in('work_orders.assigned_organization_id', userOrganizations)
+        .in('work_orders.assigned_organization_id', userOrgIds)
         .order('submitted_at', { ascending: false })
         .limit(10);
 
@@ -137,7 +135,7 @@ export const useOrganizationTeamData = () => {
 
       return activities;
     },
-    enabled: userOrganizations.length > 0,
+    enabled: userOrgIds.length > 0,
   });
 
   return {

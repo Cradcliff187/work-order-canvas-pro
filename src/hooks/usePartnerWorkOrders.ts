@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
 
 type WorkOrder = Database['public']['Tables']['work_orders']['Row'] & {
   organizations: { name: string } | null;
@@ -32,40 +31,17 @@ interface WorkOrderFilters {
 }
 
 export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
-  const { profile } = useAuth();
-  const permissions = useEnhancedPermissions();
+  const { profile, userOrganizations } = useAuth();
 
   return useQuery({
     queryKey: ['partner-work-orders', filters, profile?.id],
     queryFn: async () => {
-      let organizationIds: string[];
-
-      if (permissions.user) {
-        // Use organization-based access
-        const userOrganizations = permissions.user.organization_members?.map(
-          (membership: any) => membership.organization_id
-        ) || [];
-        
-        if (userOrganizations.length === 0) {
-          return { data: [], totalCount: 0 };
-        }
-        organizationIds = userOrganizations;
-      } else {
-        // Fallback access using legacy user organization lookup
-        if (!profile?.id) throw new Error('No user profile');
-
-        const { data: userOrgs, error: userOrgsError } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', profile.id);
-
-        if (userOrgsError) throw userOrgsError;
-        
-        organizationIds = userOrgs.map(org => org.organization_id);
-        
-        if (organizationIds.length === 0) {
-          return { data: [], totalCount: 0 };
-        }
+      if (!profile?.id) throw new Error('No user profile');
+      
+      const organizationIds = userOrganizations?.map(org => org.organization_id) || [];
+      
+      if (organizationIds.length === 0) {
+        return { data: [], totalCount: 0 };
       }
 
       let query = supabase
@@ -116,55 +92,27 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
         totalCount: count || 0,
       };
     },
-    enabled: !!permissions.user || !!profile?.id,
+    enabled: !!profile?.id,
   });
 }
 
 export function usePartnerWorkOrderStats() {
-  const { profile } = useAuth();
-  const permissions = useEnhancedPermissions();
+  const { profile, userOrganizations } = useAuth();
 
   return useQuery({
     queryKey: ['partner-work-order-stats', profile?.id],
     queryFn: async () => {
-      let organizationIds: string[];
-
-      if (permissions.user) {
-        // Use organization-based access
-        const userOrganizations = permissions.user.organization_members?.map(
-          (membership: any) => membership.organization_id
-        ) || [];
-        
-        if (userOrganizations.length === 0) {
-          return {
-            total: 0,
-            active: 0,
-            completedThisMonth: 0,
-            avgCompletionDays: 0
-          };
-        }
-        organizationIds = userOrganizations;
-      } else {
-        // Fallback access using legacy user organization lookup
-        if (!profile?.id) throw new Error('No user profile');
-
-        const { data: userOrgs, error: userOrgsError } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', profile.id);
-
-        if (userOrgsError) throw userOrgsError;
-        
-        organizationIds = userOrgs.map(org => org.organization_id);
-        
-        if (organizationIds.length === 0) {
-          return {
-            total: 0,
-            active: 0,
-            completedThisMonth: 0,
-            avgCompletionDays: 0
-          };
-        }
+      if (!profile?.id) throw new Error('No user profile');
+      
+      const organizationIds = userOrganizations?.map(org => org.organization_id) || [];
+      
+      if (organizationIds.length === 0) {
+        return {
+          total: 0,
+          active: 0,
+          completedThisMonth: 0,
+          avgCompletionDays: 0
+        };
       }
 
       // Get all work orders for user's organizations
@@ -214,7 +162,7 @@ export function usePartnerWorkOrderStats() {
         avgCompletionDays
       };
     },
-    enabled: !!permissions.user || !!profile?.id,
+    enabled: !!profile?.id,
   });
 }
 

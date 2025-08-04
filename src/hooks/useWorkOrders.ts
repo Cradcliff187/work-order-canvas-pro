@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import type { Database } from '@/integrations/supabase/types';
 
 // Base types from database
@@ -115,12 +116,13 @@ export function useWorkOrders(
 ) {
   const { pageIndex, pageSize } = pagination;
   const { sortBy } = sorting;
-  const permissions = useEnhancedPermissions();
+  const { user, userOrganizations } = useAuth();
+  const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
 
   return useQuery({
-    queryKey: ['work-orders', pagination, sorting, filters, permissions.user?.id],
+    queryKey: ['work-orders', pagination, sorting, filters, user?.id],
     queryFn: async () => {
-      if (!permissions.user) throw new Error('No user found');
+      if (!user) throw new Error('No user found');
 
       let query = supabase
         .from('work_orders')
@@ -155,28 +157,24 @@ export function useWorkOrders(
         );
 
       // Apply organization-based filtering
-      if (permissions.hasInternalAccess) {
+      if (isAdmin() || isEmployee()) {
         // Internal users see all work orders - no additional filtering needed
-      } else if (permissions.isPartner) {
+      } else if (isPartner()) {
         // Partners see only their organization's work orders
-        const userOrganizations = permissions.user.organization_members?.map(
-          (membership: any) => membership.organization_id
-        ) || [];
+        const orgIds = userOrganizations?.map(org => org.organization_id) || [];
         
-        if (userOrganizations.length > 0) {
-          query = query.in('organization_id', userOrganizations);
+        if (orgIds.length > 0) {
+          query = query.in('organization_id', orgIds);
         } else {
           // No organizations, return empty results
           return { data: [], pageCount: 0, totalCount: 0 };
         }
-      } else if (permissions.isSubcontractor) {
+      } else if (isSubcontractor()) {
         // Subcontractors see only assigned work orders
-        const userOrganizations = permissions.user.organization_members?.map(
-          (membership: any) => membership.organization_id
-        ) || [];
+        const orgIds = userOrganizations?.map(org => org.organization_id) || [];
         
-        if (userOrganizations.length > 0) {
-          query = query.in('assigned_organization_id', userOrganizations);
+        if (orgIds.length > 0) {
+          query = query.in('assigned_organization_id', orgIds);
         } else {
           // No organizations, return empty results
           return { data: [], pageCount: 0, totalCount: 0 };
@@ -234,17 +232,18 @@ export function useWorkOrders(
         totalCount: count || 0,
       };
     },
-    enabled: !!permissions.user,
+    enabled: !!user,
   });
 }
 
 export function useWorkOrder(id: string) {
-  const permissions = useEnhancedPermissions();
+  const { user, userOrganizations } = useAuth();
+  const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
 
   return useQuery({
-    queryKey: ['work-order', id, permissions.user?.id],
+    queryKey: ['work-order', id, user?.id],
     queryFn: async () => {
-      if (!permissions.user) throw new Error('No user found');
+      if (!user) throw new Error('No user found');
       let query = supabase
         .from('work_orders')
         .select(`
@@ -276,27 +275,23 @@ export function useWorkOrder(id: string) {
         .eq('id', id);
 
       // Apply organization-based filtering
-      if (permissions.hasInternalAccess) {
+      if (isAdmin() || isEmployee()) {
         // Internal users can access any work order
-      } else if (permissions.isPartner) {
+      } else if (isPartner()) {
         // Partners can only access their organization's work orders
-        const userOrganizations = permissions.user.organization_members?.map(
-          (membership: any) => membership.organization_id
-        ) || [];
+        const orgIds = userOrganizations?.map(org => org.organization_id) || [];
         
-        if (userOrganizations.length > 0) {
-          query = query.in('organization_id', userOrganizations);
+        if (orgIds.length > 0) {
+          query = query.in('organization_id', orgIds);
         } else {
           throw new Error('No access to this work order');
         }
-      } else if (permissions.isSubcontractor) {
+      } else if (isSubcontractor()) {
         // Subcontractors can only access assigned work orders
-        const userOrganizations = permissions.user.organization_members?.map(
-          (membership: any) => membership.organization_id
-        ) || [];
+        const orgIds = userOrganizations?.map(org => org.organization_id) || [];
         
-        if (userOrganizations.length > 0) {
-          query = query.in('assigned_organization_id', userOrganizations);
+        if (orgIds.length > 0) {
+          query = query.in('assigned_organization_id', orgIds);
         } else {
           throw new Error('No access to this work order');
         }
@@ -307,7 +302,7 @@ export function useWorkOrder(id: string) {
       if (error) throw error;
       return data as WorkOrder;
     },
-    enabled: !!id && !!permissions.user,
+    enabled: !!id && !!user,
   });
 }
 
