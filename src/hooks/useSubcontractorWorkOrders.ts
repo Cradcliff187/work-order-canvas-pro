@@ -12,10 +12,16 @@ export function useSubcontractorWorkOrders() {
 
   const permissions = useEnhancedPermissions();
 
-  // Memoize organization IDs to prevent query invalidation
+  // Stabilize organization IDs using string-based memoization
   const organizationIds = useMemo(() => {
-    return permissions.user?.organization_members?.map((m: any) => m.organization_id) || [];
-  }, [permissions.user?.organization_members]);
+    const orgIds = permissions.user?.organization_members?.map((m: any) => m.organization_id) || [];
+    return orgIds.sort(); // Sort for consistent ordering
+  }, [JSON.stringify(permissions.user?.organization_members?.map((m: any) => m.organization_id) || [])]);
+
+  // Create unified ready state for all queries
+  const isReady = useMemo(() => {
+    return !!profile?.id && !loading && organizationIds.length > 0;
+  }, [profile?.id, loading, organizationIds.length]);
 
   // Stable query key for assigned work orders
   const assignedWorkOrdersQueryKey = useMemo(() => 
@@ -65,7 +71,14 @@ export function useSubcontractorWorkOrders() {
       
       return transformedData;
     },
-    enabled: !!profile?.id && !loading && organizationIds.length > 0,
+    enabled: isReady,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: (failureCount, error) => {
+      // Don't retry on permission errors
+      if (error?.message?.includes('row-level security')) return false;
+      return failureCount < 3;
+    },
   });
 
   // Stable query key for dashboard stats
@@ -144,7 +157,13 @@ export function useSubcontractorWorkOrders() {
         reportsThisMonth,
       };
     },
-    enabled: !!profile?.id && !loading,
+    enabled: isReady,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('row-level security')) return false;
+      return failureCount < 3;
+    },
   });
 
   // Get work order by ID
@@ -244,7 +263,13 @@ export function useSubcontractorWorkOrders() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id && !loading,
+    enabled: isReady,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('row-level security')) return false;
+      return failureCount < 3;
+    },
   });
 
   // Submit work report
@@ -406,7 +431,13 @@ export function useSubcontractorWorkOrders() {
       
       return data || [];
     },
-    enabled: !!profile?.id && !loading,
+    enabled: isReady,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('row-level security')) return false;
+      return failureCount < 3;
+    },
   });
 
   return {
