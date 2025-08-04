@@ -73,9 +73,9 @@ const SubcontractorWorkOrders = () => {
   const workOrderIds = workOrderList.map(wo => wo.id);
   const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds);
 
-  // Get selected work order detail
+  // Get selected work order detail - only call if we have a valid ID
   const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(
-    selectedWorkOrderId || ""
+    selectedWorkOrderId || "skip-query"
   );
 
   const filteredWorkOrders = workOrderList.filter((workOrder) => {

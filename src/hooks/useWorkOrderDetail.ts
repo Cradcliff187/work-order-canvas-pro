@@ -209,6 +209,6 @@ export function useWorkOrderDetail(id: string) {
         location_contact_email: locationContact?.contact_email,
       };
     },
-    enabled: !!id && id !== "undefined",
+    enabled: !!id && id !== "undefined" && id !== "skip-query",
   });
 }
