@@ -14,6 +14,7 @@ import {
   RowSelectionState,
 } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
@@ -287,7 +288,7 @@ export default function AdminWorkOrders() {
               <div className="hidden lg:block">
                 <MasterDetailLayout
                   listContent={
-                    <div className="rounded-md border">
+                    <ResponsiveTableWrapper stickyFirstColumn={true}>
                       <Table className="admin-table">
                         <TableHeader>
                           {table.getHeaderGroups().map((headerGroup) => (
@@ -346,7 +347,7 @@ export default function AdminWorkOrders() {
                           )}
                         </TableBody>
                       </Table>
-                    </div>
+                    </ResponsiveTableWrapper>
                   }
                   selectedId={selectedWorkOrderId}
                   onSelectionChange={setSelectedWorkOrderId}

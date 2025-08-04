@@ -28,6 +28,7 @@ import {
   FileText,
   X
 } from 'lucide-react';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { usePartnerWorkOrders } from '@/hooks/usePartnerWorkOrders';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
@@ -318,7 +319,7 @@ const WorkOrderList = () => {
             <div className="hidden lg:block">
               <MasterDetailLayout
                 listContent={
-                  <div className="rounded-md border">
+                  <ResponsiveTableWrapper stickyFirstColumn={true}>
                     <Table>
                       <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -355,7 +356,7 @@ const WorkOrderList = () => {
                         ))}
                       </TableBody>
                     </Table>
-                  </div>
+                  </ResponsiveTableWrapper>
                 }
                 selectedId={selectedWorkOrderId}
                 onSelectionChange={setSelectedWorkOrderId}
@@ -375,7 +376,7 @@ const WorkOrderList = () => {
 
             {/* Mobile/Tablet Table */}
             <div className="block lg:hidden">
-              <div className="rounded-md border">
+              <ResponsiveTableWrapper stickyFirstColumn={true}>
                 <Table>
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -408,7 +409,7 @@ const WorkOrderList = () => {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              </ResponsiveTableWrapper>
             </div>
           </CardContent>
         </Card>

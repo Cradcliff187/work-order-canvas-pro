@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -420,64 +421,66 @@ export default function AdminReports() {
           ) : (
             <>
               {/* Desktop Table */}
-              <div className="hidden lg:block rounded-md border">
-                <Table className="admin-table">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          data-state={row.getIsSelected() && "selected"}
-                          onClick={(e) => {
-                            // Don't navigate if clicking interactive elements
-                            const target = e.target as HTMLElement;
-                            if (target instanceof HTMLButtonElement || 
-                                target instanceof HTMLInputElement ||
-                                target.closest('[role="checkbox"]') ||
-                                target.closest('[data-radix-collection-item]') ||
-                                target.closest('.dropdown-trigger')) {
-                              return;
-                            }
-                            navigate(`/admin/reports/${row.original.id}`);
-                          }}
-                          className="cursor-pointer"
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
+              <div className="hidden lg:block">
+                <ResponsiveTableWrapper stickyFirstColumn={true}>
+                  <Table className="admin-table">
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} className="h-12">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
                           ))}
                         </TableRow>
-                      ))
-                    ) : (
-                      <EmptyTableState
-                        icon={FileText}
-                        title="No reports found"
-                        description="Try adjusting your filters or search criteria"
-                        colSpan={columns.length}
-                      />
-                    )}
-                  </TableBody>
-                </Table>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            data-state={row.getIsSelected() && "selected"}
+                            onClick={(e) => {
+                              // Don't navigate if clicking interactive elements
+                              const target = e.target as HTMLElement;
+                              if (target instanceof HTMLButtonElement || 
+                                  target instanceof HTMLInputElement ||
+                                  target.closest('[role="checkbox"]') ||
+                                  target.closest('[data-radix-collection-item]') ||
+                                  target.closest('.dropdown-trigger')) {
+                                return;
+                              }
+                              navigate(`/admin/reports/${row.original.id}`);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell key={cell.id}>
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <EmptyTableState
+                          icon={FileText}
+                          title="No reports found"
+                          description="Try adjusting your filters or search criteria"
+                          colSpan={columns.length}
+                        />
+                      )}
+                    </TableBody>
+                  </Table>
+                </ResponsiveTableWrapper>
               </div>
 
               {/* Mobile Cards */}

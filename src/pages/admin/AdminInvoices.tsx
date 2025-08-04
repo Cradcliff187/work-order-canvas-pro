@@ -33,6 +33,7 @@ import {
 import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
@@ -201,67 +202,69 @@ export default function AdminInvoices() {
           ) : (
             <>
               {/* Desktop Table */}
-              <div className="hidden lg:block rounded-md border">
-                <Table className="admin-table">
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id}>
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          data-state={row.getIsSelected() && 'selected'}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => {
-                            const invoice = row.original;
-                            handleViewInvoice(invoice);
-                          }}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell 
-                              key={cell.id}
-                              onClick={(e) => {
-                                // Prevent row click when interacting with dropdown or checkboxes
-                                const target = e.target as HTMLElement;
-                                if (target.closest('[data-radix-collection-item]') || 
-                                    target.closest('input[type="checkbox"]') ||
-                                    target.closest('button')) {
-                                  e.stopPropagation();
-                                }
-                              }}
-                            >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
+              <div className="hidden lg:block">
+                <ResponsiveTableWrapper stickyFirstColumn={true}>
+                  <Table className="admin-table">
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id}>
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
                           ))}
                         </TableRow>
-                      ))
-                    ) : (
-                      <EmptyTableState
-                        icon={FileText}
-                        title="No invoices found"
-                        description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Invoices will appear here when subcontractors submit them"}
-                        colSpan={columns.length}
-                      />
-                    )}
-                  </TableBody>
-                </Table>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            data-state={row.getIsSelected() && 'selected'}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => {
+                              const invoice = row.original;
+                              handleViewInvoice(invoice);
+                            }}
+                          >
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell 
+                                key={cell.id}
+                                onClick={(e) => {
+                                  // Prevent row click when interacting with dropdown or checkboxes
+                                  const target = e.target as HTMLElement;
+                                  if (target.closest('[data-radix-collection-item]') || 
+                                      target.closest('input[type="checkbox"]') ||
+                                      target.closest('button')) {
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              >
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <EmptyTableState
+                          icon={FileText}
+                          title="No invoices found"
+                          description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Invoices will appear here when subcontractors submit them"}
+                          colSpan={columns.length}
+                        />
+                      )}
+                    </TableBody>
+                  </Table>
+                </ResponsiveTableWrapper>
               </div>
 
               {/* Mobile Cards */}
