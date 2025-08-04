@@ -184,7 +184,7 @@ export default function WorkOrderDetail() {
               uploader_email: '' // Email not available in current schema
             }))}
             workOrderId={workOrder.id}
-            canUpload={workOrder.status !== 'completed'}
+            canUpload={true}
             onUpload={async (files) => {
               try {
                 await uploadFiles(files, workOrder.id);
