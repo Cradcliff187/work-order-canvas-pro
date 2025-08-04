@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Search, Filter, X, CheckCircle, RotateCcw, FileText, DollarSign } from 'lucide-react';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
@@ -284,7 +285,7 @@ export default function AdminApprovals() {
                   item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                   item.submittedBy.toLowerCase().includes(searchQuery.toLowerCase()))
               ).length === 0 ? (
-                <EmptyTableState
+                <EmptyState
                   icon={FileText}
                   title="No pending report approvals"
                   description={
@@ -292,7 +293,7 @@ export default function AdminApprovals() {
                       ? "No reports match your current filters."
                       : "All reports have been reviewed. New submissions will appear here."
                   }
-                  colSpan={columns.length}
+                  variant="full"
                 />
               ) : (
                 <>
@@ -379,11 +380,11 @@ export default function AdminApprovals() {
                         );
                       })
                     ) : (
-                      <EmptyTableState
+                      <EmptyState
                         icon={FileText}
                         title="No reports found"
                         description="Try adjusting your filters"
-                        colSpan={1}
+                        variant="full"
                       />
                     )}
                   </div>
@@ -407,7 +408,7 @@ export default function AdminApprovals() {
                   item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                   item.submittedBy.toLowerCase().includes(searchQuery.toLowerCase()))
               ).length === 0 ? (
-                <EmptyTableState
+                <EmptyState
                   icon={DollarSign}
                   title="No pending invoice approvals"
                   description={
@@ -415,7 +416,7 @@ export default function AdminApprovals() {
                       ? "No invoices match your current filters."
                       : "All invoices have been reviewed. New submissions will appear here."
                   }
-                  colSpan={columns.length}
+                  variant="full"
                 />
               ) : (
                 <>
@@ -502,11 +503,11 @@ export default function AdminApprovals() {
                         );
                       })
                     ) : (
-                      <EmptyTableState
+                      <EmptyState
                         icon={DollarSign}
                         title="No invoices found"
                         description="Try adjusting your filters"
-                        colSpan={1}
+                        variant="full"
                       />
                     )}
                   </div>
