@@ -143,9 +143,11 @@ export function useSubcontractorWorkOrders() {
 
   // Get work order by ID
   const getWorkOrder = (id: string) => {
+    console.log('🔍 getWorkOrder called with ID:', id);
     return useQuery({
       queryKey: ["work-order", id],
       queryFn: async () => {
+        console.log('🔍 getWorkOrder queryFn executing for ID:', id);
         if (!id) throw new Error('Work order ID is required');
         
         // Validate UUID format

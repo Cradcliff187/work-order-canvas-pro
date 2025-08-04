@@ -66,12 +66,15 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
 export type { WorkOrderDetail };
 
 export function useWorkOrderDetail(id: string) {
+  console.log('🔍 useWorkOrderDetail called with ID:', id);
   return useQuery({
     queryKey: ['work-order-detail', id],
     queryFn: async () => {
+      console.log('🔍 useWorkOrderDetail queryFn executing for ID:', id);
       if (!id) throw new Error('Work order ID is required');
 
       // Main work order query (one-to-one relationships only)
+      console.log('🔍 Executing main work order query for ID:', id);
       const { data: workOrderData, error: workOrderError } = await supabase
         .from('work_orders')
         .select(`
@@ -95,10 +98,15 @@ export function useWorkOrderDetail(id: string) {
         .eq('id', id)
         .maybeSingle();
 
-      if (workOrderError) throw workOrderError;
+      console.log('🔍 Main work order query result:', { data: workOrderData, error: workOrderError });
+      if (workOrderError) {
+        console.error('❌ Work order query error:', workOrderError);
+        throw workOrderError;
+      }
       if (!workOrderData) return null;
 
       // Separate queries for one-to-many relationships
+      console.log('🔍 Executing relationship queries for work order:', id);
       const [reportsResult, attachmentsResult, assignmentsResult] = await Promise.all([
         // Work order reports
         supabase
@@ -156,10 +164,25 @@ export function useWorkOrderDetail(id: string) {
           .eq('work_order_id', id)
       ]);
 
+      console.log('🔍 Relationship queries results:', {
+        reports: { data: reportsResult.data, error: reportsResult.error },
+        attachments: { data: attachmentsResult.data, error: attachmentsResult.error },
+        assignments: { data: assignmentsResult.data, error: assignmentsResult.error }
+      });
+
       // Check for errors in the relationship queries
-      if (reportsResult.error) throw reportsResult.error;
-      if (attachmentsResult.error) throw attachmentsResult.error;
-      if (assignmentsResult.error) throw assignmentsResult.error;
+      if (reportsResult.error) {
+        console.error('❌ Reports query error:', reportsResult.error);
+        throw reportsResult.error;
+      }
+      if (attachmentsResult.error) {
+        console.error('❌ Attachments query error:', attachmentsResult.error);
+        throw attachmentsResult.error;
+      }
+      if (assignmentsResult.error) {
+        console.error('❌ Assignments query error:', assignmentsResult.error);
+        throw assignmentsResult.error;
+      }
 
       // Get location contact information if available
       let locationContact = null;
