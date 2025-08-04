@@ -41,26 +41,29 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
   const { data: trades } = useTrades();
   const { shouldShowSelector } = useAutoOrganization();
 
-  // Get unique locations for the selected organization
+  // Get unique locations for the selected organization (or all if no org selected)
   const { data: locations } = useQuery({
     queryKey: ['work-order-locations', filters.organization_id],
     queryFn: async () => {
-      if (!filters.organization_id) return [];
-      
-      const { data, error } = await supabase
+      let query = supabase
         .from('work_orders')
         .select('store_location')
-        .eq('organization_id', filters.organization_id)
         .not('store_location', 'is', null)
         .not('store_location', 'eq', '');
       
+      // If a specific organization is selected, filter by it
+      if (filters.organization_id) {
+        query = query.eq('organization_id', filters.organization_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       
       // Get unique locations
       const uniqueLocations = [...new Set(data.map(wo => wo.store_location))].filter(Boolean);
       return uniqueLocations.sort();
     },
-    enabled: !!filters.organization_id,
+    enabled: shouldShowSelector,
   });
   const [dateFrom, setDateFrom] = useState<Date | undefined>(
     filters.date_from ? new Date(filters.date_from) : undefined
@@ -155,8 +158,8 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
           </div>
         )}
 
-        {/* Location Filter - Only show when organization is selected */}
-        {shouldShowSelector && filters.organization_id && (
+        {/* Location Filter */}
+        {shouldShowSelector && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Location</label>
             <Select
