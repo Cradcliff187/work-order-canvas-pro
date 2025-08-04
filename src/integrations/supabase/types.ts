@@ -1179,7 +1179,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by_user_id: string | null
           status: Database["public"]["Enums"]["report_status"]
-          subcontractor_user_id: string
+          subcontractor_user_id: string | null
           submitted_at: string
           submitted_by_user_id: string | null
           work_order_id: string
@@ -1195,7 +1195,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by_user_id?: string | null
           status?: Database["public"]["Enums"]["report_status"]
-          subcontractor_user_id: string
+          subcontractor_user_id?: string | null
           submitted_at?: string
           submitted_by_user_id?: string | null
           work_order_id: string
@@ -1211,7 +1211,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by_user_id?: string | null
           status?: Database["public"]["Enums"]["report_status"]
-          subcontractor_user_id?: string
+          subcontractor_user_id?: string | null
           submitted_at?: string
           submitted_by_user_id?: string | null
           work_order_id?: string

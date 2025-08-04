@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface AdminReportSubmissionData {
   workOrderId: string;
-  subcontractorUserId: string; // Who the report is being submitted for
+  subcontractorUserId: string | null; // Who the report is being submitted for (null for admin-only reports)
   workPerformed: string;
   materialsUsed?: string;
   hoursWorked?: number;
@@ -31,14 +31,18 @@ export function useAdminReportSubmission() {
 
       if (!adminProfile) throw new Error("Admin profile not found");
 
-      // Get subcontractor's auth user_id for proper file organization
-      const { data: subcontractorProfile } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("id", reportData.subcontractorUserId)
-        .single();
+      // Get subcontractor's auth user_id for proper file organization (if subcontractor specified)
+      let subcontractorProfile = null;
+      if (reportData.subcontractorUserId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("id", reportData.subcontractorUserId)
+          .single();
 
-      if (!subcontractorProfile) throw new Error("Subcontractor profile not found");
+        if (!profile) throw new Error("Subcontractor profile not found");
+        subcontractorProfile = profile;
+      }
 
       // Submit the report with admin as submitted_by_user_id
       const reportInsert: any = {
@@ -66,8 +70,9 @@ export function useAdminReportSubmission() {
       // Upload photos if provided
       if (reportData.photos && reportData.photos.length > 0) {
         const uploadPromises = reportData.photos.map(async (photo, index) => {
-          // Use subcontractor's auth user_id for file path organization
-          const fileName = `${subcontractorProfile.user_id}/${report.id}/${Date.now()}_${index}_${photo.name}`;
+          // Use subcontractor's auth user_id if available, otherwise use admin's user_id for file path organization
+          const fileUserId = subcontractorProfile?.user_id || user.id;
+          const fileName = `${fileUserId}/${report.id}/${Date.now()}_${index}_${photo.name}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from("work-order-attachments")

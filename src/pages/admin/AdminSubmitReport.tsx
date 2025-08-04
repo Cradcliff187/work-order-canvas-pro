@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, FileText, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, AlertTriangle, Users } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAdminReportSubmission } from '@/hooks/useAdminReportSubmission';
+import { useSubcontractors } from '@/hooks/useSubcontractors';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,6 +21,7 @@ interface FormData {
   notes: string;
   hoursWorked: string;
   attachments: File[];
+  selectedSubcontractor: string | null; // For unassigned work orders
 }
 
 export default function AdminSubmitReport() {
@@ -27,8 +30,8 @@ export default function AdminSubmitReport() {
   const { toast } = useToast();
   const { profile } = useAuth();
   
-  
   const { data: workOrder, isLoading, error } = useWorkOrderDetail(workOrderId!);
+  const { data: subcontractors } = useSubcontractors();
   const { submitReportForSubcontractor, isSubmitting } = useAdminReportSubmission();
 
   const [formData, setFormData] = useState<FormData>({
@@ -37,6 +40,7 @@ export default function AdminSubmitReport() {
     notes: '',
     hoursWorked: '',
     attachments: [],
+    selectedSubcontractor: null,
   });
 
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -74,25 +78,7 @@ export default function AdminSubmitReport() {
   // Check if there's an assigned subcontractor
   const hasAssignments = workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0;
   const assignedSubcontractor = hasAssignments ? workOrder.work_order_assignments[0].profiles : null;
-  
-  if (!hasAssignments || !assignedSubcontractor) {
-    return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            This work order must be assigned to a subcontractor before a report can be submitted on their behalf.
-          </AlertDescription>
-        </Alert>
-        <div className="mt-4">
-          <Button onClick={() => navigate(`/admin/work-orders/${workOrderId}`)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Work Order
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const isUnassigned = !hasAssignments || !assignedSubcontractor;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,9 +98,14 @@ export default function AdminSubmitReport() {
     }
 
     try {
+      // Determine which subcontractor to use
+      const subcontractorUserId = isUnassigned 
+        ? formData.selectedSubcontractor 
+        : workOrder.work_order_assignments[0].assigned_to;
+
       await submitReportForSubcontractor.mutateAsync({
         workOrderId,
-        subcontractorUserId: workOrder.work_order_assignments[0].assigned_to,
+        subcontractorUserId,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
         hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
@@ -122,9 +113,22 @@ export default function AdminSubmitReport() {
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
 
+      // Get subcontractor name for toast message
+      const selectedSubcontractor = formData.selectedSubcontractor 
+        ? subcontractors?.find(sub => sub.id === formData.selectedSubcontractor)
+        : null;
+      
+      const subcontractorName = assignedSubcontractor 
+        ? `${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
+        : selectedSubcontractor 
+        ? `${selectedSubcontractor.first_name} ${selectedSubcontractor.last_name}`
+        : null;
+
       toast({
         title: "Report Submitted",
-        description: `Report submitted successfully on behalf of ${assignedSubcontractor?.first_name || 'Unknown'} ${assignedSubcontractor?.last_name || 'User'}.`,
+        description: subcontractorName 
+          ? `Report submitted successfully on behalf of ${subcontractorName}.`
+          : "Admin-only report submitted successfully.",
       });
 
       navigate(`/admin/work-orders/${workOrderId}`);
@@ -165,7 +169,22 @@ export default function AdminSubmitReport() {
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            You are about to submit a work report on behalf of <strong>{assignedSubcontractor?.first_name || 'Unknown'} {assignedSubcontractor?.last_name || 'User'}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.
+            {(() => {
+              if (assignedSubcontractor) {
+                return (
+                  <>You are about to submit a work report on behalf of <strong>{assignedSubcontractor.first_name} {assignedSubcontractor.last_name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
+                );
+              } else if (formData.selectedSubcontractor) {
+                const selectedSubcontractor = subcontractors?.find(sub => sub.id === formData.selectedSubcontractor);
+                return (
+                  <>You are about to submit a work report on behalf of <strong>{selectedSubcontractor?.first_name} {selectedSubcontractor?.last_name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
+                );
+              } else {
+                return (
+                  <>You are about to submit an admin-only work report for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
+                );
+              }
+            })()}
           </AlertDescription>
         </Alert>
 
@@ -247,7 +266,10 @@ export default function AdminSubmitReport() {
         <div>
           <h1 className="text-2xl font-bold">Submit Work Report</h1>
           <p className="text-muted-foreground">
-            For {assignedSubcontractor?.first_name || 'Unknown'} {assignedSubcontractor?.last_name || 'User'} • {workOrder.work_order_number}
+            {assignedSubcontractor 
+              ? `For ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name} • ${workOrder.work_order_number}`
+              : `Admin Report • ${workOrder.work_order_number}`
+            }
           </p>
         </div>
       </div>
@@ -255,13 +277,62 @@ export default function AdminSubmitReport() {
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          You are submitting this report on behalf of the assigned subcontractor. This action will be logged for audit purposes.
+          {assignedSubcontractor 
+            ? "You are submitting this report on behalf of the assigned subcontractor. This action will be logged for audit purposes."
+            : "You are submitting this report as an admin. You can optionally select a subcontractor to attribute the work to, or submit as admin-only. This action will be logged for audit purposes."
+          }
         </AlertDescription>
       </Alert>
+
+      {/* Subcontractor Selection for Unassigned Work Orders */}
+      {isUnassigned && (
+        <Alert>
+          <Users className="h-4 w-4" />
+          <AlertDescription>
+            This work order is not currently assigned to a subcontractor. You can optionally select a subcontractor to attribute this work to, or submit the report as admin-only.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <StandardFormLayout>
+          {/* Subcontractor Selection Section for Unassigned Work Orders */}
+          {isUnassigned && (
+            <StandardFormLayout.Section 
+              title="Subcontractor Assignment"
+              description="Optionally select a subcontractor to attribute this work to"
+            >
+              <StandardFormLayout.FieldGroup>
+                <div className="space-y-2">
+                  <Label htmlFor="subcontractor">Select Subcontractor (Optional)</Label>
+                  <Select
+                    value={formData.selectedSubcontractor || ""}
+                    onValueChange={(value) => setFormData(prev => ({ 
+                      ...prev, 
+                      selectedSubcontractor: value || null 
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a subcontractor or leave blank for admin-only report" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Admin-only report (no subcontractor)</SelectItem>
+                      {subcontractors?.map((subcontractor) => (
+                        <SelectItem key={subcontractor.id} value={subcontractor.id}>
+                          {subcontractor.first_name} {subcontractor.last_name} - {subcontractor.organization_members[0]?.organization?.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose a subcontractor to attribute this work to, or leave blank to submit as an admin-only report.
+                  </p>
+                </div>
+              </StandardFormLayout.FieldGroup>
+            </StandardFormLayout.Section>
+          )}
+
           <StandardFormLayout.Section 
             title="Work Details"
             description="Provide detailed information about the work performed"
