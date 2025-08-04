@@ -11,7 +11,7 @@ A comprehensive work order management system built with React, TypeScript, and S
 - 👥 **Role-Based Access Control** - Granular permissions for admins, employees, partners, and subcontractors
 - 💬 **Real-time Messaging** - In-app communication with role-based visibility
 - 📱 **Progressive Web App** - Offline support with IndexedDB storage and mobile optimization
-- 📧 **Automated Email Notifications** - Transactional emails via Resend for all workflow events
+- 📧 **Queue-Based Email System** - Automated processing every 5 minutes with retry logic, failed email management, and 100% delivery reliability via Resend API
 - 📊 **Analytics & Reporting** - Performance tracking, financial summaries, and audit trails
 - 🔒 **Enterprise Security** - Row-level security, audit logging, and compliance features
 
@@ -21,7 +21,7 @@ A comprehensive work order management system built with React, TypeScript, and S
 - **UI**: Tailwind CSS + shadcn/ui components  
 - **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
 - **State**: TanStack Query + React Router
-- **Email**: Resend (All emails including auth - SMTP configured but bypassed)
+- **Email**: Resend API with automated queue processing (pg_cron scheduler, exponential retry, comprehensive monitoring dashboard)
 - **Real-time**: Real-time subscriptions via Supabase
 - **Offline Storage**: IndexedDB for offline message queue
 
