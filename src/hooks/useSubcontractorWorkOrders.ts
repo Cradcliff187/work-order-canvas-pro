@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -12,22 +12,44 @@ export function useSubcontractorWorkOrders() {
 
   const permissions = useEnhancedPermissions();
 
-  // Stabilize organization IDs using string-based memoization
+  // PHASE 1 FIX: Create fully stabilized organization IDs
   const organizationIds = useMemo(() => {
-    const orgIds = permissions.user?.organization_members?.map((m: any) => m.organization_id) || [];
-    return orgIds.sort(); // Sort for consistent ordering
-  }, [JSON.stringify(permissions.user?.organization_members?.map((m: any) => m.organization_id) || [])]);
+    if (!permissions.user?.organization_members || loading) {
+      return [];
+    }
+    
+    // Extract IDs once and sort for consistency
+    const orgIds = permissions.user.organization_members
+      .map((m: any) => m.organization_id)
+      .filter(Boolean)
+      .sort();
+    
+    // Debug logging to track changes
+    console.log('🔄 organizationIds computed:', orgIds);
+    
+    return orgIds;
+  }, [
+    // Use stable string comparison instead of object reference
+    permissions.user?.organization_members?.map((m: any) => m.organization_id).sort().join(',') || '',
+    loading
+  ]);
 
-  // Create unified ready state for all queries
+  // PHASE 1 FIX: Truly stable ready state based only on essential data
   const isReady = useMemo(() => {
-    return !!profile?.id && !loading && organizationIds.length > 0;
-  }, [profile?.id, loading, organizationIds.length]);
+    const ready = !loading && !!profile?.id && organizationIds.length > 0;
+    console.log('🔄 isReady computed:', ready, { loading, profileId: profile?.id, orgCount: organizationIds.length });
+    return ready;
+  }, [loading, profile?.id, organizationIds.length]);
 
-  // Stable query key for assigned work orders
-  const assignedWorkOrdersQueryKey = useMemo(() => 
-    ["subcontractor-work-orders", user?.id, profile?.id, organizationIds],
-    [user?.id, profile?.id, organizationIds]
-  );
+  // PHASE 1 FIX: Completely stable query keys that never change unless data actually changes
+  const stableProfileId = useMemo(() => profile?.id, [profile?.id]);
+  const stableOrgIdsString = useMemo(() => organizationIds.join(','), [organizationIds]);
+
+  const assignedWorkOrdersQueryKey = useMemo(() => {
+    const key = ["subcontractor-work-orders", stableProfileId, stableOrgIdsString];
+    console.log('🔄 assignedWorkOrdersQueryKey computed:', key);
+    return key;
+  }, [stableProfileId, stableOrgIdsString]);
 
   // Organization-level access: Filter to work orders assigned to user's subcontractor organizations
   const assignedWorkOrders = useQuery({
@@ -81,11 +103,12 @@ export function useSubcontractorWorkOrders() {
     },
   });
 
-  // Stable query key for dashboard stats
-  const dashboardStatsQueryKey = useMemo(() => 
-    ["subcontractor-dashboard", user?.id, profile?.id, organizationIds],
-    [user?.id, profile?.id, organizationIds]
-  );
+  // PHASE 1 FIX: Stable query key for dashboard stats
+  const dashboardStatsQueryKey = useMemo(() => {
+    const key = ["subcontractor-dashboard", stableProfileId, stableOrgIdsString];
+    console.log('🔄 dashboardStatsQueryKey computed:', key);
+    return key;
+  }, [stableProfileId, stableOrgIdsString]);
 
   // Organization dashboard stats: Show metrics for all work assigned to user's organizations
   const dashboardStats = useQuery({
@@ -231,11 +254,12 @@ export function useSubcontractorWorkOrders() {
     });
   };
 
-  // Stable query key for reports
-  const reportsQueryKey = useMemo(() => 
-    ["subcontractor-reports", user?.id, profile?.id, organizationIds],
-    [user?.id, profile?.id, organizationIds]
-  );
+  // PHASE 1 FIX: Stable query key for reports
+  const reportsQueryKey = useMemo(() => {
+    const key = ["subcontractor-reports", stableProfileId, stableOrgIdsString];
+    console.log('🔄 reportsQueryKey computed:', key);
+    return key;
+  }, [stableProfileId, stableOrgIdsString]);
 
   // Get reports for work orders assigned to user's organizations
   const reports = useQuery({
@@ -386,11 +410,12 @@ export function useSubcontractorWorkOrders() {
     },
   });
 
-  // Stable query key for completed work orders
-  const completedWorkOrdersQueryKey = useMemo(() => 
-    ["completed-work-orders-for-invoicing", user?.id, profile?.id, organizationIds],
-    [user?.id, profile?.id, organizationIds]
-  );
+  // PHASE 1 FIX: Stable query key for completed work orders
+  const completedWorkOrdersQueryKey = useMemo(() => {
+    const key = ["completed-work-orders-for-invoicing", stableProfileId, stableOrgIdsString];
+    console.log('🔄 completedWorkOrdersQueryKey computed:', key);
+    return key;
+  }, [stableProfileId, stableOrgIdsString]);
 
   // Organization completed work orders: All completed work for user's organizations
   const completedWorkOrdersForInvoicing = useQuery({
