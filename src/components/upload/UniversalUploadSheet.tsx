@@ -33,6 +33,8 @@ interface UniversalUploadSheetProps {
   accept?: string;
   multiple?: boolean;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function UniversalUploadSheet({
@@ -40,10 +42,16 @@ export function UniversalUploadSheet({
   onFilesSelected,
   accept = "*/*",
   multiple = true,
-  disabled = false
+  disabled = false,
+  open,
+  onOpenChange
 }: UniversalUploadSheetProps) {
   const isMobile = useIsMobile();
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  
+  // Use controlled state if provided, otherwise use internal state
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
   
   // File input refs
   const cameraInputRef = useRef<HTMLInputElement>(null);

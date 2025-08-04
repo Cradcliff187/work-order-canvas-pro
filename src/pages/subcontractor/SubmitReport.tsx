@@ -67,6 +67,7 @@ export default function SubmitReport() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [showUploadSheet, setShowUploadSheet] = useState(false);
 
   // Check for work order ID
   if (!workOrderId) {
@@ -387,6 +388,8 @@ export default function SubmitReport() {
                     </Button>
                   }
                   onFilesSelected={handleFilesSelected}
+                  open={showUploadSheet}
+                  onOpenChange={setShowUploadSheet}
                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
                   multiple={true}
                 />

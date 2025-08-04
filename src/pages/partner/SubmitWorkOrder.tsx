@@ -119,6 +119,7 @@ export default function SubmitWorkOrder() {
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'creating' | 'uploading'>('idle');
+  const [showUploadSheet, setShowUploadSheet] = useState(false);
 
   // Touch gesture state
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -883,6 +884,8 @@ export default function SubmitWorkOrder() {
                           </Button>
                         }
                         onFilesSelected={handleFilesSelected}
+                        open={showUploadSheet}
+                        onOpenChange={setShowUploadSheet}
                         accept="image/*,.pdf"
                         multiple={true}
                       />
