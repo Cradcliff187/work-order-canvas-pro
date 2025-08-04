@@ -9,7 +9,8 @@ import {
   CheckCircle, 
   TrendingUp
 } from 'lucide-react';
-import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { usePartnerSubcontractorActivityFeed } from '@/hooks/usePartnerSubcontractorActivityFeed';
 
 import { StandardDashboardStats, StatCard } from '@/components/dashboard/StandardDashboardStats';
@@ -23,11 +24,65 @@ import { useEnhancedPermissions } from '@/hooks/useEnhancedPermissions';
 
 const SubcontractorDashboard = () => {
   const navigate = useNavigate();
-  const { assignedWorkOrders, reports, dashboardStats } = useSubcontractorWorkOrders();
   const { organizationMembers, organizationActivity, isLoading: teamDataLoading } = useOrganizationTeamData();
   const isMobile = useIsMobile();
   const permissions = useEnhancedPermissions();
   const { activities, isLoading: activitiesLoading, error: activitiesError, refetch: refetchActivities } = usePartnerSubcontractorActivityFeed('subcontractor');
+
+  // Get organization IDs for queries
+  const organizationIds = React.useMemo(() => {
+    return permissions.user?.userOrganizations?.map(org => org.organization_id) || [];
+  }, [permissions.user?.userOrganizations]);
+
+  // Fetch assigned work orders
+  const { data: assignedWorkOrders = [] } = useQuery({
+    queryKey: ['subcontractor-assigned-work-orders', organizationIds],
+    queryFn: async () => {
+      if (organizationIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('*')
+        .in('assigned_organization_id', organizationIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: organizationIds.length > 0,
+    staleTime: 30 * 1000,
+  });
+
+  // Fetch reports
+  const { data: reports = [] } = useQuery({
+    queryKey: ['subcontractor-reports', permissions.user?.id],
+    queryFn: async () => {
+      if (!permissions.user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('work_order_reports')
+        .select('*')
+        .eq('subcontractor_user_id', permissions.user.id)
+        .order('submitted_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!permissions.user?.id,
+    staleTime: 30 * 1000,
+  });
+
+  // Calculate dashboard stats
+  const dashboardStats = React.useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const completedThisMonth = assignedWorkOrders.filter(wo => 
+      wo.status === 'completed' && new Date(wo.updated_at) >= startOfMonth
+    ).length;
+
+    return { completedThisMonth };
+  }, [assignedWorkOrders]);
   
   // Refetch activities when component mounts or when user returns to dashboard
   React.useEffect(() => {
@@ -45,25 +100,25 @@ const SubcontractorDashboard = () => {
     {
       icon: FileText,
       label: "My Assigned Work Orders",
-      value: assignedWorkOrders.data?.length || 0,
+      value: assignedWorkOrders.length || 0,
       description: "Assigned to me"
     },
     {
       icon: Clock,
       label: "My Active Work",
-      value: assignedWorkOrders.data?.filter(wo => wo.status === 'assigned' || wo.status === 'in_progress').length || 0,
+      value: assignedWorkOrders.filter(wo => wo.status === 'assigned' || wo.status === 'in_progress').length || 0,
       description: "In progress"
     },
     {
       icon: CheckCircle,
       label: "My Completed This Month",
-      value: dashboardStats.data?.completedThisMonth || 0,
+      value: dashboardStats.completedThisMonth || 0,
       description: "This month"
     },
     {
       icon: TrendingUp,
       label: "My Reports Submitted",
-      value: reports.data?.length || 0,
+      value: reports.length || 0,
       description: "All time"
     }
   ];

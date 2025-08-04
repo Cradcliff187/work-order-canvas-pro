@@ -3,7 +3,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvoiceDrafts } from '@/hooks/useInvoiceDrafts';
-import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { useBranding } from '@/hooks/useBranding';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -51,18 +52,40 @@ const sidebarItems = [
 export function SubcontractorSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, userOrganizations } = useAuth();
   const { draftCount } = useInvoiceDrafts();
-  const { assignedWorkOrders } = useSubcontractorWorkOrders();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
   const organizationNavItems = useOrganizationNavigation();
+
+  // Get organization IDs for the query
+  const organizationIds = React.useMemo(() => {
+    return userOrganizations?.map(org => org.organization_id) || [];
+  }, [userOrganizations]);
+
+  // Fetch assigned work orders
+  const { data: assignedWorkOrders = [] } = useQuery({
+    queryKey: ['sidebar-assigned-work-orders', organizationIds],
+    queryFn: async () => {
+      if (organizationIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('id, status')
+        .in('assigned_organization_id', organizationIds);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: organizationIds.length > 0,
+    staleTime: 60 * 1000,
+  });
   
   // Count work orders that need reports (assigned or in_progress status)
-  const pendingReportsCount = assignedWorkOrders.data?.filter(
+  const pendingReportsCount = assignedWorkOrders.filter(
     (wo: any) => wo.status === 'assigned' || wo.status === 'in_progress'
-  ).length || 0;
+  ).length;
 
   const isActive = (path: string) => location.pathname === path;
 

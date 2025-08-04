@@ -9,7 +9,9 @@ import { Upload, ArrowLeft, FileText, Loader2, Save } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
-import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
 import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
@@ -22,8 +24,36 @@ interface InvoiceFormData {
 export default function SubmitInvoice() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { completedWorkOrdersForInvoicing } = useSubcontractorWorkOrders();
+  const { userOrganizations } = useAuth();
   const { submitInvoice, isSubmitting } = useInvoiceSubmission();
+
+  // Get organization IDs for the query
+  const organizationIds = React.useMemo(() => {
+    return userOrganizations?.map(org => org.organization_id) || [];
+  }, [userOrganizations]);
+
+  // Fetch completed work orders for invoicing
+  const completedWorkOrdersForInvoicing = useQuery({
+    queryKey: ['completed-work-orders-for-invoicing', organizationIds],
+    queryFn: async () => {
+      if (organizationIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          invoice_work_orders (id)
+        `)
+        .in('assigned_organization_id', organizationIds)
+        .eq('status', 'completed')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: organizationIds.length > 0,
+    staleTime: 30 * 1000,
+  });
   
   const [formData, setFormData] = useState<InvoiceFormData>({
     externalInvoiceNumber: '',

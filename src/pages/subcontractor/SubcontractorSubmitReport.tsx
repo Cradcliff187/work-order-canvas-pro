@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,18 +15,42 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function SubcontractorSubmitReport() {
   const navigate = useNavigate();
-  const { assignedWorkOrders } = useSubcontractorWorkOrders();
+  const { userOrganizations } = useAuth();
   const { organizationActivity } = useOrganizationTeamData();
   const isMobile = useIsMobile();
 
-  if (assignedWorkOrders.isLoading) {
+  // Get organization IDs for the query
+  const organizationIds = React.useMemo(() => {
+    return userOrganizations?.map(org => org.organization_id) || [];
+  }, [userOrganizations]);
+
+  // Fetch assigned work orders
+  const { data: assignedWorkOrders = [], isLoading } = useQuery({
+    queryKey: ['submit-report-work-orders', organizationIds],
+    queryFn: async () => {
+      if (organizationIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('*')
+        .in('assigned_organization_id', organizationIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: organizationIds.length > 0,
+    staleTime: 30 * 1000,
+  });
+
+  if (isLoading) {
     return <LoadingSpinner />;
   }
 
   // Filter work orders that need reports (assigned or in_progress status)
-  const workOrdersNeedingReports = assignedWorkOrders.data?.filter(
+  const workOrdersNeedingReports = assignedWorkOrders.filter(
     (wo: any) => wo.status === 'assigned' || wo.status === 'in_progress'
-  ) || [];
+  );
 
   return (
     <div className="space-y-6">

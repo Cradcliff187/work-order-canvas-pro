@@ -12,7 +12,9 @@ import { Save, ArrowLeft, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { DraftIndicator } from '@/components/DraftIndicator';
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
-import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useWorkOrderReportSubmission } from '@/hooks/useWorkOrderReportSubmission';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -35,12 +37,28 @@ export default function SubmitReport() {
   const { toast } = useToast();
   const { profile } = useAuth();
   const { isEmployee } = useUserProfile();
-  const { submitReport } = useSubcontractorWorkOrders();
+  const { submitReport } = useWorkOrderReportSubmission();
   const { saveDraft, getDrafts } = useOfflineStorage();
   const isMobile = useIsMobile();
 
-  // Use getWorkOrder hook directly
-  const workOrderQuery = useSubcontractorWorkOrders().getWorkOrder(workOrderId || '');
+  // Fetch work order details
+  const workOrderQuery = useQuery({
+    queryKey: ['work-order-detail', workOrderId],
+    queryFn: async () => {
+      if (!workOrderId) throw new Error('Work order ID is required');
+      
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('*')
+        .eq('id', workOrderId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workOrderId,
+    staleTime: 30 * 1000,
+  });
 
   const [formData, setFormData] = useState<FormData>({
     workPerformed: '',

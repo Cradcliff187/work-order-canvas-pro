@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useSubcontractorWorkOrders } from "@/hooks/useSubcontractorWorkOrders";
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Search, 
   Eye, 
@@ -26,11 +28,35 @@ import {
 } from "@/components/ui/select";
 
 export default function ReportHistory() {
-  const { reports } = useSubcontractorWorkOrders();
+  const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const reportList = reports.data || [];
+  // Fetch reports
+  const { data: reportList = [], isLoading } = useQuery({
+    queryKey: ['subcontractor-reports', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('work_order_reports')
+        .select(`
+          *,
+          work_orders (
+            work_order_number,
+            title,
+            store_location
+          )
+        `)
+        .eq('subcontractor_user_id', profile.id)
+        .order('submitted_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id,
+    staleTime: 30 * 1000,
+  });
 
   const filteredReports = reportList.filter((report) => {
     const matchesSearch = 
@@ -69,7 +95,7 @@ export default function ReportHistory() {
     return reportList.filter(report => report.status === "approved").length;
   };
 
-  if (reports.isLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="h-8 bg-muted rounded animate-pulse" />
