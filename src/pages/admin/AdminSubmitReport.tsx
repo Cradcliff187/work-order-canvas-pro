@@ -307,17 +307,17 @@ export default function AdminSubmitReport() {
                 <div className="space-y-2">
                   <Label htmlFor="subcontractor">Select Subcontractor (Optional)</Label>
                   <Select
-                    value={formData.selectedSubcontractor || ""}
+                    value={formData.selectedSubcontractor || "ADMIN_ONLY"}
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
-                      selectedSubcontractor: value || null 
+                      selectedSubcontractor: value === "ADMIN_ONLY" ? null : value 
                     }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a subcontractor or leave blank for admin-only report" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Admin-only report (no subcontractor)</SelectItem>
+                      <SelectItem value="ADMIN_ONLY">Admin-only report (no subcontractor)</SelectItem>
                       {subcontractors?.map((subcontractor) => (
                         <SelectItem key={subcontractor.id} value={subcontractor.id}>
                           {subcontractor.first_name} {subcontractor.last_name} - {subcontractor.organization_members[0]?.organization?.name}
