@@ -20,16 +20,18 @@ export const useUserOrganizations = () => {
     queryFn: async () => {
       if (!user) return [];
 
-      // Get the profile ID first, then query organization_members
-      const { data: profileData, error: profileError } = await supabase
+      // Get the profile ID first, then query organization_members (handle potential duplicates)
+      const { data: profileArray, error: profileError } = await supabase
         .from('profiles')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1);
 
-      if (profileError || !profileData) {
+      if (profileError || !profileArray?.[0]) {
         throw new Error(`Failed to fetch user profile: ${profileError?.message}`);
       }
+
+      const profileData = profileArray[0];
 
       // Organization_members query with organizations join
 

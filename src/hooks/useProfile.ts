@@ -17,14 +17,17 @@ export function useProfile() {
         throw new Error('No authenticated user');
       }
 
-      // First, get the profile without joins
-      const { data: profile, error: profileError } = await supabase
+      // First, get the profile without joins (handle potential duplicates)
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single(); // This will return exactly 1 row
+        .limit(1);
 
       if (profileError) throw profileError;
+      if (!profileData?.[0]) throw new Error('Profile not found');
+      
+      const profile = profileData[0];
 
       // Then, separately get organization memberships
       const { data: orgMemberships, error: orgError } = await supabase

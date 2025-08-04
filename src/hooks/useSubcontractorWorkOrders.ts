@@ -153,40 +153,48 @@ export function useSubcontractorWorkOrders() {
           throw new Error('Invalid work order ID format');
         }
 
-        // First, get the work order data
-        const { data, error } = await supabase
+        // Main work order query (one-to-one relationships only)
+        const { data: workOrderData, error: workOrderError } = await supabase
           .from("work_orders")
           .select(`
             *,
             trades (name, description),
             organizations!organization_id (name, contact_email, contact_phone),
-            profiles!created_by (first_name, last_name, email),
-            work_order_reports (
-              *,
-              profiles!subcontractor_user_id (first_name, last_name)
-            )
+            profiles!created_by (first_name, last_name, email)
           `)
           .eq("id", id)
           .maybeSingle();
 
-        if (error) throw error;
-        if (!data) throw new Error('Work order not found');
+        if (workOrderError) throw workOrderError;
+        if (!workOrderData) throw new Error('Work order not found');
+
+        // Separate query for work order reports (one-to-many relationship)
+        const { data: reportsData, error: reportsError } = await supabase
+          .from("work_order_reports")
+          .select(`
+            *,
+            profiles!subcontractor_user_id (first_name, last_name)
+          `)
+          .eq("work_order_id", id);
+
+        if (reportsError) throw reportsError;
 
         // Then get location contact information if available
         let locationContact = null;
-        if (data.partner_location_number && data.organization_id) {
+        if (workOrderData.partner_location_number && workOrderData.organization_id) {
           const { data: locationData } = await supabase
             .from("partner_locations")
             .select("contact_name, contact_phone, contact_email")
-            .eq("organization_id", data.organization_id)
-            .eq("location_number", data.partner_location_number)
+            .eq("organization_id", workOrderData.organization_id)
+            .eq("location_number", workOrderData.partner_location_number)
             .maybeSingle();
           
           locationContact = locationData;
         }
 
         return {
-          ...data,
+          ...workOrderData,
+          work_order_reports: reportsData || [],
           location_contact_name: locationContact?.contact_name,
           location_contact_phone: locationContact?.contact_phone,
           location_contact_email: locationContact?.contact_email,
