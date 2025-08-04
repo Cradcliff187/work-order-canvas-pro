@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -21,6 +21,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 }) => {
   const { profile, updateProfile } = useAuth();
   const [showUploadSheet, setShowUploadSheet] = useState(false);
+  const uploadSheetTriggerRef = useRef<HTMLButtonElement>(null);
   
   const {
     uploadFiles,
@@ -97,7 +98,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
           'hover:scale-105',
           isUploading && 'pointer-events-none'
         )}
-        onClick={() => setShowUploadSheet(true)}
+        onClick={() => uploadSheetTriggerRef.current?.click()}
       >
         {/* Avatar */}
         <Avatar className={cn('w-full h-full transition-all duration-200', isUploading && 'opacity-50')}>
@@ -153,7 +154,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
           variant="outline"
           size="sm"
           disabled={isUploading}
-          onClick={() => setShowUploadSheet(true)}
+          onClick={() => uploadSheetTriggerRef.current?.click()}
         >
           <Upload className="h-4 w-4 mr-2" />
           {profile?.avatar_url ? 'Change' : 'Upload'}
@@ -182,7 +183,13 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
       {/* Upload Sheet */}
       <UniversalUploadSheet
-        trigger={null}
+        trigger={
+          <button 
+            ref={uploadSheetTriggerRef}
+            style={{ display: 'none' }}
+            aria-hidden="true"
+          />
+        }
         onFilesSelected={handleFilesSelected}
         accept="image/jpeg,image/png,image/webp"
         multiple={false}
