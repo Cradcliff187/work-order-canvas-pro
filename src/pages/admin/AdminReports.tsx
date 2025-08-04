@@ -39,7 +39,8 @@ import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useViewMode } from '@/hooks/useViewMode';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useAdminReports } from '@/hooks/useAdminReports';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useSubcontractors } from '@/hooks/useSubcontractors';
@@ -58,6 +59,17 @@ interface ReportFilters {
 export default function AdminReports() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // View mode configuration
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'admin-reports',
+    config: {
+      mobile: ['card'],
+      desktop: ['table', 'card']
+    },
+    defaultMode: 'table'
+  });
+  
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -262,7 +274,7 @@ export default function AdminReports() {
     setRowSelection({});
   };
 
-  const isMobile = useIsMobile();
+  
 
   if (error) {
     return (
@@ -366,6 +378,13 @@ export default function AdminReports() {
                 Clear Filters
               </Button>
             </div>
+            <div className="flex justify-end">
+              <ViewModeSwitcher
+                value={viewMode}
+                onValueChange={setViewMode}
+                allowedModes={allowedModes}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -420,8 +439,9 @@ export default function AdminReports() {
             />
           ) : (
             <>
-              {/* Desktop Table */}
-              <div className="hidden lg:block">
+              {/* Table View */}
+              {viewMode === 'table' && (
+                <div className="hidden lg:block">
                 <ResponsiveTableWrapper stickyFirstColumn={true}>
                   <Table className="admin-table">
                     <TableHeader>
@@ -481,10 +501,12 @@ export default function AdminReports() {
                     </TableBody>
                   </Table>
                 </ResponsiveTableWrapper>
-              </div>
+                </div>
+              )}
 
-              {/* Mobile Cards */}
-              <div className="block lg:hidden space-y-3">
+              {/* Card View */}
+              {viewMode === 'card' && (
+                <div className="space-y-3">
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => {
                     const report = row.original;
@@ -519,7 +541,8 @@ export default function AdminReports() {
                     colSpan={1}
                   />
                 )}
-              </div>
+                </div>
+              )}
             </>
           )}
 

@@ -23,7 +23,8 @@ import { Plus, Edit, Trash2, RotateCcw, ClipboardList } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useViewMode } from '@/hooks/useViewMode';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
 import { EditOrganizationModal } from '@/components/admin/organizations/EditOrganizationModal';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -36,6 +37,17 @@ interface OrganizationFilters {
 
 export default function AdminOrganizations() {
   const { toast } = useToast();
+  
+  // View mode configuration
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'admin-organizations',
+    config: {
+      mobile: ['card'],
+      desktop: ['table', 'card']
+    },
+    defaultMode: 'table'
+  });
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
@@ -49,7 +61,7 @@ export default function AdminOrganizations() {
     setFilters({ search: debouncedSearch });
   }, [debouncedSearch]);
 
-  const isMobile = useIsMobile();
+  
 
   const handleClearFilters = () => {
     setSearch('');
@@ -84,10 +96,17 @@ export default function AdminOrganizations() {
             {organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations'}
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Organization
-        </Button>
+        <div className="flex items-center gap-3">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Organization
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -127,8 +146,9 @@ export default function AdminOrganizations() {
             />
           ) : (
             <>
-              {/* Desktop Table */}
-              <div className="hidden lg:block rounded-md border">
+              {/* Table View */}
+              {viewMode === 'table' && (
+                <div className="hidden lg:block rounded-md border">
                 <Table className="admin-table">
                   <TableHeader>
                     <TableRow>
@@ -187,10 +207,12 @@ export default function AdminOrganizations() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+                </div>
+              )}
 
-              {/* Mobile Cards */}
-              <div className="block lg:hidden space-y-3">
+              {/* Card View */}
+              {viewMode === 'card' && (
+                <div className="space-y-3">
                 {organizations?.map((organization) => (
                   <MobileTableCard
                     key={organization.id}
@@ -210,7 +232,8 @@ export default function AdminOrganizations() {
                     }}
                   />
                 ))}
-              </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>

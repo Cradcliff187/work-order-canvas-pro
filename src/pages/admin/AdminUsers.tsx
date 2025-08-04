@@ -27,7 +27,8 @@ import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { ViewUserModal } from '@/components/admin/users/ViewUserModal';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useViewMode } from '@/hooks/useViewMode';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -41,7 +42,17 @@ interface UserFilters {
 export default function AdminUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  
+  // View mode configuration
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'admin-users',
+    config: {
+      mobile: ['card'],
+      desktop: ['table', 'card']
+    },
+    defaultMode: 'table'
+  });
+  
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [editUserModalOpen, setEditUserModalOpen] = useState(false);
   const [viewUserModalOpen, setViewUserModalOpen] = useState(false);
@@ -150,10 +161,17 @@ export default function AdminUsers() {
             {users?.length ? `${users.length} total users` : 'Manage system users and their access'}
           </p>
         </div>
-        <Button onClick={() => setCreateUserModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New User
-        </Button>
+        <div className="flex items-center gap-3">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
+          <Button onClick={() => setCreateUserModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            New User
+          </Button>
+        </div>
       </div>
 
       {/* Data Table */}
@@ -187,8 +205,9 @@ export default function AdminUsers() {
             />
           ) : (
             <>
-              {/* Desktop Table */}
-              <div className="hidden lg:block rounded-md border">
+              {/* Table View */}
+              {viewMode === 'table' && (
+                <div className="hidden lg:block rounded-md border">
                 <Table className="admin-table">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -247,10 +266,12 @@ export default function AdminUsers() {
                     )}
                   </TableBody>
                 </Table>
-              </div>
+                </div>
+              )}
 
-              {/* Mobile Cards */}
-              <div className="block lg:hidden space-y-3">
+              {/* Card View */}
+              {viewMode === 'card' && (
+                <div className="space-y-3">
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => {
                     const user = row.original;
@@ -307,7 +328,8 @@ export default function AdminUsers() {
                     colSpan={1}
                   />
                 )}
-              </div>
+                </div>
+              )}
 
               {/* Pagination */}
               <div className="flex items-center justify-between space-x-2 py-4">

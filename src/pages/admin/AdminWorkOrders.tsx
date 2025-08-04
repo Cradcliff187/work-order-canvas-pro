@@ -31,7 +31,8 @@ import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkO
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useViewMode } from '@/hooks/useViewMode';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useToast } from '@/hooks/use-toast';
 import { exportWorkOrders } from '@/lib/utils/export';
 import { format } from 'date-fns';
@@ -52,8 +53,17 @@ interface WorkOrderFiltersState {
 export default function AdminWorkOrders() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { profile, isEmployee, isAdmin } = useUserProfile();
+  
+  // View mode configuration
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'admin-work-orders',
+    config: {
+      mobile: ['card'],
+      desktop: ['table', 'card']
+    },
+    defaultMode: 'table'
+  });
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
@@ -230,11 +240,22 @@ export default function AdminWorkOrders() {
       </div>
 
       {/* Filters */}
-      <WorkOrderFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        onClearFilters={handleClearFilters}
-      />
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <WorkOrderFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            onClearFilters={handleClearFilters}
+          />
+        </div>
+        <div className="flex items-end">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
+        </div>
+      </div>
 
       {/* Data Table */}
       <Card>
@@ -284,8 +305,9 @@ export default function AdminWorkOrders() {
             />
           ) : (
             <>
-              {/* Desktop Table with Master-Detail */}
-              <div className="hidden lg:block">
+              {/* Table View (Desktop Master-Detail) */}
+              {viewMode === 'table' && (
+                <div className="hidden lg:block">
                 <MasterDetailLayout
                   listContent={
                     <ResponsiveTableWrapper stickyFirstColumn={true}>
@@ -363,10 +385,12 @@ export default function AdminWorkOrders() {
                   isLoading={isLoadingDetail}
                   items={workOrdersData?.data?.map(wo => ({ id: wo.id })) || []}
                 />
-              </div>
+                </div>
+              )}
 
-              {/* Mobile Cards */}
-              <div className="block lg:hidden space-y-3">
+              {/* Card View (Mobile + Desktop Option) */}
+              {viewMode === 'card' && (
+                <div className="space-y-3">
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => {
                     const workOrder = row.original;
@@ -410,7 +434,8 @@ export default function AdminWorkOrders() {
                     colSpan={1}
                   />
                 )}
-              </div>
+                </div>
+              )}
 
               {/* Pagination */}
               <div className="flex items-center justify-between space-x-2 py-4">
