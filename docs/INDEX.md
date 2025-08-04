@@ -42,7 +42,7 @@ This documentation map helps developers quickly find the right documentation for
 | File | Description | When to Reference |
 |------|-------------|-------------------|
 | [EDGE_FUNCTIONS_TEST.md](./EDGE_FUNCTIONS_TEST.md) | Edge function testing procedures and debugging | Testing serverless functions, debugging integration issues |
-| [DEVELOPMENT.md](./DEVELOPMENT.md) | Legacy development notes and historical context | Understanding older implementation decisions, troubleshooting legacy code |
+| [DEVELOPMENT.md](./DEVELOPMENT.md) | Quick local development setup and database seeding | Setting up local environment, seeding test data, development workflows |
 
 ## 📱 Quick Navigation by Role
 
