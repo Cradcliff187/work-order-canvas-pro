@@ -76,9 +76,11 @@ WorkOrderPortal implements a unified email system using Resend API that handles 
 
 As of January 2025, WorkOrderPortal has implemented a sophisticated queue-based email system with automated processing for enhanced reliability and performance. This architecture provides asynchronous email processing with automatic retry capabilities and comprehensive monitoring.
 
-### Automated Processing System
+### ⏰ Automated Processing System
 
-**pg_cron Schedule**: Email queue is automatically processed every 5 minutes using PostgreSQL's cron extension:
+**⏰ Processing Schedule**: Every 5 minutes, 24/7 via PostgreSQL cron jobs
+
+Email queue is automatically processed every 5 minutes using PostgreSQL's cron extension:
 ```sql
 -- Automated processing schedule
 SELECT cron.schedule(
@@ -93,6 +95,12 @@ SELECT cron.schedule(
   $$
 );
 ```
+
+The email system runs completely autonomously with:
+- Automatic queue processing every 5 minutes
+- Exponential backoff retry (5min → 30min → 2hr)
+- Self-healing with failed email management
+- Zero manual intervention required
 
 ### Queue-Based Flow Architecture
 
