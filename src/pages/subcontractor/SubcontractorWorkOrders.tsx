@@ -1,8 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  SortingState,
+  ColumnFiltersState,
+} from '@tanstack/react-table';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -23,12 +31,13 @@ import {
   List,
   Grid
 } from 'lucide-react';
-import { useSubcontractorWorkOrders } from '@/hooks/useSubcontractorWorkOrders';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
-import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
 import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
 import { createSubcontractorWorkOrderColumns } from '@/components/subcontractor/work-orders/WorkOrderColumns';
@@ -40,23 +49,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { format } from 'date-fns';
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  flexRender,
-  SortingState,
-  ColumnFiltersState,
-} from '@tanstack/react-table';
 
 const SubcontractorWorkOrders = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const { profile, isEmployee, isAdmin } = useUserProfile();
-  const { assignedWorkOrders } = useSubcontractorWorkOrders();
+  const { profile, userOrganizations } = useAuth();
+  const { isEmployee, isAdmin } = useUserProfile();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'subcontractor-work-orders',
     config: {
@@ -65,34 +69,83 @@ const SubcontractorWorkOrders = () => {
     },
     defaultMode: 'card'
   });
-  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  const workOrderList = assignedWorkOrders.data || [];
-  
-  // Extract work order IDs for unread message counts
-  const workOrderIds = workOrderList.map(wo => wo.id);
-  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds, profile, isEmployee, isAdmin);
+  // Get organization IDs for the query
+  const organizationIds = useMemo(() => {
+    return userOrganizations?.map(org => org.organization_id) || [];
+  }, [userOrganizations]);
 
-  // FIX 3: Use proper conditional hook pattern with stable query key
-  const workOrderDetailQuery = useWorkOrderDetail(selectedWorkOrderId || "skip-query");
-  
-  // Clean data access - only use data if we have a valid selected ID
-  const selectedWorkOrder = selectedWorkOrderId ? workOrderDetailQuery.data : null;
-  const isLoadingDetail = selectedWorkOrderId ? workOrderDetailQuery.isLoading : false;
+  // Simple direct query for work orders
+  const { data: workOrderList = [], isLoading } = useQuery({
+    queryKey: ['subcontractor-work-orders', organizationIds],
+    queryFn: async () => {
+      if (!profile?.id || organizationIds.length === 0) {
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          trades (name),
+          organizations!organization_id (name),
+          work_order_attachments(count),
+          work_order_reports (
+            id,
+            status,
+            submitted_at,
+            subcontractor_user_id
+          ),
+          work_order_assignments (
+            assigned_to,
+            assignment_type,
+            profiles!work_order_assignments_assigned_to_fkey (first_name, last_name),
+            assigned_organization:organizations!assigned_organization_id(name, organization_type)
+          )
+        `)
+        .in('assigned_organization_id', organizationIds)
+        .order('created_at', { ascending: false });
 
-  const filteredWorkOrders = workOrderList.filter((workOrder) => {
-    const matchesSearch = 
-      workOrder.work_order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      workOrder.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      workOrder.store_location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      workOrder.city?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || workOrder.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+      if (error) throw error;
+      
+      return (data || []).map((wo: any) => ({
+        ...wo,
+        attachment_count: wo.work_order_attachments?.[0]?.count || 0
+      }));
+    },
+    enabled: !!profile?.id && organizationIds.length > 0,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: false,
   });
+
+  // Get unread message counts
+  const workOrderIds = workOrderList.map(wo => wo.id);
+  const { data: unreadCounts = {} } = useUnreadMessageCounts(
+    workOrderIds, 
+    profile, 
+    isEmployee, 
+    isAdmin
+  );
+
+  // Get selected work order detail
+  const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(
+    selectedWorkOrderId || undefined
+  );
+
+  // Filter work orders
+  const filteredWorkOrders = useMemo(() => {
+    return workOrderList.filter((workOrder) => {
+      const matchesSearch = 
+        workOrder.work_order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        workOrder.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        workOrder.store_location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        workOrder.city?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || workOrder.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [workOrderList, searchTerm, statusFilter]);
 
   const hasFilters = searchTerm || statusFilter !== 'all';
 
@@ -123,107 +176,81 @@ const SubcontractorWorkOrders = () => {
     setStatusFilter('all');
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const renderTableView = () => {
     return (
       <Card>
         <CardContent className="p-0">
-          {/* Desktop Master-Detail Layout */}
-          <div className="hidden lg:block">
-            <MasterDetailLayout
-              listContent={
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id} className="h-12">
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows.map((row) => (
-                        <TableRow 
-                          key={row.id}
-                          className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
-                          onClick={() => setSelectedWorkOrderId(row.original.id)}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              }
-              selectedId={selectedWorkOrderId}
-              onSelectionChange={setSelectedWorkOrderId}
-              detailContent={
-                selectedWorkOrder && (
-                  <WorkOrderDetailPanel
-                    workOrder={selectedWorkOrder}
-                    onViewFull={() => navigate(`/subcontractor/work-orders/${selectedWorkOrderId}`)}
-                    showActionButtons={true}
-                  />
-                )
-              }
-              isLoading={isLoadingDetail}
-              items={filteredWorkOrders.map(wo => ({ id: wo.id }))}
-            />
-          </div>
-
-          {/* Mobile/Tablet Table */}
-          <div className="block lg:hidden">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id} className="h-12">
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          <MasterDetailLayout
+            listContent={
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow 
+                        key={row.id}
+                        className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
+                        onClick={() => setSelectedWorkOrderId(row.original.id)}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            }
+            selectedId={selectedWorkOrderId}
+            onSelectionChange={setSelectedWorkOrderId}
+            detailContent={
+              selectedWorkOrder && (
+                <WorkOrderDetailPanel
+                  workOrder={selectedWorkOrder}
+                  onViewFull={() => navigate(`/subcontractor/work-orders/${selectedWorkOrderId}`)}
+                  showActionButtons={true}
+                />
+              )
+            }
+            isLoading={isLoadingDetail}
+            items={filteredWorkOrders.map(wo => ({ id: wo.id }))}
+          />
         </CardContent>
       </Card>
     );
@@ -269,7 +296,7 @@ const SubcontractorWorkOrders = () => {
 
                   <h4 className="font-medium text-foreground">{workOrder.title}</h4>
 
-                  <div className={`grid gap-3 text-sm text-muted-foreground ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  <div className="grid gap-3 text-sm text-muted-foreground grid-cols-1 sm:grid-cols-2">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
                       <span>{workOrder.store_location}, {workOrder.city}</span>
@@ -287,10 +314,10 @@ const SubcontractorWorkOrders = () => {
                       </div>
                     )}
 
-                    {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 && (
+                    {workOrder.attachment_count > 0 && (
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4" />
-                        <span>{workOrder.work_order_attachments.length} attachment(s)</span>
+                        <span>{workOrder.attachment_count} attachment(s)</span>
                       </div>
                     )}
                   </div>
@@ -348,10 +375,7 @@ const SubcontractorWorkOrders = () => {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -373,8 +397,6 @@ const SubcontractorWorkOrders = () => {
                 <SelectItem value="received">Received</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="estimate_needed">Estimate Needed</SelectItem>
-                <SelectItem value="estimate_approved">Estimate Approved</SelectItem>
               </SelectContent>
             </Select>
             <ViewModeSwitcher
@@ -394,21 +416,7 @@ const SubcontractorWorkOrders = () => {
       </Card>
 
       {/* Content */}
-      {assignedWorkOrders.isLoading ? (
-        <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : viewMode === 'table' ? (
-        renderTableView()
-      ) : (
-        renderCardView()
-      )}
+      {viewMode === 'table' ? renderTableView() : renderCardView()}
     </div>
   );
 };
