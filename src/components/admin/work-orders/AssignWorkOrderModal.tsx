@@ -334,9 +334,9 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
     [subcontractorOrgs, selectedOrganizations]
   );
 
-  // Filter subcontractor organizations - only show those with active users
+  // Filter subcontractor organizations - show all active organizations
   const filteredSubcontractorOrgs = useMemo(() => {
-    let filtered = subcontractorOrgs.filter(org => org.active_user_count > 0);
+    let filtered = [...subcontractorOrgs];
 
     // Apply search filter
     if (debouncedSearchQuery) {
@@ -344,7 +344,7 @@ export function AssignWorkOrderModal({ isOpen, onClose, workOrders }: AssignWork
       filtered = filtered.filter(org => 
         org.name.toLowerCase().includes(query) ||
         org.contact_email?.toLowerCase().includes(query) ||
-        org.first_active_user?.full_name.toLowerCase().includes(query)
+        (org.first_active_user?.full_name && org.first_active_user.full_name.toLowerCase().includes(query))
       );
     }
 
