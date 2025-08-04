@@ -44,9 +44,13 @@ export const useInvoiceDrafts = () => {
   const { data: drafts = [], isLoading: isLoadingDrafts } = useQuery({
     queryKey: ['invoice-drafts'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
+        .eq('user_id', user.id)
         .single();
 
       if (!profile) throw new Error('Profile not found');
@@ -89,9 +93,13 @@ export const useInvoiceDrafts = () => {
   // Save draft mutation
   const saveDraftMutation = useMutation({
     mutationFn: async ({ draftData, isManual = false }: { draftData: InvoiceDraftData, isManual?: boolean }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
+        .eq('user_id', user.id)
         .single();
 
       if (!profile) throw new Error('Profile not found');
@@ -249,9 +257,13 @@ export const useInvoiceDrafts = () => {
   // Convert draft to submission
   const convertDraftToSubmission = useMutation({
     mutationFn: async (draftId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
+        .eq('user_id', user.id)
         .single();
 
       if (!profile) throw new Error('Profile not found');
