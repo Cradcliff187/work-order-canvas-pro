@@ -147,11 +147,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       case 'avatar':
         return `${user.id}/avatar.jpg`;
       case 'workOrder':
-        return `${user.id}/${contextIds.workOrderId || 'temp'}/${timestamp}_${sanitizedFileName}`;
+        return `work-orders/${contextIds.workOrderId || 'temp'}/${timestamp}_${sanitizedFileName}`;
       case 'invoice':
-        return `${user.id}/invoices/${contextIds.invoiceId}/${timestamp}_${sanitizedFileName}`;
+        return `work-orders/${contextIds.invoiceId}/${timestamp}_${sanitizedFileName}`;
       case 'report':
-        return `${user.id}/${contextIds.reportId || 'temp'}/${timestamp}_${sanitizedFileName}`;
+        return `work-orders/${contextIds.reportId || 'temp'}/${timestamp}_${sanitizedFileName}`;
       case 'receipt':
         return `${user.id}/receipts/${timestamp}_${sanitizedFileName}`;
       default:
