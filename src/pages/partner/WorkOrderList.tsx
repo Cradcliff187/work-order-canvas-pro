@@ -44,7 +44,8 @@ import {
 } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { createWorkOrderColumns } from '@/components/partner/work-orders/WorkOrderColumns';
-import { ViewToggle } from '@/components/partner/work-orders/ViewToggle';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { useViewMode } from '@/hooks/useViewMode';
 import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
 import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
@@ -68,8 +69,17 @@ const WorkOrderList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
-  const [view, setView] = useState<'card' | 'table'>('table');
   const [sortOption, setSortOption] = useState('submitted-desc');
+
+  // Use responsive view mode hook
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'partner-work-orders',
+    config: {
+      mobile: ['card'],           // Mobile: cards only
+      desktop: ['table', 'card']  // Desktop: table default, cards optional
+    },
+    defaultMode: 'table'
+  });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
 
@@ -103,7 +113,7 @@ const WorkOrderList = () => {
     });
 
     // Apply sorting for card view
-    if (view === 'card') {
+    if (viewMode === 'card') {
       const [sortBy, direction] = sortOption.split('-');
       
       filtered.sort((a, b) => {
@@ -144,7 +154,7 @@ const WorkOrderList = () => {
     }
 
     return filtered;
-  }, [workOrderList, searchTerm, statusFilter, locationFilter, sortOption, view]);
+  }, [workOrderList, searchTerm, statusFilter, locationFilter, sortOption, viewMode]);
 
   const hasFilters = searchTerm || statusFilter !== 'all' || locationFilter !== 'all';
 
@@ -218,7 +228,11 @@ const WorkOrderList = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <ViewToggle view={view} onViewChange={setView} />
+          <ViewModeSwitcher 
+            value={viewMode} 
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
           <Button onClick={() => navigate('/partner/work-orders/new')}>
             <Plus className="h-4 w-4 mr-2" />
             New Work Order
@@ -280,7 +294,7 @@ const WorkOrderList = () => {
                 )}
               </div>
               
-              {view === 'card' && (
+              {viewMode === 'card' && (
                 <SortDropdown 
                   value={sortOption} 
                   onValueChange={setSortOption}
@@ -311,7 +325,7 @@ const WorkOrderList = () => {
             icon: Plus
           }}
         />
-      ) : view === 'table' ? (
+      ) : viewMode === 'table' ? (
         /* Table View with Master-Detail on Desktop */
         <Card>
           <CardContent className="p-0">
