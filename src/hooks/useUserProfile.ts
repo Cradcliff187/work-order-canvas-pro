@@ -17,10 +17,7 @@ export const useUserProfile = () => {
     internal: getInternalMembership(userOrganizations),
     partner: filterMembershipsByType(userOrganizations, 'partner'),
     subcontractor: filterMembershipsByType(userOrganizations, 'subcontractor')
-  }), [
-    // Use stable dependency - only re-compute when org IDs actually change
-    userOrganizations?.map(o => o.organization_id).sort().join(',') || ''
-  ]);
+  }), [userOrganizations]);
 
   // Memoize permission checks to prevent unnecessary re-computations
   const permissionChecks = useMemo(() => ({

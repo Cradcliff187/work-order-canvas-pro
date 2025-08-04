@@ -79,7 +79,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
     // Only update the ref when there's an actual change
     previousOrganizationsRef.current = userOrganizations;
     return userOrganizations;
-  }, [userOrganizations.map(o => o.organization_id).sort().join(',')]);
+  }, [userOrganizations]);
 
   // Get primary organization (first internal org for admin/employee, or first org for others) - memoized
   const userOrganization = useMemo(() => {

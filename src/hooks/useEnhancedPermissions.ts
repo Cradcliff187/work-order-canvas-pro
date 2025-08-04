@@ -36,7 +36,7 @@ export const useEnhancedPermissions = () => {
     previousOrgsRef.current = userOrganizations;
     
     return newUser;
-  }, [user?.id, user?.email, JSON.stringify(userOrganizations?.map(o => o.organization_id).sort() || [])])
+  }, [user?.id, user?.email, userOrganizations])
 
   // Memoize role checks directly without useUserProfile
   const roleChecks = useMemo(() => {
