@@ -71,8 +71,8 @@ export function useWorkOrderDetail(id: string) {
     queryFn: async () => {
       if (!id) throw new Error('Work order ID is required');
 
-      // First, get the work order data
-      const { data, error } = await supabase
+      // Main work order query (one-to-one relationships only)
+      const { data: workOrderData, error: workOrderError } = await supabase
         .from('work_orders')
         .select(`
           *,
@@ -90,8 +90,20 @@ export function useWorkOrderDetail(id: string) {
             first_name,
             last_name,
             email
-          ),
-          work_order_reports(
+          )
+        `)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (workOrderError) throw workOrderError;
+      if (!workOrderData) return null;
+
+      // Separate queries for one-to-many relationships
+      const [reportsResult, attachmentsResult, assignmentsResult] = await Promise.all([
+        // Work order reports
+        supabase
+          .from('work_order_reports')
+          .select(`
             id,
             status,
             submitted_at,
@@ -101,8 +113,13 @@ export function useWorkOrderDetail(id: string) {
               first_name,
               last_name
             )
-          ),
-          work_order_attachments(
+          `)
+          .eq('work_order_id', id),
+
+        // Work order attachments
+        supabase
+          .from('work_order_attachments')
+          .select(`
             id,
             file_name,
             file_url,
@@ -113,8 +130,13 @@ export function useWorkOrderDetail(id: string) {
               first_name,
               last_name
             )
-          ),
-          work_order_assignments(
+          `)
+          .eq('work_order_id', id),
+
+        // Work order assignments
+        supabase
+          .from('work_order_assignments')
+          .select(`
             id,
             assigned_to,
             assigned_organization_id,
@@ -130,29 +152,34 @@ export function useWorkOrderDetail(id: string) {
               name,
               organization_type
             )
-          )
-        `)
-        .eq('id', id)
-        .maybeSingle();
+          `)
+          .eq('work_order_id', id)
+      ]);
 
-      if (error) throw error;
-      if (!data) return null;
+      // Check for errors in the relationship queries
+      if (reportsResult.error) throw reportsResult.error;
+      if (attachmentsResult.error) throw attachmentsResult.error;
+      if (assignmentsResult.error) throw assignmentsResult.error;
 
-      // Then get location contact information if available
+      // Get location contact information if available
       let locationContact = null;
-      if (data.partner_location_number && data.organization_id) {
+      if (workOrderData.partner_location_number && workOrderData.organization_id) {
         const { data: locationData } = await supabase
           .from("partner_locations")
           .select("contact_name, contact_phone, contact_email")
-          .eq("organization_id", data.organization_id)
-          .eq("location_number", data.partner_location_number)
+          .eq("organization_id", workOrderData.organization_id)
+          .eq("location_number", workOrderData.partner_location_number)
           .maybeSingle();
         
         locationContact = locationData;
       }
 
+      // Combine all data maintaining the original structure
       return {
-        ...data,
+        ...workOrderData,
+        work_order_reports: reportsResult.data || [],
+        work_order_attachments: attachmentsResult.data || [],
+        work_order_assignments: assignmentsResult.data || [],
         location_contact_name: locationContact?.contact_name,
         location_contact_phone: locationContact?.contact_phone,
         location_contact_email: locationContact?.contact_email,
