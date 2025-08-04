@@ -28,7 +28,11 @@ export const useUserProfile = () => {
     isEmployee: organizationCheckers.isEmployee(memberships.internal),
     isPartner: organizationCheckers.isPartner(memberships.partner),
     isSubcontractor: organizationCheckers.isSubcontractor(memberships.subcontractor)
-  }), [memberships]);
+  }), [
+    memberships.internal?.role,
+    memberships.partner.length,
+    memberships.subcontractor.length
+  ]);
 
   // Stable permission function references
   const isAdmin = useCallback(() => permissionChecks.isAdmin, [permissionChecks.isAdmin]);
