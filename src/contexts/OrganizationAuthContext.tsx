@@ -80,7 +80,7 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       if (profileError) throw profileError;
 
       if (!profileData) {
-        const { data: newProfile, error: createError } = await supabase
+        const { data: newProfileArray, error: createError } = await supabase
           .from('profiles')
           .insert({
             user_id: userId,
@@ -90,10 +90,11 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
             is_active: true,
             is_employee: false
           })
-          .select()
-          .single();
+          .select();
 
         if (createError) throw createError;
+        if (!newProfileArray?.[0]) throw new Error('Failed to create profile');
+        const newProfile = newProfileArray[0];
         setProfile(newProfile);
         setUserOrganizations([]);
         setAuthError(null);
