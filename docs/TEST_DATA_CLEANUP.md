@@ -88,7 +88,7 @@ The function returns a JSON object with the following structure:
     "invoices": 3,
     "work_orders": 25,
     "partner_locations": 8,
-    "user_organizations": 15,
+    "organization_members": 15,
     "organizations": 10,
     "email_templates": 2,
     "trades": 3,

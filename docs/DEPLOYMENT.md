@@ -137,7 +137,7 @@ curl -X POST 'https://inudoymofztrvxhrlrek.supabase.co/functions/v1/seed-databas
 SELECT public.auth_is_admin();
 
 -- Verify organization access
-SELECT * FROM public.auth_user_organizations();
+SELECT * FROM public.get_user_organizations_with_roles();
 
 -- Test work order access
 SELECT count(*) FROM work_orders;

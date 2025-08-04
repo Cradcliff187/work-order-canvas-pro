@@ -495,7 +495,7 @@ if (error) {
     "trades": 10,
     "email_templates": 5,
     "profiles": 1,
-    "user_organizations": 1,
+    "organization_members": 1,
     "partner_locations": 10,
     "work_orders": 16
   }
@@ -564,7 +564,7 @@ if (error) {
     "employee_reports": 0,
     "work_orders": 16,
     "partner_locations": 10,
-    "user_organizations": 1,
+    "organization_members": 1,
     "organizations": 7,
     "profiles": 0
   },
@@ -1374,7 +1374,7 @@ CREATE TRIGGER audit_work_orders
 ### Index Support
 Functions that query large tables are supported by appropriate indexes:
 - auth_profile_id() → profiles(user_id)
-- auth_user_organizations() → user_organizations(user_id)
+- get_user_organizations_with_roles() → organization_members(user_id)
 - Analytics functions → date-based indexes
 
 ### Caching Strategy
