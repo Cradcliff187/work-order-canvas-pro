@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { UnifiedFileUpload } from "@/components/upload/UnifiedFileUpload";
+import { UniversalUploadSheet } from "@/components/upload/UniversalUploadSheet";
 import { WorkOrderSelector } from "./WorkOrderSelector";
 import { useReceipts } from "@/hooks/useReceipts";
 import { 
@@ -139,10 +139,23 @@ export function ReceiptUpload() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <UnifiedFileUpload
+              <UniversalUploadSheet
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+                  >
+                    <div className="text-center">
+                      <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">Upload Receipt Image</p>
+                      <p className="text-xs text-muted-foreground">Click to select image</p>
+                    </div>
+                  </Button>
+                }
                 onFilesSelected={handleFileSelect}
-                maxFiles={1}
-                acceptedTypes={['image/*']}
+                accept="image/*"
+                multiple={false}
               />
               {receiptFile && (
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">

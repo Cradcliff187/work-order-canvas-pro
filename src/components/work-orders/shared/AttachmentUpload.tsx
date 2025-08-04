@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
+import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { cn } from '@/lib/utils';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 
@@ -51,12 +51,24 @@ export function AttachmentUpload({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <UnifiedFileUpload
+      <UniversalUploadSheet
+        trigger={
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+            disabled={disabled || isUploading}
+          >
+            <div className="text-center">
+              <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm font-medium">Upload Files</p>
+              <p className="text-xs text-muted-foreground">Click to select files</p>
+            </div>
+          </Button>
+        }
         onFilesSelected={handleFilesSelected}
-        maxFiles={maxFiles}
-        maxSizeBytes={maxFileSize}
-        uploadProgress={formattedProgress}
-        disabled={disabled || isUploading}
+        accept="*/*"
+        multiple={true}
       />
       
       {hasFilesToUpload && !isUploading && (

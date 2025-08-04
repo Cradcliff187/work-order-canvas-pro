@@ -29,7 +29,7 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { UnifiedFileUpload } from '@/components/upload/UnifiedFileUpload';
+import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { getFileTypeForStorage, formatFileSize } from '@/utils/fileUtils';
 
 // Unified form schema with improved error messages
@@ -868,12 +868,23 @@ export default function SubmitWorkOrder() {
                         Upload images or PDFs to help explain the work needed. Maximum 10 files, 10MB each.
                       </div>
                       
-                      <UnifiedFileUpload
+                      <UniversalUploadSheet
+                        trigger={
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+                          >
+                            <div className="text-center">
+                              <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm font-medium">Upload Files</p>
+                              <p className="text-xs text-muted-foreground">Click to select images & PDFs</p>
+                            </div>
+                          </Button>
+                        }
                         onFilesSelected={handleFilesSelected}
-                        maxFiles={10}
-                        maxSizeBytes={10 * 1024 * 1024}
-                        disabled={isUploading}
-                        acceptedTypes={['image/*', '.pdf']}
+                        accept="image/*,.pdf"
+                        multiple={true}
                       />
                     </div>
 

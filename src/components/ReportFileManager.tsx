@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { FileUpload } from '@/components/FileUpload';
+import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -174,12 +174,24 @@ export function ReportFileManager({
                   />
                 </div>
                 
-                <FileUpload
+                <UniversalUploadSheet
+                  trigger={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+                      disabled={isUploading}
+                    >
+                      <div className="text-center">
+                        <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm font-medium">Upload Files</p>
+                        <p className="text-xs text-muted-foreground">Click to select files</p>
+                      </div>
+                    </Button>
+                  }
                   onFilesSelected={setSelectedFiles}
-                  maxFiles={10}
-                  acceptedTypes={['image/*', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv']}
-                  uploadProgress={uploadProgress}
-                  disabled={isUploading}
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+                  multiple={true}
                 />
                 
                 <div className="flex justify-end gap-2">
