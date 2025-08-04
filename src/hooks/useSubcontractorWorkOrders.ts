@@ -17,9 +17,15 @@ export function useSubcontractorWorkOrders() {
     return permissions.user?.organization_members?.map((m: any) => m.organization_id) || [];
   }, [permissions.user?.organization_members]);
 
+  // Stable query key for assigned work orders
+  const assignedWorkOrdersQueryKey = useMemo(() => 
+    ["subcontractor-work-orders", user?.id, profile?.id, organizationIds],
+    [user?.id, profile?.id, organizationIds]
+  );
+
   // Organization-level access: Filter to work orders assigned to user's subcontractor organizations
   const assignedWorkOrders = useQuery({
-    queryKey: ["subcontractor-work-orders", user?.id, profile?.id, organizationIds],
+    queryKey: assignedWorkOrdersQueryKey,
     queryFn: async () => {
       if (!profile?.id || organizationIds.length === 0) {
         return [];
@@ -62,9 +68,15 @@ export function useSubcontractorWorkOrders() {
     enabled: !!profile?.id && !loading && organizationIds.length > 0,
   });
 
+  // Stable query key for dashboard stats
+  const dashboardStatsQueryKey = useMemo(() => 
+    ["subcontractor-dashboard", user?.id, profile?.id, organizationIds],
+    [user?.id, profile?.id, organizationIds]
+  );
+
   // Organization dashboard stats: Show metrics for all work assigned to user's organizations
   const dashboardStats = useQuery({
-    queryKey: ["subcontractor-dashboard", user?.id, profile?.id, organizationIds],
+    queryKey: dashboardStatsQueryKey,
     queryFn: async () => {
       if (!profile?.id || organizationIds.length === 0) {
         return {
@@ -200,9 +212,15 @@ export function useSubcontractorWorkOrders() {
     });
   };
 
+  // Stable query key for reports
+  const reportsQueryKey = useMemo(() => 
+    ["subcontractor-reports", user?.id, profile?.id, organizationIds],
+    [user?.id, profile?.id, organizationIds]
+  );
+
   // Get reports for work orders assigned to user's organizations
   const reports = useQuery({
-    queryKey: ["subcontractor-reports", user?.id, profile?.id, organizationIds],
+    queryKey: reportsQueryKey,
     queryFn: async () => {
       if (!profile?.id || organizationIds.length === 0) {
         return [];
@@ -343,9 +361,15 @@ export function useSubcontractorWorkOrders() {
     },
   });
 
+  // Stable query key for completed work orders
+  const completedWorkOrdersQueryKey = useMemo(() => 
+    ["completed-work-orders-for-invoicing", user?.id, profile?.id, organizationIds],
+    [user?.id, profile?.id, organizationIds]
+  );
+
   // Organization completed work orders: All completed work for user's organizations
   const completedWorkOrdersForInvoicing = useQuery({
-    queryKey: ["completed-work-orders-for-invoicing", user?.id, profile?.id, organizationIds],
+    queryKey: completedWorkOrdersQueryKey,
     queryFn: async () => {
       if (!profile?.id || organizationIds.length === 0) {
         return [];

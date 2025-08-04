@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -13,31 +13,33 @@ interface SubcontractorLayoutProps {
   children: ReactNode;
 }
 
-export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
+export const SubcontractorLayout = React.memo(function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
   const { signOut } = useAuth();
   const isMobile = useIsMobile();
   const { draftCount } = useInvoiceDrafts();
   const organizationNavItems = useOrganizationNavigation();
-  const useOrgNavigation = true; // Always use organization navigation
 
-  // Convert organization navigation items to mobile navigation format with icons
-  const iconMap = {
+  // Stable icon mapping
+  const iconMap = useMemo(() => ({
     'Dashboard': Home,
     'Work Orders': ClipboardList,
     'Reports': ClipboardList,
     'Submit Report': Plus,
     'Invoices': Receipt,
-  };
+  }), []);
 
-  const subcontractorNavItems = organizationNavItems
-    .filter(item => item.visible)
-    .map(item => ({
-      id: item.path.split('/').pop() || item.label.toLowerCase().replace(' ', '-'),
-      label: item.label === 'Submit Report' ? 'Submit' : item.label,
-      icon: iconMap[item.label as keyof typeof iconMap] || ClipboardList,
-      path: item.path,
-      badge: item.label === 'Invoices' ? draftCount : undefined
-    }));
+  // Memoize navigation items to prevent re-renders
+  const subcontractorNavItems = useMemo(() => 
+    organizationNavItems
+      .filter(item => item.visible)
+      .map(item => ({
+        id: item.path.split('/').pop() || item.label.toLowerCase().replace(' ', '-'),
+        label: item.label === 'Submit Report' ? 'Submit' : item.label,
+        icon: iconMap[item.label as keyof typeof iconMap] || ClipboardList,
+        path: item.path,
+        badge: item.label === 'Invoices' ? draftCount : undefined
+      })), [organizationNavItems, iconMap, draftCount]
+  );
 
   return (
     <SidebarProvider>
@@ -70,4 +72,4 @@ export function SubcontractorLayout({ children }: SubcontractorLayoutProps) {
       </div>
     </SidebarProvider>
   );
-}
+});

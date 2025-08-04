@@ -13,28 +13,31 @@ export const useEnhancedPermissions = () => {
     [user, userOrganizations]
   );
 
-  // Memoize computed values to prevent function recreation on each render
-  const computedPermissions = useMemo(() => {
-    const adminCheck = isAdmin();
-    const employeeCheck = isEmployee();
-    const partnerCheck = isPartner();
-    const subcontractorCheck = isSubcontractor();
+  // Memoize role checks to prevent recreation
+  const roleChecks = useMemo(() => ({
+    isAdmin: isAdmin(),
+    isEmployee: isEmployee(),
+    isPartner: isPartner(),
+    isSubcontractor: isSubcontractor(),
+  }), [isAdmin, isEmployee, isPartner, isSubcontractor]);
 
-    return {
-      isAdmin: adminCheck,
-      isEmployee: employeeCheck,
-      isPartner: partnerCheck,
-      isSubcontractor: subcontractorCheck,
-      hasInternalAccess: () => adminCheck || employeeCheck,
-      hasPartnerAccess: () => partnerCheck || adminCheck || employeeCheck,
-      canManageWorkOrders: () => adminCheck || employeeCheck,
-      canManageUsers: () => adminCheck,
-      canManageOrganizations: () => adminCheck,
-      canViewFinancialData: () => adminCheck || employeeCheck,
-      canViewSystemHealth: () => adminCheck,
-      isImpersonating: false, // No impersonation in new system
-    };
-  }, [isAdmin, isEmployee, isPartner, isSubcontractor]);
+  // Memoize permission functions with stable references
+  const permissionFunctions = useMemo(() => ({
+    hasInternalAccess: () => roleChecks.isAdmin || roleChecks.isEmployee,
+    hasPartnerAccess: () => roleChecks.isPartner || roleChecks.isAdmin || roleChecks.isEmployee,
+    canManageWorkOrders: () => roleChecks.isAdmin || roleChecks.isEmployee,
+    canManageUsers: () => roleChecks.isAdmin,
+    canManageOrganizations: () => roleChecks.isAdmin,
+    canViewFinancialData: () => roleChecks.isAdmin || roleChecks.isEmployee,
+    canViewSystemHealth: () => roleChecks.isAdmin,
+  }), [roleChecks]);
+
+  // Combine all computed values
+  const computedPermissions = useMemo(() => ({
+    ...roleChecks,
+    ...permissionFunctions,
+    isImpersonating: false, // No impersonation in new system
+  }), [roleChecks, permissionFunctions]);
 
   return {
     user: enhancedUser,

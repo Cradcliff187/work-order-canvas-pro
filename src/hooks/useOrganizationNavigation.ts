@@ -16,13 +16,8 @@ export interface NavigationItem {
 export const useOrganizationNavigation = () => {
   const permissions = useEnhancedPermissions();
 
+  // Stable navigation items with memoized permission checks
   return useMemo(() => {
-    console.log('useOrganizationNavigation - permissions:', {
-      isAdmin: permissions.isAdmin,
-      isEmployee: permissions.isEmployee,
-      isPartner: permissions.isPartner,
-      isSubcontractor: permissions.isSubcontractor
-    });
 
     // Organization-based navigation
     if (permissions.isAdmin) {
@@ -60,7 +55,16 @@ export const useOrganizationNavigation = () => {
       ];
     }
 
-    console.log('useOrganizationNavigation - No matching permissions found, returning empty array');
     return [];
-  }, [permissions]);
+  }, [
+    permissions.isAdmin,
+    permissions.isEmployee, 
+    permissions.isPartner,
+    permissions.isSubcontractor,
+    permissions.canManageWorkOrders,
+    permissions.canManageUsers,
+    permissions.canManageOrganizations,
+    permissions.canViewFinancialData,
+    permissions.canViewSystemHealth
+  ]);
 };
