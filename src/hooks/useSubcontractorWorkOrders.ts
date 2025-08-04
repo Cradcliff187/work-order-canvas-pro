@@ -3,25 +3,23 @@ import { useMemo, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useEnhancedPermissions } from "@/hooks/useEnhancedPermissions";
-
 /**
  * Custom hook to provide truly stable organization IDs
  * This prevents the infinite loop by ensuring the array reference
  * only changes when the actual organization IDs change
  */
 function useStableOrganizationIds() {
-  const permissions = useEnhancedPermissions();
+  const { userOrganizations } = useAuth();
   const previousIdsRef = useRef<string[]>([]);
   
   return useMemo(() => {
-    // Early return if no user or no memberships
-    if (!permissions.user?.organization_members) {
+    // Early return if no user organizations
+    if (!userOrganizations || userOrganizations.length === 0) {
       return [];
     }
     
     // Extract and sort IDs for comparison
-    const newIds = permissions.user.organization_members
+    const newIds = userOrganizations
       .map((m: any) => m.organization_id)
       .filter(Boolean)
       .sort();
@@ -40,7 +38,7 @@ function useStableOrganizationIds() {
     
     // Return previous reference if unchanged
     return previousIds;
-  }, [permissions.user?.organization_members?.length, permissions.user?.id]);
+  }, [userOrganizations?.length]);
 }
 
 export function useSubcontractorWorkOrders() {
@@ -468,11 +466,11 @@ export function useSubcontractorWorkOrders() {
 
 // Helper hook for stable organization member IDs
 function useStableOrganizationMemberIds(organizationIds: string[]) {
-  const permissions = useEnhancedPermissions();
+  const { userOrganizations } = useAuth();
   const previousIdsRef = useRef<string[]>([]);
   
   return useMemo(() => {
-    const newIds = permissions.user?.organization_members
+    const newIds = userOrganizations
       ?.filter((m: any) => organizationIds.includes(m.organization_id))
       .map((m: any) => m.user_id)
       .filter(Boolean)
@@ -488,7 +486,7 @@ function useStableOrganizationMemberIds(organizationIds: string[]) {
     }
     
     return previousIdsRef.current;
-  }, [permissions.user?.organization_members?.length, organizationIds.join(',')]);
+  }, [userOrganizations?.length, organizationIds.join(',')]);
 }
 
 // Image compression utility
