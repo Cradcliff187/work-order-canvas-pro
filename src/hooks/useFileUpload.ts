@@ -48,7 +48,7 @@ const uploadConfigs = {
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ],
-    pathStructure: '{user_id}/invoices/{invoice_id}/{timestamp}_{filename}'
+    pathStructure: 'work-orders/{work_order_id}/invoices/{timestamp}_{filename}'
   },
   report: {
     bucket: 'work-order-attachments' as const,
@@ -56,7 +56,7 @@ const uploadConfigs = {
     processing: { compress: true },
     dbTable: 'work_order_attachments' as const,
     supportedTypes: [] as string[], // Use default supported types
-    pathStructure: '{user_id}/{report_id}/{timestamp}_{filename}'
+    pathStructure: 'work-orders/{work_order_id}/reports/{timestamp}_{filename}'
   },
   receipt: {
     bucket: 'work-order-attachments' as const,
@@ -149,9 +149,9 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       case 'workOrder':
         return `work-orders/${contextIds.workOrderId || 'temp'}/${timestamp}_${sanitizedFileName}`;
       case 'invoice':
-        return `work-orders/${contextIds.invoiceId}/${timestamp}_${sanitizedFileName}`;
+        return `work-orders/${contextIds.workOrderId}/invoices/${timestamp}_${sanitizedFileName}`;
       case 'report':
-        return `work-orders/${contextIds.reportId || 'temp'}/${timestamp}_${sanitizedFileName}`;
+        return `work-orders/${contextIds.workOrderId}/reports/${timestamp}_${sanitizedFileName}`;
       case 'receipt':
         return `${user.id}/receipts/${timestamp}_${sanitizedFileName}`;
       default:
