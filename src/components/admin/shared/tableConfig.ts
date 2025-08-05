@@ -1,5 +1,3 @@
-import { type ClassValue } from "clsx";
-import { cn } from "@/lib/utils";
 
 // Status color mappings for consistent badge styling across admin tables
 export const statusConfig = {
@@ -133,65 +131,6 @@ export const statusConfig = {
   }
 } as const;
 
-// Common table utilities
-export const tableUtils = {
-  // Get status configuration for a specific entity type and status
-  getStatusConfig: (entityType: keyof typeof statusConfig, status: string) => {
-    const entityConfig = statusConfig[entityType] as Record<string, { label: string; className: string }>;
-    return entityConfig[status] || {
-      label: status.charAt(0).toUpperCase() + status.slice(1),
-      className: "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900/20 dark:text-gray-400"
-    };
-  },
-
-  // Common table row classes
-  getRowClasses: (...classes: ClassValue[]) => cn(
-    "border-b smooth-transition-colors md:hover:bg-muted/50 data-[state=selected]:bg-muted",
-    ...classes
-  ),
-
-  // Common table cell classes  
-  getCellClasses: (...classes: ClassValue[]) => cn(
-    "p-4 align-middle [&:has([role=checkbox])]:pr-0",
-    ...classes
-  ),
-
-  // Common table header classes
-  getHeaderClasses: (...classes: ClassValue[]) => cn(
-    "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
-    ...classes
-  )
-};
-
-// Universal badge component that enforces consistency
-export const getStatusBadge = (
-  type: keyof typeof statusConfig,
-  status: string,
-  options?: {
-    showIcon?: boolean;
-    size?: 'sm' | 'default' | 'lg';
-    className?: string;
-  }
-) => {
-  const config = statusConfig[type]?.[status];
-  if (!config) return null;
-  
-  const sizeClasses = {
-    sm: 'h-5 text-[10px] px-1.5',
-    default: 'h-6 text-xs px-2',
-    lg: 'h-7 text-sm px-3'
-  };
-  
-  return {
-    label: config.label,
-    className: cn(
-      'inline-flex items-center font-medium rounded-md border',
-      sizeClasses[options?.size || 'default'],
-      config.className,
-      options?.className
-    )
-  };
-};
 
 // Export types for type safety
 export type EntityType = keyof typeof statusConfig;
