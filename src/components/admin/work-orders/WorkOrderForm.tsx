@@ -30,7 +30,7 @@ const workOrderSchema = z.object({
   partner_po_number: z.string().optional(),
   partner_location_number: z.string().optional(),
   estimated_hours: z.string().optional(),
-  due_date: z.string().optional(),
+  due_date: z.string().optional().transform((val) => val === '' ? undefined : val),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;

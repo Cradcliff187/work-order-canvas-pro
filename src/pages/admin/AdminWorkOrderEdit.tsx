@@ -25,6 +25,7 @@ export default function AdminWorkOrderEdit() {
         originalStatus: workOrder?.status,
         ...formData,
         estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
+        due_date: formData.due_date || null,
       });
       navigate(`/admin/work-orders/${id}`);
     } catch (error) {

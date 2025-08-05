@@ -22,10 +22,19 @@ export const useAdminWorkOrderEdit = () => {
     mutationFn: async (data: WorkOrderUpdateData) => {
       const { id, status, originalStatus, ...updateData } = data;
 
+      // Transform empty date strings to null
+      const cleanedData = {
+        ...updateData,
+        due_date: updateData.due_date === '' ? null : updateData.due_date,
+        actual_completion_date: updateData.actual_completion_date === '' ? null : updateData.actual_completion_date,
+        estimated_completion_date: updateData.estimated_completion_date === '' ? null : updateData.estimated_completion_date,
+        final_completion_date: updateData.final_completion_date === '' ? null : updateData.final_completion_date,
+      };
+
       // First update the work order details (without status)
       const { data: workOrder, error } = await supabase
         .from('work_orders')
-        .update(updateData)
+        .update(cleanedData)
         .eq('id', id)
         .select()
         .single();
