@@ -5,8 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { AttachmentSection } from '@/components/work-orders/shared/AttachmentSection';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { useToast } from '@/hooks/use-toast';
 import type { AttachmentItem } from '@/components/work-orders/shared/AttachmentSection';
+import { useState } from 'react';
 import { 
   ArrowLeft, 
   Edit, 
@@ -95,7 +98,23 @@ export default function AdminWorkOrderDetail() {
   const navigate = useNavigate();
   const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id!);
   const { data: assignments = [], isLoading: isLoadingAssignments, refetch: refetchAssignments } = useWorkOrderAssignments(id);
-  const { uploadFiles } = useFileUpload();
+  const { uploadFiles, removeFile } = useFileUpload();
+  const { toast } = useToast();
+  
+  // Delete confirmation state
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    fileId: string | null;
+    fileName: string;
+    isBulk: boolean;
+    fileIds?: string[];
+  }>({
+    open: false,
+    fileId: null,
+    fileName: '',
+    isBulk: false,
+    fileIds: []
+  });
 
   if (!id) {
     return (
@@ -154,6 +173,70 @@ export default function AdminWorkOrderDetail() {
   const formatDateTime = (date: string | null) => {
     if (!date) return 'N/A';
     return format(new Date(date), 'MMM dd, yyyy • h:mm a');
+  };
+
+  const handleDeleteAttachment = async (attachment: AttachmentItem) => {
+    setDeleteDialog({
+      open: true,
+      fileId: attachment.id,
+      fileName: attachment.file_name,
+      isBulk: false
+    });
+  };
+
+  const handleBulkDeleteAttachments = async (attachmentIds: string[]) => {
+    const attachmentNames = workOrder?.work_order_attachments
+      ?.filter(att => attachmentIds.includes(att.id))
+      .map(att => att.file_name) || [];
+    
+    setDeleteDialog({
+      open: true,
+      fileId: null,
+      fileName: `${attachmentIds.length} attachment${attachmentIds.length > 1 ? 's' : ''}`,
+      isBulk: true,
+      fileIds: attachmentIds
+    });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      if (deleteDialog.isBulk && deleteDialog.fileIds?.length) {
+        // Handle bulk delete
+        for (const fileId of deleteDialog.fileIds) {
+          await removeFile(fileId);
+        }
+        toast({
+          title: "Success",
+          description: `${deleteDialog.fileIds.length} attachment${deleteDialog.fileIds.length > 1 ? 's' : ''} deleted successfully`,
+        });
+      } else if (deleteDialog.fileId) {
+        // Handle single delete
+        await removeFile(deleteDialog.fileId);
+        toast({
+          title: "Success",
+          description: "Attachment deleted successfully",
+        });
+      }
+      
+      // Refresh work order data
+      refetch();
+      
+      // Close dialog
+      setDeleteDialog({
+        open: false,
+        fileId: null,
+        fileName: '',
+        isBulk: false,
+        fileIds: []
+      });
+    } catch (error) {
+      console.error('Error deleting attachment(s):', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete attachment(s). Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -697,6 +780,8 @@ export default function AdminWorkOrderDetail() {
                   link.click();
                   document.body.removeChild(link);
                 }}
+                onDelete={handleDeleteAttachment}
+                onBulkDelete={handleBulkDeleteAttachments}
                 maxFileSize={50 * 1024 * 1024} // 50MB
                 maxFiles={10}
               />
@@ -714,6 +799,16 @@ export default function AdminWorkOrderDetail() {
           <WorkOrderAuditTrail workOrderId={workOrder.id} />
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}
+        onConfirm={confirmDelete}
+        itemName={deleteDialog.fileName}
+        itemType="attachment"
+        isLoading={false}
+      />
     </div>
   );
 }
