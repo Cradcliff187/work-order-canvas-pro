@@ -2,6 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Circle, Clock, UserPlus, Play, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
@@ -45,37 +46,24 @@ const statusSteps: StatusStep[] = [
   }
 ];
 
-const specialStatuses: Partial<Record<WorkOrderStatus, { label: string; icon: React.ReactNode; color: string }>> = {
-  'estimate_needed': {
-    label: 'Estimate Needed',
-    icon: <Clock className="h-4 w-4" />,
-    color: 'bg-orange-100 text-orange-800 border-orange-200'
-  },
-  'estimate_approved': {
-    label: 'Estimate Approved',
-    icon: <CheckCircle className="h-4 w-4" />,
-    color: 'bg-teal-100 text-teal-800 border-teal-200'
-  },
-  'cancelled': {
-    label: 'Cancelled',
-    icon: <XCircle className="h-4 w-4" />,
-    color: 'bg-red-100 text-red-800 border-red-200'
-  }
+const specialStatuses: Partial<Record<WorkOrderStatus, { useProgressFlow: boolean }>> = {
+  'estimate_needed': { useProgressFlow: false },
+  'estimate_approved': { useProgressFlow: false },
+  'cancelled': { useProgressFlow: false }
 };
 
 export function StatusProgressIndicator({ currentStatus, className }: StatusProgressIndicatorProps) {
   // Handle special statuses that don't follow the normal flow
   if (currentStatus in specialStatuses) {
     const special = specialStatuses[currentStatus];
-    if (special) {
+    if (special && !special.useProgressFlow) {
       return (
         <div className={cn('flex items-center gap-2', className)}>
-          <Badge className={special.color}>
-            <span className="flex items-center gap-1">
-              {special.icon}
-              {special.label}
-            </span>
-          </Badge>
+          <WorkOrderStatusBadge 
+            status={currentStatus}
+            size="sm"
+            showIcon={true}
+          />
         </div>
       );
     }

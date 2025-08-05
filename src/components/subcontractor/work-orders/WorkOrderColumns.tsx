@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, FileText, MapPin, Building, Calendar, MessageCircle, ArrowUpDown, Paperclip } from 'lucide-react';
 import { format } from 'date-fns';
-import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
 
 export interface WorkOrder {

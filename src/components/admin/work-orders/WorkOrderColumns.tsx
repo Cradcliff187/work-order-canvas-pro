@@ -7,7 +7,7 @@ import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown } fro
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
-import { StatusIndicator } from '@/components/ui/status-indicator';
+import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 
 
 interface WorkOrderColumnsProps {
@@ -210,12 +210,10 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
       return (
-        <StatusIndicator
-          status={status}
-          type="work_order"
-          mode="badge"
-          size="sm"
-          showIcon={false}
+        <WorkOrderStatusBadge 
+          status={status} 
+          size="sm" 
+          showIcon={false} 
         />
       );
     },

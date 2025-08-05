@@ -19,7 +19,7 @@ import { WorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { cn } from '@/lib/utils';
-import { StatusIndicator } from '@/components/ui/status-indicator';
+import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 
 interface WorkOrderDetailPanelProps {
   workOrder: WorkOrderDetail;
@@ -51,10 +51,8 @@ export function WorkOrderDetailPanel({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{workOrder.work_order_number}</h2>
-          <StatusIndicator
+          <WorkOrderStatusBadge
             status={workOrder.status}
-            type="work_order"
-            mode="badge"
             size="sm"
           />
         </div>

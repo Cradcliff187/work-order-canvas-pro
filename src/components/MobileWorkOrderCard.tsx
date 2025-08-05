@@ -7,6 +7,7 @@ import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, Ale
 import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
+import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import { formatLocationDisplay, generateMapUrl } from '@/lib/utils/addressUtils';
 
 interface WorkOrder {
@@ -74,14 +75,6 @@ interface MobileWorkOrderCardProps {
   viewerRole?: 'partner' | 'subcontractor' | 'admin';
 }
 
-const statusColors = {
-  received: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  assigned: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-  estimate_needed: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  in_progress: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-};
 
 export function MobileWorkOrderCard({ 
   workOrder, 
@@ -246,12 +239,11 @@ export function MobileWorkOrderCard({
                   {workOrder.work_order_number}
                 </Badge>
               )}
-              <Badge 
-                variant="secondary"
-                className={statusColors[workOrder.status as keyof typeof statusColors]}
-              >
-                {workOrder.status.replace('_', ' ')}
-              </Badge>
+              <WorkOrderStatusBadge 
+                status={workOrder.status}
+                size="sm"
+                showIcon={false}
+              />
               {(workOrder.attachment_count || 0) > 0 && (
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <Paperclip className="h-3 w-3" />
