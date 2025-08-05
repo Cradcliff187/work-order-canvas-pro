@@ -44,7 +44,7 @@ import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/
 import { formatFileSize } from '@/utils/fileUtils';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { StatusIndicator } from '@/components/ui/status-indicator';
+import { WorkOrderStatusBadge, ReportStatusBadge } from '@/components/ui/status-badge';
 
 const getFileIcon = (fileType: string, fileName: string) => {
   if (fileType === 'photo' || fileName.match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
@@ -262,11 +262,10 @@ export default function AdminWorkOrderDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <StatusIndicator
+          <WorkOrderStatusBadge
             status={workOrder.status}
-            type="work_order"
-            mode="badge"
             size="sm"
+            showIcon
           />
           {/* Show Submit Report button if no reports exist and not completed */}
           {workOrder.status !== 'completed' && 
@@ -333,11 +332,10 @@ export default function AdminWorkOrderDetail() {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Status</label>
                 <div className="mt-1">
-                  <StatusIndicator
+                  <WorkOrderStatusBadge
                     status={workOrder.status}
-                    type="work_order"
-                    mode="badge"
                     size="sm"
+                    showIcon
                   />
                 </div>
               </div>
@@ -677,12 +675,10 @@ export default function AdminWorkOrderDetail() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <StatusIndicator
+                              <ReportStatusBadge
                                 status={report.status}
-                                type="report"
-                                mode="badge"
                                 size="sm"
-                                showIcon={false}
+                                showIcon
                               />
                               {report.hours_worked && (
                                 <div className="flex items-center gap-1 text-sm font-medium mt-1">

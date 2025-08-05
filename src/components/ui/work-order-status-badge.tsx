@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Database } from '@/integrations/supabase/types';
-import { StatusIndicator } from './status-indicator';
+import { WorkOrderStatusBadge as UniversalWorkOrderStatusBadge } from './status-badge';
 
 type WorkOrderStatus = Database["public"]["Enums"]["work_order_status"];
 
@@ -14,9 +14,9 @@ interface WorkOrderStatusBadgeProps {
 }
 
 /**
- * Reusable badge component for displaying work order status with consistent styling
- * across all views. Supports all work order statuses with proper dark mode variants.
- * Now uses the enhanced StatusIndicator component internally.
+ * Legacy wrapper for WorkOrderStatusBadge - now uses the universal StatusBadge system.
+ * This component is maintained for backward compatibility.
+ * @deprecated Use WorkOrderStatusBadge from '@/components/ui/status-badge' directly.
  */
 export const WorkOrderStatusBadge: React.FC<WorkOrderStatusBadgeProps> = ({ 
   status, 
@@ -26,10 +26,8 @@ export const WorkOrderStatusBadge: React.FC<WorkOrderStatusBadgeProps> = ({
   size = 'default'
 }) => {
   return (
-    <StatusIndicator
+    <UniversalWorkOrderStatusBadge
       status={status}
-      type="work_order"
-      mode={mode}
       showIcon={showIcon}
       size={size}
       className={className}
@@ -37,5 +35,3 @@ export const WorkOrderStatusBadge: React.FC<WorkOrderStatusBadgeProps> = ({
   );
 };
 
-// Export status config for backward compatibility
-export { workOrderStatusConfig as statusConfig } from './status-indicator';

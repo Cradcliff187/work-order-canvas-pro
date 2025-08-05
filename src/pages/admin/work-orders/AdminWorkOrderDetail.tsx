@@ -10,7 +10,7 @@ import { ArrowLeft, Edit, MapPin, Calendar, Clock, User, Building2, Wrench, File
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { formatDate } from '@/lib/utils/date';
-import { StatusIndicator } from '@/components/ui/status-indicator';
+import { WorkOrderStatusBadge, ReportStatusBadge } from '@/components/ui/status-badge';
 
 export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -107,11 +107,10 @@ export default function AdminWorkOrderDetail() {
         </div>
         
         <div className="flex items-center gap-2">
-          <StatusIndicator
+          <WorkOrderStatusBadge
             status={workOrder.status}
-            type="work_order"
-            mode="badge"
             size="sm"
+            showIcon
           />
           <Button asChild size="sm">
             <Link to={`/admin/work-orders/${id}/edit`}>
@@ -307,12 +306,10 @@ export default function AdminWorkOrderDetail() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <StatusIndicator
+                          <ReportStatusBadge
                             status={report.status}
-                            type="report"
-                            mode="badge"
                             size="sm"
-                            showIcon={false}
+                            showIcon
                           />
                           <span className="text-sm text-muted-foreground">
                             {formatDate(report.submitted_at)}
