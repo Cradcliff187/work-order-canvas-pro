@@ -1,4 +1,7 @@
 
+import { type ClassValue } from "clsx";
+import { cn } from "@/lib/utils";
+
 // Status color mappings for consistent badge styling across admin tables
 export const statusConfig = {
   workOrder: {
@@ -131,6 +134,32 @@ export const statusConfig = {
   }
 } as const;
 
+// Table utility functions for consistent styling and alignment
+export const tableUtils = {
+  // Standard cell classes with checkbox support
+  getCellClasses: (...classes: ClassValue[]) => cn(
+    "p-4 align-middle [&:has([role=checkbox])]:pr-0 [&:has([role=checkbox])]:pl-3",
+    classes
+  ),
+
+  // Standard header classes with checkbox support
+  getHeaderClasses: (...classes: ClassValue[]) => cn(
+    "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&:has([role=checkbox])]:pl-3",
+    classes
+  ),
+
+  // Checkbox cell classes for proper alignment
+  getCheckboxCellClasses: (...classes: ClassValue[]) => cn(
+    "w-[40px] pl-3 pr-0 align-middle",
+    classes
+  ),
+
+  // Ensure checkboxes are vertically centered
+  getCheckboxClasses: (...classes: ClassValue[]) => cn(
+    "translate-y-[1px]", // Fine-tune vertical alignment
+    classes
+  ),
+};
 
 // Export types for type safety
 export type EntityType = keyof typeof statusConfig;
