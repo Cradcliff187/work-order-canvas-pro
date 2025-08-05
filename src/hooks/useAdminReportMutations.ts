@@ -16,12 +16,21 @@ export function useAdminReportMutations() {
       status: 'approved' | 'rejected'; 
       reviewNotes?: string;
     }) => {
+      // Validate inputs
+      if (!reportId || typeof reportId !== 'string') {
+        throw new Error('Invalid report ID');
+      }
+      if (!status || !['approved', 'rejected'].includes(status)) {
+        throw new Error('Invalid status');
+      }
+      
       return performReportReview({ reportId, status, reviewNotes });
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
       queryClient.invalidateQueries({ queryKey: ['admin-report-detail'] });
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
       
       toast({ 
         title: `Report ${variables.status}`, 
@@ -50,6 +59,21 @@ export function useAdminReportMutations() {
     status: 'approved' | 'rejected'; 
     reviewNotes?: string;
   }) => {
+    // Check if report exists first
+    const { data: reportCheck, error: reportCheckError } = await supabase
+      .from('work_order_reports')
+      .select('id, status')
+      .eq('id', reportId)
+      .single();
+
+    if (reportCheckError) {
+      throw new Error('Report not found or access denied');
+    }
+
+    if (reportCheck.status !== 'submitted') {
+      throw new Error('Report is not in submitted status');
+    }
+
     const { data: userResponse, error: userError } = await supabase.auth.getUser();
     if (userError || !userResponse.user) {
       throw new Error('Authentication failed');
@@ -162,6 +186,7 @@ export function useAdminReportMutations() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
       
       toast({ 
         title: `${variables.reportIds.length} reports ${variables.status}`, 

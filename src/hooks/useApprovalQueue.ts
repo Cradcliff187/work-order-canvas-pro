@@ -30,19 +30,17 @@ export const useApprovalQueue = (): ApprovalQueueData => {
     queryKey: ['approval-queue'],
     queryFn: async () => {
       // Fetch work order reports with status = 'submitted'
+      // Use separate queries to handle null subcontractor_user_id values safely
       const reportsQuery = supabase
         .from('work_order_reports')
         .select(`
           id,
           submitted_at,
           work_order_id,
+          subcontractor_user_id,
           work_orders!work_order_id (
             work_order_number,
             title
-          ),
-          subcontractor:profiles!subcontractor_user_id (
-            first_name,
-            last_name
           )
         `)
         .eq('status', 'submitted')
@@ -77,17 +75,46 @@ export const useApprovalQueue = (): ApprovalQueueData => {
       const reports = reportsResult.data || [];
       const invoices = invoicesResult.data || [];
 
+      // Get subcontractor profiles for reports that have subcontractor_user_id
+      const reportSubcontractorIds = reports
+        .map(r => r.subcontractor_user_id)
+        .filter((id): id is string => id != null);
+
+      let subcontractorProfiles: Record<string, any> = {};
+      
+      if (reportSubcontractorIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', reportSubcontractorIds);
+        
+        if (!profilesError && profiles) {
+          subcontractorProfiles = profiles.reduce((acc, profile) => {
+            acc[profile.id] = profile;
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+
       // Transform reports to ApprovalItem format
-      const reportItems: ApprovalItem[] = reports.map(report => ({
-        id: report.id,
-        type: 'report' as const,
-        title: report.work_orders?.work_order_number 
-          ? `${report.work_orders.work_order_number} - ${report.work_orders.title}`
-          : 'Unknown Work Order',
-        submittedBy: report.subcontractor ? `${report.subcontractor.first_name} ${report.subcontractor.last_name}` : 'Unknown Organization',
-        submittedAt: report.submitted_at,
-        urgency: isUrgent(report.submitted_at)
-      }));
+      const reportItems: ApprovalItem[] = reports.map(report => {
+        const subcontractor = report.subcontractor_user_id 
+          ? subcontractorProfiles[report.subcontractor_user_id] 
+          : null;
+        
+        return {
+          id: report.id,
+          type: 'report' as const,
+          title: report.work_orders?.work_order_number 
+            ? `${report.work_orders.work_order_number} - ${report.work_orders.title}`
+            : 'Unknown Work Order',
+          submittedBy: subcontractor 
+            ? `${subcontractor.first_name} ${subcontractor.last_name}` 
+            : 'Internal Report',
+          submittedAt: report.submitted_at,
+          urgency: isUrgent(report.submitted_at)
+        };
+      });
 
       // Transform invoices to ApprovalItem format
       const invoiceItems: ApprovalItem[] = invoices.map(invoice => ({

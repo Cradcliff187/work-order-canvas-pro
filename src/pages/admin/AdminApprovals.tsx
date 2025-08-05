@@ -75,6 +75,16 @@ export default function AdminApprovals() {
   };
 
   const handleApprove = async (item: any) => {
+    // Validate item ID
+    if (!item?.id || typeof item.id !== 'string') {
+      toast({
+        title: "Invalid item",
+        description: "The selected item is invalid",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoadingItems(prev => new Set(prev).add(item.id));
     
     try {
@@ -109,6 +119,16 @@ export default function AdminApprovals() {
   };
 
   const handleReject = async (item: any) => {
+    // Validate item ID
+    if (!item?.id || typeof item.id !== 'string') {
+      toast({
+        title: "Invalid item",
+        description: "The selected item is invalid",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoadingItems(prev => new Set(prev).add(item.id));
     
     try {

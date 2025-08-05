@@ -27,6 +27,7 @@ export const useInvoiceMutations = () => {
   const handleSuccess = useCallback((message: string, description: string) => {
     queryClient.invalidateQueries({ queryKey: ['invoices'] });
     queryClient.invalidateQueries({ queryKey: ['invoice'] });
+    queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
     toast({ title: message, description });
   }, [queryClient, toast]);
 
@@ -41,11 +42,17 @@ export const useInvoiceMutations = () => {
 
   const approveInvoice = useMutation({
     mutationFn: async ({ invoiceId, notes }: ApproveInvoiceData) => {
+      // Validate input
+      if (!invoiceId || typeof invoiceId !== 'string') {
+        throw new Error('Invalid invoice ID');
+      }
+      
       return performInvoiceApproval({ invoiceId, notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
       
       handleSuccess(
         'Invoice Approved',
@@ -78,11 +85,17 @@ export const useInvoiceMutations = () => {
 
   const rejectInvoice = useMutation({
     mutationFn: async ({ invoiceId, notes }: RejectInvoiceData) => {
+      // Validate input
+      if (!invoiceId || typeof invoiceId !== 'string') {
+        throw new Error('Invalid invoice ID');
+      }
+      
       return performInvoiceRejection({ invoiceId, notes });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
       
       handleSuccess(
         'Invoice Rejected',
