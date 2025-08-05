@@ -51,7 +51,14 @@ export const TEMPLATE_VARIABLES = {
   },
   system: {
     // System Variables
+    'site_url': window.location.origin,
     'system_url': 'https://workorderportal.com',
+    'admin_dashboard_url': `${window.location.origin}/admin/dashboard`,
+    'unsubscribe_url': `${window.location.origin}/preferences/email`,
+    'company_name': 'AKC Contracting',
+    'support_email': 'support@akcllc.com',
+    'assignee_name': 'John Smith',
+    'completed_by_name': 'Mike Johnson',
     'current_date': new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
   },
   report: {

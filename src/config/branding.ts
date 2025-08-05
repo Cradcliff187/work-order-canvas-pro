@@ -57,11 +57,11 @@ export interface BrandingConfig {
 export const brandingConfig: BrandingConfig = {
   company: {
     name: 'AKC',
-    fullName: 'AKC Construction Services',
+    fullName: 'AKC Contracting',
     description: 'Professional construction work order management solutions for commercial projects',
-    website: 'https://akc-construction.com',
-    email: 'info@akc-construction.com',
-    phone: '+1 (555) 123-4567'
+    website: 'https://akcllc.com',
+    email: 'support@akcllc.com',
+    phone: '(817) 846-2101'
   },
   product: {
     name: 'AKC Portal',
@@ -107,7 +107,7 @@ export const brandingConfig: BrandingConfig = {
       'subcontractor management',
       'AKC construction'
     ],
-    author: 'AKC Construction Services'
+    author: 'AKC Contracting'
   },
   social: {
     linkedin: 'https://linkedin.com/company/akc-construction',
