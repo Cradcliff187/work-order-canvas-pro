@@ -18,67 +18,80 @@ This document defines the complete UI design system for WorkOrderPro, a construc
 
 ### Primary Brand Colors
 
-**Primary Blue**: Professional construction industry blue
-- `--primary: 210 95% 46%` (#0485EA)
+**Primary Blue**: Professional enterprise blue with depth
+- `--primary: 211 96% 45%` (#0969DA)
+- `--primary-dark: 211 96% 35%` (#0650A7)
 - `--primary-foreground: 0 0% 100%` (White text on primary)
-- `--primary-glow: 210 95% 56%` (Lighter variant for gradients)
+- `--primary-glow: 211 96% 55%` (Lighter variant for gradients)
 
 ### Color Palette
 
 **Background & Surface Colors**
 ```css
---background: 210 17% 98%;          /* Main app background */
---foreground: 0 0% 20%;             /* Primary text color */
---card: 0 0% 100%;                  /* Card backgrounds */
---card-foreground: 0 0% 20%;        /* Card text */
---popover: 0 0% 100%;               /* Popover backgrounds */
---popover-foreground: 0 0% 20%;     /* Popover text */
+--background: 0 0% 98%;             /* Clean white background #FAFAFA */
+--foreground: 222 47% 11%;          /* Rich dark text #1A202C */
+--card: 0 0% 100%;                  /* Pure white cards */
+--card-foreground: 222 47% 11%;     /* Dark card text */
+--popover: 0 0% 100%;               /* White popovers */
+--popover-foreground: 222 47% 11%;  /* Dark popover text */
 ```
 
 **Neutral Colors**
 ```css
---secondary: 210 10% 96%;           /* Secondary buttons, subtle backgrounds */
---secondary-foreground: 0 0% 20%;   /* Text on secondary */
---muted: 210 12% 95%;               /* Muted backgrounds */
---muted-foreground: 210 6% 46%;     /* Muted text */
---accent: 210 95% 96%;              /* Accent backgrounds */
---accent-foreground: 210 95% 46%;   /* Accent text */
+--secondary: 215 20% 25%;           /* Sophisticated dark gray #334155 */
+--secondary-foreground: 0 0% 100%;  /* White text on secondary */
+--muted: 214 32% 91%;               /* Light gray backgrounds #E2E8F0 */
+--muted-foreground: 215 25% 27%;    /* Dark muted text #3A4358 */
+--accent: 158 64% 92%;              /* Light green tint #D1FAE5 */
+--accent-foreground: 158 84% 25%;   /* Dark green text #0F5132 */
 ```
 
-**Status Colors** (Construction-appropriate)
+**Status Colors** (Clear & Professional)
 ```css
---success: 142 71% 45%;             /* Green for completed/approved */
---success-foreground: 0 0% 100%;    /* White text on success */
---warning: 38 100% 50%;             /* Orange for pending/attention */
---warning-foreground: 0 0% 100%;    /* White text on warning */
---destructive: 0 84% 60%;           /* Red for errors/dangerous actions */
---destructive-foreground: 0 0% 100%; /* White text on destructive */
+--success: 158 64% 42%;             /* Efficiency green #27A971 */
+--success-foreground: 0 0% 100%;    
+--warning: 45 93% 47%;              /* Attention amber #F59E0B */
+--warning-foreground: 0 0% 100%;    
+--destructive: 0 72% 51%;           /* Issue red #E11D48 */
+--destructive-foreground: 0 0% 100%;
+--info: 206 100% 50%;               /* Information blue #0EA5E9 */
+--info-foreground: 0 0% 100%;
 ```
 
 **Form & Interactive Colors**
 ```css
---border: 210 20% 90%;              /* Border color */
---input: 210 20% 95%;               /* Input field backgrounds */
---ring: 210 95% 46%;                /* Focus ring color */
+--border: 214 32% 85%;              /* Visible borders #D4DBE5 */
+--input: 214 32% 96%;               /* Input backgrounds #F1F5F9 */
+--ring: 211 96% 45%;                /* Blue focus rings */
 ```
 
-### Dark Theme Support
-
-All colors have dark theme variants defined in the `:root.dark` selector with appropriate contrast adjustments.
-
-### Professional Gradients
-
+**Professional Gradients**
 ```css
---gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+--gradient-primary: linear-gradient(135deg, hsl(211 96% 45%), hsl(211 96% 55%));
 --gradient-surface: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+--gradient-header: linear-gradient(135deg, hsl(211 96% 45%), hsl(211 96% 35%));
 ```
 
-### Professional Shadows
-
+**Enterprise Shadows**
 ```css
---shadow-construction: 0 4px 24px -2px hsl(var(--primary) / 0.12);
---shadow-card: 0 2px 8px -2px hsl(var(--foreground) / 0.08);
+--shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
+--shadow: 0 2px 4px -1px hsl(222 47% 11% / 0.06), 0 1px 2px -1px hsl(222 47% 11% / 0.03);
+--shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.07), 0 2px 4px -1px hsl(222 47% 11% / 0.04);
+--shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.08), 0 4px 6px -2px hsl(222 47% 11% / 0.04);
+--shadow-xl: 0 20px 25px -5px hsl(222 47% 11% / 0.08), 0 10px 10px -5px hsl(222 47% 11% / 0.04);
 ```
+
+### Design Philosophy
+
+The enhanced color system reflects AKC's position as a professional B2B maintenance management platform:
+
+- **Deeper Blue Primary**: Conveys trust, stability, and enterprise credibility
+- **Sophisticated Grays**: Creates visual hierarchy without distraction
+- **Green Accents**: Signals efficiency and successful completion
+- **Improved Contrast**: Ensures accessibility and reduces eye strain
+- **Subtle Gradients**: Adds depth without overwhelming partner branding
+
+This palette maintains familiarity while elevating the overall professional appearance.
 
 ## Typography System
 
