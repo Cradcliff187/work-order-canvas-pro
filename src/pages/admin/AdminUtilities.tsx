@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FixWorkOrderNumbersButton } from '@/components/admin/FixWorkOrderNumbersButton';
 import { FixWorkOrderSequencesButton } from '@/components/admin/work-orders/FixWorkOrderSequencesButton';
+import { DataRecoveryUtility } from '@/components/admin/DataRecoveryUtility';
 
 export default function AdminUtilities() {
   return (
@@ -11,6 +12,8 @@ export default function AdminUtilities() {
           Administrative tools and utilities for system maintenance
         </p>
       </div>
+
+      <DataRecoveryUtility />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
