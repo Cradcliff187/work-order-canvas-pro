@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { StatusIndicator } from '@/components/ui/status-indicator';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 export interface StatCard {
   icon: LucideIcon;
@@ -135,12 +135,12 @@ export function StandardDashboardStats({
           )}
           {stat.status && stat.statusType && (
             <div className="mt-3">
-              <StatusIndicator
+              <StatusBadge
+                type={stat.statusType === 'work_order' ? 'workOrder' : 
+                      stat.statusType === 'report' ? 'report' : 
+                      stat.statusType === 'invoice' ? 'financialStatus' : 'activeStatus'}
                 status={stat.status}
-                type={stat.statusType}
-                mode="full-width"
                 size="sm"
-                showIcon={true}
               />
             </div>
           )}

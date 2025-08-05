@@ -316,18 +316,6 @@ export function EmailTestingPanel() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'delivered':
-        return <Badge className="bg-green-100 text-green-800 border-green-200 h-5 text-[10px] px-1.5">Delivered</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800 border-red-200 h-5 text-[10px] px-1.5">Failed</Badge>;
-      case 'sent':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200 h-5 text-[10px] px-1.5">Sent</Badge>;
-      default:
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 h-5 text-[10px] px-1.5">Pending</Badge>;
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -475,7 +463,15 @@ export function EmailTestingPanel() {
                         {EMAIL_TEMPLATES.find(t => t.value === log.template_used)?.label || log.template_used}
                       </TableCell>
                       <TableCell>{log.recipient_email}</TableCell>
-                      <TableCell>{getStatusBadge(log.status)}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          log.status.toLowerCase() === 'delivered' ? 'default' :
+                          log.status.toLowerCase() === 'failed' ? 'destructive' :
+                          log.status.toLowerCase() === 'sent' ? 'secondary' : 'outline'
+                        }>
+                          {log.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         {format(new Date(log.sent_at), 'MMM dd, yyyy HH:mm:ss')}
                       </TableCell>

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Calendar, DollarSign, Clock, FileText, Printer } from "lucide-react";
 import { ReportFileManager } from '@/components/ReportFileManager';
 import { format } from "date-fns";
-import { StatusIndicator } from '@/components/ui/status-indicator';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 
 export default function ReportDetail() {
   const { id } = useParams<{ id: string }>();
@@ -157,12 +157,7 @@ export default function ReportDetail() {
         </div>
         
         <div className="flex items-center gap-2">
-          <StatusIndicator
-            status={report.status}
-            type="report"
-            mode="badge"
-            size="sm"
-          />
+          <ReportStatusBadge status={report.status} showIcon />
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
@@ -244,13 +239,7 @@ export default function ReportDetail() {
               
               <div>
                 <h4 className="font-medium text-sm text-muted-foreground mb-1">Status</h4>
-                <StatusIndicator
-                  status={report.status}
-                  type="report"
-                  mode="badge"
-                  size="sm"
-                  className="print:bg-transparent print:text-black print:border-black"
-                />
+                <ReportStatusBadge status={report.status} size="sm" showIcon />
               </div>
             </div>
 

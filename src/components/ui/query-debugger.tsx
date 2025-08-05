@@ -29,19 +29,6 @@ export function QueryDebugger() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      loading: 'secondary',
-      success: 'default',
-      error: 'destructive'
-    } as const;
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {status}
-      </Badge>
-    );
-  };
 
   const formatDuration = (duration?: number) => {
     if (!duration) return 'N/A';
@@ -109,7 +96,12 @@ export function QueryDebugger() {
                       {JSON.stringify(metric.queryKey)}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      {getStatusBadge(metric.status)}
+                      <Badge variant={
+                        metric.status === 'success' ? 'default' :
+                        metric.status === 'error' ? 'destructive' : 'secondary'
+                      }>
+                        {metric.status}
+                      </Badge>
                       <span className="text-muted-foreground">
                         {formatDuration(metric.duration)}
                       </span>
@@ -139,7 +131,12 @@ export function QueryDebugger() {
                       {JSON.stringify(metric.queryKey)}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      {getStatusBadge(metric.status)}
+                      <Badge variant={
+                        metric.status === 'success' ? 'default' :
+                        metric.status === 'error' ? 'destructive' : 'secondary'
+                      }>
+                        {metric.status}
+                      </Badge>
                       <span className="text-orange-600 font-medium">
                         {formatDuration(metric.duration)}
                       </span>

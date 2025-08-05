@@ -123,24 +123,6 @@ export function StorageDebugPanel({ isOpen, onClose }: StorageDebugPanelProps) {
     }
   }, [showConfirmClear, clearCache, toast]);
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'ready': return 'default';
-      case 'fallback': return 'secondary';
-      case 'failed': return 'destructive';
-      default: return 'outline';
-    }
-  };
-
-  const getHealthBadgeVariant = (health: string) => {
-    switch (health) {
-      case 'healthy': return 'default';
-      case 'warning': return 'secondary';
-      case 'error': return 'destructive';
-      case 'critical': return 'destructive';
-      default: return 'outline';
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -174,7 +156,7 @@ export function StorageDebugPanel({ isOpen, onClose }: StorageDebugPanelProps) {
                   
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Status:</span>
-                    <Badge variant={getStatusBadgeVariant(initializationState)}>
+                    <Badge variant={initializationState === 'ready' ? 'default' : initializationState === 'failed' ? 'destructive' : 'secondary'}>
                       {initializationState}
                     </Badge>
                   </div>
@@ -214,7 +196,10 @@ export function StorageDebugPanel({ isOpen, onClose }: StorageDebugPanelProps) {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Overall Health:</span>
-                      <Badge variant={getHealthBadgeVariant(healthStatus.overallHealth)}>
+                      <Badge variant={
+                        healthStatus.overallHealth === 'healthy' ? 'default' :
+                        healthStatus.overallHealth === 'error' || healthStatus.overallHealth === 'critical' ? 'destructive' : 'secondary'
+                      }>
                         {healthStatus.overallHealth}
                       </Badge>
                     </div>
