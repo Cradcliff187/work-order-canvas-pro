@@ -17,15 +17,21 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
-// Branding variables for all emails
+// Enhanced branding variables for all emails
+const publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://workorderportal.lovable.app';
+
 const BRANDING_VARIABLES = {
-  company_name: 'WorkOrderPortal',
+  company_name: 'AKC Construction Services',
   support_email: 'support@workorderportal.com',
   company_address: 'Austin, TX',
-  company_logo_url: 'https://workorderportal.com/logo.png',
+  company_logo_url: `${publicSiteUrl}/branding/logos/AKC_logo_fixed_header.png`,
   company_website: 'https://workorderportal.com',
-  primary_color: '#2563eb',
-  secondary_color: '#1e40af'
+  primary_color: '#0080FF',
+  secondary_color: '#0066CC',
+  site_url: publicSiteUrl,
+  admin_dashboard_url: `${publicSiteUrl}/admin`,
+  partner_dashboard_url: `${publicSiteUrl}/partner`,
+  subcontractor_dashboard_url: `${publicSiteUrl}/subcontractor`
 };
 
 /**
@@ -480,19 +486,93 @@ Deno.serve(async (req) => {
           };
         }
       } else {
-        // Regular work order emails
+        // Enhanced work order data fetching with comprehensive joins
         const { data: workOrder } = await supabase
           .from('work_orders')
-          .select('*')
+          .select(`
+            *,
+            organizations!inner(name, contact_email),
+            trades!inner(name)
+          `)
           .eq('id', record_id)
           .single();
 
         if (workOrder) {
+          // Format dates for display
+          const formatEmailDate = (dateString: string | null): string => {
+            if (!dateString) return 'Not specified';
+            return new Date(dateString).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          };
+
+          // Get completion details for completed work orders
+          let completionData = {};
+          if (template_name === 'work_order_completed') {
+            const { data: report } = await supabase
+              .from('work_order_reports')
+              .select(`
+                work_performed,
+                subcontractor_user_id,
+                profiles!inner(first_name, last_name)
+              `)
+              .eq('work_order_id', record_id)
+              .eq('status', 'approved')
+              .order('submitted_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (report) {
+              completionData = {
+                work_performed: report.work_performed || 'Work completed as requested',
+                completed_by_name: `${report.profiles.first_name} ${report.profiles.last_name}`
+              };
+            }
+          }
+
+          // Get assignee information for assignment emails
+          let assigneeData = {};
+          if (template_name === 'work_order_assigned') {
+            const { data: assignment } = await supabase
+              .from('work_order_assignments')
+              .select(`
+                assigned_to,
+                profiles!inner(email, first_name, last_name)
+              `)
+              .eq('work_order_id', record_id)
+              .single();
+
+            if (assignment) {
+              assigneeData = {
+                assignee_name: `${assignment.profiles.first_name} ${assignment.profiles.last_name}`,
+                first_name: assignment.profiles.first_name,
+                last_name: assignment.profiles.last_name
+              };
+            }
+          }
+
           const workOrderUrl = generateUrl(`/work-orders/${workOrder.id}`);
           variables = { 
-            ...workOrder, 
+            ...workOrder,
+            ...completionData,
+            ...assigneeData,
             workOrderUrl,
-            work_order_number: workOrder.work_order_number || 'N/A'
+            work_order_number: workOrder.work_order_number || 'N/A',
+            organization_name: workOrder.organizations?.name || 'N/A',
+            trade_name: workOrder.trades?.name || 'N/A',
+            store_location: workOrder.store_location || 'Not specified',
+            city: workOrder.city || '',
+            state: workOrder.state || '',
+            zip_code: workOrder.zip_code || '',
+            street_address: workOrder.street_address || '',
+            description: workOrder.description || 'No description provided',
+            date_submitted: formatEmailDate(workOrder.date_submitted),
+            date_completed: formatEmailDate(workOrder.date_completed),
+            estimated_completion_date: formatEmailDate(workOrder.estimated_completion_date)
           };
         }
       }
