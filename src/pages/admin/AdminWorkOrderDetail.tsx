@@ -385,37 +385,66 @@ export default function AdminWorkOrderDetail() {
                 <p className="text-muted-foreground">Loading assignments...</p>
               ) : assignments.length > 0 ? (
                 <div className="space-y-3">
-                  {assignments.map((assignment) => (
-                    <div key={assignment.id} className="border rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium">
-                          {(() => {
-                            const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
-                            
-                            if (isPlaceholder && assignment.assigned_organization) {
-                              return assignment.assigned_organization.name;
-                            } else if (assignment.assigned_organization) {
-                              return assignment.assigned_organization.name;
-                             } else if (assignment.assignee) {
-                               return `${assignment.assignee.first_name} ${assignment.assignee.last_name}`;
-                             } else {
-                               return 'No individual assignee';
-                             }
-                          })()}
-                        </p>
-                        <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
-                          {assignment.assignment_type}
-                        </Badge>
-                      </div>
-                       <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                         <Mail className="h-3 w-3" />
-                         {assignment.assignee?.email || assignment.assigned_organization?.name || 'No individual assignee'}
-                       </div>
-                      {assignment.notes && (
-                        <p className="text-sm text-muted-foreground mt-2 italic">{assignment.notes}</p>
-                      )}
-                    </div>
-                  ))}
+                  {(() => {
+                    console.log('Work Order Assignments Debug:', {
+                      workOrderId: workOrder.id,
+                      assignmentsCount: assignments.length,
+                      assignments: assignments.map(a => ({
+                        id: a.id,
+                        hasAssignee: !!a.assignee,
+                        assigneeData: a.assignee,
+                        hasOrganization: !!a.assigned_organization,
+                        organizationData: a.assigned_organization,
+                        assignmentType: a.assignment_type
+                      }))
+                    });
+                    
+                    return assignments.map((assignment) => {
+                      console.log('Processing assignment:', {
+                        assignmentId: assignment.id,
+                        hasAssignee: !!assignment.assignee,
+                        hasOrganization: !!assignment.assigned_organization,
+                        assigneeData: assignment.assignee,
+                        organizationData: assignment.assigned_organization
+                      });
+                      
+                      if (!assignment.assignee && !assignment.assigned_organization) {
+                        console.error('Assignment missing both assignee and organization:', assignment.id);
+                      }
+                      
+                      return (
+                        <div key={assignment.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-medium">
+                              {(() => {
+                                const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
+                                
+                                if (isPlaceholder && assignment.assigned_organization) {
+                                  return assignment.assigned_organization.name;
+                                } else if (assignment.assigned_organization) {
+                                  return assignment.assigned_organization.name;
+                                 } else if (assignment.assignee) {
+                                   return `${assignment.assignee.first_name || 'Unknown'} ${assignment.assignee.last_name || 'User'}`;
+                                 } else {
+                                   return 'No individual assignee';
+                                 }
+                              })()}
+                            </p>
+                            <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
+                              {assignment.assignment_type}
+                            </Badge>
+                          </div>
+                           <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                             <Mail className="h-3 w-3" />
+                             {assignment.assignee?.email || assignment.assigned_organization?.name || 'No contact info'}
+                           </div>
+                          {assignment.notes && (
+                            <p className="text-sm text-muted-foreground mt-2 italic">{assignment.notes}</p>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               ) : (
                 <p className="text-muted-foreground">Unassigned</p>
@@ -519,56 +548,82 @@ export default function AdminWorkOrderDetail() {
 
         <TabsContent value="reports">
           {/* Reports Section */}
-          {workOrder.work_order_reports && workOrder.work_order_reports.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Work Order Reports ({workOrder.work_order_reports.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {workOrder.work_order_reports.map((report) => (
-                    <div key={report.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <p className="font-medium">
-                            {report.subcontractor_user.first_name} {report.subcontractor_user.last_name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Submitted {formatDateTime(report.submitted_at)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <StatusIndicator
-                            status={report.status}
-                            type="report"
-                            mode="badge"
-                            size="sm"
-                            showIcon={false}
-                          />
-                          {report.hours_worked && (
-                            <div className="flex items-center gap-1 text-sm font-medium mt-1">
-                              <Clock className="h-3 w-3" />
-                              {report.hours_worked}h worked
+          {(() => {
+            const reports = workOrder.work_order_reports || [];
+            console.log('Work Order Reports Debug:', {
+              workOrderId: workOrder.id,
+              reportsCount: reports.length,
+              reports: reports.map(r => ({
+                id: r.id,
+                hasSubcontractorUser: !!r.subcontractor_user,
+                subcontractorUser: r.subcontractor_user,
+                status: r.status
+              }))
+            });
+            
+            return reports.length > 0 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Work Order Reports ({reports.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {reports.map((report) => {
+                      console.log('Processing report:', {
+                        reportId: report.id,
+                        hasSubcontractorUser: !!report.subcontractor_user,
+                        subcontractorUserData: report.subcontractor_user
+                      });
+                      
+                      if (!report.subcontractor_user) {
+                        console.error('Missing subcontractor_user for report:', report.id);
+                      }
+                      
+                      return (
+                        <div key={report.id} className="border rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <p className="font-medium">
+                                {report.subcontractor_user?.first_name || 'Unknown'} {report.subcontractor_user?.last_name || 'User'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Submitted {formatDateTime(report.submitted_at)}
+                              </p>
                             </div>
-                          )}
+                            <div className="text-right">
+                              <StatusIndicator
+                                status={report.status}
+                                type="report"
+                                mode="badge"
+                                size="sm"
+                                showIcon={false}
+                              />
+                              {report.hours_worked && (
+                                <div className="flex items-center gap-1 text-sm font-medium mt-1">
+                                  <Clock className="h-3 w-3" />
+                                  {report.hours_worked}h worked
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-sm">{report.work_performed}</p>
                         </div>
-                      </div>
-                      <p className="text-sm">{report.work_performed}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                No reports submitted yet
-              </CardContent>
-            </Card>
-          )}
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  No reports submitted yet
+                </CardContent>
+              </Card>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="attachments">
@@ -581,18 +636,44 @@ export default function AdminWorkOrderDetail() {
             </CardHeader>
             <CardContent>
               <AttachmentSection
-                attachments={(workOrder.work_order_attachments || []).map((attachment): AttachmentItem => ({
-                  id: attachment.id,
-                  file_name: attachment.file_name,
-                  file_url: attachment.file_url,
-                  file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
-                  file_size: attachment.file_size || 0,
-                  uploaded_at: attachment.uploaded_at,
-                  uploader_name: attachment.uploaded_by_user ? 
-                    `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
-                    'Unknown',
-                  uploader_email: ''
-                }))}
+                attachments={(() => {
+                  const attachments = workOrder.work_order_attachments || [];
+                  console.log('Work Order Attachments Debug:', {
+                    workOrderId: workOrder.id,
+                    attachmentsCount: attachments.length,
+                    attachments: attachments.map(a => ({
+                      id: a.id,
+                      fileName: a.file_name,
+                      hasUploadedByUser: !!a.uploaded_by_user,
+                      uploadedByUserData: a.uploaded_by_user
+                    }))
+                  });
+                  
+                  return attachments.map((attachment): AttachmentItem => {
+                    console.log('Processing attachment:', {
+                      attachmentId: attachment.id,
+                      hasUploadedByUser: !!attachment.uploaded_by_user,
+                      uploadedByUserData: attachment.uploaded_by_user
+                    });
+                    
+                    if (!attachment.uploaded_by_user) {
+                      console.error('Missing uploaded_by_user for attachment:', attachment.id);
+                    }
+                    
+                    return {
+                      id: attachment.id,
+                      file_name: attachment.file_name,
+                      file_url: attachment.file_url,
+                      file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
+                      file_size: attachment.file_size || 0,
+                      uploaded_at: attachment.uploaded_at,
+                      uploader_name: attachment.uploaded_by_user ? 
+                        `${attachment.uploaded_by_user.first_name || 'Unknown'} ${attachment.uploaded_by_user.last_name || 'User'}` : 
+                        'Unknown User',
+                      uploader_email: ''
+                    };
+                  });
+                })()}
                 workOrderId={workOrder.id}
                 canUpload={true}
                 onUpload={async (files) => {
