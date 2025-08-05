@@ -19,6 +19,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { LocationFields } from '@/components/LocationFields';
 import { WorkOrderNumberPreview } from '@/components/WorkOrderNumberPreview';
+import { WorkOrderReviewSummary } from '@/components/WorkOrderReviewSummary';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
@@ -398,7 +399,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
     const isValid = await validateStep(currentStep);
     console.log('✅ Step validation result:', isValid);
     
-    const maxStep = 2; // We only have steps 0, 1, 2 based on the UI
+    const maxStep = 3; // We now have steps 0, 1, 2, 3 (review) based on the UI
     if (isValid && currentStep < maxStep) {
       const nextStep = currentStep + 1;
       console.log('✅ Moving to step:', nextStep);
@@ -850,6 +851,25 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                   </CardContent>
                 </Card>
               )}
+
+              {/* Step 3: Review */}
+              {currentStep === 3 && (
+                <div className="animate-fade-in">
+                  <WorkOrderReviewSummary
+                    trades={trades}
+                    workOrderNumber={workOrderNumber}
+                    isLoadingWorkOrderNumber={isLoadingWorkOrderNumber}
+                    workOrderNumberError={workOrderNumberError}
+                    organizationName={organizationName}
+                    userProfile={profile}
+                    selectedLocation={selectedLocation}
+                    generatedLocationNumber={generatedLocationNumber}
+                    isLoadingLocations={isLoadingPartnerLocations}
+                    locationsError={null}
+                    partnerLocationSelection={partnerLocationSelection}
+                  />
+                </div>
+              )}
             </div>
           </Form>
         </ScrollArea>
@@ -868,7 +888,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                 Previous
               </Button>
 
-              {currentStep < 2 ? (
+              {currentStep < 3 ? (
                 <Button 
                   type="button" 
                   onClick={() => {
