@@ -274,6 +274,42 @@ const isMobile = useIsMobile(); // Returns boolean
 - Hover states and focus indicators
 - Descriptive `aria-label` attributes
 
+### Construction-Specific Navigation Icons
+
+**OPERATIONS**
+- Admin Dashboard → Building2 or Gauge (construction overview)
+- Employee Dashboard → HardHat (worker-focused)
+- Work Orders → ClipboardList (task management)
+- Approval Center → ShieldCheck (authority/verification)
+- Reports → FileBarChart (data visualization)
+- Time Reports → Timer (time tracking)
+
+**FINANCIAL**
+- Receipts → ReceiptText (construction receipts)
+- Invoices → FileText with DollarSign (billing)
+
+**MANAGEMENT**
+- Users → Users (multiple people)
+- Organizations → Building2 (company structures)
+- Partner Locations → MapPin (location management)
+- Employees → HardHat (worker management)
+
+**INSIGHTS**
+- Email Templates → Mail (communications)
+- Analytics → TrendingUp or BarChart3 (data analysis)
+
+**SYSTEM**
+- Settings → Settings (configuration)
+- System Health → Activity (monitoring)
+- Email Testing → MailCheck (testing)
+
+**Icon Color Coding**
+- Operations: Blue (#2563EB)
+- Financial: Green (#059669)
+- Management: Purple (#7C3AED)
+- Insights: Orange (#EA580C)
+- System: Gray (#6B7280)
+
 ### Icon Import Pattern
 
 ```tsx
