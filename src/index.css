@@ -7,103 +7,110 @@
 
 @layer base {
   :root {
-    /* AKC Brand Colors - Construction Professional Theme */
-    --background: 210 17% 98%;
-    --foreground: 0 0% 20%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%;
-
-    /* Primary: AKC Blue #0080FF */
-    --primary: 210 100% 50%;
+    /* Primary Brand Colors - Enhanced Blue */
+    --primary: 211 96% 45%;              /* #0969DA Professional Blue */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 210 100% 60%;
+    --primary-glow: 211 96% 55%;         /* Lighter blue for gradients */
 
-    /* Secondary: Clean Gray for professional look */
-    --secondary: 210 10% 96%;
-    --secondary-foreground: 0 0% 20%;
+    /* Background & Surface - Cleaner */
+    --background: 0 0% 98%;              /* #FAFAFA Clean white */
+    --foreground: 222 47% 11%;           /* #1A202C Rich dark text */
 
-    --muted: 210 12% 95%;
-    --muted-foreground: 210 6% 46%;
+    --card: 0 0% 100%;                   /* Pure white cards */
+    --card-foreground: 222 47% 11%;      /* Dark card text */
 
-    --accent: 210 95% 96%;
-    --accent-foreground: 210 95% 46%;
+    --popover: 0 0% 100%;                /* White popovers */
+    --popover-foreground: 222 47% 11%;   /* Dark popover text */
 
-    /* Construction-appropriate status colors */
-    --success: 142 71% 45%;
+    /* Secondary - Sophisticated Grays */
+    --secondary: 215 20% 25%;            /* #334155 Dark gray */
+    --secondary-foreground: 0 0% 100%;
+
+    /* Neutral Palette - Better Depth */
+    --muted: 214 32% 91%;                /* #E2E8F0 Light gray */
+    --muted-foreground: 215 25% 27%;     /* #3A4358 Dark muted */
+
+    --accent: 158 64% 92%;               /* #D1FAE5 Light green tint */
+    --accent-foreground: 158 84% 25%;    /* #0F5132 Dark green */
+
+    /* Interactive Elements - Refined */
+    --border: 214 32% 85%;               /* #D4DBE5 Visible borders */
+    --input: 214 32% 96%;                /* #F1F5F9 Input backgrounds */
+    --ring: 211 96% 45%;                 /* Blue focus rings */
+
+    /* Status Colors - Professional & Clear */
+    --success: 158 64% 42%;              /* #27A971 Efficiency green */
     --success-foreground: 0 0% 100%;
     
-    --warning: 38 100% 50%;
+    --warning: 45 93% 47%;               /* #F59E0B Attention amber */
     --warning-foreground: 0 0% 100%;
     
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;            /* #E11D48 Issue red */
     --destructive-foreground: 0 0% 100%;
-
-    --border: 210 20% 90%;
-    --input: 210 20% 95%;
-    --ring: 210 100% 50%;
 
     --radius: 0.5rem;
 
-    /* Professional gradients for AKC Construction Services */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-surface: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    /* Update Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(211 96% 45%), hsl(211 96% 55%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 98%), hsl(214 32% 91%));
 
-    /* Professional shadows */
-    --shadow-construction: 0 4px 24px -2px hsl(var(--primary) / 0.12);
-    --shadow-card: 0 2px 8px -2px hsl(var(--foreground) / 0.08);
+    /* Professional Shadows */
+    --shadow-construction: 0 4px 6px -1px hsl(222 47% 11% / 0.07), 0 2px 4px -1px hsl(222 47% 11% / 0.04);
+    --shadow-card: 0 2px 4px -1px hsl(222 47% 11% / 0.06), 0 1px 2px -1px hsl(222 47% 11% / 0.03);
 
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* Professional gradients with mobile optimizations */
-    --gradient-header-desktop: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.05));
-    --gradient-card-desktop: linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted) / 0.3));
-    --gradient-button-hover: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-mobile-header: hsl(var(--primary));
-    --gradient-mobile-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.5));
+    --gradient-header-desktop: linear-gradient(135deg, hsl(211 96% 45% / 0.08), hsl(211 96% 45% / 0.04));
+    --gradient-card-desktop: linear-gradient(180deg, hsl(0 0% 100%), hsl(214 32% 91% / 0.3));
+    --gradient-button-hover: linear-gradient(135deg, hsl(211 96% 45%), hsl(211 96% 55%));
+    --gradient-mobile-header: hsl(211 96% 45%);
+    --gradient-mobile-subtle: linear-gradient(180deg, hsl(0 0% 98%), hsl(214 32% 91% / 0.5));
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent: 211 96% 93%;       /* Light blue tint */
+    --sidebar-accent-foreground: 211 96% 35%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 210 100% 50%;
+    --sidebar-ring: 211 96% 45%;         /* Blue focus */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Background & Surface - Dark Mode */
+    --background: 222 47% 8%;            /* Deep blue-black */
+    --foreground: 210 40% 98%;           /* Off-white */
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 8%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Primary - Brighter blue for dark mode */
+    --primary: 211 96% 55%;              /* Brighter blue in dark mode */
+    --primary-foreground: 222 47% 11%;   /* Dark text on bright blue */
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    /* Secondary - Light gray for dark mode */
+    --secondary: 215 16% 70%;            /* Light gray for dark mode */
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    /* Neutral Palette - Dark Mode */
+    --muted: 217 32% 15%;                /* Dark muted backgrounds */
+    --muted-foreground: 215 20% 65%;     /* Lighter muted text */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 158 64% 15%;               /* Dark green tint */
+    --accent-foreground: 158 64% 80%;    /* Light green text */
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 217 32% 20%;               /* Subtle borders */
+    --input: 217 32% 17.5%;
+    --ring: 211 96% 55%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
