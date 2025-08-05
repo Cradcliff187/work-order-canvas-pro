@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { AttachmentSection } from '@/components/work-orders/shared/AttachmentSection';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import type { AttachmentItem } from '@/components/work-orders/shared/AttachmentSection';
 import { 
   ArrowLeft, 
   Edit, 
@@ -92,6 +95,7 @@ export default function AdminWorkOrderDetail() {
   const navigate = useNavigate();
   const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id!);
   const { data: assignments = [], isLoading: isLoadingAssignments, refetch: refetchAssignments } = useWorkOrderAssignments(id);
+  const { uploadFiles } = useFileUpload();
 
   if (!id) {
     return (
@@ -568,117 +572,55 @@ export default function AdminWorkOrderDetail() {
         </TabsContent>
 
         <TabsContent value="attachments">
-          {/* Attachments Section */}
-          {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Paperclip className="h-5 w-5" />
-                  Attachments ({workOrder.work_order_attachments.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {workOrder.work_order_attachments.map((attachment) => (
-                    <Card key={attachment.id} className="overflow-hidden">
-                      <div className="aspect-video bg-muted relative">
-                        {attachment.file_type === 'photo' ? (
-                          <img
-                            src={supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url).data.publicUrl}
-                            alt={attachment.file_name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <div className="text-center">
-                              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                              <div className="text-sm font-medium text-muted-foreground">
-                                {attachment.file_name.split('.').pop()?.toUpperCase()}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <div className="hidden flex items-center justify-center w-full h-full">
-                          <FileText className="w-12 h-12 text-muted-foreground" />
-                        </div>
-                      </div>
-                      
-                      <CardContent className="p-3">
-                        <div className="space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center space-x-2">
-                                {getFileIcon(attachment.file_type, attachment.file_name)}
-                                <span className="text-sm font-medium truncate">
-                                  {attachment.file_name}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Badge 
-                                  variant="secondary" 
-                                  className={cn("text-xs", getFileTypeColor(attachment.file_type))}
-                                >
-                                  {attachment.file_type}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  Size: Unknown
-                                </span>
-                              </div>
-                              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                                <Calendar className="w-3 h-3 mr-1" />
-                                {format(new Date(attachment.uploaded_at), 'MMM dd, yyyy')}
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                Uploaded by: {attachment.uploaded_by_user.first_name} {attachment.uploaded_by_user.last_name}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => {
-                                const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-                                window.open(data.publicUrl, '_blank');
-                              }}
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
-                                const link = document.createElement('a');
-                                link.href = data.publicUrl;
-                                link.download = attachment.file_name;
-                                link.click();
-                              }}
-                            >
-                              <Download className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                No attachments uploaded yet
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Attachments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AttachmentSection
+                attachments={(workOrder.work_order_attachments || []).map((attachment): AttachmentItem => ({
+                  id: attachment.id,
+                  file_name: attachment.file_name,
+                  file_url: attachment.file_url,
+                  file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
+                  file_size: attachment.file_size || 0,
+                  uploaded_at: attachment.uploaded_at,
+                  uploader_name: attachment.uploaded_by_user ? 
+                    `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
+                    'Unknown',
+                  uploader_email: ''
+                }))}
+                workOrderId={workOrder.id}
+                canUpload={true}
+                onUpload={async (files) => {
+                  try {
+                    await uploadFiles(files, workOrder.id);
+                    await refetch();
+                  } catch (error) {
+                    console.error('Upload failed:', error);
+                  }
+                }}
+                onView={(attachment) => {
+                  const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                  window.open(data.publicUrl, '_blank');
+                }}
+                onDownload={(attachment) => {
+                  const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
+                  const link = document.createElement('a');
+                  link.href = data.publicUrl;
+                  link.download = attachment.file_name;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                maxFileSize={50 * 1024 * 1024} // 50MB
+                maxFiles={10}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="messages">
