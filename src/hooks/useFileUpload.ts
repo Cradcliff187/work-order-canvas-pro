@@ -542,27 +542,29 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
   // Context-aware remove file function
   const removeFile = useCallback(async (fileId: string): Promise<void> => {
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     try {
-      // Find the file in uploadedFiles
-      const file = uploadedFiles.find(f => f.id === fileId);
-      if (!file) throw new Error("File not found");
-
-      // Remove from storage
-      const { error: storageError } = await supabase.storage
-        .from(config.bucket)
-        .remove([file.fileUrl]);
-
-      if (storageError) {
-        console.warn("Failed to remove file from storage:", storageError);
-      }
-
-      // Context-specific database removal
+      // For work order/report attachments, get file info from database first
+      let fileUrl: string | null = null;
+      
       if (context === 'avatar') {
         // Avatar: remove from profile
         if (updateProfile) {
           await updateProfile({ avatar_url: null });
         }
       } else if (context === 'invoice') {
+        // Get file URL before deletion for storage cleanup
+        const { data: attachment } = await supabase
+          .from("invoice_attachments")
+          .select("file_url")
+          .eq("id", fileId)
+          .single();
+        
+        fileUrl = attachment?.file_url || null;
+
         // Invoice: remove from invoice_attachments
         const { error: dbError } = await supabase
           .from("invoice_attachments")
@@ -571,16 +573,40 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
         if (dbError) throw dbError;
       } else {
+        // Get file URL before deletion for storage cleanup
+        const { data: attachment } = await supabase
+          .from("work_order_attachments")
+          .select("file_url")
+          .eq("id", fileId)
+          .single();
+        
+        fileUrl = attachment?.file_url || null;
+
         // Work order/report: remove from work_order_attachments
         const { error: dbError } = await supabase
           .from("work_order_attachments")
           .delete()
           .eq("id", fileId);
 
-        if (dbError) throw dbError;
+        if (dbError) {
+          console.error("Database deletion error:", dbError);
+          throw new Error(`Failed to delete attachment: ${dbError.message}`);
+        }
       }
 
-      // Update local state
+      // Remove from storage if we have a file URL
+      if (fileUrl) {
+        const { error: storageError } = await supabase.storage
+          .from(config.bucket)
+          .remove([fileUrl]);
+
+        if (storageError) {
+          console.warn("Failed to remove file from storage:", storageError);
+          // Don't throw here since the database record is already deleted
+        }
+      }
+
+      // Update local state (remove from uploadedFiles if it exists there)
       setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
       
       toast({
@@ -588,15 +614,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         description: "File has been successfully removed",
       });
     } catch (error) {
+      console.error("Remove file error:", error);
       const errorMessage = error instanceof Error ? error.message : 'Remove failed';
       toast({
-        title: "Remove Failed",
+        title: "Remove Failed", 
         description: errorMessage,
         variant: "destructive",
       });
       throw error;
     }
-  }, [uploadedFiles, toast, config.bucket, context, updateProfile]);
+  }, [user, uploadedFiles, toast, config.bucket, context, updateProfile]);
 
   // Reset upload state
   const reset = useCallback(() => {
