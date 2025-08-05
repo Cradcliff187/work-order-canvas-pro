@@ -47,7 +47,23 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   low: TrendingUp,
   medium: AlertCircle,
   high: AlertCircle,
-  urgent: AlertCircle
+  urgent: AlertCircle,
+  
+  // Report Status Icons
+  submitted: Circle,
+  reviewed: Clock,
+  approved: CheckCircle,
+  rejected: XCircle,
+  
+  // User Role Icons
+  admin: Users,
+  partner: Users,
+  subcontractor: Users,
+  employee: Users,
+  
+  // Active Status Icons
+  true: CheckCircle,
+  false: XCircle
 };
 
 export function StatusBadge({
@@ -84,9 +100,10 @@ export function StatusBadge({
   const Icon = showIcon ? iconMap[status] : null;
   
   return (
-    <div
+    <Badge
+      variant={variant}
       className={cn(
-        'inline-flex items-center font-medium rounded-md border smooth-transition-colors',
+        'inline-flex items-center font-medium rounded-md border smooth-transition-colors hover:scale-105',
         sizeClasses[size],
         config.className,
         variant === 'outline' && 'bg-transparent',
@@ -95,7 +112,7 @@ export function StatusBadge({
     >
       {Icon && <Icon className={iconSizes[size]} />}
       <span>{config.label}</span>
-    </div>
+    </Badge>
   );
 }
 
