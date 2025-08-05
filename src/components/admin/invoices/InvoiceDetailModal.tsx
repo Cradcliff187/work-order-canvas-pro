@@ -44,6 +44,7 @@ import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { formatFileSize } from '@/utils/fileUtils';
+import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InvoiceDetailModalProps {
@@ -109,20 +110,6 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'paid':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   const canApprove = invoice.status === 'submitted';
   const canReject = invoice.status === 'submitted';
@@ -219,9 +206,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                     Status
                   </Label>
                   <div className="mt-1">
-                    <Badge className={`${getStatusColor(invoice.status)} h-5 text-[10px] px-1.5 capitalize`}>
-                      {invoice.status}
-                    </Badge>
+                    <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
                   </div>
                 </div>
 

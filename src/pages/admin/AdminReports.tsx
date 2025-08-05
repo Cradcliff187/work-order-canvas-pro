@@ -45,6 +45,7 @@ import { useAdminReports } from '@/hooks/useAdminReports';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useSubcontractors } from '@/hooks/useSubcontractors';
 import { useToast } from '@/hooks/use-toast';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -87,20 +88,6 @@ export default function AdminReports() {
   const { data: subcontractors } = useSubcontractors();
   const { reviewReport, bulkReviewReports } = useAdminReportMutations();
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return <Badge variant="secondary" className="h-5 text-[10px] px-1.5"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
-      case 'reviewed':
-        return <Badge variant="outline" className="h-5 text-[10px] px-1.5"><Eye className="w-3 h-3 mr-1" />Reviewed</Badge>;
-      case 'approved':
-        return <Badge variant="default" className="h-5 text-[10px] px-1.5"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive" className="h-5 text-[10px] px-1.5"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
-      default:
-        return <Badge variant="outline" className="h-5 text-[10px] px-1.5">{status}</Badge>;
-    }
-  };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
@@ -176,7 +163,7 @@ export default function AdminReports() {
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }) => getStatusBadge(row.getValue('status')),
+      cell: ({ row }) => <ReportStatusBadge status={row.getValue('status')} size="sm" showIcon />,
     },
     {
       accessorKey: 'invoice_amount',
@@ -517,7 +504,7 @@ export default function AdminReports() {
                         key={report.id}
                         title={workOrder?.work_order_number || 'N/A'}
                         subtitle={`${workOrder?.title || 'N/A'} • ${subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}`}
-                        status={getStatusBadge(report.status)}
+                        status={<ReportStatusBadge status={report.status} size="sm" showIcon />}
                         onClick={() => navigate(`/admin/reports/${report.id}`)}
                       >
                         <div className="flex justify-between text-sm">

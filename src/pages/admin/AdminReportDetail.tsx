@@ -22,6 +22,7 @@ import {
 import { useAdminReportDetail } from '@/hooks/useAdminReportDetail';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { ReportFileManager } from '@/components/ReportFileManager';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
 
 export default function AdminReportDetail() {
@@ -37,20 +38,6 @@ export default function AdminReportDetail() {
   const { data: report, isLoading, error } = useAdminReportDetail(isValidId ? id! : '');
   const { reviewReport } = useAdminReportMutations();
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return <Badge variant="secondary" className="h-5 text-[10px] px-1.5"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
-      case 'reviewed':
-        return <Badge variant="outline" className="h-5 text-[10px] px-1.5">Reviewed</Badge>;
-      case 'approved':
-        return <Badge variant="default" className="h-5 text-[10px] px-1.5"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive" className="h-5 text-[10px] px-1.5"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
-      default:
-        return <Badge variant="outline" className="h-5 text-[10px] px-1.5">{status}</Badge>;
-    }
-  };
 
   const handleReview = (status: 'approved' | 'rejected') => {
     if (!id || !isValidId) return;
@@ -148,7 +135,7 @@ export default function AdminReportDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {getStatusBadge(report.status)}
+          <ReportStatusBadge status={report.status} size="sm" showIcon />
         </div>
       </div>
 

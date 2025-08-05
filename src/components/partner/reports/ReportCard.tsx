@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 
 interface ReportCardProps {
   report: any;
@@ -22,20 +23,6 @@ interface ReportCardProps {
 export function ReportCard({ report }: ReportCardProps) {
   const navigate = useNavigate();
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
-      case 'reviewed':
-        return <Badge variant="outline"><Eye className="w-3 h-3 mr-1" />Reviewed</Badge>;
-      case 'approved':
-        return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
 
   const workOrder = report.work_orders;
   const subcontractor = report.subcontractor;
@@ -52,7 +39,7 @@ export function ReportCard({ report }: ReportCardProps) {
               {workOrder?.title || 'No title'}
             </p>
           </div>
-          {getStatusBadge(report.status)}
+          <ReportStatusBadge status={report.status} showIcon />
         </div>
       </CardHeader>
       
