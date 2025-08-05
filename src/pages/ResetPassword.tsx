@@ -12,7 +12,7 @@ import { useBranding } from '@/hooks/useBranding';
 import { supabase } from '@/integrations/supabase/client';
 
 // Error types for better categorization
-type ResetErrorType = 'EXPIRED_LINK' | 'INVALID_TOKEN' | 'ALREADY_USED' | 'MISSING_PARAMS' | 'SESSION_ERROR' | 'NETWORK_ERROR' | 'URL_CONFIG' | 'AUTH_ERROR' | 'UNKNOWN';
+type ResetErrorType = 'EXPIRED_LINK' | 'INVALID_TOKEN' | 'ALREADY_USED' | 'MISSING_PARAMS' | 'SESSION_ERROR' | 'NETWORK_ERROR' | 'URL_CONFIG' | 'AUTH_ERROR' | 'OTP_EXPIRED' | 'UNKNOWN';
 
 interface ResetError {
   type: ResetErrorType;
@@ -55,7 +55,19 @@ const ResetPassword = () => {
       hasHashParams: window.location.hash.length > 0
     });
     
-    // Check for URL configuration issues first
+    // Check for specific OTP expired error first
+    if (context === 'otp_expired' || errorMessage.includes('otp_expired') || 
+        errorMessage.includes('Email link is invalid or has expired')) {
+      return {
+        type: 'OTP_EXPIRED',
+        title: 'Reset Link Expired',
+        message: 'Your password reset link has expired for security reasons. Please request a new one.',
+        canRetry: false,
+        showRequestNewLink: true
+      };
+    }
+    
+    // Check for URL configuration issues
     if (errorMessage.includes('One-time token not found') || 
         errorMessage.includes('Email link is invalid') ||
         context === 'missing_params' && !window.location.search && !window.location.hash) {
@@ -154,6 +166,7 @@ const ResetPassword = () => {
   const getErrorIcon = (type: ResetErrorType) => {
     switch (type) {
       case 'EXPIRED_LINK':
+      case 'OTP_EXPIRED':
         return <Clock className="h-5 w-5" />;
       case 'INVALID_TOKEN':
       case 'ALREADY_USED':
@@ -183,6 +196,33 @@ const ResetPassword = () => {
   const isPasswordValid = Object.values(passwordRequirements).every(Boolean) && passwordsMatch;
 
   useEffect(() => {
+    // Check for URL error parameters FIRST before any session validation
+    const checkForUrlErrors = () => {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const searchParams = new URLSearchParams(window.location.search);
+      
+      // Check hash parameters for Supabase error responses
+      const error = hashParams.get('error') || searchParams.get('error');
+      const errorCode = hashParams.get('error_code') || searchParams.get('error_code');
+      const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
+      
+      console.log('URL Error Check:', { error, errorCode, errorDescription });
+      
+      // Handle OTP expired specifically
+      if (error === 'access_denied' && errorCode === 'otp_expired') {
+        setResetError(categorizeError('OTP expired', 'otp_expired'));
+        return true; // Stop further processing
+      }
+      
+      // Handle other error states
+      if (error) {
+        setResetError(categorizeError(`${error}: ${errorDescription || 'Unknown error'}`, 'url_error'));
+        return true; // Stop further processing
+      }
+      
+      return false; // No errors found, continue with normal flow
+    };
+
     const extractTokensFromUrl = () => {
       console.log('=== URL DEBUGGING START ===');
       console.log('Full URL:', window.location.href);
@@ -345,6 +385,12 @@ const ResetPassword = () => {
 
     const handleRecoverySession = async () => {
       console.log('Handling recovery session...');
+      
+      // FIRST: Check for URL errors before any session processing
+      if (checkForUrlErrors()) {
+        console.log('URL error detected, stopping session processing');
+        return; // Error detected and handled, stop processing
+      }
       
       // Step 1: Check for existing session first
       const { data: { session }, error: getSessionError } = await supabase.auth.getSession();
