@@ -25,7 +25,17 @@ export const SUPPORTED_DOCUMENT_TYPES = [
   'text/plain'
 ];
 
-export const ALL_SUPPORTED_TYPES = [...SUPPORTED_IMAGE_TYPES, ...SUPPORTED_DOCUMENT_TYPES];
+export const SUPPORTED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/quicktime', // MOV
+  'video/webm',
+  'video/avi',
+  'video/x-msvideo', // AVI
+  'video/x-ms-wmv', // WMV
+  'video/3gpp' // 3GP
+];
+
+export const ALL_SUPPORTED_TYPES = [...SUPPORTED_IMAGE_TYPES, ...SUPPORTED_DOCUMENT_TYPES, ...SUPPORTED_VIDEO_TYPES];
 
 /**
  * Determine file type for storage categorization
@@ -34,7 +44,7 @@ export function getFileTypeForStorage(file: File): 'photo' | 'document' {
   if (SUPPORTED_IMAGE_TYPES.includes(file.type)) {
     return 'photo';
   }
-  if (SUPPORTED_DOCUMENT_TYPES.includes(file.type)) {
+  if (SUPPORTED_DOCUMENT_TYPES.includes(file.type) || SUPPORTED_VIDEO_TYPES.includes(file.type)) {
     return 'document';
   }
   // Default to document for unknown types that pass validation
@@ -64,7 +74,7 @@ export function isImageFile(fileName: string, mimeType?: string): boolean {
  * Get human-readable list of supported formats
  */
 export function getSupportedFormatsText(): string {
-  return 'Images (JPEG, PNG, GIF, WebP, HEIC), Documents (PDF, Word, Excel, CSV, Text)';
+  return 'Images (JPEG, PNG, GIF, WebP, HEIC), Documents (PDF, Word, Excel, CSV, Text), Videos (MP4, MOV, WebM, AVI)';
 }
 
 /**
