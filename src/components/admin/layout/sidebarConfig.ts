@@ -38,7 +38,6 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Settings', url: '/admin/settings', icon: Settings },
   { title: 'System Health', url: '/admin/system-health', icon: Activity },
   { title: 'Email Testing', url: '/admin/test-email', icon: Mail },
-  { title: 'Dev Tools', url: '/dev-tools', icon: Wrench },
 ];
 
 export const sidebarSections = {
@@ -46,8 +45,8 @@ export const sidebarSections = {
   FINANCIAL: ['Receipts', 'Invoices'],
   MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
-  SYSTEM: ['Settings', 'System Health', 'Email Testing', 'Dev Tools']
+  SYSTEM: ['Settings', 'System Health', 'Email Testing']
 };
 
-export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Email Testing', 'Dev Tools'];
+export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Email Testing'];
 export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Approval Center', 'Time Reports', 'Receipts'];
