@@ -35,6 +35,7 @@ import { ReportCard } from '@/components/partner/reports/ReportCard';
 import { usePartnerReports } from '@/hooks/usePartnerReports';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -86,20 +87,6 @@ export default function PartnerReports() {
     filters
   );
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
-      case 'reviewed':
-        return <Badge variant="outline"><Eye className="w-3 h-3 mr-1" />Reviewed</Badge>;
-      case 'approved':
-        return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
@@ -148,7 +135,7 @@ export default function PartnerReports() {
     {
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }) => getStatusBadge(row.getValue('status')),
+      cell: ({ row }) => <ReportStatusBadge status={row.getValue('status')} size="sm" showIcon />,
     },
     {
       accessorKey: 'hours_worked',

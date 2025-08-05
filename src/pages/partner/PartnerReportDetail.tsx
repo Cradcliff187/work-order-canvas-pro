@@ -16,6 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { usePartnerReportDetail } from '@/hooks/usePartnerReports';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
 
 export default function PartnerReportDetail() {
@@ -29,20 +30,6 @@ export default function PartnerReportDetail() {
   
   const { data: report, isLoading, error } = usePartnerReportDetail(isValidId ? id! : '');
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Submitted</Badge>;
-      case 'reviewed':
-        return <Badge variant="outline">Reviewed</Badge>;
-      case 'approved':
-        return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
 
   if (isLoading) {
     return (
@@ -130,7 +117,7 @@ export default function PartnerReportDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {getStatusBadge(report.status)}
+          <ReportStatusBadge status={report.status} showIcon />
         </div>
       </div>
 

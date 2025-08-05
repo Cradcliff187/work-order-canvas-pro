@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingCard } from "@/components/ui/loading-states";
 import { QueryError, QueryErrorBoundary } from "@/components/ui/query-error-boundary";
+import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Plus, Search, DollarSign, Paperclip, FileText, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
@@ -36,24 +37,6 @@ const SubcontractorInvoices = () => {
 
   const hasFilters = statusFilter !== "all" || searchQuery || initialPayment;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return "bg-warning/10 text-warning border-warning/20";
-      case "approved":
-        return "bg-success/10 text-success border-success/20";
-      case "rejected":
-        return "bg-destructive/10 text-destructive border-destructive/20";
-      case "paid":
-        return "bg-primary/10 text-primary border-primary/20";
-      default:
-        return "bg-muted/50 text-muted-foreground";
-    }
-  };
-
-  const formatStatus = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
 
   if (isLoading) {
     return (
@@ -184,9 +167,11 @@ const SubcontractorInvoices = () => {
                           <span className="text-xs">{invoice.attachment_count}</span>
                         </div>
                       )}
-                      <Badge className={getStatusColor(invoice.status)}>
-                        {formatStatus(invoice.status)}
-                      </Badge>
+                      <FinancialStatusBadge 
+                        status={invoice.status === 'submitted' ? 'pending' : invoice.status} 
+                        size="sm"
+                        showIcon 
+                      />
                       {invoice.status === 'approved' && !invoice.paid_at && (
                         <Badge variant="outline">Awaiting Payment</Badge>
                       )}

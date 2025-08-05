@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Building2, Mail, Phone, MapPin, Hash, Users, FileText, Activity } from 'lucide-react';
 import { Organization } from '@/hooks/useOrganizations';
+import { OrganizationBadge } from '@/components/OrganizationBadge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
 
 interface ViewOrganizationModalProps {
@@ -18,24 +20,6 @@ interface ViewOrganizationModalProps {
 export function ViewOrganizationModal({ open, onOpenChange, organization, onEdit }: ViewOrganizationModalProps) {
   if (!organization) return null;
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'partner':
-        return 'bg-blue-100 text-blue-800 hover:bg-blue-100';
-      case 'subcontractor':
-        return 'bg-green-100 text-green-800 hover:bg-green-100';
-      case 'internal':
-        return 'bg-purple-100 text-purple-800 hover:bg-purple-100';
-      default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
-    }
-  };
-
-  const getStatusColor = (isActive: boolean) => {
-    return isActive
-      ? 'bg-green-100 text-green-800 hover:bg-green-100'
-      : 'bg-red-100 text-red-800 hover:bg-red-100';
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,17 +52,23 @@ export function ViewOrganizationModal({ open, onOpenChange, organization, onEdit
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Type</label>
                   <div className="mt-1">
-                    <Badge className={`${getTypeColor(organization.organization_type)} h-5 text-[10px] px-1.5`}>
-                      {organization.organization_type.charAt(0).toUpperCase() + organization.organization_type.slice(1)}
-                    </Badge>
+                    <OrganizationBadge 
+                      organization={organization} 
+                      size="sm" 
+                      showIcon={false}
+                      showType={false}
+                    />
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Status</label>
                   <div className="mt-1">
-                    <Badge className={`${getStatusColor(organization.is_active)} h-5 text-[10px] px-1.5`}>
-                      {organization.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <StatusBadge 
+                      type="activeStatus"
+                      status={organization.is_active ? 'active' : 'inactive'}
+                      size="sm"
+                      showIcon={false}
+                    />
                   </div>
                 </div>
                 <div>
