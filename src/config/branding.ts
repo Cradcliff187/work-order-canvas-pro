@@ -69,12 +69,12 @@ export const brandingConfig: BrandingConfig = {
     description: 'Professional construction work order management system for commercial projects'
   },
   colors: {
-    primary: 'hsl(210, 100%, 50%)', // AKC Blue #0080FF
-    secondary: 'hsl(210, 10%, 96%)', // Clean Gray
-    accent: 'hsl(210, 95%, 96%)', // Light Blue
-    success: 'hsl(142, 71%, 45%)', // Green
-    warning: 'hsl(38, 100%, 50%)', // Orange
-    destructive: 'hsl(0, 84%, 60%)' // Red
+    primary: 'hsl(211, 96%, 45%)', // Professional Blue #0969DA
+    secondary: 'hsl(215, 20%, 25%)', // Sophisticated Gray #334155
+    accent: 'hsl(158, 64%, 42%)', // Efficiency Green #27A971
+    success: 'hsl(158, 64%, 42%)', // Green (same as accent)
+    warning: 'hsl(45, 93%, 47%)', // Attention Amber #F59E0B
+    destructive: 'hsl(0, 72%, 51%)' // Issue Red #E11D48
   },
   assets: {
     logos: {
