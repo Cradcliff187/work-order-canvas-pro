@@ -36,10 +36,10 @@ import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useToast } from '@/hooks/use-toast';
 import { exportWorkOrders } from '@/lib/utils/export';
 import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
 import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -394,16 +394,6 @@ export default function AdminWorkOrders() {
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => {
                     const workOrder = row.original;
-                    const getStatusVariant = (status: string) => {
-                      switch (status) {
-                        case 'received': return 'secondary';
-                        case 'assigned': return 'default';
-                        case 'in_progress': return 'outline';
-                        case 'completed': return 'default';
-                        case 'cancelled': return 'destructive';
-                        default: return 'secondary';
-                      }
-                    };
                     
                     return (
                       <MobileTableCard
@@ -411,9 +401,7 @@ export default function AdminWorkOrders() {
                         title={workOrder.work_order_number || 'N/A'}
                         subtitle={`${workOrder.title || 'Untitled'} • ${workOrder.store_location || 'No location'}, ${workOrder.city || 'No city'}`}
                         status={
-                          <Badge variant={getStatusVariant(workOrder.status)} className="h-5 text-[10px] px-1.5">
-                            {workOrder.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
-                          </Badge>
+                          <WorkOrderStatusBadge status={workOrder.status} size="sm" />
                         }
                         onClick={() => navigate(`/admin/work-orders/${workOrder.id}`)}
                       >

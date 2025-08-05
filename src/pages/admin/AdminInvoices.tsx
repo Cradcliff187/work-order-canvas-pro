@@ -34,9 +34,9 @@ import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { FinancialStatusBadge } from '@/components/ui/status-badge';
 
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
@@ -272,15 +272,6 @@ export default function AdminInvoices() {
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => {
                     const invoice = row.original;
-                    const getStatusVariant = (status: string) => {
-                      switch (status) {
-                        case 'submitted': return 'secondary';
-                        case 'approved': return 'default';
-                        case 'rejected': return 'destructive';
-                        case 'paid': return 'outline';
-                        default: return 'secondary';
-                      }
-                    };
                     
                     return (
                       <MobileTableCard
@@ -289,13 +280,9 @@ export default function AdminInvoices() {
                         subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • $${invoice.total_amount?.toFixed(2) || '0.00'}`}
                         status={
                           <div className="flex flex-col items-end gap-1">
-                            <Badge variant={getStatusVariant(invoice.status)} className="h-5 text-[10px] px-1.5">
-                              {invoice.status?.toUpperCase() || 'UNKNOWN'}
-                            </Badge>
+                            <FinancialStatusBadge status={invoice.status} size="sm" />
                             {invoice.paid_at && (
-                              <Badge variant="outline" className="h-5 text-[10px] px-1.5">
-                                PAID
-                              </Badge>
+                              <FinancialStatusBadge status="paid" size="sm" />
                             )}
                           </div>
                         }
