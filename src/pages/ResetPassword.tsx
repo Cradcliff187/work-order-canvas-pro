@@ -196,230 +196,108 @@ const ResetPassword = () => {
   const isPasswordValid = Object.values(passwordRequirements).every(Boolean) && passwordsMatch;
 
   useEffect(() => {
-    // Check for URL error parameters FIRST before any session validation
+    let recoveryModeFlag = false;
+
+    // Check for URL error parameters first
     const checkForUrlErrors = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const searchParams = new URLSearchParams(window.location.search);
       
-      // Check hash parameters for Supabase error responses
       const error = hashParams.get('error') || searchParams.get('error');
       const errorCode = hashParams.get('error_code') || searchParams.get('error_code');
       const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
       
-      console.log('URL Error Check:', { error, errorCode, errorDescription });
-      
-      // Handle OTP expired specifically
       if (error === 'access_denied' && errorCode === 'otp_expired') {
         setResetError(categorizeError('OTP expired', 'otp_expired'));
-        return true; // Stop further processing
+        return true;
       }
       
-      // Handle other error states
       if (error) {
         setResetError(categorizeError(`${error}: ${errorDescription || 'Unknown error'}`, 'url_error'));
-        return true; // Stop further processing
+        return true;
       }
       
-      return false; // No errors found, continue with normal flow
+      return false;
     };
 
-    const extractTokensFromUrl = () => {
-      console.log('=== URL DEBUGGING START ===');
-      console.log('Full URL:', window.location.href);
-      console.log('Protocol:', window.location.protocol);
-      console.log('Host:', window.location.host);
-      console.log('Pathname:', window.location.pathname);
-      console.log('Search:', window.location.search);
-      console.log('Hash:', window.location.hash);
+    // Set up auth state listener to detect recovery mode
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, !!session);
       
-      // Check search parameters first
-      const searchParams = new URLSearchParams(window.location.search);
-      let accessToken = searchParams.get('access_token');
-      let refreshToken = searchParams.get('refresh_token');
-      let type = searchParams.get('type');
-      
-      console.log('Search params found:', { 
-        accessToken: !!accessToken, 
-        refreshToken: !!refreshToken, 
-        type,
-        accessTokenLength: accessToken?.length || 0,
-        refreshTokenLength: refreshToken?.length || 0 
-      });
-      
-      // If not found in search params, check hash fragments
-      if (!accessToken && window.location.hash) {
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        accessToken = hashParams.get('access_token');
-        refreshToken = hashParams.get('refresh_token');
-        type = hashParams.get('type');
-        
-        console.log('Hash params found:', { 
-          accessToken: !!accessToken, 
-          refreshToken: !!refreshToken, 
-          type,
-          accessTokenLength: accessToken?.length || 0,
-          refreshTokenLength: refreshToken?.length || 0 
-        });
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('PASSWORD_RECOVERY event detected');
+        sessionStorage.setItem('password_recovery_mode', 'true');
+        recoveryModeFlag = true;
       }
       
-      console.log('=== URL DEBUGGING END ===');
-      return { accessToken, refreshToken, type };
-    };
-
-    const validateRecoverySession = (session: any) => {
-      console.log('Validating recovery session:', {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        hasAccessToken: !!session?.access_token,
-        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000) : null,
-        userAud: session?.user?.aud,
-        provider: session?.user?.app_metadata?.provider
-      });
-      
-      // Check 1: Basic session validity
-      if (!session?.user || !session?.access_token) {
-        console.log('Session validation failed: Missing user or access token');
-        return false;
+      if (event === 'SIGNED_IN' && sessionStorage.getItem('password_recovery_mode')) {
+        console.log('User signed in from recovery link');
+        sessionStorage.removeItem('password_recovery_mode');
+        recoveryModeFlag = true;
       }
-      
-      // Check 2: Session is not expired
-      const isRecentSession = session.expires_at && 
-        new Date(session.expires_at * 1000) > new Date();
-      if (!isRecentSession) {
-        console.log('Session validation failed: Session expired');
-        return false;
-      }
-      
-      // Check 3: Recovery session indicators
-      const isRecoverySession = session.user.aud === 'authenticated';
-      const hasRecoveryContext = session.user.app_metadata?.provider === 'email';
-      const isConfirmedUser = session.user.email_confirmed_at !== null;
-      
-      console.log('Recovery session validation:', {
-        isRecoverySession,
-        hasRecoveryContext,
-        isConfirmedUser
-      });
-      
-      return isRecoverySession && hasRecoveryContext && isConfirmedUser;
-    };
+    });
 
-    const processUrlParameters = async () => {
-      const { accessToken, refreshToken, type } = extractTokensFromUrl();
-      
-      // Check if we have the required Supabase parameters for production flow
-      if (!accessToken || !refreshToken || (type !== 'recovery' && type !== 'signup')) {
-        console.log('Missing standard URL parameters - checking for alternative flows');
-        
-        // Check if we already have a valid authenticated session (common in preview environments)
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          console.log('Valid existing session found, proceeding with password reset');
-          // setRecoveryFlow(true); // Not needed in new auth system
-          return;
-        }
-        
-        // Check if this is a valid user accessing the reset page directly
-        // In some environments, users may be redirected here with different authentication flows
-        const currentUrl = window.location.href;
-        const hasValidContext = currentUrl.includes('reset-password') || currentUrl.includes('recovery');
-        
-        if (hasValidContext) {
-          console.log('Reset password page accessed directly - checking authentication state');
-          // Allow the flow to continue but show appropriate error if no valid auth
-          setResetError({
-            type: 'AUTH_ERROR',
-            title: 'Authentication Required',
-            message: 'Please use a valid password reset link from your email, or request a new one.',
-            canRetry: false,
-            showRequestNewLink: true,
-            showConfigHelp: false
-          });
-          return;
-        }
-        
-        // Fallback for completely invalid access
-        setResetError({
-          type: 'URL_CONFIG',
-          title: 'Invalid Password Reset Link',
-          message: 'This password reset link is invalid or has expired. Please request a new one.',
-          canRetry: false,
-          showRequestNewLink: true,
-          showConfigHelp: false
-        });
-        return;
-      }
-      
-      console.log('Valid URL parameters found, setting session...');
-      
-      // Clean up URL for security
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-
-      try {
-        // Set the session from URL parameters for recovery
-        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setResetError(categorizeError(sessionError, 'session_error'));
-          return;
-        }
-
-        // Verify this is actually a recovery session and set recovery flow
-        if (sessionData.user && sessionData.session) {
-          console.log('Recovery session established successfully from URL');
-          // setRecoveryFlow(true); // Not needed in new auth system
-        } else {
-          console.error('Session verification failed - no user or session data');
-          setResetError(categorizeError('Session verification failed', 'session_error'));
-        }
-      } catch (err) {
-        console.error('Error setting recovery session:', err);
-        setResetError(categorizeError(err, 'session_error'));
-      }
-    };
-
-    const handleRecoverySession = async () => {
-      console.log('Handling recovery session...');
-      
-      // FIRST: Check for URL errors before any session processing
+    const checkRecoverySession = async () => {
+      // First check for URL errors
       if (checkForUrlErrors()) {
-        console.log('URL error detected, stopping session processing');
-        return; // Error detected and handled, stop processing
-      }
-      
-      // Step 1: Check for existing session first
-      const { data: { session }, error: getSessionError } = await supabase.auth.getSession();
-      
-      if (getSessionError) {
-        console.error('Error getting session:', getSessionError);
-        setResetError(categorizeError(getSessionError, 'session_error'));
         return;
       }
-      
-      // Step 2: Validate if existing session is a recovery session
-      if (session?.user) {
-        const isValidRecoverySession = validateRecoverySession(session);
-        if (isValidRecoverySession) {
-          console.log('Found existing valid recovery session');
-          // setRecoveryFlow(true); // Not needed in new auth system
-          return; // Success - no need to process URL parameters
-        } else {
-          console.log('Existing session is not a valid recovery session');
-        }
+
+      // Check if we're in recovery mode from sessionStorage
+      const isRecoveryMode = sessionStorage.getItem('password_recovery_mode') === 'true';
+      if (isRecoveryMode) {
+        console.log('Recovery mode detected from sessionStorage');
+        return;
       }
+
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Step 3: Fallback to URL parameter processing
-      console.log('No existing recovery session found, checking URL parameters');
-      await processUrlParameters();
+      if (session?.user) {
+        // Check if this is a recovery session
+        // Look for recent authentication that indicates password recovery
+        const userMetadata = session.user.user_metadata;
+        const appMetadata = session.user.app_metadata;
+        
+        // Multiple indicators of a recovery session
+        const isRecoverySession = 
+          // Recent session created in last 10 minutes (typical for recovery flow)
+          (session.user.last_sign_in_at && 
+           new Date(session.user.last_sign_in_at).getTime() > Date.now() - 10 * 60 * 1000) ||
+          // Email provider and recent confirmation
+          (appMetadata?.provider === 'email' && 
+           session.user.email_confirmed_at &&
+           new Date(session.user.email_confirmed_at).getTime() > Date.now() - 10 * 60 * 1000) ||
+          // Recovery mode flag
+          recoveryModeFlag;
+        
+        if (isRecoverySession) {
+          console.log('User is in recovery mode - allowing password reset');
+          return;
+        } else {
+          // Regular logged-in user accessing reset page
+          console.log('Regular user accessing reset page - redirecting to dashboard');
+          navigate('/');
+          return;
+        }
+      } else {
+        // No session - user needs to use recovery link
+        setResetError({
+          type: 'AUTH_ERROR',
+          title: 'Authentication Required',
+          message: 'Please use the password reset link from your email to access this page.',
+          canRetry: false,
+          showRequestNewLink: true
+        });
+      }
     };
 
-    handleRecoverySession();
-  }, []);
+    checkRecoverySession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   // Countdown timer effect
   useEffect(() => {

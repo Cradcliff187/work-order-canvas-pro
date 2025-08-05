@@ -235,6 +235,17 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
         
         if (!mounted) return;
         
+        // Handle password recovery flow
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery event detected - setting recovery mode');
+          sessionStorage.setItem('password_recovery_mode', 'true');
+        }
+        
+        if (event === 'SIGNED_IN' && sessionStorage.getItem('password_recovery_mode')) {
+          console.log('User signed in from recovery link - maintaining recovery mode');
+          // Keep the recovery flag until the user actually resets their password
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -345,6 +356,11 @@ export const OrganizationAuthProvider: React.FC<{ children: React.ReactNode }> =
       const { error } = await supabase.auth.updateUser({
         password: password
       });
+
+      // Clear recovery mode flag on successful password reset
+      if (!error) {
+        sessionStorage.removeItem('password_recovery_mode');
+      }
 
       return { error };
     } catch (error) {
