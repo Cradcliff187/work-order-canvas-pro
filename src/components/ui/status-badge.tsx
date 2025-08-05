@@ -86,15 +86,27 @@ export function StatusBadge({
   }
   
   const sizeClasses = {
-    sm: 'h-5 text-[10px] px-1.5 gap-1',
-    default: 'h-6 text-xs px-2 gap-1.5',
-    lg: 'h-7 text-sm px-3 gap-2'
-  };
-  
-  const iconSizes = {
-    sm: 'h-3 w-3',
-    default: 'h-3.5 w-3.5',
-    lg: 'h-4 w-4'
+    sm: {
+      text: 'text-xs',
+      padding: 'px-2 py-1',
+      icon: 'h-3 w-3',
+      height: 'h-6',
+      minWidth: 'min-w-[80px]'
+    },
+    default: {
+      text: 'text-xs',
+      padding: 'px-3 py-1.5',
+      icon: 'h-4 w-4',
+      height: 'h-7',
+      minWidth: 'min-w-[100px]'
+    },
+    lg: {
+      text: 'text-sm',
+      padding: 'px-4 py-2',
+      icon: 'h-5 w-5',
+      height: 'h-10',
+      minWidth: 'min-w-[120px]'
+    }
   };
   
   const Icon = showIcon ? iconMap[status] : null;
@@ -103,14 +115,16 @@ export function StatusBadge({
     <Badge
       variant={variant}
       className={cn(
-        'inline-flex items-center font-medium rounded-md border smooth-transition-colors hover:scale-105',
-        sizeClasses[size],
+        'inline-flex items-center justify-center font-medium rounded-md border transition-colors text-center',
+        sizeClasses[size].padding,
+        sizeClasses[size].height,
+        sizeClasses[size].minWidth,
         config.className,
         variant === 'outline' && 'bg-transparent',
         className
       )}
     >
-      {Icon && <Icon className={iconSizes[size]} />}
+      {Icon && <Icon className={sizeClasses[size].icon} />}
       <span>{config.label}</span>
     </Badge>
   );
