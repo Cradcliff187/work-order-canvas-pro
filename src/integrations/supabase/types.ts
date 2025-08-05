@@ -1497,7 +1497,7 @@ export type Database = {
       }
       check_assignment_completion_status_enhanced: {
         Args: { work_order_id: string }
-        Returns: boolean
+        Returns: Json
       }
       check_email_queue_health: {
         Args: Record<PropertyKey, never>
