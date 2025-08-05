@@ -41,41 +41,22 @@ export const useInvoiceMutations = () => {
 
   const approveInvoice = useMutation({
     mutationFn: async ({ invoiceId, notes }: ApproveInvoiceData) => {
-      // Add timeout wrapper
-      return Promise.race([
-        performInvoiceApproval({ invoiceId, notes }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Invoice approval timed out after 20 seconds')), 20000)
-        )
-      ]);
+      return performInvoiceApproval({ invoiceId, notes });
     },
     onSuccess: () => {
-      // Staggered cache invalidation
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      }, 50);
-      
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['invoice'] });
-      }, 100);
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice'] });
       
       handleSuccess(
         'Invoice Approved',
-        'The invoice has been successfully approved and the subcontractor has been notified.'
+        'The invoice has been successfully approved.'
       );
     },
     onError: (error) => {
       console.error('Invoice approval error:', error);
       handleError(error, 'Failed to approve invoice.');
     },
-    retry: (failureCount, error) => {
-      // Don't retry timeout errors
-      if (error?.message?.includes('timed out')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: 1000,
+    retry: 2,
   });
 
   // Extracted approval logic
@@ -97,41 +78,22 @@ export const useInvoiceMutations = () => {
 
   const rejectInvoice = useMutation({
     mutationFn: async ({ invoiceId, notes }: RejectInvoiceData) => {
-      // Add timeout wrapper
-      return Promise.race([
-        performInvoiceRejection({ invoiceId, notes }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Invoice rejection timed out after 20 seconds')), 20000)
-        )
-      ]);
+      return performInvoiceRejection({ invoiceId, notes });
     },
     onSuccess: () => {
-      // Staggered cache invalidation
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      }, 50);
-      
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['invoice'] });
-      }, 100);
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice'] });
       
       handleSuccess(
         'Invoice Rejected',
-        'The invoice has been rejected and the subcontractor has been notified.'
+        'The invoice has been rejected.'
       );
     },
     onError: (error) => {
       console.error('Invoice rejection error:', error);
       handleError(error, 'Failed to reject invoice.');
     },
-    retry: (failureCount, error) => {
-      // Don't retry timeout errors
-      if (error?.message?.includes('timed out')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: 1000,
+    retry: 2,
   });
 
   // Extracted rejection logic

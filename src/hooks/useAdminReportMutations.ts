@@ -16,27 +16,12 @@ export function useAdminReportMutations() {
       status: 'approved' | 'rejected'; 
       reviewNotes?: string;
     }) => {
-      // Add timeout wrapper for the entire operation
-      return Promise.race([
-        performReportReview({ reportId, status, reviewNotes }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Operation timed out after 25 seconds')), 25000)
-        )
-      ]);
+      return performReportReview({ reportId, status, reviewNotes });
     },
     onSuccess: (data, variables) => {
-      // Staggered query invalidation to prevent race conditions
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
-      }, 50);
-      
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['admin-report-detail'] });
-      }, 100);
-      
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['work-orders'] });
-      }, 150);
+      queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-report-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       
       toast({ 
         title: `Report ${variables.status}`, 
@@ -45,7 +30,7 @@ export function useAdminReportMutations() {
     },
     onError: (error: any) => {
       console.error('Report review mutation error:', error);
-      const errorMessage = error?.message || 'Unknown error occurred while reviewing report';
+      const errorMessage = error?.message || 'Failed to review report';
       
       toast({ 
         title: 'Error reviewing report', 
@@ -53,17 +38,9 @@ export function useAdminReportMutations() {
         variant: 'destructive' 
       });
     },
-    retry: (failureCount, error) => {
-      // Don't retry timeout errors or user not found errors
-      if (error?.message?.includes('timed out') || error?.message?.includes('User not found')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: 1000,
+    retry: 2,
   });
 
-  // Extracted mutation logic for better error handling and testability
   const performReportReview = async ({ 
     reportId, 
     status, 
@@ -73,10 +50,9 @@ export function useAdminReportMutations() {
     status: 'approved' | 'rejected'; 
     reviewNotes?: string;
   }) => {
-    // Get current user with better error handling
     const { data: userResponse, error: userError } = await supabase.auth.getUser();
     if (userError || !userResponse.user) {
-      throw new Error('Authentication failed. Please refresh and try again.');
+      throw new Error('Authentication failed');
     }
 
     const { data: currentUser, error: profileError } = await supabase
@@ -85,26 +61,28 @@ export function useAdminReportMutations() {
       .eq('user_id', userResponse.user.id)
       .single();
 
-    if (profileError || !currentUser) {
-      throw new Error('User profile not found. Please contact support.');
+    if (profileError || !currentUser?.id) {
+      throw new Error('User profile not found');
     }
 
-    // Perform manual report review operations
     return performManualReportReview({ reportId, status, reviewNotes, currentUser });
   };
 
-  // Fallback manual operations
   const performManualReportReview = async ({ 
     reportId, 
     status, 
     reviewNotes, 
     currentUser 
   }: any) => {
+    if (!currentUser?.id) {
+      throw new Error('Invalid user ID');
+    }
+
     const { data, error } = await supabase
       .from('work_order_reports')
       .update({
         status,
-        review_notes: reviewNotes,
+        review_notes: reviewNotes || null,
         reviewed_by_user_id: currentUser.id,
         reviewed_at: new Date().toISOString()
       })
@@ -117,20 +95,14 @@ export function useAdminReportMutations() {
 
     if (error) throw error;
 
-    // Update work order status if report is approved
     if (status === 'approved' && data.work_orders) {
-      const { error: workOrderError } = await supabase
+      await supabase
         .from('work_orders')
         .update({ 
           status: 'completed',
           date_completed: new Date().toISOString()
         })
         .eq('id', data.work_orders.id);
-
-      if (workOrderError) {
-        console.error('Failed to update work order status:', workOrderError);
-        // Don't throw here - the report review succeeded
-      }
     }
 
     return data;
@@ -146,19 +118,22 @@ export function useAdminReportMutations() {
       status: 'approved' | 'rejected'; 
       reviewNotes?: string;
     }) => {
+      const { data: userResponse } = await supabase.auth.getUser();
+      if (!userResponse.user) throw new Error('Not authenticated');
+
       const { data: currentUser } = await supabase
         .from('profiles')
         .select('id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id!)
+        .eq('user_id', userResponse.user.id)
         .single();
 
-      if (!currentUser) throw new Error('User not found');
+      if (!currentUser?.id) throw new Error('User profile not found');
 
       const { data, error } = await supabase
         .from('work_order_reports')
         .update({
           status,
-          review_notes: reviewNotes,
+          review_notes: reviewNotes || null,
           reviewed_by_user_id: currentUser.id,
           reviewed_at: new Date().toISOString()
         })
@@ -171,7 +146,6 @@ export function useAdminReportMutations() {
 
       if (error) throw error;
 
-      // Update work orders to completed if reports are approved
       if (status === 'approved' && data) {
         const workOrderIds = data.map(report => report.work_order_id);
         await supabase

@@ -77,50 +77,23 @@ export default function AdminApprovals() {
   const handleApprove = async (item: any) => {
     setLoadingItems(prev => new Set(prev).add(item.id));
     
-    // Create a timeout to prevent permanent loading states
-    const timeoutId = setTimeout(() => {
-      setLoadingItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(item.id);
-        return newSet;
-      });
-      toast({
-        title: "Operation timed out",
-        description: "The approval process took too long. Please check if it completed and try again if needed.",
-        variant: "destructive",
-      });
-    }, 30000); // 30 second timeout
-    
     try {
-      let result;
       if (item.type === 'report') {
-        result = await reviewReport.mutateAsync({ 
+        await reviewReport.mutateAsync({ 
           reportId: item.id, 
           status: 'approved' 
         });
       } else {
-        result = await approveInvoice.mutateAsync({ 
+        await approveInvoice.mutateAsync({ 
           invoiceId: item.id 
         });
       }
       
-      // Clear timeout since operation completed
-      clearTimeout(timeoutId);
-      
-      // Staggered cache invalidation to prevent race conditions
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
-      }, 100);
-      
-      toast({
-        title: "Item approved",
-        description: `${item.title} has been approved successfully.`,
-      });
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
     } catch (error: any) {
-      clearTimeout(timeoutId);
       console.error('Approval error:', error);
       
-      const errorMessage = error?.message || "Failed to approve item. Please try again.";
+      const errorMessage = error?.message || "Failed to approve item";
       toast({
         title: "Approval failed",
         description: errorMessage,
@@ -138,52 +111,25 @@ export default function AdminApprovals() {
   const handleReject = async (item: any) => {
     setLoadingItems(prev => new Set(prev).add(item.id));
     
-    // Create a timeout to prevent permanent loading states
-    const timeoutId = setTimeout(() => {
-      setLoadingItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(item.id);
-        return newSet;
-      });
-      toast({
-        title: "Operation timed out",
-        description: "The rejection process took too long. Please check if it completed and try again if needed.",
-        variant: "destructive",
-      });
-    }, 30000); // 30 second timeout
-    
     try {
-      let result;
       if (item.type === 'report') {
-        result = await reviewReport.mutateAsync({ 
+        await reviewReport.mutateAsync({ 
           reportId: item.id, 
           status: 'rejected',
           reviewNotes: 'Rejected from approval center'
         });
       } else {
-        result = await rejectInvoice.mutateAsync({ 
+        await rejectInvoice.mutateAsync({ 
           invoiceId: item.id,
           notes: 'Rejected from approval center'
         });
       }
       
-      // Clear timeout since operation completed
-      clearTimeout(timeoutId);
-      
-      // Staggered cache invalidation to prevent race conditions
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
-      }, 100);
-      
-      toast({
-        title: "Item rejected",
-        description: `${item.title} has been rejected.`,
-      });
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
     } catch (error: any) {
-      clearTimeout(timeoutId);
       console.error('Rejection error:', error);
       
-      const errorMessage = error?.message || "Failed to reject item. Please try again.";
+      const errorMessage = error?.message || "Failed to reject item";
       toast({
         title: "Rejection failed",
         description: errorMessage,
