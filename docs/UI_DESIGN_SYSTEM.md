@@ -7,12 +7,13 @@ This document defines the complete UI design system for WorkOrderPro, a construc
 1. [Brand & Color System](#brand--color-system)
 2. [Typography System](#typography-system)
 3. [Component Standards](#component-standards)
-4. [Layout & Grid System](#layout--grid-system)
-5. [Icon Usage Guidelines](#icon-usage-guidelines)
-6. [Interactive States & Animations](#interactive-states--animations)
-7. [Mobile Design Patterns](#mobile-design-patterns)
-8. [Accessibility Standards](#accessibility-standards)
-9. [Implementation Guidelines](#implementation-guidelines)
+4. [Status Badge System](#status-badge-system)
+5. [Layout & Grid System](#layout--grid-system)
+6. [Icon Usage Guidelines](#icon-usage-guidelines)
+7. [Interactive States & Animations](#interactive-states--animations)
+8. [Mobile Design Patterns](#mobile-design-patterns)
+9. [Accessibility Standards](#accessibility-standards)
+10. [Implementation Guidelines](#implementation-guidelines)
 
 ## Brand & Color System
 
@@ -199,6 +200,97 @@ This palette maintains familiarity while elevating the overall professional appe
 - Error messages linked to fields via `aria-describedby`
 - Success states with checkmark icons
 - Loading states with `aria-busy`
+
+## Status Badge System
+
+### Design Philosophy
+
+Status badges provide **instant visual communication** across the platform. Each color has specific meaning that remains consistent in every context:
+
+- **Blue** - New, pending, or informational states
+- **Amber** - Assigned, attention needed, or warning states  
+- **Orange** - Active, in-progress states
+- **Green** - Completed, approved, or success states
+- **Red** - Cancelled, rejected, or error states
+- **Purple** - Special requests or unique states
+- **Gray** - Inactive, pending, or neutral states
+
+### Badge Implementation
+
+All status badges use the `StatusBadge` component to ensure consistency:
+
+```tsx
+// Basic usage
+<StatusBadge type="workOrder" status="assigned" />
+
+// With options
+<StatusBadge 
+  type="workOrder" 
+  status="in_progress" 
+  showIcon 
+  size="lg" 
+/>
+
+// Convenience components
+<WorkOrderStatusBadge status="completed" />
+<FinancialStatusBadge status="paid" showIcon />
+```
+
+### Status Color Mappings
+
+**Work Order Statuses**
+- `received` - Blue (New work order)
+- `assigned` - Amber (Awaiting action)
+- `estimate_needed` - Purple (Special requirement)
+- `estimate_approved` - Teal (Ready to proceed)
+- `in_progress` - Orange (Active work)
+- `completed` - Green (Work done)
+- `cancelled` - Red (Stopped)
+
+**Financial Statuses**
+- `pending` - Gray (No invoice yet)
+- `partially_invoiced` - Yellow (Partial billing)
+- `fully_invoiced` - Blue (Complete billing)
+- `approved_for_payment` - Teal (Ready to pay)
+- `paid` - Green (Transaction complete)
+- `dispute` - Red (Issue to resolve)
+
+**Priority Levels**
+- `low` - Gray
+- `medium` - Blue
+- `high` - Orange
+- `urgent` - Red
+
+### Badge Anatomy
+
+```
+┌─────────────────────────┐
+│ [Icon] Status Label     │ <- Font: medium, size varies
+└─────────────────────────┘
+   └─ Background color with matching border
+   └─ Hover state darkens background
+   └─ Consistent padding and height
+```
+
+### Usage Guidelines
+
+1. **Always use the StatusBadge component** - Never create custom badge styles
+2. **Icon usage** - Include icons for better scannability in data tables
+3. **Size variants**:
+   - `sm` - Compact tables, mobile views
+   - `default` - Standard tables, forms
+   - `lg` - Featured status, detail pages
+4. **Maintain meaning** - Never repurpose colors for different meanings
+
+### 🎯 What This Achieves
+
+1. **100% Consistency** - Same badge everywhere = instant recognition
+2. **Better Visibility** - Stronger colors that work with your enhanced blue theme
+3. **Single Source of Truth** - One configuration controls all badges
+4. **Easy Maintenance** - Change once, updates everywhere
+5. **TypeScript Safety** - Can't use wrong status values
+
+The badges will now be a **unified visual language** that partners can learn once and recognize instantly across all screens.
 
 ## Layout & Grid System
 
