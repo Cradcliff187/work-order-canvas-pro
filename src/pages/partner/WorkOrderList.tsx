@@ -377,9 +377,9 @@ const WorkOrderList = () => {
                 detailContent={
                   selectedWorkOrder && (
                     <WorkOrderDetailPanel
-                      workOrder={selectedWorkOrder}
-                      onViewFull={() => navigate(`/partner/work-orders/${selectedWorkOrderId}`)}
-                      showActionButtons={false}
+                       workOrder={selectedWorkOrder}
+                       onViewFull={() => navigate(`/partner/work-orders/${selectedWorkOrderId}`)}
+                       showActionButtons={true}
                     />
                   )
                 }
