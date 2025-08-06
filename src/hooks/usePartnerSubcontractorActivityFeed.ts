@@ -111,9 +111,11 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
         if (!workOrder) return;
 
         const isUnread = (unreadMap.get(message.work_order_id) || 0) > 0;
-        const senderName = message.profiles 
-          ? `${message.profiles.first_name} ${message.profiles.last_name}`
-          : 'Unknown User';
+        const senderName = role === 'partner' 
+          ? 'Team member'
+          : (message.profiles 
+              ? `${message.profiles.first_name} ${message.profiles.last_name}`
+              : 'Unknown User');
 
         activities.push({
           id: `message-${message.id}`,
@@ -159,9 +161,11 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
         const newStatus = typeof change.new_values === 'object' && change.new_values && 'status' in change.new_values ? String(change.new_values.status) : null;
         
         if (oldStatus && newStatus && oldStatus !== newStatus) {
-          const changerName = change.profiles 
-            ? `${(change.profiles as any).first_name} ${(change.profiles as any).last_name}`
-            : 'System';
+          const changerName = role === 'partner'
+            ? 'System'
+            : (change.profiles 
+                ? `${(change.profiles as any).first_name} ${(change.profiles as any).last_name}`
+                : 'System');
 
           activities.push({
             id: `status-${change.id}`,
@@ -321,8 +325,10 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
               work_order_title: workOrder.title,
               location: `${workOrder.store_location}, ${workOrder.city}`,
               timestamp: report.reviewed_at || report.submitted_at,
-              title: 'Report approved',
-              description: `${submitterName} had their report approved`,
+               title: 'Report approved',
+               description: role === 'partner' 
+                 ? 'AKC has a report for this job that is now completed'
+                 : `${submitterName} had their report approved`,
               actionUrl: `/${role}/work-orders/${report.work_order_id}`
             });
           }
