@@ -13,16 +13,17 @@ import { useAutoOrganization } from '@/hooks/useAutoOrganization';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 
 interface WorkOrderFiltersProps {
   filters: {
     status?: string[];
-    trade_id?: string;
+    trade_id?: string[];
     organization_id?: string;
     search?: string;
     date_from?: string;
     date_to?: string;
-    location_filter?: string;
+    location_filter?: string[];
   };
   onFiltersChange: (filters: any) => void;
   onClearFilters: () => void;
@@ -34,6 +35,8 @@ const statusOptions = [
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
+  { value: 'estimate_needed', label: 'Estimate Needed' },
+  { value: 'estimate_approved', label: 'Estimate Approved' },
 ];
 
 export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: WorkOrderFiltersProps) {
@@ -75,15 +78,6 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
   const hasActiveFilters = Object.values(filters).some(value => 
     Array.isArray(value) ? value.length > 0 : Boolean(value)
   );
-
-  const handleStatusToggle = (status: string) => {
-    const currentStatuses = filters.status || [];
-    const newStatuses = currentStatuses.includes(status)
-      ? currentStatuses.filter(s => s !== status)
-      : [...currentStatuses, status];
-    
-    onFiltersChange({ ...filters, status: newStatuses });
-  };
 
   const handleDateFromChange = (date: Date | undefined) => {
     setDateFrom(date);
@@ -162,50 +156,32 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
         {shouldShowSelector && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Location</label>
-            <Select
-              value={filters.location_filter || 'all-locations'}
-              onValueChange={(value) => onFiltersChange({ 
+            <MultiSelectFilter
+              options={Array.isArray(locations) ? locations.map(location => ({ value: location, label: location })) : []}
+              selectedValues={filters.location_filter || []}
+              onSelectionChange={(values) => onFiltersChange({ 
                 ...filters, 
-                location_filter: value === 'all-locations' ? undefined : value 
+                location_filter: values.length > 0 ? values : undefined 
               })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All Locations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all-locations">All Locations</SelectItem>
-                {Array.isArray(locations) && locations.map((location) => (
-                  <SelectItem key={location} value={location}>
-                    {location}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="All Locations"
+              searchPlaceholder="Search locations..."
+            />
           </div>
         )}
 
         {/* Trade */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Trade</label>
-          <Select
-            value={filters.trade_id || 'all-trades'}
-            onValueChange={(value) => onFiltersChange({ 
+          <MultiSelectFilter
+            options={Array.isArray(trades) ? trades.map(trade => ({ value: trade.id || `trade-${trade.name}`, label: trade.name })) : []}
+            selectedValues={filters.trade_id || []}
+            onSelectionChange={(values) => onFiltersChange({ 
               ...filters, 
-              trade_id: value === 'all-trades' ? undefined : value 
+              trade_id: values.length > 0 ? values : undefined 
             })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Trades" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-trades">All Trades</SelectItem>
-              {Array.isArray(trades) && trades.map((trade) => (
-                <SelectItem key={trade.id} value={trade.id || `trade-${trade.name}`}>
-                  {trade.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="All Trades"
+            searchPlaceholder="Search trades..."
+          />
         </div>
 
         {/* Date Range */}
@@ -266,21 +242,17 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
       {/* Status Filter */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Status</label>
-        <div className="flex flex-wrap gap-2">
-          {statusOptions.map((status) => {
-            const isSelected = filters.status?.includes(status.value);
-            return (
-              <Badge
-                key={status.value}
-                variant={isSelected ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => handleStatusToggle(status.value)}
-              >
-                {status.label}
-              </Badge>
-            );
+        <MultiSelectFilter
+          options={statusOptions}
+          selectedValues={filters.status || []}
+          onSelectionChange={(values) => onFiltersChange({ 
+            ...filters, 
+            status: values.length > 0 ? values : undefined 
           })}
-        </div>
+          placeholder="All Statuses"
+          searchPlaceholder="Search statuses..."
+          className="min-w-[200px]"
+        />
       </div>
     </div>
   );

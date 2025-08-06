@@ -103,12 +103,12 @@ export interface WorkOrder {
 
 interface WorkOrderFilters {
   status?: string[];
-  trade_id?: string;
+  trade_id?: string[];
   organization_id?: string;
   search?: string;
   date_from?: string;
   date_to?: string;
-  location_filter?: string;
+  location_filter?: string[];
 }
 
 export function useWorkOrders(
@@ -191,8 +191,8 @@ export function useWorkOrders(
         if (filters.status && filters.status.length > 0) {
           query = query.in('status', filters.status as ('received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed' | 'estimate_approved')[]);
         }
-        if (filters.trade_id) {
-          query = query.eq('trade_id', filters.trade_id);
+        if (filters.trade_id && filters.trade_id.length > 0) {
+          query = query.in('trade_id', filters.trade_id);
         }
         if (filters.organization_id) {
           query = query.eq('organization_id', filters.organization_id);
@@ -204,8 +204,9 @@ export function useWorkOrders(
             `store_location.ilike.%${filters.search}%`
           );
         }
-        if (filters.location_filter) {
-          query = query.ilike('store_location', `%${filters.location_filter}%`);
+        if (filters.location_filter && filters.location_filter.length > 0) {
+          const locationConditions = filters.location_filter.map(loc => `store_location.ilike.%${loc}%`).join(',');
+          query = query.or(locationConditions);
         }
         if (filters.date_from) {
           query = query.gte('created_at', filters.date_from);

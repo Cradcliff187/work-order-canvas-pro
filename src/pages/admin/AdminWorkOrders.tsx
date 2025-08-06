@@ -43,11 +43,12 @@ import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 
 interface WorkOrderFiltersState {
   status?: string[];
-  trade_id?: string;
+  trade_id?: string[];
   organization_id?: string;
   search?: string;
   date_from?: string;
   date_to?: string;
+  location_filter?: string[];
 }
 
 export default function AdminWorkOrders() {
