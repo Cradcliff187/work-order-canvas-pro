@@ -98,7 +98,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
       console.log('File upload progress:', progressArray);
     },
     onComplete: (files) => {
-      console.log('Files uploaded successfully:', files);
+      // Success toast is handled by useFileUpload hook now - remove redundant toast
     },
     onError: (error) => {
       console.error('File upload failed:', error);
@@ -504,23 +504,23 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
         }
       }
 
-      // Success message
+      // Combined success message
       const hasFiles = selectedFiles.length > 0;
       const uploadedCount = uploadResults.length;
       
-      let successMessage = "The work order has been successfully created.";
-      if (hasFiles) {
-        if (uploadedCount === selectedFiles.length) {
-          successMessage += ` All ${uploadedCount} files were uploaded successfully.`;
-        } else if (uploadedCount > 0) {
-          successMessage += ` ${uploadedCount} of ${selectedFiles.length} files were uploaded successfully.`;
-        } else {
-          successMessage += " However, file uploads failed.";
-        }
+      let successMessage;
+      if (hasFiles && uploadedCount === selectedFiles.length) {
+        successMessage = `Work order created with ${uploadedCount} file${uploadedCount > 1 ? 's' : ''} attached`;
+      } else if (hasFiles && uploadedCount > 0) {
+        successMessage = `Work order created with ${uploadedCount} of ${selectedFiles.length} files attached`;
+      } else if (hasFiles && uploadedCount === 0) {
+        successMessage = "Work order created successfully (file upload failed)";
+      } else {
+        successMessage = "Work order created successfully";
       }
       
       toast({
-        title: "Work order created",
+        title: "Work Order Created",
         description: successMessage,
       });
 

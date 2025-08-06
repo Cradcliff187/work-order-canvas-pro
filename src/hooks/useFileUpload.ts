@@ -578,13 +578,20 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       const errorMessage = errors.join(', ');
       onError?.(errorMessage);
       toast({
-        title: "Upload Error",
+        title: "File Validation Failed",
         description: errorMessage,
         variant: "destructive",
       });
       throw new Error(errorMessage);
     }
+
     setIsUploading(true);
+    
+    // Show upload start notification
+    toast({
+      title: `Uploading ${valid.length} file${valid.length > 1 ? 's' : ''}...`,
+      description: "Please wait while your files are uploaded.",
+    });
     
     // Initialize progress tracking
     const initialProgress: UploadProgress[] = valid.map((file, index) => ({
@@ -628,7 +635,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
           
           toast({
             title: "Upload Failed",
-            description: `${file.name}: ${errorMessage}`,
+            description: `Failed to upload ${file.name}: ${errorMessage}`,
             variant: "destructive",
           });
         }
@@ -638,9 +645,27 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       onComplete?.(results);
       
       if (results.length > 0) {
+        // Context-aware success message
+        const getContextMessage = () => {
+          switch (context) {
+            case 'workOrder':
+              return `${results.length} file${results.length > 1 ? 's' : ''} uploaded to work order`;
+            case 'report':
+              return `${results.length} file${results.length > 1 ? 's' : ''} attached to report`;
+            case 'invoice':
+              return `${results.length} file${results.length > 1 ? 's' : ''} uploaded to invoice`;
+            case 'receipt':
+              return `${results.length} receipt${results.length > 1 ? 's' : ''} uploaded successfully`;
+            case 'avatar':
+              return "Profile picture updated successfully";
+            default:
+              return `${results.length} file${results.length > 1 ? 's' : ''} uploaded successfully`;
+          }
+        };
+
         toast({
           title: "Upload Complete",
-          description: `Successfully uploaded ${results.length} file(s)`,
+          description: getContextMessage(),
         });
       }
 

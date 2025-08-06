@@ -150,11 +150,8 @@ export default function SubmitWorkOrder() {
   }, []);
 
   const handleUploadComplete = useCallback((files: any[]) => {
-    toast({
-      title: "Files uploaded successfully",
-      description: `${files.length} file(s) uploaded.`,
-    });
-  }, [toast]);
+    // Success toast is handled by useFileUpload hook now - remove redundant toast
+  }, []);
 
   const handleUploadError = useCallback((error: string) => {
     toast({
@@ -639,13 +636,13 @@ export default function SubmitWorkOrder() {
         }
       }
 
-      // Success message with file count
+      // Combined success message
       const successDescription = filesUploaded > 0 
-        ? `Work order created with ${filesUploaded} files uploaded`
+        ? `Work order created with ${filesUploaded} file${filesUploaded > 1 ? 's' : ''} attached`
         : "Work order created successfully";
 
       toast({
-        title: "Success",
+        title: "Work Order Created",
         description: successDescription,
       });
       

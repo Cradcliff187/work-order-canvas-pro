@@ -118,10 +118,15 @@ export function useAdminReportSubmission() {
 
       return report;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      const photoCount = variables.photos?.length || 0;
+      const description = photoCount > 0 
+        ? `Report submitted on behalf of subcontractor with ${photoCount} attachment${photoCount > 1 ? 's' : ''}`
+        : "Report submitted successfully on behalf of subcontractor";
+
       toast({
         title: "Report Submitted",
-        description: "Work report has been submitted successfully on behalf of the subcontractor.",
+        description,
       });
       queryClient.invalidateQueries({ queryKey: ["admin-work-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-reports"] });

@@ -86,10 +86,15 @@ export function useWorkOrderReportSubmission() {
 
       return report;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      const photoCount = variables.photos?.length || 0;
+      const description = photoCount > 0 
+        ? `Report submitted with ${photoCount} attachment${photoCount > 1 ? 's' : ''}`
+        : 'Report submitted successfully';
+
       toast({
         title: 'Report Submitted',
-        description: 'Your work report has been submitted successfully.',
+        description,
       });
       
       // Invalidate relevant queries
