@@ -453,6 +453,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          created_by_admin_id: string | null
           external_invoice_number: string | null
           id: string
           internal_invoice_number: string
@@ -470,6 +471,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          created_by_admin_id?: string | null
           external_invoice_number?: string | null
           id?: string
           internal_invoice_number: string
@@ -487,6 +489,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          created_by_admin_id?: string | null
           external_invoice_number?: string | null
           id?: string
           internal_invoice_number?: string
@@ -503,6 +506,13 @@ export type Database = {
           {
             foreignKeyName: "invoices_approved_by_fkey"
             columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_admin_id_fkey"
+            columns: ["created_by_admin_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
