@@ -226,7 +226,7 @@ export default function WorkOrderDetail() {
                     `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
                     'Unknown',
                   uploader_email: '',
-                  is_internal: attachment.is_internal || false,
+                  // Remove is_internal since partners should never see internal files
                   uploader_organization_type: uploaderOrgType
                 };
               })}

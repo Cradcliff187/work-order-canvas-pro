@@ -255,7 +255,7 @@ export function AttachmentTable({
                           Internal
                         </Badge>
                       )}
-                      {attachment.uploader_organization_type && (
+                       {attachment.uploader_organization_type && (
                         <Badge 
                           variant={
                             attachment.uploader_organization_type === 'partner' ? 'default' :
@@ -266,7 +266,7 @@ export function AttachmentTable({
                         >
                           {attachment.uploader_organization_type === 'partner' ? 'Partner' :
                            attachment.uploader_organization_type === 'subcontractor' ? 'Subcontractor' :
-                           'Internal'}
+                           'AKC Staff'}
                         </Badge>
                       )}
                     </div>
