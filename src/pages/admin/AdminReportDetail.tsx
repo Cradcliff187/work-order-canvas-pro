@@ -345,11 +345,15 @@ export default function AdminReportDetail() {
                       📝 Admin-only report
                     </SelectItem>
                     {subcontractorOrganizations?.map((org) => (
-                      org.first_active_user && (
-                        <SelectItem key={org.first_active_user.id} value={org.first_active_user.id}>
-                          🏢 {org.first_active_user.full_name} ({org.name})
-                        </SelectItem>
-                      )
+                      <SelectItem 
+                        key={org.first_active_user?.id || org.id} 
+                        value={org.first_active_user?.id || "ADMIN_ONLY"}
+                        disabled={!org.first_active_user}
+                      >
+                        🏢 {org.name} {org.first_active_user 
+                          ? `(${org.active_user_count} user${org.active_user_count !== 1 ? 's' : ''})` 
+                          : '(no users)'}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
