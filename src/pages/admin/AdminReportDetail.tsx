@@ -22,7 +22,10 @@ import {
 } from 'lucide-react';
 import { useAdminReportDetail } from '@/hooks/useAdminReportDetail';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
+import { useSubcontractorAssignment } from '@/hooks/useSubcontractorAssignment';
+import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ReportFileManager } from '@/components/ReportFileManager';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
@@ -40,6 +43,8 @@ export default function AdminReportDetail() {
   
   const { data: report, isLoading, error } = useAdminReportDetail(isValidId ? id! : '');
   const { reviewReport, deleteReport } = useAdminReportMutations();
+  const { assignSubcontractor, isAssigning } = useSubcontractorAssignment();
+  const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
 
 
   const handleReview = (status: 'approved' | 'rejected') => {
@@ -314,13 +319,52 @@ export default function AdminReportDetail() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                Subcontractor
+                Subcontractor Assignment
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {subcontractor && (
-                <>
+            <CardContent className="space-y-4">
+              {/* Quick Assignment Dropdown */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Change Assignment</label>
+                <Select
+                  value={report.subcontractor_user_id || "ADMIN_ONLY"}
+                  onValueChange={(value) => {
+                    const newSubcontractorId = value === "ADMIN_ONLY" ? null : value;
+                    assignSubcontractor.mutate({
+                      reportId: report.id,
+                      subcontractorUserId: newSubcontractorId
+                    });
+                  }}
+                  disabled={isAssigning}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ADMIN_ONLY">
+                      📝 Admin-only report
+                    </SelectItem>
+                    {subcontractorOrganizations?.map((org) => (
+                      org.first_active_user && (
+                        <SelectItem key={org.first_active_user.id} value={org.first_active_user.id}>
+                          🏢 {org.first_active_user.full_name} ({org.name})
+                        </SelectItem>
+                      )
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {isAssigning ? "Updating..." : "Change who this report is attributed to"}
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Current Assignment Display */}
+              {subcontractor ? (
+                <div className="space-y-3">
                   <div>
+                    <label className="text-sm font-medium text-muted-foreground">Current Assignment</label>
                     <p className="font-medium">
                       {subcontractor.first_name} {subcontractor.last_name}
                     </p>
@@ -337,7 +381,12 @@ export default function AdminReportDetail() {
                       <p className="text-sm">{subcontractor.phone}</p>
                     </div>
                   )}
-                </>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground">Admin-only report</p>
+                  <p className="text-xs text-muted-foreground">No subcontractor assigned</p>
+                </div>
               )}
             </CardContent>
           </Card>

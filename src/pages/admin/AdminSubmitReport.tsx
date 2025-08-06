@@ -295,10 +295,10 @@ export default function AdminSubmitReport() {
 
       {/* Subcontractor Selection for Unassigned Work Orders */}
       {isUnassigned && (
-        <Alert>
+        <Alert variant="default" className="border-amber-200 bg-amber-50 text-amber-800">
           <Users className="h-4 w-4" />
           <AlertDescription>
-            This work order is not currently assigned to a subcontractor. You can optionally select a subcontractor to attribute this work to, or submit the report as admin-only.
+            <strong>Important:</strong> This work order is not assigned to a subcontractor. Please select a subcontractor organization to attribute the work to, or submit as admin-only.
           </AlertDescription>
         </Alert>
       )}
@@ -310,11 +310,14 @@ export default function AdminSubmitReport() {
           {isUnassigned && (
             <StandardFormLayout.Section 
               title="Subcontractor Assignment"
-              description="Optionally select a subcontractor to attribute this work to"
+              description="Select a subcontractor organization to attribute this work to"
+              className="border-l-4 border-amber-200 pl-4"
             >
               <StandardFormLayout.FieldGroup>
                 <div className="space-y-2">
-                  <Label htmlFor="subcontractor">Select Subcontractor Organization (Optional)</Label>
+                  <Label htmlFor="subcontractor" className="text-base font-semibold">
+                    Subcontractor Organization <span className="text-amber-600">*Recommended</span>
+                  </Label>
                   <Select
                     value={formData.selectedSubcontractorOrganization || "ADMIN_ONLY"}
                     onValueChange={(value) => setFormData(prev => ({ 
@@ -322,20 +325,22 @@ export default function AdminSubmitReport() {
                       selectedSubcontractorOrganization: value === "ADMIN_ONLY" ? null : value 
                     }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an organization or leave blank for admin-only report" />
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Choose a subcontractor organization..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ADMIN_ONLY">Admin-only report (no organization)</SelectItem>
+                      <SelectItem value="ADMIN_ONLY" className="text-muted-foreground">
+                        📝 Admin-only report (no organization)
+                      </SelectItem>
                       {subcontractorOrganizations?.map((organization) => (
                         <SelectItem key={organization.id} value={organization.id}>
-                          {organization.name} ({organization.active_user_count} employee{organization.active_user_count !== 1 ? 's' : ''})
+                          🏢 {organization.name} ({organization.active_user_count} member{organization.active_user_count !== 1 ? 's' : ''})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Choose an organization to attribute this work to, or leave blank to submit as an admin-only report.
+                  <p className="text-sm font-medium text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                    💡 <strong>Tip:</strong> Selecting a subcontractor helps with accurate reporting and attribution. You can change this later if needed.
                   </p>
                 </div>
               </StandardFormLayout.FieldGroup>
