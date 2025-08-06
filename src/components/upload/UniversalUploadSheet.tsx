@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Camera, Scan, FolderOpen, Image, Clock, Loader2, Upload } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Camera, Scan, FolderOpen, Image, Clock, Loader2, Upload, CheckCircle2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -38,6 +38,7 @@ interface UniversalUploadSheetProps {
   isProcessing?: boolean;
   selectedFileCount?: number;
   buttonText?: string;
+  context?: 'work-order' | 'general' | 'invoice' | 'report';
 }
 
 export function UniversalUploadSheet({
@@ -50,10 +51,13 @@ export function UniversalUploadSheet({
   onOpenChange,
   isProcessing = false,
   selectedFileCount = 0,
-  buttonText
+  buttonText,
+  context = 'general'
 }: UniversalUploadSheetProps) {
   const isMobile = useIsMobile();
-  const [internalOpen, setInternalOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successFileCount, setSuccessFileCount] = useState(0);
   
   // Use controlled state if provided, otherwise use internal state
   const isOpen = open !== undefined ? open : internalOpen;
@@ -125,8 +129,23 @@ export function UniversalUploadSheet({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length > 0) {
+      // Add haptic feedback on mobile
+      if (isMobile && 'vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+      
+      // Show success state with animation
+      setSuccessFileCount(files.length);
+      setShowSuccess(true);
+      
+      // Call the parent handler
       onFilesSelected(files);
-      setIsOpen(false);
+      
+      // Delay closing the sheet to show success confirmation
+      setTimeout(() => {
+        setShowSuccess(false);
+        setIsOpen(false);
+      }, 300);
     }
     // Reset input value to allow selecting the same file again
     event.target.value = '';
@@ -155,27 +174,45 @@ export function UniversalUploadSheet({
         className={cn(
           "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]",
           "border-2 hover:border-primary/20",
-          isProcessing && "opacity-50 cursor-not-allowed"
+          (isProcessing || showSuccess) && "opacity-50 cursor-not-allowed"
         )}
-        onClick={() => !isProcessing && triggerFileInput(option.id)}
+        onClick={() => !isProcessing && !showSuccess && triggerFileInput(option.id)}
       >
         <CardContent className="p-4 text-center space-y-2">
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
             {isProcessing ? (
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            ) : showSuccess ? (
+              <CheckCircle2 className="w-6 h-6 text-green-600 animate-scale-in" />
             ) : (
               <option.icon className="w-6 h-6 text-primary" />
             )}
           </div>
           <div>
             <h3 className="font-medium text-sm">
-              {isProcessing ? "Processing..." : option.title}
+              {isProcessing ? "Processing..." : showSuccess ? "Selected!" : option.title}
             </h3>
-            <p className="text-xs text-muted-foreground">{option.description}</p>
+            <p className="text-xs text-muted-foreground">
+              {showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected` : option.description}
+            </p>
           </div>
         </CardContent>
       </Card>
     );
+  };
+
+  // Get context-aware description
+  const getSheetDescription = () => {
+    switch (context) {
+      case 'work-order':
+        return "Select files to attach to your work order";
+      case 'invoice':
+        return "Select invoice or receipt files to upload";
+      case 'report':
+        return "Select files to attach to your report";
+      default:
+        return "Choose how you'd like to add your files";
+    }
   };
 
   // Default trigger button if none provided
@@ -183,7 +220,7 @@ export function UniversalUploadSheet({
     <Button
       type="button"
       variant="outline"
-      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+      className="w-full h-20 border-dashed border-2 hover:border-primary/50 transition-colors duration-200"
       disabled={disabled || isProcessing}
     >
       <div className="text-center">
@@ -243,9 +280,11 @@ export function UniversalUploadSheet({
           
           <div className="p-6 space-y-6">
             <SheetHeader>
-              <SheetTitle>Upload Files</SheetTitle>
+              <SheetTitle>
+                {showSuccess ? "Files Selected!" : "Upload Files"}
+              </SheetTitle>
               <SheetDescription>
-                Choose how you'd like to add your files
+                {showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} ready for upload` : getSheetDescription()}
               </SheetDescription>
             </SheetHeader>
 

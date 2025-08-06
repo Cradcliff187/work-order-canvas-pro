@@ -812,6 +812,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
                           accept="*/*"
                           multiple={true}
                           selectedFileCount={selectedFiles.length}
+                          context="work-order"
                         />
 
                         {/* Alert explaining when files will be uploaded */}

@@ -899,6 +899,7 @@ export default function SubmitWorkOrder() {
                         accept="image/*,.pdf"
                         multiple={true}
                         selectedFileCount={selectedFiles.length}
+                        context="work-order"
                       />
 
                       {/* Alert explaining when files will be uploaded */}
