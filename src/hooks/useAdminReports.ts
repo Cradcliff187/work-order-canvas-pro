@@ -32,7 +32,15 @@ export function useAdminReports(
             first_name,
             last_name,
             email,
-            phone
+            phone,
+            organization_members(
+              role,
+              organizations(
+                id,
+                name,
+                organization_type
+              )
+            )
           ),
           subcontractor_organization:organizations!subcontractor_organization_id(
             id,
@@ -45,7 +53,16 @@ export function useAdminReports(
           ),
           submitted_by:profiles!submitted_by_user_id(
             first_name,
-            last_name
+            last_name,
+            email,
+            organization_members(
+              role,
+              organizations(
+                id,
+                name,
+                organization_type
+              )
+            )
           )
         `, { count: 'exact' });
 

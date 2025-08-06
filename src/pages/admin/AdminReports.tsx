@@ -148,15 +148,30 @@ export default function AdminReports() {
       accessorKey: 'subcontractor',
       header: 'Subcontractor',
       cell: ({ row }) => {
+        const subcontractor = row.original.subcontractor;
         const subcontractorOrg = row.original.subcontractor_organization;
         const submittedBy = row.original.submitted_by;
         
-        // For subcontractors: always show organization name, never individual names
+        // Determine what to display based on organization type
         let displayName = 'N/A';
         
+        // Check if subcontractor is from internal organization
+        const isInternalSubcontractor = subcontractor?.organization_members?.some(
+          (om: any) => om.organizations?.organization_type === 'internal'
+        );
+        
         if (subcontractorOrg) {
-          // Always show organization name for subcontractor organizations
+          // Organization-level assignment - always show organization name for subcontractors
           displayName = subcontractorOrg.name;
+        } else if (subcontractor && isInternalSubcontractor) {
+          // Individual internal user - show their name
+          displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
+        } else if (subcontractor) {
+          // Individual subcontractor from subcontractor org - this shouldn't happen but fallback to org name
+          const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+            (om: any) => om.organizations?.organization_type === 'subcontractor'
+          );
+          displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
         }
 
         return (
@@ -164,7 +179,7 @@ export default function AdminReports() {
             <div className="font-medium">
               {displayName}
             </div>
-            {submittedBy && (submittedBy as any)?.organization_members?.some((om: any) => om.organization.organization_type === 'internal') && (
+            {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
               <div className="text-xs text-orange-600 font-medium">
                 Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
               </div>
@@ -535,12 +550,29 @@ export default function AdminReports() {
                   table.getRowModel().rows.map((row) => {
                     const report = row.original;
                     const workOrder = report.work_orders;
-                    const subcontractorOrg = row.original.subcontractor_organization;
+                    const subcontractor = report.subcontractor;
+                    const subcontractorOrg = report.subcontractor_organization;
                     
-                    // For mobile cards: always show organization name for subcontractors
+                    // For mobile cards: apply same logic as table
                     let subcontractorDisplay = 'N/A';
+                    
+                    // Check if subcontractor is from internal organization
+                    const isInternalSubcontractor = subcontractor?.organization_members?.some(
+                      (om: any) => om.organizations?.organization_type === 'internal'
+                    );
+                    
                     if (subcontractorOrg) {
+                      // Organization-level assignment - always show organization name for subcontractors
                       subcontractorDisplay = subcontractorOrg.name;
+                    } else if (subcontractor && isInternalSubcontractor) {
+                      // Individual internal user - show their name
+                      subcontractorDisplay = `${subcontractor.first_name} ${subcontractor.last_name}`;
+                    } else if (subcontractor) {
+                      // Individual subcontractor from subcontractor org - fallback to org name if available
+                      const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+                        (om: any) => om.organizations?.organization_type === 'subcontractor'
+                      );
+                      subcontractorDisplay = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
                     }
                     
                     return (
