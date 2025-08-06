@@ -30,7 +30,7 @@ export const useApprovalQueue = (): ApprovalQueueData => {
     queryKey: ['approval-queue'],
     queryFn: async () => {
       try {
-        // Optimized single query with JOINs to eliminate N+1 problem
+        // Step 1: Query reports WITHOUT JOIN to avoid NULL UUID conversion errors
         const reportsQuery = supabase
           .from('work_order_reports')
           .select(`
@@ -41,17 +41,12 @@ export const useApprovalQueue = (): ApprovalQueueData => {
             work_orders!work_order_id (
               work_order_number,
               title
-            ),
-            subcontractor:profiles!subcontractor_user_id (
-              id,
-              first_name,
-              last_name
             )
           `)
           .eq('status', 'submitted')
           .order('submitted_at', { ascending: false });
 
-        // Optimized invoices query with organization JOIN
+        // Step 2: Query invoices with organization JOIN (this works fine)
         const invoicesQuery = supabase
           .from('invoices')
           .select(`
@@ -86,10 +81,41 @@ export const useApprovalQueue = (): ApprovalQueueData => {
         const reports = reportsResult.data || [];
         const invoices = invoicesResult.data || [];
 
-        // Transform reports to ApprovalItem format with proper null handling
+        // Step 3: Get unique valid subcontractor IDs to fetch profiles separately
+        const validSubcontractorIds = [
+          ...new Set(
+            reports
+              .filter(report => report.subcontractor_user_id) // Filter out NULLs
+              .map(report => report.subcontractor_user_id)
+          )
+        ];
+
+        // Step 4: Fetch subcontractor profiles separately (only if we have valid IDs)
+        let subcontractorProfiles: any[] = [];
+        if (validSubcontractorIds.length > 0) {
+          const profilesResult = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .in('id', validSubcontractorIds);
+
+          if (profilesResult.error) {
+            console.error('Profiles query error:', profilesResult.error);
+            // Don't throw - continue with empty profiles
+          } else {
+            subcontractorProfiles = profilesResult.data || [];
+          }
+        }
+
+        // Step 5: Create a lookup map for profiles
+        const profileLookup = new Map(
+          subcontractorProfiles.map(profile => [profile.id, profile])
+        );
+
+        // Step 6: Transform reports with safe profile lookup
         const reportItems: ApprovalItem[] = reports.map(report => {
-          // Safely handle subcontractor data
-          const subcontractor = report.subcontractor;
+          const profile = report.subcontractor_user_id 
+            ? profileLookup.get(report.subcontractor_user_id)
+            : null;
           
           return {
             id: report.id,
@@ -97,15 +123,15 @@ export const useApprovalQueue = (): ApprovalQueueData => {
             title: report.work_orders?.work_order_number 
               ? `${report.work_orders.work_order_number} - ${report.work_orders.title}`
               : 'Unknown Work Order',
-            submittedBy: subcontractor && subcontractor.first_name && subcontractor.last_name
-              ? `${subcontractor.first_name} ${subcontractor.last_name}` 
+            submittedBy: profile && profile.first_name && profile.last_name
+              ? `${profile.first_name} ${profile.last_name}` 
               : 'Internal Report',
             submittedAt: report.submitted_at,
             urgency: isUrgent(report.submitted_at)
           };
         });
 
-        // Transform invoices to ApprovalItem format with proper null handling
+        // Step 7: Transform invoices (this remains the same)
         const invoiceItems: ApprovalItem[] = invoices.map(invoice => ({
           id: invoice.id,
           type: 'invoice' as const,
@@ -140,7 +166,7 @@ export const useApprovalQueue = (): ApprovalQueueData => {
     },
     staleTime: 30000, // 30 seconds cache
     gcTime: 300000, // 5 minutes in memory
-    retry: 2,
+    retry: 1, // Reduced retries to prevent cascade failures
     retryDelay: 1000,
   });
 
