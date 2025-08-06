@@ -491,8 +491,8 @@ Deno.serve(async (req) => {
           .from('work_orders')
           .select(`
             *,
-            organizations!inner(name, contact_email),
-            trades!inner(name)
+            organization:organizations(name, contact_email),
+            trade:trades(name)
           `)
           .eq('id', record_id)
           .single();
@@ -562,8 +562,8 @@ Deno.serve(async (req) => {
             ...assigneeData,
             workOrderUrl,
             work_order_number: workOrder.work_order_number || 'N/A',
-            organization_name: workOrder.organizations?.name || 'N/A',
-            trade_name: workOrder.trades?.name || 'N/A',
+            organization_name: workOrder.organization?.name || 'N/A',
+            trade_name: workOrder.trade?.name || 'N/A',
             store_location: workOrder.store_location || 'Not specified',
             city: workOrder.city || '',
             state: workOrder.state || '',
