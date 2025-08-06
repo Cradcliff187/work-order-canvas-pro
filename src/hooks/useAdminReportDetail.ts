@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkOrderReport } from '@/types/reports';
@@ -19,7 +20,15 @@ export function useAdminReportDetail(reportId: string) {
             first_name,
             last_name,
             email,
-            phone
+            phone,
+            organization_members(
+              role,
+              organizations(
+                id,
+                name,
+                organization_type
+              )
+            )
           ),
           subcontractor_organization:organizations!subcontractor_organization_id(
             id,
@@ -29,6 +38,19 @@ export function useAdminReportDetail(reportId: string) {
           reviewed_by:profiles!reviewed_by_user_id(
             first_name,
             last_name
+          ),
+          submitted_by:profiles!submitted_by_user_id(
+            first_name,
+            last_name,
+            email,
+            organization_members(
+              role,
+              organizations(
+                id,
+                name,
+                organization_type
+              )
+            )
           ),
           work_order_attachments!work_order_report_id(
             id,
