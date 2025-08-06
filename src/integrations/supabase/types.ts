@@ -1869,6 +1869,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      log_attachment_access_violation: {
+        Args: { user_id: string; attachment_id: string; violation_type: string }
+        Returns: undefined
+      }
       monitor_email_queue: {
         Args: Record<PropertyKey, never>
         Returns: Json

@@ -59,6 +59,7 @@ export const PartnerReportDetail = lazy(() => import('@/pages/partner/PartnerRep
 export const SystemHealthCheck = lazy(() => import('@/pages/admin/SystemHealthCheck'));
 export const TestEmailPage = lazy(() => import('@/pages/admin/TestEmailPage'));
 export const BillingDashboard = lazy(() => import('@/pages/admin/BillingDashboard'));
+export const SecurityAudit = lazy(() => import('@/pages/admin/SecurityAudit'));
 
 // Migration Pages - REMOVED (migration complete)
 
