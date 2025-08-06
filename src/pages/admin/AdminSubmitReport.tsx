@@ -21,7 +21,7 @@ interface FormData {
   notes: string;
   hoursWorked: string;
   attachments: File[];
-  selectedSubcontractorOrganization: string | null; // For unassigned work orders
+  selectedSubcontractorOrganization: string | null; // Only used for unassigned work orders
 }
 
 export default function AdminSubmitReport() {
@@ -40,7 +40,7 @@ export default function AdminSubmitReport() {
     notes: '',
     hoursWorked: '',
     attachments: [],
-    selectedSubcontractorOrganization: null,
+    selectedSubcontractorOrganization: null, // Only relevant for unassigned orders
   });
 
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -75,7 +75,7 @@ export default function AdminSubmitReport() {
     );
   }
 
-  // Auto-detect existing assignments to simplify the flow
+  // Assignment detection logic - determines if manual selection is needed
   const hasIndividualAssignment = workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0;
   const hasOrganizationAssignment = workOrder.assigned_organization_id;
   const assignedSubcontractor = hasIndividualAssignment ? workOrder.work_order_assignments[0].profiles : null;
@@ -89,6 +89,16 @@ export default function AdminSubmitReport() {
       toast({
         title: "Missing Required Fields",
         description: "Please describe the work performed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validation for unassigned work orders - ensure they have explicit assignment choice
+    if (isCompletelyUnassigned && !formData.selectedSubcontractorOrganization) {
+      toast({
+        title: "Assignment Required",
+        description: "Please select a subcontractor organization or choose admin-only report.",
         variant: "destructive",
       });
       return;
@@ -131,24 +141,23 @@ export default function AdminSubmitReport() {
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
 
-      // Get organization/user name for toast message
-      const selectedOrg = formData.selectedSubcontractorOrganization 
-        ? subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization)
-        : null;
-      
-      const attributionName = assignedSubcontractor 
-        ? `${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
-        : assignedOrganization?.name
-        ? assignedOrganization.name
-        : selectedOrg?.name 
-        ? selectedOrg.name
-        : null;
+      // Success message based on assignment type
+      const getSuccessMessage = () => {
+        if (assignedSubcontractor) {
+          return `Report submitted for ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}.`;
+        } else if (assignedOrganization) {
+          return `Report submitted for ${assignedOrganization.name}.`;
+        } else if (formData.selectedSubcontractorOrganization) {
+          const selectedOrg = subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization);
+          return `Report submitted for ${selectedOrg?.name}.`;
+        } else {
+          return "Admin-only report submitted successfully.";
+        }
+      };
 
       toast({
         title: "Report Submitted",
-        description: attributionName 
-          ? `Report submitted successfully for ${attributionName}.`
-          : "Admin-only report submitted successfully.",
+        description: getSuccessMessage(),
       });
 
       navigate(`/admin/work-orders/${workOrderId}`);
@@ -327,27 +336,28 @@ export default function AdminSubmitReport() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <StandardFormLayout>
-          {/* Subcontractor Selection Section for Completely Unassigned Work Orders */}
+          {/* Manual Subcontractor Selection - ONLY for completely unassigned work orders */}
           {isCompletelyUnassigned && (
             <StandardFormLayout.Section 
               title="Subcontractor Assignment"
-              description="Select a subcontractor organization to attribute this work to"
+              description="This work order has no assignment. Choose attribution for the report."
               className="border-l-4 border-amber-200 pl-4"
             >
               <StandardFormLayout.FieldGroup>
                 <div className="space-y-2">
                   <Label htmlFor="subcontractor" className="text-base font-semibold">
-                    Subcontractor Organization <span className="text-amber-600">*Recommended</span>
+                    Subcontractor Organization <span className="text-red-600">*Required</span>
                   </Label>
                   <Select
-                    value={formData.selectedSubcontractorOrganization || "ADMIN_ONLY"}
+                    value={formData.selectedSubcontractorOrganization || ""}
                     onValueChange={(value) => setFormData(prev => ({ 
                       ...prev, 
                       selectedSubcontractorOrganization: value === "ADMIN_ONLY" ? null : value 
                     }))}
+                    required
                   >
                     <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Choose a subcontractor organization..." />
+                      <SelectValue placeholder="Choose attribution for this report..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ADMIN_ONLY" className="text-muted-foreground">
@@ -360,8 +370,8 @@ export default function AdminSubmitReport() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-sm font-medium text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
-                    💡 <strong>Tip:</strong> Selecting a subcontractor helps with accurate reporting and attribution. You can change this later if needed.
+                  <p className="text-sm text-muted-foreground">
+                    Select who should be credited with this work for accurate reporting and attribution.
                   </p>
                 </div>
               </StandardFormLayout.FieldGroup>

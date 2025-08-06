@@ -125,7 +125,7 @@ export function useAdminReportSubmission() {
       });
       queryClient.invalidateQueries({ queryKey: ["admin-work-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-reports"] });
-      queryClient.invalidateQueries({ queryKey: ["work-order", "detail"] });
+      queryClient.invalidateQueries({ queryKey: ["work-order-detail"] });
     },
     onError: (error) => {
       toast({
