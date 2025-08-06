@@ -99,158 +99,161 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
     });
   };
 
-  // Filter groups for mobile organization
-  const essentialFilters = (
-    <>
-      {/* Search */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Search</label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search WO#, title, or location..."
-            value={filters.search || ''}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            className="pl-10 h-10"
-          />
-        </div>
-      </div>
-
-      {/* Status Filter */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Status</label>
-        <MultiSelectFilter
-          options={statusOptions}
-          selectedValues={filters.status || []}
-          onSelectionChange={(values) => onFiltersChange({ 
-            ...filters, 
-            status: values.length > 0 ? values : undefined 
-          })}
-          placeholder="All Statuses"
-          searchPlaceholder="Search statuses..."
-          className="h-10"
+  // Helper function to render search filter
+  const renderSearchFilter = () => (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">Search</label>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <Input
+          placeholder="Search WO#, title, or location..."
+          value={filters.search || ''}
+          onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+          className="pl-10 h-10"
         />
       </div>
-    </>
+    </div>
   );
 
-  const advancedFilters = (
-    <>
-      {/* Organization - Only show for admin users */}
-      {shouldShowSelector && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Organization</label>
-          <Select
-            value={filters.organization_id || 'all-organizations'}
-            onValueChange={(value) => onFiltersChange({ 
-              ...filters, 
-              organization_id: value === 'all-organizations' ? undefined : value,
-              location_filter: undefined // Clear location filter when organization changes
-            })}
-          >
-            <SelectTrigger className="h-10">
-              <SelectValue placeholder="All Organizations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-organizations">All Organizations</SelectItem>
-              {Array.isArray(organizations) && organizations.map((org) => (
-                <SelectItem key={org.id} value={org.id || `org-${org.name}`}>
-                  {org.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+  // Helper function to render status filter
+  const renderStatusFilter = () => (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">Status</label>
+      <MultiSelectFilter
+        options={statusOptions}
+        selectedValues={filters.status || []}
+        onSelectionChange={(values) => onFiltersChange({ 
+          ...filters, 
+          status: values.length > 0 ? values : undefined 
+        })}
+        placeholder="All Statuses"
+        searchPlaceholder="Search statuses..."
+        className="h-10"
+      />
+    </div>
+  );
 
-      {/* Location Filter */}
-      {shouldShowSelector && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Location</label>
-          <MultiSelectFilter
-            options={Array.isArray(locations) ? locations.map(location => ({ value: location, label: location })) : []}
-            selectedValues={filters.location_filter || []}
-            onSelectionChange={(values) => onFiltersChange({ 
-              ...filters, 
-              location_filter: values.length > 0 ? values : undefined 
-            })}
-            placeholder="All Locations"
-            searchPlaceholder="Search locations..."
-            className="h-10"
-          />
-        </div>
-      )}
-
-      {/* Trade */}
+  // Helper function to render organization filter
+  const renderOrganizationFilter = () => (
+    shouldShowSelector ? (
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Trade</label>
+        <label className="text-sm font-medium text-foreground">Organization</label>
+        <Select
+          value={filters.organization_id || 'all-organizations'}
+          onValueChange={(value) => onFiltersChange({ 
+            ...filters, 
+            organization_id: value === 'all-organizations' ? undefined : value,
+            location_filter: undefined // Clear location filter when organization changes
+          })}
+        >
+          <SelectTrigger className="h-10">
+            <SelectValue placeholder="All Organizations" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all-organizations">All Organizations</SelectItem>
+            {Array.isArray(organizations) && organizations.map((org) => (
+              <SelectItem key={org.id} value={org.id || `org-${org.name}`}>
+                {org.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    ) : null
+  );
+
+  // Helper function to render location filter
+  const renderLocationFilter = () => (
+    shouldShowSelector ? (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Location</label>
         <MultiSelectFilter
-          options={Array.isArray(trades) ? trades.map(trade => ({ value: trade.id || `trade-${trade.name}`, label: trade.name })) : []}
-          selectedValues={filters.trade_id || []}
+          options={Array.isArray(locations) ? locations.map(location => ({ value: location, label: location })) : []}
+          selectedValues={filters.location_filter || []}
           onSelectionChange={(values) => onFiltersChange({ 
             ...filters, 
-            trade_id: values.length > 0 ? values : undefined 
+            location_filter: values.length > 0 ? values : undefined 
           })}
-          placeholder="All Trades"
-          searchPlaceholder="Search trades..."
+          placeholder="All Locations"
+          searchPlaceholder="Search locations..."
           className="h-10"
         />
       </div>
+    ) : null
+  );
 
-      {/* Date Range */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Date Range</label>
-        <div className="flex gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "flex-1 justify-start text-left font-normal h-10",
-                  !dateFrom && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateFrom ? format(dateFrom, "MMM dd") : "From"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={dateFrom}
-                onSelect={handleDateFromChange}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+  // Helper function to render trade filter
+  const renderTradeFilter = () => (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">Trade</label>
+      <MultiSelectFilter
+        options={Array.isArray(trades) ? trades.map(trade => ({ value: trade.id || `trade-${trade.name}`, label: trade.name })) : []}
+        selectedValues={filters.trade_id || []}
+        onSelectionChange={(values) => onFiltersChange({ 
+          ...filters, 
+          trade_id: values.length > 0 ? values : undefined 
+        })}
+        placeholder="All Trades"
+        searchPlaceholder="Search trades..."
+        className="h-10"
+      />
+    </div>
+  );
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "flex-1 justify-start text-left font-normal h-10",
-                  !dateTo && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateTo ? format(dateTo, "MMM dd") : "To"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={dateTo}
-                onSelect={handleDateToChange}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
+  // Helper function to render date range filter
+  const renderDateRangeFilter = () => (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">Date Range</label>
+      <div className="flex gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "flex-1 justify-start text-left font-normal h-10",
+                !dateFrom && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateFrom ? format(dateFrom, "MMM dd") : "From"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              onSelect={handleDateFromChange}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "flex-1 justify-start text-left font-normal h-10",
+                !dateTo && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateTo ? format(dateTo, "MMM dd") : "To"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              onSelect={handleDateToChange}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
       </div>
-    </>
+    </div>
   );
 
   if (isMobile) {
@@ -278,7 +281,8 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
 
         {/* Essential filters always visible */}
         <div className="grid grid-cols-1 gap-4">
-          {essentialFilters}
+          {renderSearchFilter()}
+          {renderStatusFilter()}
         </div>
 
         {/* Advanced filters collapsible */}
@@ -291,7 +295,10 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-4">
             <div className="grid grid-cols-1 gap-4">
-              {advancedFilters}
+              {renderOrganizationFilter()}
+              {renderLocationFilter()}
+              {renderTradeFilter()}
+              {renderDateRangeFilter()}
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -327,8 +334,12 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
           ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
           : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
       )}>
-        {essentialFilters}
-        {advancedFilters}
+        {renderSearchFilter()}
+        {renderStatusFilter()}
+        {renderOrganizationFilter()}
+        {renderLocationFilter()}
+        {renderTradeFilter()}
+        {renderDateRangeFilter()}
       </div>
     </div>
   );
