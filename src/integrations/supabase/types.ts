@@ -1182,6 +1182,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by_user_id: string | null
           status: Database["public"]["Enums"]["report_status"]
+          subcontractor_organization_id: string | null
           subcontractor_user_id: string | null
           submitted_at: string
           submitted_by_user_id: string | null
@@ -1198,6 +1199,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by_user_id?: string | null
           status?: Database["public"]["Enums"]["report_status"]
+          subcontractor_organization_id?: string | null
           subcontractor_user_id?: string | null
           submitted_at?: string
           submitted_by_user_id?: string | null
@@ -1214,6 +1216,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by_user_id?: string | null
           status?: Database["public"]["Enums"]["report_status"]
+          subcontractor_organization_id?: string | null
           subcontractor_user_id?: string | null
           submitted_at?: string
           submitted_by_user_id?: string | null
@@ -1226,6 +1229,13 @@ export type Database = {
             columns: ["reviewed_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_reports_subcontractor_organization_id_fkey"
+            columns: ["subcontractor_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {

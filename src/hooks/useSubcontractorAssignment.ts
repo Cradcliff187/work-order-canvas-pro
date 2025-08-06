@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface SubcontractorAssignmentData {
   reportId: string;
-  subcontractorUserId: string | null;
+  subcontractorUserId: string | null; // Can be organization ID or "ADMIN_ONLY"
 }
 
 export function useSubcontractorAssignment() {
@@ -13,34 +13,16 @@ export function useSubcontractorAssignment() {
 
   const assignSubcontractor = useMutation({
     mutationFn: async ({ reportId, subcontractorUserId }: SubcontractorAssignmentData) => {
-      // Handle organization ID vs user ID
-      let finalUserId = subcontractorUserId;
-      
-      if (subcontractorUserId && subcontractorUserId !== "ADMIN_ONLY") {
-        // Check if this is an organization ID (UUID format but not a user)
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('id')
-          .eq('id', subcontractorUserId)
-          .single();
-          
-        if (orgData) {
-          // This is an organization ID, get the first active user
-          const { data: userData } = await supabase
-            .from('organization_members')
-            .select('user_id, profiles!left(is_active)')
-            .eq('organization_id', subcontractorUserId)
-            .eq('profiles.is_active', true)
-            .limit(1)
-            .single();
-            
-          finalUserId = userData?.user_id || null;
-        }
-      }
+      // Determine if this is an organization assignment or admin-only
+      const isAdminOnly = subcontractorUserId === "ADMIN_ONLY";
+      const organizationId = isAdminOnly ? null : subcontractorUserId;
 
       const { data, error } = await supabase
         .from('work_order_reports')
-        .update({ subcontractor_user_id: finalUserId })
+        .update({ 
+          subcontractor_organization_id: organizationId,
+          subcontractor_user_id: null // Clear user assignment since we're using org-based now
+        })
         .eq('id', reportId)
         .select()
         .single();
@@ -50,10 +32,10 @@ export function useSubcontractorAssignment() {
     },
     onSuccess: (data, variables) => {
       toast({
-        title: "Subcontractor Updated",
-        description: variables.subcontractorUserId 
-          ? "Subcontractor assignment updated successfully."
-          : "Report converted to admin-only.",
+        title: "Assignment Updated",
+        description: variables.subcontractorUserId === "ADMIN_ONLY"
+          ? "Report converted to admin-only."
+          : "Organization assignment updated successfully.",
       });
 
       // Invalidate related queries

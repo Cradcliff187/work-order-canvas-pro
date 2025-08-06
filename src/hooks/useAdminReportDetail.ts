@@ -21,6 +21,11 @@ export function useAdminReportDetail(reportId: string) {
             email,
             phone
           ),
+          subcontractor_organization:organizations!subcontractor_organization_id(
+            id,
+            name,
+            initials
+          ),
           reviewed_by:profiles!reviewed_by_user_id(
             first_name,
             last_name
@@ -38,6 +43,11 @@ export function useAdminReportDetail(reportId: string) {
 
       if (error) throw error;
       return data as WorkOrderReport & {
+        subcontractor_organization: {
+          id: string;
+          name: string;
+          initials: string;
+        } | null;
         work_order_attachments: Array<{
           id: string;
           file_name: string;

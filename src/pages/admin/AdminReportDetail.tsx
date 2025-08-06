@@ -327,18 +327,23 @@ export default function AdminReportDetail() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Change Assignment</label>
                 <Select
-                  value={report.subcontractor_user_id || "ADMIN_ONLY"}
+                  value={report.subcontractor_organization_id || "ADMIN_ONLY"}
                   onValueChange={(value) => {
-                    const newSubcontractorId = value === "ADMIN_ONLY" ? null : value;
                     assignSubcontractor.mutate({
                       reportId: report.id,
-                      subcontractorUserId: newSubcontractorId
+                      subcontractorUserId: value
                     });
                   }}
                   disabled={isAssigning}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>
+                      {report.subcontractor_organization ? (
+                        `🏢 ${report.subcontractor_organization.name}`
+                      ) : (
+                        "📝 Admin-only report"
+                      )}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ADMIN_ONLY">
@@ -359,31 +364,26 @@ export default function AdminReportDetail() {
               <Separator />
 
               {/* Current Assignment Display */}
-              {subcontractor ? (
+              {report.subcontractor_organization ? (
                 <div className="space-y-3">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Current Assignment</label>
-                    <p className="font-medium">
-                      {subcontractor.first_name} {subcontractor.last_name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center">
+                        <span className="text-xs font-medium text-primary">
+                          {report.subcontractor_organization.initials}
+                        </span>
+                      </div>
+                      <span className="font-medium">
+                        {report.subcontractor_organization.name}
+                      </span>
+                    </div>
                   </div>
-                  {subcontractor.email && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Email</label>
-                      <p className="text-sm">{subcontractor.email}</p>
-                    </div>
-                  )}
-                  {subcontractor.phone && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                      <p className="text-sm">{subcontractor.phone}</p>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="text-center py-4">
                   <p className="text-sm text-muted-foreground">Admin-only report</p>
-                  <p className="text-xs text-muted-foreground">No subcontractor assigned</p>
+                  <p className="text-xs text-muted-foreground">No organization assigned</p>
                 </div>
               )}
             </CardContent>
