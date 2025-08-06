@@ -618,6 +618,7 @@ export default function SubmitWorkOrder() {
           // Upload files using the hook - it will handle both storage and database
           const uploadResults = await uploadFiles(
             selectedFiles,
+            false, // not internal
             workOrderResult.id, // work order ID
             undefined // no report ID for work order attachments
           );

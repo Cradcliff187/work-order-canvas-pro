@@ -89,7 +89,7 @@ export function ReportFileManager({
     }
 
     try {
-      await uploadFiles(selectedFiles, workOrderId, reportId);
+      await uploadFiles(selectedFiles, false, workOrderId, reportId);
     } catch (error) {
       console.error('Upload failed:', error);
     }

@@ -1,18 +1,22 @@
 import React, { useState, useCallback } from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 
 interface AttachmentUploadProps {
-  onUpload: (files: File[]) => Promise<void>;
+  onUpload: (files: File[], isInternal?: boolean) => Promise<void>;
   maxFileSize?: number; // in bytes
   maxFiles?: number;
   isUploading?: boolean;
   uploadProgress?: UploadProgress[];
   disabled?: boolean;
   className?: string;
+  showInternalToggle?: boolean; // Only show for admins/employees
 }
 
 export function AttachmentUpload({
@@ -22,10 +26,13 @@ export function AttachmentUpload({
   isUploading = false,
   uploadProgress = [],
   disabled = false,
-  className
+  className,
+  showInternalToggle = false
 }: AttachmentUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [hasFilesToUpload, setHasFilesToUpload] = useState(false);
+  const [isInternal, setIsInternal] = useState(false);
+  const { profile: userProfile } = useUserProfile();
 
   // Convert UploadProgress[] to the format expected by UnifiedFileUpload
   const formattedProgress = uploadProgress.reduce((acc, progress) => {
@@ -43,11 +50,12 @@ export function AttachmentUpload({
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length > 0) {
-      await onUpload(selectedFiles);
+      await onUpload(selectedFiles, isInternal);
       setSelectedFiles([]);
       setHasFilesToUpload(false);
+      setIsInternal(false);
     }
-  }, [selectedFiles, onUpload]);
+  }, [selectedFiles, onUpload, isInternal]);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -72,29 +80,46 @@ export function AttachmentUpload({
       />
       
       {hasFilesToUpload && !isUploading && (
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">
-            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} ready to upload
-          </span>
-          <div className="space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                setSelectedFiles([]);
-                setHasFilesToUpload(false);
-              }}
-            >
-              Clear
-            </Button>
-            <Button 
-              size="sm"
-              onClick={handleUpload}
-              disabled={isUploading}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Files
-            </Button>
+        <div className="space-y-3">
+          {showInternalToggle && userProfile?.is_employee && (
+            <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
+              <Checkbox
+                id="attachment-internal"
+                checked={isInternal}
+                onCheckedChange={(checked) => setIsInternal(checked as boolean)}
+              />
+              <Label htmlFor="attachment-internal" className="text-sm font-medium flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Make internal (only visible to team and subcontractors)
+              </Label>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">
+              {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} ready to upload
+            </span>
+            <div className="space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setSelectedFiles([]);
+                  setHasFilesToUpload(false);
+                  setIsInternal(false);
+                }}
+              >
+                Clear
+              </Button>
+              <Button 
+                size="sm"
+                onClick={handleUpload}
+                disabled={isUploading}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Files
+              </Button>
+            </div>
           </div>
         </div>
       )}

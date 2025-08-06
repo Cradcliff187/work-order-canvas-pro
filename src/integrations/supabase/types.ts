@@ -1056,6 +1056,7 @@ export type Database = {
           file_type: Database["public"]["Enums"]["file_type"]
           file_url: string
           id: string
+          is_internal: boolean | null
           uploaded_at: string
           uploaded_by_user_id: string
           work_order_id: string | null
@@ -1068,6 +1069,7 @@ export type Database = {
           file_type: Database["public"]["Enums"]["file_type"]
           file_url: string
           id?: string
+          is_internal?: boolean | null
           uploaded_at?: string
           uploaded_by_user_id: string
           work_order_id?: string | null
@@ -1080,6 +1082,7 @@ export type Database = {
           file_type?: Database["public"]["Enums"]["file_type"]
           file_url?: string
           id?: string
+          is_internal?: boolean | null
           uploaded_at?: string
           uploaded_by_user_id?: string
           work_order_id?: string | null

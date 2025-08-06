@@ -260,7 +260,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   const uploadFile = useCallback(async (
     file: File,
     contextIds: { workOrderId?: string; reportId?: string; invoiceId?: string; profileId?: string },
-    fileId?: string
+    fileId?: string,
+    isInternal: boolean = false
   ): Promise<UploadedFile> => {
     if (!user) throw new Error("User not authenticated");
 
@@ -409,6 +410,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         file_type: fileType,
         file_size: compressedSize,
         uploaded_by_user_id: profile.id,
+        is_internal: isInternal,
       };
 
       // Set appropriate ID based on context
@@ -448,6 +450,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   // Main upload function - context-aware version
   const uploadFiles = useCallback(async (
     files: File[],
+    isInternal: boolean = false,
     workOrderId?: string,
     reportId?: string
   ): Promise<UploadedFile[]> => {
@@ -501,7 +504,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         const fileId = initialProgress[i].fileId;
         
         try {
-          const result = await uploadFile(file, contextIds, fileId);
+          const result = await uploadFile(file, contextIds, fileId, isInternal);
           results.push(result);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Upload failed';

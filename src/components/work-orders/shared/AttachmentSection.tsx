@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Upload, Search, X, Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, Search, X, Plus, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useViewMode, type ViewModeConfig } from '@/hooks/useViewMode';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +27,7 @@ interface AttachmentSectionProps {
   workOrderId: string;
   reportId?: string; // Optional for report uploads
   canUpload?: boolean;
-  onUpload?: (files: File[]) => Promise<void>;
+  onUpload?: (files: File[], isInternal?: boolean) => Promise<void>;
   onUploadComplete?: () => void; // Called after successful upload to refresh attachments
   onView?: (attachment: AttachmentItem) => void;
   onDownload?: (attachment: AttachmentItem) => void;
@@ -35,6 +36,7 @@ interface AttachmentSectionProps {
   maxFileSize?: number;
   maxFiles?: number;
   isLoading?: boolean;
+  showInternalToggle?: boolean; // Show internal/public toggle for uploads
 }
 
 const viewConfig: ViewModeConfig = {
@@ -93,8 +95,10 @@ export function AttachmentSection({
   onBulkDelete,
   maxFileSize,
   maxFiles,
-  isLoading = false
+  isLoading = false,
+  showInternalToggle = false
 }: AttachmentSectionProps) {
+  const { profile: userProfile } = useUserProfile();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFileType, setSelectedFileType] = useState<string>('all');
@@ -183,18 +187,18 @@ export function AttachmentSection({
     setSelectedFileType('all');
   };
 
-  const handleUpload = async (files: File[]) => {
+  const handleUpload = async (files: File[], isInternal?: boolean) => {
     if (onUpload) {
       // Use custom upload handler if provided
       try {
-        await onUpload(files);
+        await onUpload(files, isInternal);
         setIsUploadSheetOpen(false);
       } catch (error) {
         console.error('Upload failed:', error);
       }
     } else {
       // Use the built-in file upload hook
-      await uploadFiles(files, workOrderId, reportId);
+      await uploadFiles(files, isInternal || false, workOrderId, reportId);
     }
   };
 
@@ -284,6 +288,7 @@ export function AttachmentSection({
                     maxFileSize={maxFileSize}
                     maxFiles={maxFiles}
                     isUploading={isUploading}
+                    showInternalToggle={showInternalToggle}
                   />
                 </div>
               </SheetContent>
@@ -351,6 +356,7 @@ export function AttachmentSection({
               maxFileSize={maxFileSize}
               maxFiles={maxFiles}
               isUploading={isUploading}
+              showInternalToggle={showInternalToggle}
             />
           )}
         </div>
@@ -429,6 +435,7 @@ export function AttachmentSection({
                   maxFileSize={maxFileSize}
                   maxFiles={maxFiles}
                   isUploading={isUploading}
+                  showInternalToggle={showInternalToggle}
                 />
               </div>
             </SheetContent>

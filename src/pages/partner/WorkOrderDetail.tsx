@@ -187,7 +187,7 @@ export default function WorkOrderDetail() {
             canUpload={true}
             onUpload={async (files) => {
               try {
-                await uploadFiles(files, workOrder.id);
+                await uploadFiles(files, false, workOrder.id);
                 await refetch();
               } catch (error) {
                 console.error('Upload failed:', error);

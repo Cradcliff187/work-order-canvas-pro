@@ -9,7 +9,8 @@ import {
   File,
   Download,
   Eye,
-  Trash2
+  Trash2,
+  Lock
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ export interface AttachmentItem {
   uploaded_at: string;
   uploader_name?: string;
   uploader_email?: string;
+  is_internal?: boolean;
 }
 
 interface AttachmentGridProps {
@@ -161,11 +163,17 @@ export function AttachmentGrid({
                 />
               </div>
 
-              {/* File type badge */}
-              <div className="absolute top-2 left-2">
+              {/* File type and internal badges */}
+              <div className="absolute top-2 left-2 flex flex-col gap-1">
                 <Badge variant={attachment.file_type === 'photo' ? 'default' : 'secondary'}>
                   {attachment.file_type === 'photo' ? 'Image' : 'Document'}
                 </Badge>
+                {attachment.is_internal && (
+                  <Badge variant="outline" className="bg-muted/90 text-xs">
+                    <Lock className="w-3 h-3 mr-1" />
+                    Internal
+                  </Badge>
+                )}
               </div>
             </div>
             

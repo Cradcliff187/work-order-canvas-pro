@@ -491,7 +491,7 @@ export function CreateWorkOrderModal({ open, onOpenChange, organizationId, onWor
           setSubmissionPhase('uploading');
           console.log('📁 Starting file upload for work order:', createdWorkOrder.id);
           
-          uploadResults = await uploadFiles(selectedFiles, createdWorkOrder.id);
+          uploadResults = await uploadFiles(selectedFiles, false, createdWorkOrder.id);
           console.log('📁 File upload completed:', uploadResults);
         } catch (uploadError: any) {
           console.error('❌ File upload failed:', uploadError);

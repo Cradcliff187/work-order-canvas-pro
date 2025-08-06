@@ -749,20 +749,22 @@ export default function AdminWorkOrderDetail() {
                       uploader_name: attachment.uploaded_by_user ? 
                         `${attachment.uploaded_by_user.first_name || 'Unknown'} ${attachment.uploaded_by_user.last_name || 'User'}` : 
                         'Unknown User',
-                      uploader_email: ''
+                      uploader_email: '',
+                      is_internal: (attachment as any).is_internal || false
                     };
                   });
                 })()}
                 workOrderId={workOrder.id}
                 canUpload={true}
-                onUpload={async (files) => {
+                onUpload={async (files, isInternal) => {
                   try {
-                    await uploadFiles(files, workOrder.id);
+                    await uploadFiles(files, isInternal || false, workOrder.id);
                     await refetch();
                   } catch (error) {
                     console.error('Upload failed:', error);
                   }
                 }}
+                showInternalToggle={true}
                 onView={(attachment) => {
                   const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
                   window.open(data.publicUrl, '_blank');
