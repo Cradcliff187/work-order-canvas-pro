@@ -20,6 +20,9 @@ export const EmployeeTimeReport = lazy(() => import('@/pages/admin/EmployeeTimeR
 export const ReceiptHistory = lazy(() => import('@/pages/admin/ReceiptHistory'));
 export const AdminUtilities = lazy(() => import('@/pages/admin/AdminUtilities'));
 
+// Partner Billing Pages
+export const SelectReports = lazy(() => import('@/pages/admin/partner-billing/SelectReports'));
+
 
 // Partner Pages
 export const PartnerDashboard = lazy(() => import('@/pages/partner/PartnerDashboard'));
