@@ -879,7 +879,14 @@ export default function SubmitWorkOrder() {
                           >
                             <div className="text-center">
                               <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                              <p className="text-sm font-medium">Upload Files</p>
+                              <p className="text-sm font-medium">
+                                Upload Files
+                                {selectedFiles.length > 0 && (
+                                  <Badge variant="secondary" className="ml-2">
+                                    {selectedFiles.length}
+                                  </Badge>
+                                )}
+                              </p>
                               <p className="text-xs text-muted-foreground">Click to select images & PDFs</p>
                             </div>
                           </Button>
@@ -890,6 +897,79 @@ export default function SubmitWorkOrder() {
                         accept="image/*,.pdf"
                         multiple={true}
                       />
+                      
+                      {/* File Preview Section */}
+                      {selectedFiles.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <Label className="text-sm font-medium">
+                              Selected Files ({selectedFiles.length})
+                            </Label>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={handleClearFiles}
+                              className="text-xs h-8"
+                            >
+                              Clear All
+                            </Button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {selectedFiles.map((file, index) => (
+                              <Card key={index} className="border-border/50">
+                                <CardContent className="p-3">
+                                  <div className="flex items-center space-x-3">
+                                    {/* File preview/icon */}
+                                    <div className="flex-shrink-0">
+                                      {file.type.startsWith('image/') ? (
+                                        <div className="w-10 h-10 rounded-md bg-muted overflow-hidden">
+                                          <img 
+                                            src={URL.createObjectURL(file)} 
+                                            alt={file.name}
+                                            className="w-full h-full object-cover"
+                                            onLoad={(e) => {
+                                              // Clean up object URL after image loads
+                                              setTimeout(() => {
+                                                URL.revokeObjectURL((e.target as HTMLImageElement).src);
+                                              }, 1000);
+                                            }}
+                                          />
+                                        </div>
+                                      ) : (
+                                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                                          <FileText className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* File details */}
+                                    <div className="flex-grow min-w-0">
+                                      <p className="text-sm font-medium truncate">
+                                        {file.name}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {formatFileSize(file.size)}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* Remove button */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleRemoveFile(index)}
+                                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                    >
+                                      <span className="sr-only">Remove file</span>
+                                      ✕
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Admin-only fields */}
