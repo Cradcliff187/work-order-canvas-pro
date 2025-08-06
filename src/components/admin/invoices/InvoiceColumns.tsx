@@ -2,8 +2,9 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, CheckCircle, XCircle, DollarSign, Paperclip } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, DollarSign, Paperclip, UserCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/utils/formatting';
@@ -85,11 +86,33 @@ export const createInvoiceColumns = ({
   {
     accessorKey: 'subcontractor_organization.name',
     header: 'Subcontractor',
-    cell: ({ row }) => (
-      <div className="max-w-[200px] truncate">
-        {row.original.subcontractor_organization.name}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const invoice = row.original;
+      const isAdminEntered = !!invoice.created_by_admin_id;
+      
+      return (
+        <div className="flex items-center gap-2">
+          <div className="max-w-[180px] truncate">
+            {invoice.subcontractor_organization.name}
+          </div>
+          {isAdminEntered && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="secondary" className="h-5 text-[10px] px-1.5 flex items-center gap-1">
+                    <UserCheck className="h-3 w-3" />
+                    Admin
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Entered by {invoice.created_by_admin?.first_name} {invoice.created_by_admin?.last_name}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'total_amount',

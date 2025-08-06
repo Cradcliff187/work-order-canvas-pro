@@ -24,6 +24,8 @@ export interface Invoice {
   paid_at: string | null;
   payment_reference: string | null;
   approval_notes: string | null;
+  admin_notes: string | null;
+  created_by_admin_id: string | null;
   created_at: string;
   updated_at: string;
   attachment_count?: number;
@@ -37,6 +39,11 @@ export interface Invoice {
     last_name: string;
   };
   approved_by_user?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
+  created_by_admin?: {
     id: string;
     first_name: string;
     last_name: string;
@@ -92,6 +99,11 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
             last_name
           ),
           approved_by_user:profiles!approved_by(
+            id,
+            first_name,
+            last_name
+          ),
+          created_by_admin:profiles!created_by_admin_id(
             id,
             first_name,
             last_name
@@ -185,6 +197,11 @@ export const useInvoice = (id: string) => {
             email
           ),
           approved_by_user:profiles!approved_by(
+            id,
+            first_name,
+            last_name
+          ),
+          created_by_admin:profiles!created_by_admin_id(
             id,
             first_name,
             last_name

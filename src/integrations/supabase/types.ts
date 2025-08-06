@@ -449,6 +449,7 @@ export type Database = {
       }
       invoices: {
         Row: {
+          admin_notes: string | null
           approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
@@ -467,6 +468,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_notes?: string | null
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -485,6 +487,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_notes?: string | null
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null

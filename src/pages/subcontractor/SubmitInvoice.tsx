@@ -4,9 +4,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
-import { Upload, ArrowLeft, FileText, Loader2, Save, Building2 } from 'lucide-react';
+import { Upload, ArrowLeft, FileText, Loader2, Save, Building2, Info } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
@@ -21,6 +22,7 @@ import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 
 interface InvoiceFormData {
   externalInvoiceNumber: string;
+  adminNotes: string;
   selectedWorkOrders: Record<string, number>; // workOrderId -> amount
   selectedOrganizationId?: string; // For admin submissions
 }
@@ -34,6 +36,7 @@ export default function SubmitInvoice() {
 
   const [formData, setFormData] = useState<InvoiceFormData>({
     externalInvoiceNumber: '',
+    adminNotes: '',
     selectedWorkOrders: {},
     selectedOrganizationId: undefined,
   });
@@ -180,6 +183,7 @@ export default function SubmitInvoice() {
         attachments: files.length > 0 ? files : undefined,
         organizationId: isAdminMode ? formData.selectedOrganizationId : undefined,
         createdByAdminId: isAdminMode ? profile?.id : undefined,
+        adminNotes: isAdminMode && formData.adminNotes ? formData.adminNotes : undefined,
       });
       
       // Clear saved form data
@@ -253,10 +257,11 @@ export default function SubmitInvoice() {
                   />
                 </div>
                 {selectedOrganization && (
-                  <Alert>
-                    <Building2 className="h-4 w-4" />
-                    <AlertDescription>
-                      Submitting invoice on behalf of: <strong>{selectedOrganization.name}</strong>
+                  <Alert className="border-l-4 border-l-primary bg-primary/5 transition-all duration-200">
+                    <Info className="h-4 w-4 text-primary" />
+                    <AlertTitle className="text-primary">Admin Mode</AlertTitle>
+                    <AlertDescription className="text-primary/80">
+                      Submitting invoice on behalf of: <strong className="text-primary">{selectedOrganization.name}</strong>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -280,6 +285,22 @@ export default function SubmitInvoice() {
                   Optional: Your own invoice number for reference
                 </p>
               </div>
+
+              {isAdminMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="adminNotes">Admin Notes</Label>
+                  <Textarea
+                    id="adminNotes"
+                    placeholder="Document why this invoice was entered manually by admin..."
+                    value={formData.adminNotes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, adminNotes: e.target.value }))}
+                    className="min-h-[100px] transition-all duration-200"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    These notes will help track why this invoice was entered manually and any special circumstances.
+                  </p>
+                </div>
+              )}
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
