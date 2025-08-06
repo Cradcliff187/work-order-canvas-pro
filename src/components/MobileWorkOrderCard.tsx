@@ -8,7 +8,7 @@ import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
-import { formatLocationDisplay, generateMapUrl } from '@/lib/utils/addressUtils';
+import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 
 interface WorkOrder {
   id: string;
@@ -183,13 +183,15 @@ export function MobileWorkOrderCard({
   const isOverdue = daysOld > 7; // Consider 7+ days old as overdue
   const mapUrl = generateMapUrl(workOrder);
 
-  // Enhanced location display with partner location number
+  // Get full address for location display
   const getLocationDisplay = () => {
-    const baseLocation = formatLocationDisplay(workOrder);
-    if (workOrder.partner_location_number && baseLocation !== 'N/A') {
-      return `#${workOrder.partner_location_number} - ${baseLocation}`;
+    const fullAddress = formatAddress(workOrder);
+    if (fullAddress && fullAddress !== 'N/A') {
+      return fullAddress;
     }
-    return baseLocation;
+    // Fallback to compact location display if no address
+    const compactLocation = formatLocationDisplay(workOrder);
+    return compactLocation !== 'N/A' ? compactLocation : 'No location specified';
   };
 
   return (
