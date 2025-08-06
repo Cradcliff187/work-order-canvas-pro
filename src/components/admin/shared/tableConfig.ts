@@ -133,7 +133,18 @@ export const statusConfig = {
     }
   },
   assignedTo: {
-    default: "text-slate-700 font-medium"
+    internal: {
+      label: "Internal",
+      className: "bg-blue-50 text-blue-700 border-blue-200"
+    },
+    external: {
+      label: "External", 
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200"
+    },
+    unassigned: {
+      label: "Unassigned",
+      className: "bg-red-50 text-red-700 border-red-200"
+    }
   }
 } as const;
 
@@ -172,3 +183,4 @@ export type Priority = keyof typeof statusConfig.priority;
 export type RoleType = keyof typeof statusConfig.user;
 export type ReportStatus = keyof typeof statusConfig.report;
 export type ActiveStatus = keyof typeof statusConfig.activeStatus;
+export type AssignedToStatus = keyof typeof statusConfig.assignedTo;

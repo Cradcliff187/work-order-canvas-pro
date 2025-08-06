@@ -21,6 +21,7 @@ interface StatusBadgeProps {
   size?: 'sm' | 'default' | 'lg';
   className?: string;
   variant?: 'default' | 'outline';
+  children?: React.ReactNode;
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -63,7 +64,12 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   
   // Active Status Icons
   true: CheckCircle,
-  false: XCircle
+  false: XCircle,
+  
+  // Assignment Status Icons
+  internal: Users,
+  external: Users,
+  unassigned: Circle
 };
 
 export function StatusBadge({
@@ -72,7 +78,8 @@ export function StatusBadge({
   showIcon = false,
   size = 'default',
   className,
-  variant = 'default'
+  variant = 'default',
+  children
 }: StatusBadgeProps) {
   const config = statusConfig[type]?.[status];
   
@@ -125,7 +132,7 @@ export function StatusBadge({
       )}
     >
       {Icon && <Icon className={sizeClasses[size].icon} />}
-      <span>{config.label}</span>
+      <span>{children || config.label}</span>
     </Badge>
   );
 }
@@ -153,4 +160,8 @@ export function ReportStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
 
 export function ActiveStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
   return <StatusBadge type="activeStatus" {...props} />;
+}
+
+export function AssignedToStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
+  return <StatusBadge type="assignedTo" {...props} />;
 }

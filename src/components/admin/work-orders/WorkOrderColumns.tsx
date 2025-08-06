@@ -7,7 +7,7 @@ import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown } fro
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge, AssignedToStatusBadge } from '@/components/ui/status-badge';
 
 
 interface WorkOrderColumnsProps {
@@ -241,11 +241,19 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     cell: ({ row }) => {
       const assignments = row.original.work_order_assignments || [];
       
+      // Helper function to determine organization type
+      const getOrganizationType = (assignment: any) => {
+        if (!assignment.organizations) return 'internal'; // User assignment, treat as internal
+        return assignment.organizations.organization_type === 'internal' ? 'internal' : 'external';
+      };
+      
       if (assignments.length === 0) {
         return (
-          <Badge variant="outline" className="h-5 text-[10px] px-1.5 bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700">
-            Unassigned
-          </Badge>
+          <AssignedToStatusBadge 
+            status="unassigned"
+            size="sm"
+            showIcon={false}
+          />
         );
       }
       
@@ -253,21 +261,26 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
         const assignment = assignments[0];
         const assignee = assignment.profiles;
         const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
+        const orgType = getOrganizationType(assignment);
 
         let displayText = 'Unknown';
         if (isPlaceholder && assignment.organizations) {
           displayText = assignment.organizations.name;
         } else if (assignment.organizations) {
-          // If assigned to an organization, show organization name
           displayText = assignment.organizations.name;
         } else if (assignee) {
           displayText = `${assignee.first_name} ${assignee.last_name}`;
         }
 
         return (
-          <Badge variant="secondary" className="h-5 text-[10px] px-1.5 bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
+          <AssignedToStatusBadge 
+            status={orgType}
+            size="sm"
+            showIcon={false}
+            className="h-5 text-[10px] px-1.5"
+          >
             {displayText}
-          </Badge>
+          </AssignedToStatusBadge>
         );
       }
       
@@ -275,14 +288,20 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
       const assignee = lead.profiles;
       const leadName = assignee ? `${assignee.first_name} ${assignee.last_name.charAt(0)}.` : 'Unknown';
       const additionalCount = assignments.length - 1;
+      const orgType = getOrganizationType(lead);
       
       return (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="secondary" className="h-5 text-[10px] px-1.5 bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700 cursor-help">
+              <AssignedToStatusBadge 
+                status={orgType}
+                size="sm"
+                showIcon={false}
+                className="h-5 text-[10px] px-1.5 cursor-help"
+              >
                 {leadName} + {additionalCount} more
-              </Badge>
+              </AssignedToStatusBadge>
             </TooltipTrigger>
             <TooltipContent>
               <div className="space-y-1">
@@ -294,7 +313,6 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
                   if (isPlaceholder && assignment.organizations) {
                     displayText = assignment.organizations.name;
                   } else if (assignment.organizations) {
-                    // If assigned to an organization, show organization name
                     displayText = assignment.organizations.name;
                   } else if (profile) {
                     displayText = `${profile.first_name} ${profile.last_name}`;
