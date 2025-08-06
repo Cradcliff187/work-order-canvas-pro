@@ -148,22 +148,14 @@ export default function AdminReports() {
       accessorKey: 'subcontractor',
       header: 'Subcontractor',
       cell: ({ row }) => {
-        const subcontractor = row.original.subcontractor;
         const subcontractorOrg = row.original.subcontractor_organization;
         const submittedBy = row.original.submitted_by;
         
-        // Determine what to display based on available data
+        // For subcontractors: always show organization name, never individual names
         let displayName = 'N/A';
-        let companyName = '';
         
-        if (subcontractor) {
-          // Individual subcontractor assigned
-          displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
-          if (subcontractorOrg) {
-            companyName = subcontractorOrg.name;
-          }
-        } else if (subcontractorOrg) {
-          // Organization-level assignment (no individual)
+        if (subcontractorOrg) {
+          // Always show organization name for subcontractor organizations
           displayName = subcontractorOrg.name;
         }
 
@@ -175,11 +167,6 @@ export default function AdminReports() {
             {submittedBy && (submittedBy as any)?.organization_members?.some((om: any) => om.organization.organization_type === 'internal') && (
               <div className="text-xs text-orange-600 font-medium">
                 Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
-              </div>
-            )}
-            {companyName && (
-              <div className="text-sm text-muted-foreground">
-                {companyName}
               </div>
             )}
           </div>
@@ -548,14 +535,11 @@ export default function AdminReports() {
                   table.getRowModel().rows.map((row) => {
                     const report = row.original;
                     const workOrder = report.work_orders;
-                    const subcontractor = report.subcontractor;
-                    const subcontractorOrg = report.subcontractor_organization;
+                    const subcontractorOrg = row.original.subcontractor_organization;
                     
-                    // Determine display name for subcontractor
+                    // For mobile cards: always show organization name for subcontractors
                     let subcontractorDisplay = 'N/A';
-                    if (subcontractor) {
-                      subcontractorDisplay = `${subcontractor.first_name} ${subcontractor.last_name}`;
-                    } else if (subcontractorOrg) {
+                    if (subcontractorOrg) {
                       subcontractorDisplay = subcontractorOrg.name;
                     }
                     
