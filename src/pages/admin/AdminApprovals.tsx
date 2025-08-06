@@ -30,6 +30,10 @@ import { createApprovalColumns } from '@/components/admin/approvals/ApprovalColu
 import { useToast } from '@/hooks/use-toast';
 import { QueryErrorBoundary } from '@/components/ui/query-error-boundary';
 import { isValidUUID } from '@/lib/utils/validation';
+import { useOptimisticApprovals } from '@/hooks/useOptimisticApprovals';
+import { useApprovalRetry } from '@/hooks/useApprovalRetry';
+import { BulkActionsBar } from '@/components/admin/approvals/BulkActionsBar';
+import { EnhancedApprovalSkeleton } from '@/components/admin/approvals/EnhancedApprovalSkeleton';
 
 export default function AdminApprovals() {
   const navigate = useNavigate();
@@ -43,6 +47,10 @@ export default function AdminApprovals() {
 
   const { data: approvalItems = [], totalCount = 0, loading, error } = useApprovalQueue();
   
+  // Enhanced hooks for Phase 3
+  const optimistic = useOptimisticApprovals();
+  const retry = useApprovalRetry();
+  
   // Retry mechanism for the approval queue
   const retryApprovalQueue = () => {
     queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
@@ -50,12 +58,15 @@ export default function AdminApprovals() {
   const { reviewReport } = useAdminReportMutations();
   const { approveInvoice, rejectInvoice } = useInvoiceMutations();
 
-  // Optimized filtering with memoization
+  // Optimized filtering with memoization and optimistic updates
   const { reportItems, invoiceItems, filteredItems } = useMemo(() => {
-    const reports = approvalItems.filter(item => item.type === 'report');
-    const invoices = approvalItems.filter(item => item.type === 'invoice');
+    // Apply optimistic filtering to hide approved/rejected items
+    const optimisticItems = optimistic.applyOptimisticFiltering(approvalItems);
     
-    const filtered = approvalItems.filter(item => {
+    const reports = optimisticItems.filter(item => item.type === 'report');
+    const invoices = optimisticItems.filter(item => item.type === 'invoice');
+    
+    const filtered = optimisticItems.filter(item => {
       const matchesTab = activeTab === 'reports' ? item.type === 'report' : item.type === 'invoice';
       const matchesUrgency = urgencyFilter === 'all' || item.urgency === urgencyFilter;
       const matchesSearch = !searchQuery || 
@@ -70,7 +81,7 @@ export default function AdminApprovals() {
       invoiceItems: invoices,
       filteredItems: filtered
     };
-  }, [approvalItems, activeTab, urgencyFilter, searchQuery]);
+  }, [approvalItems, activeTab, urgencyFilter, searchQuery, optimistic]);
 
   // Get current tab items
   const currentTabItems = activeTab === 'reports' ? reportItems : invoiceItems;
@@ -108,30 +119,76 @@ export default function AdminApprovals() {
       return;
     }
 
+    // Optimistic update
+    optimistic.updateOptimisticState(item.id, 'approving');
     setLoadingItems(prev => new Set(prev).add(item.id));
     
-    try {
+    const performApproval = async () => {
       if (item.type === 'report') {
-        await reviewReport.mutateAsync({ 
+        return await reviewReport.mutateAsync({ 
           reportId: item.id, 
           status: 'approved' 
         });
       } else {
-        await approveInvoice.mutateAsync({ 
+        return await approveInvoice.mutateAsync({ 
           invoiceId: item.id 
         });
       }
+    };
+
+    try {
+      await performApproval();
       
+      // Mark as approved optimistically
+      optimistic.updateOptimisticState(item.id, 'approved');
       queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+      
+      toast({
+        title: "Item approved",
+        description: `${item.title} has been approved successfully.`,
+      });
     } catch (error: any) {
       console.error('Approval error:', error);
       
-      const errorMessage = error?.message || "Failed to approve item";
-      toast({
-        title: "Approval failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Check if retry is applicable
+      if (retry.shouldRetry(item.id, error)) {
+        toast({
+          title: "Approval failed - retrying",
+          description: "Attempting to retry the approval...",
+          variant: "destructive",
+        });
+        
+        await retry.scheduleRetry(
+          item.id,
+          performApproval,
+          () => {
+            optimistic.updateOptimisticState(item.id, 'approved');
+            queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+            toast({
+              title: "Item approved",
+              description: `${item.title} has been approved after retry.`,
+            });
+          },
+          (retryError) => {
+            optimistic.rollbackOptimisticUpdate(item.id);
+            toast({
+              title: "Approval failed",
+              description: retryError?.message || "Failed to approve item after retries",
+              variant: "destructive",
+            });
+          }
+        );
+      } else {
+        // Rollback optimistic update
+        optimistic.rollbackOptimisticUpdate(item.id);
+        
+        const errorMessage = error?.message || "Failed to approve item";
+        toast({
+          title: "Approval failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoadingItems(prev => {
         const newSet = new Set(prev);
@@ -161,32 +218,78 @@ export default function AdminApprovals() {
       return;
     }
 
+    // Optimistic update
+    optimistic.updateOptimisticState(item.id, 'rejecting');
     setLoadingItems(prev => new Set(prev).add(item.id));
     
-    try {
+    const performRejection = async () => {
       if (item.type === 'report') {
-        await reviewReport.mutateAsync({ 
+        return await reviewReport.mutateAsync({ 
           reportId: item.id, 
           status: 'rejected',
           reviewNotes: 'Rejected from approval center'
         });
       } else {
-        await rejectInvoice.mutateAsync({ 
+        return await rejectInvoice.mutateAsync({ 
           invoiceId: item.id,
           notes: 'Rejected from approval center'
         });
       }
+    };
+
+    try {
+      await performRejection();
       
+      // Mark as rejected optimistically
+      optimistic.updateOptimisticState(item.id, 'rejected');
       queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+      
+      toast({
+        title: "Item rejected",
+        description: `${item.title} has been rejected.`,
+      });
     } catch (error: any) {
       console.error('Rejection error:', error);
       
-      const errorMessage = error?.message || "Failed to reject item";
-      toast({
-        title: "Rejection failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Check if retry is applicable
+      if (retry.shouldRetry(item.id, error)) {
+        toast({
+          title: "Rejection failed - retrying",
+          description: "Attempting to retry the rejection...",
+          variant: "destructive",
+        });
+        
+        await retry.scheduleRetry(
+          item.id,
+          performRejection,
+          () => {
+            optimistic.updateOptimisticState(item.id, 'rejected');
+            queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+            toast({
+              title: "Item rejected",
+              description: `${item.title} has been rejected after retry.`,
+            });
+          },
+          (retryError) => {
+            optimistic.rollbackOptimisticUpdate(item.id);
+            toast({
+              title: "Rejection failed",
+              description: retryError?.message || "Failed to reject item after retries",
+              variant: "destructive",
+            });
+          }
+        );
+      } else {
+        // Rollback optimistic update
+        optimistic.rollbackOptimisticUpdate(item.id);
+        
+        const errorMessage = error?.message || "Failed to reject item";
+        toast({
+          title: "Rejection failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoadingItems(prev => {
         const newSet = new Set(prev);
@@ -201,8 +304,8 @@ export default function AdminApprovals() {
     onView: handleView,
     onApprove: handleApprove,
     onReject: handleReject,
-    loadingItems,
-  }), [loadingItems]);
+    loadingItems: new Set([...loadingItems, ...Array.from(optimistic.isPending ? [] : [])]),
+  }), [loadingItems, optimistic]);
 
   const tableData = useMemo(() => filteredItems, [filteredItems]);
 
@@ -217,7 +320,15 @@ export default function AdminApprovals() {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  // Get selected items for bulk actions
+  const selectedItems = useMemo(() => {
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    return filteredItems.filter((item, index) => selectedIds.includes(String(index)));
+  }, [rowSelection, filteredItems]);
+
   const isMobile = useIsMobile();
+  
+  const clearSelection = () => setRowSelection({});
 
   if (error) {
     return (
@@ -329,8 +440,8 @@ export default function AdminApprovals() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <TableSkeleton rows={5} columns={7} />
-              ) : reportItems.filter(item => 
+                <EnhancedApprovalSkeleton showFilters={false} showTabs={false} />
+              ) : reportItems.filter(item =>
                 (urgencyFilter === 'all' || item.urgency === urgencyFilter) &&
                 (!searchQuery || 
                   item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -452,8 +563,8 @@ export default function AdminApprovals() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <TableSkeleton rows={5} columns={7} />
-              ) : invoiceItems.filter(item => 
+                <EnhancedApprovalSkeleton showFilters={false} showTabs={false} />
+              ) : invoiceItems.filter(item =>
                 (urgencyFilter === 'all' || item.urgency === urgencyFilter) &&
                 (!searchQuery || 
                   item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -568,6 +679,12 @@ export default function AdminApprovals() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+        {/* Bulk Actions Bar */}
+        <BulkActionsBar 
+          selectedItems={selectedItems}
+          onClearSelection={clearSelection}
+        />
       </div>
     </QueryErrorBoundary>
   );

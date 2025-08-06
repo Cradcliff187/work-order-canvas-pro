@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { validateUUIDArray, isValidUUID, safeUUIDLookup } from '@/lib/utils/validation';
+import { useQueryPerformance } from './useQueryPerformance';
 
 export interface ApprovalItem {
   id: string;
@@ -195,6 +196,9 @@ export const useApprovalQueue = (): ApprovalQueueData => {
     retry: 1, // Reduced retries to prevent cascade failures
     retryDelay: 1000,
   });
+
+  // Add performance monitoring
+  useQueryPerformance(['approval-queue'], isLoading, error, data);
 
   return {
     data: data?.data || [],
