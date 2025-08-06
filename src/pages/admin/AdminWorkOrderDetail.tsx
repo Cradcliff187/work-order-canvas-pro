@@ -304,46 +304,37 @@ export default function AdminWorkOrderDetail() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* Work Order Information */}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Status & Quick Info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Work Order Details
+              Quick Info
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Title</label>
-              <p className="font-medium">{workOrder.title}</p>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Status</span>
+              <WorkOrderStatusBadge
+                status={workOrder.status}
+                size="sm"
+                showIcon
+              />
             </div>
-            {workOrder.description && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Description</label>
-                <p className="text-sm">{workOrder.description}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Work Order #</label>
-                <p className="font-mono">{workOrder.work_order_number}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Status</label>
-                <div className="mt-1">
-                  <WorkOrderStatusBadge
-                    status={workOrder.status}
-                    size="sm"
-                    showIcon
-                  />
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Work Order #</span>
+              <span className="font-mono text-sm">{workOrder.work_order_number}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Trade</span>
+              <span className="text-sm">{workOrder.trades?.name || 'N/A'}</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Organization & Location */}
+        {/* Organization & Location Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -351,250 +342,73 @@ export default function AdminWorkOrderDetail() {
               Organization & Location
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Organization</label>
-              <p className="font-medium">{workOrder.organizations?.name || 'N/A'}</p>
-              {workOrder.organizations?.contact_email && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                  <Mail className="h-3 w-3" />
-                  {workOrder.organizations.contact_email}
-                </div>
-              )}
-              {workOrder.organizations?.contact_phone && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Phone className="h-3 w-3" />
-                  {workOrder.organizations.contact_phone}
-                </div>
-              )}
+              <span className="text-sm font-medium text-muted-foreground">Organization</span>
+              <p className="text-sm font-medium">{workOrder.organizations?.name || 'N/A'}</p>
             </div>
-            
-            <Separator />
-            
             <div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  Location
-                </label>
-                {generateMapUrl(workOrder) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(generateMapUrl(workOrder)!, '_blank')}
-                  >
-                    <MapPin className="h-3 w-3 mr-1" />
-                    Directions
-                  </Button>
-                )}
-              </div>
-              {workOrder.store_location && (
-                <p className="font-medium">{workOrder.store_location}</p>
-              )}
+              <span className="text-sm font-medium text-muted-foreground">Location</span>
+              <p className="text-sm">{workOrder.store_location || 'N/A'}</p>
               {workOrder.partner_location_number && (
-                <p className="text-sm text-muted-foreground">Loc: {workOrder.partner_location_number}</p>
-              )}
-              {hasAddress(workOrder) && (
-                <div className="text-sm text-muted-foreground">
-                  {formatAddressMultiline(workOrder).map((line, index) => (
-                    <p key={index}>{line}</p>
-                  ))}
-                </div>
-              )}
-              {workOrder.location_contact_name && (
-                <div className="text-sm text-muted-foreground mt-1">
-                  Site Contact: {workOrder.location_contact_name}
-                  {workOrder.location_contact_phone && ` • ${workOrder.location_contact_phone}`}
-                  {workOrder.location_contact_email && ` • ${workOrder.location_contact_email}`}
-                </div>
+                <p className="text-xs text-muted-foreground">Loc: {workOrder.partner_location_number}</p>
               )}
             </div>
+            {generateMapUrl(workOrder) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => window.open(generateMapUrl(workOrder)!, '_blank')}
+              >
+                <MapPin className="h-3 w-3 mr-2" />
+                Get Directions
+              </Button>
+            )}
           </CardContent>
         </Card>
 
-        {/* Partner References */}
-        {(workOrder.partner_po_number || workOrder.partner_location_number) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Partner References
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {workOrder.partner_po_number && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">PO Number</label>
-                  <p className="font-medium">{workOrder.partner_po_number}</p>
-                </div>
-              )}
-              {workOrder.partner_location_number && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Location Number</label>
-                  <p className="font-medium">{workOrder.partner_location_number}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Trade & Assignment */}
+        {/* Assignment & Timeline Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Wrench className="h-5 w-5" />
-              Trade & Assignment
+              <User className="h-5 w-5" />
+              Assignment & Due Date
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Trade</label>
-              <p className="font-medium">{workOrder.trades?.name || 'N/A'}</p>
-              {workOrder.trades?.description && (
-                <p className="text-sm text-muted-foreground">{workOrder.trades.description}</p>
-              )}
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <User className="h-3 w-3" />
-                Assigned To
-              </label>
+              <span className="text-sm font-medium text-muted-foreground">Assigned To</span>
               {isLoadingAssignments ? (
-                <p className="text-muted-foreground">Loading assignments...</p>
+                <p className="text-sm text-muted-foreground">Loading...</p>
               ) : assignments.length > 0 ? (
-                <div className="space-y-3">
-                  {(() => {
-                    console.log('Work Order Assignments Debug:', {
-                      workOrderId: workOrder.id,
-                      assignmentsCount: assignments.length,
-                      assignments: assignments.map(a => ({
-                        id: a.id,
-                        hasAssignee: !!a.assignee,
-                        assigneeData: a.assignee,
-                        hasOrganization: !!a.assigned_organization,
-                        organizationData: a.assigned_organization,
-                        assignmentType: a.assignment_type
-                      }))
-                    });
-                    
-                    return assignments.map((assignment) => {
-                      console.log('Processing assignment:', {
-                        assignmentId: assignment.id,
-                        hasAssignee: !!assignment.assignee,
-                        hasOrganization: !!assignment.assigned_organization,
-                        assigneeData: assignment.assignee,
-                        organizationData: assignment.assigned_organization
-                      });
-                      
-                      if (!assignment.assignee && !assignment.assigned_organization) {
-                        console.error('Assignment missing both assignee and organization:', assignment.id);
-                      }
-                      
-                      return (
-                        <div key={assignment.id} className="border rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-medium">
-                              {(() => {
-                                const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
-                                
-                                if (isPlaceholder && assignment.assigned_organization) {
-                                  return assignment.assigned_organization.name;
-                                } else if (assignment.assigned_organization) {
-                                  return assignment.assigned_organization.name;
-                                 } else if (assignment.assignee) {
-                                   return `${assignment.assignee.first_name || 'Unknown'} ${assignment.assignee.last_name || 'User'}`;
-                                 } else {
-                                   return 'No individual assignee';
-                                 }
-                              })()}
-                            </p>
-                            <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
-                              {assignment.assignment_type}
-                            </Badge>
-                          </div>
-                           <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                             <Mail className="h-3 w-3" />
-                             {assignment.assignee?.email || assignment.assigned_organization?.name || 'No contact info'}
-                           </div>
-                          {assignment.notes && (
-                            <p className="text-sm text-muted-foreground mt-2 italic">{assignment.notes}</p>
-                          )}
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
+                <p className="text-sm">
+                  {assignments.map(assignment => {
+                    if (assignment.assigned_organization) {
+                      return assignment.assigned_organization.name;
+                    } else if (assignment.assignee) {
+                      return `${assignment.assignee.first_name} ${assignment.assignee.last_name}`;
+                    }
+                    return 'Unknown';
+                  }).join(', ')}
+                </p>
               ) : (
-                <p className="text-muted-foreground">Unassigned</p>
+                <p className="text-sm text-muted-foreground">Unassigned</p>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Timeline */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <label className="font-medium text-muted-foreground">Created</label>
-                <p>{formatDateTime(workOrder.date_submitted)}</p>
-                {workOrder.created_user && (
-                  <p className="text-xs text-muted-foreground">
-                    by {workOrder.created_user.first_name} {workOrder.created_user.last_name}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <label className="font-medium text-muted-foreground">Assigned</label>
-                <p>{formatDateTime(workOrder.date_assigned)}</p>
-              </div>
-              
-              <div>
-                <label className="font-medium text-muted-foreground">Due Date</label>
-                <p>{formatDate(workOrder.due_date)}</p>
-              </div>
-              
-              <div>
-                <label className="font-medium text-muted-foreground">Completed</label>
-                <p>{formatDateTime(workOrder.date_completed)}</p>
-              </div>
+            <div>
+              <span className="text-sm font-medium text-muted-foreground">Due Date</span>
+              <p className="text-sm">{formatDate(workOrder.due_date)}</p>
             </div>
-
             {(workOrder.estimated_hours || workOrder.actual_hours) && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {workOrder.estimated_hours && (
-                    <div>
-                      <label className="font-medium text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Estimated Hours
-                      </label>
-                      <p>{workOrder.estimated_hours}h</p>
-                    </div>
-                  )}
-                  
-                  {workOrder.actual_hours && (
-                    <div>
-                      <label className="font-medium text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Actual Hours
-                      </label>
-                      <p>{workOrder.actual_hours}h</p>
-                    </div>
-                  )}
-                </div>
-              </>
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Hours</span>
+                <p className="text-sm">
+                  {workOrder.estimated_hours ? `Est: ${workOrder.estimated_hours}h` : ''}
+                  {workOrder.estimated_hours && workOrder.actual_hours ? ' • ' : ''}
+                  {workOrder.actual_hours ? `Actual: ${workOrder.actual_hours}h` : ''}
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -614,6 +428,276 @@ export default function AdminWorkOrderDetail() {
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
+          {/* Detailed Information Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Work Order Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Work Order Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Title</label>
+                  <p className="font-medium">{workOrder.title}</p>
+                </div>
+                {workOrder.description && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Description</label>
+                    <p className="text-sm">{workOrder.description}</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Work Order #</label>
+                    <p className="font-mono">{workOrder.work_order_number}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Status</label>
+                    <div className="mt-1">
+                      <WorkOrderStatusBadge
+                        status={workOrder.status}
+                        size="sm"
+                        showIcon
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Organization & Location - Full Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="h-5 w-5" />
+                  Organization & Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Organization</label>
+                  <p className="font-medium">{workOrder.organizations?.name || 'N/A'}</p>
+                  {workOrder.organizations?.contact_email && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                      <Mail className="h-3 w-3" />
+                      {workOrder.organizations.contact_email}
+                    </div>
+                  )}
+                  {workOrder.organizations?.contact_phone && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Phone className="h-3 w-3" />
+                      {workOrder.organizations.contact_phone}
+                    </div>
+                  )}
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Location
+                    </label>
+                    {generateMapUrl(workOrder) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(generateMapUrl(workOrder)!, '_blank')}
+                      >
+                        <MapPin className="h-3 w-3 mr-1" />
+                        Directions
+                      </Button>
+                    )}
+                  </div>
+                  {workOrder.store_location && (
+                    <p className="font-medium">{workOrder.store_location}</p>
+                  )}
+                  {workOrder.partner_location_number && (
+                    <p className="text-sm text-muted-foreground">Loc: {workOrder.partner_location_number}</p>
+                  )}
+                  {hasAddress(workOrder) && (
+                    <div className="text-sm text-muted-foreground">
+                      {formatAddressMultiline(workOrder).map((line, index) => (
+                        <p key={index}>{line}</p>
+                      ))}
+                    </div>
+                  )}
+                  {workOrder.location_contact_name && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Site Contact: {workOrder.location_contact_name}
+                      {workOrder.location_contact_phone && ` • ${workOrder.location_contact_phone}`}
+                      {workOrder.location_contact_email && ` • ${workOrder.location_contact_email}`}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Partner References */}
+            {(workOrder.partner_po_number || workOrder.partner_location_number) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Partner References
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {workOrder.partner_po_number && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">PO Number</label>
+                      <p className="font-medium">{workOrder.partner_po_number}</p>
+                    </div>
+                  )}
+                  {workOrder.partner_location_number && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Location Number</label>
+                      <p className="font-medium">{workOrder.partner_location_number}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Trade & Assignment - Full Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5" />
+                  Trade & Assignment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Trade</label>
+                  <p className="font-medium">{workOrder.trades?.name || 'N/A'}</p>
+                  {workOrder.trades?.description && (
+                    <p className="text-sm text-muted-foreground">{workOrder.trades.description}</p>
+                  )}
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Assigned To
+                  </label>
+                  {isLoadingAssignments ? (
+                    <p className="text-muted-foreground">Loading assignments...</p>
+                  ) : assignments.length > 0 ? (
+                    <div className="space-y-3">
+                      {assignments.map((assignment) => {
+                        return (
+                          <div key={assignment.id} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-medium">
+                                {(() => {
+                                  const isPlaceholder = assignment.notes?.includes('no active users - placeholder assignment');
+                                  
+                                  if (isPlaceholder && assignment.assigned_organization) {
+                                    return assignment.assigned_organization.name;
+                                  } else if (assignment.assigned_organization) {
+                                    return assignment.assigned_organization.name;
+                                   } else if (assignment.assignee) {
+                                     return `${assignment.assignee.first_name || 'Unknown'} ${assignment.assignee.last_name || 'User'}`;
+                                   } else {
+                                     return 'No individual assignee';
+                                   }
+                                })()}
+                              </p>
+                              <Badge variant={assignment.assignment_type === 'lead' ? 'default' : 'outline'}>
+                                {assignment.assignment_type}
+                              </Badge>
+                            </div>
+                             <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                               <Mail className="h-3 w-3" />
+                               {assignment.assignee?.email || assignment.assigned_organization?.name || 'No contact info'}
+                             </div>
+                            {assignment.notes && (
+                              <p className="text-sm text-muted-foreground mt-2 italic">{assignment.notes}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">Unassigned</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Timeline - Full Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <label className="font-medium text-muted-foreground">Created</label>
+                    <p>{formatDateTime(workOrder.date_submitted)}</p>
+                    {workOrder.created_user && (
+                      <p className="text-xs text-muted-foreground">
+                        by {workOrder.created_user.first_name} {workOrder.created_user.last_name}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="font-medium text-muted-foreground">Assigned</label>
+                    <p>{formatDateTime(workOrder.date_assigned)}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="font-medium text-muted-foreground">Due Date</label>
+                    <p>{formatDate(workOrder.due_date)}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="font-medium text-muted-foreground">Completed</label>
+                    <p>{formatDateTime(workOrder.date_completed)}</p>
+                  </div>
+                </div>
+
+                {(workOrder.estimated_hours || workOrder.actual_hours) && (
+                  <>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {workOrder.estimated_hours && (
+                        <div>
+                          <label className="font-medium text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Estimated Hours
+                          </label>
+                          <p>{workOrder.estimated_hours}h</p>
+                        </div>
+                      )}
+                      
+                      {workOrder.actual_hours && (
+                        <div>
+                          <label className="font-medium text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Actual Hours
+                          </label>
+                          <p>{workOrder.actual_hours}h</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Admin Notes */}
           {workOrder.admin_completion_notes && (
             <Card>
