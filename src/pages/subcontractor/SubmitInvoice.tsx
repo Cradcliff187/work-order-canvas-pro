@@ -4,33 +4,49 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
-import { Upload, ArrowLeft, FileText, Loader2, Save } from 'lucide-react';
+import { Upload, ArrowLeft, FileText, Loader2, Save, Building2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
 import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 
 interface InvoiceFormData {
   externalInvoiceNumber: string;
   selectedWorkOrders: Record<string, number>; // workOrderId -> amount
+  selectedOrganizationId?: string; // For admin submissions
 }
 
 export default function SubmitInvoice() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { userOrganizations } = useAuth();
+  const { isAdmin, profile } = useUserProfile();
   const { submitInvoice, isSubmitting } = useInvoiceSubmission();
 
-  // Get organization IDs for the query
+  const [formData, setFormData] = useState<InvoiceFormData>({
+    externalInvoiceNumber: '',
+    selectedWorkOrders: {},
+    selectedOrganizationId: undefined,
+  });
+
+  const isAdminMode = isAdmin();
+  
+  // Get organization IDs for the query - either selected org (admin) or user's orgs (subcontractor)
   const organizationIds = React.useMemo(() => {
+    if (isAdminMode && formData.selectedOrganizationId) {
+      return [formData.selectedOrganizationId];
+    }
     return userOrganizations?.map(org => org.organization_id) || [];
-  }, [userOrganizations]);
+  }, [userOrganizations, isAdminMode, formData.selectedOrganizationId]);
 
   // Fetch completed work orders for invoicing
   const completedWorkOrdersForInvoicing = useQuery({
@@ -55,11 +71,23 @@ export default function SubmitInvoice() {
     staleTime: 30 * 1000,
   });
   
-  const [formData, setFormData] = useState<InvoiceFormData>({
-    externalInvoiceNumber: '',
-    selectedWorkOrders: {},
-  });
   const [files, setFiles] = useState<File[]>([]);
+  
+  // Get selected organization details for display
+  const { data: selectedOrganization } = useQuery({
+    queryKey: ['organization', formData.selectedOrganizationId],
+    queryFn: async () => {
+      if (!formData.selectedOrganizationId) return null;
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name, organization_type')
+        .eq('id', formData.selectedOrganizationId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!formData.selectedOrganizationId,
+  });
 
   // Load saved form data from localStorage
   useEffect(() => {
@@ -150,12 +178,14 @@ export default function SubmitInvoice() {
         totalAmount,
         workOrders: workOrdersData,
         attachments: files.length > 0 ? files : undefined,
+        organizationId: isAdminMode ? formData.selectedOrganizationId : undefined,
+        createdByAdminId: isAdminMode ? profile?.id : undefined,
       });
       
       // Clear saved form data
       localStorage.removeItem('invoiceFormData');
       
-      navigate('/subcontractor/invoices');
+      navigate(isAdminMode ? '/admin/invoices' : '/subcontractor/invoices');
     } catch (error: any) {
       toast({
         title: "Error submitting invoice",
@@ -186,7 +216,7 @@ export default function SubmitInvoice() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/subcontractor/invoices">
+          <Link to={isAdminMode ? "/admin/invoices" : "/subcontractor/invoices"}>
             <Button variant="outline" size="sm" className="min-h-[44px] sm:min-h-auto">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Invoices
@@ -194,13 +224,45 @@ export default function SubmitInvoice() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold">Submit Invoice</h1>
-            <p className="text-muted-foreground">Submit your invoice for completed work</p>
+            <p className="text-muted-foreground">
+              {isAdminMode ? "Submit invoice on behalf of subcontractor" : "Submit your invoice for completed work"}
+            </p>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <StandardFormLayout>
+          {isAdminMode && (
+            <StandardFormLayout.Section 
+              title="Select Organization"
+              description="Choose the subcontractor organization for this invoice"
+            >
+              <StandardFormLayout.FieldGroup>
+                <div className="space-y-2">
+                  <Label>Subcontractor Organization</Label>
+                  <OrganizationSelector
+                    value={formData.selectedOrganizationId}
+                    onChange={(orgId) => setFormData(prev => ({ 
+                      ...prev, 
+                      selectedOrganizationId: orgId,
+                      selectedWorkOrders: {} // Reset work orders when org changes
+                    }))}
+                    organizationType="subcontractor"
+                    placeholder="Select subcontractor organization..."
+                  />
+                </div>
+                {selectedOrganization && (
+                  <Alert>
+                    <Building2 className="h-4 w-4" />
+                    <AlertDescription>
+                      Submitting invoice on behalf of: <strong>{selectedOrganization.name}</strong>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </StandardFormLayout.FieldGroup>
+            </StandardFormLayout.Section>
+          )}
           <StandardFormLayout.Section 
             title="Invoice Details"
             description="Enter your external invoice number (optional)"
@@ -226,7 +288,12 @@ export default function SubmitInvoice() {
             description="Choose completed work orders to include in this invoice"
           >
             <StandardFormLayout.FieldGroup>
-              {completedWorkOrdersForInvoicing?.isLoading ? (
+              {isAdminMode && !formData.selectedOrganizationId ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Please select a subcontractor organization first</p>
+                </div>
+              ) : completedWorkOrdersForInvoicing?.isLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
@@ -323,7 +390,7 @@ export default function SubmitInvoice() {
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting || selectedWorkOrderIds.length === 0}
+              disabled={isSubmitting || selectedWorkOrderIds.length === 0 || (isAdminMode && !formData.selectedOrganizationId)}
               className="min-h-[44px]"
             >
               {isSubmitting ? (
