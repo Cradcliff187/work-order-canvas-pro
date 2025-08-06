@@ -225,6 +225,11 @@ export default function AdminWorkOrders() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
           <Button 
             variant="outline" 
             onClick={() => setBulkMode(!bulkMode)}
@@ -247,13 +252,6 @@ export default function AdminWorkOrders() {
             filters={filters}
             onFiltersChange={setFilters}
             onClearFilters={handleClearFilters}
-          />
-        </div>
-        <div className="flex items-end">
-          <ViewModeSwitcher
-            value={viewMode}
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
           />
         </div>
       </div>
