@@ -28,7 +28,6 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Admin Dashboard', url: '/admin/dashboard', icon: Gauge },
   { title: 'Employee Dashboard', url: '/admin/employee-dashboard', icon: HardHat },
   { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
-  { title: 'Approval Center', url: '/admin/approvals', icon: ShieldCheck },
   { title: 'Reports', url: '/admin/reports', icon: FileBarChart },
   { title: 'Time Reports', url: '/admin/time-reports', icon: Timer },
   { title: 'Receipts', url: '/admin/receipts', icon: ReceiptText },
@@ -45,7 +44,7 @@ export const sidebarItems: SidebarItem[] = [
 ];
 
 export const sidebarSections = {
-  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Approval Center', 'Reports', 'Time Reports'],
+  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Reports', 'Time Reports'],
   FINANCIAL: ['Receipts', 'Invoices'],
   MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
@@ -53,4 +52,4 @@ export const sidebarSections = {
 };
 
 export const adminOnlyItems = ['Admin Dashboard', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Settings', 'System Health', 'Email Testing'];
-export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Approval Center', 'Time Reports', 'Receipts'];
+export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];

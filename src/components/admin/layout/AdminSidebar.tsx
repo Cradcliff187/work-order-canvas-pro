@@ -17,7 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApprovalQueue } from '@/hooks/useApprovalQueue';
+import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
 import { useBranding } from '@/hooks/useBranding';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sidebarItems, sidebarSections, adminOnlyItems, employeeAccessItems } from './sidebarConfig';
@@ -31,7 +31,7 @@ export function AdminSidebar() {
   const { profile } = useAuth();
   const userProfile = useUserProfile();
   const organizationNavItems = useOrganizationNavigation();
-  const { totalCount } = useApprovalQueue();
+  const { data: submittedCounts } = useSubmittedCounts();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
   const collapsed = state === 'collapsed';
@@ -83,9 +83,14 @@ export function AdminSidebar() {
                     {!collapsed && (
                       <>
                         <span className="flex-1">{item.title}</span>
-                        {item.title === 'Approval Center' && totalCount > 0 && (
-                          <Badge variant="secondary" className="h-5 text-[10px] px-1.5 ml-2">
-                            {totalCount}
+                        {item.title === 'Reports' && submittedCounts && submittedCounts.reportsCount > 0 && (
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 h-5 text-[10px] px-1.5 ml-2">
+                            {submittedCounts.reportsCount}
+                          </Badge>
+                        )}
+                        {item.title === 'Invoices' && submittedCounts && submittedCounts.invoicesCount > 0 && (
+                          <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 h-5 text-[10px] px-1.5 ml-2">
+                            {submittedCounts.invoicesCount}
                           </Badge>
                         )}
                       </>

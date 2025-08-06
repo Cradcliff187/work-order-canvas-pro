@@ -91,7 +91,7 @@ const WorkOrderList = () => {
 
   // Fetch selected work order details for master-detail view
   const { data: selectedWorkOrder, isLoading: isLoadingDetail } = useWorkOrderDetail(
-    selectedWorkOrderId || undefined
+    selectedWorkOrderId || ''
   );
 
   // Filter and sort work orders

@@ -37,6 +37,8 @@ import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper
 import { format } from 'date-fns';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
+import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
@@ -45,7 +47,7 @@ export default function AdminInvoices() {
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [filters, setFilters] = useState({
-    status: [] as string[],
+    status: ['submitted'] as string[], // Default to showing submitted invoices first
     paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
     search: '',
     page: 1,
@@ -65,6 +67,7 @@ export default function AdminInvoices() {
   }, [searchParams]);
 
   const { data, isLoading, error } = useInvoices(filters);
+  const { data: submittedCounts } = useSubmittedCounts();
 
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -159,7 +162,14 @@ export default function AdminInvoices() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
+            {submittedCounts && submittedCounts.invoicesCount > 0 && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                {submittedCounts.invoicesCount} pending
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Manage and review subcontractor invoices
           </p>

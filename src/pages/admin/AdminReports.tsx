@@ -47,6 +47,7 @@ import { useAdminReports } from '@/hooks/useAdminReports';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useSubcontractors } from '@/hooks/useSubcontractors';
 import { useToast } from '@/hooks/use-toast';
+import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -79,7 +80,9 @@ export default function AdminReports() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [filters, setFilters] = useState<ReportFilters>({});
+  const [filters, setFilters] = useState<ReportFilters>({
+    status: ['submitted'] // Default to showing submitted reports first
+  });
 
   const { data: reportsData, isLoading, error, refetch } = useAdminReports(
     pagination,
@@ -89,6 +92,7 @@ export default function AdminReports() {
 
   const { data: subcontractors } = useSubcontractors();
   const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
+  const { data: submittedCounts } = useSubmittedCounts();
 
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -311,7 +315,14 @@ export default function AdminReports() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Report Review</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Report Review</h1>
+            {submittedCounts && submittedCounts.reportsCount > 0 && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                {submittedCounts.reportsCount} pending
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
           </p>

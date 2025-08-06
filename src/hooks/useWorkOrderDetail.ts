@@ -78,9 +78,10 @@ export function useWorkOrderDetail(id: string) {
   
   const query = useQuery({
     queryKey,
+    enabled: !!id && id !== '' && id !== 'undefined',
     queryFn: async () => {
       console.log('🔍 useWorkOrderDetail queryFn executing for ID:', id);
-      if (!id) throw new Error('Work order ID is required');
+      if (!id || id === '' || id === 'undefined') throw new Error('Work order ID is required');
 
       // Main work order query (one-to-one relationships only)
       console.log('🔍 Executing main work order query for ID:', id);
@@ -219,7 +220,6 @@ export function useWorkOrderDetail(id: string) {
         location_contact_email: locationContact?.contact_email,
       };
     },
-    enabled: !!id && id !== "undefined" && id !== "skip-query" && id.length > 10,
     staleTime: 3 * 60 * 1000, // 3 minutes
     retry: (failureCount, error: any) => {
       if (error?.code === 'PGRST116' || error?.message?.includes('permission')) {
