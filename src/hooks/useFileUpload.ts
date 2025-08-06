@@ -454,10 +454,87 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     workOrderId?: string,
     reportId?: string
   ): Promise<UploadedFile[]> => {
+    console.log('🔧 UPLOAD DEBUG - uploadFiles called:', {
+      filesCount: files.length,
+      isInternal,
+      workOrderId,
+      reportId,
+      userAuthId: user?.id,
+      context,
+      timestamp: new Date().toISOString()
+    });
+
     if (!user) {
       const error = "User not authenticated";
+      console.error('🔧 UPLOAD DEBUG - No user authenticated');
       onError?.(error);
       throw new Error(error);
+    }
+
+    // Test auth state first
+    try {
+      const { data: authTest, error: authError } = await supabase.rpc('debug_auth_state');
+      console.log('🔧 UPLOAD DEBUG - Auth state:', { authTest, authError });
+    } catch (authTestError) {
+      console.error('🔧 UPLOAD DEBUG - Auth test failed:', authTestError);
+    }
+
+    // Get current profile
+    let currentProfile;
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, user_id, email, first_name, last_name")
+        .eq("user_id", user.id)
+        .single();
+      
+      console.log('🔧 UPLOAD DEBUG - Profile lookup:', { profile, profileError });
+      currentProfile = profile;
+      
+      if (!profile) {
+        throw new Error("Profile not found for authenticated user");
+      }
+    } catch (profileError) {
+      console.error('🔧 UPLOAD DEBUG - Profile lookup failed:', profileError);
+      throw new Error("Failed to get user profile");
+    }
+
+    // Check user organizations and work order access if workOrderId provided
+    if (workOrderId) {
+      try {
+        // Get user organizations
+        const { data: userOrgs, error: orgError } = await supabase
+          .from('organization_members')
+          .select('organization_id, organizations!inner(name, organization_type)')
+          .eq('user_id', currentProfile.id);
+        
+        console.log('🔧 UPLOAD DEBUG - User organizations:', { userOrgs, orgError });
+
+        // Get work order details
+        const { data: workOrder, error: woError } = await supabase
+          .from('work_orders')
+          .select('id, organization_id, work_order_number, organizations!inner(name, organization_type)')
+          .eq('id', workOrderId)
+          .single();
+        
+        console.log('🔧 UPLOAD DEBUG - Work order details:', { workOrder, woError });
+
+        // Verify access
+        const userOrgIds = userOrgs?.map(uo => uo.organization_id) || [];
+        const canAccess = workOrder && userOrgIds.includes(workOrder.organization_id);
+        console.log('🔧 UPLOAD DEBUG - Access verification:', { 
+          userOrgIds, 
+          workOrderOrgId: workOrder?.organization_id, 
+          canAccess 
+        });
+
+        if (!canAccess) {
+          throw new Error('Access denied: Work order does not belong to your organization');
+        }
+      } catch (accessError) {
+        console.error('🔧 UPLOAD DEBUG - Access check failed:', accessError);
+        throw accessError;
+      }
     }
 
     // Validate files
@@ -465,6 +542,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     
     if (errors.length > 0) {
       const errorMessage = errors.join(', ');
+      console.error('🔧 UPLOAD DEBUG - File validation failed:', errors);
       onError?.(errorMessage);
       toast({
         title: "Upload Error",
@@ -474,6 +552,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       throw new Error(errorMessage);
     }
 
+    console.log('🔧 UPLOAD DEBUG - Files validated successfully:', valid.length);
     setIsUploading(true);
     
     // Initialize progress tracking
@@ -497,17 +576,35 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         invoiceId: defaultInvoiceId,
         profileId: profileId
       };
+
+      console.log('🔧 UPLOAD DEBUG - Context IDs prepared:', contextIds);
       
       // Upload files sequentially to avoid overwhelming the system
       for (let i = 0; i < valid.length; i++) {
         const file = valid[i];
         const fileId = initialProgress[i].fileId;
         
+        console.log(`🔧 UPLOAD DEBUG - Starting upload ${i + 1}/${valid.length}:`, {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          fileId,
+          isInternal,
+          contextIds
+        });
+        
         try {
           const result = await uploadFile(file, contextIds, fileId, isInternal);
+          console.log(`🔧 UPLOAD DEBUG - Upload ${i + 1} successful:`, result);
           results.push(result);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+          console.error(`🔧 UPLOAD DEBUG - Upload ${i + 1} failed:`, {
+            fileName: file.name,
+            error: errorMessage,
+            fullError: error
+          });
+          
           if (fileId) {
             updateProgress(fileId, { 
               status: 'error', 
