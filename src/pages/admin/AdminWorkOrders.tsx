@@ -30,7 +30,7 @@ import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
-import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { MobileWorkOrderCard } from '@/components/MobileWorkOrderCard';
 import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useToast } from '@/hooks/use-toast';
@@ -395,23 +395,36 @@ export default function AdminWorkOrders() {
                   table.getRowModel().rows.map((row) => {
                     const workOrder = row.original;
                     
+                    // Transform the work order data to match MobileWorkOrderCard's expected format
+                    const transformedWorkOrder = {
+                      ...workOrder,
+                      work_order_assignments: workOrder.work_order_assignments?.map(assignment => ({
+                        assigned_to: assignment.assigned_to,
+                        assignment_type: assignment.assignment_type,
+                        assignee_profile: {
+                          first_name: assignment.profiles?.first_name || '',
+                          last_name: assignment.profiles?.last_name || ''
+                        },
+                        assigned_organization: assignment.organizations ? {
+                          name: assignment.organizations.name,
+                          organization_type: 'partner' as const
+                        } : undefined
+                      })) || []
+                    };
+                    
                     return (
-                      <MobileTableCard
+                      <MobileWorkOrderCard
                         key={row.id}
-                        title={workOrder.work_order_number || 'N/A'}
-                        subtitle={`${workOrder.title || 'Untitled'} • ${workOrder.store_location || 'No location'}, ${workOrder.city || 'No city'}`}
-                        status={
-                          <WorkOrderStatusBadge status={workOrder.status} size="sm" />
-                        }
-                        onClick={() => navigate(`/admin/work-orders/${workOrder.id}`)}
-                      >
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{workOrder.trades?.name || 'No trade'}</span>
-                          {workOrder.date_submitted && (
-                            <span>{format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}</span>
-                          )}
-                        </div>
-                      </MobileTableCard>
+                        workOrder={transformedWorkOrder}
+                        viewerRole="admin"
+                        showAssignee={true}
+                        showOrganization={true}
+                        showTrade={true}
+                        showInvoiceAmount={true}
+                        showDaysOld={true}
+                        showActions={false}
+                        onTap={() => navigate(`/admin/work-orders/${workOrder.id}`)}
+                      />
                     );
                   })
                 ) : (
