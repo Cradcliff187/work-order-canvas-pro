@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, MessageCircle } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAttachmentOrganizations } from '@/hooks/useAttachmentOrganizations';
@@ -47,40 +48,31 @@ export default function WorkOrderDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Work Order Details</h1>
-          <p className="text-muted-foreground">
-            {workOrder.work_order_number ? `Work Order #${workOrder.work_order_number}` : `Work Order ${workOrder.id}`}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {workOrder.work_order_number ? `Work Order #${workOrder.work_order_number}` : `Work Order ${workOrder.id}`}
+            </h1>
+          </div>
         </div>
+        <WorkOrderStatusBadge status={workOrder.status} />
       </div>
 
-      <div className="space-y-6">
-          {/* Organization Info */}
-          {workOrder.organizations && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Building className="h-5 w-5 text-primary" />
-                  <div>
-                    <div className="font-medium">
-                      {workOrder.organizations.name}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {workOrder.organizations.contact_email}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Work Order Details Card */}
+      {/* Tabs */}
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="details" className="space-y-6">
+          {/* Work Order Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -106,7 +98,7 @@ export default function WorkOrderDetail() {
                   <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
                   <p className="text-sm">{formatDate(workOrder.created_at)}</p>
                 </div>
-                <div>
+                <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
                   <Label className="text-sm font-medium text-muted-foreground">Description</Label>
                   <p className="text-sm">{workOrder.description || 'Not specified'}</p>
                 </div>
@@ -114,15 +106,32 @@ export default function WorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Location & Contact Information */}
+          {/* Organization & Location */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Location & Contact Information
+                <Building className="h-5 w-5" />
+                Organization & Location
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Organization Info */}
+              {workOrder.organizations && (
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Building className="h-5 w-5 text-primary" />
+                    <div>
+                      <div className="font-medium">
+                        {workOrder.organizations.name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {workOrder.organizations.contact_email}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Location Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 <div>
@@ -156,25 +165,48 @@ export default function WorkOrderDetail() {
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-foreground">Contact Details</p>
                 
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
-                  <p className="text-sm">{workOrder.location_contact_name || 'Not available'}</p>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
-                  <p className="text-sm">{workOrder.location_contact_phone || 'Not available'}</p>
-                </div>
-                
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Email</Label>
-                  <p className="text-sm">{workOrder.location_contact_email || 'Not available'}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Contact Name</Label>
+                    <p className="text-sm">{workOrder.location_contact_name || 'Not available'}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                    <p className="text-sm">{workOrder.location_contact_phone || 'Not available'}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                    <p className="text-sm">{workOrder.location_contact_email || 'Not available'}</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Attachments */}
+          {/* Assignment Information */}
+          {workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Assignment Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Assigned To</Label>
+                  <p className="text-sm">
+                    {workOrder.work_order_assignments[0].profiles?.first_name} {workOrder.work_order_assignments[0].profiles?.last_name}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="files" className="space-y-6">
           <AttachmentSection
             attachments={(workOrder.work_order_attachments || []).map((attachment): AttachmentItem => {
               const uploaderOrg = organizationMap?.[attachment.uploaded_by_user_id];
@@ -221,8 +253,9 @@ export default function WorkOrderDetail() {
             maxFileSize={50 * 1024 * 1024} // 50MB
             maxFiles={10}
           />
+        </TabsContent>
 
-          {/* Messages Section */}
+        <TabsContent value="messages" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -236,24 +269,8 @@ export default function WorkOrderDetail() {
               </MessageErrorBoundary>
             </CardContent>
           </Card>
-          
-          {/* Assigned User */}
-          {workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Assigned To
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">
-                  {workOrder.work_order_assignments[0].profiles?.first_name} {workOrder.work_order_assignments[0].profiles?.last_name}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
