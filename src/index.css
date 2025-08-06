@@ -270,9 +270,9 @@
     @apply py-4 text-slate-700;
   }
 
-  /* Remove alternating row colors for cleaner look */
+  /* Zebra striping for better readability */
   .admin-table tbody tr:nth-child(even) {
-    @apply bg-white;
+    @apply bg-slate-50/20;
   }
 
   /* Admin table row selection states */
