@@ -98,7 +98,6 @@ export default function AdminReports() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<any>(null);
 
-
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
       id: 'select',
@@ -150,20 +149,37 @@ export default function AdminReports() {
       header: 'Subcontractor',
       cell: ({ row }) => {
         const subcontractor = row.original.subcontractor;
+        const subcontractorOrg = row.original.subcontractor_organization;
         const submittedBy = row.original.submitted_by;
+        
+        // Determine what to display based on available data
+        let displayName = 'N/A';
+        let companyName = '';
+        
+        if (subcontractor) {
+          // Individual subcontractor assigned
+          displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
+          if (subcontractorOrg) {
+            companyName = subcontractorOrg.name;
+          }
+        } else if (subcontractorOrg) {
+          // Organization-level assignment (no individual)
+          displayName = subcontractorOrg.name;
+        }
+
         return (
           <div>
             <div className="font-medium">
-              {subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}
+              {displayName}
             </div>
             {submittedBy && (submittedBy as any)?.organization_members?.some((om: any) => om.organization.organization_type === 'internal') && (
               <div className="text-xs text-orange-600 font-medium">
                 Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
               </div>
             )}
-            {(subcontractor as any)?.organization_members?.[0]?.organization?.name && (
+            {companyName && (
               <div className="text-sm text-muted-foreground">
-                {(subcontractor as any).organization_members[0].organization.name}
+                {companyName}
               </div>
             )}
           </div>
@@ -289,8 +305,6 @@ export default function AdminReports() {
       setReportToDelete(null);
     }
   };
-
-  
 
   if (error) {
     return (
@@ -535,11 +549,21 @@ export default function AdminReports() {
                     const report = row.original;
                     const workOrder = report.work_orders;
                     const subcontractor = report.subcontractor;
+                    const subcontractorOrg = report.subcontractor_organization;
+                    
+                    // Determine display name for subcontractor
+                    let subcontractorDisplay = 'N/A';
+                    if (subcontractor) {
+                      subcontractorDisplay = `${subcontractor.first_name} ${subcontractor.last_name}`;
+                    } else if (subcontractorOrg) {
+                      subcontractorDisplay = subcontractorOrg.name;
+                    }
+                    
                     return (
                       <MobileTableCard
                         key={report.id}
                         title={workOrder?.work_order_number || 'N/A'}
-                        subtitle={`${workOrder?.title || 'N/A'} • ${subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}`}
+                        subtitle={`${workOrder?.title || 'N/A'} • ${subcontractorDisplay}`}
                         status={<ReportStatusBadge status={report.status} size="sm" showIcon />}
                         onClick={() => navigate(`/admin/reports/${report.id}`)}
                       >

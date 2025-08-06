@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
@@ -32,6 +33,11 @@ export function useAdminReports(
             last_name,
             email,
             phone
+          ),
+          subcontractor_organization:organizations!subcontractor_organization_id(
+            id,
+            name,
+            initials
           ),
           reviewed_by:profiles!reviewed_by_user_id(
             first_name,
