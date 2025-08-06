@@ -43,20 +43,27 @@ export default function AdminApprovals() {
   const { reviewReport } = useAdminReportMutations();
   const { approveInvoice, rejectInvoice } = useInvoiceMutations();
 
-  // Filter items by tab and other filters
-  const filteredItems = approvalItems.filter(item => {
-    const matchesTab = activeTab === 'all' || item.type === activeTab.slice(0, -1); // 'reports' -> 'report'
-    const matchesUrgency = urgencyFilter === 'all' || item.urgency === urgencyFilter;
-    const matchesSearch = !searchQuery || 
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.submittedBy.toLowerCase().includes(searchQuery.toLowerCase());
+  // Optimized filtering with memoization
+  const { reportItems, invoiceItems, filteredItems } = useMemo(() => {
+    const reports = approvalItems.filter(item => item.type === 'report');
+    const invoices = approvalItems.filter(item => item.type === 'invoice');
     
-    return matchesTab && matchesUrgency && matchesSearch;
-  });
-
-  // Separate items by type for tabs
-  const reportItems = approvalItems.filter(item => item.type === 'report');
-  const invoiceItems = approvalItems.filter(item => item.type === 'invoice');
+    const filtered = approvalItems.filter(item => {
+      const matchesTab = activeTab === 'reports' ? item.type === 'report' : item.type === 'invoice';
+      const matchesUrgency = urgencyFilter === 'all' || item.urgency === urgencyFilter;
+      const matchesSearch = !searchQuery || 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.submittedBy.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesTab && matchesUrgency && matchesSearch;
+    });
+    
+    return {
+      reportItems: reports,
+      invoiceItems: invoices,
+      filteredItems: filtered
+    };
+  }, [approvalItems, activeTab, urgencyFilter, searchQuery]);
 
   // Get current tab items
   const currentTabItems = activeTab === 'reports' ? reportItems : invoiceItems;
@@ -164,7 +171,7 @@ export default function AdminApprovals() {
     }
   };
 
-  // Table setup
+  // Optimized table setup with stable references
   const columns = useMemo(() => createApprovalColumns({
     onView: handleView,
     onApprove: handleApprove,
@@ -172,10 +179,10 @@ export default function AdminApprovals() {
     loadingItems,
   }), [loadingItems]);
 
+  const tableData = useMemo(() => filteredItems, [filteredItems]);
+
   const table = useReactTable({
-    data: filteredItems.filter(item => 
-      activeTab === 'reports' ? item.type === 'report' : item.type === 'invoice'
-    ),
+    data: tableData,
     columns,
     state: {
       rowSelection,
