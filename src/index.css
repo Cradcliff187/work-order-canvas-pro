@@ -272,7 +272,7 @@
 
   /* Zebra striping for better readability */
   .admin-table tbody tr:nth-child(even) {
-    @apply bg-slate-50/20;
+    @apply bg-slate-50;
   }
 
   /* Admin table row selection states */
