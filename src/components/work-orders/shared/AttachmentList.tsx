@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { TableActionsDropdown, type TableAction } from '@/components/ui/table-actions-dropdown';
+
 import { getFileIcon, getFileExtension, formatFileSize } from '@/utils/fileUtils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,8 @@ interface AttachmentItem {
   uploaded_at: string;
   uploader_name?: string;
   uploader_email?: string;
+  is_internal?: boolean;
+  uploader_organization_type?: 'partner' | 'subcontractor' | 'internal';
 }
 
 interface AttachmentListProps {
@@ -155,6 +158,25 @@ export function AttachmentList({
                       >
                         {getFileExtension(attachment.file_name).toUpperCase()}
                       </Badge>
+                      {attachment.is_internal && (
+                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                          Internal
+                        </Badge>
+                      )}
+                      {attachment.uploader_organization_type && (
+                        <Badge 
+                          variant={
+                            attachment.uploader_organization_type === 'partner' ? 'default' :
+                            attachment.uploader_organization_type === 'subcontractor' ? 'secondary' :
+                            'outline'
+                          }
+                          className="text-xs flex-shrink-0"
+                        >
+                          {attachment.uploader_organization_type === 'partner' ? 'Partner' :
+                           attachment.uploader_organization_type === 'subcontractor' ? 'Subcontractor' :
+                           'Internal'}
+                        </Badge>
+                      )}
                     </div>
                     
                     <div className="flex items-center justify-between text-xs text-muted-foreground">

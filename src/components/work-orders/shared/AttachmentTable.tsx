@@ -24,6 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableActionsDropdown, type TableAction } from '@/components/ui/table-actions-dropdown';
+
 import { getFileIcon, getFileExtension, formatFileSize } from '@/utils/fileUtils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,8 @@ interface AttachmentItem {
   uploaded_at: string;
   uploader_name?: string;
   uploader_email?: string;
+  is_internal?: boolean;
+  uploader_organization_type?: 'partner' | 'subcontractor' | 'internal';
 }
 
 interface AttachmentTableProps {
@@ -242,9 +245,29 @@ export function AttachmentTable({
                   </TableCell>
                   
                   <TableCell className="hidden md:table-cell">
-                    <Badge variant={attachment.file_type === 'photo' ? 'default' : 'secondary'}>
-                      {attachment.file_type === 'photo' ? 'Image' : 'Document'}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant={attachment.file_type === 'photo' ? 'default' : 'secondary'}>
+                        {attachment.file_type === 'photo' ? 'Image' : 'Document'}
+                      </Badge>
+                      {attachment.is_internal && (
+                        <Badge variant="outline">
+                          Internal
+                        </Badge>
+                      )}
+                      {attachment.uploader_organization_type && (
+                        <Badge 
+                          variant={
+                            attachment.uploader_organization_type === 'partner' ? 'default' :
+                            attachment.uploader_organization_type === 'subcontractor' ? 'secondary' :
+                            'outline'
+                          }
+                        >
+                          {attachment.uploader_organization_type === 'partner' ? 'Partner' :
+                           attachment.uploader_organization_type === 'subcontractor' ? 'Subcontractor' :
+                           'Internal'}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   
                   <TableCell className="hidden lg:table-cell">
