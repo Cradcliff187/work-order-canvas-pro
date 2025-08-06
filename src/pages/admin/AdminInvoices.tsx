@@ -39,9 +39,12 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
 import { Badge } from '@/components/ui/badge';
+import { Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -174,6 +177,10 @@ export default function AdminInvoices() {
             Manage and review subcontractor invoices
           </p>
         </div>
+        <Button onClick={() => navigate('/admin/submit-invoice')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Invoice
+        </Button>
       </div>
 
       {/* Filters */}
