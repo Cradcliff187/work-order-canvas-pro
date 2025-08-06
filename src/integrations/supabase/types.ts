@@ -1543,6 +1543,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      debug_upload_attempt: {
+        Args: { p_uploaded_by_user_id: string; p_work_order_id: string }
+        Returns: {
+          uploaded_by_user_id: string
+          auth_profile_id_result: string
+          ids_match: boolean
+          work_order_check: boolean
+        }[]
+      }
       debug_user_creation_state: {
         Args: { p_email?: string; p_user_id?: string }
         Returns: Json
@@ -1763,7 +1772,7 @@ export type Database = {
         Returns: Json
       }
       test_auth_context: {
-        Args: { user_uuid: string }
+        Args: Record<PropertyKey, never> | { user_uuid: string }
         Returns: {
           auth_uid: string
           profile_found: boolean
