@@ -1,15 +1,18 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
+import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
 import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -25,8 +28,11 @@ export default function SelectReports() {
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>();
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
   const [markupPercentage, setMarkupPercentage] = useState<number>(20);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+  const navigate = useNavigate();
   const { data: reports, isLoading, error } = usePartnerUnbilledReports(selectedPartnerId);
+  const generateInvoice = usePartnerInvoiceGeneration();
 
   // Calculate totals based on selected reports
   const calculations = useMemo(() => {
@@ -66,6 +72,27 @@ export default function SelectReports() {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  const handleGenerateInvoice = () => {
+    if (!selectedPartnerId || selectedReportIds.size === 0) return;
+    
+    generateInvoice.mutate({
+      partnerOrganizationId: selectedPartnerId,
+      selectedReportIds: Array.from(selectedReportIds),
+      markupPercentage,
+      subtotal: calculations.subtotal,
+      totalAmount: calculations.total
+    }, {
+      onSuccess: (result) => {
+        // Clear selection
+        setSelectedReportIds(new Set());
+        setShowConfirmDialog(false);
+        
+        // Navigate to invoice detail
+        navigate(`/admin/partner-billing/invoices/${result.invoiceId}`);
+      }
+    });
   };
 
   return (
@@ -318,9 +345,43 @@ export default function SelectReports() {
                     </div>
                   </div>
                   
-                  <Button disabled className="bg-muted text-muted-foreground cursor-not-allowed">
-                    Generate Invoice
-                  </Button>
+                  <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="default" 
+                        size="lg"
+                        disabled={selectedReportIds.size === 0 || generateInvoice.isPending}
+                      >
+                        {generateInvoice.isPending ? 'Generating...' : 'Generate Invoice'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                          <p>You are about to generate an invoice with the following details:</p>
+                          <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
+                            <p><strong>Partner:</strong> {selectedPartnerId ? 'Selected Partner' : 'Unknown'}</p>
+                            <p><strong>Reports:</strong> {selectedReportIds.size} selected</p>
+                            <p><strong>Subtotal:</strong> {formatCurrency(calculations.subtotal)}</p>
+                            <p><strong>Markup ({markupPercentage}%):</strong> {formatCurrency(calculations.markupAmount)}</p>
+                            <p><strong>Total Amount:</strong> {formatCurrency(calculations.total)}</p>
+                          </div>
+                          <p className="text-amber-600 text-sm">This action cannot be undone. The selected reports will be marked as billed.</p>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={generateInvoice.isPending}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleGenerateInvoice}
+                          disabled={generateInvoice.isPending}
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                          {generateInvoice.isPending ? 'Generating...' : 'Generate Invoice'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
