@@ -473,31 +473,83 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
     // Check user organizations and work order access if workOrderId provided
     if (workOrderId) {
-      // Get user organizations
+      // Get user organizations with organization details
       const { data: userOrgs, error: orgError } = await supabase
         .from('organization_members')
-        .select('organization_id')
+        .select(`
+          organization_id,
+          role,
+          organizations!organization_id(
+            organization_type
+          )
+        `)
         .eq('user_id', currentProfile.id);
       
       if (orgError) {
+        console.error('Failed to get user organizations:', orgError);
         throw new Error('Failed to get user organizations');
       }
 
-      // Get work order details
+      // Get work order details with assignment info
       const { data: workOrder, error: woError } = await supabase
         .from('work_orders')
-        .select('id, organization_id')
+        .select('id, organization_id, assigned_organization_id')
         .eq('id', workOrderId)
         .single();
       
       if (woError || !workOrder) {
+        console.error('Work order not found:', woError);
         throw new Error('Work order not found');
       }
 
-      // Verify access
-      const userOrgIds = userOrgs?.map(uo => uo.organization_id) || [];
-      if (!userOrgIds.includes(workOrder.organization_id)) {
-        throw new Error('Access denied: Work order does not belong to your organization');
+      // Check access based on user role and organization type
+      let hasAccess = false;
+      
+      // Check if user is admin (internal user with admin role)
+      const isAdmin = userOrgs?.some(uo => 
+        uo.organizations?.organization_type === 'internal' && 
+        uo.role === 'admin'
+      );
+      
+      if (isAdmin) {
+        console.log('Access granted: User is admin');
+        hasAccess = true;
+      } else {
+        // Check partner access (work order belongs to partner organization)
+        const partnerOrgIds = userOrgs
+          ?.filter(uo => uo.organizations?.organization_type === 'partner')
+          ?.map(uo => uo.organization_id) || [];
+        
+        if (partnerOrgIds.includes(workOrder.organization_id)) {
+          console.log('Access granted: Partner owns work order');
+          hasAccess = true;
+        }
+        
+        // Check subcontractor access (work order assigned to subcontractor organization)
+        if (!hasAccess && workOrder.assigned_organization_id) {
+          const subcontractorOrgIds = userOrgs
+            ?.filter(uo => uo.organizations?.organization_type === 'subcontractor')
+            ?.map(uo => uo.organization_id) || [];
+          
+          if (subcontractorOrgIds.includes(workOrder.assigned_organization_id)) {
+            console.log('Access granted: Subcontractor assigned to work order');
+            hasAccess = true;
+          }
+        }
+      }
+
+      if (!hasAccess) {
+        console.error('Access denied for upload:', {
+          workOrderId,
+          workOrderOrgId: workOrder.organization_id,
+          assignedOrgId: workOrder.assigned_organization_id,
+          userOrgs: userOrgs?.map(uo => ({
+            orgId: uo.organization_id,
+            type: uo.organizations?.organization_type,
+            role: uo.role
+          }))
+        });
+        throw new Error('Access denied: You do not have permission to upload files to this work order');
       }
     }
 
