@@ -691,6 +691,69 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_invoices: {
+        Row: {
+          created_at: string
+          created_by: string
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          markup_percentage: number | null
+          partner_organization_id: string
+          quickbooks_export_date: string | null
+          status: string
+          subtotal: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          markup_percentage?: number | null
+          partner_organization_id: string
+          quickbooks_export_date?: string | null
+          status?: string
+          subtotal: number
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          markup_percentage?: number | null
+          partner_organization_id?: string
+          quickbooks_export_date?: string | null
+          status?: string
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invoices_partner_organization_id_fkey"
+            columns: ["partner_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_locations: {
         Row: {
           city: string | null
