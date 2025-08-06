@@ -136,30 +136,30 @@ export function AttachmentList({
             itemType="attachment"
           >
             <Card className="hover:shadow-sm transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 min-h-[44px]">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3 min-h-[44px] min-w-0">
                   {/* File Icon */}
-                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                    <IconComponent className="w-6 h-6 text-muted-foreground" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-muted rounded-lg flex items-center justify-center shrink-0">
+                    <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                   </div>
                   
                   {/* File Info */}
                   <div 
-                    className="flex-1 min-w-0 cursor-pointer"
+                    className="flex-1 min-w-0 overflow-hidden cursor-pointer"
                     onClick={() => onView?.(attachment)}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm truncate" title={attachment.file_name}>
+                    <div className="flex items-center gap-1 mb-1 overflow-hidden">
+                      <h4 className="font-medium text-sm truncate max-w-[140px] sm:max-w-none" title={attachment.file_name}>
                         {attachment.file_name}
                       </h4>
                       <Badge 
                         variant={attachment.file_type === 'photo' ? 'default' : 'secondary'}
-                        className="text-xs flex-shrink-0"
+                        className="text-xs shrink-0 max-w-[50px] truncate"
                       >
                         {getFileExtension(attachment.file_name).toUpperCase()}
                       </Badge>
                       {attachment.is_internal && (
-                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                        <Badge variant="outline" className="text-xs shrink-0 hidden sm:inline-flex">
                           Internal
                         </Badge>
                       )}
@@ -170,7 +170,7 @@ export function AttachmentList({
                             attachment.uploader_organization_type === 'subcontractor' ? 'secondary' :
                             'outline'
                           }
-                          className="text-xs flex-shrink-0"
+                          className="text-xs shrink-0 hidden sm:inline-flex"
                         >
                           {attachment.uploader_organization_type === 'partner' ? 'Partner' :
                            attachment.uploader_organization_type === 'subcontractor' ? 'Subcontractor' :
@@ -179,14 +179,14 @@ export function AttachmentList({
                       )}
                     </div>
                     
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <span>{formatFileSize(attachment.file_size)}</span>
-                        <span>•</span>
-                        <span>{format(new Date(attachment.uploaded_at), 'MMM d, yyyy')}</span>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground overflow-hidden">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="shrink-0">{formatFileSize(attachment.file_size)}</span>
+                        <span className="shrink-0">•</span>
+                        <span className="shrink-0">{format(new Date(attachment.uploaded_at), 'MMM d, yyyy')}</span>
                       </div>
                       {attachment.uploader_name && (
-                        <span className="truncate max-w-[120px]">
+                        <span className="truncate max-w-[80px] sm:max-w-[120px]">
                           By {attachment.uploader_name}
                         </span>
                       )}
@@ -194,7 +194,7 @@ export function AttachmentList({
                   </div>
                   
                   {/* Quick Action & Menu */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     {/* Quick view button */}
                     <Button
                       variant="ghost"

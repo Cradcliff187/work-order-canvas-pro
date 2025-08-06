@@ -127,7 +127,7 @@ export function AttachmentSection({
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'attachment-section',
     config: viewConfig,
-    defaultMode: 'table'
+    defaultMode: isMobile ? 'list' : 'table'
   });
 
   // Build filter options from actual attachments

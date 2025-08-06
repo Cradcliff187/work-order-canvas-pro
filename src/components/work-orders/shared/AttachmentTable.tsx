@@ -160,28 +160,29 @@ export function AttachmentTable({
       )}
 
       {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {showBulkActions && (
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={isAllSelected}
-                  onCheckedChange={handleSelectAll}
-                  aria-label="Select all attachments"
-                  className={cn(isIndeterminate && "data-[state=checked]:bg-primary/50")}
-                />
-              </TableHead>
-              )}
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden md:table-cell">Type</TableHead>
-              <TableHead className="hidden lg:table-cell">Size</TableHead>
-              <TableHead className="hidden lg:table-cell">Uploaded By</TableHead>
-              <TableHead className="hidden md:table-cell">Date</TableHead>
-              <TableHead className="w-12">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+      <div className="rounded-md border overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[600px]">
+            <TableHeader>
+              <TableRow>
+                {showBulkActions && (
+                <TableHead className="w-12 min-w-[48px]">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all attachments"
+                    className={cn(isIndeterminate && "data-[state=checked]:bg-primary/50")}
+                  />
+                </TableHead>
+                )}
+                <TableHead className="min-w-[200px]">Name</TableHead>
+                <TableHead className="hidden md:table-cell min-w-[120px]">Type</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[80px]">Size</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[120px]">Uploaded By</TableHead>
+                <TableHead className="hidden md:table-cell min-w-[100px]">Date</TableHead>
+                <TableHead className="w-12 min-w-[48px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
           <TableBody>
             {attachments.map((attachment) => {
               const IconComponent = getFileTypeIcon(attachment.file_name, attachment.file_type);
@@ -230,10 +231,10 @@ export function AttachmentTable({
                     </TableCell>
                   )}
                   
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <IconComponent className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                      <div className="min-w-0">
+                  <TableCell className="max-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <IconComponent className="w-5 h-5 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium truncate" title={attachment.file_name}>
                           {attachment.file_name}
                         </p>
@@ -245,12 +246,12 @@ export function AttachmentTable({
                   </TableCell>
                   
                   <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant={attachment.file_type === 'photo' ? 'default' : 'secondary'}>
+                    <div className="flex flex-wrap gap-1 max-w-[120px]">
+                      <Badge variant={attachment.file_type === 'photo' ? 'default' : 'secondary'} className="text-xs">
                         {attachment.file_type === 'photo' ? 'Image' : 'Document'}
                       </Badge>
                       {attachment.is_internal && (
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           Internal
                         </Badge>
                       )}
@@ -261,6 +262,7 @@ export function AttachmentTable({
                             attachment.uploader_organization_type === 'subcontractor' ? 'secondary' :
                             'outline'
                           }
+                          className="text-xs"
                         >
                           {attachment.uploader_organization_type === 'partner' ? 'Partner' :
                            attachment.uploader_organization_type === 'subcontractor' ? 'Subcontractor' :
@@ -274,8 +276,10 @@ export function AttachmentTable({
                     {formatFileSize(attachment.file_size)}
                   </TableCell>
                   
-                  <TableCell className="hidden lg:table-cell">
-                    {attachment.uploader_name || 'Unknown'}
+                  <TableCell className="hidden lg:table-cell max-w-[120px]">
+                    <span className="truncate block" title={attachment.uploader_name}>
+                      {attachment.uploader_name || 'Unknown'}
+                    </span>
                   </TableCell>
                   
                   <TableCell className="hidden md:table-cell">
@@ -300,7 +304,8 @@ export function AttachmentTable({
               );
             })}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
     </div>
   );
