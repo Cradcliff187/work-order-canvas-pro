@@ -207,25 +207,28 @@ export default function SubcontractorWorkOrderDetail() {
             </CardHeader>
             <CardContent>
               <AttachmentSection
-                attachments={(workOrder.work_order_attachments || []).map((attachment): AttachmentItem => {
-                  const uploaderOrg = organizationMap?.[attachment.uploaded_by_user_id];
-                  const uploaderOrgType = (uploaderOrg?.organization_type || 'internal') as 'partner' | 'subcontractor' | 'internal';
-                  
-                  return {
-                    id: attachment.id,
-                    file_name: attachment.file_name,
-                    file_url: attachment.file_url,
-                    file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
-                    file_size: attachment.file_size || 0,
-                    uploaded_at: attachment.uploaded_at,
-                    uploader_name: attachment.uploaded_by_user ? 
-                      `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
-                      'Unknown',
-                    uploader_email: '',
-                    is_internal: attachment.is_internal || false,
-                    uploader_organization_type: uploaderOrgType
-                  };
-                })}
+                attachments={(workOrder.work_order_attachments || [])
+                  // SECURITY: Subcontractors can see partner uploads, internal admin uploads, and their own org uploads
+                  // but admin can mark files as internal which subcontractors should see
+                  .map((attachment): AttachmentItem => {
+                    const uploaderOrg = organizationMap?.[attachment.uploaded_by_user_id];
+                    const uploaderOrgType = (uploaderOrg?.organization_type || 'internal') as 'partner' | 'subcontractor' | 'internal';
+                    
+                    return {
+                      id: attachment.id,
+                      file_name: attachment.file_name,
+                      file_url: attachment.file_url,
+                      file_type: attachment.file_type === 'photo' ? 'photo' : 'document',
+                      file_size: attachment.file_size || 0,
+                      uploaded_at: attachment.uploaded_at,
+                      uploader_name: attachment.uploaded_by_user ? 
+                        `${attachment.uploaded_by_user.first_name} ${attachment.uploaded_by_user.last_name}` : 
+                        'Unknown',
+                      uploader_email: '',
+                      is_internal: attachment.is_internal || false,
+                      uploader_organization_type: uploaderOrgType
+                    };
+                  })}
                 workOrderId={workOrder.id}
                 canUpload={true}
                 onUpload={async (files) => {
