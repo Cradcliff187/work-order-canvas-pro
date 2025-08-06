@@ -229,14 +229,16 @@ export default function WorkOrderDetail() {
             })}
             workOrderId={workOrder.id}
             canUpload={true}
-            onUpload={async (files) => {
+            onUpload={async (files, isInternal) => {
               try {
+                // Force is_internal to false for partner uploads (security requirement)
                 await uploadFiles(files, false, workOrder.id);
                 await refetch();
               } catch (error) {
                 console.error('Upload failed:', error);
               }
             }}
+            showInternalToggle={false}
             onView={(attachment) => {
               const { data } = supabase.storage.from('work-order-attachments').getPublicUrl(attachment.file_url);
               window.open(data.publicUrl, '_blank');
