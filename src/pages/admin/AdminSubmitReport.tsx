@@ -79,8 +79,25 @@ export default function AdminSubmitReport() {
   const hasIndividualAssignment = workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0;
   const hasOrganizationAssignment = workOrder.assigned_organization_id;
   const assignedSubcontractor = hasIndividualAssignment ? workOrder.work_order_assignments[0].profiles : null;
-  const assignedOrganization = hasOrganizationAssignment ? workOrder.organizations : null;
+  
+  // Get assigned organization from the assignment data, not from workOrder.organizations
+  const assignedOrganization = hasIndividualAssignment 
+    ? workOrder.work_order_assignments[0].assigned_organization
+    : hasOrganizationAssignment 
+    ? workOrder.organizations 
+    : null;
+    
   const isCompletelyUnassigned = !hasIndividualAssignment && !hasOrganizationAssignment;
+  
+  // Debug logging for visibility issue
+  console.log('🔍 Assignment Detection Debug:', {
+    hasIndividualAssignment,
+    hasOrganizationAssignment,
+    assignedSubcontractor,
+    assignedOrganization,
+    assignmentData: workOrder.work_order_assignments?.[0],
+    isCompletelyUnassigned
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
