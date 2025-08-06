@@ -264,8 +264,11 @@ const WorkOrderList = () => {
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="received">Received</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="estimate_needed">Estimate Needed</SelectItem>
+                  <SelectItem value="estimate_approved">Estimate Approved</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={locationFilter} onValueChange={setLocationFilter}>
