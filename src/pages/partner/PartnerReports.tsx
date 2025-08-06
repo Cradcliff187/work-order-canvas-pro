@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import {
   useReactTable,
@@ -32,10 +31,13 @@ import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useViewMode } from '@/hooks/useViewMode';
 import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
 import { ReportCard } from '@/components/partner/reports/ReportCard';
-import { usePartnerReports } from '@/hooks/usePartnerReports';
+import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
+import { ReportDetailPanel } from '@/components/partner/reports/ReportDetailPanel';
+import { usePartnerReports, usePartnerReportDetail } from '@/hooks/usePartnerReports';
 import { useUserOrganization } from '@/hooks/useUserOrganization';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -71,6 +73,7 @@ export default function PartnerReports() {
     },
     defaultMode: 'table'
   });
+  
   const [sortBy, setSortBy] = useState('submitted-desc');
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -78,8 +81,9 @@ export default function PartnerReports() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<ReportFilters>({
-    location_filter: 'all'
+    location_filter: 'all',
   });
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
   const { data: reportsData, isLoading, error, refetch } = usePartnerReports(
     pagination,
@@ -87,6 +91,10 @@ export default function PartnerReports() {
     filters
   );
 
+  // Fetch selected report details for master-detail view
+  const { data: selectedReport, isLoading: isLoadingDetail } = usePartnerReportDetail(
+    selectedReportId || ''
+  );
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
     {
@@ -142,38 +150,22 @@ export default function PartnerReports() {
         return date ? format(new Date(date), 'MMM dd, yyyy') : '-';
       },
     },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }) => {
-        const report = row.original;
-        
-        return (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/partner/reports/${report.id}`)}
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
-        );
-      },
-    },
-  ], [navigate]);
+  ], []);
 
   const table = useReactTable({
     data: reportsData?.data || [],
     columns,
+    manualPagination: true,
+    manualSorting: true,
     pageCount: reportsData?.pageCount || 0,
     state: {
       pagination,
-      sorting,
+      sorting: [{ id: 'submitted_at', desc: true }],
     },
     onPaginationChange: setPagination,
-    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    manualSorting: true,
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   // Sort reports for card view
@@ -234,8 +226,6 @@ export default function PartnerReports() {
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-16" />
         </div>
       ))}
     </div>
@@ -416,105 +406,207 @@ export default function PartnerReports() {
           )}
         </div>
       ) : (
+        /* Table View with Master-Detail on Desktop */
         <Card>
-          <CardHeader>
-            <CardTitle>Reports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              renderTableSkeleton()
-            ) : reportsData?.data.length === 0 ? (
-              <div className="text-center p-8 text-muted-foreground">
-                {filters.search || filters.status || (filters.location_filter && filters.location_filter !== 'all') ? (
-                  <div className="space-y-2">
-                    <p>No reports found matching your criteria.</p>
-                    <Button variant="outline" onClick={handleClearFilters}>
-                      Clear filters to see all reports
-                    </Button>
+          <CardContent className="p-0">
+            {/* Desktop Master-Detail Layout */}
+            <div className="hidden lg:block">
+              <MasterDetailLayout
+                listContent={
+                  <div>
+                    <ResponsiveTableWrapper stickyFirstColumn={true}>
+                      <Table>
+                        <TableHeader>
+                          {table.getHeaderGroups().map((headerGroup) => (
+                            <TableRow key={headerGroup.id}>
+                              {headerGroup.headers.map((header) => (
+                                <TableHead key={header.id} className="h-12">
+                                  {header.isPlaceholder
+                                    ? null
+                                    : flexRender(
+                                        header.column.columnDef.header,
+                                        header.getContext()
+                                      )}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableHeader>
+                        <TableBody>
+                          {isLoading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                              <TableRow key={i}>
+                                {columns.map((_, j) => (
+                                  <TableCell key={j}>
+                                    <Skeleton className="h-4 w-20" />
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))
+                          ) : table.getRowModel().rows.length ? (
+                            table.getRowModel().rows.map((row) => (
+                              <TableRow 
+                                key={row.id}
+                                className={`cursor-pointer ${selectedReportId === row.original.id ? 'bg-muted/50' : ''}`}
+                                onClick={() => setSelectedReportId(row.original.id)}
+                              >
+                                {row.getVisibleCells().map((cell) => (
+                                  <TableCell key={cell.id}>
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext()
+                                    )}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={columns.length} className="h-24 text-center">
+                                No results.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </ResponsiveTableWrapper>
+                    
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between px-6 py-4 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+                        {Math.min(
+                          (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                          reportsData?.totalCount || 0
+                        )}{' '}
+                        of {reportsData?.totalCount || 0} results
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => table.previousPage()}
+                          disabled={!table.getCanPreviousPage()}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => table.nextPage()}
+                          disabled={!table.getCanNextPage()}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  'No reports found.'
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id} className="h-12">
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
+                }
+                selectedId={selectedReportId}
+                onSelectionChange={setSelectedReportId}
+                detailContent={
+                  selectedReport && (
+                    <ReportDetailPanel
+                      report={selectedReport}
+                      onViewFull={() => navigate(`/partner/reports/${selectedReportId}`)}
+                      showActionButtons={true}
+                    />
+                  )
+                }
+                isLoading={isLoadingDetail}
+                items={reportsData?.data?.map(report => ({ id: report.id })) || []}
+              />
+            </div>
+
+            {/* Mobile/Tablet Table */}
+            <div className="block lg:hidden">
+              <ResponsiveTableWrapper stickyFirstColumn={true}>
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          {columns.map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-4 w-20" />
+                            </TableCell>
                           ))}
                         </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={columns.length}
-                            className="h-24 text-center"
-                          >
-                            No results.
-                          </TableCell>
+                      ))
+                    ) : table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className="cursor-pointer"
+                          onClick={() => navigate(`/partner/reports/${row.original.id}`)}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No results.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ResponsiveTableWrapper>
+              
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-6 py-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+                  {Math.min(
+                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                    reportsData?.totalCount || 0
+                  )}{' '}
+                  of {reportsData?.totalCount || 0} results
                 </div>
-
-                {/* Pagination */}
-                <div className="flex items-center justify-between space-x-2 py-4">
-                  <div className="flex-1 text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows.length} of {reportsData?.totalCount || 0} reports
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm text-muted-foreground">
-                        Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                      </span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      Next
-                    </Button>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                  </Button>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
