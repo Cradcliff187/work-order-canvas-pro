@@ -32,10 +32,12 @@ import {
   Download,
   RotateCcw,
   Filter,
-  X
+  X,
+  Trash
 } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
@@ -86,7 +88,11 @@ export default function AdminReports() {
   );
 
   const { data: subcontractors } = useSubcontractors();
-  const { reviewReport, bulkReviewReports } = useAdminReportMutations();
+  const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<any>(null);
 
 
   const columns = useMemo<ColumnDef<any>[]>(() => [
@@ -206,6 +212,12 @@ export default function AdminReports() {
             onClick: () => reviewReport.mutate({ reportId: report.id, status: 'rejected' }),
             show: isSubmitted,
             variant: 'destructive' as const
+          },
+          {
+            label: 'Delete',
+            icon: Trash,
+            onClick: () => handleDeleteClick(report),
+            variant: 'destructive' as const
           }
         ];
         
@@ -259,6 +271,19 @@ export default function AdminReports() {
     if (selectedIds.length === 0) return;
     bulkReviewReports.mutate({ reportIds: selectedIds, status: 'rejected' });
     setRowSelection({});
+  };
+
+  const handleDeleteClick = (report: any) => {
+    setReportToDelete(report);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (reportToDelete) {
+      deleteReport.mutate(reportToDelete.id);
+      setDeleteDialogOpen(false);
+      setReportToDelete(null);
+    }
   };
 
   
@@ -570,6 +595,16 @@ export default function AdminReports() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        itemName={reportToDelete ? `${reportToDelete.work_orders?.work_order_number || 'Report'} - ${reportToDelete.work_orders?.title || 'Work Order'}` : ''}
+        itemType="report"
+        isLoading={deleteReport.isPending}
+      />
     </div>
   );
 }

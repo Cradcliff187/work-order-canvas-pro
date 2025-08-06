@@ -202,8 +202,46 @@ export function useAdminReportMutations() {
     },
   });
 
+  const deleteReport = useMutation({
+    mutationFn: async (reportId: string) => {
+      if (!reportId || typeof reportId !== 'string') {
+        throw new Error('Invalid report ID');
+      }
+
+      const { error } = await supabase
+        .from('work_order_reports')
+        .delete()
+        .eq('id', reportId);
+
+      if (error) throw error;
+      return { reportId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-report-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+      
+      toast({ 
+        title: 'Report deleted', 
+        description: 'The report has been deleted successfully.' 
+      });
+    },
+    onError: (error: any) => {
+      console.error('Report deletion error:', error);
+      const errorMessage = error?.message || 'Failed to delete report';
+      
+      toast({ 
+        title: 'Error deleting report', 
+        description: errorMessage, 
+        variant: 'destructive' 
+      });
+    },
+  });
+
   return {
     reviewReport,
     bulkReviewReports,
+    deleteReport,
   };
 }

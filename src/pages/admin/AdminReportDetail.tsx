@@ -17,10 +17,12 @@ import {
   DollarSign,
   Image,
   Download,
-  ExternalLink
+  ExternalLink,
+  Trash
 } from 'lucide-react';
 import { useAdminReportDetail } from '@/hooks/useAdminReportDetail';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { ReportFileManager } from '@/components/ReportFileManager';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
@@ -29,6 +31,7 @@ export default function AdminReportDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [reviewNotes, setReviewNotes] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Validate ID format and prevent literal ":id" from being used
   const isValidId = id && id !== ':id' && id.length > 8;
@@ -36,7 +39,7 @@ export default function AdminReportDetail() {
   console.log('[AdminReportDetail] Route ID:', id, 'Valid:', isValidId);
   
   const { data: report, isLoading, error } = useAdminReportDetail(isValidId ? id! : '');
-  const { reviewReport } = useAdminReportMutations();
+  const { reviewReport, deleteReport } = useAdminReportMutations();
 
 
   const handleReview = (status: 'approved' | 'rejected') => {
@@ -46,6 +49,14 @@ export default function AdminReportDetail() {
       status, 
       reviewNotes: reviewNotes.trim() || undefined 
     });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!id || !isValidId) return;
+    deleteReport.mutate(id, {
+      onSuccess: () => navigate('/admin/reports')
+    });
+    setDeleteDialogOpen(false);
   };
 
   if (isLoading) {
@@ -135,6 +146,14 @@ export default function AdminReportDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash className="w-4 h-4 mr-2" />
+            Delete Report
+          </Button>
           <ReportStatusBadge status={report.status} size="sm" showIcon />
         </div>
       </div>
@@ -379,6 +398,16 @@ export default function AdminReportDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        itemName={workOrder?.work_order_number ? `${workOrder.work_order_number} - ${workOrder.title || 'Work Order'}` : 'Report'}
+        itemType="report"
+        isLoading={deleteReport.isPending}
+      />
     </div>
   );
 }
