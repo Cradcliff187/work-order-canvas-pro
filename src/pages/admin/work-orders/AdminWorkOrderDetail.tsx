@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Edit, MapPin, Calendar, Clock, User, Building2, Wrench, FileText, Phone, Mail, Loader2 } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { useAttachmentOrganizations } from '@/hooks/useAttachmentOrganizations';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { formatDate } from '@/lib/utils/date';
 import { WorkOrderStatusBadge, ReportStatusBadge } from '@/components/ui/status-badge';
@@ -17,6 +18,10 @@ export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id!);
+  
+  // Get organization data for all attachment uploaders
+  const uploaderIds = workOrder?.work_order_attachments?.map(a => a.uploaded_by_user_id) || [];
+  const { data: organizationMap } = useAttachmentOrganizations(uploaderIds);
 
   if (isLoading) {
     return (
@@ -338,16 +343,22 @@ export default function AdminWorkOrderDetail() {
 
         <TabsContent value="attachments" className="space-y-6">
           <AttachmentSection
-            attachments={workOrder.work_order_attachments?.map(attachment => ({
-              id: attachment.id,
-              file_name: attachment.file_name,
-              file_url: attachment.file_url,
-              file_type: attachment.file_type as 'photo' | 'document',
-              file_size: attachment.file_size || 0,
-              uploaded_at: attachment.uploaded_at,
-              uploader_name: `${attachment.uploaded_by_user?.first_name || ''} ${attachment.uploaded_by_user?.last_name || ''}`.trim(),
-              is_internal: false // Will be populated by the database query
-            })) || []}
+            attachments={workOrder.work_order_attachments?.map(attachment => {
+              const uploaderOrg = organizationMap?.[attachment.uploaded_by_user_id];
+              const uploaderOrgType = (uploaderOrg?.organization_type || 'internal') as 'partner' | 'subcontractor' | 'internal';
+              
+              return {
+                id: attachment.id,
+                file_name: attachment.file_name,
+                file_url: attachment.file_url,
+                file_type: attachment.file_type as 'photo' | 'document',
+                file_size: attachment.file_size || 0,
+                uploaded_at: attachment.uploaded_at,
+                uploader_name: `${attachment.uploaded_by_user?.first_name || ''} ${attachment.uploaded_by_user?.last_name || ''}`.trim(),
+                is_internal: attachment.is_internal || false,
+                uploader_organization_type: uploaderOrgType
+              };
+            }) || []}
             workOrderId={workOrder.id}
             canUpload={true}
             onUploadComplete={refetch}

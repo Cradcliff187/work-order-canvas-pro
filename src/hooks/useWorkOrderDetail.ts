@@ -38,6 +38,8 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     file_type: string;
     file_size: number | null;
     uploaded_at: string;
+    is_internal: boolean | null;
+    uploaded_by_user_id: string;
     uploaded_by_user: {
       first_name: string;
       last_name: string;
@@ -141,6 +143,8 @@ export function useWorkOrderDetail(id: string) {
             file_type,
             file_size,
             uploaded_at,
+            is_internal,
+            uploaded_by_user_id,
             uploaded_by_user:profiles!uploaded_by_user_id(
               first_name,
               last_name
