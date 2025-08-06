@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface AdminReportSubmissionData {
   workOrderId: string;
   subcontractorUserId: string | null; // Who the report is being submitted for (null for admin-only reports)
-  assignedOrganizationId?: string | null; // Organization to assign the work order to
+  subcontractorOrganizationId?: string | null; // For attribution in report (auto-detected from existing assignments)
   workPerformed: string;
   materialsUsed?: string;
   hoursWorked?: number;
@@ -49,6 +49,7 @@ export function useAdminReportSubmission() {
       const reportInsert: any = {
         work_order_id: reportData.workOrderId,
         subcontractor_user_id: reportData.subcontractorUserId,
+        subcontractor_organization_id: reportData.subcontractorOrganizationId,
         submitted_by_user_id: adminProfile.id, // Track who actually submitted it
         work_performed: reportData.workPerformed,
         materials_used: reportData.materialsUsed,
@@ -105,21 +106,14 @@ export function useAdminReportSubmission() {
         await Promise.all(uploadPromises);
       }
 
-      // Update work order status and assignment if needed
-      const workOrderUpdate: any = { 
-        status: "completed",
-        subcontractor_report_submitted: true,
-        date_completed: new Date().toISOString()
-      };
-
-      // If we have an assignedOrganizationId, update the work order assignment
-      if (reportData.assignedOrganizationId) {
-        workOrderUpdate.assigned_organization_id = reportData.assignedOrganizationId;
-      }
-
+      // Update work order status - no longer updating assignments as they should be pre-existing
       await supabase
         .from("work_orders")
-        .update(workOrderUpdate)
+        .update({ 
+          status: "completed",
+          subcontractor_report_submitted: true,
+          date_completed: new Date().toISOString()
+        })
         .eq("id", reportData.workOrderId);
 
       return report;

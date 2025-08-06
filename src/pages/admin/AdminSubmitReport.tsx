@@ -75,10 +75,12 @@ export default function AdminSubmitReport() {
     );
   }
 
-  // Check if there's an assigned subcontractor
-  const hasAssignments = workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0;
-  const assignedSubcontractor = hasAssignments ? workOrder.work_order_assignments[0].profiles : null;
-  const isUnassigned = !hasAssignments || !assignedSubcontractor;
+  // Auto-detect existing assignments to simplify the flow
+  const hasIndividualAssignment = workOrder.work_order_assignments && workOrder.work_order_assignments.length > 0;
+  const hasOrganizationAssignment = workOrder.assigned_organization_id;
+  const assignedSubcontractor = hasIndividualAssignment ? workOrder.work_order_assignments[0].profiles : null;
+  const assignedOrganization = hasOrganizationAssignment ? workOrder.organizations : null;
+  const isCompletelyUnassigned = !hasIndividualAssignment && !hasOrganizationAssignment;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,23 +100,30 @@ export default function AdminSubmitReport() {
     }
 
     try {
-      // Determine which organization and user to use
-      let assignedOrganizationId = null;
+      // Auto-detect assignment details from existing work order assignments
       let subcontractorUserId = null;
+      let subcontractorOrganizationId = null;
 
-      if (isUnassigned && formData.selectedSubcontractorOrganization) {
-        const selectedOrg = subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization);
-        assignedOrganizationId = formData.selectedSubcontractorOrganization;
-        subcontractorUserId = selectedOrg?.first_active_user_id || null;
-      } else if (!isUnassigned) {
-        assignedOrganizationId = workOrder.assigned_organization_id;
+      if (hasIndividualAssignment) {
+        // Use individual assignment (employee/subcontractor user)
         subcontractorUserId = workOrder.work_order_assignments[0].assigned_to;
+        subcontractorOrganizationId = workOrder.work_order_assignments[0].assigned_organization_id;
+      } else if (hasOrganizationAssignment) {
+        // Use organization assignment (first active user from org)
+        subcontractorOrganizationId = workOrder.assigned_organization_id;
+        // For org assignments, we don't specify individual user - let system handle it
+        subcontractorUserId = null;
+      } else if (isCompletelyUnassigned && formData.selectedSubcontractorOrganization) {
+        // Manual selection for unassigned work orders
+        const selectedOrg = subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization);
+        subcontractorOrganizationId = formData.selectedSubcontractorOrganization;
+        subcontractorUserId = selectedOrg?.first_active_user_id || null;
       }
 
       await submitReportForSubcontractor.mutateAsync({
         workOrderId,
         subcontractorUserId,
-        assignedOrganizationId,
+        subcontractorOrganizationId,
         workPerformed: formData.workPerformed,
         materialsUsed: formData.materialsUsed || undefined,
         hoursWorked: formData.hoursWorked ? parseFloat(formData.hoursWorked) : undefined,
@@ -122,21 +131,23 @@ export default function AdminSubmitReport() {
         photos: formData.attachments.length > 0 ? formData.attachments : undefined,
       });
 
-      // Get organization name for toast message
+      // Get organization/user name for toast message
       const selectedOrg = formData.selectedSubcontractorOrganization 
         ? subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization)
         : null;
       
-      const organizationName = assignedSubcontractor 
+      const attributionName = assignedSubcontractor 
         ? `${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
-        : selectedOrg 
+        : assignedOrganization?.name
+        ? assignedOrganization.name
+        : selectedOrg?.name 
         ? selectedOrg.name
         : null;
 
       toast({
         title: "Report Submitted",
-        description: organizationName 
-          ? `Report submitted successfully for ${organizationName}.`
+        description: attributionName 
+          ? `Report submitted successfully for ${attributionName}.`
           : "Admin-only report submitted successfully.",
       });
 
@@ -181,7 +192,11 @@ export default function AdminSubmitReport() {
             {(() => {
               if (assignedSubcontractor) {
                 return (
-                  <>You are about to submit a work report on behalf of <strong>{assignedSubcontractor.first_name} {assignedSubcontractor.last_name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
+            <>You are about to submit a work report on behalf of <strong>{assignedSubcontractor.first_name} {assignedSubcontractor.last_name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
+                );
+              } else if (assignedOrganization) {
+                return (
+                  <>You are about to submit a work report for <strong>{assignedOrganization.name}</strong> for work order <strong>{workOrder.work_order_number}</strong>. This action will mark the work order as completed.</>
                 );
               } else if (formData.selectedSubcontractorOrganization) {
                 const selectedOrg = subcontractorOrganizations?.find(org => org.id === formData.selectedSubcontractorOrganization);
@@ -277,37 +292,43 @@ export default function AdminSubmitReport() {
           <p className="text-muted-foreground">
             {assignedSubcontractor 
               ? `For ${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name} • ${workOrder.work_order_number}`
+              : assignedOrganization?.name
+              ? `For ${assignedOrganization.name} • ${workOrder.work_order_number}`
               : `Admin Report • ${workOrder.work_order_number}`
             }
           </p>
         </div>
       </div>
 
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          {assignedSubcontractor 
-            ? "You are submitting this report on behalf of the assigned subcontractor. This action will be logged for audit purposes."
-            : "You are submitting this report as an admin. You can optionally select a subcontractor to attribute the work to, or submit as admin-only. This action will be logged for audit purposes."
-          }
-        </AlertDescription>
-      </Alert>
-
-      {/* Subcontractor Selection for Unassigned Work Orders */}
-      {isUnassigned && (
-        <Alert variant="default" className="border-amber-200 bg-amber-50 text-amber-800">
+      {/* Assignment Status Display */}
+      {!isCompletelyUnassigned && (
+        <Alert>
           <Users className="h-4 w-4" />
           <AlertDescription>
-            <strong>Important:</strong> This work order is not assigned to a subcontractor. Please select a subcontractor organization to attribute the work to, or submit as admin-only.
+            <strong>Assignment Details:</strong> This work order is assigned to{' '}
+            {assignedSubcontractor 
+              ? `${assignedSubcontractor.first_name} ${assignedSubcontractor.last_name}`
+              : assignedOrganization?.name
+            }. The report will be submitted on their behalf and logged for audit purposes.
           </AlertDescription>
         </Alert>
       )}
 
+      {isCompletelyUnassigned && (
+        <Alert variant="default" className="border-amber-200 bg-amber-50 text-amber-800">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Unassigned Work Order:</strong> This work order has no assignment. You can submit as admin-only or optionally assign it to a subcontractor organization.
+          </AlertDescription>
+        </Alert>
+      )}
+
+
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <StandardFormLayout>
-          {/* Subcontractor Selection Section for Unassigned Work Orders */}
-          {isUnassigned && (
+          {/* Subcontractor Selection Section for Completely Unassigned Work Orders */}
+          {isCompletelyUnassigned && (
             <StandardFormLayout.Section 
               title="Subcontractor Assignment"
               description="Select a subcontractor organization to attribute this work to"
