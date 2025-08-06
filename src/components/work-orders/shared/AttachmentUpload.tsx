@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, Lock } from 'lucide-react';
+import { Upload, Lock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { Progress } from '@/components/ui/progress';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 
 interface AttachmentUploadProps {
@@ -68,15 +69,24 @@ export function AttachmentUpload({
             disabled={disabled || isUploading}
           >
             <div className="text-center">
-              <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium">Upload Files</p>
-              <p className="text-xs text-muted-foreground">Click to select files</p>
+              {isUploading ? (
+                <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" />
+              ) : (
+                <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+              )}
+              <p className="text-sm font-medium">
+                {isUploading ? "Processing Files..." : "Upload Files"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isUploading ? "Please wait..." : "Click to select files"}
+              </p>
             </div>
           </Button>
         }
         onFilesSelected={handleFilesSelected}
         accept="*/*"
         multiple={true}
+        isProcessing={isUploading}
       />
       
       {hasFilesToUpload && !isUploading && (
@@ -116,10 +126,42 @@ export function AttachmentUpload({
                 onClick={handleUpload}
                 disabled={isUploading}
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Files
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                {isUploading ? "Uploading..." : "Upload Files"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Progress Display */}
+      {isUploading && uploadProgress.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Upload Progress</h4>
+          <div className="space-y-2">
+            {uploadProgress.map((progress) => (
+              <div key={progress.fileName} className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm truncate">{progress.fileName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {progress.progress}%
+                  </span>
+                </div>
+                <Progress value={progress.progress} className="h-2" />
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {progress.status}
+                  </span>
+                  {progress.status === 'error' && (
+                    <span className="text-xs text-destructive">Failed</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

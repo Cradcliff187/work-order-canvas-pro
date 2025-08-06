@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileIcon, ImageIcon, AlertCircle } from 'lucide-react';
+import { Upload, X, FileIcon, ImageIcon, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -32,6 +32,7 @@ interface UnifiedFileUploadProps {
   disabled?: boolean;
   className?: string;
   acceptedTypes?: string[];
+  isUploading?: boolean;
 }
 
 export function UnifiedFileUpload({
@@ -41,7 +42,8 @@ export function UnifiedFileUpload({
   uploadProgress = {},
   disabled = false,
   className,
-  acceptedTypes = []
+  acceptedTypes = [],
+  isUploading = false
 }: UnifiedFileUploadProps) {
   const isMobile = useIsMobile();
   const [previews, setPreviews] = useState<FilePreview[]>([]);
@@ -191,13 +193,21 @@ export function UnifiedFileUpload({
             <Button
               variant="outline"
               className="w-full h-32 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50"
-              disabled={disabled}
+              disabled={disabled || isUploading}
             >
               <div className="text-center space-y-2">
-                <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
+                {isUploading ? (
+                  <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin" />
+                ) : (
+                  <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
+                )}
                 <div>
-                  <p className="text-sm font-medium">Upload Files</p>
-                  <p className="text-xs text-muted-foreground">Tap to choose files</p>
+                  <p className="text-sm font-medium">
+                    {isUploading ? "Processing Files..." : "Upload Files"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isUploading ? "Please wait..." : "Tap to choose files"}
+                  </p>
                 </div>
               </div>
             </Button>
@@ -205,7 +215,8 @@ export function UnifiedFileUpload({
           onFilesSelected={handleFilesSelected}
           accept={acceptedTypes.length > 0 ? acceptedTypes.join(',') : "*/*"}
           multiple={maxFiles > 1}
-          disabled={disabled}
+          disabled={disabled || isUploading}
+          isProcessing={isUploading}
         />
 
         {/* Validation errors */}
@@ -314,8 +325,15 @@ export function UnifiedFileUpload({
           <p className="text-muted-foreground mb-4">
             or click to browse files
           </p>
-          <Button variant="outline" type="button" disabled={disabled}>
-            Browse Files
+          <Button variant="outline" type="button" disabled={disabled || isUploading}>
+            {isUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Browse Files"
+            )}
           </Button>
         </CardContent>
       </Card>

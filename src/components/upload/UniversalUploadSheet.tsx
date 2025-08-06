@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Camera, Scan, FolderOpen, Image, Clock } from 'lucide-react';
+import { Camera, Scan, FolderOpen, Image, Clock, Loader2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -35,6 +35,7 @@ interface UniversalUploadSheetProps {
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  isProcessing?: boolean;
 }
 
 export function UniversalUploadSheet({
@@ -44,7 +45,8 @@ export function UniversalUploadSheet({
   multiple = true,
   disabled = false,
   open,
-  onOpenChange
+  onOpenChange,
+  isProcessing = false
 }: UniversalUploadSheetProps) {
   const isMobile = useIsMobile();
   const [internalOpen, setInternalOpen] = React.useState(false);
@@ -148,16 +150,23 @@ export function UniversalUploadSheet({
         key={option.id}
         className={cn(
           "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]",
-          "border-2 hover:border-primary/20"
+          "border-2 hover:border-primary/20",
+          isProcessing && "opacity-50 cursor-not-allowed"
         )}
-        onClick={() => triggerFileInput(option.id)}
+        onClick={() => !isProcessing && triggerFileInput(option.id)}
       >
         <CardContent className="p-4 text-center space-y-2">
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <option.icon className="w-6 h-6 text-primary" />
+            {isProcessing ? (
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            ) : (
+              <option.icon className="w-6 h-6 text-primary" />
+            )}
           </div>
           <div>
-            <h3 className="font-medium text-sm">{option.title}</h3>
+            <h3 className="font-medium text-sm">
+              {isProcessing ? "Processing..." : option.title}
+            </h3>
             <p className="text-xs text-muted-foreground">{option.description}</p>
           </div>
         </CardContent>
@@ -186,7 +195,7 @@ export function UniversalUploadSheet({
       ))}
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild disabled={disabled}>
+        <SheetTrigger asChild disabled={disabled || isProcessing}>
           {trigger}
         </SheetTrigger>
         
