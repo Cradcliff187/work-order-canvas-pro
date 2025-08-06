@@ -30,6 +30,7 @@ import {
   AdminUtilities,
   SelectReports,
   PartnerInvoiceDetail,
+  BillingDashboard,
 } from '@/pages/LazyPages';
 
 export const AdminRoutes = () => (
@@ -280,6 +281,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <PartnerInvoiceDetail />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/billing-dashboard" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <BillingDashboard />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>

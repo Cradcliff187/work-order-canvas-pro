@@ -10,6 +10,8 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ArrowLeft, Download, FileText } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { format } from 'date-fns';
+import { exportToCSV, ExportColumn } from '@/lib/utils/export';
+import { toast } from 'sonner';
 
 interface PartnerInvoiceDetail {
   id: string;
@@ -90,6 +92,39 @@ export default function PartnerInvoiceDetail() {
     }).format(amount);
   };
 
+  const handleExportCSV = () => {
+    try {
+      if (!invoice) return;
+
+      // Prepare data for QuickBooks import format
+      const csvData = invoice.line_items.map(item => ({
+        customer: invoice.partner_organization.name,
+        invoice_number: invoice.invoice_number,
+        invoice_date: format(new Date(invoice.invoice_date), 'MM/dd/yyyy'),
+        work_order_number: item.work_order_report.work_order.work_order_number,
+        description: item.description || item.work_order_report.work_order.title,
+        amount: item.amount
+      }));
+
+      const columns: ExportColumn[] = [
+        { key: 'customer', label: 'Customer', type: 'string' },
+        { key: 'invoice_number', label: 'Invoice Number', type: 'string' },
+        { key: 'invoice_date', label: 'Invoice Date', type: 'string' },
+        { key: 'work_order_number', label: 'Work Order #', type: 'string' },
+        { key: 'description', label: 'Description', type: 'string' },
+        { key: 'amount', label: 'Amount', type: 'currency' }
+      ];
+
+      const filename = `partner_invoice_${invoice.invoice_number.replace(/[^a-zA-Z0-9]/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      
+      exportToCSV(csvData, columns, filename);
+      toast.success('Invoice exported successfully');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export invoice');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -146,7 +181,7 @@ export default function PartnerInvoiceDetail() {
         </Button>
         
         <div className="flex gap-2">
-          <Button variant="outline" disabled>
+          <Button variant="outline" onClick={handleExportCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
