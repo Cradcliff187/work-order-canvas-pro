@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { validateUUIDArray, isValidUUID, safeUUIDLookup } from '@/lib/utils/validation';
 
 export interface ApprovalItem {
   id: string;
@@ -28,7 +29,17 @@ const isUrgent = (submittedAt: string): 'normal' | 'high' => {
 export const useApprovalQueue = (): ApprovalQueueData => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['approval-queue'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
+      // Add 30-second timeout to prevent hanging queries
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 30000);
+      
+      // Combine query cancellation with timeout
+      const combinedSignal = AbortSignal.any([
+        signal || new AbortController().signal,
+        timeoutController.signal
+      ]);
+      
       try {
         // Step 1: Query reports WITHOUT JOIN to avoid NULL UUID conversion errors
         const reportsQuery = supabase
@@ -62,10 +73,10 @@ export const useApprovalQueue = (): ApprovalQueueData => {
           .eq('status', 'submitted')
           .order('submitted_at', { ascending: false });
 
-        // Execute both queries in parallel
+        // Execute both queries in parallel with abort signal
         const [reportsResult, invoicesResult] = await Promise.all([
-          reportsQuery,
-          invoicesQuery
+          reportsQuery.abortSignal(combinedSignal),
+          invoicesQuery.abortSignal(combinedSignal)
         ]);
 
         // Check for errors
@@ -81,22 +92,27 @@ export const useApprovalQueue = (): ApprovalQueueData => {
         const reports = reportsResult.data || [];
         const invoices = invoicesResult.data || [];
 
-        // Step 3: Get unique valid subcontractor IDs to fetch profiles separately
-        const validSubcontractorIds = [
-          ...new Set(
-            reports
-              .filter(report => report.subcontractor_user_id) // Filter out NULLs
-              .map(report => report.subcontractor_user_id)
-          )
-        ];
+        // Step 3: Get unique valid subcontractor IDs with UUID validation
+        const subcontractorIds = reports
+          .map(report => report.subcontractor_user_id)
+          .filter(Boolean); // Remove NULLs and undefined
+        
+        const validSubcontractorIds = validateUUIDArray(
+          subcontractorIds, 
+          'Subcontractor UUID validation'
+        );
+        
+        // Remove duplicates
+        const uniqueValidIds = [...new Set(validSubcontractorIds)];
 
         // Step 4: Fetch subcontractor profiles separately (only if we have valid IDs)
         let subcontractorProfiles: any[] = [];
-        if (validSubcontractorIds.length > 0) {
+        if (uniqueValidIds.length > 0) {
           const profilesResult = await supabase
             .from('profiles')
             .select('id, first_name, last_name')
-            .in('id', validSubcontractorIds);
+            .in('id', uniqueValidIds)
+            .abortSignal(combinedSignal);
 
           if (profilesResult.error) {
             console.error('Profiles query error:', profilesResult.error);
@@ -113,9 +129,11 @@ export const useApprovalQueue = (): ApprovalQueueData => {
 
         // Step 6: Transform reports with safe profile lookup
         const reportItems: ApprovalItem[] = reports.map(report => {
-          const profile = report.subcontractor_user_id 
-            ? profileLookup.get(report.subcontractor_user_id)
-            : null;
+          const profile = safeUUIDLookup(
+            profileLookup, 
+            report.subcontractor_user_id,
+            null
+          );
           
           return {
             id: report.id,
@@ -161,7 +179,15 @@ export const useApprovalQueue = (): ApprovalQueueData => {
         };
       } catch (error) {
         console.error('Approval queue query failed:', error);
+        
+        // Handle timeout errors specifically
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Query timed out - please try again');
+        }
+        
         throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
     },
     staleTime: 30000, // 30 seconds cache

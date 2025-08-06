@@ -28,6 +28,8 @@ import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { createApprovalColumns } from '@/components/admin/approvals/ApprovalColumns';
 import { useToast } from '@/hooks/use-toast';
+import { QueryErrorBoundary } from '@/components/ui/query-error-boundary';
+import { isValidUUID } from '@/lib/utils/validation';
 
 export default function AdminApprovals() {
   const navigate = useNavigate();
@@ -40,6 +42,11 @@ export default function AdminApprovals() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const { data: approvalItems = [], totalCount = 0, loading, error } = useApprovalQueue();
+  
+  // Retry mechanism for the approval queue
+  const retryApprovalQueue = () => {
+    queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
+  };
   const { reviewReport } = useAdminReportMutations();
   const { approveInvoice, rejectInvoice } = useInvoiceMutations();
 
@@ -82,11 +89,20 @@ export default function AdminApprovals() {
   };
 
   const handleApprove = async (item: any) => {
-    // Validate item ID
-    if (!item?.id || typeof item.id !== 'string') {
+    // Enhanced validation with UUID checking
+    if (!item?.id || !isValidUUID(item.id)) {
       toast({
         title: "Invalid item",
-        description: "The selected item is invalid",
+        description: "The selected item has an invalid identifier",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!item.type || !['report', 'invoice'].includes(item.type)) {
+      toast({
+        title: "Invalid item type",
+        description: "The selected item type is not supported",
         variant: "destructive",
       });
       return;
@@ -126,11 +142,20 @@ export default function AdminApprovals() {
   };
 
   const handleReject = async (item: any) => {
-    // Validate item ID
-    if (!item?.id || typeof item.id !== 'string') {
+    // Enhanced validation with UUID checking
+    if (!item?.id || !isValidUUID(item.id)) {
       toast({
         title: "Invalid item",
-        description: "The selected item is invalid",
+        description: "The selected item has an invalid identifier",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!item.type || !['report', 'invoice'].includes(item.type)) {
+      toast({
+        title: "Invalid item type",
+        description: "The selected item type is not supported",
         variant: "destructive",
       });
       return;
@@ -223,14 +248,19 @@ export default function AdminApprovals() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Approval Center</h1>
-        <p className="text-muted-foreground">
-          Review and approve pending items
-        </p>
-      </div>
+    <QueryErrorBoundary 
+      onRetry={retryApprovalQueue}
+      fallbackTitle="Failed to load approval center"
+      fallbackDescription="There was an error loading the approval queue. Please try again."
+    >
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold">Approval Center</h1>
+          <p className="text-muted-foreground">
+            Review and approve pending items
+          </p>
+        </div>
 
       {/* Filters */}
       <Card>
@@ -538,6 +568,7 @@ export default function AdminApprovals() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </QueryErrorBoundary>
   );
 }
