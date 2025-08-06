@@ -691,6 +691,48 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_invoice_line_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          partner_invoice_id: string
+          work_order_report_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          partner_invoice_id: string
+          work_order_report_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          partner_invoice_id?: string
+          work_order_report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invoice_line_items_partner_invoice_id_fkey"
+            columns: ["partner_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invoice_line_items_work_order_report_id_fkey"
+            columns: ["work_order_report_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_invoices: {
         Row: {
           created_at: string
@@ -1253,6 +1295,9 @@ export type Database = {
           id: string
           materials_used: string | null
           notes: string | null
+          partner_billed_amount: number | null
+          partner_billed_at: string | null
+          partner_invoice_id: string | null
           photos: Json | null
           review_notes: string | null
           reviewed_at: string | null
@@ -1270,6 +1315,9 @@ export type Database = {
           id?: string
           materials_used?: string | null
           notes?: string | null
+          partner_billed_amount?: number | null
+          partner_billed_at?: string | null
+          partner_invoice_id?: string | null
           photos?: Json | null
           review_notes?: string | null
           reviewed_at?: string | null
@@ -1287,6 +1335,9 @@ export type Database = {
           id?: string
           materials_used?: string | null
           notes?: string | null
+          partner_billed_amount?: number | null
+          partner_billed_at?: string | null
+          partner_invoice_id?: string | null
           photos?: Json | null
           review_notes?: string | null
           reviewed_at?: string | null
@@ -1300,6 +1351,13 @@ export type Database = {
           work_performed?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_order_reports_partner_invoice_id_fkey"
+            columns: ["partner_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_order_reports_reviewed_by_user_id_fkey"
             columns: ["reviewed_by_user_id"]
