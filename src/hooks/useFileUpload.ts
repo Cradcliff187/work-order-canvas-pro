@@ -266,13 +266,20 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     if (!user) throw new Error("User not authenticated");
 
     // Get current user profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileFetchError } = await supabase
       .from("profiles")
       .select("id")
       .eq("user_id", user.id)
       .single();
 
-    if (!profile) throw new Error("Profile not found");
+    // ADD DEBUG LOGGING
+    console.log('[FileUpload Debug] User ID:', user.id);
+    console.log('[FileUpload Debug] Profile fetch result:', { profile, profileFetchError });
+
+    if (!profile) {
+      console.error('[FileUpload Debug] Profile not found!', { userId: user.id, error: profileFetchError });
+      throw new Error("Profile not found");
+    }
 
     let processedFile: File;
     let originalSize = file.size;
@@ -413,6 +420,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         is_internal: isInternal,
       };
 
+      // ADD DEBUG LOGGING
+      console.log('[FileUpload Debug] Insert data being sent:', insertData);
+      console.log('[FileUpload Debug] Profile ID being used:', profile.id);
+      console.log('[FileUpload Debug] Work Order ID:', contextIds.workOrderId);
+
       // Set appropriate ID based on context
       if (contextIds.workOrderId) {
         insertData.work_order_id = contextIds.workOrderId;
@@ -422,13 +434,19 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         throw new Error("Either workOrderId or reportId must be provided for work order uploads");
       }
 
+      console.log('[FileUpload Debug] Final insert data:', insertData);
+
       const { data: attachment, error: attachmentError } = await supabase
         .from("work_order_attachments")
         .insert(insertData)
         .select()
         .single();
 
+      // ADD DEBUG LOGGING
+      console.log('[FileUpload Debug] Insert result:', { attachment, attachmentError });
+
       if (attachmentError) {
+        console.error('[FileUpload Debug] Insert failed:', attachmentError);
         await supabase.storage.from(config.bucket).remove([uploadData.path]);
         throw new Error(`Database save failed: ${attachmentError.message}`);
       }
