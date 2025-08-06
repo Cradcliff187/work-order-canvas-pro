@@ -114,25 +114,6 @@ export default function PartnerReports() {
       },
     },
     {
-      accessorKey: 'subcontractor',
-      header: 'Subcontractor',
-      cell: ({ row }) => {
-        const subcontractor = row.original.subcontractor;
-        return (
-          <div>
-            <div className="font-medium">
-              {subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}
-            </div>
-            {(subcontractor as any)?.organization_members?.[0]?.organization?.name && (
-              <div className="text-sm text-muted-foreground">
-                {(subcontractor as any).organization_members[0].organization.name}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => <ReportStatusBadge status={row.getValue('status')} size="sm" showIcon />,

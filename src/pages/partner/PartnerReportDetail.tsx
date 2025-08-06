@@ -112,7 +112,7 @@ export default function PartnerReportDetail() {
               Report for {workOrder?.work_order_number || 'N/A'}
             </h1>
             <p className="text-muted-foreground">
-              Submitted by {subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'Unknown'}
+              Work report details and attachments
             </p>
           </div>
         </div>
@@ -266,26 +266,6 @@ export default function PartnerReportDetail() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Subcontractor Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Subcontractor
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {subcontractor && (
-                <>
-                  <div>
-                    <p className="font-medium">
-                      {subcontractor.first_name} {subcontractor.last_name}
-                    </p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Timeline */}
           <Card>

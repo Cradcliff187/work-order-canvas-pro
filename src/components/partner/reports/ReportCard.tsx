@@ -44,20 +44,6 @@ export function ReportCard({ report }: ReportCardProps) {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Subcontractor Info */}
-        <div className="flex items-center gap-2">
-          <User className="w-4 h-4 text-muted-foreground" />
-          <div>
-            <div className="font-medium text-sm">
-              {subcontractor ? `${subcontractor.first_name} ${subcontractor.last_name}` : 'N/A'}
-            </div>
-            {(subcontractor as any)?.organization_members?.[0]?.organization?.name && (
-              <div className="text-xs text-muted-foreground">
-                {(subcontractor as any).organization_members[0].organization.name}
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Hours Worked */}
         {report.hours_worked && (
