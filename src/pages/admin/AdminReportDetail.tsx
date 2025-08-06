@@ -342,19 +342,14 @@ export default function AdminReportDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ADMIN_ONLY">
-                      📝 Admin-only report
+                    📝 Admin-only report
+                  </SelectItem>
+                  {/* Only show organizations with active users to avoid duplicate ADMIN_ONLY values */}
+                  {subcontractorOrganizations?.filter(org => org.first_active_user).map((org) => (
+                    <SelectItem key={org.first_active_user.id} value={org.first_active_user.id}>
+                      🏢 {org.name} ({org.active_user_count} user{org.active_user_count !== 1 ? 's' : ''})
                     </SelectItem>
-                    {subcontractorOrganizations?.map((org) => (
-                      <SelectItem 
-                        key={org.first_active_user?.id || org.id} 
-                        value={org.first_active_user?.id || "ADMIN_ONLY"}
-                        disabled={!org.first_active_user}
-                      >
-                        🏢 {org.name} {org.first_active_user 
-                          ? `(${org.active_user_count} user${org.active_user_count !== 1 ? 's' : ''})` 
-                          : '(no users)'}
-                      </SelectItem>
-                    ))}
+                  ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
