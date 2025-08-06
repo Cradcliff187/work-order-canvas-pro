@@ -880,12 +880,14 @@ export default function SubmitWorkOrder() {
                             <div className="text-center">
                               <FileText className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                               <p className="text-sm font-medium">
-                                Upload Files
-                                {selectedFiles.length > 0 && (
-                                  <Badge variant="secondary" className="ml-2">
-                                    {selectedFiles.length}
-                                  </Badge>
-                                )}
+                                {selectedFiles.length > 0 ? (
+                                  <span className="flex items-center gap-2 justify-center">
+                                    Select Files
+                                    <Badge variant="secondary" className="text-xs">
+                                      {selectedFiles.length}
+                                    </Badge>
+                                  </span>
+                                ) : "Select Files"}
                               </p>
                               <p className="text-xs text-muted-foreground">Click to select images & PDFs</p>
                             </div>
@@ -896,7 +898,17 @@ export default function SubmitWorkOrder() {
                         onOpenChange={setShowUploadSheet}
                         accept="image/*,.pdf"
                         multiple={true}
+                        selectedFileCount={selectedFiles.length}
                       />
+
+                      {/* Alert explaining when files will be uploaded */}
+                      {selectedFiles.length > 0 && (
+                        <Alert>
+                          <AlertDescription>
+                            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected. Files will be uploaded when you submit the work order.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                       
                       {/* File Preview Section */}
                       {selectedFiles.length > 0 && (

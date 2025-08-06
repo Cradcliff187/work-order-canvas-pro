@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { Progress } from '@/components/ui/progress';
@@ -18,6 +20,7 @@ interface AttachmentUploadProps {
   disabled?: boolean;
   className?: string;
   showInternalToggle?: boolean; // Only show for admins/employees
+  isFormContext?: boolean; // true for work order forms, false for standalone uploads
 }
 
 export function AttachmentUpload({
@@ -28,7 +31,8 @@ export function AttachmentUpload({
   uploadProgress = [],
   disabled = false,
   className,
-  showInternalToggle = false
+  showInternalToggle = false,
+  isFormContext = false
 }: AttachmentUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [hasFilesToUpload, setHasFilesToUpload] = useState(false);
@@ -75,7 +79,14 @@ export function AttachmentUpload({
                 <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
               )}
               <p className="text-sm font-medium">
-                {isUploading ? "Processing Files..." : "Upload Files"}
+                {isUploading ? "Processing Files..." : (selectedFiles.length > 0 ? (
+                  <span className="flex items-center gap-2 justify-center">
+                    Select Files
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedFiles.length}
+                    </Badge>
+                  </span>
+                ) : "Select Files")}
               </p>
               <p className="text-xs text-muted-foreground">
                 {isUploading ? "Please wait..." : "Click to select files"}
@@ -87,7 +98,17 @@ export function AttachmentUpload({
         accept="*/*"
         multiple={true}
         isProcessing={isUploading}
+        selectedFileCount={selectedFiles.length}
       />
+
+      {/* Alert for form context explaining when files will be uploaded */}
+      {selectedFiles.length > 0 && isFormContext && !isUploading && (
+        <Alert>
+          <AlertDescription>
+            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected. Files will be uploaded when you submit the form.
+          </AlertDescription>
+        </Alert>
+      )}
       
       {hasFilesToUpload && !isUploading && (
         <div className="space-y-3">
@@ -121,18 +142,20 @@ export function AttachmentUpload({
               >
                 Clear
               </Button>
-              <Button 
-                size="sm"
-                onClick={handleUpload}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4 mr-2" />
-                )}
-                {isUploading ? "Uploading..." : "Upload Files"}
-              </Button>
+              {!isFormContext && (
+                <Button 
+                  size="sm"
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  {isUploading ? "Uploading..." : "Upload Selected Files"}
+                </Button>
+              )}
             </div>
           </div>
         </div>

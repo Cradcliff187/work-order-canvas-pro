@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Camera, Scan, FolderOpen, Image, Clock, Loader2 } from 'lucide-react';
+import { Camera, Scan, FolderOpen, Image, Clock, Loader2, Upload } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -28,7 +28,7 @@ interface UploadOption {
 }
 
 interface UniversalUploadSheetProps {
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
   onFilesSelected: (files: File[]) => void;
   accept?: string;
   multiple?: boolean;
@@ -36,6 +36,8 @@ interface UniversalUploadSheetProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   isProcessing?: boolean;
+  selectedFileCount?: number;
+  buttonText?: string;
 }
 
 export function UniversalUploadSheet({
@@ -46,7 +48,9 @@ export function UniversalUploadSheet({
   disabled = false,
   open,
   onOpenChange,
-  isProcessing = false
+  isProcessing = false,
+  selectedFileCount = 0,
+  buttonText
 }: UniversalUploadSheetProps) {
   const isMobile = useIsMobile();
   const [internalOpen, setInternalOpen] = React.useState(false);
@@ -174,6 +178,30 @@ export function UniversalUploadSheet({
     );
   };
 
+  // Default trigger button if none provided
+  const defaultTrigger = (
+    <Button
+      type="button"
+      variant="outline"
+      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+      disabled={disabled || isProcessing}
+    >
+      <div className="text-center">
+        {isProcessing ? (
+          <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" />
+        ) : (
+          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+        )}
+        <p className="text-sm font-medium">
+          {isProcessing ? "Processing..." : (buttonText || (selectedFileCount > 0 ? `${selectedFileCount} file${selectedFileCount !== 1 ? 's' : ''} selected` : "Select Files"))}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {isProcessing ? "Please wait..." : "Click to select files"}
+        </p>
+      </div>
+    </Button>
+  );
+
   return (
     <>
       {/* Hidden file inputs */}
@@ -196,7 +224,7 @@ export function UniversalUploadSheet({
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild disabled={disabled || isProcessing}>
-          {trigger}
+          {trigger || defaultTrigger}
         </SheetTrigger>
         
         <SheetContent
