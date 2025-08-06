@@ -40,6 +40,7 @@ import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout'
 import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { cn } from '@/lib/utils';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -224,21 +225,23 @@ export default function AdminWorkOrders() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
+            className="h-9"
           />
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => setBulkMode(!bulkMode)}
-            className={bulkMode ? "border-primary text-primary" : ""}
+            className={cn("h-9", bulkMode ? "border-primary text-primary" : "")}
           >
             <CheckSquare className="w-4 h-4 mr-2" />
             {bulkMode ? 'Exit Bulk Mode' : 'Bulk Actions'}
           </Button>
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button size="sm" onClick={() => setShowCreateModal(true)} className="h-9">
             <Plus className="w-4 h-4 mr-2" />
             New Work Order
           </Button>

@@ -110,7 +110,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
         )}
       </div>
 
-      <div className={`grid gap-4 ${shouldShowSelector ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-5' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+      <div className={`grid gap-4 ${shouldShowSelector ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
         {/* Search */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Search</label>
@@ -120,7 +120,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
               placeholder="Search WO#, title, or location..."
               value={filters.search || ''}
               onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-              className="pl-10"
+              className="pl-10 h-9"
             />
           </div>
         </div>
@@ -137,7 +137,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
                 location_filter: undefined // Clear location filter when organization changes
               })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue placeholder="All Organizations" />
               </SelectTrigger>
               <SelectContent>
@@ -165,6 +165,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
               })}
               placeholder="All Locations"
               searchPlaceholder="Search locations..."
+              className="h-9"
             />
           </div>
         )}
@@ -181,6 +182,23 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
             })}
             placeholder="All Trades"
             searchPlaceholder="Search trades..."
+            className="h-9"
+          />
+        </div>
+
+        {/* Status Filter */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Status</label>
+          <MultiSelectFilter
+            options={statusOptions}
+            selectedValues={filters.status || []}
+            onSelectionChange={(values) => onFiltersChange({ 
+              ...filters, 
+              status: values.length > 0 ? values : undefined 
+            })}
+            placeholder="All Statuses"
+            searchPlaceholder="Search statuses..."
+            className="h-9"
           />
         </div>
 
@@ -192,8 +210,9 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
+                  size="sm"
                   className={cn(
-                    "flex-1 justify-start text-left font-normal",
+                    "flex-1 justify-start text-left font-normal h-9",
                     !dateFrom && "text-muted-foreground"
                   )}
                 >
@@ -216,8 +235,9 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
+                  size="sm"
                   className={cn(
-                    "flex-1 justify-start text-left font-normal",
+                    "flex-1 justify-start text-left font-normal h-9",
                     !dateTo && "text-muted-foreground"
                   )}
                 >
@@ -237,22 +257,6 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
             </Popover>
           </div>
         </div>
-      </div>
-
-      {/* Status Filter */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Status</label>
-        <MultiSelectFilter
-          options={statusOptions}
-          selectedValues={filters.status || []}
-          onSelectionChange={(values) => onFiltersChange({ 
-            ...filters, 
-            status: values.length > 0 ? values : undefined 
-          })}
-          placeholder="All Statuses"
-          searchPlaceholder="Search statuses..."
-          className="min-w-[200px]"
-        />
       </div>
     </div>
   );
