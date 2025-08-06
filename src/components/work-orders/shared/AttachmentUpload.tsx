@@ -32,7 +32,7 @@ export function AttachmentUpload({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [hasFilesToUpload, setHasFilesToUpload] = useState(false);
   const [isInternal, setIsInternal] = useState(false);
-  const { profile: userProfile } = useUserProfile();
+  const { profile: userProfile, isAdmin } = useUserProfile();
 
   // Convert UploadProgress[] to the format expected by UnifiedFileUpload
   const formattedProgress = uploadProgress.reduce((acc, progress) => {
@@ -81,7 +81,7 @@ export function AttachmentUpload({
       
       {hasFilesToUpload && !isUploading && (
         <div className="space-y-3">
-          {showInternalToggle && userProfile?.is_employee && (
+          {showInternalToggle && isAdmin && (
             <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
               <Checkbox
                 id="attachment-internal"
@@ -90,7 +90,7 @@ export function AttachmentUpload({
               />
               <Label htmlFor="attachment-internal" className="text-sm font-medium flex items-center gap-2">
                 <Lock className="h-4 w-4" />
-                Make internal (only visible to team and subcontractors)
+                Make internal (only visible to admins and assigned subcontractors)
               </Label>
             </div>
           )}

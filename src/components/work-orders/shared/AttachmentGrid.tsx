@@ -30,6 +30,7 @@ export interface AttachmentItem {
   uploader_name?: string;
   uploader_email?: string;
   is_internal?: boolean;
+  uploader_organization_type?: 'partner' | 'subcontractor' | 'internal';
 }
 
 interface AttachmentGridProps {
@@ -172,6 +173,12 @@ export function AttachmentGrid({
                   <Badge variant="outline" className="bg-muted/90 text-xs">
                     <Lock className="w-3 h-3 mr-1" />
                     Internal
+                  </Badge>
+                )}
+                {attachment.uploader_organization_type && (
+                  <Badge variant="outline" className="bg-muted/90 text-xs">
+                    {attachment.uploader_organization_type === 'partner' ? 'Partner' : 
+                     attachment.uploader_organization_type === 'subcontractor' ? 'Subcontractor' : 'Admin'}
                   </Badge>
                 )}
               </div>

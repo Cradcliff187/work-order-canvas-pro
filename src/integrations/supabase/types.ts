@@ -1613,6 +1613,10 @@ export type Database = {
           unread_count: number
         }[]
       }
+      get_uploader_organization_type: {
+        Args: { uploader_profile_id: string }
+        Returns: Database["public"]["Enums"]["organization_type"]
+      }
       get_user_id_from_legacy_path: {
         Args: { file_path: string }
         Returns: string

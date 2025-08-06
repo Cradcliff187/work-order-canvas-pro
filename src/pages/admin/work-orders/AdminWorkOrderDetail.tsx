@@ -11,11 +11,12 @@ import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { formatDate } from '@/lib/utils/date';
 import { WorkOrderStatusBadge, ReportStatusBadge } from '@/components/ui/status-badge';
+import { AttachmentSection } from '@/components/work-orders/shared/AttachmentSection';
 
 export default function AdminWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: workOrder, isLoading, error } = useWorkOrderDetail(id!);
+  const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id!);
 
   if (isLoading) {
     return (
@@ -336,38 +337,22 @@ export default function AdminWorkOrderDetail() {
         </TabsContent>
 
         <TabsContent value="attachments" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Attachments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {workOrder.work_order_attachments && workOrder.work_order_attachments.length > 0 ? (
-                <div className="space-y-4">
-                  {workOrder.work_order_attachments.map((attachment) => (
-                    <div key={attachment.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{attachment.file_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{attachment.file_type}</Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDate(attachment.uploaded_at)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Uploaded by: {attachment.uploaded_by_user.first_name} {attachment.uploaded_by_user.last_name}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No attachments uploaded yet.</p>
-              )}
-            </CardContent>
-          </Card>
+          <AttachmentSection
+            attachments={workOrder.work_order_attachments?.map(attachment => ({
+              id: attachment.id,
+              file_name: attachment.file_name,
+              file_url: attachment.file_url,
+              file_type: attachment.file_type as 'photo' | 'document',
+              file_size: attachment.file_size || 0,
+              uploaded_at: attachment.uploaded_at,
+              uploader_name: `${attachment.uploaded_by_user?.first_name || ''} ${attachment.uploaded_by_user?.last_name || ''}`.trim(),
+              is_internal: false // Will be populated by the database query
+            })) || []}
+            workOrderId={workOrder.id}
+            canUpload={true}
+            onUploadComplete={refetch}
+            showInternalToggle={true}
+          />
         </TabsContent>
       </Tabs>
     </div>
