@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
-import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
@@ -227,7 +228,7 @@ export default function SelectReports() {
                 description={error.message}
               />
             ) : isLoading ? (
-              <TableSkeleton rows={3} columns={2} />
+              <TableSkeleton rows={3} columns={8} />
             ) : !reports || reports.length === 0 ? (
               <EmptyState
                 icon={FileBarChart}
@@ -235,162 +236,167 @@ export default function SelectReports() {
                 description="All approved reports for this partner have already been billed, or there are no approved reports yet."
               />
             ) : (
-              <div className="space-y-3">
-                {reports.map((report) => {
-                  const isSelected = selectedReportIds.has(report.id);
-                  return (
-                    <div
-                      key={report.id}
-                      className={`relative transition-all duration-200 ${
-                        isSelected ? 'ring-2 ring-primary ring-offset-2' : ''
-                      }`}
-                    >
-                      <div className="absolute top-4 left-4 z-10">
+              <ResponsiveTableWrapper stickyFirstColumn>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
                         <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
-                          className="bg-background border-2"
+                          checked={selectedReportIds.size === reports.length && reports.length > 0}
+                          onCheckedChange={handleSelectAll}
                         />
-                      </div>
-                      <MobileTableCard
-                        title={`Work Order ${report.work_orders?.work_order_number || 'N/A'}`}
-                        subtitle={report.work_orders?.title || 'No title'}
-                        onClick={() => handleReportToggle(report.id, !isSelected)}
-                        status={
-                          <div className="flex flex-col items-end gap-1">
-                            <ReportStatusBadge status="approved" size="sm" />
-                            {report.subcontractor_costs && (
-                              <Badge 
-                                variant={isSelected ? "default" : "secondary"}
-                                className={`h-5 text-[10px] px-1.5 ${isSelected ? 'bg-primary text-primary-foreground' : ''}`}
-                              >
+                      </TableHead>
+                      <TableHead>Work Order</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Subcontractor</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Submitted</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reports.map((report) => {
+                      const isSelected = selectedReportIds.has(report.id);
+                      return (
+                        <TableRow 
+                          key={report.id}
+                          className={`cursor-pointer hover:bg-muted/50 ${
+                            isSelected ? 'bg-primary/10 border-l-2 border-l-primary' : ''
+                          }`}
+                          onClick={() => handleReportToggle(report.id, !isSelected)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {report.work_orders?.work_order_number || 'N/A'}
+                          </TableCell>
+                          <TableCell className="max-w-[200px]">
+                            <div className="space-y-1">
+                              <p className="font-medium truncate">
+                                {report.work_orders?.title || 'No title'}
+                              </p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {report.work_orders?.description || 'No description'}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {report.subcontractor_organization?.name || 'Unknown'}
+                          </TableCell>
+                          <TableCell>
+                            {report.work_orders?.store_location || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(report.submitted_at), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            {report.subcontractor_costs ? (
+                              <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
                                 {formatCurrency(report.subcontractor_costs)}
                               </Badge>
+                            ) : (
+                              '-'
                             )}
-                          </div>
-                        }
-                      >
-                        <div className="space-y-2 ml-6">
-                          {/* Work Order Details */}
-                          <div className="text-sm text-muted-foreground">
-                            <p className="truncate">
-                              {report.work_orders?.description || 'No description'}
-                            </p>
-                          </div>
-                          
-                          {/* Dates and Location */}
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>
-                                Submitted: {format(new Date(report.submitted_at), 'MMM d, yyyy')}
-                              </span>
-                            </div>
-                            {report.work_orders?.store_location && (
-                              <span className="truncate">
-                                {report.work_orders.store_location}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Subcontractor Info */}
-                          {report.subcontractor_organization && (
-                            <div className="text-xs">
-                              <span className="text-muted-foreground">Completed by: </span>
-                              <span className="font-medium">
-                                {report.subcontractor_organization.name}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </MobileTableCard>
-                    </div>
-                  );
-                })}
-              </div>
+                          </TableCell>
+                          <TableCell>
+                            <ReportStatusBadge status="approved" size="sm" />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ResponsiveTableWrapper>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Summary Footer - Fixed at bottom when reports are selected */}
+      {/* Summary Section - Show when reports are selected */}
       {calculations.selectedReports.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border shadow-lg">
-          <div className="container mx-auto px-4 py-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Receipt className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">
-                        {calculations.selectedReports.length} report{calculations.selectedReports.length !== 1 ? 's' : ''} selected
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Subtotal: </span>
-                        <span className="font-medium">{formatCurrency(calculations.subtotal)}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Markup ({markupPercentage}%): </span>
-                        <span className="font-medium">{formatCurrency(calculations.markupAmount)}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Total: </span>
-                        <span className="font-bold text-lg">{formatCurrency(calculations.total)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="default" 
-                        size="lg"
-                        disabled={selectedReportIds.size === 0 || generateInvoice.isPending}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Invoice Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Reports Selected</p>
+                  <p className="text-lg font-semibold">
+                    {calculations.selectedReports.length}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Subtotal</p>
+                  <p className="text-lg font-semibold">
+                    {formatCurrency(calculations.subtotal)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Markup ({markupPercentage}%)</p>
+                  <p className="text-lg font-semibold">
+                    {formatCurrency(calculations.markupAmount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                  <p className="text-xl font-bold text-primary">
+                    {formatCurrency(calculations.total)}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end">
+                <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="default" 
+                      size="lg"
+                      disabled={selectedReportIds.size === 0 || generateInvoice.isPending}
+                    >
+                      {generateInvoice.isPending ? 'Generating...' : 'Generate Invoice'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <p>You are about to generate an invoice with the following details:</p>
+                        <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
+                          <p><strong>Partner:</strong> {selectedPartnerId ? 'Selected Partner' : 'Unknown'}</p>
+                          <p><strong>Reports:</strong> {selectedReportIds.size} selected</p>
+                          <p><strong>Subtotal:</strong> {formatCurrency(calculations.subtotal)}</p>
+                          <p><strong>Markup ({markupPercentage}%):</strong> {formatCurrency(calculations.markupAmount)}</p>
+                          <p><strong>Total Amount:</strong> {formatCurrency(calculations.total)}</p>
+                        </div>
+                        <p className="text-warning text-sm">This action cannot be undone. The selected reports will be marked as billed.</p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={generateInvoice.isPending}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleGenerateInvoice}
+                        disabled={generateInvoice.isPending}
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         {generateInvoice.isPending ? 'Generating...' : 'Generate Invoice'}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-2">
-                          <p>You are about to generate an invoice with the following details:</p>
-                          <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
-                            <p><strong>Partner:</strong> {selectedPartnerId ? 'Selected Partner' : 'Unknown'}</p>
-                            <p><strong>Reports:</strong> {selectedReportIds.size} selected</p>
-                            <p><strong>Subtotal:</strong> {formatCurrency(calculations.subtotal)}</p>
-                            <p><strong>Markup ({markupPercentage}%):</strong> {formatCurrency(calculations.markupAmount)}</p>
-                            <p><strong>Total Amount:</strong> {formatCurrency(calculations.total)}</p>
-                          </div>
-                          <p className="text-warning text-sm">This action cannot be undone. The selected reports will be marked as billed.</p>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel disabled={generateInvoice.isPending}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={handleGenerateInvoice}
-                          disabled={generateInvoice.isPending}
-                          className="bg-primary text-primary-foreground hover:bg-primary/90"
-                        >
-                          {generateInvoice.isPending ? 'Generating...' : 'Generate Invoice'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* Spacer to prevent content from being hidden behind fixed footer */}
-      {calculations.selectedReports.length > 0 && (
-        <div className="h-24" />
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

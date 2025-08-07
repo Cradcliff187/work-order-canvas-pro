@@ -162,7 +162,7 @@ export default function BillingDashboard() {
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="gradient-card-responsive">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unbilled Reports</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
