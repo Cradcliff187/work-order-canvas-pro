@@ -156,6 +156,7 @@ export function WorkOrderTable({
                   size="sm"
                   onClick={onClearSelection}
                   disabled={selectedIds.length === 0}
+                  aria-label={`Clear selection (${selectedIds.length} selected)`}
                 >
                   Clear Selection
                 </Button>
@@ -217,6 +218,7 @@ export function WorkOrderTable({
                             onChange={row.getToggleSelectedHandler()}
                             onClick={(e) => e.stopPropagation()}
                             className="rounded border-gray-300 scale-125"
+                            aria-label={`Select work order ${workOrder.work_order_number || workOrder.title}`}
                           />
                         </div>
                       </div>
@@ -254,11 +256,21 @@ export function WorkOrderTable({
         <CardTitle>Work Orders</CardTitle>
         <div className="flex items-center gap-2">
           {selectedRows.length > 0 && (
-            <Button variant="outline" size="sm" onClick={onClearSelection}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onClearSelection}
+              aria-label={`Clear selection of ${selectedRows.length} work orders`}
+            >
               Clear Selection ({selectedRows.length})
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={onExportAll}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onExportAll}
+            aria-label="Export all work orders to CSV"
+          >
             <Download className="w-4 h-4 mr-2" />
             Export All
           </Button>
@@ -287,12 +299,12 @@ export function WorkOrderTable({
                 <MasterDetailLayout
                   listContent={
                     <ResponsiveTableWrapper stickyFirstColumn={true}>
-                      <Table className="admin-table">
+                      <Table className="admin-table" aria-label="Work orders data table">
                         <TableHeader>
                           {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                               {headerGroup.headers.map((header) => (
-                                <TableHead key={header.id} className="h-12">
+                                <TableHead key={header.id} className="h-12" scope="col">
                                   {header.isPlaceholder
                                     ? null
                                     : flexRender(
@@ -437,8 +449,8 @@ export function WorkOrderTable({
             )}
 
             {/* Pagination */}
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between space-x-2 py-4" role="navigation" aria-label="Table pagination">
+              <div className="flex-1 text-sm text-muted-foreground" aria-live="polite">
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected.
                 {totalCount && ` (${totalCount} total)`}
@@ -449,6 +461,7 @@ export function WorkOrderTable({
                   size="sm"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
+                  aria-label={`Go to previous page (currently on page ${pagination.pageIndex + 1})`}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -464,6 +477,7 @@ export function WorkOrderTable({
                   size="sm"
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
+                  aria-label={`Go to next page (currently on page ${pagination.pageIndex + 1})`}
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />

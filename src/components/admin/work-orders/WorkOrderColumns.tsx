@@ -46,9 +46,10 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         className="h-auto p-0 font-medium hover:bg-transparent"
+        aria-label={`Sort by work order number ${column.getIsSorted() === 'asc' ? 'descending' : 'ascending'}`}
       >
         Work Order
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+        <ArrowUpDown className="ml-2 h-4 w-4" aria-hidden="true" />
       </Button>
     ),
     size: 140,
@@ -85,7 +86,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
                 e.stopPropagation();
                 navigator.clipboard.writeText(number);
               }}
-              title="Copy work order number"
+              aria-label={`Copy work order number ${number}`}
             >
               <Copy className="h-3 w-3" />
             </Button>
@@ -162,6 +163,7 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
                       e.stopPropagation();
                       window.open(mapUrl, '_blank');
                     }}
+                    aria-label={`Open map for ${locationDisplay}`}
                   >
                     <MapPin className="h-3 w-3" />
                   </Button>

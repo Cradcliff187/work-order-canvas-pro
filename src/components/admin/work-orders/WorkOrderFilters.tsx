@@ -104,14 +104,16 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   // Helper function to render search filter
   const renderSearchFilter = () => (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-foreground">Search</label>
+      <label htmlFor="work-order-search" className="text-sm font-medium text-foreground">Search</label>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" aria-hidden="true" />
         <Input
+          id="work-order-search"
           placeholder="Search WO#, title, or location..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10 h-10"
+          aria-label="Search work orders by number, title, or location"
         />
       </div>
     </div>
@@ -120,7 +122,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   // Helper function to render status filter
   const renderStatusFilter = () => (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-foreground">Status</label>
+      <label htmlFor="status-filter" className="text-sm font-medium text-foreground">Status</label>
       <MultiSelectFilter
         options={statusOptions}
         selectedValues={filters.status || []}
@@ -131,6 +133,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         placeholder="All Statuses"
         searchPlaceholder="Search statuses..."
         className="h-10"
+        aria-label="Filter by work order status"
       />
     </div>
   );
@@ -139,7 +142,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const renderOrganizationFilter = () => (
     shouldShowSelector ? (
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Organization</label>
+        <label htmlFor="organization-filter" className="text-sm font-medium text-foreground">Organization</label>
         <Select
           value={filters.organization_id || 'all-organizations'}
           onValueChange={(value) => onFiltersChange({ 
@@ -148,7 +151,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             location_filter: undefined // Clear location filter when organization changes
           })}
         >
-          <SelectTrigger className="h-10">
+          <SelectTrigger className="h-10" id="organization-filter" aria-label="Filter by organization">
             <SelectValue placeholder="All Organizations" />
           </SelectTrigger>
           <SelectContent>
@@ -215,8 +218,11 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
                 "flex-1 justify-start text-left font-normal h-10",
                 !dateFrom && "text-muted-foreground"
               )}
+              aria-label={dateFrom ? `Start date selected: ${format(dateFrom, "MMMM dd, yyyy")}` : "Select start date"}
+              aria-haspopup="dialog"
+              aria-expanded="false"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               {dateFrom ? format(dateFrom, "MMM dd") : "From"}
             </Button>
           </PopoverTrigger>
@@ -227,6 +233,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
               onSelect={handleDateFromChange}
               initialFocus
               className="pointer-events-auto"
+              aria-label="Select start date for date range filter"
             />
           </PopoverContent>
         </Popover>
@@ -239,8 +246,11 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
                 "flex-1 justify-start text-left font-normal h-10",
                 !dateTo && "text-muted-foreground"
               )}
+              aria-label={dateTo ? `End date selected: ${format(dateTo, "MMMM dd, yyyy")}` : "Select end date"}
+              aria-haspopup="dialog"
+              aria-expanded="false"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               {dateTo ? format(dateTo, "MMM dd") : "To"}
             </Button>
           </PopoverTrigger>
@@ -251,6 +261,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
               onSelect={handleDateToChange}
               initialFocus
               className="pointer-events-auto"
+              aria-label="Select end date for date range filter"
             />
           </PopoverContent>
         </Popover>
@@ -274,7 +285,15 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             )}
           </h3>
           {hasActiveFilters && (
-            <Button variant="outline" size="sm" onClick={onClearFilters} className="h-10">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onClearFilters} 
+              className="h-10"
+              aria-label={`Clear all active filters (${Object.values(filters).filter(value => 
+                Array.isArray(value) ? value.length > 0 : Boolean(value)
+              ).length} active)`}
+            >
               <X className="h-4 w-4 mr-2" />
               Clear All
             </Button>
@@ -290,9 +309,14 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         {/* Advanced filters collapsible */}
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between h-10">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-between h-10"
+              aria-label={isExpanded ? 'Hide advanced filters' : 'Show advanced filters'}
+              aria-expanded={isExpanded}
+            >
               Advanced Filters
-              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-4">

@@ -214,7 +214,11 @@ export default function AdminWorkOrders() {
           <CardContent className="p-6">
             <div className="text-center space-y-4">
               <p className="text-destructive">Error loading work orders: {error.message}</p>
-              <Button onClick={() => refetch()} variant="outline">
+              <Button 
+                onClick={() => refetch()} 
+                variant="outline"
+                aria-label="Retry loading work orders"
+              >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Retry
               </Button>
@@ -231,7 +235,7 @@ export default function AdminWorkOrders() {
       <WorkOrderBreadcrumb />
       
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <header className="flex justify-between items-center" role="banner" aria-label="Work orders management header">
         <div>
           <h1 className="text-2xl font-bold">Work Orders Management</h1>
           <p className="text-muted-foreground">
@@ -243,7 +247,7 @@ export default function AdminWorkOrders() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" role="toolbar" aria-label="Work order actions">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
@@ -255,19 +259,26 @@ export default function AdminWorkOrders() {
             size="sm"
             onClick={() => setBulkMode(!bulkMode)}
             className={cn("h-9", bulkMode ? "border-primary text-primary" : "")}
+            aria-label={bulkMode ? 'Exit bulk selection mode' : 'Enter bulk selection mode'}
+            aria-pressed={bulkMode}
           >
             <CheckSquare className="w-4 h-4 mr-2" />
             {bulkMode ? 'Exit Bulk Mode' : 'Bulk Actions'}
           </Button>
-          <Button size="sm" onClick={() => setShowCreateModal(true)} className="h-9">
+          <Button 
+            size="sm" 
+            onClick={() => setShowCreateModal(true)} 
+            className="h-9"
+            aria-label="Create new work order"
+          >
             <Plus className="w-4 h-4 mr-2" />
             New Work Order
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-4">
+      <section className="flex flex-col lg:flex-row gap-4" role="search" aria-label="Work order filters">
         <div className="flex-1">
           <WorkOrderFilters
             filters={filters}
@@ -277,7 +288,7 @@ export default function AdminWorkOrders() {
             onClearFilters={handleClearFilters}
           />
         </div>
-      </div>
+      </section>
 
       {/* Work Order Table */}
       <WorkOrderTable

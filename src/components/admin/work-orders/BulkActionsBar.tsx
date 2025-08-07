@@ -21,10 +21,10 @@ export function BulkActionsBar({
   if (selectedCount === 0) return null;
 
   return (
-    <Card className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 shadow-lg">
+    <Card className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 shadow-lg" role="toolbar" aria-label="Bulk actions for selected work orders">
       <CardContent className="py-3 px-4">
         <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium" aria-live="polite">
             {selectedCount} work order{selectedCount === 1 ? '' : 's'} selected
           </span>
           
@@ -33,6 +33,7 @@ export function BulkActionsBar({
               size="sm" 
               variant="outline"
               onClick={() => onExport(selectedIds)}
+              aria-label={`Export ${selectedCount} selected work orders to CSV`}
             >
               <Download className="h-4 w-4 mr-2" />
               Export
@@ -42,6 +43,7 @@ export function BulkActionsBar({
               size="sm" 
               variant="outline"
               onClick={() => onBulkAssign(selectedIds)}
+              aria-label={`Assign ${selectedCount} selected work orders`}
             >
               <Users className="h-4 w-4 mr-2" />
               Assign
@@ -51,6 +53,7 @@ export function BulkActionsBar({
               size="sm" 
               variant="ghost"
               onClick={onClearSelection}
+              aria-label={`Clear selection of ${selectedCount} work orders`}
             >
               <X className="h-4 w-4" />
             </Button>
