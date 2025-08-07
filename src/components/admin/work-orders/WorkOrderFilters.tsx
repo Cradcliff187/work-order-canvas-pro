@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Search, Filter, Calendar as CalendarIcon, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
@@ -49,6 +50,14 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const { shouldShowSelector } = useAutoOrganization();
   const isMobile = useIsMobile();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  // Calculate active filter count for display
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filters).filter(value => 
+      Array.isArray(value) ? value.length > 0 : Boolean(value)
+    ).length + (searchTerm ? 1 : 0);
+  }, [filters, searchTerm]);
 
   // Get unique locations for the selected organization (or all if no org selected)
   const { data: locations } = useQuery({
@@ -271,63 +280,100 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
 
   if (isMobile) {
     return (
-      <div className="space-y-4 p-4 border rounded-lg bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-            {hasActiveFilters && (
-              <Badge variant="secondary" className="ml-2">
-                {Object.values(filters).filter(value => 
-                  Array.isArray(value) ? value.length > 0 : Boolean(value)
-                ).length}
-              </Badge>
-            )}
-          </h3>
-          {hasActiveFilters && (
+      <div className="space-y-4">
+        {/* Mobile search bar always visible */}
+        <div className="p-4 border rounded-lg bg-card/50 backdrop-blur-sm">
+          {renderSearchFilter()}
+        </div>
+
+        {/* Filter trigger button */}
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <SheetTrigger asChild>
             <Button 
               variant="outline" 
-              size="sm" 
-              onClick={onClearFilters} 
-              className="h-10"
-              aria-label={`Clear all active filters (${Object.values(filters).filter(value => 
-                Array.isArray(value) ? value.length > 0 : Boolean(value)
-              ).length} active)`}
+              className="w-full h-12 justify-between px-4"
+              aria-label={`Open filters${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
             >
-              <X className="h-4 w-4 mr-2" />
-              Clear All
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <span>Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="h-5">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </div>
+              <ChevronDown className="h-4 w-4" />
             </Button>
-          )}
-        </div>
+          </SheetTrigger>
 
-        {/* Essential filters always visible */}
-        <div className="grid grid-cols-1 gap-4">
-          {renderSearchFilter()}
-          {renderStatusFilter()}
-        </div>
+          <SheetContent side="bottom" className="h-[85vh] p-0">
+            <SheetHeader className="p-4 border-b sticky top-0 bg-background z-10">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </SheetTitle>
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      onClearFilters();
+                      setIsSheetOpen(false);
+                    }}
+                    className="h-8"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+            </SheetHeader>
 
-        {/* Advanced filters collapsible */}
-        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <CollapsibleTrigger asChild>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-between h-10"
-              aria-label={isExpanded ? 'Hide advanced filters' : 'Show advanced filters'}
-              aria-expanded={isExpanded}
-            >
-              Advanced Filters
-              {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 pt-4">
-            <div className="grid grid-cols-1 gap-4">
-              {renderOrganizationFilter()}
-              {renderLocationFilter()}
-              {renderTradeFilter()}
-              {renderDateRangeFilter()}
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              {/* Essential filters */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Essential
+                </h3>
+                <div className="space-y-4">
+                  {renderStatusFilter()}
+                </div>
+              </div>
+
+              {/* Advanced filters */}
+              {(shouldShowSelector || true) && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Advanced
+                  </h3>
+                  <div className="space-y-4">
+                    {renderOrganizationFilter()}
+                    {renderLocationFilter()}
+                    {renderTradeFilter()}
+                    {renderDateRangeFilter()}
+                  </div>
+                </div>
+              )}
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+
+            <SheetFooter className="p-4 border-t bg-background">
+              <Button 
+                onClick={() => setIsSheetOpen(false)}
+                className="w-full h-11"
+              >
+                Apply Filters
+                {activeFilterCount > 0 && ` (${activeFilterCount})`}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       </div>
     );
   }
