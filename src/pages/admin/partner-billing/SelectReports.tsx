@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
@@ -236,82 +237,134 @@ export default function SelectReports() {
                 description="All approved reports for this partner have already been billed, or there are no approved reports yet."
               />
             ) : (
-              <ResponsiveTableWrapper stickyFirstColumn>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedReportIds.size === reports.length && reports.length > 0}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead>Work Order</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Subcontractor</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reports.map((report) => {
-                      const isSelected = selectedReportIds.has(report.id);
-                      return (
-                        <TableRow 
-                          key={report.id}
-                          className={`cursor-pointer hover:bg-muted/50 ${
-                            isSelected ? 'bg-primary/10 border-l-2 border-l-primary' : ''
-                          }`}
-                          onClick={() => handleReportToggle(report.id, !isSelected)}
-                        >
-                          <TableCell onClick={(e) => e.stopPropagation()}>
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden lg:block">
+                  <ResponsiveTableWrapper stickyFirstColumn>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={selectedReportIds.size === reports.length && reports.length > 0}
+                              onCheckedChange={handleSelectAll}
+                            />
+                          </TableHead>
+                          <TableHead>Work Order</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Subcontractor</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>Submitted</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {reports.map((report) => {
+                          const isSelected = selectedReportIds.has(report.id);
+                          return (
+                            <TableRow 
+                              key={report.id}
+                              className={`cursor-pointer hover:bg-muted/50 ${
+                                isSelected ? 'bg-primary/10 border-l-2 border-l-primary' : ''
+                              }`}
+                              onClick={() => handleReportToggle(report.id, !isSelected)}
+                            >
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {report.work_orders?.work_order_number || 'N/A'}
+                              </TableCell>
+                              <TableCell className="max-w-[200px]">
+                                <div className="space-y-1">
+                                  <p className="font-medium truncate">
+                                    {report.work_orders?.title || 'No title'}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground truncate">
+                                    {report.work_orders?.description || 'No description'}
+                                  </p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {report.subcontractor_organization?.name || 'Unknown'}
+                              </TableCell>
+                              <TableCell>
+                                {report.work_orders?.store_location || '-'}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(report.submitted_at), 'MMM d, yyyy')}
+                              </TableCell>
+                              <TableCell>
+                                {report.subcontractor_costs ? (
+                                  <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                                    {formatCurrency(report.subcontractor_costs)}
+                                  </Badge>
+                                ) : (
+                                  '-'
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <ReportStatusBadge status="approved" size="sm" />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ResponsiveTableWrapper>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="block lg:hidden space-y-3">
+                  {reports.map((report) => {
+                    const isSelected = selectedReportIds.has(report.id);
+                    return (
+                      <MobileTableCard
+                        key={report.id}
+                        title={report.work_orders?.work_order_number || 'N/A'}
+                        subtitle={`${report.work_orders?.title || 'No title'} • ${report.work_orders?.description || 'No description'}`}
+                        status={<ReportStatusBadge status="approved" size="sm" />}
+                        onClick={() => handleReportToggle(report.id, !isSelected)}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
+                              onClick={(e) => e.stopPropagation()}
                             />
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {report.work_orders?.work_order_number || 'N/A'}
-                          </TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <div className="space-y-1">
-                              <p className="font-medium truncate">
-                                {report.work_orders?.title || 'No title'}
-                              </p>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {report.work_orders?.description || 'No description'}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {report.subcontractor_organization?.name || 'Unknown'}
-                          </TableCell>
-                          <TableCell>
-                            {report.work_orders?.store_location || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(report.submitted_at), 'MMM d, yyyy')}
-                          </TableCell>
-                          <TableCell>
-                            {report.subcontractor_costs ? (
+                            {report.subcontractor_costs && (
                               <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
                                 {formatCurrency(report.subcontractor_costs)}
                               </Badge>
-                            ) : (
-                              '-'
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <ReportStatusBadge status="approved" size="sm" />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ResponsiveTableWrapper>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div className="flex items-center gap-1">
+                              <Building2 className="w-3 h-3" />
+                              {report.subcontractor_organization?.name || 'Unknown'}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {format(new Date(report.submitted_at), 'MMM d, yyyy')}
+                            </div>
+                            {report.work_orders?.store_location && (
+                              <div className="flex items-center gap-1">
+                                <span>📍</span>
+                                {report.work_orders.store_location}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </MobileTableCard>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
