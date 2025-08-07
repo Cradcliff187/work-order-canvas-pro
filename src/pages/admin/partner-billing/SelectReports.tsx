@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -207,10 +208,10 @@ export default function SelectReports() {
                     <CheckSquare className="w-4 h-4" />
                     {selectedReportIds.size === reports.length ? 'Deselect All' : 'Select All'}
                   </Button>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
                     {reports.length} report{reports.length !== 1 ? 's' : ''}
                   </Badge>
-                  <Badge variant="outline" className="flex items-center gap-1">
+                  <Badge variant="outline" className="h-5 text-[10px] px-1.5 flex items-center gap-1">
                     <DollarSign className="w-3 h-3" />
                     {formatCurrency(totalSubcontractorCosts)} available
                   </Badge>
@@ -257,13 +258,11 @@ export default function SelectReports() {
                         onClick={() => handleReportToggle(report.id, !isSelected)}
                         status={
                           <div className="flex flex-col items-end gap-1">
-                            <Badge variant="outline" className="text-green-600 border-green-600">
-                              Approved
-                            </Badge>
+                            <ReportStatusBadge status="approved" size="sm" />
                             {report.subcontractor_costs && (
                               <Badge 
                                 variant={isSelected ? "default" : "secondary"}
-                                className={`text-xs ${isSelected ? 'bg-primary text-primary-foreground' : ''}`}
+                                className={`h-5 text-[10px] px-1.5 ${isSelected ? 'bg-primary text-primary-foreground' : ''}`}
                               >
                                 {formatCurrency(report.subcontractor_costs)}
                               </Badge>

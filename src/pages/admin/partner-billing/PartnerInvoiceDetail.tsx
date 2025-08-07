@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Separator } from '@/components/ui/separator';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ArrowLeft, Download, FileText } from 'lucide-react';
@@ -193,7 +194,7 @@ export default function PartnerInvoiceDetail() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl">Partner Invoice</CardTitle>
-            <Badge variant="secondary">{invoice.status}</Badge>
+            <FinancialStatusBadge status={invoice.status} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   FileText, 
@@ -298,9 +299,7 @@ export default function BillingDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-sm">{formatCurrency(invoice.total_amount)}</p>
-                      <Badge variant="secondary" className="text-xs">
-                        {invoice.status}
-                      </Badge>
+                      <FinancialStatusBadge status={invoice.status} size="sm" />
                     </div>
                   </div>
                 ))}
@@ -344,12 +343,7 @@ export default function BillingDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-sm">{formatCurrency(invoice.total_amount || 0)}</p>
-                      <Badge 
-                        variant={invoice.status === 'approved' ? 'default' : invoice.status === 'submitted' ? 'secondary' : 'destructive'}
-                        className="text-xs"
-                      >
-                        {invoice.status}
-                      </Badge>
+                      <FinancialStatusBadge status={invoice.status} size="sm" />
                     </div>
                   </div>
                 ))}
