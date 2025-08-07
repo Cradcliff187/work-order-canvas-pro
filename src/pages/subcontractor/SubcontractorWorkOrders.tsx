@@ -72,7 +72,7 @@ const SubcontractorWorkOrders = () => {
 
   // Pull to refresh functionality
   const { handleRefresh, threshold } = usePullToRefresh({
-    queryKey: ['subcontractor-work-orders', organizationIds],
+    queryKey: ['subcontractor-work-orders', ...organizationIds],
     successMessage: 'Work orders refreshed'
   });
   
