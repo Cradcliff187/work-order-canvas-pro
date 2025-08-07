@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,7 +20,7 @@ import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
 import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
-import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare } from 'lucide-react';
+import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Breadcrumb,
@@ -36,6 +38,7 @@ export default function SelectReports() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { data: reports, isLoading, error } = usePartnerUnbilledReports(selectedPartnerId);
   const { data: reportStats } = usePartnerReportStats(selectedPartnerId);
   const generateInvoice = usePartnerInvoiceGeneration();
@@ -83,6 +86,16 @@ export default function SelectReports() {
   const handleGenerateInvoice = () => {
     if (!selectedPartnerId || selectedReportIds.size === 0) return;
     
+    // Phase 3: Validate minimum invoice amount
+    if (calculations.subtotal < 0.01) {
+      toast({
+        title: "Cannot Generate Invoice",
+        description: "Selected reports have no associated costs. Please ensure subcontractor invoices are approved.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     generateInvoice.mutate({
       partnerOrganizationId: selectedPartnerId,
       selectedReportIds: Array.from(selectedReportIds),
@@ -102,8 +115,9 @@ export default function SelectReports() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -254,6 +268,7 @@ export default function SelectReports() {
                           <TableHead>Subcontractor</TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead>Submitted</TableHead>
+                          <TableHead>Invoice Status</TableHead>
                           <TableHead>Amount</TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
@@ -337,10 +352,33 @@ export default function SelectReports() {
                                 {format(new Date(report.submitted_at), 'MMM d, yyyy')}
                               </TableCell>
                               <TableCell>
-                                {report.subcontractor_costs ? (
-                                  <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
-                                    {formatCurrency(report.subcontractor_costs)}
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="h-5 text-[10px] px-1.5 flex items-center gap-1">
+                                    <Receipt className="w-3 h-3" />
+                                    Approved Invoice
                                   </Badge>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Invoice has been approved and costs are available for billing</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {report.subcontractor_costs ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5 cursor-help">
+                                        {formatCurrency(report.subcontractor_costs)}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Cost from approved subcontractor invoice</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 ) : (
                                   '-'
                                 )}
@@ -368,19 +406,25 @@ export default function SelectReports() {
                         status={<ReportStatusBadge status="approved" size="sm" />}
                         onClick={() => handleReportToggle(report.id, !isSelected)}
                       >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            {report.subcontractor_costs && (
-                              <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
-                                {formatCurrency(report.subcontractor_costs)}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              {report.subcontractor_costs && (
+                                <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                                  {formatCurrency(report.subcontractor_costs)}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <Badge variant="outline" className="h-4 text-[9px] px-1 flex items-center gap-1">
+                                <Receipt className="w-2 h-2" />
+                                Approved Invoice
                               </Badge>
-                            )}
-                          </div>
+                            </div>
                           <div className="text-xs text-muted-foreground space-y-1">
                             <div className="flex items-center gap-1">
                               <Building2 className="w-3 h-3" />
@@ -448,7 +492,7 @@ export default function SelectReports() {
       )}
 
       {/* Summary Section - Show when reports are selected */}
-      {calculations.selectedReports.length > 0 && (
+      {selectedReportIds.size > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -458,29 +502,49 @@ export default function SelectReports() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Reports Selected</p>
-                  <p className="text-lg font-semibold">
-                    {calculations.selectedReports.length}
-                  </p>
+              {/* Phase 3: Warning for edge cases */}
+              {calculations.subtotal < 0.01 && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">Cannot generate invoice</p>
+                    <p className="text-muted-foreground">Selected reports have no associated costs. Minimum $0.01 required.</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Subtotal</p>
-                  <p className="text-lg font-semibold">
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Subcontractor Costs
+                  </Label>
+                  <div className="text-lg font-bold">
                     {formatCurrency(calculations.subtotal)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    From {calculations.selectedReports.length} approved invoice{calculations.selectedReports.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Markup ({markupPercentage}%)</p>
-                  <p className="text-lg font-semibold">
-                    {formatCurrency(calculations.markupAmount)}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Markup ({markupPercentage}%)
+                  </Label>
+                  <div className="text-lg font-bold text-green-600">
+                    +{formatCurrency(calculations.markupAmount)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Administrative costs & profit margin
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-xl font-bold text-primary">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Total Invoice Amount
+                  </Label>
+                  <div className="text-xl font-bold text-primary">
                     {formatCurrency(calculations.total)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ready for partner billing
                   </p>
                 </div>
               </div>
@@ -489,11 +553,15 @@ export default function SelectReports() {
                 <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
                   <AlertDialogTrigger asChild>
                     <Button 
-                      variant="default" 
-                      size="lg"
-                      disabled={selectedReportIds.size === 0 || generateInvoice.isPending}
+                      className="w-full md:w-auto"
+                      onClick={() => setShowConfirmDialog(true)}
+                      disabled={selectedReportIds.size === 0 || generateInvoice.isPending || calculations.subtotal < 0.01}
                     >
-                      {generateInvoice.isPending ? 'Generating...' : 'Generate Invoice'}
+                      {generateInvoice.isPending ? (
+                        "Generating Invoice..."
+                      ) : (
+                        `Generate Invoice (${selectedReportIds.size} report${selectedReportIds.size !== 1 ? 's' : ''})`
+                      )}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -528,6 +596,7 @@ export default function SelectReports() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
