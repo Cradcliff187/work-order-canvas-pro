@@ -361,6 +361,9 @@ export default function AdminWorkOrders() {
                         showAssignee={true}
                         showTrade={true}
                         showDaysOld={true}
+                        showQuickActions={true}
+                        onMessage={() => navigate(`/admin/work-orders/${row.original.id}?tab=messages`)}
+                        onViewDetails={() => navigate(`/admin/work-orders/${row.original.id}`)}
                       />
                     );
                   })}
@@ -559,7 +562,10 @@ export default function AdminWorkOrders() {
                         showInvoiceAmount={true}
                         showDaysOld={true}
                         showActions={false}
+                        showQuickActions={true}
                         onTap={() => navigate(`/admin/work-orders/${workOrder.id}`)}
+                        onMessage={() => navigate(`/admin/work-orders/${workOrder.id}?tab=messages`)}
+                        onViewDetails={() => navigate(`/admin/work-orders/${workOrder.id}`)}
                       />
                     );
                   })

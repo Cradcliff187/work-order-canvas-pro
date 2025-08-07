@@ -52,6 +52,7 @@ import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileWorkOrderCard } from '@/components/MobileWorkOrderCard';
 
 const workOrderSortOptions = [
   { value: 'submitted-desc', label: 'Newest First' },
@@ -377,6 +378,31 @@ const WorkOrderList = () => {
   };
 
   const renderCards = () => {
+    if (isMobile) {
+      return (
+        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+          <div className="space-y-4">
+            {filteredAndSortedWorkOrders.map((workOrder) => (
+              <MobileWorkOrderCard
+                key={workOrder.id}
+                workOrder={workOrder}
+                onTap={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                viewerRole="partner"
+                showQuickActions={true}
+                showOrganization={false}
+                showAssignee={true}
+                showTrade={true}
+                showInvoiceAmount={false}
+                onMessage={() => navigate(`/partner/work-orders/${workOrder.id}?tab=messages`)}
+                onViewDetails={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+              />
+            ))}
+          </div>
+        </MobilePullToRefresh>
+      );
+    }
+
+    // Desktop card view - keep original card design for larger screens
     const WorkOrderCard = ({ workOrder }: { workOrder: any }) => (
       <Card className="hover:shadow-md transition-shadow">
         <CardContent className="p-6">
@@ -435,18 +461,6 @@ const WorkOrderList = () => {
         </CardContent>
       </Card>
     );
-
-    if (isMobile) {
-      return (
-        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
-          <div className="space-y-4">
-            {filteredAndSortedWorkOrders.map((workOrder) => (
-              <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
-            ))}
-          </div>
-        </MobilePullToRefresh>
-      );
-    }
 
     return (
       <div className="space-y-4">

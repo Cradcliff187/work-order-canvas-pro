@@ -9,6 +9,7 @@ import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/utils/addressUtils';
+import { MobileQuickActions, createMapAction, createMessageAction, createViewDetailsAction, createSubmitReportAction, createPhoneAction } from '@/components/work-orders/MobileQuickActions';
 
 interface WorkOrder {
   id: string;
@@ -64,6 +65,7 @@ interface MobileWorkOrderCardProps {
   onSwipeLeft?: (workOrder: WorkOrder) => void;
   onSwipeRight?: (workOrder: WorkOrder) => void;
   showActions?: boolean;
+  showQuickActions?: boolean;
   // New customization props
   showAssignee?: boolean;
   showOrganization?: boolean;
@@ -73,6 +75,13 @@ interface MobileWorkOrderCardProps {
   showDaysOld?: boolean;
   fieldsToShow?: Array<FieldType>;
   viewerRole?: 'partner' | 'subcontractor' | 'admin';
+  // Action callbacks
+  onMessage?: () => void;
+  onViewDetails?: () => void;
+  onSubmitReport?: () => void;
+  onCall?: () => void;
+  // Contact information for calls
+  contactPhone?: string;
 }
 
 
@@ -82,6 +91,7 @@ export function MobileWorkOrderCard({
   onSwipeLeft, 
   onSwipeRight,
   showActions: showActionsDefault = false,
+  showQuickActions = false,
   showAssignee = true,
   showOrganization = true,
   showInvoiceAmount = true,
@@ -89,7 +99,12 @@ export function MobileWorkOrderCard({
   showLocationNumber = false,
   showDaysOld = false,
   fieldsToShow,
-  viewerRole = 'subcontractor'
+  viewerRole = 'subcontractor',
+  onMessage,
+  onViewDetails,
+  onSubmitReport,
+  onCall,
+  contactPhone
 }: MobileWorkOrderCardProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
@@ -182,6 +197,50 @@ export function MobileWorkOrderCard({
   const daysOld = differenceInDays(new Date(), new Date(workOrder.date_submitted));
   const isOverdue = daysOld > 7; // Consider 7+ days old as overdue
   const mapUrl = generateMapUrl(workOrder);
+
+  // Build quick actions based on role and available data
+  const quickActions = React.useMemo(() => {
+    if (!showQuickActions) return [];
+    
+    const actions = [];
+    
+    // Map action (always available if address exists)
+    if (mapUrl) {
+      actions.push(createMapAction(workOrder));
+    }
+    
+    // Role-specific actions
+    switch (viewerRole) {
+      case 'admin':
+        if (contactPhone && onCall) {
+          actions.push(createPhoneAction(contactPhone, 'Call'));
+        }
+        if (onMessage) {
+          actions.push(createMessageAction(onMessage));
+        }
+        break;
+        
+      case 'partner':
+        if (onMessage) {
+          actions.push(createMessageAction(onMessage));
+        }
+        if (onViewDetails) {
+          actions.push(createViewDetailsAction(onViewDetails));
+        }
+        break;
+        
+      case 'subcontractor':
+        if (onMessage) {
+          actions.push(createMessageAction(onMessage));
+        }
+        if (onSubmitReport && ['assigned', 'in_progress'].includes(workOrder.status)) {
+          actions.push(createSubmitReportAction(onSubmitReport));
+        }
+        break;
+    }
+    
+    return actions;
+  }, [showQuickActions, viewerRole, mapUrl, contactPhone, onCall, onMessage, onViewDetails, onSubmitReport, workOrder.status]);
 
   // Get full address for location display
   const getLocationDisplay = () => {
@@ -407,6 +466,9 @@ export function MobileWorkOrderCard({
           </div>
         )}
       </CardContent>
+
+      {/* Quick Actions Footer */}
+      <MobileQuickActions actions={quickActions} />
     </Card>
     </div>
   );
