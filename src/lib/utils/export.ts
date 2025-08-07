@@ -1,4 +1,5 @@
-// Generic CSV export utilities for WorkOrderPortal
+// Generic CSV and Excel export utilities for WorkOrderPortal
+import * as XLSX from 'xlsx';
 
 export interface ExportColumn {
   key: string;
@@ -126,10 +127,74 @@ export function exportToCSV(
   downloadFile(blob, filename);
 }
 
+export function exportToExcel(data: any[], columns: ExportColumn[], filename: string): void {
+  // Create worksheet data with headers
+  const headers = columns.map(col => col.label);
+  const worksheetData = [
+    headers,
+    ...data.map(row => 
+      columns.map(col => {
+        const value = getNestedValue(row, col.key);
+        return formatExcelValue(value, col.type);
+      })
+    )
+  ];
+
+  // Create workbook and worksheet
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+  // Auto-size columns
+  const columnWidths = columns.map((col, index) => {
+    const maxLength = Math.max(
+      col.label.length,
+      ...data.map(row => {
+        const value = getNestedValue(row, col.key);
+        return formatExcelValue(value, col.type).toString().length;
+      })
+    );
+    return { wch: Math.min(maxLength + 2, 50) };
+  });
+  worksheet['!cols'] = columnWidths;
+
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Work Orders');
+
+  // Generate Excel file and download
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  
+  downloadFile(blob, filename.replace('.csv', '.xlsx'));
+}
+
+function formatExcelValue(value: any, type: ExportColumn['type'] = 'string'): any {
+  if (value === null || value === undefined) return '';
+  
+  switch (type) {
+    case 'number':
+      return typeof value === 'number' ? value : parseFloat(value) || 0;
+    case 'currency':
+      return typeof value === 'number' ? value : parseFloat(value.toString().replace(/[$,]/g, '')) || 0;
+    case 'date':
+      if (value instanceof Date) return value;
+      if (typeof value === 'string') {
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? value : date;
+      }
+      return value;
+    case 'boolean':
+      return Boolean(value);
+    default:
+      return value.toString();
+  }
+}
+
 /**
  * Export work orders with standard column mapping
  */
-export function exportWorkOrders(workOrders: any[], filename?: string): void {
+export function exportWorkOrders(workOrders: any[], format: 'csv' | 'excel' = 'csv', filename?: string): void {
   const columns: ExportColumn[] = [
     { key: 'work_order_number', label: 'Work Order #', type: 'string' },
     { key: 'title', label: 'Title', type: 'string' },
@@ -151,8 +216,13 @@ export function exportWorkOrders(workOrders: any[], filename?: string): void {
     { key: 'description', label: 'Description', type: 'string' },
   ];
 
-  const exportFilename = filename || generateFilename('work_orders');
-  exportToCSV(workOrders, columns, exportFilename);
+  const exportFilename = filename || generateFilename('work_orders', format === 'excel' ? 'xlsx' : 'csv');
+  
+  if (format === 'excel') {
+    exportToExcel(workOrders, columns, exportFilename);
+  } else {
+    exportToCSV(workOrders, columns, exportFilename);
+  }
 }
 
 /**

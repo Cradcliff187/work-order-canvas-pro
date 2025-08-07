@@ -174,14 +174,14 @@ export default function AdminWorkOrders() {
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
-  const handleExportAll = () => {
+  const handleExportAll = async (format: 'csv' | 'excel') => {
     try {
       if (!workOrdersData?.data || workOrdersData.data.length === 0) {
         toast({ title: 'No data to export', variant: 'destructive' });
         return;
       }
-      exportWorkOrders(workOrdersData.data);
-      toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
+      exportWorkOrders(workOrdersData.data, format);
+      toast({ title: `Successfully exported ${workOrdersData.data.length} work orders as ${format.toUpperCase()}` });
     } catch (error) {
       toast({ 
         title: 'Export failed', 
@@ -191,7 +191,7 @@ export default function AdminWorkOrders() {
     }
   };
 
-  const handleExport = (ids: string[]) => {
+  const handleExport = (format: 'csv' | 'excel', ids: string[]) => {
     try {
       const selectedData = workOrdersData?.data.filter(wo => ids.includes(wo.id));
       if (!selectedData || selectedData.length === 0) {
@@ -199,8 +199,8 @@ export default function AdminWorkOrders() {
         return;
       }
       
-      exportWorkOrders(selectedData);
-      toast({ title: `Successfully exported ${ids.length} work orders` });
+      exportWorkOrders(selectedData, format);
+      toast({ title: `Successfully exported ${ids.length} work orders as ${format.toUpperCase()}` });
     } catch (error) {
       toast({ 
         title: 'Export failed', 
@@ -357,6 +357,7 @@ export default function AdminWorkOrders() {
         onViewDetails={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}`)}
         onMessage={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}?tab=messages`)}
         onExportAll={handleExportAll}
+        onExport={handleExport}
         onClearSelection={handleClearSelection}
         onCreateNew={() => setShowCreateModal(true)}
         isMobile={isMobile}

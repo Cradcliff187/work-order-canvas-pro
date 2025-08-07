@@ -1,13 +1,14 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Users, X } from 'lucide-react';
+import { Users, X } from 'lucide-react';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
 
 export interface BulkActionsBarProps {
   selectedCount: number;
   selectedIds: string[];
   onClearSelection: () => void;
-  onExport: (ids: string[]) => void;
+  onExport: (format: 'csv' | 'excel', ids: string[]) => void;
   onBulkAssign: (ids: string[]) => void;
 }
 
@@ -33,16 +34,11 @@ export function BulkActionsBar({
           </span>
           
           <div className="flex items-center gap-1 sm:gap-2">
-            <Button 
-              size="sm" 
+            <ExportDropdown
+              onExport={(format) => onExport(format, selectedIds)}
               variant="outline"
-              onClick={() => onExport(selectedIds)}
-              aria-label={`Export ${selectedCount} selected work orders to CSV`}
-              className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
-            >
-              <Download className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+              size="sm"
+            />
             
             <Button 
               size="sm" 

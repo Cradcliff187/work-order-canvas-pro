@@ -17,7 +17,8 @@ import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
-import { Download, Plus, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { WorkOrder } from '@/hooks/useWorkOrders';
@@ -66,7 +67,8 @@ interface WorkOrderTableProps {
   onEdit: (workOrder: WorkOrder) => void;
   onViewDetails: (workOrder: WorkOrder) => void;
   onMessage: (workOrder: WorkOrder) => void;
-  onExportAll: () => void;
+  onExportAll: (format: 'csv' | 'excel') => void;
+  onExport: (format: 'csv' | 'excel', ids: string[]) => void;
   onClearSelection: () => void;
   onCreateNew: () => void;
   
@@ -102,6 +104,7 @@ export function WorkOrderTable({
   onViewDetails,
   onMessage,
   onExportAll,
+  onExport,
   onClearSelection,
   onCreateNew,
   isMobile,
@@ -265,15 +268,11 @@ export function WorkOrderTable({
               Clear Selection ({selectedRows.length})
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onExportAll}
-            aria-label="Export all work orders to CSV"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export All
-          </Button>
+          <ExportDropdown
+            onExport={onExportAll}
+            variant="outline"
+            size="sm"
+          />
         </div>
       </CardHeader>
       <CardContent>
