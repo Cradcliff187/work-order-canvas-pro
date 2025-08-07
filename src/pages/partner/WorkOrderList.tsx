@@ -77,7 +77,7 @@ const WorkOrderList = () => {
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'partner-work-orders',
     config: {
-      mobile: ['card'],           // Mobile: cards only
+      mobile: ['list'],           // Mobile: list view with pull-to-refresh
       desktop: ['table', 'card']  // Desktop: table default, cards optional
     },
     defaultMode: 'table'

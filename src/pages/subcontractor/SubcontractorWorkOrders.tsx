@@ -79,10 +79,10 @@ const SubcontractorWorkOrders = () => {
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'subcontractor-work-orders',
     config: {
-      mobile: ['card'],
-      desktop: ['card', 'table']
+      mobile: ['list'],
+      desktop: ['table', 'card']
     },
-    defaultMode: 'card'
+    defaultMode: 'table'
   });
 
 

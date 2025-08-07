@@ -65,7 +65,7 @@ export default function AdminWorkOrders() {
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'admin-work-orders',
     config: {
-      mobile: ['card'],
+      mobile: ['list'],
       desktop: ['table', 'card']
     },
     defaultMode: 'table'
@@ -278,34 +278,94 @@ export default function AdminWorkOrders() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Work Orders</CardTitle>
               <div className="flex items-center gap-2">
-                {selectedRows.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={handleClearSelection}>
-                    Clear Selection ({selectedRows.length})
+                {bulkMode && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={handleClearSelection}
+                    disabled={selectedIds.length === 0}
+                  >
+                    Clear Selection
                   </Button>
                 )}
-                <Button variant="outline" size="sm" onClick={() => {
-                  try {
-                    if (!workOrdersData?.data || workOrdersData.data.length === 0) {
-                      toast({ title: 'No data to export', variant: 'destructive' });
-                      return;
-                    }
-                    exportWorkOrders(workOrdersData.data);
-                    toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
-                  } catch (error) {
-                    toast({ 
-                      title: 'Export failed', 
-                      description: 'Failed to export work orders. Please try again.',
-                      variant: 'destructive' 
-                    });
-                  }
-                }}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export All
-                </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              {/* Content continues... */}
+            <CardContent className="p-0">
+              {!workOrdersData?.data?.length ? (
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No work orders found"
+                  description={workOrdersData?.totalCount === 0 
+                    ? "No work orders have been created yet. Create your first work order to get started."
+                    : "No work orders match your current filters. Try adjusting your search criteria."
+                  }
+                  action={workOrdersData?.totalCount === 0 ? {
+                    label: "Create Work Order",
+                    onClick: () => setShowCreateModal(true),
+                    icon: Plus
+                  } : undefined}
+                />
+              ) : (
+                <div className="space-y-4 p-4">
+                  {table.getRowModel().rows.map((row) => {
+                    const workOrder = row.original;
+                    // Transform the work order data to match MobileWorkOrderCard's expected format
+                    const transformedWorkOrder = {
+                      ...workOrder,
+                      work_order_assignments: workOrder.work_order_assignments?.map(assignment => ({
+                        assigned_to: assignment.assigned_to,
+                        assignment_type: assignment.assignment_type,
+                        assignee_profile: {
+                          first_name: assignment.profiles?.first_name || '',
+                          last_name: assignment.profiles?.last_name || ''
+                        },
+                        assigned_organization: assignment.organizations ? {
+                          name: assignment.organizations.name,
+                          organization_type: 'partner' as const
+                        } : undefined
+                      })) || []
+                    };
+
+                    if (bulkMode) {
+                      return (
+                        <div key={row.original.id} className="relative">
+                          <MobileWorkOrderCard
+                            workOrder={transformedWorkOrder}
+                            onTap={() => navigate(`/admin/work-orders/${row.original.id}`)}
+                            viewerRole="admin"
+                            showOrganization={true}
+                            showAssignee={true}
+                            showTrade={true}
+                            showDaysOld={true}
+                          />
+                          <div className="absolute top-2 right-2">
+                            <input
+                              type="checkbox"
+                              checked={row.getIsSelected()}
+                              onChange={row.getToggleSelectedHandler()}
+                              onClick={(e) => e.stopPropagation()}
+                              className="rounded border-gray-300 scale-125"
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <MobileWorkOrderCard
+                        key={row.original.id}
+                        workOrder={transformedWorkOrder}
+                        onTap={() => navigate(`/admin/work-orders/${row.original.id}`)}
+                        viewerRole="admin"
+                        showOrganization={true}
+                        showAssignee={true}
+                        showTrade={true}
+                        showDaysOld={true}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </MobilePullToRefresh>
