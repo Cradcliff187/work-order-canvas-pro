@@ -16,6 +16,8 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
+import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
+import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
 import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -35,6 +37,7 @@ export default function SelectReports() {
 
   const navigate = useNavigate();
   const { data: reports, isLoading, error } = usePartnerUnbilledReports(selectedPartnerId);
+  const { data: reportStats } = usePartnerReportStats(selectedPartnerId);
   const generateInvoice = usePartnerInvoiceGeneration();
 
   // Calculate totals based on selected reports
@@ -231,11 +234,7 @@ export default function SelectReports() {
             ) : isLoading ? (
               <TableSkeleton rows={3} columns={8} />
             ) : !reports || reports.length === 0 ? (
-              <EmptyState
-                icon={FileBarChart}
-                title="No unbilled reports found"
-                description="All approved reports for this partner have already been billed, or there are no approved reports yet."
-              />
+              <ReportPipelineEmptyState reportStats={reportStats} />
             ) : (
               <>
                 {/* Desktop Table View */}
