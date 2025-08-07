@@ -26,6 +26,8 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useDebounce } from '@/hooks/useDebounce';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
+import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -76,6 +78,28 @@ export default function AdminWorkOrders() {
   const { handleRefresh, threshold } = usePullToRefresh({
     queryKey: 'work-orders',
     successMessage: 'Work orders refreshed'
+  });
+
+  // Keyboard shortcuts
+  const handleSearchFocus = () => {
+    const searchInput = document.getElementById('work-order-search') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  };
+
+  const handleEscape = () => {
+    // Close any open modals
+    if (showCreateModal) setShowCreateModal(false);
+    if (showAssignModal) setShowAssignModal(false);
+    if (deleteDialogOpen) setDeleteDialogOpen(false);
+  };
+
+  useGlobalKeyboardShortcuts({
+    onSearchFocus: handleSearchFocus,
+    onEscape: handleEscape,
+    disabled: isMobile,
   });
 
   // Transform sorting state to match the hook's expected format
@@ -263,6 +287,7 @@ export default function AdminWorkOrders() {
           )}
         </div>
         <div className="flex items-center gap-2" role="toolbar" aria-label="Work order actions">
+          <KeyboardShortcutsTooltip />
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
