@@ -366,7 +366,7 @@ export default function SelectReports() {
                             <p><strong>Markup ({markupPercentage}%):</strong> {formatCurrency(calculations.markupAmount)}</p>
                             <p><strong>Total Amount:</strong> {formatCurrency(calculations.total)}</p>
                           </div>
-                          <p className="text-amber-600 text-sm">This action cannot be undone. The selected reports will be marked as billed.</p>
+                          <p className="text-warning text-sm">This action cannot be undone. The selected reports will be marked as billed.</p>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
