@@ -1,26 +1,10 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  ColumnDef,
-  flexRender,
-  PaginationState,
-  SortingState,
-  RowSelectionState,
-} from '@tanstack/react-table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
+import { PaginationState, SortingState, RowSelectionState } from '@tanstack/react-table';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
-import { Plus, Download, RotateCcw, ClipboardList, CheckSquare } from 'lucide-react';
-import { EmptyTableState } from '@/components/ui/empty-table-state';
-import { EmptyState } from '@/components/ui/empty-state';
+import { Plus, RotateCcw, CheckSquare } from 'lucide-react';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -30,20 +14,14 @@ import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
-import { MobileWorkOrderCard } from '@/components/MobileWorkOrderCard';
-import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
+import { WorkOrderTable } from '@/components/admin/work-orders/WorkOrderTable';
 import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useToast } from '@/hooks/use-toast';
 import { exportWorkOrders } from '@/lib/utils/export';
-import { format } from 'date-fns';
-import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
-import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 interface WorkOrderFiltersState {
@@ -145,34 +123,29 @@ export default function AdminWorkOrders() {
     },
   }), [deleteWorkOrder, navigate, unreadCounts]);
 
-  // React Table configuration
-  const table = useReactTable({
-    data: workOrdersData?.data || [],
-    columns,
-    pageCount: workOrdersData?.pageCount || 0,
-    state: {
-      pagination,
-      sorting,
-      rowSelection,
-    },
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    manualSorting: true,
-  });
-
-  const selectedRows = table.getFilteredSelectedRowModel().rows;
-  const selectedIds = selectedRows.map(row => row.original.id);
+  const handleClearSelection = () => {
+    setRowSelection({});
+  };
 
   const handleClearFilters = () => {
     setFilters({});
   };
 
-  const handleClearSelection = () => {
-    setRowSelection({});
+  const handleExportAll = () => {
+    try {
+      if (!workOrdersData?.data || workOrdersData.data.length === 0) {
+        toast({ title: 'No data to export', variant: 'destructive' });
+        return;
+      }
+      exportWorkOrders(workOrdersData.data);
+      toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Failed to export work orders. Please try again.',
+        variant: 'destructive' 
+      });
+    }
   };
 
   const handleExport = (ids: string[]) => {
@@ -271,362 +244,50 @@ export default function AdminWorkOrders() {
         </div>
       </div>
 
-      {/* Data Table */}
-      {isMobile ? (
-        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Work Orders</CardTitle>
-              <div className="flex items-center gap-2">
-                {bulkMode && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={handleClearSelection}
-                    disabled={selectedIds.length === 0}
-                  >
-                    Clear Selection
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {!workOrdersData?.data?.length ? (
-                <EmptyState
-                  icon={ClipboardList}
-                  title="No work orders found"
-                  description={workOrdersData?.totalCount === 0 
-                    ? "No work orders have been created yet. Create your first work order to get started."
-                    : "No work orders match your current filters. Try adjusting your search criteria."
-                  }
-                  action={workOrdersData?.totalCount === 0 ? {
-                    label: "Create Work Order",
-                    onClick: () => setShowCreateModal(true),
-                    icon: Plus
-                  } : undefined}
-                />
-              ) : (
-                <div className="space-y-4 p-4">
-                  {table.getRowModel().rows.map((row) => {
-                    const workOrder = row.original;
-                    // Transform the work order data to match MobileWorkOrderCard's expected format
-                    const transformedWorkOrder = {
-                      ...workOrder,
-                      work_order_assignments: workOrder.work_order_assignments?.map(assignment => ({
-                        assigned_to: assignment.assigned_to,
-                        assignment_type: assignment.assignment_type,
-                        assignee_profile: {
-                          first_name: assignment.profiles?.first_name || '',
-                          last_name: assignment.profiles?.last_name || ''
-                        },
-                        assigned_organization: assignment.organizations ? {
-                          name: assignment.organizations.name,
-                          organization_type: 'partner' as const
-                        } : undefined
-                      })) || []
-                    };
-
-                    if (bulkMode) {
-                      return (
-                        <div key={row.original.id} className="relative">
-                          <MobileWorkOrderCard
-                            workOrder={transformedWorkOrder}
-                            onTap={() => navigate(`/admin/work-orders/${row.original.id}`)}
-                            viewerRole="admin"
-                            showOrganization={true}
-                            showAssignee={true}
-                            showTrade={true}
-                            showDaysOld={true}
-                          />
-                          <div className="absolute top-2 right-2">
-                            <input
-                              type="checkbox"
-                              checked={row.getIsSelected()}
-                              onChange={row.getToggleSelectedHandler()}
-                              onClick={(e) => e.stopPropagation()}
-                              className="rounded border-gray-300 scale-125"
-                            />
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <MobileWorkOrderCard
-                        key={row.original.id}
-                        workOrder={transformedWorkOrder}
-                        onTap={() => navigate(`/admin/work-orders/${row.original.id}`)}
-                        viewerRole="admin"
-                        showOrganization={true}
-                        showAssignee={true}
-                        showTrade={true}
-                        showDaysOld={true}
-                        showQuickActions={true}
-                        onMessage={() => navigate(`/admin/work-orders/${row.original.id}?tab=messages`)}
-                        onViewDetails={() => navigate(`/admin/work-orders/${row.original.id}`)}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </MobilePullToRefresh>
-      ) : (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Work Orders</CardTitle>
-              <div className="flex items-center gap-2">
-                {selectedRows.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={handleClearSelection}>
-                    Clear Selection ({selectedRows.length})
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={() => {
-                  try {
-                    if (!workOrdersData?.data || workOrdersData.data.length === 0) {
-                      toast({ title: 'No data to export', variant: 'destructive' });
-                      return;
-                    }
-                    exportWorkOrders(workOrdersData.data);
-                    toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
-                  } catch (error) {
-                    toast({ 
-                      title: 'Export failed', 
-                      description: 'Failed to export work orders. Please try again.',
-                      variant: 'destructive' 
-                    });
-                  }
-                }}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export All
-                </Button>
-              </div>
-            </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <TableSkeleton rows={5} columns={9} />
-          ) : workOrdersData?.data.length === 0 ? (
-            <EmptyState
-              icon={ClipboardList}
-              title="No work orders found"
-              description={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Get started by creating your first work order"}
-              action={{
-                label: "Create Work Order",
-                onClick: () => setShowCreateModal(true),
-                icon: Plus
-              }}
-              variant="card"
-            />
-          ) : (
-            <>
-              {/* Table View (Desktop Master-Detail) */}
-              {viewMode === 'table' && (
-                <div className="hidden lg:block">
-                <MasterDetailLayout
-                  listContent={
-                    <ResponsiveTableWrapper stickyFirstColumn={true}>
-                      <Table className="admin-table">
-                        <TableHeader>
-                          {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                              {headerGroup.headers.map((header) => (
-                                <TableHead key={header.id} className="h-12">
-                                  {header.isPlaceholder
-                                    ? null
-                                    : flexRender(
-                                        header.column.columnDef.header,
-                                        header.getContext()
-                                      )}
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableHeader>
-                        <TableBody>
-                          {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                              <TableRow
-                                key={row.id}
-                                data-state={row.getIsSelected() && "selected"}
-                                className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
-                                onClick={(e) => {
-                                  // Don't navigate if clicking interactive elements
-                                  const target = e.target as HTMLElement;
-                                  if (target instanceof HTMLButtonElement || 
-                                      target instanceof HTMLInputElement ||
-                                      target.closest('[role="checkbox"]') ||
-                                      target.closest('[data-radix-collection-item]') ||
-                                      target.closest('.dropdown-trigger')) {
-                                    return;
-                                  }
-                                  // Set selection for master-detail view on desktop
-                                  setSelectedWorkOrderId(row.original.id);
-                                }}
-                              >
-                                {row.getVisibleCells().map((cell) => (
-                                  <TableCell key={cell.id}>
-                                    {flexRender(
-                                      cell.column.columnDef.cell,
-                                      cell.getContext()
-                                    )}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))
-                          ) : (
-                            <EmptyTableState
-                              icon={ClipboardList}
-                              title="No work orders found"
-                              description="Try adjusting your filters or search criteria"
-                              colSpan={columns.length}
-                            />
-                          )}
-                        </TableBody>
-                      </Table>
-                    </ResponsiveTableWrapper>
-                  }
-                  selectedId={selectedWorkOrderId}
-                  onSelectionChange={setSelectedWorkOrderId}
-                  detailContent={
-                    selectedWorkOrder && (
-                      <WorkOrderDetailPanel
-                        workOrder={selectedWorkOrder}
-                        onEdit={() => navigate(`/admin/work-orders/${selectedWorkOrderId}/edit`)}
-                        onViewFull={() => navigate(`/admin/work-orders/${selectedWorkOrderId}`)}
-                      />
-                    )
-                  }
-                  isLoading={isLoadingDetail}
-                  items={workOrdersData?.data?.map(wo => ({ id: wo.id })) || []}
-                />
-                </div>
-              )}
-
-              {/* Card View (Mobile + Desktop Option) */}
-              {viewMode === 'card' && (
-                <div className="space-y-3">
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => {
-                    const workOrder = row.original;
-                    
-                    // Use compact cards on mobile for better fit
-                    if (isMobile || useCompactCards) {
-                      const assignee = workOrder.work_order_assignments?.[0];
-                      const assigneeName = assignee?.profiles ? 
-                        `${assignee.profiles.first_name} ${assignee.profiles.last_name}`.trim() : 
-                        'Unassigned';
-                      
-                      return (
-                        <CompactMobileCard
-                          key={row.id}
-                          title={`#${workOrder.work_order_number}`}
-                          subtitle={`${workOrder.organizations?.name || 'Unknown Org'} • ${workOrder.store_location || 'No Location'}`}
-                          badge={<WorkOrderStatusBadge status={workOrder.status} />}
-                          trailing={assigneeName !== 'Unassigned' ? <span className="text-xs text-muted-foreground">{assigneeName}</span> : undefined}
-                          onClick={() => navigate(`/admin/work-orders/${workOrder.id}`)}
-                        >
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{workOrder.trades?.name || 'No Trade'}</span>
-                            <span>{workOrder.description?.slice(0, 50) || 'No description'}...</span>
-                          </div>
-                        </CompactMobileCard>
-                      );
-                    }
-                    
-                    // Transform the work order data to match MobileWorkOrderCard's expected format for full cards
-                    const transformedWorkOrder = {
-                      ...workOrder,
-                      work_order_assignments: workOrder.work_order_assignments?.map(assignment => ({
-                        assigned_to: assignment.assigned_to,
-                        assignment_type: assignment.assignment_type,
-                        assignee_profile: {
-                          first_name: assignment.profiles?.first_name || '',
-                          last_name: assignment.profiles?.last_name || ''
-                        },
-                        assigned_organization: assignment.organizations ? {
-                          name: assignment.organizations.name,
-                          organization_type: 'partner' as const
-                        } : undefined
-                      })) || []
-                    };
-                    
-                    return (
-                      <MobileWorkOrderCard
-                        key={row.id}
-                        workOrder={transformedWorkOrder}
-                        viewerRole="admin"
-                        showAssignee={true}
-                        showOrganization={true}
-                        showTrade={true}
-                        showInvoiceAmount={true}
-                        showDaysOld={true}
-                        showActions={false}
-                        showQuickActions={true}
-                        onTap={() => navigate(`/admin/work-orders/${workOrder.id}`)}
-                        onMessage={() => navigate(`/admin/work-orders/${workOrder.id}?tab=messages`)}
-                        onViewDetails={() => navigate(`/admin/work-orders/${workOrder.id}`)}
-                      />
-                    );
-                  })
-                ) : (
-                  <EmptyTableState
-                    icon={ClipboardList}
-                    title="No work orders found"
-                    description="Try adjusting your filters or search criteria"
-                    colSpan={1}
-                  />
-                )}
-                </div>
-              )}
-
-              {/* Pagination */}
-              <div className="flex items-center justify-between space-x-2 py-4">
-                <div className="flex-1 text-sm text-muted-foreground">
-                  {selectedRows.length > 0 && (
-                    <span>
-                      {selectedRows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-        </Card>
-      )}
+      {/* Work Order Table */}
+      <WorkOrderTable
+        data={workOrdersData?.data}
+        totalCount={workOrdersData?.totalCount}
+        pageCount={workOrdersData?.pageCount || 0}
+        isLoading={isLoading}
+        columns={columns}
+        pagination={pagination}
+        setPagination={setPagination}
+        sorting={sorting}
+        setSorting={setSorting}
+        rowSelection={rowSelection}
+        setRowSelection={setRowSelection}
+        viewMode={viewMode}
+        allowedModes={allowedModes}
+        setViewMode={setViewMode}
+        bulkMode={bulkMode}
+        useCompactCards={useCompactCards}
+        selectedWorkOrderId={selectedWorkOrderId}
+        setSelectedWorkOrderId={setSelectedWorkOrderId}
+        selectedWorkOrder={selectedWorkOrder as any}
+        isLoadingDetail={isLoadingDetail}
+        onWorkOrderClick={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}`)}
+        onEdit={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}/edit`)}
+        onViewDetails={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}`)}
+        onMessage={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}?tab=messages`)}
+        onExportAll={handleExportAll}
+        onClearSelection={handleClearSelection}
+        onCreateNew={() => setShowCreateModal(true)}
+        isMobile={isMobile}
+        onRefresh={handleRefresh}
+        refreshThreshold={threshold}
+      />
 
       {/* Bulk Actions Bar */}
-      <BulkActionsBar
-        selectedCount={selectedRows.length}
-        selectedIds={selectedIds}
-        onClearSelection={handleClearSelection}
-        onExport={handleExport}
-        onBulkAssign={handleBulkAssign}
-      />
+      {bulkMode && (
+        <BulkActionsBar
+          selectedCount={Object.keys(rowSelection).length}
+          selectedIds={Object.keys(rowSelection)}
+          onClearSelection={handleClearSelection}
+          onExport={handleExport}
+          onBulkAssign={handleBulkAssign}
+        />
+      )}
 
       {/* Create Modal */}
       <CreateWorkOrderModal
