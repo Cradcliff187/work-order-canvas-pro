@@ -68,91 +68,58 @@ export const usePartnerUnbilledReports = (partnerOrgId?: string) => {
       if (!partnerOrgId) return [];
       
       const { data, error } = await supabase
-        .from('work_order_reports')
-        .select(`
-          id,
-          work_order_id,
-          work_performed,
-          materials_used,
-          hours_worked,
-          notes,
-          status,
-          submitted_at,
-          reviewed_at,
-          partner_billed_at,
-          partner_billed_amount,
-          partner_invoice_id,
-          subcontractor_organization_id,
-          submitted_by_user_id,
-          reviewed_by_user_id,
-          work_orders!inner (
-            work_order_number,
-            title,
-            description,
-            store_location,
-            street_address,
-            city,
-            state,
-            zip_code,
-            organization_id
-          ),
-          subcontractor_organization:organizations!subcontractor_organization_id (
-            id,
-            name,
-            initials
-          ),
-          subcontractor:profiles!subcontractor_user_id (
-            first_name,
-            last_name,
-            email,
-            organization_members!inner(
-              role,
-              organizations!inner(
-                id,
-                name,
-                organization_type
-              )
-            )
-          ),
-          submitted_by:profiles!submitted_by_user_id (
-            first_name,
-            last_name,
-            email,
-            organization_members!inner(
-              role,
-              organizations!inner(
-                id,
-                name,
-                organization_type
-              )
-            )
-          )
-        `)
-        .eq('status', 'approved')
-        .is('partner_invoice_id', null)
-        .eq('work_orders.organization_id', partnerOrgId)
-        .order('submitted_at', { ascending: false });
+        .rpc('get_partner_unbilled_reports_with_approved_invoices', {
+          partner_org_id: partnerOrgId
+        });
 
       if (error) throw error;
 
-      // Get subcontractor costs for each report
-      const reportsWithCosts = await Promise.all(
-        (data || []).map(async (report) => {
-          const { data: invoiceData } = await supabase
-            .from('invoice_work_orders')
-            .select('amount')
-            .eq('work_order_report_id', report.id);
-
-          const subcontractor_costs = invoiceData?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
-
-          return {
-            ...report,
-            subcontractor_costs
-          };
-        })
-      );
-
-      return reportsWithCosts;
+      // Transform the function results to match our interface
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        work_order_id: row.work_order_id,
+        work_performed: row.work_performed,
+        materials_used: row.materials_used,
+        hours_worked: row.hours_worked,
+        notes: row.notes,
+        status: row.status,
+        submitted_at: row.submitted_at,
+        reviewed_at: row.reviewed_at,
+        partner_billed_at: row.partner_billed_at,
+        partner_billed_amount: row.partner_billed_amount,
+        partner_invoice_id: row.partner_invoice_id,
+        subcontractor_organization_id: row.subcontractor_organization_id,
+        submitted_by_user_id: row.submitted_by_user_id,
+        reviewed_by_user_id: row.reviewed_by_user_id,
+        subcontractor_costs: row.subcontractor_costs,
+        work_orders: {
+          work_order_number: row.work_order_number,
+          title: row.title,
+          description: row.description,
+          store_location: row.store_location,
+          street_address: row.street_address,
+          city: row.city,
+          state: row.state,
+          zip_code: row.zip_code,
+        },
+        subcontractor_organization: row.org_id ? {
+          id: row.org_id,
+          name: row.org_name,
+          initials: row.org_initials,
+        } : null,
+        subcontractor: row.subcontractor_first_name ? {
+          first_name: row.subcontractor_first_name,
+          last_name: row.subcontractor_last_name,
+          email: row.subcontractor_email,
+          organization_members: []
+        } : null,
+        submitted_by: row.submitted_by_first_name ? {
+          first_name: row.submitted_by_first_name,
+          last_name: row.submitted_by_last_name,
+          email: row.submitted_by_email,
+          organization_members: []
+        } : null,
+      }));
     },
     enabled: !!partnerOrgId,
   });

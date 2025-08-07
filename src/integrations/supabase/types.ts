@@ -1755,6 +1755,44 @@ export type Database = {
           avg_completion_hours: number
         }[]
       }
+      get_partner_unbilled_reports_with_approved_invoices: {
+        Args: { partner_org_id: string }
+        Returns: {
+          id: string
+          work_order_id: string
+          work_performed: string
+          materials_used: string
+          hours_worked: number
+          notes: string
+          status: Database["public"]["Enums"]["report_status"]
+          submitted_at: string
+          reviewed_at: string
+          partner_billed_at: string
+          partner_billed_amount: number
+          partner_invoice_id: string
+          subcontractor_organization_id: string
+          submitted_by_user_id: string
+          reviewed_by_user_id: string
+          subcontractor_costs: number
+          work_order_number: string
+          title: string
+          description: string
+          store_location: string
+          street_address: string
+          city: string
+          state: string
+          zip_code: string
+          org_id: string
+          org_name: string
+          org_initials: string
+          subcontractor_first_name: string
+          subcontractor_last_name: string
+          subcontractor_email: string
+          submitted_by_first_name: string
+          submitted_by_last_name: string
+          submitted_by_email: string
+        }[]
+      }
       get_profile_id_direct: {
         Args: { p_user_id: string }
         Returns: string
