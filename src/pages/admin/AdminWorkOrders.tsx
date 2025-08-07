@@ -43,6 +43,8 @@ import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -82,6 +84,12 @@ export default function AdminWorkOrders() {
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
   const [useCompactCards, setUseCompactCards] = useState(false);
   const isMobile = useIsMobile();
+
+  // Pull to refresh functionality  
+  const { handleRefresh, threshold } = usePullToRefresh({
+    queryKey: 'work-orders',
+    successMessage: 'Work orders refreshed'
+  });
 
   // Transform sorting state to match the hook's expected format
   const sortingFormatted = useMemo(() => ({
@@ -264,36 +272,74 @@ export default function AdminWorkOrders() {
       </div>
 
       {/* Data Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Work Orders</CardTitle>
-          <div className="flex items-center gap-2">
-            {selectedRows.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleClearSelection}>
-                Clear Selection ({selectedRows.length})
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={() => {
-              try {
-                if (!workOrdersData?.data || workOrdersData.data.length === 0) {
-                  toast({ title: 'No data to export', variant: 'destructive' });
-                  return;
-                }
-                exportWorkOrders(workOrdersData.data);
-                toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
-              } catch (error) {
-                toast({ 
-                  title: 'Export failed', 
-                  description: 'Failed to export work orders. Please try again.',
-                  variant: 'destructive' 
-                });
-              }
-            }}>
-              <Download className="w-4 h-4 mr-2" />
-              Export All
-            </Button>
-          </div>
-        </CardHeader>
+      {isMobile ? (
+        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Work Orders</CardTitle>
+              <div className="flex items-center gap-2">
+                {selectedRows.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleClearSelection}>
+                    Clear Selection ({selectedRows.length})
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => {
+                  try {
+                    if (!workOrdersData?.data || workOrdersData.data.length === 0) {
+                      toast({ title: 'No data to export', variant: 'destructive' });
+                      return;
+                    }
+                    exportWorkOrders(workOrdersData.data);
+                    toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
+                  } catch (error) {
+                    toast({ 
+                      title: 'Export failed', 
+                      description: 'Failed to export work orders. Please try again.',
+                      variant: 'destructive' 
+                    });
+                  }
+                }}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Content continues... */}
+            </CardContent>
+          </Card>
+        </MobilePullToRefresh>
+      ) : (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Work Orders</CardTitle>
+              <div className="flex items-center gap-2">
+                {selectedRows.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleClearSelection}>
+                    Clear Selection ({selectedRows.length})
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => {
+                  try {
+                    if (!workOrdersData?.data || workOrdersData.data.length === 0) {
+                      toast({ title: 'No data to export', variant: 'destructive' });
+                      return;
+                    }
+                    exportWorkOrders(workOrdersData.data);
+                    toast({ title: `Successfully exported ${workOrdersData.data.length} work orders` });
+                  } catch (error) {
+                    toast({ 
+                      title: 'Export failed', 
+                      description: 'Failed to export work orders. Please try again.',
+                      variant: 'destructive' 
+                    });
+                  }
+                }}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export All
+                </Button>
+              </div>
+            </CardHeader>
         <CardContent>
           {isLoading ? (
             <TableSkeleton rows={5} columns={9} />
@@ -504,7 +550,8 @@ export default function AdminWorkOrders() {
             </>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Bulk Actions Bar */}
       <BulkActionsBar

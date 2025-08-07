@@ -49,6 +49,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const SubcontractorWorkOrders = () => {
   const navigate = useNavigate();
@@ -60,6 +63,18 @@ const SubcontractorWorkOrders = () => {
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const isMobile = useIsMobile();
+
+  // Get organization IDs for the query
+  const organizationIds = useMemo(() => {
+    return userOrganizations?.map(org => org.organization_id) || [];
+  }, [userOrganizations]);
+
+  // Pull to refresh functionality
+  const { handleRefresh, threshold } = usePullToRefresh({
+    queryKey: ['subcontractor-work-orders', organizationIds],
+    successMessage: 'Work orders refreshed'
+  });
   
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'subcontractor-work-orders',
@@ -70,10 +85,6 @@ const SubcontractorWorkOrders = () => {
     defaultMode: 'card'
   });
 
-  // Get organization IDs for the query
-  const organizationIds = useMemo(() => {
-    return userOrganizations?.map(org => org.organization_id) || [];
-  }, [userOrganizations]);
 
   // Simple direct query for work orders
   const { data: workOrderList = [], isLoading } = useQuery({
@@ -193,6 +204,55 @@ const SubcontractorWorkOrders = () => {
   }
 
   const renderTableView = () => {
+    if (isMobile) {
+      return (
+        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+          <Card>
+            <CardContent className="p-0">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow 
+                        key={row.id}
+                        className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
+                        onClick={() => setSelectedWorkOrderId(row.original.id)}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </MobilePullToRefresh>
+      );
+    }
+
     return (
       <Card>
         <CardContent className="p-0">
@@ -273,6 +333,89 @@ const SubcontractorWorkOrders = () => {
           } : undefined}
           variant="full"
         />
+      );
+    }
+
+    if (isMobile) {
+      return (
+        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+          <div className="space-y-4">
+            {filteredWorkOrders.map((workOrder) => (
+              <Card key={workOrder.id} className="hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/subcontractor/work-orders/${workOrder.id}`)}>
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-lg">{workOrder.work_order_number}</h3>
+                        {unreadCounts[workOrder.id] > 0 && (
+                          <Badge variant="default" className="ml-2">
+                            {unreadCounts[workOrder.id]}
+                          </Badge>
+                        )}
+                        <WorkOrderStatusBadge status={workOrder.status} />
+                      </div>
+                      <h4 className="font-medium text-foreground">{workOrder.title}</h4>
+                      <div className="grid gap-3 text-sm text-muted-foreground grid-cols-1 sm:grid-cols-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          <span>{workOrder.store_location}, {workOrder.city}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          <span>{format(new Date(workOrder.date_submitted), 'MMM dd, yyyy')}</span>
+                        </div>
+                        {workOrder.trades && (
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4" />
+                            <span>{workOrder.trades.name}</span>
+                          </div>
+                        )}
+                        {workOrder.attachment_count > 0 && (
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>{workOrder.attachment_count} attachment(s)</span>
+                          </div>
+                        )}
+                      </div>
+                      {workOrder.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {workOrder.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/subcontractor/work-orders/${workOrder.id}`);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                      {workOrder.status === 'assigned' && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/subcontractor/work-orders/${workOrder.id}?action=submit-report`);
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Submit Report
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </MobilePullToRefresh>
       );
     }
 

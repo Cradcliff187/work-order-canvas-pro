@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -50,6 +49,9 @@ import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
 import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const workOrderSortOptions = [
   { value: 'submitted-desc', label: 'Newest First' },
@@ -82,6 +84,13 @@ const WorkOrderList = () => {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+
+  // Pull to refresh functionality
+  const { handleRefresh, threshold } = usePullToRefresh({
+    queryKey: ['partner-work-orders'],
+    successMessage: 'Work orders refreshed'
+  });
 
   const workOrderList = workOrdersData?.data || [];
   
@@ -217,6 +226,237 @@ const WorkOrderList = () => {
     );
   }
 
+  const renderTable = () => {
+    if (isMobile) {
+      return (
+        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+          <Card>
+            <CardContent className="p-0">
+              <ResponsiveTableWrapper stickyFirstColumn={true}>
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="h-12">
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ResponsiveTableWrapper>
+            </CardContent>
+          </Card>
+        </MobilePullToRefresh>
+      );
+    }
+
+    return (
+      <Card>
+        <CardContent className="p-0">
+          {/* Desktop Master-Detail Layout */}
+          <div className="hidden lg:block">
+            <MasterDetailLayout
+              listContent={
+                <ResponsiveTableWrapper stickyFirstColumn={true}>
+                  <Table>
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id} className="h-12">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows.map((row) => (
+                        <TableRow 
+                          key={row.id}
+                          className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
+                          onClick={() => setSelectedWorkOrderId(row.original.id)}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ResponsiveTableWrapper>
+              }
+              selectedId={selectedWorkOrderId}
+              onSelectionChange={setSelectedWorkOrderId}
+              detailContent={
+                selectedWorkOrder && (
+                  <WorkOrderDetailPanel
+                     workOrder={selectedWorkOrder}
+                     onViewFull={() => navigate(`/partner/work-orders/${selectedWorkOrderId}`)}
+                     showActionButtons={true}
+                  />
+                )
+              }
+              isLoading={isLoadingDetail}
+              items={filteredAndSortedWorkOrders.map(wo => ({ id: wo.id }))}
+            />
+          </div>
+
+          {/* Mobile/Tablet Table */}
+          <div className="block lg:hidden">
+            <ResponsiveTableWrapper stickyFirstColumn={true}>
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} className="h-12">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ResponsiveTableWrapper>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCards = () => {
+    const WorkOrderCard = ({ workOrder }: { workOrder: any }) => (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-lg">{workOrder.work_order_number}</h3>
+                {unreadCounts[workOrder.id] > 0 && (
+                  <Badge variant="default" className="ml-2">
+                    {unreadCounts[workOrder.id]}
+                  </Badge>
+                )}
+                <WorkOrderStatusBadge status={workOrder.status} />
+              </div>
+
+              <h4 className="font-medium text-foreground">{workOrder.title}</h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  <span>{workOrder.store_location}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span>{workOrder.city}, {workOrder.state}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Submitted: {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}</span>
+                </div>
+                {workOrder.trades?.name && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span>{workOrder.trades.name}</span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {workOrder.description}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:items-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+                className="min-h-[48px] sm:min-h-auto"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                View Details
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+
+    if (isMobile) {
+      return (
+        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+          <div className="space-y-4">
+            {filteredAndSortedWorkOrders.map((workOrder) => (
+              <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
+            ))}
+          </div>
+        </MobilePullToRefresh>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {filteredAndSortedWorkOrders.map((workOrder) => (
+          <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -328,171 +568,7 @@ const WorkOrderList = () => {
             icon: Plus
           }}
         />
-      ) : viewMode === 'table' ? (
-        /* Table View with Master-Detail on Desktop */
-        <Card>
-          <CardContent className="p-0">
-            {/* Desktop Master-Detail Layout */}
-            <div className="hidden lg:block">
-              <MasterDetailLayout
-                listContent={
-                  <ResponsiveTableWrapper stickyFirstColumn={true}>
-                    <Table>
-                      <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                          <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => (
-                              <TableHead key={header.id} className="h-12">
-                                {header.isPlaceholder
-                                  ? null
-                                  : flexRender(
-                                      header.column.columnDef.header,
-                                      header.getContext()
-                                    )}
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableHeader>
-                      <TableBody>
-                        {table.getRowModel().rows.map((row) => (
-                          <TableRow 
-                            key={row.id}
-                            className={`cursor-pointer ${selectedWorkOrderId === row.original.id ? 'bg-muted/50' : ''}`}
-                            onClick={() => setSelectedWorkOrderId(row.original.id)}
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ResponsiveTableWrapper>
-                }
-                selectedId={selectedWorkOrderId}
-                onSelectionChange={setSelectedWorkOrderId}
-                detailContent={
-                  selectedWorkOrder && (
-                    <WorkOrderDetailPanel
-                       workOrder={selectedWorkOrder}
-                       onViewFull={() => navigate(`/partner/work-orders/${selectedWorkOrderId}`)}
-                       showActionButtons={true}
-                    />
-                  )
-                }
-                isLoading={isLoadingDetail}
-                items={filteredAndSortedWorkOrders.map(wo => ({ id: wo.id }))}
-              />
-            </div>
-
-            {/* Mobile/Tablet Table */}
-            <div className="block lg:hidden">
-              <ResponsiveTableWrapper stickyFirstColumn={true}>
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ResponsiveTableWrapper>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        /* Card View */
-        <div className="space-y-4">
-          {filteredAndSortedWorkOrders.map((workOrder) => (
-            <Card key={workOrder.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg">{workOrder.work_order_number}</h3>
-                      {unreadCounts[workOrder.id] > 0 && (
-                        <Badge variant="default" className="ml-2">
-                          {unreadCounts[workOrder.id]}
-                        </Badge>
-                      )}
-                      <WorkOrderStatusBadge status={workOrder.status} />
-                    </div>
-
-                    <h4 className="font-medium text-foreground">{workOrder.title}</h4>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4" />
-                        <span>{workOrder.store_location}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        <span>{workOrder.city}, {workOrder.state}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>Submitted: {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}</span>
-                      </div>
-                      {workOrder.trades?.name && (
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>{workOrder.trades.name}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {workOrder.description}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:items-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-                      className="min-h-[44px] sm:min-h-auto"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      ) : viewMode === 'table' ? renderTable() : renderCards()}
     </div>
   );
 };
