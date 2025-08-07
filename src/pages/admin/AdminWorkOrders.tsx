@@ -23,6 +23,7 @@ import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -61,6 +62,8 @@ export default function AdminWorkOrders() {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
   const [useCompactCards, setUseCompactCards] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
   const isMobile = useIsMobile();
 
   // Pull to refresh functionality  
@@ -102,9 +105,8 @@ export default function AdminWorkOrders() {
       navigate(`/admin/work-orders/${workOrder.id}`);
     },
     onDelete: (workOrder: WorkOrder) => {
-      if (confirm('Are you sure you want to delete this work order?')) {
-        deleteWorkOrder.mutate(workOrder.id);
-      }
+      setWorkOrderToDelete(workOrder);
+      setDeleteDialogOpen(true);
     },
     onAssign: (workOrder: WorkOrder) => {
       // Ensure the workOrder has the correct type structure
@@ -171,6 +173,21 @@ export default function AdminWorkOrders() {
     const workOrders = workOrdersData?.data.filter(wo => ids.includes(wo.id)) || [];
     setAssignmentWorkOrders(workOrders);
     setShowAssignModal(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (workOrderToDelete) {
+      deleteWorkOrder.mutate(workOrderToDelete.id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setWorkOrderToDelete(null);
+        },
+        onError: () => {
+          setDeleteDialogOpen(false);
+          setWorkOrderToDelete(null);
+        }
+      });
+    }
   };
 
 
@@ -304,6 +321,16 @@ export default function AdminWorkOrders() {
           setAssignmentWorkOrders([]);
         }}
         workOrders={assignmentWorkOrders}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        itemName={workOrderToDelete?.work_order_number || workOrderToDelete?.title || 'Unknown'}
+        itemType="work order"
+        isLoading={deleteWorkOrder.isPending}
       />
     </div>
   );
