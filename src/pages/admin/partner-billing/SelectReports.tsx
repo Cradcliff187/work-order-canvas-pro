@@ -19,6 +19,7 @@ import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { usePartnerUnbilledReports } from '@/hooks/usePartnerUnbilledReports';
 import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration';
 import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
+import { useReportInvoiceDetails } from '@/hooks/useReportInvoiceDetails';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
 import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -41,6 +42,7 @@ export default function SelectReports() {
   const { toast } = useToast();
   const { data: reports, isLoading, error } = usePartnerUnbilledReports(selectedPartnerId);
   const { data: reportStats } = usePartnerReportStats(selectedPartnerId);
+  const { data: invoiceDetails } = useReportInvoiceDetails(reports?.map(r => r.id) || []);
   const generateInvoice = usePartnerInvoiceGeneration();
 
   // Calculate totals based on selected reports
@@ -268,8 +270,8 @@ export default function SelectReports() {
                           <TableHead>Subcontractor</TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead>Submitted</TableHead>
-                          <TableHead>Invoice Status</TableHead>
-                          <TableHead>Amount</TableHead>
+                           <TableHead>Invoices</TableHead>
+                           <TableHead>Amount</TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -351,36 +353,67 @@ export default function SelectReports() {
                               <TableCell>
                                 {format(new Date(report.submitted_at), 'MMM d, yyyy')}
                               </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="h-5 text-[10px] px-1.5 flex items-center gap-1">
-                                    <Receipt className="w-3 h-3" />
-                                    Approved Invoice
-                                  </Badge>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Invoice has been approved and costs are available for billing</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {report.subcontractor_costs ? (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5 cursor-help">
-                                        {formatCurrency(report.subcontractor_costs)}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Cost from approved subcontractor invoice</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ) : (
-                                  '-'
+                               <TableCell>
+                                 {(() => {
+                                   const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
+                                   const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
+                                   
+                                   return (
+                                     <div className="flex items-center gap-2">
+                                       <Badge variant="outline" className="h-5 text-[10px] px-1.5">
+                                         {invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}
+                                       </Badge>
+                                       {invoiceCount > 0 && (
+                                         <Badge variant="default" className="h-5 text-[10px] px-1.5">
+                                           Approved
+                                         </Badge>
+                                       )}
+                                     </div>
+                                   );
+                                 })()}
+                               </TableCell>
+                               <TableCell>
+                                 {report.subcontractor_costs ? (
+                                   (() => {
+                                     const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
+                                     const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
+                                     
+                                     return (
+                                       <Tooltip>
+                                         <TooltipTrigger asChild>
+                                           <div className="flex items-center gap-1 cursor-help">
+                                             <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                                               {formatCurrency(report.subcontractor_costs)}
+                                             </Badge>
+                                             {invoiceCount > 1 && (
+                                               <Info className="w-3 h-3 text-muted-foreground" />
+                                             )}
+                                           </div>
+                                         </TooltipTrigger>
+                                         <TooltipContent>
+                                           {invoiceCount > 1 ? (
+                                             <div className="space-y-1 text-xs">
+                                               <p className="font-medium">Invoice Breakdown:</p>
+                                               {reportInvoiceDetail?.invoices.map((invoice, index) => (
+                                                 <div key={invoice.invoice_id} className="flex justify-between gap-4">
+                                                   <span>{invoice.invoice_number}</span>
+                                                   <span>{formatCurrency(invoice.amount)}</span>
+                                                 </div>
+                                               ))}
+                                               <div className="border-t pt-1 flex justify-between gap-4 font-medium">
+                                                 <span>Total:</span>
+                                                 <span>{formatCurrency(reportInvoiceDetail?.total_amount || 0)}</span>
+                                               </div>
+                                             </div>
+                                           ) : (
+                                             <p>Cost from approved subcontractor invoice</p>
+                                           )}
+                                         </TooltipContent>
+                                       </Tooltip>
+                                     );
+                                   })()
+                                 ) : (
+                                   '-'
                                 )}
                               </TableCell>
                               <TableCell>
@@ -413,18 +446,43 @@ export default function SelectReports() {
                                 onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
                                 onClick={(e) => e.stopPropagation()}
                               />
-                              {report.subcontractor_costs && (
-                                <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
-                                  {formatCurrency(report.subcontractor_costs)}
-                                </Badge>
-                              )}
+                               {report.subcontractor_costs && (
+                                 (() => {
+                                   const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
+                                   const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
+                                   
+                                   return (
+                                     <div className="flex items-center gap-1">
+                                       <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                                         {formatCurrency(report.subcontractor_costs)}
+                                       </Badge>
+                                       {invoiceCount > 1 && (
+                                         <Info className="w-3 h-3 text-muted-foreground" />
+                                       )}
+                                     </div>
+                                   );
+                                 })()
+                               )}
                             </div>
-                            <div className="flex items-center gap-2 pt-1">
-                              <Badge variant="outline" className="h-4 text-[9px] px-1 flex items-center gap-1">
-                                <Receipt className="w-2 h-2" />
-                                Approved Invoice
-                              </Badge>
-                            </div>
+                             <div className="flex items-center gap-2 pt-1">
+                               {(() => {
+                                 const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
+                                 const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
+                                 
+                                 return (
+                                   <>
+                                     <Badge variant="outline" className="h-4 text-[9px] px-1">
+                                       {invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}
+                                     </Badge>
+                                     {invoiceCount > 0 && (
+                                       <Badge variant="default" className="h-4 text-[9px] px-1">
+                                         Approved
+                                       </Badge>
+                                     )}
+                                   </>
+                                 );
+                               })()}
+                             </div>
                           <div className="text-xs text-muted-foreground space-y-1">
                             <div className="flex items-center gap-1">
                               <Building2 className="w-3 h-3" />
