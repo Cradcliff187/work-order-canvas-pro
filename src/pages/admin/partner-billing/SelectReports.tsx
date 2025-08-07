@@ -290,7 +290,46 @@ export default function SelectReports() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                {report.subcontractor_organization?.name || 'Unknown'}
+                                {(() => {
+                                  const subcontractor = report.subcontractor;
+                                  const subcontractorOrg = report.subcontractor_organization;
+                                  const submittedBy = report.submitted_by;
+                                  
+                                  // Determine what to display based on organization type
+                                  let displayName = 'N/A';
+                                  
+                                  // Check if subcontractor is from internal organization
+                                  const isInternalSubcontractor = subcontractor?.organization_members?.some(
+                                    (om: any) => om.organizations?.organization_type === 'internal'
+                                  );
+                                  
+                                  if (subcontractorOrg) {
+                                    // Organization-level assignment - always show organization name for subcontractors
+                                    displayName = subcontractorOrg.name;
+                                  } else if (subcontractor && isInternalSubcontractor) {
+                                    // Individual internal user - show their name
+                                    displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
+                                  } else if (subcontractor) {
+                                    // Individual subcontractor from subcontractor org - this shouldn't happen but fallback to org name
+                                    const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+                                      (om: any) => om.organizations?.organization_type === 'subcontractor'
+                                    );
+                                    displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
+                                  }
+
+                                  return (
+                                    <div>
+                                      <div className="font-medium">
+                                        {displayName}
+                                      </div>
+                                      {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
+                                        <div className="text-xs text-orange-600 font-medium">
+                                          Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </TableCell>
                               <TableCell>
                                 {report.work_orders?.store_location || '-'}
@@ -346,7 +385,46 @@ export default function SelectReports() {
                           <div className="text-xs text-muted-foreground space-y-1">
                             <div className="flex items-center gap-1">
                               <Building2 className="w-3 h-3" />
-                              {report.subcontractor_organization?.name || 'Unknown'}
+                              {(() => {
+                                const subcontractor = report.subcontractor;
+                                const subcontractorOrg = report.subcontractor_organization;
+                                const submittedBy = report.submitted_by;
+                                
+                                // Determine what to display based on organization type
+                                let displayName = 'N/A';
+                                
+                                // Check if subcontractor is from internal organization
+                                const isInternalSubcontractor = subcontractor?.organization_members?.some(
+                                  (om: any) => om.organizations?.organization_type === 'internal'
+                                );
+                                
+                                if (subcontractorOrg) {
+                                  // Organization-level assignment - always show organization name for subcontractors
+                                  displayName = subcontractorOrg.name;
+                                } else if (subcontractor && isInternalSubcontractor) {
+                                  // Individual internal user - show their name
+                                  displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
+                                } else if (subcontractor) {
+                                  // Individual subcontractor from subcontractor org - fallback to org name
+                                  const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+                                    (om: any) => om.organizations?.organization_type === 'subcontractor'
+                                  );
+                                  displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
+                                }
+
+                                return (
+                                  <div>
+                                    <div className="font-medium">
+                                      {displayName}
+                                    </div>
+                                    {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
+                                      <div className="text-xs text-orange-600 font-medium">
+                                        Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />

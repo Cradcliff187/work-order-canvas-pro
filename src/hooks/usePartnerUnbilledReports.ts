@@ -33,6 +33,32 @@ export interface PartnerUnbilledReport {
     name: string;
     initials: string;
   } | null;
+  subcontractor: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    organization_members: Array<{
+      role: string;
+      organizations: {
+        id: string;
+        name: string;
+        organization_type: string;
+      } | null;
+    }>;
+  } | null;
+  submitted_by: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    organization_members: Array<{
+      role: string;
+      organizations: {
+        id: string;
+        name: string;
+        organization_type: string;
+      } | null;
+    }>;
+  } | null;
 }
 
 export const usePartnerUnbilledReports = (partnerOrgId?: string) => {
@@ -74,6 +100,32 @@ export const usePartnerUnbilledReports = (partnerOrgId?: string) => {
             id,
             name,
             initials
+          ),
+          subcontractor:profiles!subcontractor_user_id (
+            first_name,
+            last_name,
+            email,
+            organization_members!inner(
+              role,
+              organizations!inner(
+                id,
+                name,
+                organization_type
+              )
+            )
+          ),
+          submitted_by:profiles!submitted_by_user_id (
+            first_name,
+            last_name,
+            email,
+            organization_members!inner(
+              role,
+              organizations!inner(
+                id,
+                name,
+                organization_type
+              )
+            )
           )
         `)
         .eq('status', 'approved')
