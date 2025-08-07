@@ -230,7 +230,7 @@ export default function AdminWorkOrders() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={cn("p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />
       
