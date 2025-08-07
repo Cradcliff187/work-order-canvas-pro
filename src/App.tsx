@@ -6,6 +6,7 @@ import { Toaster as Sonner } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PWAUpdateNotification } from '@/components/PWAUpdateNotification';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { StorageDebugPanel } from '@/components/StorageDebugPanel';
 
 import { OrganizationAuthProvider } from '@/contexts/OrganizationAuthContext';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
             <Sonner richColors closeButton />
             <OfflineIndicator />
             <PWAUpdateNotification />
+            <PWAInstallPrompt />
             
             <AppWithBrowserTitle />
             {process.env.NODE_ENV !== 'production' && (

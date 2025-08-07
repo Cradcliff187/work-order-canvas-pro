@@ -31,6 +31,7 @@ import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkO
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
 import { MobileWorkOrderCard } from '@/components/MobileWorkOrderCard';
+import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
 import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +42,7 @@ import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPa
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -78,6 +80,8 @@ export default function AdminWorkOrders() {
   const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
+  const [useCompactCards, setUseCompactCards] = useState(false);
+  const isMobile = useIsMobile();
 
   // Transform sorting state to match the hook's expected format
   const sortingFormatted = useMemo(() => ({
@@ -397,7 +401,31 @@ export default function AdminWorkOrders() {
                   table.getRowModel().rows.map((row) => {
                     const workOrder = row.original;
                     
-                    // Transform the work order data to match MobileWorkOrderCard's expected format
+                    // Use compact cards on mobile for better fit
+                    if (isMobile || useCompactCards) {
+                      const assignee = workOrder.work_order_assignments?.[0];
+                      const assigneeName = assignee?.profiles ? 
+                        `${assignee.profiles.first_name} ${assignee.profiles.last_name}`.trim() : 
+                        'Unassigned';
+                      
+                      return (
+                        <CompactMobileCard
+                          key={row.id}
+                          title={`#${workOrder.work_order_number}`}
+                          subtitle={`${workOrder.organizations?.name || 'Unknown Org'} • ${workOrder.store_location || 'No Location'}`}
+                          badge={<WorkOrderStatusBadge status={workOrder.status} />}
+                          trailing={assigneeName !== 'Unassigned' ? <span className="text-xs text-muted-foreground">{assigneeName}</span> : undefined}
+                          onClick={() => navigate(`/admin/work-orders/${workOrder.id}`)}
+                        >
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{workOrder.trades?.name || 'No Trade'}</span>
+                            <span>{workOrder.description?.slice(0, 50) || 'No description'}...</span>
+                          </div>
+                        </CompactMobileCard>
+                      );
+                    }
+                    
+                    // Transform the work order data to match MobileWorkOrderCard's expected format for full cards
                     const transformedWorkOrder = {
                       ...workOrder,
                       work_order_assignments: workOrder.work_order_assignments?.map(assignment => ({
