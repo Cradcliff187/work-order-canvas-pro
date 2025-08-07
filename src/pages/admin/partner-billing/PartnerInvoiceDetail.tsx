@@ -170,6 +170,11 @@ export default function PartnerInvoiceDetail() {
         </BreadcrumbList>
       </Breadcrumb>
 
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Partner Invoice Detail</h1>
+        <p className="text-muted-foreground">View and export partner invoice information</p>
+      </div>
+
       {/* Header Actions */}
       <div className="flex items-center justify-between">
         <Button 

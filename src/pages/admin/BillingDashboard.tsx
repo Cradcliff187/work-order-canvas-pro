@@ -234,7 +234,7 @@ export default function BillingDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Button 
-          className="h-16 flex flex-col gap-1"
+          className="h-11 flex flex-col gap-1"
           onClick={() => navigate('/admin/invoices')}
         >
           <Plus className="h-5 w-5" />
@@ -242,7 +242,7 @@ export default function BillingDashboard() {
         </Button>
         <Button 
           variant="outline" 
-          className="h-16 flex flex-col gap-1"
+          className="h-11 flex flex-col gap-1"
           onClick={() => navigate('/admin/partner-billing/select-reports')}
         >
           <Building2 className="h-5 w-5" />
@@ -250,7 +250,7 @@ export default function BillingDashboard() {
         </Button>
         <Button 
           variant="outline" 
-          className="h-16 flex flex-col gap-1"
+          className="h-11 flex flex-col gap-1"
           onClick={() => navigate('/admin/invoices')}
         >
           <FileText className="h-5 w-5" />
@@ -258,7 +258,7 @@ export default function BillingDashboard() {
         </Button>
         <Button 
           variant="outline" 
-          className="h-16 flex flex-col gap-1"
+          className="h-11 flex flex-col gap-1"
           onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
         >
           <Clock className="h-5 w-5" />
