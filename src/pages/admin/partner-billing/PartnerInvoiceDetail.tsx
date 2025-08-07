@@ -127,7 +127,7 @@ export default function PartnerInvoiceDetail() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="space-y-6">
         <LoadingSpinner />
       </div>
     );
@@ -135,7 +135,7 @@ export default function PartnerInvoiceDetail() {
 
   if (error || !invoice) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="space-y-6">
         <Card className="p-6">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-destructive mb-2">Invoice Not Found</h2>
@@ -155,7 +155,7 @@ export default function PartnerInvoiceDetail() {
   const markupAmount = invoice.subtotal * (invoice.markup_percentage / 100);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumb>
         <BreadcrumbList>

@@ -117,7 +117,7 @@ export default function SelectReports() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Partner Billing</h1>
+          <h1 className="text-3xl font-bold">Partner Billing</h1>
           <p className="text-muted-foreground">
             Select approved reports to include in partner invoices
           </p>

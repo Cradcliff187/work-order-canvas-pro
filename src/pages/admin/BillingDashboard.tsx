@@ -143,7 +143,7 @@ export default function BillingDashboard() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-6 py-8">
+      <div className="space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Billing Dashboard</h1>
           <p className="text-muted-foreground">Please try refreshing the page or check your connection.</p>
@@ -153,14 +153,14 @@ export default function BillingDashboard() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
-      <div className="mb-8">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-3xl font-bold mb-2">Billing Dashboard</h1>
         <p className="text-muted-foreground">Monitor billing activities and manage invoices</p>
       </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="gradient-card-responsive">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unbilled Reports</CardTitle>
@@ -231,7 +231,7 @@ export default function BillingDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Button 
           className="h-16 flex flex-col gap-1"
           onClick={() => navigate('/admin/invoices')}
