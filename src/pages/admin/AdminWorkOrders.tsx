@@ -25,6 +25,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { useDebounce } from '@/hooks/useDebounce';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -91,7 +92,7 @@ export default function AdminWorkOrders() {
   }, [debouncedSearchTerm]);
 
   // Fetch data with server-side pagination and filtering
-  const { data: workOrdersData, isLoading, error, refetch } = useWorkOrders(
+  const { data: workOrdersData, isLoading, error, refetch, isFetching, isRefetching } = useWorkOrders(
     pagination,
     sortingFormatted,
     filters
@@ -205,6 +206,20 @@ export default function AdminWorkOrders() {
       });
     }
   };
+
+  // Loading overlay logic - show during operations but not initial load
+  const getLoadingMessage = () => {
+    if (deleteWorkOrder.isPending) return "Deleting work order...";
+    if (isRefetching) return "Refreshing work orders...";
+    if (isFetching && !isLoading) {
+      if (debouncedSearchTerm) return "Searching work orders...";
+      if (Object.keys(filters).length > 1) return "Applying filters...";
+      return "Loading work orders...";
+    }
+    return "Loading...";
+  };
+
+  const showLoadingOverlay = deleteWorkOrder.isPending || (isFetching && !isLoading);
 
 
   if (error) {
@@ -360,6 +375,12 @@ export default function AdminWorkOrders() {
         itemName={workOrderToDelete?.work_order_number || workOrderToDelete?.title || 'Unknown'}
         itemType="work order"
         isLoading={deleteWorkOrder.isPending}
+      />
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isVisible={showLoadingOverlay}
+        message={getLoadingMessage()}
       />
     </div>
   );
