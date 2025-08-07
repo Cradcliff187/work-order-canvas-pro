@@ -171,7 +171,7 @@ export default function BillingDashboard() {
             {isLoading ? (
               <Skeleton className="h-8 w-16 mb-1" />
             ) : (
-              <div className="text-2xl font-bold text-warning">{metrics?.unbilledReports.count || 0}</div>
+              <div className="text-2xl font-bold">{metrics?.unbilledReports.count || 0}</div>
             )}
             <p className="text-xs text-muted-foreground">
               {isLoading ? (
@@ -222,7 +222,7 @@ export default function BillingDashboard() {
             {isLoading ? (
               <Skeleton className="h-8 w-20 mb-1" />
             ) : (
-              <div className="text-2xl font-bold text-success">
+              <div className="text-2xl font-bold text-primary">
                 {formatCurrency(metrics?.monthlyTotals.totalValue || 0)}
               </div>
             )}
