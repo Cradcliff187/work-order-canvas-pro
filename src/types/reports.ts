@@ -55,7 +55,7 @@ export type WorkOrderReport = Database['public']['Tables']['work_order_reports']
 
 export interface ReportFilters {
   status?: string[];
-  subcontractor_id?: string;
+  subcontractor_organization_id?: string;
   date_from?: string;
   date_to?: string;
   search?: string;

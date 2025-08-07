@@ -45,7 +45,7 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useAdminReports } from '@/hooks/useAdminReports';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
-import { useSubcontractors } from '@/hooks/useSubcontractors';
+import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { useToast } from '@/hooks/use-toast';
 import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
@@ -54,7 +54,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface ReportFilters {
   status?: string[];
-  subcontractor_id?: string;
+  subcontractor_organization_id?: string;
   date_from?: string;
   date_to?: string;
   search?: string;
@@ -90,7 +90,7 @@ export default function AdminReports() {
     filters
   );
 
-  const { data: subcontractors } = useSubcontractors();
+  const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
   const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
   const { data: submittedCounts } = useSubmittedCounts();
 
@@ -392,9 +392,9 @@ export default function AdminReports() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Subcontractor</label>
               <Select
-                value={filters.subcontractor_id || 'all'}
+                value={filters.subcontractor_organization_id || 'all'}
                 onValueChange={(value) => 
-                  handleFilterChange('subcontractor_id', value === 'all' ? undefined : value)
+                  handleFilterChange('subcontractor_organization_id', value === 'all' ? undefined : value)
                 }
               >
                 <SelectTrigger>
@@ -402,9 +402,9 @@ export default function AdminReports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Subcontractors</SelectItem>
-                  {subcontractors?.map((subcontractor) => (
-                    <SelectItem key={subcontractor.id} value={subcontractor.id}>
-                      {subcontractor.first_name} {subcontractor.last_name}
+                  {subcontractorOrganizations?.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

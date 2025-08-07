@@ -70,8 +70,21 @@ export function useAdminReports(
       if (filters.status?.length) {
         query = query.in('status', filters.status as Database['public']['Enums']['report_status'][]);
       }
-      if (filters.subcontractor_id) {
-        query = query.eq('subcontractor_user_id', filters.subcontractor_id);
+      if (filters.subcontractor_organization_id) {
+        // Get user IDs from the selected organization first
+        const { data: orgUsers } = await supabase
+          .from('organization_members')
+          .select('user_id')
+          .eq('organization_id', filters.subcontractor_organization_id);
+        
+        const userIds = orgUsers?.map(u => u.user_id) || [];
+        
+        // Filter for reports assigned to this organization OR to individual users from this organization
+        if (userIds.length > 0) {
+          query = query.or(`subcontractor_organization_id.eq.${filters.subcontractor_organization_id},subcontractor_user_id.in.(${userIds.join(',')})`);
+        } else {
+          query = query.eq('subcontractor_organization_id', filters.subcontractor_organization_id);
+        }
       }
       if (filters.date_from) {
         query = query.gte('submitted_at', filters.date_from);
