@@ -80,9 +80,7 @@ export default function AdminReports() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [filters, setFilters] = useState<ReportFilters>({
-    status: ['submitted'] // Default to showing submitted reports first
-  });
+  const [filters, setFilters] = useState<ReportFilters>({});
 
   const { data: reportsData, isLoading, error, refetch } = useAdminReports(
     pagination,
