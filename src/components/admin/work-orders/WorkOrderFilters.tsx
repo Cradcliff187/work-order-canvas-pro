@@ -27,7 +27,9 @@ interface WorkOrderFiltersProps {
     date_to?: string;
     location_filter?: string[];
   };
+  searchTerm: string;
   onFiltersChange: (filters: any) => void;
+  onSearchChange: (value: string) => void;
   onClearFilters: () => void;
 }
 
@@ -41,7 +43,7 @@ const statusOptions = [
   { value: 'estimate_approved', label: 'Estimate Approved' },
 ];
 
-export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: WorkOrderFiltersProps) {
+export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearchChange, onClearFilters }: WorkOrderFiltersProps) {
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const { shouldShowSelector } = useAutoOrganization();
@@ -79,7 +81,7 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
     filters.date_to ? new Date(filters.date_to) : undefined
   );
 
-  const hasActiveFilters = Object.values(filters).some(value => 
+  const hasActiveFilters = searchTerm || Object.values(filters).some(value => 
     Array.isArray(value) ? value.length > 0 : Boolean(value)
   );
 
@@ -107,8 +109,8 @@ export function WorkOrderFilters({ filters, onFiltersChange, onClearFilters }: W
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
         <Input
           placeholder="Search WO#, title, or location..."
-          value={filters.search || ''}
-          onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10 h-10"
         />
       </div>

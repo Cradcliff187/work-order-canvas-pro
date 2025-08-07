@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PaginationState, SortingState, RowSelectionState } from '@tanstack/react-table';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -55,6 +56,7 @@ export default function AdminWorkOrders() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<WorkOrderFiltersState>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -66,6 +68,9 @@ export default function AdminWorkOrders() {
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
   const isMobile = useIsMobile();
 
+  // Debounce search term with 300ms delay
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   // Pull to refresh functionality  
   const { handleRefresh, threshold } = usePullToRefresh({
     queryKey: 'work-orders',
@@ -76,6 +81,14 @@ export default function AdminWorkOrders() {
   const sortingFormatted = useMemo(() => ({
     sortBy: sorting.map(sort => ({ id: sort.id, desc: sort.desc }))
   }), [sorting]);
+
+  // Update filters when debounced search term changes
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      search: debouncedSearchTerm || undefined
+    }));
+  }, [debouncedSearchTerm]);
 
   // Fetch data with server-side pagination and filtering
   const { data: workOrdersData, isLoading, error, refetch } = useWorkOrders(
@@ -130,7 +143,10 @@ export default function AdminWorkOrders() {
   };
 
   const handleClearFilters = () => {
+    setSearchTerm('');
     setFilters({});
+    setRowSelection({});
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
   const handleExportAll = () => {
@@ -255,7 +271,9 @@ export default function AdminWorkOrders() {
         <div className="flex-1">
           <WorkOrderFilters
             filters={filters}
+            searchTerm={searchTerm}
             onFiltersChange={setFilters}
+            onSearchChange={setSearchTerm}
             onClearFilters={handleClearFilters}
           />
         </div>
