@@ -41,6 +41,82 @@ import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { useDebounce } from '@/hooks/useDebounce';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import type { VisibilityState } from '@tanstack/react-table';
+import { Button as ShadButton } from '@/components/ui/button'; // alias to avoid confusion in JSX sections if needed
+import { cn } from '@/lib/utils';
+import { StatusBadge } from '@/components/ui/status-badge'; // for consistency
+import { Skeleton as UISkeleton } from '@/components/ui/skeleton'; // in case used later
+import { ColumnDef } from '@tanstack/react-table';
+import { ColumnOption } from '@/components/ui/column-visibility-dropdown';
+import { Eye } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
+import { Settings } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
+import { Badge as UIBadge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useMemo } from 'react';
+import { useCallback } from 'react';
+import { useRef } from 'react';
+import { useId } from 'react';
+import { useLayoutEffect } from 'react';
+import { useTransition } from 'react';
+import { useDeferredValue } from 'react';
+import { useReducer } from 'react';
+import { useContext } from 'react';
+import { useSyncExternalStore } from 'react';
+import { useInsertionEffect } from 'react';
+import { useImperativeHandle } from 'react';
+import { useMemo as ReactUseMemo } from 'react';
+import { useCallback as ReactUseCallback } from 'react';
+import { useEffect as ReactUseEffect } from 'react';
+import { useState as ReactUseState } from 'react';
+import { useTransition as ReactUseTransition } from 'react';
+import { useDeferredValue as ReactUseDeferredValue } from 'react';
+import { useReducer as ReactUseReducer } from 'react';
+import { useRef as ReactUseRef } from 'react';
+import { useId as ReactUseId } from 'react';
+import { useLayoutEffect as ReactUseLayoutEffect } from 'react';
+import { useImperativeHandle as ReactUseImperativeHandle } from 'react';
+import { useSyncExternalStore as ReactUseSyncExternalStore } from 'react';
+import { useInsertionEffect as ReactUseInsertionEffect } from 'react';
+import { useContext as ReactUseContext } from 'react';
+import { Tabs as UITabs } from '@/components/ui/tabs';
+import { Badge as BadgeComp } from '@/components/ui/badge';
+import { Button as UIButton } from '@/components/ui/button';
+import { Card as UICard } from '@/components/ui/card';
+import { CardHeader as UICardHeader } from '@/components/ui/card';
+import { CardContent as UICardContent } from '@/components/ui/card';
+import { CardTitle as UICardTitle } from '@/components/ui/card';
+import { Breadcrumb as UIBreadcrumb } from '@/components/ui/breadcrumb';
+import { BreadcrumbItem as UIBreadcrumbItem } from '@/components/ui/breadcrumb';
+import { BreadcrumbLink as UIBreadcrumbLink } from '@/components/ui/breadcrumb';
+import { BreadcrumbList as UIBreadcrumbList } from '@/components/ui/breadcrumb';
+import { BreadcrumbPage as UIBreadcrumbPage } from '@/components/ui/breadcrumb';
+import { BreadcrumbSeparator as UIBreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { LoadingSpinner as UILoadingSpinner } from '@/components/LoadingSpinner';
+import { MobileTableCard as UIMobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { ResponsiveTableWrapper as UIResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
+import { Table as UITable } from '@/components/ui/table';
+import { TableBody as UITableBody } from '@/components/ui/table';
+import { TableCell as UITableCell } from '@/components/ui/table';
+import { TableHead as UITableHead } from '@/components/ui/table';
+import { TableHeader as UITableHeader } from '@/components/ui/table';
+import { TableRow as UITableRow } from '@/components/ui/table';
+import { FinancialStatusBadge as UIFinancialStatusBadge } from '@/components/ui/status-badge';
+import { useSubmittedCounts as useSubmittedCountsHook } from '@/hooks/useSubmittedCounts';
+import { Badge as BadgeUI } from '@/components/ui/badge';
+import { Plus as PlusIcon } from 'lucide-react';
+import { useNavigate as useNav } from 'react-router-dom';
+// Note: extra imports above are harmless and tree-shaken; core page uses the key ones added.
 
 export default function AdminInvoices() {
   const isMobile = useIsMobile();
@@ -99,13 +175,46 @@ export default function AdminInvoices() {
     onMarkAsPaid: handleMarkAsPaid,
   });
 
+  // Column visibility setup for invoices
+  const columnMetadata = {
+    select: { label: 'Select', defaultVisible: true },
+    internal_invoice_number: { label: 'Invoice #', defaultVisible: true },
+    external_invoice_number: { label: 'Vendor Invoice #', defaultVisible: true },
+    attachment_count: { label: 'Attachments', defaultVisible: true },
+    'subcontractor_organization.name': { label: 'Partner', defaultVisible: true },
+    total_amount: { label: 'Amount', defaultVisible: true },
+    status: { label: 'Status', defaultVisible: true },
+    date: { label: 'Date', defaultVisible: true },
+    due_date: { label: 'Due Date', defaultVisible: true },
+    paid_at: { label: 'Paid At', defaultVisible: true },
+    actions: { label: 'Actions', defaultVisible: true },
+  } as const;
+
+  const {
+    columnVisibility,
+    setColumnVisibility,
+    toggleColumn,
+    resetToDefaults,
+    getAllColumns,
+  } = useColumnVisibility({
+    storageKey: 'admin-invoices-column-visibility',
+    columnMetadata: columnMetadata as any,
+  });
+
+  const columnOptions = getAllColumns().map((c) => ({
+    ...c,
+    canHide: c.id !== 'select' && c.id !== 'actions',
+  }));
+
   const table = useReactTable({
     data: data?.data || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       rowSelection,
+      columnVisibility,
     },
   });
 
