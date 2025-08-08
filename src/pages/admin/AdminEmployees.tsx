@@ -13,6 +13,10 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEmployees, useEmployeeMutations, formatCurrency, Employee } from '@/hooks/useEmployees';
 import { Users, UserPlus, Search, DollarSign, Edit, UserCheck, Power, TrendingUp } from 'lucide-react';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 
 export default function AdminEmployees() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,6 +46,28 @@ export default function AdminEmployees() {
     });
   }, [data?.employees, searchTerm, activeFilter]);
 
+  const handleExport = (format: 'csv' | 'excel') => {
+    const columns: ExportColumn[] = [
+      { key: 'first_name', label: 'First Name', type: 'string' },
+      { key: 'last_name', label: 'Last Name', type: 'string' },
+      { key: 'email', label: 'Email', type: 'string' },
+      { key: 'is_active', label: 'Active', type: 'boolean' },
+      { key: 'hourly_cost_rate', label: 'Cost Rate', type: 'currency' },
+      { key: 'hourly_billable_rate', label: 'Billable Rate', type: 'currency' },
+      { key: 'created_at', label: 'Created', type: 'date' },
+    ];
+
+    const filename = generateFilename('employees', format === 'excel' ? 'xlsx' : 'csv');
+    const rows = filteredEmployees;
+    if (!rows || rows.length === 0) return;
+
+    if (format === 'excel') {
+      exportToExcel(rows, columns, filename);
+    } else {
+      exportToCSV(rows, columns, filename);
+    }
+  };
+
   const handleToggleStatus = async (employeeId: string, currentStatus: boolean) => {
     try {
       await toggleEmployeeStatus.mutateAsync({
@@ -66,10 +92,18 @@ export default function AdminEmployees() {
             Manage internal employees and their billing rates
           </p>
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add Employee
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportDropdown 
+            onExport={handleExport} 
+            variant="outline" 
+            size="sm" 
+            disabled={isLoading || filteredEmployees.length === 0}
+          />
+          <Button onClick={() => setShowAddModal(true)} aria-label="Add employee">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Employee
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -141,13 +175,13 @@ export default function AdminEmployees() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-4 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+            <div className="relative flex-1 max-w-sm" role="search">
+              <SmartSearchInput
                 placeholder="Search employees..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
+                onSearchSubmit={(q) => setSearchTerm(q)}
+                aria-label="Search employees"
               />
             </div>
             
