@@ -357,6 +357,8 @@ export default function AdminInvoices() {
             onResetToDefaults={resetToDefaults}
             variant="outline"
             size="sm"
+            visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+            totalCount={columnOptions.filter(c => c.canHide).length}
           />
           <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
           <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">

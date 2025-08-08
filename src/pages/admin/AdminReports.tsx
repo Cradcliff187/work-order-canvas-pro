@@ -55,6 +55,9 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { ReportsTable } from '@/components/admin/reports/ReportsTable';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 
 interface ReportFilters {
   status?: string[];
@@ -263,6 +266,28 @@ export default function AdminReports() {
     },
   ], [navigate, reviewReport]);
 
+  // Column visibility
+  const columnMetadata = {
+    select: { label: 'Select', defaultVisible: true },
+    'work_orders.work_order_number': { label: 'Work Order', defaultVisible: true },
+    'work_orders.title': { label: 'Title', defaultVisible: true },
+    subcontractor: { label: 'Subcontractor', defaultVisible: true },
+    status: { label: 'Status', defaultVisible: true },
+    invoice_amount: { label: 'Amount', defaultVisible: true },
+    submitted_at: { label: 'Submitted', defaultVisible: true },
+    actions: { label: 'Actions', defaultVisible: true },
+  } as const;
+
+  const { columnVisibility, setColumnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
+    storageKey: 'admin-reports-columns-v1',
+    columnMetadata: columnMetadata as any,
+  });
+
+  const columnOptions = getAllColumns().map((c) => ({
+    ...c,
+    canHide: c.id !== 'select' && c.id !== 'actions',
+  }));
+
   const table = useReactTable({
     data: reportsData?.data || [],
     columns,
@@ -271,11 +296,13 @@ export default function AdminReports() {
       pagination,
       sorting,
       rowSelection,
+      columnVisibility,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
@@ -389,15 +416,13 @@ export default function AdminReports() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search reports..."
-                  value={filters.search || ''}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+              <SmartSearchInput
+                placeholder="Search reports..."
+                value={filters.search || ''}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                onSearchSubmit={(q) => handleFilterChange('search', q)}
+                storageKey="admin-reports-search"
+              />
             </div>
 
             <div className="space-y-2">

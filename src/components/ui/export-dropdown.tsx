@@ -35,7 +35,7 @@ export function ExportDropdown({
           Export
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="z-50 bg-popover min-w-[220px]">
         <DropdownMenuItem
           onClick={() => onExport('csv')}
           disabled={loading}

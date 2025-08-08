@@ -191,6 +191,7 @@ export default function AdminOrganizations() {
             workOrders={[]}
             assignees={[]}
             locations={[]}
+            storageKey="admin-organizations-search"
           />
         </div>
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>

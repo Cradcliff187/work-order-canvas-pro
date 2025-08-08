@@ -206,6 +206,7 @@ export default function AdminEmployees() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onSearchSubmit={(q) => setSearchTerm(q)}
                 aria-label="Search employees"
+                storageKey="admin-employees-search"
               />
             </div>
             
@@ -237,6 +238,8 @@ export default function AdminEmployees() {
                 onResetToDefaults={resetToDefaults}
                 variant="outline"
                 size="sm"
+                visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+                totalCount={columnOptions.filter(c => c.canHide).length}
               />
             </div>
           </div>
