@@ -3,13 +3,15 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, AlertCircle, Paperclip } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, AlertCircle, Paperclip, Check, Trash2 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
 import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
 import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { MobileQuickActions, createMapAction, createMessageAction, createViewDetailsAction, createSubmitReportAction, createPhoneAction } from '@/components/work-orders/MobileQuickActions';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 interface WorkOrder {
   id: string;
@@ -106,62 +108,35 @@ export function MobileWorkOrderCard({
   onCall,
   contactPhone
 }: MobileWorkOrderCardProps) {
-  const [touchStart, setTouchStart] = React.useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
-  const [swipeOffset, setSwipeOffset] = React.useState(0);
-  const [isSwipeActive, setIsSwipeActive] = React.useState(false);
-  const [showActionsState, setShowActionsState] = React.useState(false);
+  const {
+    isSwipeing,
+    direction,
+    distance,
+    onTouchStart,
+    onTouchMove,
+    onReset,
+  } = useSwipeGesture();
 
-  const minSwipeDistance = 80;
-  const maxSwipeDistance = 120;
+  const ACTION_THRESHOLD = 75;
+  const MAX_DRAG = 120;
+  const progress = Math.min(1, distance / ACTION_THRESHOLD);
+  const x = direction ? (direction === 'left' ? -1 : 1) * Math.min(distance, MAX_DRAG) : 0;
+  const isDragging = isSwipeing;
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-    setIsSwipeActive(true);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart || !isSwipeActive) return;
-    
-    const currentX = e.targetTouches[0].clientX;
-    const distance = touchStart - currentX;
-    
-    // Only allow left swipes for revealing actions
-    if (distance > 0) {
-      const offset = Math.min(distance, maxSwipeDistance);
-      setSwipeOffset(offset);
-    }
-    
-    setTouchEnd(currentX);
-  };
-
-  const onTouchEnd = () => {
-    setIsSwipeActive(false);
-    
-    if (!touchStart || !touchEnd) {
-      setSwipeOffset(0);
-      return;
-    }
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-
-    if (isLeftSwipe) {
-      // Show action buttons
-      setShowActionsState(true);
-      setSwipeOffset(maxSwipeDistance);
-      // Add haptic feedback
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
+  const handleTouchEnd = () => {
+    if (distance >= ACTION_THRESHOLD && direction) {
+      if (direction === 'right') {
+        if ('vibrate' in navigator) (navigator as any).vibrate?.(20);
+        onSwipeRight?.(workOrder);
+      } else if (direction === 'left') {
+        if ('vibrate' in navigator) (navigator as any).vibrate?.(20);
+        setConfirmOpen(true);
       }
-    } else {
-      // Reset swipe state
-      setShowActionsState(false);
-      setSwipeOffset(0);
     }
+    
+    onReset();
   };
-
   const handleTap = () => {
     // Add haptic feedback if available
     if ('vibrate' in navigator) {
@@ -255,41 +230,46 @@ export function MobileWorkOrderCard({
 
   return (
     <div className="relative mb-4 overflow-hidden">
-      {/* Swipe Action Background */}
-      {showActionsState && (
-        <div className="absolute inset-y-0 right-0 flex items-center bg-primary text-primary-foreground px-4 z-10">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 text-primary-foreground hover:bg-primary-foreground/20 touch-target"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (workOrder.status === 'assigned') {
-                  // Start work action
-                } else if (workOrder.status === 'in_progress') {
-                  // Submit report action
-                }
-                setShowActionsState(false);
-                setSwipeOffset(0);
-              }}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+      {/* Swipe Action Backgrounds */}
+      <div className="absolute inset-0 z-0">
+        {/* Left (Delete) */}
+        <div
+          className="absolute inset-y-0 left-0 w-full flex items-center justify-start px-4 bg-destructive text-destructive-foreground"
+          style={{ opacity: direction === 'left' ? progress : 0 }}
+        >
+          <div
+            className="flex items-center gap-2"
+            style={{ transform: `scale(${0.9 + 0.1 * progress})` }}
+          >
+            <Trash2 className="h-5 w-5" />
+            <span className="font-medium">Delete</span>
           </div>
         </div>
-      )}
+        {/* Right (Complete) */}
+        <div
+          className="absolute inset-y-0 right-0 w-full flex items-center justify-end px-4 bg-success text-success-foreground"
+          style={{ opacity: direction === 'right' ? progress : 0 }}
+        >
+          <div
+            className="flex items-center gap-2"
+            style={{ transform: `scale(${0.9 + 0.1 * progress})` }}
+          >
+            <Check className="h-5 w-5" />
+            <span className="font-medium">Complete</span>
+          </div>
+        </div>
+      </div>
       
       <Card 
-        className="touch-manipulation active:scale-95 transition-all duration-200 min-h-[48px] card-hover touch-action-pan-y"
+        className="touch-manipulation transition-transform will-change-transform active:scale-95 duration-200 min-h-[48px] card-hover touch-action-pan-y relative z-10"
         style={{
-          transform: `translateX(-${swipeOffset}px)`,
-          transition: isSwipeActive ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          transform: `translateX(${x}px)`,
+          transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)'
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onClick={showActionsState ? undefined : handleTap}
+        onTouchEnd={handleTouchEnd}
+        onClick={isDragging || x !== 0 ? undefined : handleTap}
       >
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
@@ -470,6 +450,18 @@ export function MobileWorkOrderCard({
       {/* Quick Actions Footer */}
       <MobileQuickActions actions={quickActions} />
     </Card>
+
+    <DeleteConfirmationDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      onConfirm={async () => {
+        await onSwipeLeft?.(workOrder);
+        setConfirmOpen(false);
+      }}
+      itemType="work order"
+      itemName={workOrder.work_order_number || workOrder.title}
+      isLoading={false}
+    />
     </div>
   );
 }
