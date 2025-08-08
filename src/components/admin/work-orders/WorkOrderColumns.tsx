@@ -8,7 +8,51 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
 import { WorkOrderStatusBadge, AssignedToStatusBadge } from '@/components/ui/status-badge';
+import { ColumnMetadata } from '@/hooks/useColumnVisibility';
 
+// Column metadata for visibility management
+export const WORK_ORDER_COLUMN_METADATA: Record<string, ColumnMetadata> = {
+  work_order_number: { 
+    label: 'Work Order #', 
+    description: 'Work order number and details',
+    defaultVisible: true 
+  },
+  title: { 
+    label: 'Title', 
+    description: 'Work order title/description',
+    defaultVisible: true 
+  },
+  organization: { 
+    label: 'Organization', 
+    description: 'Associated organization',
+    defaultVisible: true 
+  },
+  store_location: { 
+    label: 'Location', 
+    description: 'Store location and address',
+    defaultVisible: true 
+  },
+  trade: { 
+    label: 'Trade', 
+    description: 'Trade/skill category',
+    defaultVisible: true 
+  },
+  status: { 
+    label: 'Status', 
+    description: 'Current work order status',
+    defaultVisible: true 
+  },
+  assigned_to: { 
+    label: 'Assigned To', 
+    description: 'Assignee information',
+    defaultVisible: true 
+  },
+  date_submitted: { 
+    label: 'Date Submitted', 
+    description: 'When the work order was submitted',
+    defaultVisible: true 
+  }
+};
 
 interface WorkOrderColumnsProps {
   unreadCounts: Record<string, number>;

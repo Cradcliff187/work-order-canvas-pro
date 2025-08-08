@@ -8,7 +8,8 @@ import { Plus, RotateCcw, CheckSquare } from 'lucide-react';
 import { useWorkOrders, useWorkOrderMutations, WorkOrder } from '@/hooks/useWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { createWorkOrderColumns } from '@/components/admin/work-orders/WorkOrderColumns';
+import { createWorkOrderColumns, WORK_ORDER_COLUMN_METADATA } from '@/components/admin/work-orders/WorkOrderColumns';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
@@ -70,6 +71,28 @@ export default function AdminWorkOrders() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
   const isMobile = useIsMobile();
+
+  // Column visibility management
+  const {
+    columnVisibility,
+    setColumnVisibility,
+    toggleColumn,
+    resetToDefaults,
+    getAllColumns
+  } = useColumnVisibility({
+    storageKey: 'admin-workorders-columns',
+    columnMetadata: WORK_ORDER_COLUMN_METADATA,
+    defaultVisible: {
+      work_order_number: true,
+      title: true,
+      organization: true,
+      store_location: true,
+      trade: true,
+      status: true,
+      assigned_to: true,
+      date_submitted: true
+    }
+  });
 
   // Debounce search term with 300ms delay
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -343,6 +366,11 @@ export default function AdminWorkOrders() {
         setSorting={setSorting}
         rowSelection={rowSelection}
         setRowSelection={setRowSelection}
+        columnVisibility={columnVisibility}
+        setColumnVisibility={setColumnVisibility}
+        columnVisibilityColumns={getAllColumns()}
+        onToggleColumn={toggleColumn}
+        onResetColumns={resetToDefaults}
         viewMode={viewMode}
         allowedModes={allowedModes}
         setViewMode={setViewMode}

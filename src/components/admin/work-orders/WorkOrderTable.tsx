@@ -11,6 +11,7 @@ import {
   PaginationState,
   SortingState,
   RowSelectionState,
+  VisibilityState,
 } from '@tanstack/react-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
@@ -19,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { Plus, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { WorkOrder } from '@/hooks/useWorkOrders';
@@ -48,6 +50,17 @@ interface WorkOrderTableProps {
   setSorting: (sorting: SortingState) => void;
   rowSelection: RowSelectionState;
   setRowSelection: (selection: RowSelectionState) => void;
+  columnVisibility?: VisibilityState;
+  setColumnVisibility?: (visibility: VisibilityState) => void;
+  columnVisibilityColumns?: Array<{
+    id: string;
+    label: string;
+    description?: string;
+    visible: boolean;
+    canHide: boolean;
+  }>;
+  onToggleColumn?: (columnId: string) => void;
+  onResetColumns?: () => void;
   
   // View Configuration
   viewMode: 'table' | 'card' | 'list';
@@ -90,6 +103,11 @@ export function WorkOrderTable({
   setSorting,
   rowSelection,
   setRowSelection,
+  columnVisibility,
+  setColumnVisibility,
+  columnVisibilityColumns,
+  onToggleColumn,
+  onResetColumns,
   viewMode,
   allowedModes,
   setViewMode,
@@ -123,11 +141,13 @@ export function WorkOrderTable({
       pagination,
       sorting,
       rowSelection,
+      columnVisibility,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
@@ -267,6 +287,15 @@ export function WorkOrderTable({
             >
               Clear Selection ({selectedRows.length})
             </Button>
+          )}
+          {columnVisibilityColumns && onToggleColumn && onResetColumns && (
+            <ColumnVisibilityDropdown
+              columns={columnVisibilityColumns}
+              onToggleColumn={onToggleColumn}
+              onResetToDefaults={onResetColumns}
+              variant="outline"
+              size="sm"
+            />
           )}
           <ExportDropdown
             onExport={onExportAll}
