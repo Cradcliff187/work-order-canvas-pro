@@ -405,6 +405,9 @@ export default function AdminUsers() {
                         <TableRow
                           key={row.id}
                           data-state={row.getIsSelected() && "selected"}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View user ${(row.original as any).first_name ?? ''} ${(row.original as any).last_name ?? ''}`}
                           onClick={(e) => {
                             // Don't navigate if clicking interactive elements
                             const target = e.target as HTMLElement;
@@ -412,13 +415,33 @@ export default function AdminUsers() {
                                 target instanceof HTMLInputElement ||
                                 target.closest('[role="checkbox"]') ||
                                 target.closest('[data-radix-collection-item]') ||
-                                target.closest('.dropdown-trigger')) {
+                                target.closest('.dropdown-trigger') ||
+                                target.closest('a') ||
+                                target.closest('textarea') ||
+                                target.closest('select')) {
                               return;
                             }
                             setSelectedUser(row.original);
                             setViewUserModalOpen(true);
                           }}
-                          className="cursor-pointer"
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return;
+                            const target = e.target as HTMLElement;
+                            if (target instanceof HTMLButtonElement || 
+                                target instanceof HTMLInputElement ||
+                                target.closest('[role="checkbox"]') ||
+                                target.closest('[data-radix-collection-item]') ||
+                                target.closest('.dropdown-trigger') ||
+                                target.closest('a') ||
+                                target.closest('textarea') ||
+                                target.closest('select')) {
+                              return;
+                            }
+                            e.preventDefault();
+                            setSelectedUser(row.original);
+                            setViewUserModalOpen(true);
+                          }}
+                          className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id}>

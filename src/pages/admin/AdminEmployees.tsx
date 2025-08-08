@@ -345,7 +345,10 @@ export default function AdminEmployees() {
                     {filteredEmployees.map((employee) => (
                       <TableRow 
                         key={employee.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Edit rates for ${employee.first_name} ${employee.last_name}`}
+                        className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={(e) => {
                           // Don't navigate if clicking interactive elements
                           const target = e.target as HTMLElement;
@@ -353,9 +356,28 @@ export default function AdminEmployees() {
                               target instanceof HTMLInputElement ||
                               target.closest('[role="checkbox"]') ||
                               target.closest('[data-radix-collection-item]') ||
-                              target.closest('.dropdown-trigger')) {
+                              target.closest('.dropdown-trigger') ||
+                              target.closest('a') ||
+                              target.closest('textarea') ||
+                              target.closest('select')) {
                             return;
                           }
+                          setEditRatesEmployee(employee);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return;
+                          const target = e.target as HTMLElement;
+                          if (target instanceof HTMLButtonElement || 
+                              target instanceof HTMLInputElement ||
+                              target.closest('[role="checkbox"]') ||
+                              target.closest('[data-radix-collection-item]') ||
+                              target.closest('.dropdown-trigger') ||
+                              target.closest('a') ||
+                              target.closest('textarea') ||
+                              target.closest('select')) {
+                            return;
+                          }
+                          e.preventDefault();
                           setEditRatesEmployee(employee);
                         }}
                       >
