@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2 } from 'lucide-react';
+import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw } from 'lucide-react';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,9 @@ import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
-
 export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
@@ -53,12 +53,13 @@ export default function AdminPartnerLocations() {
       );
     } catch {}
   }, [searchTerm, selectedOrganization, statusFilter]);
-  // Fetch all partner locations (admin can see all)
-  const { data: allLocations = [], isLoading: locationsLoading } = usePartnerLocations();
-  const { data: organizations = [], isLoading: orgsLoading } = useOrganizations();
+// Fetch all partner locations (admin can see all)
+  const { data: allLocations = [], isLoading: locationsLoading, error: locationsError, refetch: refetchLocations } = usePartnerLocations();
+  const { data: organizations = [], isLoading: orgsLoading, error: orgsError, refetch: refetchOrgs } = useOrganizations();
   const { deleteLocation } = usePartnerLocationMutations();
 
   const isLoading = locationsLoading || orgsLoading;
+  const loadError = locationsError || orgsError;
 
   // Create a map of organization IDs to organization data
   const organizationMap = organizations.reduce((acc, org) => {
@@ -157,7 +158,23 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
       toast.error('Failed to delete location');
     }
   };
-  if (isLoading) {
+  if (loadError) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <p className="text-destructive">Error loading partner locations: {String((loadError as any)?.message || loadError)}</p>
+              <Button onClick={() => { refetchLocations(); refetchOrgs(); }} variant="outline">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  } else if (isLoading) {
     return (
       <div className="p-6">
         <Card>
@@ -343,11 +360,16 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
               </TableHeader>
               <TableBody>
                 {filteredLocations.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      No locations found.
-                    </TableCell>
-                  </TableRow>
+                  <EmptyTableState
+                    icon={MapPin}
+                    title="No locations found"
+                    description={(searchTerm || selectedOrganization !== 'all' || statusFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by adding your first partner location"}
+                    action={{
+                      label: "Add Location",
+                      onClick: () => setIsAddModalOpen(true)
+                    }}
+                    colSpan={7}
+                  />
                 ) : (
                   filteredLocations.map((location) => {
                     const organization = organizationMap[location.organization_id];
@@ -417,8 +439,12 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           {/* Mobile Cards */}
           <div className="block lg:hidden space-y-3">
             {filteredLocations.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No locations found.
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-3">{(searchTerm || selectedOrganization !== 'all' || statusFilter !== 'all') ? "No locations match your current filters" : "No partner locations yet"}</p>
+                <Button onClick={() => setIsAddModalOpen(true)} variant="outline" size="sm" aria-label="Add first location">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Location
+                </Button>
               </div>
             ) : (
               filteredLocations.map((location) => {
