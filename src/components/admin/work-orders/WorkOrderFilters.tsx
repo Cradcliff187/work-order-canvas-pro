@@ -91,7 +91,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     queryFn: async () => {
       let query = supabase
         .from('work_orders')
-        .select('id, work_order_number, store_location')
+        .select('id, work_order_number, store_location, description')
         .order('created_at', { ascending: false })
         .limit(50);
       if (filters.organization_id) {
@@ -147,9 +147,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
           aria-label="Search work orders by number, title, or location"
           storageKey="work-orders-filters-search"
           workOrders={(woSuggestionSource || []).map((wo: any) => ({
-            id: wo.id,
+            id: String(wo.id),
             label: wo.work_order_number || '',
-            subtitle: wo.store_location || undefined,
+            subtitle: wo.store_location || (wo.description ? String(wo.description).slice(0, 80) : undefined),
           }))}
           assignees={(employees || []).map((emp) => ({
             id: emp.id,

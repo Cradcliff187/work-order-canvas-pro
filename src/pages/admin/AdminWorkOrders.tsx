@@ -92,7 +92,7 @@ export default function AdminWorkOrders() {
     resetToDefaults,
     getAllColumns
   } = useColumnVisibility({
-    storageKey: 'admin-workorders-columns',
+    storageKey: 'admin-workorders-columns-v1',
     columnMetadata: WORK_ORDER_COLUMN_METADATA,
     defaultVisible: {
       work_order_number: true,

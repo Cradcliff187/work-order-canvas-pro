@@ -260,6 +260,26 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
           onBlur={(e) => {
             onBlur?.(e)
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              if (activeIndex >= 0 && activeIndex < flatList.length) {
+                handleSelect(flatList[activeIndex])
+              } else if (value?.trim()) {
+                handleSubmit(value.trim())
+              }
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              setActiveIndex((idx) => (flatList.length ? (idx + 1) % flatList.length : -1))
+              if (!open) setOpen(true)
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              setActiveIndex((idx) => (flatList.length ? (idx - 1 + flatList.length) % flatList.length : -1))
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setOpen(false)
+            }
+          }}
           className={className}
           {...rest}
         />
