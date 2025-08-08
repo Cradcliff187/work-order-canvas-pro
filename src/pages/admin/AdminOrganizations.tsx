@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, RotateCcw, ClipboardList, Power } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
@@ -67,11 +67,76 @@ export default function AdminOrganizations() {
     setFilters({ search: debouncedSearch });
   }, [debouncedSearch]);
 
-  
+  const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'partner' | 'subcontractor'>('all');
+
+  const { mutate: updateOrg } = useUpdateOrganization();
+
+  const handleToggleActive = (org: Organization) => {
+    updateOrg({ id: org.id as string, is_active: !org.is_active });
+  };
+
+  const columnMetadata = {
+    initials: { label: 'Initials', defaultVisible: true },
+    name: { label: 'Name', defaultVisible: true },
+    contact_email: { label: 'Contact Email', defaultVisible: true },
+    organization_type: { label: 'Type', defaultVisible: true },
+    actions: { label: 'Actions', defaultVisible: true },
+  } as const;
+
+  const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
+    storageKey: 'admin-organizations-columns',
+    columnMetadata,
+  });
+
+  const columnOptions = getAllColumns().map(col => ({
+    ...col,
+    canHide: col.id !== 'actions',
+  }));
+
+  const filteredOrganizations = useMemo(() => {
+    let data = organizations ?? [];
+    const q = (filters.search ?? '').toLowerCase().trim();
+    if (q) {
+      data = data.filter(o => {
+        const hay = [o.name, o.initials, o.contact_email, o.contact_phone, o.address]
+          .filter(Boolean)
+          .map(s => String(s).toLowerCase());
+        return hay.some(s => s.includes(q));
+      });
+    }
+    if (typeFilter !== 'all') {
+      data = data.filter(o => o.organization_type === typeFilter);
+    }
+    return data;
+  }, [organizations, filters.search, typeFilter]);
+
+  const exportColumns: ExportColumn[] = [
+    { key: 'name', label: 'Organization Name', type: 'string' },
+    { key: 'initials', label: 'Initials', type: 'string' },
+    { key: 'organization_type', label: 'Type', type: 'string' },
+    { key: 'contact_email', label: 'Contact Email', type: 'string' },
+  ];
+
+  const handleExport = (format: 'csv' | 'excel') => {
+    try {
+      if (format === 'excel') {
+        exportToExcel(filteredOrganizations, exportColumns, generateFilename('organizations', 'xlsx'));
+      } else {
+        exportToCSV(filteredOrganizations, exportColumns, generateFilename('organizations'));
+      }
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Export failed',
+        description: e?.message ?? 'Unable to export organizations',
+      });
+    }
+  };
 
   const handleClearFilters = () => {
     setSearch('');
     setFilters({});
+    setTypeFilter('all');
   };
 
   if (error) {
@@ -99,7 +164,7 @@ export default function AdminOrganizations() {
         <div>
           <h1 className="text-2xl font-bold">Organizations Management</h1>
           <p className="text-muted-foreground">
-            {organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations'}
+            {filteredOrganizations?.length ? `${filteredOrganizations.length} matching organizations` : (organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -116,14 +181,30 @@ export default function AdminOrganizations() {
       </div>
 
       {/* Search */}
-      <div className="flex items-center space-x-2">
-        <Input
-          type="search"
-          placeholder="Search organizations..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {search && (
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex-1 min-w-[220px]">
+          <SmartSearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearchSubmit={(q) => setSearch(q)}
+            onSelectSuggestion={(item) => setSearch(item.label)}
+            workOrders={[]}
+            assignees={[]}
+            locations={[]}
+          />
+        </div>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            <SelectItem value="internal">Internal</SelectItem>
+            <SelectItem value="partner">Partner</SelectItem>
+            <SelectItem value="subcontractor">Subcontractor</SelectItem>
+          </SelectContent>
+        </Select>
+        {(search || typeFilter !== 'all') && (
           <Button variant="ghost" size="sm" onClick={handleClearFilters}>
             Clear
           </Button>
@@ -134,15 +215,25 @@ export default function AdminOrganizations() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Organizations</CardTitle>
+          <div className="flex items-center gap-2">
+            <ExportDropdown onExport={handleExport} />
+            <ColumnVisibilityDropdown
+              columns={columnOptions}
+              onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
+              onResetToDefaults={resetToDefaults}
+              visibleCount={getVisibleColumnCount()}
+              totalCount={columnOptions.length}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <TableSkeleton rows={5} columns={5} />
-          ) : organizations?.length === 0 ? (
+          ) : filteredOrganizations.length === 0 ? (
             <EmptyTableState
               icon={ClipboardList}
               title="No organizations found"
-              description={filters.search ? "Try adjusting your search criteria" : "Get started by creating your first organization"}
+              description={(filters.search || typeFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by creating your first organization"}
               action={{
                 label: "Create Organization",
                 onClick: () => setShowCreateModal(true),
@@ -156,17 +247,21 @@ export default function AdminOrganizations() {
               {viewMode === 'table' && (
                 <div className="hidden lg:block rounded-md border">
                 <Table className="admin-table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Initials</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Contact Email</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        {columnVisibility['initials'] && (
+                          <TableHead className="w-[100px]">Initials</TableHead>
+                        )}
+                        {columnVisibility['name'] && <TableHead>Name</TableHead>}
+                        {columnVisibility['contact_email'] && <TableHead>Contact Email</TableHead>}
+                        {columnVisibility['organization_type'] && <TableHead>Type</TableHead>}
+                        {columnVisibility['actions'] && (
+                          <TableHead className="text-right">Actions</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
-                    {organizations?.map((organization) => (
+                    {filteredOrganizations.map((organization) => (
                       <TableRow 
                         key={organization.id}
                         className="cursor-pointer hover:bg-muted/50"
@@ -184,31 +279,41 @@ export default function AdminOrganizations() {
                           setShowEditModal(true);
                         }}
                       >
-                        <TableCell className="font-medium">{organization.initials}</TableCell>
-                        <TableCell>{organization.name}</TableCell>
-                        <TableCell>{organization.contact_email}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
-                            className="h-5 text-[10px] px-1.5"
-                          >
-                            {organization.organization_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedOrganization(organization);
-                              setShowEditModal(true);
-                            }}
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                        </TableCell>
+                        {columnVisibility['initials'] && (
+                          <TableCell className="font-medium">{organization.initials}</TableCell>
+                        )}
+                        {columnVisibility['name'] && (
+                          <TableCell>{organization.name}</TableCell>
+                        )}
+                        {columnVisibility['contact_email'] && (
+                          <TableCell>{organization.contact_email}</TableCell>
+                        )}
+                        {columnVisibility['organization_type'] && (
+                          <TableCell>
+                            <Badge 
+                              variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
+                              className="h-5 text-[10px] px-1.5"
+                            >
+                              {organization.organization_type}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        {columnVisibility['actions'] && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedOrganization(organization);
+                                setShowEditModal(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -219,25 +324,37 @@ export default function AdminOrganizations() {
               {/* Card View */}
               {viewMode === 'card' && (
                 <div className="space-y-3">
-                {organizations?.map((organization) => (
-                  <MobileTableCard
-                    key={organization.id}
-                    title={organization.name}
-                    subtitle={`${organization.initials} • ${organization.contact_email}`}
-                    status={
-                      <Badge 
-                        variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
-                        className="h-5 text-[10px] px-1.5"
-                      >
-                        {organization.organization_type}
-                      </Badge>
-                    }
-                    onClick={() => {
-                      setSelectedOrganization(organization);
-                      setShowEditModal(true);
-                    }}
-                  />
-                ))}
+                  {filteredOrganizations.map((organization) => (
+                    <SwipeableListItem
+                      key={organization.id}
+                      itemName={organization.name}
+                      itemType="organization"
+                      onSwipeRight={() => {
+                        setSelectedOrganization(organization);
+                        setShowEditModal(true);
+                      }}
+                      onSwipeLeft={() => handleToggleActive(organization)}
+                      rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
+                      leftAction={{ icon: Power, label: organization.is_active ? 'Deactivate' : 'Activate', color: organization.is_active ? 'destructive' : 'success' }}
+                    >
+                      <MobileTableCard
+                        title={organization.name}
+                        subtitle={`${organization.initials} • ${organization.contact_email}`}
+                        status={
+                          <Badge 
+                            variant={organization.organization_type === 'partner' ? 'default' : 'secondary'}
+                            className="h-5 text-[10px] px-1.5"
+                          >
+                            {organization.organization_type}
+                          </Badge>
+                        }
+                        onClick={() => {
+                          setSelectedOrganization(organization);
+                          setShowEditModal(true);
+                        }}
+                      />
+                    </SwipeableListItem>
+                  ))}
                 </div>
               )}
             </>
