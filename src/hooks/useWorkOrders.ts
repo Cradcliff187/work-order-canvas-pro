@@ -41,6 +41,7 @@ export interface WorkOrder {
   organization_id: string | null;
   trade_id: string | null;
   status: 'received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed' | 'estimate_approved';
+  priority: 'standard' | 'urgent';
   estimated_hours: number | null;
   actual_hours: number | null;
   estimated_completion_date: string | null;
@@ -101,7 +102,7 @@ export interface WorkOrder {
   }>;
 }
 
-interface WorkOrderFilters {
+export interface WorkOrderFilters {
   status?: string[];
   trade_id?: string[];
   organization_id?: string;
@@ -110,6 +111,7 @@ interface WorkOrderFilters {
   date_to?: string;
   location_filter?: string[];
   assigned_to_user?: string;
+  priority?: string[];
   unassigned?: boolean;
   overdue?: boolean;
   created_today?: boolean;
@@ -197,6 +199,9 @@ export function useWorkOrders(
         }
         if (filters.trade_id && filters.trade_id.length > 0) {
           query = query.in('trade_id', filters.trade_id);
+        }
+        if (filters.priority && filters.priority.length > 0) {
+          query = query.in('priority', filters.priority as ('standard' | 'urgent')[]);
         }
         if (filters.organization_id) {
           query = query.eq('organization_id', filters.organization_id);

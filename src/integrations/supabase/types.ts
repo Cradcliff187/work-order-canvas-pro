@@ -1428,6 +1428,7 @@ export type Database = {
           organization_id: string | null
           partner_location_number: string | null
           partner_po_number: string | null
+          priority: Database["public"]["Enums"]["work_order_priority"]
           state: string | null
           status: Database["public"]["Enums"]["work_order_status"]
           store_location: string | null
@@ -1472,6 +1473,7 @@ export type Database = {
           organization_id?: string | null
           partner_location_number?: string | null
           partner_po_number?: string | null
+          priority?: Database["public"]["Enums"]["work_order_priority"]
           state?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
@@ -1516,6 +1518,7 @@ export type Database = {
           organization_id?: string | null
           partner_location_number?: string | null
           partner_po_number?: string | null
+          priority?: Database["public"]["Enums"]["work_order_priority"]
           state?: string | null
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
@@ -2018,6 +2021,7 @@ export type Database = {
       organization_role: "owner" | "admin" | "manager" | "employee" | "member"
       organization_type: "partner" | "subcontractor" | "internal"
       report_status: "submitted" | "reviewed" | "approved" | "rejected"
+      work_order_priority: "standard" | "urgent"
       work_order_status:
         | "received"
         | "assigned"
@@ -2159,6 +2163,7 @@ export const Constants = {
       organization_role: ["owner", "admin", "manager", "employee", "member"],
       organization_type: ["partner", "subcontractor", "internal"],
       report_status: ["submitted", "reviewed", "approved", "rejected"],
+      work_order_priority: ["standard", "urgent"],
       work_order_status: [
         "received",
         "assigned",

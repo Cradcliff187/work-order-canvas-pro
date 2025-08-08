@@ -3,7 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown } from 'lucide-react';
+import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown, Flame } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
@@ -35,6 +35,11 @@ export const WORK_ORDER_COLUMN_METADATA: Record<string, ColumnMetadata> = {
   trade: { 
     label: 'Trade', 
     description: 'Trade/skill category',
+    defaultVisible: true 
+  },
+  priority: { 
+    label: 'Priority', 
+    description: 'Work order priority level',
     defaultVisible: true 
   },
   status: { 
@@ -240,6 +245,38 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
     ),
     size: 120,
     cell: ({ row }) => row.original.trades?.name || 'N/A',
+  },
+  {
+    accessorKey: 'priority',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="h-auto p-0 font-medium hover:bg-transparent"
+      >
+        Priority
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    size: 90,
+    cell: ({ row }) => {
+      const priority = row.getValue('priority') as string;
+      
+      if (priority === 'urgent') {
+        return (
+          <Badge variant="destructive" className="h-5 text-[10px] px-1.5 flex items-center gap-1">
+            <Flame className="h-3 w-3" />
+            Urgent
+          </Badge>
+        );
+      }
+      
+      return (
+        <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
+          Standard
+        </Badge>
+      );
+    },
   },
   {
     accessorKey: 'status',

@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { FormattedInput } from '@/components/ui/formatted-input';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Flame } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { WorkOrder } from '@/hooks/useWorkOrders';
 import { US_STATES } from '@/constants/states';
 
@@ -18,6 +20,7 @@ const workOrderSchema = z.object({
   description: z.string().optional(),
   organization_id: z.string().min(1, 'Organization is required'),
   trade_id: z.string().min(1, 'Trade is required'),
+  priority: z.enum(['standard', 'urgent']).default('standard'),
   store_location: z.string().optional(),
   location_street_address: z.string().optional(),
   location_city: z.string().optional(),
@@ -53,6 +56,7 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
       description: workOrder?.description || '',
       organization_id: workOrder?.organization_id || '',
       trade_id: workOrder?.trade_id || '',
+      priority: workOrder?.priority || 'standard',
       store_location: workOrder?.store_location || '',
       location_street_address: workOrder?.location_street_address || '',
       location_city: workOrder?.location_city || '',
@@ -136,6 +140,38 @@ export function WorkOrderForm({ workOrder, onSubmit, onCancel, isLoading }: Work
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="priority"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Priority</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-row space-x-6"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="standard" id="standard" />
+                      <Label htmlFor="standard" className="flex items-center gap-2">
+                        Standard
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="urgent" id="urgent" />
+                      <Label htmlFor="urgent" className="flex items-center gap-2">
+                        <Flame className="h-4 w-4 text-destructive" />
+                        Urgent
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

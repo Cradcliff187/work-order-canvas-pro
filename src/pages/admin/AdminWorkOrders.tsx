@@ -41,6 +41,7 @@ interface WorkOrderFiltersState {
   date_to?: string;
   location_filter?: string[];
   assigned_to_user?: string;
+  priority?: string[];
   unassigned?: boolean;
   overdue?: boolean;
   created_today?: boolean;
@@ -96,6 +97,7 @@ export default function AdminWorkOrders() {
       organization: true,
       store_location: true,
       trade: true,
+      priority: true,
       status: true,
       assigned_to: true,
       date_submitted: true
@@ -150,8 +152,8 @@ export default function AdminWorkOrders() {
           }
           break;
         case 'urgent':
-          // Map to estimate_needed status as urgent approximation
-          quickFilterState.status = [...(quickFilterState.status || []), 'estimate_needed'];
+          // Map to urgent priority
+          quickFilterState.priority = ['urgent'];
           break;
         case 'overdue':
           quickFilterState.overdue = true;
