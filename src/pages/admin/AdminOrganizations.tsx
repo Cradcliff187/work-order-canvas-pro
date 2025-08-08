@@ -17,12 +17,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, RotateCcw, ClipboardList, Power } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { CreateOrganizationModal } from '@/components/admin/organizations/CreateOrganizationModal';
@@ -251,7 +251,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <TableSkeleton rows={5} columns={5} />
+            <EnhancedTableSkeleton rows={5} columns={5} />
           ) : filteredOrganizations.length === 0 ? (
             <EmptyTableState
               icon={ClipboardList}

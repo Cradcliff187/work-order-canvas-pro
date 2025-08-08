@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AddLocationModal } from '@/components/admin/partner-locations/AddLocationModal';
 import { EditLocationModal } from '@/components/admin/partner-locations/EditLocationModal';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { toast } from 'sonner';
@@ -159,8 +159,12 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
   };
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner />
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <EnhancedTableSkeleton rows={5} columns={7} />
+          </CardContent>
+        </Card>
       </div>
     );
   }

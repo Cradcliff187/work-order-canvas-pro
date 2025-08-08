@@ -57,8 +57,8 @@ Checklists by page
 - Work Orders: getRowId set; column visibility key standardized; dropdowns opaque; export disabled states correct; skeletons present; filters resettable. Status: COMPLETE.
 - Reports: getRowId set; column visibility key standardized; export disabled states; dropdowns; skeletons. Status: COMPLETE.
 - Invoices: getRowId set; column visibility migration to admin-invoices-columns-v1; export UX; skeletons; dropdowns. Status: COMPLETE.
-- Organizations: column visibility key standardized to admin-organizations-columns-v1 with legacyKeys; dropdowns; skeletons. Status: IN PROGRESS → validate.
-- Partner Locations: column visibility key standardized to admin-partner-locations-columns-v1 with legacyKeys; dropdowns; skeletons. Status: IN PROGRESS → validate.
+- Organizations: column visibility key standardized to admin-organizations-columns-v1 with legacyKeys; dropdowns; skeletons standardized (EnhancedTableSkeleton). Status: IN PROGRESS — loading skeleton standardized.
+- Partner Locations: column visibility key standardized to admin-partner-locations-columns-v1 with legacyKeys; dropdowns; skeletons standardized (EnhancedTableSkeleton). Status: IN PROGRESS — loading skeleton standardized.
 - Employees: align selection, dropdowns, skeletons if applicable. Status: PLANNED.
 - Partner Billing → Select Reports: selection, totals UX, confirmation dialog, disabled states when empty/loading. Status: COMPLETE (Phase 3 validation).
 

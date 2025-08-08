@@ -63,7 +63,7 @@ Acceptance criteria (global)
 
 Change log
 - 2025-08-08: Marked Phases 1–3 complete; initiated Phase 4 tasks
-
+- 2025-08-08: Standardized EnhancedTableSkeleton on Organizations and Partner Locations; removed full-page LoadingSpinner from Partner Locations page
 Related docs
 - Gold Standard: docs/GOLD_STANDARD_ADMIN_OPS_FINANCE.md
 - Phase 3 completion record: docs/PHASE_3_OPS_FINANCE_POLISH_COMPLETE.md
