@@ -300,7 +300,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Locations ({filteredLocations.length})</CardTitle>
           <div className="flex items-center gap-2">
-            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={filteredLocations.length === 0} />
+            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || filteredLocations.length === 0} />
             <ColumnVisibilityDropdown
               columns={columnOptions}
               onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
@@ -318,25 +318,25 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             <Table className="admin-table">
               <TableHeader>
                 <TableRow>
-                  {(columnVisibility as any).organization !== false && (
+                  {columnVisibility['organization'] && (
                     <TableHead>Organization</TableHead>
                   )}
-                  {(columnVisibility as any).location_name !== false && (
+                  {columnVisibility['location_name'] && (
                     <TableHead>Location</TableHead>
                   )}
-                  {(columnVisibility as any).location_number !== false && (
+                  {columnVisibility['location_number'] && (
                     <TableHead>Number</TableHead>
                   )}
-                  {(columnVisibility as any).address !== false && (
+                  {columnVisibility['address'] && (
                     <TableHead>Address</TableHead>
                   )}
-                  {(columnVisibility as any).contact !== false && (
+                  {columnVisibility['contact'] && (
                     <TableHead>Contact</TableHead>
                   )}
-                  {(columnVisibility as any).status !== false && (
+                  {columnVisibility['status'] && (
                     <TableHead>Status</TableHead>
                   )}
-                  {(columnVisibility as any).actions !== false && (
+                  {columnVisibility['actions'] && (
                     <TableHead className="text-right">Actions</TableHead>
                   )}
                 </TableRow>
@@ -391,6 +391,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                               variant="ghost"
                               size="sm"
                               onClick={() => setEditingLocation(location)}
+                              aria-label={`Edit location ${location.location_name}`}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -399,6 +400,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                               size="sm"
                               onClick={() => setDeletingLocation(location)}
                               className="text-destructive hover:text-destructive"
+                              aria-label={`Delete location ${location.location_name}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -460,6 +462,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                               e.stopPropagation();
                               setEditingLocation(location);
                             }}
+                            aria-label={`Edit location ${location.location_name}`}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -471,6 +474,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                               setDeletingLocation(location);
                             }}
                             className="text-destructive hover:text-destructive"
+                            aria-label={`Delete location ${location.location_name}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

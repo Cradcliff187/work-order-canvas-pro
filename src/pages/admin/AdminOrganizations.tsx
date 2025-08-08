@@ -214,6 +214,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             assignees={[]}
             locations={[]}
             storageKey="admin-organizations-search"
+            aria-label="Search organizations"
           />
         </div>
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
@@ -294,6 +295,8 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                       <TableRow 
                         key={organization.id}
                         className="cursor-pointer hover:bg-muted/50"
+                        role="button"
+                        tabIndex={0}
                         onClick={(e) => {
                           // Don't navigate if clicking interactive elements
                           const target = e.target as HTMLElement;
@@ -306,6 +309,21 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                           }
                           setSelectedOrganization(organization);
                           setShowEditModal(true);
+                        }}
+                        onKeyDown={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (target instanceof HTMLButtonElement || 
+                              target instanceof HTMLInputElement ||
+                              target.closest('[role=\"checkbox\"]') ||
+                              target.closest('[data-radix-collection-item]') ||
+                              target.closest('.dropdown-trigger')) {
+                            return;
+                          }
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedOrganization(organization);
+                            setShowEditModal(true);
+                          }
                         }}
                       >
                         {columnVisibility['initials'] && (

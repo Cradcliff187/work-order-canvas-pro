@@ -6,7 +6,7 @@ Status summary
 - Phase 1: COMPLETE
 - Phase 2: COMPLETE
 - Phase 3: COMPLETE
-- Phase 4: IN PROGRESS
+- Phase 4: COMPLETE
 - Phase 5: PLANNED
 - Phase 6: PLANNED
 - Phase 7: PLANNED
@@ -39,10 +39,11 @@ Phase details
 - Migrate column visibility keys (admin-invoices-columns-v1; legacyKeys)
 - Verify export UX, skeletons, dropdowns
 
-4) Phase 4 – Organizations & Partner Locations (IN PROGRESS)
-- Migrate visibility keys to v1 with legacyKeys
-- Validate dropdown layering and skeletons
-- Acceptance: preferences persist and migrate; no transparency issues; export disabled state correct
+4) Phase 4 – Organizations & Partner Locations (COMPLETE)
+- Migrated visibility keys to v1 with legacyKeys
+- Verified dropdown layering (z-50 bg-popover) and standardized skeletons
+- Added accessibility improvements (keyboard row open, aria-labels on actions)
+- Acceptance: preferences persist/migrate; no transparency issues; export disabled state correct
 
 5) Phase 5 – Employees & Permissions (PLANNED)
 - Apply table standards; add column visibility where applicable
@@ -64,6 +65,7 @@ Acceptance criteria (global)
 Change log
 - 2025-08-08: Marked Phases 1–3 complete; initiated Phase 4 tasks
 - 2025-08-08: Standardized EnhancedTableSkeleton on Organizations and Partner Locations; removed full-page LoadingSpinner from Partner Locations page
+- 2025-08-08: Marked Phase 4 complete; added a11y tweaks and export disabled states.
 Related docs
 - Gold Standard: docs/GOLD_STANDARD_ADMIN_OPS_FINANCE.md
 - Phase 3 completion record: docs/PHASE_3_OPS_FINANCE_POLISH_COMPLETE.md
