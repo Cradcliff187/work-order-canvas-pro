@@ -20,13 +20,28 @@ interface InvoiceFiltersProps {
   onPaymentStatusChange: (paymentStatus?: 'paid' | 'unpaid') => void;
   onSearchChange: (search: string) => void;
   onClearFilters: () => void;
+  // Optional advanced filters (backward-compatible)
+  partnerId?: string;
+  partnerOptions?: { value: string; label: string }[];
+  onPartnerChange?: (partnerId?: string) => void;
+  dateFrom?: string;
+  dateTo?: string;
+  onDateRangeChange?: (from?: string, to?: string) => void;
+  amountMin?: number;
+  amountMax?: number;
+  onAmountRangeChange?: (min?: number, max?: number) => void;
 }
 
 const statusOptions = [
+  { value: 'draft', label: 'Draft', color: 'bg-gray-100 text-gray-800 border-gray-200' },
+  { value: 'sent', label: 'Sent', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  { value: 'overdue', label: 'Overdue', color: 'bg-red-100 text-red-800 border-red-200' },
+  { value: 'paid', label: 'Paid', color: 'bg-green-100 text-green-800 border-green-200' },
+  { value: 'cancelled', label: 'Cancelled', color: 'bg-muted text-muted-foreground border-border' },
+  // Keep legacy statuses for compatibility
   { value: 'submitted', label: 'Submitted', color: 'bg-blue-100 text-blue-800 border-blue-200' },
   { value: 'approved', label: 'Approved', color: 'bg-green-100 text-green-800 border-green-200' },
   { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-800 border-red-200' },
-  { value: 'paid', label: 'Paid', color: 'bg-purple-100 text-purple-800 border-purple-200' },
 ];
 
 export function InvoiceFilters({
@@ -50,21 +65,20 @@ export function InvoiceFilters({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end">
-        <div className="flex-1">
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-4 md:items-end">
+        <div className="md:col-span-2">
           <Label htmlFor="search" className="text-sm font-medium">
             Search Invoices
           </Label>
           <Input
             id="search"
-            placeholder="Search by internal # or vendor invoice #..."
+            placeholder="Search by invoice # or vendor invoice #..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="mt-1"
           />
         </div>
-        
-        <div className="flex-1">
+        <div>
           <Label className="text-sm font-medium">Payment Status</Label>
           <Select value={paymentStatus || 'all'} onValueChange={(value) => 
             onPaymentStatusChange(value === 'all' ? undefined : value as 'paid' | 'unpaid')
@@ -79,18 +93,74 @@ export function InvoiceFilters({
             </SelectContent>
           </Select>
         </div>
-
+        {onPartnerChange && (
+          <div>
+            <Label className="text-sm font-medium">Partner</Label>
+            <Select value={partnerId || 'all'} onValueChange={(value) => onPartnerChange(value === 'all' ? undefined : value)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="All partners" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All partners</SelectItem>
+                {partnerOptions?.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {hasActiveFilters && (
           <Button
             variant="outline"
             onClick={onClearFilters}
-            className="shrink-0"
+            className="shrink-0 md:col-span-1"
           >
             <X className="mr-2 h-4 w-4" />
             Clear Filters
           </Button>
         )}
       </div>
+
+      {(onDateRangeChange || onAmountRangeChange) && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {onDateRangeChange && (
+            <div className="md:col-span-2">
+              <Label className="text-sm font-medium">Date Range</Label>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                <Input
+                  type="date"
+                  value={dateFrom || ''}
+                  onChange={(e) => onDateRangeChange?.(e.target.value || undefined, dateTo)}
+                />
+                <Input
+                  type="date"
+                  value={dateTo || ''}
+                  onChange={(e) => onDateRangeChange?.(dateFrom, e.target.value || undefined)}
+                />
+              </div>
+            </div>
+          )}
+          {onAmountRangeChange && (
+            <div className="md:col-span-2">
+              <Label className="text-sm font-medium">Amount Range</Label>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={amountMin ?? ''}
+                  onChange={(e) => onAmountRangeChange?.(e.target.value ? Number(e.target.value) : undefined, amountMax)}
+                />
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={amountMax ?? ''}
+                  onChange={(e) => onAmountRangeChange?.(amountMin, e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <Label className="text-sm font-medium">Invoice Status</Label>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, CheckCircle, XCircle, DollarSign, Paperclip, UserCheck } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, DollarSign, Paperclip, UserCheck, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/utils/formatting';
@@ -15,6 +15,11 @@ interface InvoiceColumnsProps {
   onApproveInvoice: (invoice: Invoice) => void;
   onRejectInvoice: (invoice: Invoice) => void;
   onMarkAsPaid: (invoice: Invoice) => void;
+  // Optional billing actions
+  onSendInvoice?: (invoice: Invoice) => void;
+  onDownloadPdf?: (invoice: Invoice) => void;
+  // Optional due date resolver for overdue highlighting
+  getDueDate?: (invoice: Invoice) => string | null;
 }
 
 export const createInvoiceColumns = ({
@@ -22,6 +27,9 @@ export const createInvoiceColumns = ({
   onApproveInvoice,
   onRejectInvoice,
   onMarkAsPaid,
+  onSendInvoice,
+  onDownloadPdf,
+  getDueDate,
 }: InvoiceColumnsProps): ColumnDef<Invoice>[] => [
   {
     id: 'select',
@@ -47,7 +55,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'internal_invoice_number',
-    header: 'Internal #',
+    header: 'Invoice #',
     cell: ({ row }) => (
       <div className="font-mono text-sm text-right">
         {row.getValue('internal_invoice_number')}
@@ -85,7 +93,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'subcontractor_organization.name',
-    header: 'Subcontractor',
+    header: 'Partner',
     cell: ({ row }) => {
       const invoice = row.original;
       const isAdminEntered = !!invoice.created_by_admin_id;
@@ -130,28 +138,51 @@ export const createInvoiceColumns = ({
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => {
-      const status = row.getValue('status') as string;
-      
+      const invoice = row.original;
+      const baseStatus = (row.getValue('status') as string) || 'pending';
+      const dueDate = getDueDate?.(invoice) ?? (invoice as any).due_date ?? null;
+      const isPaid = !!invoice.paid_at;
+      const isOverdue = dueDate ? (new Date(dueDate) < new Date() && !isPaid) : false;
+      const badgeStatus = isOverdue ? 'overdue' : (baseStatus === 'submitted' ? 'pending' : baseStatus);
       return (
         <FinancialStatusBadge 
-          status={status === 'submitted' ? 'pending' : status} 
-          size="sm" 
-          showIcon={false} 
+          status={badgeStatus}
+          size="sm"
+          showIcon={false}
         />
       );
     },
   },
   {
-    accessorKey: 'submitted_at',
-    header: 'Submitted Date',
+    id: 'date',
+    header: 'Date',
     cell: ({ row }) => {
-      const date = row.getValue('submitted_at') as string | null;
+      const invoice = row.original;
+      const date = invoice.submitted_at || invoice.created_at || null;
       return date ? (
         <div className="text-sm">
           {format(new Date(date), 'MMM dd, yyyy')}
         </div>
       ) : (
         <span className="text-muted-foreground">—</span>
+      );
+    },
+  },
+  {
+    id: 'due_date',
+    header: 'Due Date',
+    cell: ({ row }) => {
+      const invoice = row.original;
+      const dueDate = getDueDate?.(invoice) ?? (invoice as any).due_date ?? null;
+      if (!dueDate) {
+        return <span className="text-muted-foreground">—</span>;
+      }
+      const isPaid = !!invoice.paid_at;
+      const isOverdue = new Date(dueDate) < new Date() && !isPaid;
+      return (
+        <div className={`text-sm ${isOverdue ? 'text-destructive font-medium' : ''}`}>
+          {format(new Date(dueDate), 'MMM dd, yyyy')}
+        </div>
       );
     },
   },
@@ -178,7 +209,9 @@ export const createInvoiceColumns = ({
       const invoice = row.original;
       const canApprove = invoice.status === 'submitted';
       const canReject = invoice.status === 'submitted';
-      const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
+      const canMarkPaid = invoice.status !== 'cancelled' && !invoice.paid_at;
+      const canSend = !!onSendInvoice && !invoice.paid_at;
+      const canDownload = !!onDownloadPdf;
 
       const invoiceName = `${invoice.internal_invoice_number}`;
       
@@ -187,6 +220,12 @@ export const createInvoiceColumns = ({
           label: 'View Details',
           icon: Eye,
           onClick: () => onViewInvoice(invoice)
+        },
+        {
+          label: 'Send Invoice',
+          icon: CheckCircle,
+          onClick: () => onSendInvoice?.(invoice),
+          show: canSend
         },
         {
           label: 'Approve',
@@ -206,6 +245,12 @@ export const createInvoiceColumns = ({
           icon: DollarSign,
           onClick: () => onMarkAsPaid(invoice),
           show: canMarkPaid
+        },
+        {
+          label: 'Download PDF',
+          icon: Download,
+          onClick: () => onDownloadPdf?.(invoice),
+          show: canDownload
         }
       ];
 
