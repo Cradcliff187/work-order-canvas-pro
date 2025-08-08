@@ -62,15 +62,46 @@ export default function AdminWorkOrders() {
     },
     defaultMode: 'table'
   });
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 25,
+  const [pagination, setPagination] = useState<PaginationState>(() => {
+    try {
+      const saved = localStorage.getItem('admin-workorders-pagination-v1');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { pageIndex: 0, pageSize: 25 };
   });
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>(() => {
+    try {
+      const saved = localStorage.getItem('admin-workorders-sorting-v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<WorkOrderFiltersState>({});
-  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('admin-workorders-search-v1');
+      return saved ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const [filters, setFilters] = useState<WorkOrderFiltersState>(() => {
+    try {
+      const saved = localStorage.getItem('admin-workorders-filters-v1');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('admin-workorders-quick-v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
@@ -137,6 +168,23 @@ export default function AdminWorkOrders() {
     onEscape: handleEscape,
     disabled: isMobile,
   });
+
+  // Persist UI state
+  useEffect(() => {
+    try { localStorage.setItem('admin-workorders-search-v1', searchTerm || ''); } catch {}
+  }, [searchTerm]);
+  useEffect(() => {
+    try { localStorage.setItem('admin-workorders-filters-v1', JSON.stringify(filters)); } catch {}
+  }, [filters]);
+  useEffect(() => {
+    try { localStorage.setItem('admin-workorders-quick-v1', JSON.stringify(activeQuickFilters)); } catch {}
+  }, [activeQuickFilters]);
+  useEffect(() => {
+    try { localStorage.setItem('admin-workorders-sorting-v1', JSON.stringify(sorting)); } catch {}
+  }, [sorting]);
+  useEffect(() => {
+    try { localStorage.setItem('admin-workorders-pagination-v1', JSON.stringify(pagination)); } catch {}
+  }, [pagination]);
 
   // Transform sorting state to match the hook's expected format
   const sortingFormatted = useMemo(() => ({
@@ -267,6 +315,11 @@ export default function AdminWorkOrders() {
   };
 
   const handleClearFilters = () => {
+    try {
+      localStorage.removeItem('admin-workorders-search-v1');
+      localStorage.removeItem('admin-workorders-filters-v1');
+      localStorage.removeItem('admin-workorders-quick-v1');
+    } catch {}
     setSearchTerm('');
     setFilters({});
     setActiveQuickFilters([]);
@@ -501,6 +554,7 @@ export default function AdminWorkOrders() {
           onExport={handleExport}
           onBulkAssign={handleBulkAssign}
           onBulkEdit={handleBulkEdit}
+          loading={isFetching || isLoading}
         />
       )}
 

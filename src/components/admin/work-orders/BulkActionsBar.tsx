@@ -11,6 +11,7 @@ export interface BulkActionsBarProps {
   onExport: (format: 'csv' | 'excel', ids: string[]) => void;
   onBulkAssign: (ids: string[]) => void;
   onBulkEdit: (ids: string[]) => void;
+  loading?: boolean;
 }
 
 export function BulkActionsBar({
@@ -20,6 +21,7 @@ export function BulkActionsBar({
   onExport,
   onBulkAssign,
   onBulkEdit,
+  loading = false,
 }: BulkActionsBarProps) {
   if (selectedCount === 0) return null;
 
@@ -40,6 +42,8 @@ export function BulkActionsBar({
               onExport={(format) => onExport(format, selectedIds)}
               variant="outline"
               size="sm"
+              disabled={loading || selectedCount === 0}
+              loading={loading}
             />
             
             <Button 

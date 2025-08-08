@@ -155,6 +155,9 @@ export function WorkOrderTable({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
@@ -305,6 +308,8 @@ export function WorkOrderTable({
             onExport={onExportAll}
             variant="outline"
             size="sm"
+            disabled={isLoading || !(data && data.length > 0)}
+            loading={isLoading}
           />
         </div>
       </CardHeader>
