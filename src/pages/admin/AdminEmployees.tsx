@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,24 @@ export default function AdminEmployees() {
   const [editRatesEmployee, setEditRatesEmployee] = useState<Employee | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
+  // Persist active filter
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('admin-employees-filters-v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.activeFilter) setActiveFilter(parsed.activeFilter);
+      }
+    } catch (e) {
+      console.warn('Failed to parse employees filters', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('admin-employees-filters-v1', JSON.stringify({ activeFilter }));
+    } catch {}
+  }, [activeFilter]);
   const { data, isLoading, refetch } = useEmployees();
   const { toggleEmployeeStatus } = useEmployeeMutations();
 
@@ -241,6 +259,23 @@ export default function AdminEmployees() {
                 visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
                 totalCount={columnOptions.filter(c => c.canHide).length}
               />
+              {(searchTerm || activeFilter !== 'all') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Clear filters"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setActiveFilter('all');
+                    try {
+                      localStorage.removeItem('admin-employees-filters-v1');
+                      localStorage.removeItem('admin-employees-search');
+                    } catch {}
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
 

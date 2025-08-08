@@ -63,7 +63,7 @@ export function ColumnVisibilityDropdown({
           </Badge>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="z-50 bg-popover min-w-[220px] w-56">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Column Visibility</span>
           <Button

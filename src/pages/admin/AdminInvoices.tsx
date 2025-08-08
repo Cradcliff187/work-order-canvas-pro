@@ -136,6 +136,32 @@ export default function AdminInvoices() {
     page: 1,
     limit: 10,
   });
+
+  // Persist filters
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('admin-invoices-filters-v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setFilters(prev => ({
+          ...prev,
+          status: Array.isArray(parsed?.status) ? parsed.status : (parsed?.status ? [parsed.status] : []),
+          paymentStatus: parsed?.paymentStatus,
+          search: parsed?.search || '',
+          page: parsed?.page || 1,
+        }));
+      }
+    } catch (e) {
+      console.warn('Failed to parse invoices filters', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const payload = { status: filters.status, paymentStatus: filters.paymentStatus, search: filters.search, page: filters.page };
+      localStorage.setItem('admin-invoices-filters-v1', JSON.stringify(payload));
+    } catch {}
+  }, [filters.status, filters.paymentStatus, filters.search, filters.page]);
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -299,6 +325,10 @@ export default function AdminInvoices() {
       page: 1,
       limit: 10,
     });
+    try {
+      localStorage.removeItem('admin-invoices-filters-v1');
+      localStorage.removeItem('admin-invoices-search');
+    } catch {}
   };
 
   const handlePageChange = (newPage: number) => {

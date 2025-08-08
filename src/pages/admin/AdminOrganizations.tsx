@@ -69,8 +69,26 @@ export default function AdminOrganizations() {
 
   const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'partner' | 'subcontractor'>('all');
 
-  const { mutate: updateOrg } = useUpdateOrganization();
+  // Persist type filter in localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('admin-organizations-filters-v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.type) setTypeFilter(parsed.type);
+      }
+    } catch (e) {
+      console.warn('Failed to parse org filters from localStorage', e);
+    }
+  }, []);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('admin-organizations-filters-v1', JSON.stringify({ type: typeFilter }));
+    } catch {}
+  }, [typeFilter]);
+
+  const { mutate: updateOrg } = useUpdateOrganization();
   const handleToggleActive = (org: Organization) => {
     updateOrg({ id: org.id as string, is_active: !org.is_active });
   };
@@ -137,8 +155,11 @@ export default function AdminOrganizations() {
     setSearch('');
     setFilters({});
     setTypeFilter('all');
+    try {
+      localStorage.removeItem('admin-organizations-filters-v1');
+      localStorage.removeItem('admin-organizations-search');
+    } catch {}
   };
-
   if (error) {
     return (
       <div className="p-6">
@@ -217,13 +238,13 @@ export default function AdminOrganizations() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Organizations</CardTitle>
           <div className="flex items-center gap-2">
-            <ExportDropdown onExport={handleExport} />
+            <ExportDropdown onExport={handleExport} disabled={filteredOrganizations.length === 0} />
             <ColumnVisibilityDropdown
               columns={columnOptions}
               onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
               onResetToDefaults={resetToDefaults}
-              visibleCount={getVisibleColumnCount()}
-              totalCount={columnOptions.length}
+              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+              totalCount={columnOptions.filter(c => c.canHide).length}
             />
           </div>
         </CardHeader>

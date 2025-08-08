@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -58,6 +58,7 @@ import { ReportsTable } from '@/components/admin/reports/ReportsTable';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 
 interface ReportFilters {
   status?: string[];
@@ -89,6 +90,33 @@ export default function AdminReports() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [filters, setFilters] = useState<ReportFilters>({});
 
+  // Persist filters
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('admin-reports-filters-v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setFilters({
+          search: parsed?.search || '',
+          status: parsed?.status ? [parsed.status] : undefined,
+          subcontractor_organization_id: parsed?.subcontractor_organization_id || undefined,
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to parse admin reports filters', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const payload = {
+        search: filters.search || '',
+        status: filters.status?.[0],
+        subcontractor_organization_id: filters.subcontractor_organization_id,
+      };
+      localStorage.setItem('admin-reports-filters-v1', JSON.stringify(payload));
+    } catch {}
+  }, [filters]);
 
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
   const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
@@ -523,7 +551,16 @@ export default function AdminReports() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Reports</CardTitle>
-            <ExportDropdown onExport={handleExport} />
+            <div className="flex items-center gap-2">
+              <ColumnVisibilityDropdown
+                columns={columnOptions}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetToDefaults}
+                visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+                totalCount={columnOptions.filter(c => c.canHide).length}
+              />
+              <ExportDropdown onExport={handleExport} disabled={isLoading || (reportsData?.data?.length ?? 0) === 0} />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -555,24 +592,34 @@ export default function AdminReports() {
               }
 
               return (
-                <MobileTableCard
+                <SwipeableListItem
                   key={report.id}
-                  title={workOrder?.work_order_number || 'N/A'}
-                  subtitle={`${workOrder?.title || 'N/A'} • ${subcontractorDisplay}`}
-                  status={<ReportStatusBadge status={report.status} size="sm" showIcon />}
-                  onClick={() => navigate(`/admin/reports/${report.id}`)}
+                  itemName={workOrder?.work_order_number || 'Report'}
+                  itemType="report"
+                  leftAction={report.status === 'submitted' ? { icon: CheckCircle, label: 'Approve', color: 'success' } : { icon: Eye, label: 'View', color: 'default' }}
+                  rightAction={report.status === 'submitted' ? { icon: XCircle, label: 'Reject', color: 'destructive' } : undefined}
+                  onSwipeLeft={report.status === 'submitted' ? () => reviewReport.mutate({ reportId: report.id, status: 'approved' }) : undefined}
+                  onSwipeRight={report.status === 'submitted' ? () => reviewReport.mutate({ reportId: report.id, status: 'rejected' }) : undefined}
                 >
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Amount:</span>
-                    <span className="font-medium">
-                      {report.invoice_amount ? `$${report.invoice_amount.toLocaleString()}` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Submitted:</span>
-                    <span>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</span>
-                  </div>
-                </MobileTableCard>
+                  <MobileTableCard
+                    key={report.id}
+                    title={workOrder?.work_order_number || 'N/A'}
+                    subtitle={`${workOrder?.title || 'N/A'} • ${subcontractorDisplay}`}
+                    status={<ReportStatusBadge status={report.status} size="sm" showIcon />}
+                    onClick={() => navigate(`/admin/reports/${report.id}`)}
+                  >
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Amount:</span>
+                      <span className="font-medium">
+                        {report.invoice_amount ? `$${report.invoice_amount.toLocaleString()}` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Submitted:</span>
+                      <span>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</span>
+                    </div>
+                  </MobileTableCard>
+                </SwipeableListItem>
               );
             }}
             emptyIcon={FileText}

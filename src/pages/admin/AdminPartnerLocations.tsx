@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2 } from 'lucide-react';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
@@ -20,6 +20,7 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 
 export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +30,29 @@ export default function AdminPartnerLocations() {
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [deletingLocation, setDeletingLocation] = useState<any>(null);
 
+  // Persist filters
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('admin-partner-locations-filters-v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.searchTerm === 'string') setSearchTerm(parsed.searchTerm);
+        if (typeof parsed.selectedOrganization === 'string') setSelectedOrganization(parsed.selectedOrganization);
+        if (typeof parsed.statusFilter === 'string') setStatusFilter(parsed.statusFilter);
+      }
+    } catch (e) {
+      console.warn('Failed to parse partner locations filters', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'admin-partner-locations-filters-v1',
+        JSON.stringify({ searchTerm, selectedOrganization, statusFilter })
+      );
+    } catch {}
+  }, [searchTerm, selectedOrganization, statusFilter]);
   // Fetch all partner locations (admin can see all)
   const { data: allLocations = [], isLoading: locationsLoading } = usePartnerLocations();
   const { data: organizations = [], isLoading: orgsLoading } = useOrganizations();
@@ -243,6 +267,25 @@ export default function AdminPartnerLocations() {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
+
+            {(searchTerm || selectedOrganization !== 'all' || statusFilter !== 'all') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Clear filters"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedOrganization('all');
+                  setStatusFilter('all');
+                  try {
+                    localStorage.removeItem('admin-partner-locations-filters-v1');
+                    localStorage.removeItem('admin-partner-locations-search');
+                  } catch {}
+                }}
+              >
+                Clear
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -259,6 +302,8 @@ export default function AdminPartnerLocations() {
               onResetToDefaults={resetToDefaults}
               variant="outline"
               size="sm"
+              visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+              totalCount={columnOptions.filter(c => c.canHide).length}
             />
           </div>
         </CardHeader>
@@ -374,51 +419,60 @@ export default function AdminPartnerLocations() {
                 const address = [location.city, location.state, location.zip_code].filter(Boolean).join(', ');
                 
                 return (
-                  <MobileTableCard
+                  <SwipeableListItem
                     key={location.id}
-                    title={location.location_name}
-                    subtitle={`${organization?.name || 'Unknown Organization'} • #${location.location_number}${address ? ` • ${address}` : ''}`}
-                    status={
-                      <Badge variant={location.is_active ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
-                        {location.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    }
-                    onClick={() => setEditingLocation(location)}
+                    itemName={location.location_name}
+                    itemType="location"
+                    rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
+                    leftAction={{ icon: Trash2, label: 'Delete', color: 'destructive', confirmMessage: `Delete location "${location.location_name}"?` }}
+                    onSwipeRight={() => setEditingLocation(location)}
+                    onSwipeLeft={() => setDeletingLocation(location)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-muted-foreground">
-                        {location.contact_name && (
-                          <div>{location.contact_name}</div>
-                        )}
-                        {location.contact_email && (
-                          <div>{location.contact_email}</div>
-                        )}
+                    <MobileTableCard
+                      title={location.location_name}
+                      subtitle={`${organization?.name || 'Unknown Organization'} • #${location.location_number}${address ? ` • ${address}` : ''}`}
+                      status={
+                        <Badge variant={location.is_active ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                          {location.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      }
+                      onClick={() => setEditingLocation(location)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground">
+                          {location.contact_name && (
+                            <div>{location.contact_name}</div>
+                          )}
+                          {location.contact_email && (
+                            <div>{location.contact_email}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingLocation(location);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingLocation(location);
+                            }}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingLocation(location);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingLocation(location);
-                          }}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </MobileTableCard>
+                    </MobileTableCard>
+                  </SwipeableListItem>
                 );
               })
             )}
