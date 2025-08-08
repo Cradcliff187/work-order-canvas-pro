@@ -76,7 +76,7 @@ export function InvoicesTable<TData = any>({
           </div>
           <div className="text-right">
             <div className="text-xs text-muted-foreground">Outstanding</div>
-            <div className="font-medium">${'{'}totalOutstanding.toLocaleString(undefined, { style: 'currency', currency: 'USD' }){'}'}</div>
+            <div className="font-medium">{totalOutstanding.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</div>
           </div>
         </div>
       </Card>
@@ -103,7 +103,7 @@ export function InvoicesTable<TData = any>({
 
       {/* Desktop table */}
       <div className="hidden lg:block">
-        <ResponsiveTableWrapper stickyFirstColumn minWidth={960}>
+        <ResponsiveTableWrapper stickyFirstColumn minWidth="960px">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

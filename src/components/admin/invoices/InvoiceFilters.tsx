@@ -52,6 +52,15 @@ export function InvoiceFilters({
   onPaymentStatusChange,
   onSearchChange,
   onClearFilters,
+  partnerId,
+  partnerOptions,
+  onPartnerChange,
+  dateFrom,
+  dateTo,
+  onDateRangeChange,
+  amountMin,
+  amountMax,
+  onAmountRangeChange,
 }: InvoiceFiltersProps) {
   const toggleStatus = (statusValue: string) => {
     if (status.includes(statusValue)) {

@@ -1,22 +1,48 @@
-
-import { ColumnDef } from '@tanstack/react-table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
-import { User } from '@/hooks/useUsers';
+import { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TableActionsDropdown } from "@/components/ui/table-actions-dropdown";
+import { Eye, Edit, Trash2, Shield, KeyRound, Ban, CheckCircle } from "lucide-react";
+import { User } from "@/hooks/useUsers";
 
 interface UserColumnHandlers {
   onView: (user: User) => void;
   onEdit: (user: User) => void;
   onDelete: (user: User) => void;
+  onEditRole?: (user: User) => void;
+  onResetPassword?: (user: User) => void;
+  onToggleSuspend?: (user: User) => void;
+}
+
+function RoleBadge({ user }: { user: User }) {
+  const orgs = (user as any).organization_members as any[] | undefined;
+  if (!orgs || orgs.length === 0) {
+    return <span className="text-muted-foreground text-xs">No role</span>;
+  }
+  const primary = orgs[0];
+  const role: string = primary?.role || "member";
+  const orgType: string | undefined = primary?.organization?.organization_type;
+
+  let classes = "h-5 text-[10px] px-1.5 capitalize";
+  if (role === "admin") {
+    classes += " bg-primary/10 text-primary";
+  } else if (role === "employee") {
+    classes += " bg-secondary/20 text-secondary-foreground";
+  } else if (orgType === "partner") {
+    classes += " bg-accent/10 text-accent-foreground";
+  } else if (orgType === "subcontractor") {
+    classes += " bg-muted";
+  } else {
+    classes += " bg-secondary/10";
+  }
+
+  return <Badge className={classes}>{role}</Badge>;
 }
 
 export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>[] {
   return [
     {
-      id: 'select',
+      id: "select",
       header: ({ table }) => (
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
@@ -36,42 +62,41 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       enableHiding: false,
     },
     {
-      accessorKey: 'first_name',
-      header: 'Name',
+      accessorKey: "first_name",
+      header: "Name",
       cell: ({ row }) => {
-        const user = row.original;
+        const user = row.original as any;
+        const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase();
         return (
-          <div className="flex flex-col">
-            <span className="font-medium">{user.first_name} {user.last_name}</span>
-            <span className="text-sm text-muted-foreground">{user.email}</span>
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+              {initials || "?"}
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium">{user.first_name} {user.last_name}</span>
+            </div>
           </div>
         );
       },
     },
     {
-      accessorKey: 'user_role',
-      header: 'Role',
+      accessorKey: "email",
+      header: "Email",
       cell: ({ row }) => {
-        const orgs = row.original.organization_members;
-        if (!orgs || orgs.length === 0) {
-          return <span className="text-muted-foreground text-xs">No role</span>;
-        }
-        // Show primary organization role
-        const primaryOrg = orgs[0];
-        const isAdmin = primaryOrg?.organization?.organization_type === 'internal' && 
-                       primaryOrg?.role === 'admin';
-        return (
-          <Badge variant={isAdmin ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5 capitalize">
-            {primaryOrg?.role || 'member'}
-          </Badge>
-        );
+        const email = row.getValue("email") as string;
+        return <span className="text-sm text-muted-foreground">{email}</span>;
       },
     },
     {
-      accessorKey: 'user_organization',
-      header: 'Organization',
+      accessorKey: "user_role",
+      header: "Role",
+      cell: ({ row }) => <RoleBadge user={row.original} />,
+    },
+    {
+      accessorKey: "user_organization",
+      header: "Organization",
       cell: ({ row }) => {
-        const orgs = row.original.organization_members;
+        const orgs = (row.original as any).organization_members as any[] | undefined;
         if (!orgs || orgs.length === 0) {
           return <span className="text-muted-foreground">No organization</span>;
         }
@@ -79,7 +104,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
           <div className="flex flex-col gap-1">
             {orgs.map((org) => (
               <Badge key={org.id} variant="outline" className="h-5 text-[10px] px-1.5">
-                {org.organization.name}
+                {org.organization?.name}
               </Badge>
             ))}
           </div>
@@ -87,56 +112,63 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       },
     },
     {
-      accessorKey: 'is_active',
-      header: 'Status',
+      accessorKey: "is_active",
+      header: "Status",
       cell: ({ row }) => {
-        const isActive = row.getValue('is_active') as boolean;
+        const u = row.original as any;
+        const suspended = u?.status === "suspended" || u?.is_suspended === true;
+        const isActive = suspended ? false : (row.getValue("is_active") as boolean);
+        if (suspended) {
+          return (
+            <Badge variant="destructive" className="h-5 text-[10px] px-1.5">Suspended</Badge>
+          );
+        }
         return (
-          <Badge variant={isActive ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5">
-            {isActive ? 'Active' : 'Inactive'}
+          <Badge variant={isActive ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+            {isActive ? "Active" : "Inactive"}
           </Badge>
         );
       },
     },
     {
-      accessorKey: 'created_at',
-      header: 'Created',
+      accessorKey: "last_login",
+      header: "Last Login",
       cell: ({ row }) => {
-        const date = new Date(row.getValue('created_at'));
-        return date.toLocaleDateString();
+        const value = row.getValue("last_login") as string | null;
+        return value ? new Date(value).toLocaleString() : (
+          <span className="text-muted-foreground">—</span>
+        );
       },
     },
     {
-      id: 'actions',
+      accessorKey: "created_at",
+      header: "Created",
       cell: ({ row }) => {
-        const user = row.original;
+        const value = row.getValue("created_at") as string | null;
+        return value ? new Date(value).toLocaleDateString() : "";
+      },
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => {
+        const user = row.original as User;
+        const suspended = (user as any)?.status === "suspended" || (user as any)?.is_suspended === true;
+        const actions = [
+          { label: "View", icon: Eye, onClick: () => handlers.onView(user) },
+          { label: "Edit", icon: Edit, onClick: () => handlers.onEdit(user) },
+          { label: "Edit Role", icon: Shield, onClick: () => handlers.onEditRole ? handlers.onEditRole(user) : handlers.onEdit(user) },
+          { label: "Reset Password", icon: KeyRound, onClick: () => handlers.onResetPassword?.(user), show: !!handlers.onResetPassword },
+          { label: suspended ? "Activate" : "Suspend", icon: suspended ? CheckCircle : Ban, onClick: () => handlers.onToggleSuspend?.(user), show: !!handlers.onToggleSuspend },
+          { label: "Delete", icon: Trash2, onClick: () => handlers.onDelete(user), variant: "destructive" as const },
+        ];
         return (
           <div onClick={(e) => e.stopPropagation()}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handlers.onView(user)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handlers.onEdit(user)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handlers.onDelete(user)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <TableActionsDropdown actions={actions} itemName={`${(user as any).first_name} ${(user as any).last_name}`} />
           </div>
         );
       },
+      enableHiding: false,
     },
   ];
 }

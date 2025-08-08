@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { TableSkeleton } from "@/components/admin/shared/TableSkeleton";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // UsersTable (Phase 1 shell)
 // - Mirrors WorkOrders table wrapper pattern without wiring business logic
@@ -13,6 +15,9 @@ export interface UsersTableProps<TData = any> {
   isLoading?: boolean;
   emptyState?: React.ReactNode;
   onRowClick?: (row: TData) => void; // TODO: connect row click in Phase 2
+  // Bulk actions (optional)
+  selectedCount?: number;
+  onBulkAssignRole?: (role: string) => void;
 }
 
 export function UsersTable<TData = any>({
@@ -24,6 +29,13 @@ export function UsersTable<TData = any>({
 }: UsersTableProps<TData>) {
   return (
     <Card className="p-4">
+      {/* Optional bulk role assignment UI */}
+      {selectedCount && selectedCount > 0 && onBulkAssignRole && (
+        <div className="mb-4 flex items-center gap-2">
+          <BulkRoleAssign onAssign={onBulkAssignRole} selectedCount={selectedCount} />
+        </div>
+      )}
+
       {isLoading ? (
         <TableSkeleton rows={8} columns={6} />
       ) : !data || data.length === 0 ? (
