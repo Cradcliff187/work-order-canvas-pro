@@ -308,6 +308,24 @@ export function useWorkOrderAssignmentMutations() {
       if (error) throw error;
       return (data as any[]) || []; // Temporary bypass during migration
     },
+    onMutate: async (assignments) => {
+      // Cancel outgoing queries to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['work-orders'] });
+      await queryClient.cancelQueries({ queryKey: ['work-order-assignments'] });
+      await queryClient.cancelQueries({ queryKey: ['user-assignments'] });
+      await queryClient.cancelQueries({ queryKey: ['organization-assignments'] });
+      
+      // Get previous data for rollback
+      const previousWorkOrders = queryClient.getQueryData(['work-orders']);
+      const previousAssignments = queryClient.getQueryData(['work-order-assignments']);
+      const previousUserAssignments = queryClient.getQueryData(['user-assignments']);
+      const previousOrgAssignments = queryClient.getQueryData(['organization-assignments']);
+      
+      // Optimistically update work orders with assignment preview
+      updateWorkOrdersWithAssignments(queryClient, assignments, 'add');
+      
+      return { previousWorkOrders, previousAssignments, previousUserAssignments, previousOrgAssignments };
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['work-order-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['user-assignments'] });
@@ -318,7 +336,21 @@ export function useWorkOrderAssignmentMutations() {
         description: `Successfully created ${data?.length} assignments`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, assignments, context) => {
+      // Rollback optimistic updates
+      if (context?.previousWorkOrders) {
+        queryClient.setQueryData(['work-orders'], context.previousWorkOrders);
+      }
+      if (context?.previousAssignments) {
+        queryClient.setQueryData(['work-order-assignments'], context.previousAssignments);
+      }
+      if (context?.previousUserAssignments) {
+        queryClient.setQueryData(['user-assignments'], context.previousUserAssignments);
+      }
+      if (context?.previousOrgAssignments) {
+        queryClient.setQueryData(['organization-assignments'], context.previousOrgAssignments);
+      }
+      
       console.error('Bulk assignment failed:', error);
       toast({
         title: 'Bulk assignment failed',
@@ -337,6 +369,24 @@ export function useWorkOrderAssignmentMutations() {
 
       if (error) throw error;
     },
+    onMutate: async (workOrderIds) => {
+      // Cancel outgoing queries to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['work-orders'] });
+      await queryClient.cancelQueries({ queryKey: ['work-order-assignments'] });
+      await queryClient.cancelQueries({ queryKey: ['user-assignments'] });
+      await queryClient.cancelQueries({ queryKey: ['organization-assignments'] });
+      
+      // Get previous data for rollback
+      const previousWorkOrders = queryClient.getQueryData(['work-orders']);
+      const previousAssignments = queryClient.getQueryData(['work-order-assignments']);
+      const previousUserAssignments = queryClient.getQueryData(['user-assignments']);
+      const previousOrgAssignments = queryClient.getQueryData(['organization-assignments']);
+      
+      // Optimistically remove assignments from work orders
+      updateWorkOrdersWithAssignments(queryClient, workOrderIds, 'remove');
+      
+      return { previousWorkOrders, previousAssignments, previousUserAssignments, previousOrgAssignments };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-order-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['user-assignments'] });
@@ -347,7 +397,21 @@ export function useWorkOrderAssignmentMutations() {
         description: 'Successfully removed all assignments',
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, workOrderIds, context) => {
+      // Rollback optimistic updates
+      if (context?.previousWorkOrders) {
+        queryClient.setQueryData(['work-orders'], context.previousWorkOrders);
+      }
+      if (context?.previousAssignments) {
+        queryClient.setQueryData(['work-order-assignments'], context.previousAssignments);
+      }
+      if (context?.previousUserAssignments) {
+        queryClient.setQueryData(['user-assignments'], context.previousUserAssignments);
+      }
+      if (context?.previousOrgAssignments) {
+        queryClient.setQueryData(['organization-assignments'], context.previousOrgAssignments);
+      }
+      
       console.error('Bulk assignment removal failed:', error);
       toast({
         title: 'Failed to remove assignments',
@@ -414,4 +478,54 @@ export function useValidateAssignment() {
   };
 
   return { validateAssignment };
+}
+
+// Helper function to update work orders with assignment changes
+function updateWorkOrdersWithAssignments(
+  queryClient: ReturnType<typeof useQueryClient>, 
+  data: CreateAssignmentData[] | string[], 
+  action: 'add' | 'remove'
+) {
+  queryClient.setQueriesData({ queryKey: ['work-orders'] }, (oldData: any) => {
+    if (!oldData?.data) return oldData;
+    
+    return {
+      ...oldData,
+      data: oldData.data.map((wo: any) => {
+        if (action === 'add') {
+          // Add assignment preview to matching work orders
+          const newAssignments = (data as CreateAssignmentData[])
+            .filter(assignment => assignment.work_order_id === wo.id);
+          
+          if (newAssignments.length > 0) {
+            return {
+              ...wo,
+              work_order_assignments: [
+                ...(wo.work_order_assignments || []),
+                ...newAssignments.map(assignment => ({
+                  id: `temp-${Date.now()}-${Math.random()}`, // Temporary ID
+                  assignment_type: assignment.assignment_type,
+                  assigned_to: assignment.assigned_to,
+                  assigned_organization_id: assignment.assigned_organization_id,
+                  notes: assignment.notes,
+                  assigned_at: new Date().toISOString(),
+                  // Add minimal assignment data for UI
+                }))
+              ]
+            };
+          }
+        } else {
+          // Remove assignments from matching work orders
+          const workOrderIds = data as string[];
+          if (workOrderIds.includes(wo.id)) {
+            return {
+              ...wo,
+              work_order_assignments: []
+            };
+          }
+        }
+        return wo;
+      })
+    };
+  });
 }

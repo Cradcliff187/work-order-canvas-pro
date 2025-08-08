@@ -533,6 +533,22 @@ export function useWorkOrderMutations() {
       if (error) throw new Error(error.message);
       return data;
     },
+    onMutate: async (workOrderId) => {
+      // Cancel outgoing queries to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['work-orders'] });
+      await queryClient.cancelQueries({ queryKey: ['work-order', workOrderId] });
+      await queryClient.cancelQueries({ queryKey: ['organization-work-orders'] });
+      
+      // Get previous data for rollback
+      const previousWorkOrders = queryClient.getQueryData(['work-orders']);
+      const previousWorkOrder = queryClient.getQueryData(['work-order', workOrderId]);
+      const previousOrgWorkOrders = queryClient.getQueryData(['organization-work-orders']);
+      
+      // Optimistically remove work order from cache
+      removeWorkOrderFromCache(queryClient, workOrderId);
+      
+      return { previousWorkOrders, previousWorkOrder, previousOrgWorkOrders };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       toast({
@@ -540,7 +556,18 @@ export function useWorkOrderMutations() {
         description: 'Work order deleted successfully',
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, workOrderId, context) => {
+      // Rollback optimistic updates
+      if (context?.previousWorkOrders) {
+        queryClient.setQueryData(['work-orders'], context.previousWorkOrders);
+      }
+      if (context?.previousWorkOrder) {
+        queryClient.setQueryData(['work-order', workOrderId], context.previousWorkOrder);
+      }
+      if (context?.previousOrgWorkOrders) {
+        queryClient.setQueryData(['organization-work-orders'], context.previousOrgWorkOrders);
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -550,4 +577,27 @@ export function useWorkOrderMutations() {
   });
 
   return { deleteWorkOrder };
+}
+
+// Helper function to remove work order from cache
+function removeWorkOrderFromCache(queryClient: ReturnType<typeof useQueryClient>, workOrderId: string) {
+  queryClient.setQueriesData({ queryKey: ['work-orders'] }, (oldData: any) => {
+    if (!oldData?.data) return oldData;
+    
+    return {
+      ...oldData,
+      data: oldData.data.filter((wo: any) => wo.id !== workOrderId),
+      totalCount: Math.max(0, (oldData.totalCount || 0) - 1)
+    };
+  });
+  
+  // Remove individual work order
+  queryClient.removeQueries({ queryKey: ['work-order', workOrderId] });
+  
+  // Update organization work orders
+  queryClient.setQueriesData({ queryKey: ['organization-work-orders'] }, (oldData: any) => {
+    if (!oldData) return oldData;
+    
+    return oldData.filter((wo: any) => wo.id !== workOrderId);
+  });
 }
