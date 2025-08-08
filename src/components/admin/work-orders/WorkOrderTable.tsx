@@ -89,6 +89,9 @@ interface WorkOrderTableProps {
   isMobile: boolean;
   onRefresh?: () => Promise<void>;
   refreshThreshold?: number;
+  
+  // Visual feedback for optimistic updates
+  updatingRowIds?: Set<string>;
 }
 
 export function WorkOrderTable({
@@ -127,7 +130,8 @@ export function WorkOrderTable({
   onCreateNew,
   isMobile,
   onRefresh,
-  refreshThreshold = 60
+  refreshThreshold = 60,
+  updatingRowIds
 }: WorkOrderTableProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -352,7 +356,8 @@ export function WorkOrderTable({
                                 data-state={row.getIsSelected() && "selected"}
                                 className={cn(
                                   "cursor-pointer hover:bg-muted/50",
-                                  selectedWorkOrderId === row.original.id && "bg-muted"
+                                  selectedWorkOrderId === row.original.id && "bg-muted",
+                                  updatingRowIds?.has(row.original.id) && "opacity-50 pointer-events-none"
                                 )}
                                 onClick={() => handleWorkOrderRowClick(row.original)}
                               >

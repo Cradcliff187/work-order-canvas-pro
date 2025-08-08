@@ -29,6 +29,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
+import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -70,6 +71,7 @@ export default function AdminWorkOrders() {
   const [useCompactCards, setUseCompactCards] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
+  const [updatingRowIds, setUpdatingRowIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
   // Column visibility management
@@ -146,6 +148,25 @@ export default function AdminWorkOrders() {
   );
 
   const { deleteWorkOrder } = useWorkOrderMutations();
+  const { transitionStatus } = useWorkOrderStatusTransitions();
+
+  // Track status updates for visual feedback
+  const handleStatusUpdate = (workOrderId: string, newStatus: string, reason?: string) => {
+    setUpdatingRowIds(prev => new Set([...prev, workOrderId]));
+    
+    transitionStatus.mutate(
+      { workOrderId, newStatus: newStatus as any, reason },
+      {
+        onSettled: () => {
+          setUpdatingRowIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(workOrderId);
+            return newSet;
+          });
+        }
+      }
+    );
+  };
 
   // Extract work order IDs for unread message counts
   const workOrderIds = workOrdersData?.data?.map(wo => wo.id) || [];
@@ -159,6 +180,7 @@ export default function AdminWorkOrders() {
   // Column definitions with action handlers - Updated with proper type handling
   const columns = useMemo(() => createWorkOrderColumns({
     unreadCounts,
+    updatingRowIds,
     onEdit: (workOrder: WorkOrder) => {
       navigate(`/admin/work-orders/${workOrder.id}/edit`);
     },
@@ -184,7 +206,7 @@ export default function AdminWorkOrders() {
       setAssignmentWorkOrders([typedWorkOrder]);
       setShowAssignModal(true);
     },
-  }), [deleteWorkOrder, navigate, unreadCounts]);
+  }), [deleteWorkOrder, navigate, unreadCounts, updatingRowIds]);
 
   const handleClearSelection = () => {
     setRowSelection({});
@@ -380,6 +402,7 @@ export default function AdminWorkOrders() {
         setSelectedWorkOrderId={setSelectedWorkOrderId}
         selectedWorkOrder={selectedWorkOrder as any}
         isLoadingDetail={isLoadingDetail}
+        updatingRowIds={updatingRowIds}
         onWorkOrderClick={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}`)}
         onEdit={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}/edit`)}
         onViewDetails={(workOrder) => navigate(`/admin/work-orders/${workOrder.id}`)}

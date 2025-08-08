@@ -56,13 +56,14 @@ export const WORK_ORDER_COLUMN_METADATA: Record<string, ColumnMetadata> = {
 
 interface WorkOrderColumnsProps {
   unreadCounts: Record<string, number>;
+  updatingRowIds?: Set<string>;
   onEdit: (workOrder: WorkOrder) => void;
   onView: (workOrder: WorkOrder) => void;
   onDelete: (workOrder: WorkOrder) => void;
   onAssign: (workOrder: WorkOrder) => void;
 }
 
-export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete, onAssign }: WorkOrderColumnsProps): ColumnDef<WorkOrder>[] => [
+export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, onView, onDelete, onAssign }: WorkOrderColumnsProps): ColumnDef<WorkOrder>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -255,12 +256,19 @@ export const createWorkOrderColumns = ({ unreadCounts, onEdit, onView, onDelete,
     size: 100,
     cell: ({ row }) => {
       const status = row.getValue('status') as string;
+      const isUpdating = updatingRowIds?.has(row.original.id);
+      
       return (
-        <WorkOrderStatusBadge 
-          status={status} 
-          size="sm" 
-          showIcon={false} 
-        />
+        <div className="flex items-center gap-2">
+          {isUpdating && (
+            <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+          )}
+          <WorkOrderStatusBadge 
+            status={status} 
+            size="sm" 
+            showIcon={!isUpdating} 
+          />
+        </div>
       );
     },
   },
