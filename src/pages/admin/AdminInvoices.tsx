@@ -114,7 +114,7 @@ import { TableRow as UITableRow } from '@/components/ui/table';
 import { FinancialStatusBadge as UIFinancialStatusBadge } from '@/components/ui/status-badge';
 import { useSubmittedCounts as useSubmittedCountsHook } from '@/hooks/useSubmittedCounts';
 import { Badge as BadgeUI } from '@/components/ui/badge';
-import { Plus as PlusIcon } from 'lucide-react';
+import { Plus as PlusIcon, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate as useNav } from 'react-router-dom';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
@@ -136,6 +136,9 @@ export default function AdminInvoices() {
     page: 1,
     limit: 10,
   });
+  
+  const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Initialize filters from URL parameters
   useEffect(() => {
@@ -149,9 +152,9 @@ export default function AdminInvoices() {
     }));
   }, [searchParams]);
 
-  const { data, isLoading, error } = useInvoices(filters);
+  const debouncedSearch = useDebounce(filters.search, 300);
+  const { data, isLoading, error } = useInvoices({ ...filters, search: debouncedSearch });
   const { data: submittedCounts } = useSubmittedCounts();
-
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
@@ -222,6 +225,57 @@ export default function AdminInvoices() {
     },
   });
 
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
+  const quickCounts = { submitted: submittedCounts?.invoicesCount ?? 0 } as Partial<Record<'submitted' | 'approved' | 'paid' | 'rejected', number>>;
+
+  const exportColumns: ExportColumn[] = [
+    { key: 'internal_invoice_number', label: 'Invoice #', type: 'string' },
+    { key: 'external_invoice_number', label: 'Vendor Invoice #', type: 'string' },
+    { key: 'subcontractor_organization.name', label: 'Partner', type: 'string' },
+    { key: 'submitted_by_user.first_name', label: 'Submitted By (First)', type: 'string' },
+    { key: 'submitted_by_user.last_name', label: 'Submitted By (Last)', type: 'string' },
+    { key: 'total_amount', label: 'Total Amount', type: 'currency' },
+    { key: 'status', label: 'Status', type: 'string' },
+    { key: 'submitted_at', label: 'Submitted At', type: 'date' },
+    { key: 'approved_at', label: 'Approved At', type: 'date' },
+    { key: 'paid_at', label: 'Paid At', type: 'date' },
+    { key: 'payment_reference', label: 'Payment Ref', type: 'string' },
+    { key: 'attachment_count', label: 'Attachments', type: 'number' },
+  ];
+
+  const handleExport = (format: 'csv' | 'excel') => {
+    const rows = data?.data || [];
+    const filename = generateFilename('invoices', format === 'excel' ? 'xlsx' : 'csv');
+    if (format === 'excel') {
+      exportToExcel(rows, exportColumns, filename);
+    } else {
+      exportToCSV(rows, exportColumns, filename);
+    }
+  };
+
+  const handleQuickFilter = (key: 'submitted' | 'approved' | 'paid' | 'rejected') => {
+    setFilters(prev => ({ ...prev, status: [key], page: 1, paymentStatus: key === 'paid' ? 'paid' : prev.paymentStatus }));
+  };
+
+  const handleBulkApprove = () => {
+    const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
+    ids.forEach(id => approveInvoice.mutate({ invoiceId: id }));
+    setBulkOpen(false);
+  };
+
+  const handleBulkReject = () => {
+    const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
+    ids.forEach(id => rejectInvoice.mutate({ invoiceId: id, notes: 'Rejected via bulk action' }));
+    setBulkOpen(false);
+  };
+
+  const handleBulkMarkPaid = () => {
+    const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
+    const now = new Date();
+    ids.forEach(id => markAsPaid.mutate({ invoiceId: id, paymentReference: 'BULK', paymentDate: now }));
+    setBulkOpen(false);
+  };
+
   const handleStatusChange = (status: string[]) => {
     setFilters(prev => ({ ...prev, status, page: 1 }));
   };
@@ -290,29 +344,27 @@ export default function AdminInvoices() {
             Manage and review subcontractor invoices
           </p>
         </div>
-        <Button onClick={() => navigate('/admin/submit-invoice')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Invoice
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <InvoiceFilters
-            status={filters.status}
-            paymentStatus={filters.paymentStatus}
-            search={filters.search}
-            onStatusChange={handleStatusChange}
-            onPaymentStatusChange={handlePaymentStatusChange}
-            onSearchChange={handleSearchChange}
-            onClearFilters={handleClearFilters}
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:block text-sm text-muted-foreground mr-2">
+            Page {filters.page} of {totalPages}
+          </div>
+          <ColumnVisibilityDropdown
+            columns={columnOptions}
+            onToggleColumn={toggleColumn}
+            onResetToDefaults={resetToDefaults}
+            variant="outline"
+            size="sm"
           />
-        </CardContent>
-      </Card>
+          <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={isLoading || (data?.data?.length ?? 0) === 0} />
+          <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} disabled={selectedCount === 0} aria-label="Open bulk actions">
+            Bulk Actions{selectedCount > 0 ? ` (${selectedCount})` : ''}
+          </Button>
+          <Button onClick={() => navigate('/admin/submit-invoice')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Invoice
+          </Button>
+        </div>
+      </div>
 
       {/* Results */}
       <Card>
@@ -327,6 +379,18 @@ export default function AdminInvoices() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Quick filters + search */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-4">
+            <QuickFiltersBar onQuickFilter={handleQuickFilter} counts={quickCounts} />
+            <SmartSearchInput
+              value={filters.search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onSearchSubmit={(q) => handleSearchChange(q)}
+              placeholder="Search invoices..."
+              className="w-full md:w-80"
+              storageKey="admin-invoices-search"
+            />
+          </div>
           {isLoading ? (
             <TableSkeleton rows={5} columns={8} />
           ) : (
