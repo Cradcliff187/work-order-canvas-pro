@@ -12,6 +12,7 @@ import { createWorkOrderColumns, WORK_ORDER_COLUMN_METADATA } from '@/components
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 import { BulkActionsBar } from '@/components/admin/work-orders/BulkActionsBar';
+import { BulkEditModal } from '@/components/admin/work-orders/BulkEditModal';
 import { CreateWorkOrderModal } from '@/components/admin/work-orders/CreateWorkOrderModal';
 import { AssignWorkOrderModal } from '@/components/admin/work-orders/AssignWorkOrderModal';
 import { WorkOrderBreadcrumb } from '@/components/admin/work-orders/WorkOrderBreadcrumb';
@@ -72,7 +73,9 @@ export default function AdminWorkOrders() {
   const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
+  const [bulkEditWorkOrders, setBulkEditWorkOrders] = useState<WorkOrder[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
   const [useCompactCards, setUseCompactCards] = useState(false);
@@ -322,6 +325,12 @@ export default function AdminWorkOrders() {
     setShowAssignModal(true);
   };
 
+  const handleBulkEdit = (ids: string[]) => {
+    const workOrders = workOrdersData?.data.filter(wo => ids.includes(wo.id)) || [];
+    setBulkEditWorkOrders(workOrders);
+    setShowBulkEditModal(true);
+  };
+
   const handleDeleteConfirm = () => {
     if (workOrderToDelete) {
       deleteWorkOrder.mutate(workOrderToDelete.id, {
@@ -491,6 +500,7 @@ export default function AdminWorkOrders() {
           onClearSelection={handleClearSelection}
           onExport={handleExport}
           onBulkAssign={handleBulkAssign}
+          onBulkEdit={handleBulkEdit}
         />
       )}
 
@@ -509,6 +519,20 @@ export default function AdminWorkOrders() {
           setAssignmentWorkOrders([]);
         }}
         workOrders={assignmentWorkOrders}
+      />
+
+      {/* Bulk Edit Modal */}
+      <BulkEditModal
+        isOpen={showBulkEditModal}
+        onClose={() => {
+          setShowBulkEditModal(false);
+          setBulkEditWorkOrders([]);
+        }}
+        workOrders={bulkEditWorkOrders}
+        onSave={async () => {
+          // TODO: Implement bulk save functionality
+          console.log('Bulk save not implemented yet');
+        }}
       />
 
       {/* Delete Confirmation Dialog */}

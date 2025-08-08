@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, X } from 'lucide-react';
+import { Users, X, Edit } from 'lucide-react';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 
 export interface BulkActionsBarProps {
@@ -10,6 +10,7 @@ export interface BulkActionsBarProps {
   onClearSelection: () => void;
   onExport: (format: 'csv' | 'excel', ids: string[]) => void;
   onBulkAssign: (ids: string[]) => void;
+  onBulkEdit: (ids: string[]) => void;
 }
 
 export function BulkActionsBar({
@@ -18,6 +19,7 @@ export function BulkActionsBar({
   onClearSelection,
   onExport,
   onBulkAssign,
+  onBulkEdit,
 }: BulkActionsBarProps) {
   if (selectedCount === 0) return null;
 
@@ -39,6 +41,17 @@ export function BulkActionsBar({
               variant="outline"
               size="sm"
             />
+            
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onBulkEdit(selectedIds)}
+              aria-label={`Edit ${selectedCount} selected work orders`}
+              className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+            >
+              <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Edit</span>
+            </Button>
             
             <Button 
               size="sm" 
