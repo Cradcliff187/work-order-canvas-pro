@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,6 +8,48 @@ interface StatusTransitionData {
   workOrderId: string;
   newStatus: Database['public']['Enums']['work_order_status'];
   reason?: string;
+}
+
+// Helper function to update work order status in cache
+function updateWorkOrderStatusInCache(
+  queryClient: QueryClient, 
+  workOrderId: string, 
+  newStatus: Database['public']['Enums']['work_order_status']
+) {
+  // Update paginated work orders list
+  queryClient.setQueriesData({ queryKey: ['work-orders'] }, (oldData: any) => {
+    if (!oldData?.data) return oldData;
+    
+    return {
+      ...oldData,
+      data: oldData.data.map((wo: any) => 
+        wo.id === workOrderId 
+          ? { ...wo, status: newStatus, updated_at: new Date().toISOString() }
+          : wo
+      )
+    };
+  });
+  
+  // Update individual work order
+  queryClient.setQueryData(['work-order', workOrderId], (oldData: any) => {
+    if (!oldData) return oldData;
+    return { 
+      ...oldData, 
+      status: newStatus, 
+      updated_at: new Date().toISOString() 
+    };
+  });
+
+  // Update organization work orders
+  queryClient.setQueriesData({ queryKey: ['organization-work-orders'] }, (oldData: any) => {
+    if (!oldData) return oldData;
+    
+    return oldData.map((wo: any) => 
+      wo.id === workOrderId 
+        ? { ...wo, status: newStatus, updated_at: new Date().toISOString() }
+        : wo
+    );
+  });
 }
 
 export const useWorkOrderStatusTransitions = () => {
@@ -25,10 +67,27 @@ export const useWorkOrderStatusTransitions = () => {
       if (error) throw error;
       return data;
     },
+    onMutate: async ({ workOrderId, newStatus }) => {
+      // Cancel outgoing queries to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['work-orders'] });
+      await queryClient.cancelQueries({ queryKey: ['work-order', workOrderId] });
+      await queryClient.cancelQueries({ queryKey: ['organization-work-orders'] });
+      
+      // Get previous data for rollback
+      const previousWorkOrders = queryClient.getQueryData(['work-orders']);
+      const previousWorkOrder = queryClient.getQueryData(['work-order', workOrderId]);
+      const previousOrgWorkOrders = queryClient.getQueryData(['organization-work-orders']);
+      
+      // Optimistically update the cache
+      updateWorkOrderStatusInCache(queryClient, workOrderId, newStatus);
+      
+      return { previousWorkOrders, previousWorkOrder, previousOrgWorkOrders };
+    },
     onSuccess: (_, variables) => {
-      // Invalidate relevant queries
+      // Invalidate relevant queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['work-order', variables.workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['organization-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
       
       toast({
@@ -36,7 +95,18 @@ export const useWorkOrderStatusTransitions = () => {
         description: `Work order status changed to ${variables.newStatus}`,
       });
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Rollback optimistic updates
+      if (context?.previousWorkOrders) {
+        queryClient.setQueryData(['work-orders'], context.previousWorkOrders);
+      }
+      if (context?.previousWorkOrder) {
+        queryClient.setQueryData(['work-order', variables.workOrderId], context.previousWorkOrder);
+      }
+      if (context?.previousOrgWorkOrders) {
+        queryClient.setQueryData(['organization-work-orders'], context.previousOrgWorkOrders);
+      }
+      
       console.error('Status transition error:', error);
       toast({
         title: "Status Update Failed",
