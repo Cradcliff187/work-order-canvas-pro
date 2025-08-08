@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { Plus, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
@@ -316,7 +316,7 @@ export function WorkOrderTable({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <TableSkeleton rows={5} columns={9} />
+          <EnhancedTableSkeleton rows={5} columns={9} />
         ) : data?.length === 0 ? (
           <EmptyState
             icon={ClipboardList}

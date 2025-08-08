@@ -8,7 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { flexRender, ColumnDef, Table as ReactTable } from '@tanstack/react-table';
@@ -45,7 +45,7 @@ export function ReportsTable<TData = any>({
   const hasRows = rows?.length > 0;
 
   if (isLoading) {
-    return <TableSkeleton rows={5} columns={Math.max(columns.length, 5)} />;
+    return <EnhancedTableSkeleton rows={5} columns={Math.max(columns.length, 5)} />;
   }
 
   if (!hasRows) {

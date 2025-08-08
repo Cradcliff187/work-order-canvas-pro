@@ -95,7 +95,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
             <DropdownMenuItem onClick={handleProfileClick}>
               <Settings className="mr-2 h-4 w-4" />
               Profile Settings
@@ -145,7 +145,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
             </div>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
           <DropdownMenuItem onClick={handleProfileClick}>
             <Settings className="mr-2 h-4 w-4" />
             Profile Settings

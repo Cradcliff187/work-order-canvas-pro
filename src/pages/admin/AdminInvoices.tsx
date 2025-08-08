@@ -35,7 +35,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { format } from 'date-fns';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
 import { Badge } from '@/components/ui/badge';
@@ -434,7 +434,7 @@ const table = useReactTable({
             </div>
           </div>
           {isLoading ? (
-            <TableSkeleton rows={5} columns={8} />
+            <EnhancedTableSkeleton rows={5} columns={8} />
           ) : (
             <>
               {/* Desktop Table */}

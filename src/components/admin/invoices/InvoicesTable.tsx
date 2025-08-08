@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
-import { TableSkeleton } from "@/components/admin/shared/TableSkeleton";
+import { EnhancedTableSkeleton } from "@/components/EnhancedTableSkeleton";
 import { ResponsiveTableWrapper } from "@/components/ui/responsive-table-wrapper";
 import {
   Table,
@@ -62,7 +62,7 @@ export function InvoicesTable<TData = any>({
   if (isLoading) {
     return (
       <Card className="p-4">
-        <TableSkeleton rows={8} columns={6} />
+        <EnhancedTableSkeleton rows={8} columns={6} />
       </Card>
     );
   }
