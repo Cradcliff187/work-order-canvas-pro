@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { TableSkeleton } from "@/components/admin/shared/TableSkeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BulkRoleAssign } from "@/components/admin/users/BulkRoleAssign";
 
 // UsersTable (Phase 1 shell)
 // - Mirrors WorkOrders table wrapper pattern without wiring business logic
@@ -26,6 +27,8 @@ export function UsersTable<TData = any>({
   isLoading = false,
   emptyState,
   onRowClick,
+  selectedCount,
+  onBulkAssignRole,
 }: UsersTableProps<TData>) {
   return (
     <Card className="p-4">
