@@ -101,10 +101,11 @@ export default function AdminOrganizations() {
     actions: { label: 'Actions', defaultVisible: true },
   } as const;
 
-  const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
-    storageKey: 'admin-organizations-columns',
-    columnMetadata,
-  });
+const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
+  storageKey: 'admin-organizations-columns-v1',
+  legacyKeys: ['admin-organizations-columns'],
+  columnMetadata,
+});
 
   const columnOptions = getAllColumns().map(col => ({
     ...col,

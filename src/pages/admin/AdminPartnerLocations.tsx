@@ -108,10 +108,11 @@ export default function AdminPartnerLocations() {
     actions: { label: 'Actions', defaultVisible: true },
   } as const;
 
-  const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
-    storageKey: 'admin-partner-locations-columns',
-    columnMetadata: columnMetadata as any,
-  });
+const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
+  storageKey: 'admin-partner-locations-columns-v1',
+  legacyKeys: ['admin-partner-locations-columns'],
+  columnMetadata: columnMetadata as any,
+});
 
   const columnOptions = getAllColumns().map((c) => ({
     ...c,

@@ -11,42 +11,66 @@ export interface UseColumnVisibilityProps {
   storageKey: string;
   columnMetadata: Record<string, ColumnMetadata>;
   defaultVisible?: Record<string, boolean>;
+  legacyKeys?: string[];
 }
 
 export function useColumnVisibility({
   storageKey,
   columnMetadata,
-  defaultVisible = {}
+  defaultVisible = {},
+  legacyKeys = []
 }: UseColumnVisibilityProps) {
-  // Get initial state from localStorage or defaults
-  const getInitialState = (): VisibilityState => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Validate that all stored columns exist in metadata
+// Get initial state from localStorage or defaults
+const getInitialState = (): VisibilityState => {
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Validate that all stored columns exist in metadata
+      const validatedState: VisibilityState = {};
+      Object.keys(columnMetadata).forEach(columnId => {
+        if (parsed.hasOwnProperty(columnId)) {
+          validatedState[columnId] = parsed[columnId];
+        } else {
+          // Use default or metadata default
+          validatedState[columnId] = defaultVisible[columnId] ?? columnMetadata[columnId]?.defaultVisible ?? true;
+        }
+      });
+      return validatedState;
+    }
+
+    // Try legacy keys migration
+    for (const legacyKey of legacyKeys) {
+      const legacyStored = localStorage.getItem(legacyKey);
+      if (legacyStored) {
+        const parsed = JSON.parse(legacyStored);
         const validatedState: VisibilityState = {};
         Object.keys(columnMetadata).forEach(columnId => {
           if (parsed.hasOwnProperty(columnId)) {
             validatedState[columnId] = parsed[columnId];
           } else {
-            // Use default or metadata default
             validatedState[columnId] = defaultVisible[columnId] ?? columnMetadata[columnId]?.defaultVisible ?? true;
           }
         });
+        // Persist migrated state and clean up legacy
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(validatedState));
+          localStorage.removeItem(legacyKey);
+        } catch {}
         return validatedState;
       }
-    } catch (error) {
-      console.warn('Failed to parse column visibility from localStorage:', error);
     }
+  } catch (error) {
+    console.warn('Failed to parse column visibility from localStorage:', error);
+  }
 
-    // Return defaults if no stored state
-    const defaultState: VisibilityState = {};
-    Object.keys(columnMetadata).forEach(columnId => {
-      defaultState[columnId] = defaultVisible[columnId] ?? columnMetadata[columnId]?.defaultVisible ?? true;
-    });
-    return defaultState;
-  };
+  // Return defaults if no stored state
+  const defaultState: VisibilityState = {};
+  Object.keys(columnMetadata).forEach(columnId => {
+    defaultState[columnId] = defaultVisible[columnId] ?? columnMetadata[columnId]?.defaultVisible ?? true;
+  });
+  return defaultState;
+};
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(getInitialState);
 

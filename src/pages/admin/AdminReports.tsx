@@ -316,25 +316,26 @@ export default function AdminReports() {
     canHide: c.id !== 'select' && c.id !== 'actions',
   }));
 
-  const table = useReactTable({
-    data: reportsData?.data || [],
-    columns,
-    pageCount: reportsData?.pageCount || 0,
-    state: {
-      pagination,
-      sorting,
-      rowSelection,
-      columnVisibility,
-    },
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    manualSorting: true,
-  });
+const table = useReactTable({
+  data: reportsData?.data || [],
+  columns,
+  pageCount: reportsData?.pageCount || 0,
+  state: {
+    pagination,
+    sorting,
+    rowSelection,
+    columnVisibility,
+  },
+  getRowId: (row) => row.id,
+  enableRowSelection: true,
+  onRowSelectionChange: setRowSelection,
+  onPaginationChange: setPagination,
+  onSortingChange: setSorting,
+  onColumnVisibilityChange: setColumnVisibility,
+  getCoreRowModel: getCoreRowModel(),
+  manualPagination: true,
+  manualSorting: true,
+});
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map(row => row.original.id);

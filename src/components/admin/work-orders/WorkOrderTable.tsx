@@ -147,6 +147,7 @@ export function WorkOrderTable({
       rowSelection,
       columnVisibility,
     },
+    getRowId: (row) => row.id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,

@@ -229,27 +229,29 @@ export default function AdminInvoices() {
     toggleColumn,
     resetToDefaults,
     getAllColumns,
-  } = useColumnVisibility({
-    storageKey: 'admin-invoices-column-visibility',
-    columnMetadata: columnMetadata as any,
-  });
+} = useColumnVisibility({
+  storageKey: 'admin-invoices-columns-v1',
+  legacyKeys: ['admin-invoices-column-visibility'],
+  columnMetadata: columnMetadata as any,
+});
 
   const columnOptions = getAllColumns().map((c) => ({
     ...c,
     canHide: c.id !== 'select' && c.id !== 'actions',
   }));
 
-  const table = useReactTable({
-    data: data?.data || [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: setRowSelection,
-    onColumnVisibilityChange: setColumnVisibility,
-    state: {
-      rowSelection,
-      columnVisibility,
-    },
-  });
+const table = useReactTable({
+  data: data?.data || [],
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  getRowId: (row) => row.id,
+  onRowSelectionChange: setRowSelection,
+  onColumnVisibilityChange: setColumnVisibility,
+  state: {
+    rowSelection,
+    columnVisibility,
+  },
+});
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
   const quickCounts = { submitted: submittedCounts?.invoicesCount ?? 0 } as Partial<Record<'submitted' | 'approved' | 'paid' | 'rejected', number>>;
