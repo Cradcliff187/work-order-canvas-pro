@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
-import { Plus, Download, RotateCcw, Users } from 'lucide-react';
+import { Plus, Download, RotateCcw, Users, Power, Edit } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
@@ -31,6 +31,13 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { exportUsers, exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface UserFilters {
   search?: string;

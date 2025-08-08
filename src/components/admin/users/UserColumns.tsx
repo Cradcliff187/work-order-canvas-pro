@@ -62,6 +62,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
       enableHiding: false,
     },
     {
+      id: "name",
       accessorKey: "first_name",
       header: "Name",
       cell: ({ row }) => {
