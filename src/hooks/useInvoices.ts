@@ -120,7 +120,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
             )
           ),
           attachment_count:invoice_attachments(count)
-        `)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 

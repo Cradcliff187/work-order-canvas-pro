@@ -30,7 +30,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, DollarSign } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
@@ -261,12 +261,14 @@ export default function AdminInvoices() {
     const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
     ids.forEach(id => approveInvoice.mutate({ invoiceId: id }));
     setBulkOpen(false);
+    setRowSelection({});
   };
 
   const handleBulkReject = () => {
     const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
     ids.forEach(id => rejectInvoice.mutate({ invoiceId: id, notes: 'Rejected via bulk action' }));
     setBulkOpen(false);
+    setRowSelection({});
   };
 
   const handleBulkMarkPaid = () => {
@@ -274,6 +276,7 @@ export default function AdminInvoices() {
     const now = new Date();
     ids.forEach(id => markAsPaid.mutate({ invoiceId: id, paymentReference: 'BULK', paymentDate: now }));
     setBulkOpen(false);
+    setRowSelection({});
   };
 
   const handleStatusChange = (status: string[]) => {
@@ -466,29 +469,45 @@ export default function AdminInvoices() {
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => {
                     const invoice = row.original;
-                    
+                    const canApprove = invoice.status === 'submitted';
+                    const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
+
                     return (
-                      <MobileTableCard
+                      <SwipeableListItem
                         key={row.id}
-                        title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
-                        subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • $${invoice.total_amount?.toFixed(2) || '0.00'}`}
-                        status={
-                          <div className="flex flex-col items-end gap-1">
-                            <FinancialStatusBadge status={invoice.status} size="sm" />
-                            {invoice.paid_at && (
-                              <FinancialStatusBadge status="paid" size="sm" />
+                        disabled={!(canApprove || canMarkPaid)}
+                        rightAction={canApprove ? { icon: CheckCircle, label: 'Approve', color: 'success' } : (canMarkPaid ? { icon: DollarSign, label: 'Mark Paid', color: 'success' } : undefined)}
+                        leftAction={canApprove ? { icon: XCircle, label: 'Reject', color: 'destructive', confirmMessage: 'Reject this invoice?' } : undefined}
+                        onSwipeRight={() => {
+                          if (canApprove) {
+                            approveInvoice.mutate({ invoiceId: invoice.id });
+                          } else if (canMarkPaid) {
+                            markAsPaid.mutate({ invoiceId: invoice.id, paymentReference: 'MOBILE', paymentDate: new Date() });
+                          }
+                        }}
+                        onSwipeLeft={canApprove ? () => rejectInvoice.mutate({ invoiceId: invoice.id, notes: 'Rejected via swipe' }) : undefined}
+                      >
+                        <MobileTableCard
+                          title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
+                          subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • $${invoice.total_amount?.toFixed(2) || '0.00'}`}
+                          status={
+                            <div className="flex flex-col items-end gap-1">
+                              <FinancialStatusBadge status={invoice.status} size="sm" />
+                              {invoice.paid_at && (
+                                <FinancialStatusBadge status="paid" size="sm" />
+                              )}
+                            </div>
+                          }
+                          onClick={() => handleViewInvoice(invoice)}
+                        >
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{invoice.invoice_work_orders?.[0]?.work_order?.work_order_number || 'No WO'}</span>
+                            {invoice.submitted_at && (
+                              <span>{format(new Date(invoice.submitted_at), 'MMM d, yyyy')}</span>
                             )}
                           </div>
-                        }
-                        onClick={() => handleViewInvoice(invoice)}
-                      >
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{invoice.invoice_work_orders?.[0]?.work_order?.work_order_number || 'No WO'}</span>
-                          {invoice.submitted_at && (
-                            <span>{format(new Date(invoice.submitted_at), 'MMM d, yyyy')}</span>
-                          )}
-                        </div>
-                      </MobileTableCard>
+                        </MobileTableCard>
+                      </SwipeableListItem>
                     );
                   })
                 ) : (
@@ -546,6 +565,15 @@ export default function AdminInvoices() {
           setModalOpen(false);
           setSelectedInvoice(null);
         }}
+      />
+
+      <BulkEditSheet
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        selectedCount={selectedCount}
+        onApproveSelected={handleBulkApprove}
+        onRejectSelected={handleBulkReject}
+        onMarkPaidSelected={handleBulkMarkPaid}
       />
     </div>
   );
