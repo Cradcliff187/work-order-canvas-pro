@@ -239,7 +239,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Organizations</CardTitle>
           <div className="flex items-center gap-2">
-            <ExportDropdown onExport={handleExport} disabled={filteredOrganizations.length === 0} />
+            <ExportDropdown onExport={handleExport} disabled={isLoading || filteredOrganizations.length === 0} />
             <ColumnVisibilityDropdown
               columns={columnOptions}
               onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
@@ -253,17 +253,23 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={5} />
           ) : filteredOrganizations.length === 0 ? (
-            <EmptyTableState
-              icon={ClipboardList}
-              title="No organizations found"
-              description={(filters.search || typeFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by creating your first organization"}
-              action={{
-                label: "Create Organization",
-                onClick: () => setShowCreateModal(true),
-                icon: Plus
-              }}
-              colSpan={5}
-            />
+            <div className="rounded-md border">
+              <Table className="admin-table">
+                <TableBody>
+                  <EmptyTableState
+                    icon={ClipboardList}
+                    title="No organizations found"
+                    description={(filters.search || typeFilter !== 'all') ? "Try adjusting your search or filters" : "Get started by creating your first organization"}
+                    action={{
+                      label: "Create Organization",
+                      onClick: () => setShowCreateModal(true),
+                      icon: Plus
+                    }}
+                    colSpan={5}
+                  />
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <>
               {/* Table View */}
