@@ -610,7 +610,77 @@ export function useWorkOrderMutations() {
     },
   });
 
-  return { deleteWorkOrder };
+  const bulkUpdateWorkOrders = useMutation({
+    mutationFn: async ({ 
+      workOrderIds, 
+      updates 
+    }: { 
+      workOrderIds: string[]; 
+      updates: Partial<WorkOrderInsert> 
+    }) => {
+      // Perform bulk update
+      const { data, error } = await supabase
+        .from('work_orders')
+        .update(updates)
+        .in('id', workOrderIds)
+        .select();
+
+      if (error) throw new Error(error.message);
+      return { data, updatedCount: workOrderIds.length };
+    },
+    onMutate: async ({ workOrderIds, updates }) => {
+      // Cancel outgoing queries
+      await queryClient.cancelQueries({ queryKey: ['work-orders'] });
+      await queryClient.cancelQueries({ queryKey: ['organization-work-orders'] });
+      
+      // Get previous data for rollback
+      const previousWorkOrders = queryClient.getQueryData(['work-orders']);
+      const previousOrgWorkOrders = queryClient.getQueryData(['organization-work-orders']);
+      
+      // Optimistically update work orders in cache
+      queryClient.setQueriesData({ queryKey: ['work-orders'] }, (oldData: any) => {
+        if (!oldData?.data) return oldData;
+        
+        return {
+          ...oldData,
+          data: oldData.data.map((wo: any) => 
+            workOrderIds.includes(wo.id) 
+              ? { ...wo, ...updates, updated_at: new Date().toISOString() }
+              : wo
+          )
+        };
+      });
+      
+      return { previousWorkOrders, previousOrgWorkOrders };
+    },
+    onSuccess: (result) => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-work-orders'] });
+      
+      toast({
+        title: 'Success',
+        description: `Successfully updated ${result.updatedCount} work order${result.updatedCount > 1 ? 's' : ''}`,
+      });
+    },
+    onError: (error: any, { workOrderIds }, context) => {
+      // Rollback optimistic updates
+      if (context?.previousWorkOrders) {
+        queryClient.setQueryData(['work-orders'], context.previousWorkOrders);
+      }
+      if (context?.previousOrgWorkOrders) {
+        queryClient.setQueryData(['organization-work-orders'], context.previousOrgWorkOrders);
+      }
+      
+      toast({
+        variant: 'destructive',
+        title: 'Bulk Update Failed',
+        description: error.message || 'Failed to update work orders. Please try again.',
+      });
+    },
+  });
+
+  return { deleteWorkOrder, bulkUpdateWorkOrders };
 }
 
 // Helper function to remove work order from cache

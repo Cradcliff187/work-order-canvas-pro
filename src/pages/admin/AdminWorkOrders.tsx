@@ -201,7 +201,7 @@ export default function AdminWorkOrders() {
     combinedFilters
   );
 
-  const { deleteWorkOrder } = useWorkOrderMutations();
+  const { deleteWorkOrder, bulkUpdateWorkOrders } = useWorkOrderMutations();
   const { transitionStatus } = useWorkOrderStatusTransitions();
 
   // Track status updates for visual feedback
@@ -529,9 +529,15 @@ export default function AdminWorkOrders() {
           setBulkEditWorkOrders([]);
         }}
         workOrders={bulkEditWorkOrders}
-        onSave={async () => {
-          // TODO: Implement bulk save functionality
-          console.log('Bulk save not implemented yet');
+        onSave={async (changes) => {
+          const workOrderIds = bulkEditWorkOrders.map(wo => wo.id);
+          await bulkUpdateWorkOrders.mutateAsync({ 
+            workOrderIds, 
+            updates: changes 
+          });
+          setShowBulkEditModal(false);
+          setBulkEditWorkOrders([]);
+          setRowSelection({});
         }}
       />
 
