@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { Plus, RotateCcw, Users, Power, Edit } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -128,7 +128,7 @@ export default function AdminUsers() {
     resetToDefaults,
     getAllColumns,
     getVisibleColumnCount,
-  } = useColumnVisibility({ storageKey: 'admin-users-columns', columnMetadata });
+  } = useColumnVisibility({ storageKey: 'admin-users-columns-v1', columnMetadata, legacyKeys: ['admin-users-columns'] });
 
   const isFiltered = Boolean(filters.search || filters.roleFilter || filters.status || filters.organizationId);
 
@@ -192,6 +192,7 @@ export default function AdminUsers() {
       rowSelection,
       columnVisibility,
     },
+    getRowId: (row: any) => row.id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
@@ -364,7 +365,7 @@ export default function AdminUsers() {
             </Select>
           </div>
           {isLoading ? (
-            <TableSkeleton rows={5} columns={6} />
+            <EnhancedTableSkeleton rows={5} columns={6} />
           ) : !users || users.length === 0 ? (
             <EmptyState
               icon={Users}

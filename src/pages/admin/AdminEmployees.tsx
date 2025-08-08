@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { AddEmployeeModal } from '@/components/admin/employees/AddEmployeeModal';
 import { EditEmployeeRatesModal } from '@/components/admin/employees/EditEmployeeRatesModal';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
@@ -12,7 +12,7 @@ import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEmployees, useEmployeeMutations, formatCurrency, Employee } from '@/hooks/useEmployees';
-import { Users, UserPlus, Search, DollarSign, Edit, UserCheck, Power, TrendingUp } from 'lucide-react';
+import { Users, UserPlus, Search, DollarSign, Edit, UserCheck, Power, TrendingUp, RotateCcw } from 'lucide-react';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
@@ -44,7 +44,7 @@ export default function AdminEmployees() {
       localStorage.setItem('admin-employees-filters-v1', JSON.stringify({ activeFilter }));
     } catch {}
   }, [activeFilter]);
-  const { data, isLoading, refetch } = useEmployees();
+  const { data, isLoading, error, refetch } = useEmployees();
   const { toggleEmployeeStatus } = useEmployeeMutations();
 
   // Column visibility
@@ -60,6 +60,7 @@ export default function AdminEmployees() {
   const { columnVisibility, toggleColumn, resetToDefaults } = useColumnVisibility({
     storageKey: 'admin-employees-columns-v1',
     columnMetadata: columnMetadata as any,
+    legacyKeys: ['admin-employees-columns']
   });
 
   const columnOptions = (Object.keys(columnMetadata) as Array<keyof typeof columnMetadata>).map((id) => ({
@@ -121,8 +122,32 @@ export default function AdminEmployees() {
     }
   };
 
-  if (isLoading) {
-    return <LoadingSpinner />;
+  if (error) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <p className="text-destructive">Error loading employees: {String((error as any)?.message || error)}</p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  } else if (isLoading) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent>
+            <EnhancedTableSkeleton rows={8} columns={6} />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
