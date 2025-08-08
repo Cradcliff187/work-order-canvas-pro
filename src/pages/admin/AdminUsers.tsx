@@ -35,7 +35,7 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
-import { exportUsers, exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -79,7 +79,65 @@ export default function AdminUsers() {
 
   // Fetch data
   const { data: users, isLoading, error, refetch } = useUsers();
-  const { deleteUser } = useUserMutations();
+  const { deleteUser, updateUser } = useUserMutations();
+
+  // Column visibility metadata and state
+  const columnMetadata = {
+    select: { label: 'Select', defaultVisible: true },
+    name: { label: 'Name', defaultVisible: true },
+    email: { label: 'Email', defaultVisible: true },
+    user_role: { label: 'Role', defaultVisible: true },
+    user_organization: { label: 'Organizations', defaultVisible: true },
+    is_active: { label: 'Status', defaultVisible: true },
+    last_login: { label: 'Last Login', defaultVisible: true },
+    created_at: { label: 'Created', defaultVisible: true },
+    actions: { label: 'Actions', defaultVisible: true },
+  } as const;
+
+  const {
+    columnVisibility,
+    setColumnVisibility,
+    toggleColumn,
+    resetToDefaults,
+    getAllColumns,
+    getVisibleColumnCount,
+  } = useColumnVisibility({ storageKey: 'admin-users-columns', columnMetadata });
+
+  const isFiltered = Boolean(filters.search || filters.roleFilter || filters.status || filters.organizationId);
+
+  // Client-side filtered users
+  const filteredUsers = useMemo(() => {
+    if (!users) return [] as User[];
+    const q = (filters.search || '').toLowerCase().trim();
+    return users.filter((u) => {
+      const role = (u as any).organization_members?.[0]?.role || '';
+      const orgNames = ((u as any).organization_members || [])
+        .map((m: any) => m.organization?.name || '')
+        .join(' ');
+      const haystack = `${u.first_name || ''} ${u.last_name || ''} ${u.email || ''} ${(u as any).phone || ''} ${orgNames}`.toLowerCase();
+
+      const matchesSearch = q ? haystack.includes(q) : true;
+      const matchesRole = filters.roleFilter ? role === filters.roleFilter : true;
+      const matchesStatus = filters.status ? (filters.status === 'active' ? (u as any).is_active : !(u as any).is_active) : true;
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, filters]);
+
+  const visibilityOptions = getAllColumns().map((c) => ({
+    ...c,
+    canHide: c.id !== 'select' && c.id !== 'actions',
+  }));
+
+  const exportColumns: ExportColumn[] = [
+    { key: 'first_name', label: 'First Name', type: 'string' },
+    { key: 'last_name', label: 'Last Name', type: 'string' },
+    { key: 'email', label: 'Email', type: 'string' },
+    { key: 'is_active', label: 'Active', type: 'boolean' },
+    { key: 'organization_members.0.role', label: 'Primary Role', type: 'string' },
+    { key: 'organization_members.0.organization.name', label: 'Primary Organization', type: 'string' },
+    { key: 'organization_members.0.organization.organization_type', label: 'Org Type', type: 'string' },
+    { key: 'created_at', label: 'Created Date', type: 'date' },
+  ];
 
   // Column definitions with action handlers
   const columns = useMemo(() => createUserColumns({
@@ -97,21 +155,21 @@ export default function AdminUsers() {
       }
     },
   }), [deleteUser]);
-
-  // React Table configuration
   const table = useReactTable({
-    data: users || [],
+    data: filteredUsers || [],
     columns,
-    pageCount: Math.ceil((users?.length || 0) / pagination.pageSize),
+    pageCount: Math.ceil((filteredUsers?.length || 0) / pagination.pageSize),
     state: {
       pagination,
       sorting,
       rowSelection,
+      columnVisibility,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
