@@ -3,7 +3,7 @@ import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2 } from 'lucide-re
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +15,11 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { usePartnerLocationMutations } from '@/hooks/usePartnerLocations';
 import { toast } from 'sonner';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 
 export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,6 +73,55 @@ export default function AdminPartnerLocations() {
     })).filter(item => item.count > 0)
   };
 
+  // Column visibility setup
+  const columnMetadata = {
+    organization: { label: 'Organization', defaultVisible: true },
+    location_name: { label: 'Location', defaultVisible: true },
+    location_number: { label: 'Number', defaultVisible: true },
+    address: { label: 'Address', defaultVisible: true },
+    contact: { label: 'Contact', defaultVisible: true },
+    status: { label: 'Status', defaultVisible: true },
+    actions: { label: 'Actions', defaultVisible: true },
+  } as const;
+
+  const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
+    storageKey: 'admin-partner-locations-columns',
+    columnMetadata: columnMetadata as any,
+  });
+
+  const columnOptions = getAllColumns().map((c) => ({
+    ...c,
+    canHide: c.id !== 'actions',
+  }));
+
+  // Export
+  const exportColumns: ExportColumn[] = [
+    { key: 'organization_name', label: 'Organization', type: 'string' },
+    { key: 'location_name', label: 'Location', type: 'string' },
+    { key: 'location_number', label: 'Number', type: 'string' },
+    { key: 'street_address', label: 'Street', type: 'string' },
+    { key: 'city', label: 'City', type: 'string' },
+    { key: 'state', label: 'State', type: 'string' },
+    { key: 'zip_code', label: 'ZIP', type: 'string' },
+    { key: 'contact_name', label: 'Contact Name', type: 'string' },
+    { key: 'contact_email', label: 'Contact Email', type: 'string' },
+    { key: 'is_active', label: 'Active', type: 'boolean' },
+  ];
+
+  const handleExport = (format: 'csv' | 'excel') => {
+    const rows = filteredLocations.map((loc) => ({
+      ...loc,
+      organization_name: organizationMap[loc.organization_id]?.name || '',
+    }));
+    if (rows.length === 0) return;
+    const filename = generateFilename('partner-locations', format === 'excel' ? 'xlsx' : 'csv');
+    if (format === 'excel') {
+      exportToExcel(rows, exportColumns, filename);
+    } else {
+      exportToCSV(rows, exportColumns, filename);
+    }
+  };
+
   const handleDeleteLocation = async () => {
     if (!deletingLocation) return;
     
@@ -78,7 +132,6 @@ export default function AdminPartnerLocations() {
       toast.error('Failed to delete location');
     }
   };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -151,13 +204,14 @@ export default function AdminPartnerLocations() {
         <CardContent className="p-6">
           <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
+              <div className="relative" role="search">
+                <SmartSearchInput
                   placeholder="Search locations, organizations, or cities..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  onSearchSubmit={(q) => setSearchTerm(q)}
+                  storageKey="admin-partner-locations-search"
+                  aria-label="Search partner locations"
                 />
               </div>
             </div>
@@ -195,8 +249,18 @@ export default function AdminPartnerLocations() {
 
       {/* Locations Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>Locations ({filteredLocations.length})</CardTitle>
+          <div className="flex items-center gap-2">
+            <ExportDropdown onExport={handleExport} variant="outline" size="sm" disabled={filteredLocations.length === 0} />
+            <ColumnVisibilityDropdown
+              columns={columnOptions}
+              onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
+              onResetToDefaults={resetToDefaults}
+              variant="outline"
+              size="sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {/* Desktop Table */}
@@ -204,13 +268,27 @@ export default function AdminPartnerLocations() {
             <Table className="admin-table">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Number</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {(columnVisibility as any).organization !== false && (
+                    <TableHead>Organization</TableHead>
+                  )}
+                  {(columnVisibility as any).location_name !== false && (
+                    <TableHead>Location</TableHead>
+                  )}
+                  {(columnVisibility as any).location_number !== false && (
+                    <TableHead>Number</TableHead>
+                  )}
+                  {(columnVisibility as any).address !== false && (
+                    <TableHead>Address</TableHead>
+                  )}
+                  {(columnVisibility as any).contact !== false && (
+                    <TableHead>Contact</TableHead>
+                  )}
+                  {(columnVisibility as any).status !== false && (
+                    <TableHead>Status</TableHead>
+                  )}
+                  {(columnVisibility as any).actions !== false && (
+                    <TableHead className="text-right">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
