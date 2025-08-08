@@ -78,6 +78,32 @@ export function ColumnVisibilityDropdown({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            hideableColumns.forEach((c) => {
+              if (!c.visible) onToggleColumn(c.id);
+            });
+          }}
+        >
+          <Eye className="h-3 w-3 mr-2 text-muted-foreground" />
+          Show all
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            hideableColumns.forEach((c) => {
+              if (c.visible) onToggleColumn(c.id);
+            });
+          }}
+        >
+          <EyeOff className="h-3 w-3 mr-2 text-muted-foreground" />
+          Hide all
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        
         {hideableColumns.map((column) => (
           <DropdownMenuItem
             key={column.id}

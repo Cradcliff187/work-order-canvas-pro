@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 
 import { ExecutiveSummary } from '@/components/admin/dashboard/ExecutiveSummary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 
 const COLORS = {
   received: 'hsl(var(--primary))',
@@ -44,6 +45,16 @@ const AdminDashboard = () => {
     isLoading,
     isError
   } = useAdminDashboard();
+
+  const [search, setSearch] = React.useState('');
+  const workOrderSuggestions = React.useMemo(
+    () => (recentWorkOrders ?? []).map((wo) => ({
+      id: wo.id,
+      label: wo.work_order_number || wo.title,
+      subtitle: wo.title,
+    })),
+    [recentWorkOrders]
+  );
 
   const navigateToInvoices = (filter?: string) => {
     const params = new URLSearchParams();
@@ -74,6 +85,26 @@ const AdminDashboard = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
         <p className="text-muted-foreground">Monitor system performance and manage work orders</p>
+      </div>
+
+      <div className="mb-6 space-y-3" role="search">
+        <SmartSearchInput
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search work orders, assignees, locations..."
+          storageKey="admin-dashboard-search-recents"
+          workOrders={workOrderSuggestions}
+          onSearchSubmit={(q) => navigate(`/admin/work-orders?search=${encodeURIComponent(q)}`)}
+          onSelectSuggestion={(item) => {
+            navigate(`/admin/work-orders?search=${encodeURIComponent(item.label)}`)
+          }}
+        />
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" aria-label="Quick filters">
+          <Button variant="outline" size="sm" onClick={() => navigate('/admin/work-orders?preset=my')}>My Orders</Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/admin/work-orders?preset=urgent')}>Urgent</Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/admin/work-orders?preset=today')}>Today</Button>
+          <Button variant="ghost" size="sm" onClick={() => setSearch('')}>Clear</Button>
+        </div>
       </div>
 
       <Tabs defaultValue="executive" className="w-full">
