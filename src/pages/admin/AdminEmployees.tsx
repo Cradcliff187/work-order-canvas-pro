@@ -17,6 +17,8 @@ import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 
 export default function AdminEmployees() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,7 +28,29 @@ export default function AdminEmployees() {
 
   const { data, isLoading, refetch } = useEmployees();
   const { toggleEmployeeStatus } = useEmployeeMutations();
-  const isMobile = useIsMobile();
+
+  // Column visibility
+  const columnMetadata = {
+    employee_name: { label: 'Name', description: 'First and last name', defaultVisible: true },
+    email: { label: 'Email', defaultVisible: true },
+    hourly_cost_rate: { label: 'Cost Rate', description: 'Internal cost/hr', defaultVisible: true },
+    hourly_billable_rate: { label: 'Billable Rate', description: 'Billable/hr', defaultVisible: true },
+    status: { label: 'Status', defaultVisible: true },
+    actions: { label: 'Actions', defaultVisible: true },
+  } as const;
+
+  const { columnVisibility, toggleColumn, resetToDefaults } = useColumnVisibility({
+    storageKey: 'admin-employees-columns-v1',
+    columnMetadata: columnMetadata as any,
+  });
+
+  const columnOptions = (Object.keys(columnMetadata) as Array<keyof typeof columnMetadata>).map((id) => ({
+    id: id as string,
+    label: columnMetadata[id].label,
+    description: (columnMetadata as any)[id]?.description,
+    visible: (columnVisibility as any)[id] ?? true,
+    canHide: id !== 'actions',
+  }));
 
   const filteredEmployees = useMemo(() => {
     if (!data?.employees) return [];
@@ -185,7 +209,7 @@ export default function AdminEmployees() {
               />
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <Button
                 variant={activeFilter === 'all' ? 'default' : 'outline'}
                 size="sm"
@@ -207,6 +231,13 @@ export default function AdminEmployees() {
               >
                 Inactive ({data?.inactiveCount || 0})
               </Button>
+              <ColumnVisibilityDropdown 
+                columns={columnOptions}
+                onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
+                onResetToDefaults={resetToDefaults}
+                variant="outline"
+                size="sm"
+              />
             </div>
           </div>
 
@@ -229,11 +260,21 @@ export default function AdminEmployees() {
                 <Table className="admin-table">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Cost Rate</TableHead>
-                      <TableHead>Billable Rate</TableHead>
-                      <TableHead>Status</TableHead>
+                      {(columnVisibility as any).employee_name !== false && (
+                        <TableHead>Name</TableHead>
+                      )}
+                      {(columnVisibility as any).email !== false && (
+                        <TableHead>Email</TableHead>
+                      )}
+                      {(columnVisibility as any).hourly_cost_rate !== false && (
+                        <TableHead>Cost Rate</TableHead>
+                      )}
+                      {(columnVisibility as any).hourly_billable_rate !== false && (
+                        <TableHead>Billable Rate</TableHead>
+                      )}
+                      {(columnVisibility as any).status !== false && (
+                        <TableHead>Status</TableHead>
+                      )}
                       <TableHead className="w-[70px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -255,50 +296,60 @@ export default function AdminEmployees() {
                           setEditRatesEmployee(employee);
                         }}
                       >
-                        <TableCell className="font-medium">
-                          {employee.first_name} {employee.last_name}
+                        {(columnVisibility as any).employee_name !== false && (
+                          <TableCell className="font-medium">
+                            {employee.first_name} {employee.last_name}
+                          </TableCell>
+                        )}
+                        {(columnVisibility as any).email !== false && (
+                          <TableCell>{employee.email}</TableCell>
+                        )}
+                        {(columnVisibility as any).hourly_cost_rate !== false && (
+                          <TableCell>
+                            <span className="font-mono text-sm">
+                              {formatCurrency(employee.hourly_cost_rate)}
+                            </span>
+                          </TableCell>
+                        )}
+                        {(columnVisibility as any).hourly_billable_rate !== false && (
+                          <TableCell>
+                            <span className="font-mono text-sm">
+                              {formatCurrency(employee.hourly_billable_rate)}
+                            </span>
+                          </TableCell>
+                        )}
+                        {(columnVisibility as any).status !== false && (
+                          <TableCell>
+                            <Badge 
+                              variant={employee.is_active ? 'default' : 'secondary'}
+                              className="h-5 text-[10px] px-1.5"
+                            >
+                              {employee.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <TableActionsDropdown
+                            itemName={`${employee.first_name} ${employee.last_name}`}
+                            actions={[
+                              {
+                                label: 'Edit Rates',
+                                icon: Edit,
+                                onClick: () => {
+                                  setEditRatesEmployee(employee);
+                                },
+                              },
+                              {
+                                label: employee.is_active ? 'Deactivate' : 'Activate',
+                                icon: Power,
+                                onClick: () => {
+                                  handleToggleStatus(employee.id, employee.is_active);
+                                },
+                                variant: employee.is_active ? 'destructive' : 'default',
+                              },
+                            ]}
+                          />
                         </TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>
-                          <span className="font-mono text-sm">
-                            {formatCurrency(employee.hourly_cost_rate)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-sm">
-                            {formatCurrency(employee.hourly_billable_rate)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={employee.is_active ? 'default' : 'secondary'}
-                            className="h-5 text-[10px] px-1.5"
-                          >
-                            {employee.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                         <TableCell onClick={(e) => e.stopPropagation()}>
-                           <TableActionsDropdown
-                             itemName={`${employee.first_name} ${employee.last_name}`}
-                             actions={[
-                               {
-                                 label: 'Edit Rates',
-                                 icon: Edit,
-                                 onClick: () => {
-                                   setEditRatesEmployee(employee);
-                                 },
-                               },
-                               {
-                                 label: employee.is_active ? 'Deactivate' : 'Activate',
-                                 icon: Power,
-                                 onClick: () => {
-                                   handleToggleStatus(employee.id, employee.is_active);
-                                 },
-                                 variant: employee.is_active ? 'destructive' : 'default',
-                               },
-                             ]}
-                           />
-                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -308,29 +359,43 @@ export default function AdminEmployees() {
               {/* Mobile Cards */}
               <div className="block lg:hidden space-y-3">
                 {filteredEmployees.map((employee) => (
-                  <MobileTableCard
+                  <SwipeableListItem
                     key={employee.id}
-                    title={`${employee.first_name} ${employee.last_name}`}
-                    subtitle={employee.email}
-                    status={
-                      <Badge 
-                        variant={employee.is_active ? 'default' : 'secondary'}
-                        className="h-5 text-[10px] px-1.5"
-                      >
-                        {employee.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    }
-                    onClick={() => setEditRatesEmployee(employee)}
+                    rightAction={{
+                      icon: Power,
+                      label: employee.is_active ? 'Deactivate' : 'Activate',
+                      color: employee.is_active ? 'destructive' : 'success',
+                      confirmMessage: employee.is_active ? 'Deactivate this employee?' : undefined,
+                    }}
+                    leftAction={{ icon: Edit, label: 'Edit Rates', color: 'default' }}
+                    onSwipeRight={() => handleToggleStatus(employee.id, employee.is_active)}
+                    onSwipeLeft={() => setEditRatesEmployee(employee)}
+                    itemName={`${employee.first_name} ${employee.last_name}`}
+                    itemType="employee"
                   >
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Cost Rate:</span>
-                      <span className="font-mono">{formatCurrency(employee.hourly_cost_rate)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Billable Rate:</span>
-                      <span className="font-mono">{formatCurrency(employee.hourly_billable_rate)}</span>
-                    </div>
-                  </MobileTableCard>
+                    <MobileTableCard
+                      title={`${employee.first_name} ${employee.last_name}`}
+                      subtitle={employee.email}
+                      status={
+                        <Badge 
+                          variant={employee.is_active ? 'default' : 'secondary'}
+                          className="h-5 text-[10px] px-1.5"
+                        >
+                          {employee.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      }
+                      onClick={() => setEditRatesEmployee(employee)}
+                    >
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Cost Rate:</span>
+                        <span className="font-mono">{formatCurrency(employee.hourly_cost_rate)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Billable Rate:</span>
+                        <span className="font-mono">{formatCurrency(employee.hourly_billable_rate)}</span>
+                      </div>
+                    </MobileTableCard>
+                  </SwipeableListItem>
                 ))}
               </div>
             </>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,9 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from "@/components/ui/input"
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Edit, Trash2, RotateCcw, ClipboardList } from 'lucide-react';
+import { Plus, Edit, RotateCcw, ClipboardList, Power } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
@@ -30,6 +29,12 @@ import { EditOrganizationModal } from '@/components/admin/organizations/EditOrga
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOrganizations, useCreateOrganization, useUpdateOrganization, type Organization } from '@/hooks/useOrganizations';
 import { useToast } from '@/hooks/use-toast';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 
 interface OrganizationFilters {
   search?: string;
