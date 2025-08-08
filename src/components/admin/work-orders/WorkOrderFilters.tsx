@@ -1,7 +1,7 @@
 
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { useAllAssignees } from '@/hooks/useEmployeesForAssignment';
 
 interface WorkOrderFiltersProps {
   filters: {
@@ -83,6 +84,27 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     },
     enabled: shouldShowSelector,
   });
+
+  // Suggestion sources
+  const { data: woSuggestionSource } = useQuery({
+    queryKey: ['work-order-suggestions', filters.organization_id],
+    queryFn: async () => {
+      let query = supabase
+        .from('work_orders')
+        .select('id, work_order_number, store_location')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (filters.organization_id) {
+        query = query.eq('organization_id', filters.organization_id);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { employees } = useAllAssignees();
+
   const [dateFrom, setDateFrom] = useState<Date | undefined>(
     filters.date_from ? new Date(filters.date_from) : undefined
   );
@@ -116,13 +138,30 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
       <label htmlFor="work-order-search" className="text-sm font-medium text-foreground">Search</label>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" aria-hidden="true" />
-        <Input
+        <SmartSearchInput
           id="work-order-search"
           placeholder="Search WO#, title, or location..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10 h-10"
           aria-label="Search work orders by number, title, or location"
+          storageKey="work-orders-filters-search"
+          workOrders={(woSuggestionSource || []).map((wo: any) => ({
+            id: wo.id,
+            label: wo.work_order_number || '',
+            subtitle: wo.store_location || undefined,
+          }))}
+          assignees={(employees || []).map((emp) => ({
+            id: emp.id,
+            label: [emp.first_name, emp.last_name].filter(Boolean).join(' '),
+            subtitle: emp.organization,
+          }))}
+          locations={(Array.isArray(locations) ? locations : []).map((loc: string) => ({
+            id: `loc-${loc}`,
+            label: loc,
+          }))}
+          onSearchSubmit={(q) => onSearchChange(q)}
+          onSelectSuggestion={(item) => onSearchChange(item.label)}
         />
       </div>
     </div>
