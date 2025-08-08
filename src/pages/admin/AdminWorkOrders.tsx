@@ -30,6 +30,7 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
+import { QuickFiltersBar } from '@/components/admin/work-orders/QuickFiltersBar';
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -39,6 +40,10 @@ interface WorkOrderFiltersState {
   date_from?: string;
   date_to?: string;
   location_filter?: string[];
+  assigned_to_user?: string;
+  unassigned?: boolean;
+  overdue?: boolean;
+  created_today?: boolean;
 }
 
 export default function AdminWorkOrders() {
@@ -63,6 +68,7 @@ export default function AdminWorkOrders() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<WorkOrderFiltersState>({});
+  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignmentWorkOrders, setAssignmentWorkOrders] = useState<WorkOrder[]>([]);
@@ -132,6 +138,49 @@ export default function AdminWorkOrders() {
     sortBy: sorting.map(sort => ({ id: sort.id, desc: sort.desc }))
   }), [sorting]);
 
+  // Helper function to map quick filters to actual filter values
+  const mapQuickFiltersToState = (activeFilters: string[], profile: any): Partial<WorkOrderFiltersState> => {
+    const quickFilterState: Partial<WorkOrderFiltersState> = {};
+    
+    activeFilters.forEach(filterId => {
+      switch (filterId) {
+        case 'my-orders':
+          if (profile?.id) {
+            quickFilterState.assigned_to_user = profile.id;
+          }
+          break;
+        case 'urgent':
+          // Map to estimate_needed status as urgent approximation
+          quickFilterState.status = [...(quickFilterState.status || []), 'estimate_needed'];
+          break;
+        case 'overdue':
+          quickFilterState.overdue = true;
+          break;
+        case 'unassigned':
+          quickFilterState.unassigned = true;
+          break;
+        case 'today':
+          quickFilterState.created_today = true;
+          break;
+      }
+    });
+    
+    return quickFilterState;
+  };
+
+  // Combine quick filters with regular filters
+  const combinedFilters = useMemo(() => {
+    const quickFilterState = mapQuickFiltersToState(activeQuickFilters, profile);
+    
+    return {
+      ...filters,
+      ...quickFilterState,
+      search: debouncedSearchTerm || undefined,
+      // Merge status arrays if both exist
+      status: [...(filters.status || []), ...(quickFilterState.status || [])].filter((v, i, a) => a.indexOf(v) === i)
+    };
+  }, [filters, activeQuickFilters, profile, debouncedSearchTerm]);
+
   // Update filters when debounced search term changes
   useEffect(() => {
     setFilters(prev => ({
@@ -144,7 +193,7 @@ export default function AdminWorkOrders() {
   const { data: workOrdersData, isLoading, error, refetch, isFetching, isRefetching } = useWorkOrders(
     pagination,
     sortingFormatted,
-    filters
+    combinedFilters
   );
 
   const { deleteWorkOrder } = useWorkOrderMutations();
@@ -215,7 +264,17 @@ export default function AdminWorkOrders() {
   const handleClearFilters = () => {
     setSearchTerm('');
     setFilters({});
+    setActiveQuickFilters([]);
     setRowSelection({});
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  };
+
+  const handleQuickFilterToggle = (preset: string) => {
+    setActiveQuickFilters(prev => 
+      prev.includes(preset) 
+        ? prev.filter(p => p !== preset)
+        : [...prev, preset]
+    );
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
@@ -361,6 +420,12 @@ export default function AdminWorkOrders() {
           </Button>
         </div>
       </header>
+
+      {/* Quick Filters */}
+      <QuickFiltersBar
+        activePresets={activeQuickFilters}
+        onTogglePreset={handleQuickFilterToggle}
+      />
 
       {/* Filters */}
       <section className="flex flex-col lg:flex-row gap-4" role="search" aria-label="Work order filters">

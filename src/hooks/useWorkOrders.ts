@@ -109,6 +109,10 @@ interface WorkOrderFilters {
   date_from?: string;
   date_to?: string;
   location_filter?: string[];
+  assigned_to_user?: string;
+  unassigned?: boolean;
+  overdue?: boolean;
+  created_today?: boolean;
 }
 
 export function useWorkOrders(
@@ -213,6 +217,31 @@ export function useWorkOrders(
         }
         if (filters.date_to) {
           query = query.lte('created_at', filters.date_to);
+        }
+        
+        // Quick filter: My Orders - filter by assigned user
+        if (filters.assigned_to_user) {
+          query = query.or(`work_order_assignments.assigned_to.eq.${filters.assigned_to_user}`);
+        }
+        
+        // Quick filter: Unassigned - no assignments
+        if (filters.unassigned) {
+          query = query.is('work_order_assignments.assigned_to', null);
+        }
+        
+        // Quick filter: Overdue - work orders past due date and not completed
+        if (filters.overdue) {
+          const today = new Date().toISOString().split('T')[0];
+          query = query
+            .lt('estimated_completion_date', today)
+            .not('status', 'in', ['completed', 'cancelled']);
+        }
+        
+        // Quick filter: Today - work orders created today
+        if (filters.created_today) {
+          const today = new Date().toISOString().split('T')[0];
+          const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          query = query.gte('created_at', today).lt('created_at', tomorrow);
         }
       }
 
