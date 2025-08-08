@@ -35,6 +35,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/utils/formatting';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
@@ -528,7 +529,7 @@ const table = useReactTable({
                       >
                         <MobileTableCard
                           title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
-                          subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • $${invoice.total_amount?.toFixed(2) || '0.00'}`}
+                          subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • ${formatCurrency(Number(invoice.total_amount), true)}`}
                           status={
                             <div className="flex flex-col items-end gap-1">
                               <FinancialStatusBadge status={invoice.status} size="sm" />
@@ -550,12 +551,13 @@ const table = useReactTable({
                     );
                   })
                 ) : (
-                  <EmptyTableState
-                    icon={FileText}
-                    title="No invoices found"
-                    description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Invoices will appear here when subcontractors submit them"}
-                    colSpan={1}
-                  />
+                  <div className="rounded-md border p-6 text-center text-muted-foreground">
+                    <FileText className="mx-auto h-8 w-8 mb-2 opacity-60" />
+                    <div className="font-medium">No invoices found</div>
+                    <div className="text-sm">
+                      {filters.status.length > 0 || filters.paymentStatus || filters.search ? 'Try adjusting your filters or search criteria' : 'Invoices will appear here when subcontractors submit them'}
+                    </div>
+                  </div>
                 )}
               </div>
 

@@ -150,13 +150,21 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         throw error;
       }
 
-      // Transform attachment count from array to number
-      const transformedData = data?.map(invoice => ({
-        ...invoice,
-        attachment_count: Array.isArray(invoice.attachment_count) 
-          ? (invoice.attachment_count[0]?.count || 0)
-          : (invoice.attachment_count || 0)
-      })) || [];
+      // Transform attachment count and coerce numeric fields to numbers
+      const transformedData = (data || []).map((invoice) => {
+        const normalizeNumber = (v: any) => (typeof v === 'string' ? parseFloat(v) : (typeof v === 'number' ? v : 0));
+        return {
+          ...invoice,
+          attachment_count: Array.isArray(invoice.attachment_count) 
+            ? (invoice.attachment_count[0]?.count || 0)
+            : (invoice.attachment_count || 0),
+          total_amount: normalizeNumber((invoice as any).total_amount),
+          invoice_work_orders: (invoice as any).invoice_work_orders?.map((item: any) => ({
+            ...item,
+            amount: normalizeNumber(item.amount),
+          })) || [],
+        };
+      });
 
       return {
         data: transformedData as Invoice[],

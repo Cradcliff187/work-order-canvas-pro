@@ -126,7 +126,8 @@ export const createInvoiceColumns = ({
     accessorKey: 'total_amount',
     header: 'Amount',
     cell: ({ row }) => {
-      const amount = row.getValue('total_amount') as number;
+      const raw = row.getValue('total_amount') as any;
+      const amount = typeof raw === 'number' ? raw : parseFloat(raw || '0');
       return (
         <div className="font-mono font-medium text-right">
           {formatCurrency(amount, true)}

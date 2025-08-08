@@ -46,6 +46,7 @@ import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { formatFileSize } from '@/utils/fileUtils';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency } from '@/utils/formatting';
 
 interface InvoiceDetailModalProps {
   invoice: Invoice | null;
@@ -196,9 +197,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <Label className="text-sm font-semibold text-muted-foreground">
                     Total Amount
                   </Label>
-                  <div className="mt-1 text-2xl font-bold">
-                    ${invoice.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </div>
+                  <div className="mt-1 text-2xl font-bold">{formatCurrency(Number(invoice.total_amount), true)}</div>
                 </div>
 
                 <div>
@@ -365,7 +364,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                       </TableCell>
                       <TableCell>{item.work_order.title}</TableCell>
                       <TableCell>
-                        ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {formatCurrency(Number(item.amount), true)}
                       </TableCell>
                       <TableCell>{item.description || '—'}</TableCell>
                     </TableRow>
