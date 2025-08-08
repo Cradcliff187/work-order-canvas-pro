@@ -1,13 +1,13 @@
 
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   getFilteredRowModel,
-  ColumnDef,
+  
   flexRender,
   PaginationState,
   SortingState,
@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
-import { Plus, Download, RotateCcw, Users, Power, Edit } from 'lucide-react';
+import { Plus, RotateCcw, Users, Power, Edit } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useUsers, useUserMutations, User } from '@/hooks/useUsers';
@@ -48,7 +48,7 @@ interface UserFilters {
 
 export default function AdminUsers() {
   const { toast } = useToast();
-  const navigate = useNavigate();
+  
   
   // View mode configuration
   const { viewMode, setViewMode, allowedModes } = useViewMode({
@@ -194,6 +194,28 @@ export default function AdminUsers() {
     setRowSelection({});
   };
 
+  const handleExport = (format: 'csv' | 'excel') => {
+    try {
+      const data = filteredUsers || [];
+      if (!data.length) {
+        toast({
+          variant: 'destructive',
+          title: 'Nothing to export',
+          description: 'No users match the current filters.',
+        });
+        return;
+      }
+      const filename = generateFilename('users', format === 'excel' ? 'xlsx' : 'csv');
+      if (format === 'excel') {
+        exportToExcel(data, exportColumns, filename);
+      } else {
+        exportToCSV(data, exportColumns, filename);
+      }
+      toast({ title: 'Export started', description: `Downloading ${format.toUpperCase()} file...` });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Export failed', description: err?.message || 'Please try again.' });
+    }
+  };
 
   if (error) {
     return (
@@ -223,7 +245,11 @@ export default function AdminUsers() {
         <div>
           <h1 className="text-2xl font-bold">User Management</h1>
           <p className="text-muted-foreground">
-            {users?.length ? `${users.length} total users` : 'Manage system users and their access'}
+            {users?.length
+              ? (isFiltered
+                  ? `${filteredUsers.length} matching of ${users.length}`
+                  : `${users.length} total users`)
+              : 'Manage system users and their access'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -244,17 +270,72 @@ export default function AdminUsers() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Users</CardTitle>
           <div className="flex items-center gap-2">
+            <ColumnVisibilityDropdown
+              columns={visibilityOptions}
+              onToggleColumn={toggleColumn}
+              onResetToDefaults={resetToDefaults}
+              size="sm"
+              variant="outline"
+              visibleCount={getVisibleColumnCount()}
+              totalCount={visibilityOptions.filter(c => c.canHide).length}
+            />
+            <ExportDropdown
+              onExport={handleExport}
+              size="sm"
+              variant="outline"
+              disabled={isLoading || (filteredUsers?.length ?? 0) === 0}
+            />
             {selectedRows.length > 0 && (
               <Button variant="outline" size="sm" onClick={handleClearSelection}>
                 Clear Selection ({selectedRows.length})
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={handleClearFilters}>
-              Clear Filters
-            </Button>
+            {isFiltered && (
+              <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                Clear Filters
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+            <SmartSearchInput
+              value={filters.search || ''}
+              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+              onSearchSubmit={(q) => setFilters((prev) => ({ ...prev, search: q }))}
+              placeholder="Search users by name, email, or organization…"
+              aria-label="Search users"
+              storageKey="admin-users-search"
+              className="w-full"
+            />
+            <Select
+              value={filters.roleFilter || ''}
+              onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v }))}
+            >
+              <SelectTrigger aria-label="Filter by role">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="employee">Employee</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.status || ''}
+              onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v }))}
+            >
+              <SelectTrigger aria-label="Filter by status">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {isLoading ? (
             <TableSkeleton rows={5} columns={6} />
           ) : !users || users.length === 0 ? (
@@ -363,26 +444,38 @@ export default function AdminUsers() {
                     };
                     
                     return (
-                      <MobileTableCard
-                        key={row.id}
-                        title={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
-                        subtitle={user.email || 'No email'}
-                        status={
-                          <Badge variant={getRoleVariant()} className="h-5 text-[10px] px-1.5">
-                            {getPrimaryRole().toUpperCase()}
-                          </Badge>
-                        }
-                        onClick={() => {
+                      <SwipeableListItem
+                        onSwipeRight={() => {
                           setSelectedUser(user);
-                          setViewUserModalOpen(true);
+                          setEditUserModalOpen(true);
                         }}
+                        onSwipeLeft={() => {
+                          updateUser.mutate({ id: user.id, is_active: !(user as any).is_active });
+                        }}
+                        rightAction={{ icon: Edit, label: 'Edit', color: 'default' }}
+                        leftAction={{ icon: Power, label: (user as any).is_active ? 'Deactivate' : 'Activate', color: (user as any).is_active ? 'destructive' : 'success' }}
                       >
-                        {user.organization_members && user.organization_members.length > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            {user.organization_members.map((membership) => membership.organization?.name).filter(Boolean).join(', ')}
-                          </div>
-                        )}
-                      </MobileTableCard>
+                        <MobileTableCard
+                          key={row.id}
+                          title={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
+                          subtitle={user.email || 'No email'}
+                          status={
+                            <Badge variant={getRoleVariant()} className="h-5 text-[10px] px-1.5">
+                              {getPrimaryRole().toUpperCase()}
+                            </Badge>
+                          }
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setViewUserModalOpen(true);
+                          }}
+                        >
+                          {user.organization_members && user.organization_members.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              {user.organization_members.map((membership) => membership.organization?.name).filter(Boolean).join(', ')}
+                            </div>
+                          )}
+                        </MobileTableCard>
+                      </SwipeableListItem>
                     );
                   })
                 ) : (
