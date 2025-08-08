@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 import {
   useReactTable,
@@ -76,6 +76,33 @@ export default function AdminUsers() {
     organizationId: '',
     status: '',
   });
+
+  const FILTERS_STORAGE_KEY = 'admin-users-filters';
+  // Load persisted role/status on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<UserFilters>;
+        setFilters((prev) => ({
+          ...prev,
+          roleFilter: saved.roleFilter ?? prev.roleFilter,
+          status: saved.status ?? prev.status,
+        }));
+      }
+    } catch {}
+  }, []);
+
+  // Persist role/status when they change
+  useEffect(() => {
+    try {
+      const toSave = {
+        roleFilter: filters.roleFilter || '',
+        status: filters.status || '',
+      };
+      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toSave));
+    } catch {}
+  }, [filters.roleFilter, filters.status]);
 
   // Fetch data
   const { data: users, isLoading, error, refetch } = useUsers();

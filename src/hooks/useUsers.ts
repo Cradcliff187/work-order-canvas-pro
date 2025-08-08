@@ -148,7 +148,6 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<User> & { id: string }) => {
-      // Temporarily use direct profile update during migration
       const { data, error } = await supabase
         .from('profiles')
         .update({
@@ -165,16 +164,7 @@ export function useUpdateUser() {
         .single();
 
       if (error) throw error;
-      
-      // Type the response properly
-      const result = data as any;
-      
-      // Check if the function returned success
-      if (!result?.success) {
-        throw new Error(result?.error || 'Failed to update user profile and auth metadata');
-      }
-      
-      return result.profile;
+      return data as User;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
