@@ -51,6 +51,10 @@ import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useDebounce } from '@/hooks/useDebounce';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { ReportsTable } from '@/components/admin/reports/ReportsTable';
 
 interface ReportFilters {
   status?: string[];
@@ -82,15 +86,23 @@ export default function AdminReports() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [filters, setFilters] = useState<ReportFilters>({});
 
-  const { data: reportsData, isLoading, error, refetch } = useAdminReports(
-    pagination,
-    sorting,
-    filters
-  );
 
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
   const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
   const { data: submittedCounts } = useSubmittedCounts();
+
+  // Debounced search for better UX
+  const debouncedSearch = useDebounce(filters.search || '', 300);
+  const effectiveFilters = useMemo(() => ({
+    ...filters,
+    search: debouncedSearch || undefined,
+  }), [filters, debouncedSearch]);
+
+  const { data: reportsData, isLoading, error, refetch } = useAdminReports(
+    pagination,
+    sorting,
+    effectiveFilters
+  );
 
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -306,6 +318,28 @@ export default function AdminReports() {
     }
   };
 
+  const handleExport = (format: 'csv' | 'excel') => {
+    try {
+      const columns: ExportColumn[] = [
+        { key: 'work_orders.work_order_number', label: 'Work Order #', type: 'string' },
+        { key: 'work_orders.title', label: 'Title', type: 'string' },
+        { key: 'status', label: 'Status', type: 'string' },
+        { key: 'invoice_amount', label: 'Amount', type: 'currency' },
+        { key: 'submitted_at', label: 'Submitted', type: 'date' },
+        { key: 'subcontractor_organization.name', label: 'Subcontractor', type: 'string' },
+      ];
+      const data = reportsData?.data || [];
+      const filename = generateFilename('reports', format === 'excel' ? 'xlsx' : 'csv');
+      if (format === 'excel') {
+        exportToExcel(data, columns, filename);
+      } else {
+        exportToCSV(data, columns, filename);
+      }
+    } catch (e: any) {
+      toast({ title: 'Export failed', description: e.message || 'Please try again.', variant: 'destructive' });
+    }
+  };
+
   if (error) {
     return (
       <div className="p-6">
@@ -462,186 +496,64 @@ export default function AdminReports() {
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Reports</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Reports</CardTitle>
+            <ExportDropdown onExport={handleExport} />
+          </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <TableSkeleton rows={5} columns={8} />
-          ) : reportsData?.data.length === 0 ? (
-            <EmptyTableState
-              icon={FileText}
-              title="No reports found"
-              description={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
-              colSpan={columns.length}
-            />
-          ) : (
-            <>
-              {/* Table View */}
-              {viewMode === 'table' && (
-                <div className="hidden lg:block">
-                <ResponsiveTableWrapper stickyFirstColumn={true}>
-                  <Table className="admin-table">
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id} className="h-12">
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
-                            onClick={(e) => {
-                              // Don't navigate if clicking interactive elements
-                              const target = e.target as HTMLElement;
-                              if (target instanceof HTMLButtonElement || 
-                                  target instanceof HTMLInputElement ||
-                                  target.closest('[role="checkbox"]') ||
-                                  target.closest('[data-radix-collection-item]') ||
-                                  target.closest('.dropdown-trigger')) {
-                                return;
-                              }
-                              navigate(`/admin/reports/${row.original.id}`);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell key={cell.id}>
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <EmptyTableState
-                          icon={FileText}
-                          title="No reports found"
-                          description="Try adjusting your filters or search criteria"
-                          colSpan={columns.length}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                </ResponsiveTableWrapper>
-                </div>
-              )}
+          <ReportsTable
+            table={table}
+            columns={columns}
+            isLoading={isLoading}
+            viewMode={viewMode === 'card' ? 'card' : 'table'}
+            onRowClick={(report) => navigate(`/admin/reports/${(report as any).id}`)}
+            renderMobileCard={(report: any) => {
+              const workOrder = report.work_orders;
+              const subcontractor = report.subcontractor;
+              const subcontractorOrg = report.subcontractor_organization;
 
-              {/* Card View */}
-              {viewMode === 'card' && (
-                <div className="space-y-3">
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => {
-                    const report = row.original;
-                    const workOrder = report.work_orders;
-                    const subcontractor = report.subcontractor;
-                    const subcontractorOrg = report.subcontractor_organization;
-                    
-                    // For mobile cards: apply same logic as table
-                    let subcontractorDisplay = 'N/A';
-                    
-                    // Check if subcontractor is from internal organization
-                    const isInternalSubcontractor = subcontractor?.organization_members?.some(
-                      (om: any) => om.organizations?.organization_type === 'internal'
-                    );
-                    
-                    if (subcontractorOrg) {
-                      // Organization-level assignment - always show organization name for subcontractors
-                      subcontractorDisplay = subcontractorOrg.name;
-                    } else if (subcontractor && isInternalSubcontractor) {
-                      // Individual internal user - show their name
-                      subcontractorDisplay = `${subcontractor.first_name} ${subcontractor.last_name}`;
-                    } else if (subcontractor) {
-                      // Individual subcontractor from subcontractor org - fallback to org name if available
-                      const subcontractorOrgFromMember = subcontractor.organization_members?.find(
-                        (om: any) => om.organizations?.organization_type === 'subcontractor'
-                      );
-                      subcontractorDisplay = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
-                    }
-                    
-                    return (
-                      <MobileTableCard
-                        key={report.id}
-                        title={workOrder?.work_order_number || 'N/A'}
-                        subtitle={`${workOrder?.title || 'N/A'} • ${subcontractorDisplay}`}
-                        status={<ReportStatusBadge status={report.status} size="sm" showIcon />}
-                        onClick={() => navigate(`/admin/reports/${report.id}`)}
-                      >
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Amount:</span>
-                          <span className="font-medium">
-                            {report.invoice_amount ? `$${report.invoice_amount.toLocaleString()}` : 'N/A'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Submitted:</span>
-                          <span>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</span>
-                        </div>
-                      </MobileTableCard>
-                    );
-                  })
-                ) : (
-                  <EmptyTableState
-                    icon={FileText}
-                    title="No reports found"
-                    description="Try adjusting your filters or search criteria"
-                    colSpan={1}
-                  />
-                )}
-                </div>
-              )}
-            </>
-          )}
+              let subcontractorDisplay = 'N/A';
+              const isInternalSubcontractor = subcontractor?.organization_members?.some(
+                (om: any) => om.organizations?.organization_type === 'internal'
+              );
 
-          {/* Pagination */}
-          {table.getRowModel().rows?.length > 0 && (
-            <div className="flex items-center justify-between space-x-2 py-4 mt-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                {selectedRows.length > 0 && (
-                  <span>
-                    {selectedRows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
+              if (subcontractorOrg) {
+                subcontractorDisplay = subcontractorOrg.name;
+              } else if (subcontractor && isInternalSubcontractor) {
+                subcontractorDisplay = `${subcontractor.first_name} ${subcontractor.last_name}`;
+              } else if (subcontractor) {
+                const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+                  (om: any) => om.organizations?.organization_type === 'subcontractor'
+                );
+                subcontractorDisplay = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
+              }
+
+              return (
+                <MobileTableCard
+                  key={report.id}
+                  title={workOrder?.work_order_number || 'N/A'}
+                  subtitle={`${workOrder?.title || 'N/A'} • ${subcontractorDisplay}`}
+                  status={<ReportStatusBadge status={report.status} size="sm" showIcon />}
+                  onClick={() => navigate(`/admin/reports/${report.id}`)}
                 >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground">
-                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="font-medium">
+                      {report.invoice_amount ? `$${report.invoice_amount.toLocaleString()}` : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Submitted:</span>
+                    <span>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</span>
+                  </div>
+                </MobileTableCard>
+              );
+            }}
+            emptyIcon={FileText}
+            emptyTitle="No reports found"
+            emptyDescription={Object.values(filters).some(val => val && (Array.isArray(val) ? val.length > 0 : true)) ? "Try adjusting your filters or search criteria" : "Reports will appear here when subcontractors submit them"}
+          />
         </CardContent>
       </Card>
 
