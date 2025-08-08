@@ -116,6 +116,10 @@ import { useSubmittedCounts as useSubmittedCountsHook } from '@/hooks/useSubmitt
 import { Badge as BadgeUI } from '@/components/ui/badge';
 import { Plus as PlusIcon } from 'lucide-react';
 import { useNavigate as useNav } from 'react-router-dom';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
+import { QuickFiltersBar } from '@/components/admin/invoices/QuickFiltersBar';
+import { BulkEditSheet } from '@/components/admin/invoices/BulkEditSheet';
 // Note: extra imports above are harmless and tree-shaken; core page uses the key ones added.
 
 export default function AdminInvoices() {

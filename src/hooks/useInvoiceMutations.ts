@@ -46,22 +46,43 @@ export const useInvoiceMutations = () => {
       if (!invoiceId || typeof invoiceId !== 'string') {
         throw new Error('Invalid invoice ID');
       }
-      
       return performInvoiceApproval({ invoiceId, notes });
     },
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['invoices'] });
+      await queryClient.cancelQueries({ queryKey: ['invoice'] });
+
+      const previousQueries = queryClient.getQueriesData<{ data: any[]; count: number }>({ queryKey: ['invoices'] });
+
+      previousQueries.forEach(([key, oldData]) => {
+        if (!oldData) return;
+        const updated = {
+          ...oldData,
+          data: oldData.data.map((inv: any) =>
+            inv.id === variables.invoiceId
+              ? { ...inv, status: 'approved', approved_at: new Date().toISOString(), approval_notes: variables.notes || inv.approval_notes }
+              : inv
+          ),
+        };
+        queryClient.setQueryData(key, updated);
+      });
+
+      return { previousQueries };
+    },
+    onError: (_error, _vars, context) => {
+      // rollback
+      context?.previousQueries?.forEach(([key, data]: any) => {
+        queryClient.setQueryData(key, data);
+      });
+      handleError(_error, 'Failed to approve invoice.');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
       queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
-      
-      handleSuccess(
-        'Invoice Approved',
-        'The invoice has been successfully approved.'
-      );
     },
-    onError: (error) => {
-      console.error('Invoice approval error:', error);
-      handleError(error, 'Failed to approve invoice.');
+    onSuccess: () => {
+      handleSuccess('Invoice Approved', 'The invoice has been successfully approved.');
     },
     retry: 2,
   });
@@ -85,26 +106,45 @@ export const useInvoiceMutations = () => {
 
   const rejectInvoice = useMutation({
     mutationFn: async ({ invoiceId, notes }: RejectInvoiceData) => {
-      // Validate input
       if (!invoiceId || typeof invoiceId !== 'string') {
         throw new Error('Invalid invoice ID');
       }
-      
       return performInvoiceRejection({ invoiceId, notes });
     },
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['invoices'] });
+      await queryClient.cancelQueries({ queryKey: ['invoice'] });
+
+      const previousQueries = queryClient.getQueriesData<{ data: any[]; count: number }>({ queryKey: ['invoices'] });
+
+      previousQueries.forEach(([key, oldData]) => {
+        if (!oldData) return;
+        const updated = {
+          ...oldData,
+          data: oldData.data.map((inv: any) =>
+            inv.id === variables.invoiceId
+              ? { ...inv, status: 'rejected', approval_notes: variables.notes }
+              : inv
+          ),
+        };
+        queryClient.setQueryData(key, updated);
+      });
+
+      return { previousQueries };
+    },
+    onError: (_error, _vars, context) => {
+      context?.previousQueries?.forEach(([key, data]: any) => {
+        queryClient.setQueryData(key, data);
+      });
+      handleError(_error, 'Failed to reject invoice.');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice'] });
       queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
-      
-      handleSuccess(
-        'Invoice Rejected',
-        'The invoice has been rejected.'
-      );
     },
-    onError: (error) => {
-      console.error('Invoice rejection error:', error);
-      handleError(error, 'Failed to reject invoice.');
+    onSuccess: () => {
+      handleSuccess('Invoice Rejected', 'The invoice has been rejected.');
     },
     retry: 2,
   });
@@ -139,16 +179,43 @@ export const useInvoiceMutations = () => {
         .single();
 
       if (error) throw error;
-
-      // Send payment notification
-
       return data;
+    },
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['invoices'] });
+      await queryClient.cancelQueries({ queryKey: ['invoice'] });
+
+      const previousQueries = queryClient.getQueriesData<{ data: any[]; count: number }>({ queryKey: ['invoices'] });
+
+      previousQueries.forEach(([key, oldData]) => {
+        if (!oldData) return;
+        const updated = {
+          ...oldData,
+          data: oldData.data.map((inv: any) =>
+            inv.id === variables.invoiceId
+              ? { ...inv, status: 'paid', paid_at: variables.paymentDate.toISOString(), payment_reference: variables.paymentReference }
+              : inv
+          ),
+        };
+        queryClient.setQueryData(key, updated);
+      });
+
+      return { previousQueries };
+    },
+    onError: (_error, _vars, context) => {
+      context?.previousQueries?.forEach(([key, data]: any) => {
+        queryClient.setQueryData(key, data);
+      });
+      handleError(_error, 'Failed to mark invoice as paid.');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice'] });
     },
     onSuccess: () => handleSuccess(
       'Invoice Marked as Paid',
       'The invoice has been marked as paid and the subcontractor has been notified.'
     ),
-    onError: (error) => handleError(error, 'Failed to mark invoice as paid.'),
     retry: 2,
   });
 
