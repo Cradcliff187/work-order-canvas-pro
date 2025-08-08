@@ -47,7 +47,7 @@ export function TableActionsDropdown({
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align}>
+      <DropdownMenuContent align={align} className="z-50 bg-popover">
         {visibleActions.map((action, index) => {
           const Icon = action.icon;
           return (

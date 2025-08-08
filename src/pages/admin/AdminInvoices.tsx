@@ -417,14 +417,19 @@ export default function AdminInvoices() {
           {/* Quick filters + search */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-4">
             <QuickFiltersBar onQuickFilter={handleQuickFilter} counts={quickCounts} />
-            <SmartSearchInput
-              value={filters.search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onSearchSubmit={(q) => handleSearchChange(q)}
-              placeholder="Search invoices..."
-              className="w-full md:w-80"
-              storageKey="admin-invoices-search"
-            />
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <SmartSearchInput
+                value={filters.search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onSearchSubmit={(q) => handleSearchChange(q)}
+                placeholder="Search invoices..."
+                className="w-full md:w-80"
+                storageKey="admin-invoices-search"
+              />
+              <Button variant="outline" size="sm" onClick={handleClearFilters} aria-label="Clear all filters">
+                Clear Filters
+              </Button>
+            </div>
           </div>
           {isLoading ? (
             <TableSkeleton rows={5} columns={8} />
