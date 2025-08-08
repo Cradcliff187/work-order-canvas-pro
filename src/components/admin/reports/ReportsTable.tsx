@@ -14,6 +14,7 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { flexRender, ColumnDef, Table as ReactTable } from '@tanstack/react-table';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils/date';
 
 export interface ReportsTableProps<TData = any> {
   table: ReactTable<TData>;
@@ -144,7 +145,7 @@ export function ReportsTable<TData = any>({
                       {submittedAt && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Submitted:</span>
-                          <span>{formatDateSafe(submittedAt)}</span>
+                          <span>{formatDate(submittedAt)}</span>
                         </div>
                       )}
                     </MobileTableCard>
