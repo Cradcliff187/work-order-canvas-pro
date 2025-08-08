@@ -12,6 +12,8 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { flexRender, ColumnDef, Table as ReactTable } from '@tanstack/react-table';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
+import { format } from 'date-fns';
 
 export interface ReportsTableProps<TData = any> {
   table: ReactTable<TData>;
@@ -23,6 +25,7 @@ export interface ReportsTableProps<TData = any> {
   emptyIcon?: React.ComponentType<{ className?: string }>;
   emptyTitle?: string;
   emptyDescription?: string;
+  exportToolbar?: React.ReactNode;
 }
 
 export function ReportsTable<TData = any>({
@@ -35,6 +38,7 @@ export function ReportsTable<TData = any>({
   emptyIcon,
   emptyTitle = 'No data found',
   emptyDescription = 'Try adjusting your filters or search criteria',
+  exportToolbar,
 }: ReportsTableProps<TData>) {
   const rows = table.getRowModel().rows;
   const hasRows = rows?.length > 0;
@@ -56,6 +60,11 @@ export function ReportsTable<TData = any>({
 
   return (
     <>
+      {exportToolbar && (
+        <div className="flex items-center justify-end mb-3">
+          {exportToolbar}
+        </div>
+      )}
       {viewMode === 'table' ? (
         <div className="hidden lg:block">
           <ResponsiveTableWrapper stickyFirstColumn>
@@ -114,11 +123,33 @@ export function ReportsTable<TData = any>({
               {renderMobileCard ? (
                 renderMobileCard(row.original as TData)
               ) : (
-                <MobileTableCard
-                  title={(row.id as string) || 'Item'}
-                  subtitle=""
-                  onClick={() => onRowClick?.(row.original as TData)}
-                />
+                (() => {
+                  const data: any = row.original;
+                  const number = data?.report_number || data?.invoice_number || data?.work_orders?.work_order_number || (row.id as string) || 'Item';
+                  const status = data?.status as string | undefined;
+                  const amount = data?.total_amount ?? data?.invoice_amount;
+                  const submittedAt = data?.submitted_at;
+                  const statusOverride = status === 'submitted' ? 'bg-amber-50 text-amber-600 border-amber-200' : undefined;
+                  return (
+                    <MobileTableCard
+                      title={number}
+                      subtitle=""
+                      status={status ? <ReportStatusBadge status={status} size="sm" showIcon className={statusOverride} /> : undefined}
+                      onClick={() => onRowClick?.(row.original as TData)}
+                    >
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Amount:</span>
+                        <span className="font-medium">{typeof amount === 'number' ? `$${amount.toLocaleString()}` : 'N/A'}</span>
+                      </div>
+                      {submittedAt && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Submitted:</span>
+                          <span>{formatDateSafe(submittedAt)}</span>
+                        </div>
+                      )}
+                    </MobileTableCard>
+                  );
+                })()
               )}
             </React.Fragment>
           ))}
