@@ -1,6 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
@@ -170,7 +170,7 @@ export const createInvoiceColumns = ({
         <span className="text-muted-foreground">—</span>
       );
     },
-  }
+  },
   {
     id: 'due_date',
     accessorFn: (row) => (getDueDate?.(row as Invoice) ?? (row as any).due_date ?? null) as any,
@@ -189,7 +189,7 @@ export const createInvoiceColumns = ({
         </div>
       );
     },
-  }
+  },
   {
     accessorKey: 'paid_at',
     header: 'Payment Status',

@@ -59,6 +59,7 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { SortableHeader } from '@/components/admin/shared/SortableHeader';
 
 interface ReportFilters {
   status?: string[];
