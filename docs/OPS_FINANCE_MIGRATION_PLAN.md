@@ -9,7 +9,7 @@ Purpose: Track work to bring all Admin Operations & Finance pages to Gold Standa
 9: - Phase 4: COMPLETE
 10: - Phase 5: COMPLETE
 11: - Phase 6: COMPLETE
-12: - Phase 7: IN PROGRESS
+12: - Phase 7: COMPLETE
 13: 
 14: Diagram
 15: <lov-mermaid>
@@ -53,7 +53,7 @@ Purpose: Track work to bring all Admin Operations & Finance pages to Gold Standa
 53: - Implemented standardized skeletons, retryable error states, toasts, a11y tweaks
 54: - Acceptance: meets Gold Standard and QA protocol
 55: 
-56: 7) Phase 7 – Accessibility & Performance pass + Regression (IN PROGRESS)
+56: 7) Phase 7 – Accessibility & Performance pass + Regression (COMPLETE)
 57: - Keyboard nav audit; ARIA labels; memoization review; React Query cache keys
 58: - Regression suite: manual QA using Validation/QA protocol
 59: 
@@ -68,8 +68,9 @@ Change log
 - 2025-08-08: Marked Phase 4 complete; added a11y tweaks and export disabled states.
 - 2025-08-08: Completed Phase 5 – Employees & Permissions; added keyboard row accessibility for Admin Users and Employees; validated loading/empty/error and export disabled states.
 - 2025-08-09: Finalized Phase 6 micro-cleanups (friendly error, consolidated toasts); kicked off Phase 7 with initial layering/a11y on Select Reports.
+- 2025-08-09: Completed Phase 7 – Ops & Finance: centralized dropdown layering, friendly error + Retry across pages, export disabled checks, mobile card a11y parity, minor memoization; updated docs and QA.
 Related docs
 - Gold Standard: docs/GOLD_STANDARD_ADMIN_OPS_FINANCE.md
 - Phase 3 completion record: docs/PHASE_3_OPS_FINANCE_POLISH_COMPLETE.md
 
-Last updated: 2025-08-08
+Last updated: 2025-08-09

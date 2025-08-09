@@ -180,7 +180,7 @@ export default function AdminInvoices() {
   }, [searchParams]);
 
   const debouncedSearch = useDebounce(filters.search, 300);
-  const { data, isLoading, error } = useInvoices({ ...filters, search: debouncedSearch });
+  const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch });
   const { data: submittedCounts } = useSubmittedCounts();
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -342,10 +342,18 @@ const table = useReactTable({
 
   if (error) {
     return (
-      <div className="container mx-auto py-6">
-        <div className="text-center text-red-500">
-          Error loading invoices: {error.message}
-        </div>
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <p className="text-destructive">We couldn't load invoices. Please try again.</p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
