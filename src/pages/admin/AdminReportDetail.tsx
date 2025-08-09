@@ -18,7 +18,8 @@ import {
   Image,
   Download,
   ExternalLink,
-  Trash
+  Trash,
+  RotateCcw
 } from 'lucide-react';
 import { useAdminReportDetail } from '@/hooks/useAdminReportDetail';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
@@ -41,7 +42,7 @@ export default function AdminReportDetail() {
   
   console.log('[AdminReportDetail] Route ID:', id, 'Valid:', isValidId);
   
-  const { data: report, isLoading, error } = useAdminReportDetail(isValidId ? id! : '');
+  const { data: report, isLoading, error, refetch } = useAdminReportDetail(isValidId ? id! : '');
   const { reviewReport, deleteReport } = useAdminReportMutations();
   const { assignSubcontractor, isAssigning } = useSubcontractorAssignment();
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
@@ -114,14 +115,17 @@ export default function AdminReportDetail() {
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <p className="text-destructive">Error loading report details</p>
-              {error && (
-                <p className="text-sm text-red-600">Error: {error.message}</p>
-              )}
-              <Button onClick={() => navigate('/admin/reports')} variant="outline">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Reports
-              </Button>
+              <p className="text-destructive">We couldn't load report details. Please try again.</p>
+              <div className="flex items-center justify-center gap-2">
+                <Button onClick={() => refetch()} variant="outline">
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+                <Button onClick={() => navigate('/admin/reports')} variant="ghost">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Reports
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

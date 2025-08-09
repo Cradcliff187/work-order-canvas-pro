@@ -28,7 +28,8 @@ import {
   Download,
   ExternalLink,
   Eye,
-  MessageCircle
+  MessageCircle,
+  RotateCcw
 } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useWorkOrderAssignments } from '@/hooks/useWorkOrderAssignments';
@@ -140,10 +141,16 @@ export default function AdminWorkOrderDetail() {
       <div className="p-6">
         <Card>
           <CardContent className="p-6 text-center space-y-4">
-            <p className="text-destructive">Error loading work order: {error.message}</p>
-            <Button onClick={() => navigate('/admin/work-orders')} variant="outline">
-              Back to Work Orders
-            </Button>
+            <p className="text-destructive">We couldn't load the work order. Please try again.</p>
+            <div className="flex items-center justify-center gap-2">
+              <Button onClick={() => refetch()} variant="outline">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+              <Button onClick={() => navigate('/admin/work-orders')} variant="ghost">
+                Back to Work Orders
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

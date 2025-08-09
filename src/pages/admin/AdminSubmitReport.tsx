@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, FileText, Loader2, AlertTriangle, Users } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, AlertTriangle, Users, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import StandardFormLayout from '@/components/layout/StandardFormLayout';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
@@ -30,7 +30,7 @@ export default function AdminSubmitReport() {
   const { toast } = useToast();
   const { profile } = useAuth();
   
-  const { data: workOrder, isLoading, error } = useWorkOrderDetail(workOrderId!);
+  const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(workOrderId!);
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
   const { submitReportForSubcontractor, isSubmitting } = useAdminReportSubmission();
 
@@ -67,11 +67,17 @@ export default function AdminSubmitReport() {
 
   if (error || !workOrder) {
     return (
-      <Alert variant="destructive">
-        <AlertDescription>
-          Failed to load work order details. {error?.message}
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertDescription>
+            We couldn't load the work order details. Please try again.
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => refetch?.()} variant="outline">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
     );
   }
 

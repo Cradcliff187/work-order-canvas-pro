@@ -309,6 +309,7 @@ export default function AdminReports() {
   const { columnVisibility, setColumnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
     storageKey: 'admin-reports-columns-v1',
     columnMetadata: columnMetadata as any,
+    legacyKeys: ['admin-reports-columns'],
   });
 
   const columnOptions = getAllColumns().map((c) => ({
@@ -402,8 +403,8 @@ const table = useReactTable({
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <p className="text-destructive">Error loading reports: {error.message}</p>
-              <Button onClick={() => refetch()} variant="outline">
+              <p className="text-destructive">We couldn't load reports. Please try again.</p>
+              <Button onClick={() => refetch()} variant="outline" aria-label="Retry loading reports">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Retry
               </Button>

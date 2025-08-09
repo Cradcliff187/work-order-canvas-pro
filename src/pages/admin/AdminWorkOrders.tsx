@@ -125,6 +125,7 @@ export default function AdminWorkOrders() {
   } = useColumnVisibility({
     storageKey: 'admin-workorders-columns-v1',
     columnMetadata: WORK_ORDER_COLUMN_METADATA,
+    legacyKeys: ['admin-workorders-columns', 'admin-work-orders-columns'],
     defaultVisible: {
       work_order_number: true,
       title: true,
@@ -420,7 +421,7 @@ export default function AdminWorkOrders() {
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <p className="text-destructive">Error loading work orders: {error.message}</p>
+              <p className="text-destructive">We couldn't load work orders. Please try again.</p>
               <Button 
                 onClick={() => refetch()} 
                 variant="outline"
