@@ -83,6 +83,7 @@ export function ReceiptsFilters({ value = {}, onChange, className }: ReceiptsFil
                       });
                     }}
                     numberOfMonths={2}
+                    className="p-3 pointer-events-auto"
                   />
                   <div className="flex flex-col gap-2">
                     <Button size="sm" variant="ghost" onClick={clearDates}>

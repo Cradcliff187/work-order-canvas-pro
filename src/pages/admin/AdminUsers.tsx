@@ -38,6 +38,8 @@ import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 
 interface UserFilters {
   search?: string;
@@ -76,6 +78,7 @@ export default function AdminUsers() {
     organizationId: '',
     status: '',
   });
+  const [organizationType, setOrganizationType] = useState<string[]>([]);
 
   const FILTERS_STORAGE_KEY = 'admin-users-filters';
   // Load persisted role/status on mount
@@ -130,25 +133,28 @@ export default function AdminUsers() {
     getVisibleColumnCount,
   } = useColumnVisibility({ storageKey: 'admin-users-columns-v1', columnMetadata, legacyKeys: ['admin-users-columns'] });
 
-  const isFiltered = Boolean(filters.search || filters.roleFilter || filters.status || filters.organizationId);
+  const isFiltered = Boolean(filters.search || filters.roleFilter || filters.status || filters.organizationId || (organizationType && organizationType.length > 0));
 
   // Client-side filtered users
   const filteredUsers = useMemo(() => {
     if (!users) return [] as User[];
     const q = (filters.search || '').toLowerCase().trim();
     return users.filter((u) => {
-      const role = (u as any).organization_members?.[0]?.role || '';
-      const orgNames = ((u as any).organization_members || [])
-        .map((m: any) => m.organization?.name || '')
-        .join(' ');
+      const memberships: any[] = ((u as any).organization_members || []);
+      const role = memberships?.[0]?.role || '';
+      const orgNames = memberships.map((m: any) => m.organization?.name || '').join(' ');
+      const orgTypes = memberships.map((m: any) => m.organization?.organization_type).filter(Boolean);
+      const orgIds = memberships.map((m: any) => m.organization?.id).filter(Boolean);
       const haystack = `${u.first_name || ''} ${u.last_name || ''} ${u.email || ''} ${(u as any).phone || ''} ${orgNames}`.toLowerCase();
 
       const matchesSearch = q ? haystack.includes(q) : true;
       const matchesRole = filters.roleFilter ? role === filters.roleFilter : true;
       const matchesStatus = filters.status ? (filters.status === 'active' ? (u as any).is_active : !(u as any).is_active) : true;
-      return matchesSearch && matchesRole && matchesStatus;
+      const matchesOrgId = filters.organizationId ? orgIds.includes(filters.organizationId) : true;
+      const matchesOrgType = organizationType && organizationType.length ? organizationType.some((t) => orgTypes.includes(t)) : true;
+      return matchesSearch && matchesRole && matchesStatus && matchesOrgId && matchesOrgType;
     });
-  }, [users, filters]);
+  }, [users, filters, organizationType]);
 
   const visibilityOptions = getAllColumns().map((c) => ({
     ...c,
@@ -364,6 +370,24 @@ export default function AdminUsers() {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+            <OrganizationSelector
+              value={filters.organizationId || undefined}
+              onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
+              placeholder="All organizations"
+              className="w-full"
+            />
+            <MultiSelectFilter
+              options={[
+                { value: 'internal', label: 'Internal' },
+                { value: 'partner', label: 'Partner' },
+                { value: 'subcontractor', label: 'Subcontractor' },
+              ]}
+              selectedValues={organizationType}
+              onSelectionChange={setOrganizationType}
+              placeholder="All organization types"
+            />
           </div>
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={6} />

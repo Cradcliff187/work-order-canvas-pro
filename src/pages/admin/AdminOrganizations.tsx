@@ -68,6 +68,7 @@ export default function AdminOrganizations() {
   }, [debouncedSearch]);
 
   const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'partner' | 'subcontractor'>('all');
+  const [sort, setSort] = useState<{ key: 'name' | 'initials' | 'contact_email' | 'organization_type'; desc: boolean}>({ key: 'name', desc: false });
 
   // Persist type filter in localStorage
   useEffect(() => {
@@ -126,8 +127,14 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
     if (typeFilter !== 'all') {
       data = data.filter(o => o.organization_type === typeFilter);
     }
-    return data;
-  }, [organizations, filters.search, typeFilter]);
+    const sorted = [...data].sort((a, b) => {
+      const aVal = String((a as any)[sort.key] ?? '').toLowerCase();
+      const bVal = String((b as any)[sort.key] ?? '').toLowerCase();
+      const cmp = aVal.localeCompare(bVal);
+      return sort.desc ? -cmp : cmp;
+    });
+    return sorted;
+  }, [organizations, filters.search, typeFilter, sort]);
 
   const exportColumns: ExportColumn[] = [
     { key: 'name', label: 'Organization Name', type: 'string' },
