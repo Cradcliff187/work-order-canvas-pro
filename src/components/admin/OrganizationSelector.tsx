@@ -108,7 +108,7 @@ export function OrganizationSelector({
             {isLoading ? (
               <CommandEmpty>Loading organizations...</CommandEmpty>
             ) : error ? (
-              <CommandEmpty>Error loading organizations</CommandEmpty>
+              <CommandEmpty>We couldn't load organizations. Please try again.</CommandEmpty>
             ) : filteredOrganizations.length === 0 ? (
               <CommandEmpty>
                 {debouncedSearch ? "No organizations found." : "No organizations available."}

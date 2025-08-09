@@ -69,6 +69,7 @@ Change log
 - 2025-08-08: Completed Phase 5 – Employees & Permissions; added keyboard row accessibility for Admin Users and Employees; validated loading/empty/error and export disabled states.
 - 2025-08-09: Finalized Phase 6 micro-cleanups (friendly error, consolidated toasts); kicked off Phase 7 with initial layering/a11y on Select Reports.
 - 2025-08-09: Completed Phase 7 – Ops & Finance: centralized dropdown layering, friendly error + Retry across pages, export disabled checks, mobile card a11y parity, minor memoization; updated docs and QA.
+- 2025-08-09: Completed Phase 8 – Management: friendly error + Retry on Organizations, Employees, Partner Locations; verified dropdown layering, export disabled checks, a11y parity; added docs.
 Related docs
 - Gold Standard: docs/GOLD_STANDARD_ADMIN_OPS_FINANCE.md
 - Phase 3 completion record: docs/PHASE_3_OPS_FINANCE_POLISH_COMPLETE.md

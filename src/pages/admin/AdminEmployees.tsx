@@ -128,7 +128,7 @@ export default function AdminEmployees() {
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <p className="text-destructive">Error loading employees: {String((error as any)?.message || error)}</p>
+              <p className="text-destructive">We couldn't load employees. Please try again.</p>
               <Button onClick={() => refetch()} variant="outline">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Retry

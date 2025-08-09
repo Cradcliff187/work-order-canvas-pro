@@ -164,7 +164,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <p className="text-destructive">Error loading partner locations: {String((loadError as any)?.message || loadError)}</p>
+              <p className="text-destructive">We couldn't load partner locations. Please try again.</p>
               <Button onClick={() => { refetchLocations(); refetchOrgs(); }} variant="outline">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Retry

@@ -167,7 +167,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         <Card>
           <CardContent className="p-6">
             <div className="text-center space-y-4">
-              <p className="text-destructive">Error loading organizations: {error.message}</p>
+              <p className="text-destructive">We couldn't load organizations. Please try again.</p>
               <Button onClick={() => refetch()} variant="outline">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Retry
