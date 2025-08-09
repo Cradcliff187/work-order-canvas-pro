@@ -189,13 +189,14 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
             {filteredOrganizations?.length ? `${filteredOrganizations.length} matching organizations` : (organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations')}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2" role="toolbar" aria-label="Organization actions">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
+            className="h-9"
           />
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={() => setShowCreateModal(true)} className="h-9">
             <Plus className="w-4 h-4 mr-2" />
             New Organization
           </Button>

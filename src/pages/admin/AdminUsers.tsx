@@ -280,13 +280,14 @@ export default function AdminUsers() {
               : 'Manage system users and their access'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2" role="toolbar" aria-label="User actions">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}
             allowedModes={allowedModes}
+            className="h-9"
           />
-          <Button onClick={() => setCreateUserModalOpen(true)}>
+          <Button onClick={() => setCreateUserModalOpen(true)} className="h-9">
             <Plus className="w-4 h-4 mr-2" />
             New User
           </Button>

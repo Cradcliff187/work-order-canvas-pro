@@ -432,6 +432,14 @@ const table = useReactTable({
             {reportsData?.totalCount ? `${reportsData.totalCount} total reports` : 'Review and approve subcontractor reports'}
           </p>
         </div>
+        <div className="flex items-center gap-2" role="toolbar" aria-label="Report actions">
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+            className="h-9"
+          />
+        </div>
       </div>
 
       {/* Filters */}
@@ -503,13 +511,6 @@ const table = useReactTable({
                 <X className="w-4 h-4 mr-2" />
                 Clear Filters
               </Button>
-            </div>
-            <div className="flex justify-end">
-              <ViewModeSwitcher
-                value={viewMode}
-                onValueChange={setViewMode}
-                allowedModes={allowedModes}
-              />
             </div>
           </div>
         </CardContent>
