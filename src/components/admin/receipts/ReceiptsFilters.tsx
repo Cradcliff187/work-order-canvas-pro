@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 
 export type ReceiptCategory = 'Materials' | 'Equipment' | 'Labor' | 'Other';
 

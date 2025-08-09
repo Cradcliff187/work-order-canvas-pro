@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { X } from 'lucide-react';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 
 interface InvoiceFiltersProps {
   status: string[];
@@ -30,6 +31,9 @@ interface InvoiceFiltersProps {
   amountMin?: number;
   amountMax?: number;
   onAmountRangeChange?: (min?: number, max?: number) => void;
+  // New: subcontractor selector (standardized)
+  subcontractorOrganizationId?: string;
+  onSubcontractorChange?: (organizationId?: string) => void;
 }
 
 const statusOptions = [
@@ -61,6 +65,8 @@ export function InvoiceFilters({
   amountMin,
   amountMax,
   onAmountRangeChange,
+  subcontractorOrganizationId,
+  onSubcontractorChange,
 }: InvoiceFiltersProps) {
   const toggleStatus = (statusValue: string) => {
     if (status.includes(statusValue)) {
@@ -70,7 +76,7 @@ export function InvoiceFilters({
     }
   };
 
-  const hasActiveFilters = status.length > 0 || paymentStatus || search;
+  const hasActiveFilters = status.length > 0 || paymentStatus || search || subcontractorOrganizationId;
 
   return (
     <div className="space-y-4">
@@ -102,7 +108,19 @@ export function InvoiceFilters({
             </SelectContent>
           </Select>
         </div>
-        {onPartnerChange && (
+{onSubcontractorChange && (
+  <div>
+    <Label className="text-sm font-medium">Subcontractor</Label>
+    <OrganizationSelector
+      organizationType="subcontractor"
+      value={subcontractorOrganizationId}
+      onChange={(id) => onSubcontractorChange(id)}
+      placeholder="All subcontractors"
+      className="mt-1 w-full"
+    />
+  </div>
+)}
+{onPartnerChange && (
           <div>
             <Label className="text-sm font-medium">Partner</Label>
             <Select value={partnerId || 'all'} onValueChange={(value) => onPartnerChange(value === 'all' ? undefined : value)}>

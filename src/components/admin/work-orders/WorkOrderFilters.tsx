@@ -24,6 +24,7 @@ interface WorkOrderFiltersProps {
     status?: string[];
     trade_id?: string[];
     organization_id?: string;
+    organization_type?: string[]; // new: filter by assignee organization type
     search?: string;
     date_from?: string;
     date_to?: string;
@@ -43,6 +44,12 @@ const statusOptions = [
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'estimate_needed', label: 'Estimate Needed' },
   { value: 'estimate_approved', label: 'Estimate Approved' },
+];
+
+const organizationTypeOptions = [
+  { value: 'internal', label: 'Internal' },
+  { value: 'partner', label: 'Partner' },
+  { value: 'subcontractor', label: 'Subcontractor' },
 ];
 
 export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearchChange, onClearFilters }: WorkOrderFiltersProps) {
@@ -213,6 +220,24 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         </Select>
       </div>
     ) : null
+  );
+
+  // Helper function to render organization type filter
+  const renderOrganizationTypeFilter = () => (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">Assignee Org Type</label>
+      <MultiSelectFilter
+        options={organizationTypeOptions}
+        selectedValues={filters.organization_type || []}
+        onSelectionChange={(values) => onFiltersChange({
+          ...filters,
+          organization_type: values.length > 0 ? values : undefined,
+        })}
+        placeholder="All Org Types"
+        searchPlaceholder="Search org types..."
+        className="h-10"
+      />
+    </div>
   );
 
   // Helper function to render location filter
@@ -394,6 +419,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
                   </h3>
                   <div className="space-y-4">
                     {renderOrganizationFilter()}
+                    {renderOrganizationTypeFilter()}
                     {renderLocationFilter()}
                     {renderTradeFilter()}
                     {renderDateRangeFilter()}
@@ -448,6 +474,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         {renderSearchFilter()}
         {renderStatusFilter()}
         {renderOrganizationFilter()}
+        {renderOrganizationTypeFilter()}
         {renderLocationFilter()}
         {renderTradeFilter()}
         {renderDateRangeFilter()}
