@@ -109,20 +109,11 @@ export default function SelectReports() {
         // Clear selection
         setSelectedReportIds(new Set());
         setShowConfirmDialog(false);
-        
-        toast({
-          title: "Invoice generated",
-          description: "Redirecting to invoice...",
-        });
         // Navigate to invoice detail
         navigate(`/admin/partner-billing/invoices/${result.invoiceId}`);
       },
-      onError: (err: any) => {
-        toast({
-          title: "Failed to generate invoice",
-          description: err?.message || 'Please try again.',
-          variant: 'destructive'
-        });
+      onError: () => {
+        // Errors are handled by usePartnerInvoiceGeneration toast logic
       }
     });
   };
@@ -256,7 +247,7 @@ export default function SelectReports() {
               <EmptyState
                 icon={FileBarChart}
                 title="Error loading reports"
-                description={error.message}
+                description="We couldn't load reports. Please try again."
                 action={{ label: 'Retry', onClick: () => refetch() }}
               />
             ) : isLoading ? (
@@ -411,7 +402,7 @@ export default function SelectReports() {
                                              )}
                                            </div>
                                          </TooltipTrigger>
-                                         <TooltipContent>
+                                         <TooltipContent className="z-50 bg-popover">
                                            {invoiceCount > 1 ? (
                                              <div className="space-y-1 text-xs">
                                                <p className="font-medium">Invoice Breakdown:</p>
