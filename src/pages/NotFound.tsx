@@ -7,7 +7,7 @@ import { Home, ArrowLeft } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
-  const { getCompanyDisplayName, getAsset } = useBranding();
+  const { getCompanyDisplayName, assets } = useBranding();
 
   useEffect(() => {
     console.error(
@@ -21,7 +21,7 @@ const NotFound = () => {
       <Card className="w-full max-w-md fade-in-up">
         <CardContent className="text-center p-8">
           <img
-            src={getAsset('logos/akc-logo-square.png')}
+            src={assets.logos.square}
             alt={getCompanyDisplayName()}
             className="w-16 h-16 mx-auto mb-6 opacity-50"
           />
