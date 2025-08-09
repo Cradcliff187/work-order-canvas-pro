@@ -22,9 +22,10 @@ export function UserFilters({ filters, onFiltersChange, onClearFilters }: UserFi
   const { data: organizations } = useOrganizations();
 
   const handleFilterChange = (key: string, value: string) => {
+    const normalized = value === 'all' ? '' : value;
     onFiltersChange({
       ...filters,
-      [key]: value,
+      [key]: normalized,
     });
   };
 
@@ -70,14 +71,14 @@ export function UserFilters({ filters, onFiltersChange, onClearFilters }: UserFi
         <div className="space-y-2">
           <Label htmlFor="roleFilter">Role</Label>
           <Select
-            value={filters.roleFilter}
+            value={filters.roleFilter ? filters.roleFilter : 'all'}
             onValueChange={(value) => handleFilterChange('roleFilter', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All types</SelectItem>
+              <SelectItem value="all">All types</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="partner">Partner</SelectItem>
               <SelectItem value="subcontractor">Subcontractor</SelectItem>
@@ -90,14 +91,14 @@ export function UserFilters({ filters, onFiltersChange, onClearFilters }: UserFi
         <div className="space-y-2">
           <Label htmlFor="organization">Organization</Label>
           <Select
-            value={filters.organizationId}
+            value={filters.organizationId ? filters.organizationId : 'all'}
             onValueChange={(value) => handleFilterChange('organizationId', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All organizations" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All organizations</SelectItem>
+              <SelectItem value="all">All organizations</SelectItem>
               {organizations?.map((org) => (
                 <SelectItem key={org.id} value={org.id}>
                   {org.name}
@@ -111,14 +112,14 @@ export function UserFilters({ filters, onFiltersChange, onClearFilters }: UserFi
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
           <Select
-            value={filters.status}
+            value={filters.status ? filters.status : 'all'}
             onValueChange={(value) => handleFilterChange('status', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
               <SelectItem value="suspended">Suspended</SelectItem>

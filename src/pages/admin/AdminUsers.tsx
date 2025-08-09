@@ -338,28 +338,28 @@ export default function AdminUsers() {
               className="w-full"
             />
             <Select
-              value={filters.roleFilter || ''}
-              onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v }))}
+              value={filters.roleFilter ? filters.roleFilter : 'all'}
+              onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
             >
               <SelectTrigger aria-label="Filter by role">
                 <SelectValue placeholder="All roles" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All roles</SelectItem>
+                <SelectItem value="all">All roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="employee">Employee</SelectItem>
                 <SelectItem value="member">Member</SelectItem>
               </SelectContent>
             </Select>
             <Select
-              value={filters.status || ''}
-              onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v }))}
+              value={filters.status ? filters.status : 'all'}
+              onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
             >
               <SelectTrigger aria-label="Filter by status">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
