@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, RotateCcw, ClipboardList, Power } from 'lucide-react';
+import { Plus, Edit, RotateCcw, ClipboardList, Power, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
@@ -68,7 +68,13 @@ export default function AdminOrganizations() {
   }, [debouncedSearch]);
 
   const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'partner' | 'subcontractor'>('all');
-  const [sort, setSort] = useState<{ key: 'name' | 'initials' | 'contact_email' | 'organization_type'; desc: boolean}>({ key: 'name', desc: false });
+  const [sort, setSort] = useState<{ key: 'name' | 'initials' | 'contact_email' | 'organization_type'; desc: boolean}>(() => {
+    try {
+      const raw = localStorage.getItem('admin-organizations-sort-v1');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { key: 'name', desc: false };
+  });
 
   // Persist type filter in localStorage
   useEffect(() => {
@@ -288,11 +294,69 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                     <TableHeader>
                       <TableRow>
                         {columnVisibility['initials'] && (
-                          <TableHead className="w-[100px]">Initials</TableHead>
+                          <TableHead className="w-[120px]">
+                            <button
+                              className="flex items-center gap-1"
+                              onClick={() => setSort((s) => ({ key: 'initials', desc: s.key === 'initials' ? !s.desc : false }))}
+                              aria-label={`Sort by initials ${sort.key === 'initials' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                            >
+                              <span>Initials</span>
+                              {sort.key === 'initials' ? (
+                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          </TableHead>
                         )}
-                        {columnVisibility['name'] && <TableHead>Name</TableHead>}
-                        {columnVisibility['contact_email'] && <TableHead>Contact Email</TableHead>}
-                        {columnVisibility['organization_type'] && <TableHead>Type</TableHead>}
+                        {columnVisibility['name'] && (
+                          <TableHead>
+                            <button
+                              className="flex items-center gap-1"
+                              onClick={() => setSort((s) => ({ key: 'name', desc: s.key === 'name' ? !s.desc : false }))}
+                              aria-label={`Sort by name ${sort.key === 'name' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                            >
+                              <span>Name</span>
+                              {sort.key === 'name' ? (
+                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          </TableHead>
+                        )}
+                        {columnVisibility['contact_email'] && (
+                          <TableHead>
+                            <button
+                              className="flex items-center gap-1"
+                              onClick={() => setSort((s) => ({ key: 'contact_email', desc: s.key === 'contact_email' ? !s.desc : false }))}
+                              aria-label={`Sort by contact email ${sort.key === 'contact_email' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                            >
+                              <span>Contact Email</span>
+                              {sort.key === 'contact_email' ? (
+                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          </TableHead>
+                        )}
+                        {columnVisibility['organization_type'] && (
+                          <TableHead>
+                            <button
+                              className="flex items-center gap-1"
+                              onClick={() => setSort((s) => ({ key: 'organization_type', desc: s.key === 'organization_type' ? !s.desc : false }))}
+                              aria-label={`Sort by type ${sort.key === 'organization_type' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                            >
+                              <span>Type</span>
+                              {sort.key === 'organization_type' ? (
+                                sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          </TableHead>
+                        )}
                         {columnVisibility['actions'] && (
                           <TableHead className="text-right">Actions</TableHead>
                         )}

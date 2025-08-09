@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { format } from 'date-fns';
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ReceiptRow {
   id: string;
@@ -44,6 +45,43 @@ export default function AdminReceipts() {
   const [amountMin, setAmountMin] = useState<string>('');
   const [amountMax, setAmountMax] = useState<string>('');
   const [hasAttachment, setHasAttachment] = useState<string>('all');
+  const [sort, setSort] = useState<{ key: 'date' | 'vendor' | 'amount' | 'allocation' | 'attachment'; desc: boolean }>({ key: 'date', desc: true });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('admin-receipts-filters-v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setSearch(parsed.search ?? '');
+        setOrganizationId(parsed.organizationId ?? undefined);
+        setOrganizationType(parsed.organizationType ?? []);
+        setAllocationStatus(parsed.allocationStatus ?? []);
+        setDateFrom(parsed.dateFrom ?? '');
+        setDateTo(parsed.dateTo ?? '');
+        setAmountMin(parsed.amountMin ?? '');
+        setAmountMax(parsed.amountMax ?? '');
+        setHasAttachment(parsed.hasAttachment ?? 'all');
+        setSort(parsed.sort ?? { key: 'date', desc: true });
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const snapshot = {
+      search,
+      organizationId,
+      organizationType,
+      allocationStatus,
+      dateFrom,
+      dateTo,
+      amountMin,
+      amountMax,
+      hasAttachment,
+      sort,
+    };
+    try { localStorage.setItem('admin-receipts-filters-v1', JSON.stringify(snapshot)); } catch {}
+  }, [search, organizationId, organizationType, allocationStatus, dateFrom, dateTo, amountMin, amountMax, hasAttachment, sort]);
+
 
   const receiptsQuery = useQuery({
     queryKey: ['admin-receipts'],
@@ -113,6 +151,43 @@ export default function AdminReceipts() {
       return matchesSearch && matchesDate && matchesAmount && matchesAttachment && matchesAllocation && matchesOrgId && matchesOrgType;
     });
   }, [receiptsQuery.data, search, dateFrom, dateTo, amountMin, amountMax, hasAttachment, allocationStatus, organizationId, organizationType, membershipByUser]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      switch (sort.key) {
+        case 'date': {
+          const cmp = (a.receipt_date || '').localeCompare(b.receipt_date || '');
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'vendor': {
+          const cmp = (a.vendor_name || '').toLowerCase().localeCompare((b.vendor_name || '').toLowerCase());
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'amount': {
+          const cmp = (a.amount || 0) - (b.amount || 0);
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'attachment': {
+          const av = a.receipt_image_url ? 1 : 0;
+          const bv = b.receipt_image_url ? 1 : 0;
+          const cmp = av - bv;
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'allocation': {
+          const aAlloc = (a.receipt_work_orders || []).reduce((s, x) => s + (x.allocated_amount || 0), 0);
+          const bAlloc = (b.receipt_work_orders || []).reduce((s, x) => s + (x.allocated_amount || 0), 0);
+          const aScore = aAlloc === 0 ? 0 : (aAlloc >= (a.amount || 0) ? 2 : 1);
+          const bScore = bAlloc === 0 ? 0 : (bAlloc >= (b.amount || 0) ? 2 : 1);
+          const cmp = aScore - bScore;
+          return sort.desc ? -cmp : cmp;
+        }
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [filtered, sort]);
 
   const clearFilters = () => {
     setSearch('');
@@ -186,24 +261,89 @@ export default function AdminReceipts() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Results ({filtered.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left border-b">
-                  <th className="py-2 px-2">Date</th>
-                  <th className="py-2 px-2">Vendor</th>
-                  <th className="py-2 px-2">Amount</th>
-                  <th className="py-2 px-2">Work Orders</th>
-                  <th className="py-2 px-2">Allocation</th>
-                  <th className="py-2 px-2">Attachment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
+          <CardHeader>
+            <CardTitle>Results ({sorted.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b">
+                    <th className="py-2 px-2">
+                      <button
+                        className="flex items-center gap-1"
+                        onClick={() => setSort((s) => ({ key: 'date', desc: s.key === 'date' ? !s.desc : false }))}
+                        aria-label={`Sort by date ${sort.key === 'date' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                      >
+                        <span>Date</span>
+                        {sort.key === 'date' ? (
+                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="py-2 px-2">
+                      <button
+                        className="flex items-center gap-1"
+                        onClick={() => setSort((s) => ({ key: 'vendor', desc: s.key === 'vendor' ? !s.desc : false }))}
+                        aria-label={`Sort by vendor ${sort.key === 'vendor' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                      >
+                        <span>Vendor</span>
+                        {sort.key === 'vendor' ? (
+                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="py-2 px-2">
+                      <button
+                        className="flex items-center gap-1"
+                        onClick={() => setSort((s) => ({ key: 'amount', desc: s.key === 'amount' ? !s.desc : false }))}
+                        aria-label={`Sort by amount ${sort.key === 'amount' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                      >
+                        <span>Amount</span>
+                        {sort.key === 'amount' ? (
+                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="py-2 px-2">Work Orders</th>
+                    <th className="py-2 px-2">
+                      <button
+                        className="flex items-center gap-1"
+                        onClick={() => setSort((s) => ({ key: 'allocation', desc: s.key === 'allocation' ? !s.desc : false }))}
+                        aria-label={`Sort by allocation ${sort.key === 'allocation' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                      >
+                        <span>Allocation</span>
+                        {sort.key === 'allocation' ? (
+                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="py-2 px-2">
+                      <button
+                        className="flex items-center gap-1"
+                        onClick={() => setSort((s) => ({ key: 'attachment', desc: s.key === 'attachment' ? !s.desc : false }))}
+                        aria-label={`Sort by attachment ${sort.key === 'attachment' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                      >
+                        <span>Attachment</span>
+                        {sort.key === 'attachment' ? (
+                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                {sorted.map((r) => {
                   const allocated = (r.receipt_work_orders || []).reduce((s, a) => s + (a.allocated_amount || 0), 0);
                   const status = allocated === 0 ? 'Unallocated' : (allocated >= r.amount ? 'Full' : 'Partial');
                   return (

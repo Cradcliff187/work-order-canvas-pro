@@ -12,7 +12,7 @@ import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEmployees, useEmployeeMutations, formatCurrency, Employee } from '@/hooks/useEmployees';
-import { Users, UserPlus, Search, DollarSign, Edit, UserCheck, Power, TrendingUp, RotateCcw } from 'lucide-react';
+import { Users, UserPlus, Search, DollarSign, Edit, UserCheck, Power, TrendingUp, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
@@ -25,6 +25,9 @@ export default function AdminEmployees() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editRatesEmployee, setEditRatesEmployee] = useState<Employee | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sort, setSort] = useState<{ key: 'name' | 'email' | 'hourly_cost_rate' | 'hourly_billable_rate' | 'status'; desc: boolean }>({ key: 'name', desc: false });
 
   // Persist active filter
   useEffect(() => {
@@ -73,21 +76,57 @@ export default function AdminEmployees() {
 
   const filteredEmployees = useMemo(() => {
     if (!data?.employees) return [];
-    
-    return data.employees.filter((employee) => {
-      const matchesSearch = 
+
+    const base = data.employees.filter((employee) => {
+      const matchesSearch =
         employee.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         employee.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         employee.email.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesActiveFilter = 
-        activeFilter === 'all' || 
+
+      const matchesActiveFilter =
+        activeFilter === 'all' ||
         (activeFilter === 'active' && employee.is_active) ||
         (activeFilter === 'inactive' && !employee.is_active);
-      
-      return matchesSearch && matchesActiveFilter;
+
+      const d = (employee.created_at ? String(employee.created_at) : '').slice(0, 10);
+      const matchesDate = (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
+
+      return matchesSearch && matchesActiveFilter && matchesDate;
     });
-  }, [data?.employees, searchTerm, activeFilter]);
+
+    const sorted = [...base].sort((a, b) => {
+      switch (sort.key) {
+        case 'name': {
+          const aName = `${a.first_name} ${a.last_name}`.toLowerCase();
+          const bName = `${b.first_name} ${b.last_name}`.toLowerCase();
+          const cmp = aName.localeCompare(bName);
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'email': {
+          const cmp = a.email.toLowerCase().localeCompare(b.email.toLowerCase());
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'hourly_cost_rate': {
+          const cmp = (a.hourly_cost_rate || 0) - (b.hourly_cost_rate || 0);
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'hourly_billable_rate': {
+          const cmp = (a.hourly_billable_rate || 0) - (b.hourly_billable_rate || 0);
+          return sort.desc ? -cmp : cmp;
+        }
+        case 'status': {
+          const av = a.is_active ? 1 : 0;
+          const bv = b.is_active ? 1 : 0;
+          const cmp = av - bv;
+          return sort.desc ? -cmp : cmp;
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [data?.employees, searchTerm, activeFilter, dateFrom, dateTo, sort]);
 
   const handleExport = (format: 'csv' | 'excel') => {
     const columns: ExportColumn[] = [
@@ -275,6 +314,16 @@ export default function AdminEmployees() {
               >
                 Inactive ({data?.inactiveCount || 0})
               </Button>
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col">
+                  <label className="text-xs text-muted-foreground">From</label>
+                  <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9" />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-muted-foreground">To</label>
+                  <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9" />
+                </div>
+              </div>
               <ColumnVisibilityDropdown 
                 columns={columnOptions}
                 onToggleColumn={(id) => { if (id !== 'actions') toggleColumn(id); }}
@@ -284,7 +333,7 @@ export default function AdminEmployees() {
                 visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
                 totalCount={columnOptions.filter(c => c.canHide).length}
               />
-              {(searchTerm || activeFilter !== 'all') && (
+              {(searchTerm || activeFilter !== 'all' || dateFrom || dateTo) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -292,6 +341,8 @@ export default function AdminEmployees() {
                   onClick={() => {
                     setSearchTerm('');
                     setActiveFilter('all');
+                    setDateFrom('');
+                    setDateTo('');
                     try {
                       localStorage.removeItem('admin-employees-filters-v1');
                       localStorage.removeItem('admin-employees-search');
@@ -324,19 +375,84 @@ export default function AdminEmployees() {
                   <TableHeader>
                     <TableRow>
                       {(columnVisibility as any).employee_name !== false && (
-                        <TableHead>Name</TableHead>
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setSort((s) => ({ key: 'name', desc: s.key === 'name' ? !s.desc : false }))}
+                            aria-label={`Sort by name ${sort.key === 'name' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                          >
+                            <span>Name</span>
+                            {sort.key === 'name' ? (
+                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
                       )}
                       {(columnVisibility as any).email !== false && (
-                        <TableHead>Email</TableHead>
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setSort((s) => ({ key: 'email', desc: s.key === 'email' ? !s.desc : false }))}
+                            aria-label={`Sort by email ${sort.key === 'email' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                          >
+                            <span>Email</span>
+                            {sort.key === 'email' ? (
+                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
                       )}
                       {(columnVisibility as any).hourly_cost_rate !== false && (
-                        <TableHead>Cost Rate</TableHead>
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setSort((s) => ({ key: 'hourly_cost_rate', desc: s.key === 'hourly_cost_rate' ? !s.desc : false }))}
+                            aria-label={`Sort by cost rate ${sort.key === 'hourly_cost_rate' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                          >
+                            <span>Cost Rate</span>
+                            {sort.key === 'hourly_cost_rate' ? (
+                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
                       )}
                       {(columnVisibility as any).hourly_billable_rate !== false && (
-                        <TableHead>Billable Rate</TableHead>
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setSort((s) => ({ key: 'hourly_billable_rate', desc: s.key === 'hourly_billable_rate' ? !s.desc : false }))}
+                            aria-label={`Sort by billable rate ${sort.key === 'hourly_billable_rate' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                          >
+                            <span>Billable Rate</span>
+                            {sort.key === 'hourly_billable_rate' ? (
+                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
                       )}
                       {(columnVisibility as any).status !== false && (
-                        <TableHead>Status</TableHead>
+                        <TableHead>
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={() => setSort((s) => ({ key: 'status', desc: s.key === 'status' ? !s.desc : false }))}
+                            aria-label={`Sort by status ${sort.key === 'status' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                          >
+                            <span>Status</span>
+                            {sort.key === 'status' ? (
+                              sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
                       )}
                       <TableHead className="w-[70px]">Actions</TableHead>
                     </TableRow>
