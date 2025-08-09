@@ -33,6 +33,7 @@ import {
   BillingDashboard,
   SubmitInvoice,
   SecurityAudit,
+  AdminReceipts,
 } from '@/pages/LazyPages';
 
 export const AdminRoutes = () => (
@@ -308,11 +309,11 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
-    <Route path="/admin/billing-dashboard" element={
+    <Route path="/admin/finance/receipts" element={
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            <BillingDashboard />
+            <AdminReceipts />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
