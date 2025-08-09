@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TableActionsDropdown } from "@/components/ui/table-actions-dropdown";
 import { Eye, Edit, Trash2, Shield, KeyRound, Ban, CheckCircle } from "lucide-react";
 import { User } from "@/hooks/useUsers";
+import { SortableHeader } from "@/components/admin/shared/SortableHeader";
 
 interface UserColumnHandlers {
   onView: (user: User) => void;

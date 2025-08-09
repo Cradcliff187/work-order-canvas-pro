@@ -19,8 +19,10 @@ import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns
 import {
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
   flexRender,
   RowSelectionState,
+  SortingState,
 } from '@tanstack/react-table';
 import {
   Breadcrumb,
@@ -130,6 +132,7 @@ export default function AdminInvoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState({
     status: ['submitted'] as string[], // Default to showing submitted invoices first
     paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
@@ -245,11 +248,14 @@ const table = useReactTable({
   data: data?.data || [],
   columns,
   getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
   getRowId: (row) => row.id,
   onRowSelectionChange: setRowSelection,
+  onSortingChange: setSorting,
   onColumnVisibilityChange: setColumnVisibility,
   state: {
     rowSelection,
+    sorting,
     columnVisibility,
   },
 });

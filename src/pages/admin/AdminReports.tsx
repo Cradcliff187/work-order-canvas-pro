@@ -163,7 +163,7 @@ export default function AdminReports() {
     },
     {
       accessorKey: 'work_orders.work_order_number',
-      header: 'Work Order',
+      header: ({ column }) => <SortableHeader column={column} label="Work Order" />,
       cell: ({ row }) => {
         const workOrder = row.original.work_orders;
         return (
@@ -175,7 +175,7 @@ export default function AdminReports() {
     },
     {
       accessorKey: 'work_orders.title',
-      header: 'Title',
+      header: ({ column }) => <SortableHeader column={column} label="Title" />,
       cell: ({ row }) => {
         const workOrder = row.original.work_orders;
         return (
@@ -236,7 +236,7 @@ export default function AdminReports() {
     },
     {
       accessorKey: 'invoice_amount',
-      header: 'Amount',
+      header: ({ column }) => <SortableHeader column={column} label="Amount" />,
       cell: ({ row }) => {
         const amount = row.getValue('invoice_amount') as number;
         return amount ? `$${amount.toLocaleString()}` : 'N/A';
@@ -244,7 +244,7 @@ export default function AdminReports() {
     },
     {
       accessorKey: 'submitted_at',
-      header: 'Submitted',
+      header: ({ column }) => <SortableHeader column={column} label="Submitted" />,
       cell: ({ row }) => {
         const date = row.getValue('submitted_at') as string;
         return format(new Date(date), 'MMM dd, yyyy');
@@ -474,7 +474,7 @@ const table = useReactTable({
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-50 bg-popover">
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="submitted">Submitted</SelectItem>
                   <SelectItem value="reviewed">Reviewed</SelectItem>

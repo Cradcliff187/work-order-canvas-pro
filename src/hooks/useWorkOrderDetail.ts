@@ -70,7 +70,9 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
 export type { WorkOrderDetail };
 
 export function useWorkOrderDetail(id: string) {
-  console.log('🔍 useWorkOrderDetail called with ID:', id);
+  if (import.meta.env?.DEV && id) {
+    console.log('🔍 useWorkOrderDetail called with ID:', id);
+  }
   const queryClient = useQueryClient();
   
   // Stabilize query key
@@ -80,11 +82,9 @@ export function useWorkOrderDetail(id: string) {
     queryKey,
     enabled: !!id && id !== '' && id !== 'undefined',
     queryFn: async () => {
-      console.log('🔍 useWorkOrderDetail queryFn executing for ID:', id);
       if (!id || id === '' || id === 'undefined') throw new Error('Work order ID is required');
 
       // Main work order query (one-to-one relationships only)
-      console.log('🔍 Executing main work order query for ID:', id);
       const { data: workOrderData, error: workOrderError } = await supabase
         .from('work_orders')
         .select(`
@@ -108,7 +108,6 @@ export function useWorkOrderDetail(id: string) {
         .eq('id', id)
         .maybeSingle();
 
-      console.log('🔍 Main work order query result:', { data: workOrderData, error: workOrderError });
       if (workOrderError) {
         console.error('❌ Work order query error:', workOrderError);
         throw workOrderError;
@@ -116,7 +115,6 @@ export function useWorkOrderDetail(id: string) {
       if (!workOrderData) return null;
 
       // Separate queries for one-to-many relationships
-      console.log('🔍 Executing relationship queries for work order:', id);
       const [reportsResult, attachmentsResult, assignmentsResult] = await Promise.all([
         // Work order reports
         supabase
@@ -176,11 +174,7 @@ export function useWorkOrderDetail(id: string) {
           .eq('work_order_id', id)
       ]);
 
-      console.log('🔍 Relationship queries results:', {
-        reports: { data: reportsResult.data, error: reportsResult.error },
-        attachments: { data: attachmentsResult.data, error: attachmentsResult.error },
-        assignments: { data: assignmentsResult.data, error: assignmentsResult.error }
-      });
+      // Relationship queries executed
 
       // Check for errors in the relationship queries
       if (reportsResult.error) {

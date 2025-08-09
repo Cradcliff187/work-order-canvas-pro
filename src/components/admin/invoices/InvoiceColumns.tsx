@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/utils/formatting';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
+import { SortableHeader } from '@/components/admin/shared/SortableHeader';
 
 interface InvoiceColumnsProps {
   onViewInvoice: (invoice: Invoice) => void;
@@ -55,7 +56,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'internal_invoice_number',
-    header: 'Invoice #',
+    header: ({ column }) => <SortableHeader column={column} label="Invoice #" />,
     cell: ({ row }) => (
       <div className="font-mono text-sm text-right">
         {row.getValue('internal_invoice_number')}
@@ -64,7 +65,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'external_invoice_number',
-    header: 'Vendor Invoice #',
+    header: ({ column }) => <SortableHeader column={column} label="Vendor Invoice #" />,
     cell: ({ row }) => {
       const external = row.getValue('external_invoice_number') as string | null;
       return (
@@ -124,7 +125,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'total_amount',
-    header: 'Amount',
+    header: ({ column }) => <SortableHeader column={column} label="Amount" />,
     cell: ({ row }) => {
       const raw = row.getValue('total_amount') as any;
       const amount = typeof raw === 'number' ? raw : parseFloat(raw || '0');
@@ -156,7 +157,8 @@ export const createInvoiceColumns = ({
   },
   {
     id: 'date',
-    header: 'Date',
+    accessorFn: (row) => (row.submitted_at || row.created_at || null) as any,
+    header: ({ column }) => <SortableHeader column={column} label="Date" />,
     cell: ({ row }) => {
       const invoice = row.original;
       const date = invoice.submitted_at || invoice.created_at || null;
@@ -168,10 +170,11 @@ export const createInvoiceColumns = ({
         <span className="text-muted-foreground">—</span>
       );
     },
-  },
+  }
   {
     id: 'due_date',
-    header: 'Due Date',
+    accessorFn: (row) => (getDueDate?.(row as Invoice) ?? (row as any).due_date ?? null) as any,
+    header: ({ column }) => <SortableHeader column={column} label="Due Date" />,
     cell: ({ row }) => {
       const invoice = row.original;
       const dueDate = getDueDate?.(invoice) ?? (invoice as any).due_date ?? null;
@@ -186,7 +189,7 @@ export const createInvoiceColumns = ({
         </div>
       );
     },
-  },
+  }
   {
     accessorKey: 'paid_at',
     header: 'Payment Status',

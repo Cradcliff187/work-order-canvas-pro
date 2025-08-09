@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Eye, CheckCircle, XCircle } from 'lucide-react';
+import { SortableHeader } from '@/components/admin/shared/SortableHeader';
 
 export interface ReportTotals {
   totalHours?: number;
@@ -64,7 +65,7 @@ export function createReportColumns<T = any>({
   return [
     {
       accessorKey: 'report_number',
-      header: 'Report #',
+      header: ({ column }) => <SortableHeader column={column} label="Report #" />,
       cell: ({ row }) => <span className="font-medium">{getReportNumber(row.original)}</span>,
     },
     {
@@ -79,12 +80,12 @@ export function createReportColumns<T = any>({
     },
     {
       accessorKey: 'submitted_at',
-      header: 'Submitted',
+      header: ({ column }) => <SortableHeader column={column} label="Submitted" />,
       cell: ({ row }) => <span>{getSubmittedAt(row.original)}</span>,
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: ({ column }) => <SortableHeader column={column} label="Status" />,
       cell: ({ row }) => {
         const status = (row.getValue('status') as string) || 'submitted';
         const overrideClass = status === 'submitted' ? 'bg-amber-50 text-amber-600 border-amber-200' : undefined;

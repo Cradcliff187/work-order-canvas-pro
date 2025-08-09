@@ -173,13 +173,13 @@ export default function BillingDashboard() {
             ) : (
               <div className="text-2xl font-bold">{metrics?.unbilledReports.count || 0}</div>
             )}
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {isLoading ? (
                 <Skeleton className="h-3 w-20" />
               ) : (
                 `${formatCurrency(metrics?.unbilledReports.totalValue || 0)} total value`
               )}
-            </p>
+            </div>
           </CardContent>
         </Card>
 
