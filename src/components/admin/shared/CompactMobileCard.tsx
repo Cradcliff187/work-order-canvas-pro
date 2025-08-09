@@ -21,9 +21,18 @@ export function CompactMobileCard({
   return (
     <Card 
       className={`transition-all duration-200 border-border ${
-        onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98]' : ''
+        onClick ? 'cursor-pointer hover:shadow-md hover:border-primary/20 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background' : ''
       }`}
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : -1}
+      onKeyDown={(e) => {
+        if (!onClick) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
       <CardContent className="p-3 min-h-[48px]">
         <div className="space-y-2">

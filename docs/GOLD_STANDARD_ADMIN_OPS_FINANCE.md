@@ -41,8 +41,10 @@ Core principles (required)
 
 7) Accessibility
 - Single H1 per page
+- "Skip to main content" link before content; <main id="main-content" role="main"> is focusable for quick navigation
 - Buttons and menus with aria-labels and sr-only text where appropriate
 - Keyboard navigable menus and controls
+- Clickable rows and mobile cards: role="button", tabIndex=0, Enter/Space activation, and visible focus ring
 
 8) Performance
 - Memoize heavy derived data

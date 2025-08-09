@@ -17,18 +17,24 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   
   return (
     <SidebarProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-background text-foreground border border-border rounded-md px-3 py-2 shadow outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background z-50"
+      >
+        Skip to main content
+      </a>
       <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar />
         
         <div className="flex-1 flex flex-col">
           {/* Header with single toggle - matches SubcontractorLayout structure */}
-          <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
+          <header role="banner" className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
             <SidebarTrigger />
             <div className="flex-1" />
           </header>
 
           {/* Main content with consistent container and padding */}
-          <main className="flex-1 overflow-auto">
+          <main id="main-content" role="main" tabIndex={-1} className="flex-1 overflow-auto">
             <div className={`container mx-auto p-4 md:p-6 ${maxWidthClass}`}>
               {children}
             </div>
