@@ -8,7 +8,7 @@ Purpose: Track work to bring all Admin Operations & Finance pages to Gold Standa
 8: - Phase 3: COMPLETE
 9: - Phase 4: COMPLETE
 10: - Phase 5: COMPLETE
-11: - Phase 6: PLANNED
+11: - Phase 6: COMPLETE
 12: - Phase 7: PLANNED
 13: 
 14: Diagram
@@ -49,8 +49,8 @@ Purpose: Track work to bring all Admin Operations & Finance pages to Gold Standa
 49: - Apply table standards; add column visibility where applicable
 50: - Acceptance: matches Gold Standard checklist; keyboard row activation implemented for Users and Employees
 51: 
-52: 6) Phase 6 – Partner Billing UX polish (PLANNED)
-53: - Validate Select Reports page on mobile, error/empty states, toast feedback
+52: 6) Phase 6 – Partner Billing UX polish (COMPLETE)
+53: - Implemented standardized skeletons, retryable error states, toasts, a11y tweaks
 54: - Acceptance: meets Gold Standard and QA protocol
 55: 
 56: 7) Phase 7 – Accessibility & Performance pass + Regression (PLANNED)

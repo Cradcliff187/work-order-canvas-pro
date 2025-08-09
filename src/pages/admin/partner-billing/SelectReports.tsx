@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
-import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
@@ -40,7 +40,7 @@ export default function SelectReports() {
 
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: reports, isLoading, error } = usePartnerUnbilledReports(selectedPartnerId);
+  const { data: reports, isLoading, error, refetch } = usePartnerUnbilledReports(selectedPartnerId);
   const { data: reportStats } = usePartnerReportStats(selectedPartnerId);
   const { data: invoiceDetails } = useReportInvoiceDetails(reports?.map(r => r.id) || []);
   const generateInvoice = usePartnerInvoiceGeneration();
@@ -110,8 +110,19 @@ export default function SelectReports() {
         setSelectedReportIds(new Set());
         setShowConfirmDialog(false);
         
+        toast({
+          title: "Invoice generated",
+          description: "Redirecting to invoice...",
+        });
         // Navigate to invoice detail
         navigate(`/admin/partner-billing/invoices/${result.invoiceId}`);
+      },
+      onError: (err: any) => {
+        toast({
+          title: "Failed to generate invoice",
+          description: err?.message || 'Please try again.',
+          variant: 'destructive'
+        });
       }
     });
   };
@@ -246,9 +257,10 @@ export default function SelectReports() {
                 icon={FileBarChart}
                 title="Error loading reports"
                 description={error.message}
+                action={{ label: 'Retry', onClick: () => refetch() }}
               />
             ) : isLoading ? (
-              <TableSkeleton rows={3} columns={8} />
+              <EnhancedTableSkeleton rows={5} columns={8} showHeader />
             ) : !reports || reports.length === 0 ? (
               <ReportPipelineEmptyState reportStats={reportStats} />
             ) : (
@@ -281,10 +293,19 @@ export default function SelectReports() {
                           return (
                             <TableRow 
                               key={report.id}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Toggle selection for work order ${report.work_orders?.work_order_number || report.id}`}
                               className={`cursor-pointer hover:bg-muted/50 ${
                                 isSelected ? 'bg-primary/10 border-l-2 border-l-primary' : ''
                               }`}
                               onClick={() => handleReportToggle(report.id, !isSelected)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleReportToggle(report.id, !isSelected);
+                                }
+                              }}
                             >
                               <TableCell onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
@@ -432,114 +453,126 @@ export default function SelectReports() {
                   {reports.map((report) => {
                     const isSelected = selectedReportIds.has(report.id);
                     return (
-                      <MobileTableCard
-                        key={report.id}
-                        title={report.work_orders?.work_order_number || 'N/A'}
-                        subtitle={`${report.work_orders?.title || 'No title'} • ${report.work_orders?.description || 'No description'}`}
-                        status={<ReportStatusBadge status="approved" size="sm" />}
-                        onClick={() => handleReportToggle(report.id, !isSelected)}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Toggle selection for work order ${report.work_orders?.work_order_number || report.id}`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleReportToggle(report.id, !isSelected);
+                          }
+                        }}
                       >
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                               {report.subcontractor_costs && (
-                                 (() => {
+                        <MobileTableCard
+                          key={report.id}
+                          title={report.work_orders?.work_order_number || 'N/A'}
+                          subtitle={`${report.work_orders?.title || 'No title'} • ${report.work_orders?.description || 'No description'}`}
+                          status={<ReportStatusBadge status="approved" size="sm" />}
+                          onClick={() => handleReportToggle(report.id, !isSelected)}
+                        >
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => handleReportToggle(report.id, checked === true)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                 {report.subcontractor_costs && (
+                                   (() => {
+                                     const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
+                                     const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
+                                     
+                                     return (
+                                       <div className="flex items-center gap-1">
+                                         <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                                           {formatCurrency(report.subcontractor_costs)}
+                                         </Badge>
+                                         {invoiceCount > 1 && (
+                                           <Info className="w-3 h-3 text-muted-foreground" />
+                                         )}
+                                       </div>
+                                     );
+                                   })()
+                                 )}
+                              </div>
+                               <div className="flex items-center gap-2 pt-1">
+                                 {(() => {
                                    const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
                                    const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
                                    
                                    return (
-                                     <div className="flex items-center gap-1">
-                                       <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
-                                         {formatCurrency(report.subcontractor_costs)}
+                                     <>
+                                       <Badge variant="outline" className="h-4 text-[9px] px-1">
+                                         {invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}
                                        </Badge>
-                                       {invoiceCount > 1 && (
-                                         <Info className="w-3 h-3 text-muted-foreground" />
+                                       {invoiceCount > 0 && (
+                                         <Badge variant="default" className="h-4 text-[9px] px-1">
+                                           Approved
+                                         </Badge>
                                        )}
-                                     </div>
+                                     </>
                                    );
-                                 })()
-                               )}
-                            </div>
-                             <div className="flex items-center gap-2 pt-1">
-                               {(() => {
-                                 const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
-                                 const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
-                                 
-                                 return (
-                                   <>
-                                     <Badge variant="outline" className="h-4 text-[9px] px-1">
-                                       {invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}
-                                     </Badge>
-                                     {invoiceCount > 0 && (
-                                       <Badge variant="default" className="h-4 text-[9px] px-1">
-                                         Approved
-                                       </Badge>
-                                     )}
-                                   </>
-                                 );
-                               })()}
-                             </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <div className="flex items-center gap-1">
-                              <Building2 className="w-3 h-3" />
-                              {(() => {
-                                const subcontractor = report.subcontractor;
-                                const subcontractorOrg = report.subcontractor_organization;
-                                const submittedBy = report.submitted_by;
-                                
-                                // Determine what to display based on organization type
-                                let displayName = 'N/A';
-                                
-                                // Check if subcontractor is from internal organization
-                                const isInternalSubcontractor = subcontractor?.organization_members?.some(
-                                  (om: any) => om.organizations?.organization_type === 'internal'
-                                );
-                                
-                                if (subcontractorOrg) {
-                                  // Organization-level assignment - always show organization name for subcontractors
-                                  displayName = subcontractorOrg.name;
-                                } else if (subcontractor && isInternalSubcontractor) {
-                                  // Individual internal user - show their name
-                                  displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
-                                } else if (subcontractor) {
-                                  // Individual subcontractor from subcontractor org - fallback to org name
-                                  const subcontractorOrgFromMember = subcontractor.organization_members?.find(
-                                    (om: any) => om.organizations?.organization_type === 'subcontractor'
-                                  );
-                                  displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
-                                }
-
-                                return (
-                                  <div>
-                                    <div className="font-medium">
-                                      {displayName}
-                                    </div>
-                                    {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
-                                      <div className="text-xs text-orange-600 font-medium">
-                                        Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {format(new Date(report.submitted_at), 'MMM d, yyyy')}
-                            </div>
-                            {report.work_orders?.store_location && (
+                                 })()}
+                               </div>
+                            <div className="text-xs text-muted-foreground space-y-1">
                               <div className="flex items-center gap-1">
-                                <span>📍</span>
-                                {report.work_orders.store_location}
+                                <Building2 className="w-3 h-3" />
+                                {(() => {
+                                  const subcontractor = report.subcontractor;
+                                  const subcontractorOrg = report.subcontractor_organization;
+                                  const submittedBy = report.submitted_by;
+                                  
+                                  // Determine what to display based on organization type
+                                  let displayName = 'N/A';
+                                  
+                                  // Check if subcontractor is from internal organization
+                                  const isInternalSubcontractor = subcontractor?.organization_members?.some(
+                                    (om: any) => om.organizations?.organization_type === 'internal'
+                                  );
+                                  
+                                  if (subcontractorOrg) {
+                                    // Organization-level assignment - always show organization name for subcontractors
+                                    displayName = subcontractorOrg.name;
+                                  } else if (subcontractor && isInternalSubcontractor) {
+                                    // Individual internal user - show their name
+                                    displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
+                                  } else if (subcontractor) {
+                                    // Individual subcontractor from subcontractor org - fallback to org name
+                                    const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+                                      (om: any) => om.organizations?.organization_type === 'subcontractor'
+                                    );
+                                    displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
+                                  }
+
+                                  return (
+                                    <div>
+                                      <div className="font-medium">
+                                        {displayName}
+                                      </div>
+                                      {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
+                                        <div className="text-xs text-orange-600 font-medium">
+                                          Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                            )}
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {format(new Date(report.submitted_at), 'MMM d, yyyy')}
+                              </div>
+                              {report.work_orders?.store_location && (
+                                <div className="flex items-center gap-1">
+                                  <span>📍</span>
+                                  {report.work_orders.store_location}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </MobileTableCard>
+                        </MobileTableCard>
+                      </div>
                     );
                   })}
                 </div>
@@ -613,7 +646,7 @@ export default function SelectReports() {
                     <Button 
                       className="w-full md:w-auto"
                       onClick={() => setShowConfirmDialog(true)}
-                      disabled={selectedReportIds.size === 0 || generateInvoice.isPending || calculations.subtotal < 0.01}
+                      disabled={!selectedPartnerId || selectedReportIds.size === 0 || generateInvoice.isPending || calculations.subtotal < 0.01}
                     >
                       {generateInvoice.isPending ? (
                         "Generating Invoice..."
