@@ -12,6 +12,7 @@ import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/util
 import { MobileQuickActions, createMapAction, createMessageAction, createViewDetailsAction, createSubmitReportAction, createPhoneAction } from '@/components/work-orders/MobileQuickActions';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { cn } from '@/lib/utils';
 
 interface WorkOrder {
   id: string;
@@ -84,6 +85,7 @@ interface MobileWorkOrderCardProps {
   onCall?: () => void;
   // Contact information for calls
   contactPhone?: string;
+  className?: string;
 }
 
 
@@ -106,7 +108,8 @@ export function MobileWorkOrderCard({
   onViewDetails,
   onSubmitReport,
   onCall,
-  contactPhone
+  contactPhone,
+  className
 }: MobileWorkOrderCardProps) {
   const {
     isSwipeing,
@@ -229,7 +232,7 @@ export function MobileWorkOrderCard({
   };
 
   return (
-    <div className="relative mb-4 overflow-hidden">
+    <div className={cn("relative mb-4 overflow-hidden", className)}>
       {/* Swipe Action Backgrounds */}
       <div className="absolute inset-0 z-0">
         {/* Left (Delete) */}

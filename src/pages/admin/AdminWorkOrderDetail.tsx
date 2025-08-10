@@ -247,7 +247,7 @@ export default function AdminWorkOrderDetail() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden p-6 space-y-6">
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />
       
@@ -314,16 +314,18 @@ export default function AdminWorkOrderDetail() {
 
       {/* Tabs for detailed sections */}
       <Tabs defaultValue="details" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="attachments">Attachments</TabsTrigger>
-          <TabsTrigger value="messages">
-            <MessageCircle className="h-4 w-4 mr-2" />
-            Messages
-          </TabsTrigger>
-          <TabsTrigger value="audit">Audit Trail</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <TabsList className="inline-flex min-w-full lg:grid lg:grid-cols-5">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="attachments">Attachments</TabsTrigger>
+            <TabsTrigger value="messages">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Messages
+            </TabsTrigger>
+            <TabsTrigger value="audit">Audit Trail</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="details" className="space-y-6">
           {/* Detailed Information Grid */}

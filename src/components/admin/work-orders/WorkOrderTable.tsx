@@ -177,7 +177,7 @@ export function WorkOrderTable({
   if (isMobile) {
     return (
       <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
-        <Card>
+        <Card className="w-full max-w-full overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Work Orders</CardTitle>
             <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export function WorkOrderTable({
               )}
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-hidden">
             {!data?.length ? (
               <EmptyState
                 icon={ClipboardList}
@@ -210,7 +210,7 @@ export function WorkOrderTable({
                 } : undefined}
               />
             ) : (
-              <div className="space-y-4 p-4">
+              <div className="w-full max-w-full overflow-hidden space-y-3 px-4">
                 {table.getRowModel().rows.map((row) => {
                   const workOrder = row.original;
                   // Transform the work order data to match MobileWorkOrderCard's expected format
@@ -237,6 +237,7 @@ export function WorkOrderTable({
                           workOrder={transformedWorkOrder}
                           onTap={() => onWorkOrderClick(row.original)}
                           viewerRole="admin"
+                          className="max-w-full"
                           showOrganization={true}
                           showAssignee={true}
                           showTrade={true}
@@ -262,6 +263,7 @@ export function WorkOrderTable({
                       workOrder={transformedWorkOrder}
                       onTap={() => onWorkOrderClick(row.original)}
                       viewerRole="admin"
+                      className="max-w-full"
                       showOrganization={true}
                       showAssignee={true}
                       showTrade={true}
@@ -449,6 +451,7 @@ export function WorkOrderTable({
                             workOrder={transformedWorkOrder}
                             onTap={() => handleWorkOrderRowClick(workOrder)}
                             viewerRole="admin"
+                            className="max-w-full"
                             showOrganization={true}
                             showAssignee={true}
                             showTrade={true}
@@ -473,6 +476,7 @@ export function WorkOrderTable({
                         workOrder={transformedWorkOrder}
                         onTap={() => handleWorkOrderRowClick(workOrder)}
                         viewerRole="admin"
+                        className="max-w-full"
                         showOrganization={true}
                         showAssignee={true}
                         showTrade={true}
