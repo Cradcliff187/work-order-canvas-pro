@@ -9,6 +9,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { useMentionCandidates } from '@/hooks/useMentionCandidates';
 import { 
   MessageCircle, 
   Users, 
@@ -24,7 +27,8 @@ import {
   Archive,
   Code,
   Film,
-  Music
+  Music,
+  X
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useWorkOrderMessages, WorkOrderMessage, WorkOrderAttachment } from '@/hooks/useWorkOrderMessages';
@@ -73,7 +77,12 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
   const [markedAsReadIds, setMarkedAsReadIds] = useState<Set<string>>(new Set());
   
   // Track previous work order ID to detect actual changes
-  const previousWorkOrderId = useRef<string | null>(null);
+const previousWorkOrderId = useRef<string | null>(null);
+
+  const [selectedMentions, setSelectedMentions] = useState<{ id: string; name: string }[]>([]);
+  const [mentionNameMap, setMentionNameMap] = useState<Record<string, string>>({});
+  const { data: publicCandidates } = useMentionCandidates(workOrderId, false);
+  const { data: internalCandidates } = useMentionCandidates(workOrderId, true);
 
   // Fetch messages using custom hooks
   const { data: publicData, isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false, publicPage);
@@ -145,6 +154,31 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
       }
     }
   }, [internalData, internalPage]);
+
+  // Build map of mentioned user IDs to names for rendering
+  useEffect(() => {
+    const ids = new Set<string>();
+    [...allPublicMessages, ...allInternalMessages].forEach((m) => {
+      m.mentioned_user_ids?.forEach((id: string) => ids.add(id));
+    });
+    if (ids.size === 0) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', Array.from(ids));
+        const map: Record<string, string> = {};
+        data?.forEach((p: any) => {
+          const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.email;
+          map[p.id] = name;
+        });
+        setMentionNameMap(map);
+      } catch (e) {
+        console.error('Failed to load mention names', e);
+      }
+    })();
+  }, [allPublicMessages, allInternalMessages]);
 
   // Reset pagination only when work order ID actually changes
   useEffect(() => {
@@ -261,11 +295,13 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
         isInternal: isSubcontractor() || (isInternal && (isAdmin() || isEmployee())),
         attachmentIds: [], // No file attachments in messages anymore
         crewMemberName: crewMemberName.trim() || undefined,
+        mentionedUserIds: selectedMentions.map((m) => m.id),
       });
       
       setNewMessage('');
       setIsInternal(false);
       setCrewMemberName('');
+      setSelectedMentions([]);
     } catch (error) {
       // Error is handled by the mutation hook
       console.error('Failed to post message:', error);
@@ -374,6 +410,11 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           </p>
         )}
         {renderAttachments(message.attachments)}
+        {message.mentioned_user_ids?.length > 0 && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            Mentioned: {message.mentioned_user_ids.map((id: string) => mentionNameMap[id] || 'User').join(', ')}
+          </div>
+        )}
         {isOwnMessage && message.total_recipients > 0 && (
           <div className="mt-2 pt-2 border-t border-muted">
             <span className="text-xs text-muted-foreground">
@@ -474,6 +515,55 @@ export const WorkOrderMessages: React.FC<WorkOrderMessagesProps> = ({ workOrderI
           disabled={postMessage.isPending}
         />
         
+        {/* Mentions */}
+        {selectedMentions.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {selectedMentions.map((m) => (
+              <Badge key={m.id} variant="secondary" className="flex items-center gap-1">
+                {m.name}
+                <button
+                  type="button"
+                  aria-label={`Remove ${m.name}`}
+                  onClick={() => setSelectedMentions((prev) => prev.filter((x) => x.id !== m.id))}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-between">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="sm">Mention users</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search users..." />
+                <CommandList>
+                  <CommandEmpty>No users found.</CommandEmpty>
+                  <CommandGroup>
+                    {(forInternal ? (internalCandidates || []) : (publicCandidates || [])).map((u) => (
+                      <CommandItem
+                        key={u.id}
+                        value={u.id}
+                        onSelect={() => {
+                          setSelectedMentions((prev) => prev.some((x) => x.id === u.id) ? prev : [...prev, { id: u.id, name: u.fullName }]);
+                        }}
+                      >
+                        <div className="flex flex-col">
+                          <span>{u.fullName}</span>
+                          {u.orgName && <span className="text-xs text-muted-foreground">{u.orgName}</span>}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
         {(isAdmin() || isEmployee()) && !forInternal && (
           <div className="flex items-center space-x-2">
             <Checkbox

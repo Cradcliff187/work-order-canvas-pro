@@ -9,14 +9,15 @@ export interface PostMessageData {
   isInternal: boolean;
   attachmentIds?: string[];
   crewMemberName?: string;
+  mentionedUserIds?: string[];
 }
 
 export function usePostMessage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async ({ workOrderId, message, isInternal, attachmentIds, crewMemberName }: PostMessageData) => {
+return useMutation({
+    mutationFn: async ({ workOrderId, message, isInternal, attachmentIds, crewMemberName, mentionedUserIds }: PostMessageData) => {
       // Check if offline
       if (!navigator.onLine) {
         // Get current user's profile ID for offline storage
@@ -35,7 +36,7 @@ export function usePostMessage() {
           throw new Error('User profile not found');
         }
 
-        // Create queued message object
+// Create queued message object
         const queuedMessage: QueuedMessage = {
           id: `temp-${Date.now()}`,
           workOrderId,
@@ -43,6 +44,7 @@ export function usePostMessage() {
           isInternal,
           senderId: profile.id,
           queuedAt: Date.now(),
+          mentionedUserIds: mentionedUserIds || [],
         };
 
         // Store in localStorage
@@ -79,7 +81,7 @@ export function usePostMessage() {
         throw new Error('User profile not found');
       }
 
-      const { data, error } = await supabase
+const { data, error } = await supabase
         .from('work_order_messages')
         .insert({
           work_order_id: workOrderId,
@@ -88,6 +90,7 @@ export function usePostMessage() {
           sender_id: profile.id,
           attachment_ids: attachmentIds || [],
           crew_member_name: crewMemberName || null,
+          mentioned_user_ids: mentionedUserIds || [],
         })
         .select(`
           id,
@@ -96,6 +99,7 @@ export function usePostMessage() {
           sender_id,
           work_order_id,
           created_at,
+          mentioned_user_ids,
           sender:profiles!sender_id(
             first_name,
             last_name,

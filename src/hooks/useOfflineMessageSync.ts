@@ -10,6 +10,7 @@ export interface QueuedMessage {
   isInternal: boolean;
   senderId: string;
   queuedAt: number;
+  mentionedUserIds?: string[];
   retryCount?: number;
 }
 
@@ -37,13 +38,14 @@ export function useOfflineMessageSync() {
         const queuedMessage: QueuedMessage = JSON.parse(queuedMessageData);
 
         // Attempt to send the message
-        const { error } = await supabase
+const { error } = await supabase
           .from('work_order_messages')
           .insert({
             work_order_id: queuedMessage.workOrderId,
             message: queuedMessage.message.trim(),
             is_internal: queuedMessage.isInternal,
             sender_id: queuedMessage.senderId,
+            mentioned_user_ids: queuedMessage.mentionedUserIds || [],
           });
 
         if (error) {

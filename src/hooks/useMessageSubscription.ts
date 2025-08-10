@@ -46,13 +46,17 @@ export function useMessageSubscription(
                 .eq('id', workOrderId)
                 .single();
 
-              const workOrderNumber = workOrder?.work_order_number || workOrderId;
+const workOrderNumber = workOrder?.work_order_number || workOrderId;
               const messagePreview = payload.new.message.length > 80 
                 ? `${payload.new.message.substring(0, 80)}...`
                 : payload.new.message;
 
+              const isMentioned = Array.isArray(payload.new.mentioned_user_ids) && profile?.id
+                ? payload.new.mentioned_user_ids.includes(profile.id)
+                : false;
+
               toast({
-                title: "New message",
+                title: isMentioned ? 'You were mentioned' : 'New message',
                 description: `Work Order ${workOrderNumber}: ${messagePreview}`,
               });
             } catch (error) {
