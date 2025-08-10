@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { useMentionCandidates } from '@/hooks/useMentionCandidates';
+import { useMentionCandidates, type MentionCandidate } from '@/hooks/useMentionCandidates';
 import { 
   MessageCircle, 
   Users, 
@@ -83,6 +83,12 @@ const previousWorkOrderId = useRef<string | null>(null);
   const [mentionNameMap, setMentionNameMap] = useState<Record<string, string>>({});
   const { data: publicCandidates } = useMentionCandidates(workOrderId, false);
   const { data: internalCandidates } = useMentionCandidates(workOrderId, true);
+
+  // Inline @ mention state
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionActiveIndex, setMentionActiveIndex] = useState(0);
 
   // Fetch messages using custom hooks
   const { data: publicData, isLoading: isLoadingPublic } = useWorkOrderMessages(workOrderId, false, publicPage);
@@ -308,6 +314,53 @@ const previousWorkOrderId = useRef<string | null>(null);
     }
   };
 
+  // Detect inline @mention triggers based on caret position
+  const detectMentionTrigger = useCallback((value: string) => {
+    const el = textareaRef.current;
+    const caret = el ? el.selectionStart : value.length;
+    const before = value.slice(0, caret);
+    const match = before.match(/(^|\s)@([a-zA-Z0-9._-]{0,30})$/);
+    if (match) {
+      setMentionOpen(true);
+      setMentionQuery(match[2] || '');
+      setMentionActiveIndex(0);
+    } else {
+      if (mentionOpen) setMentionOpen(false);
+      if (mentionQuery) setMentionQuery('');
+    }
+  }, [mentionOpen, mentionQuery]);
+
+  // Insert a selected mention into the textarea at the trigger location
+  const handleSelectMention = useCallback((user: MentionCandidate) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const value = el.value;
+    const caret = el.selectionStart;
+    const before = value.slice(0, caret);
+    const match = before.match(/(^|\s)@([a-zA-Z0-9._-]{0,30})$/);
+    if (!match) return;
+
+    const triggerStart = caret - (match[2]?.length ?? 0) - 1; // include '@'
+    const prefix = value.slice(0, triggerStart);
+    const suffix = value.slice(caret);
+    const insertion = `@${user.fullName}`;
+    const next = `${prefix}${insertion} ${suffix}`;
+
+    setNewMessage(next);
+    setSelectedMentions(prev => prev.some(x => x.id === user.id) ? prev : [...prev, { id: user.id, name: user.fullName }]);
+    setMentionOpen(false);
+    setMentionQuery('');
+    setMentionActiveIndex(0);
+
+    requestAnimationFrame(() => {
+      const pos = (prefix + insertion + ' ').length;
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(pos, pos);
+      }
+    });
+  }, []);
+
   const renderAttachments = (attachments: WorkOrderAttachment[] | undefined) => {
     if (!attachments || attachments.length === 0) return null;
 
@@ -476,6 +529,19 @@ const previousWorkOrderId = useRef<string | null>(null);
 
   const renderMessageComposer = (forInternal: boolean) => {
     const canPost = forInternal ? canPostToInternal : canPostToPublic;
+
+    // Candidates and filtering for inline mentions
+    const candidatesList = (forInternal ? (internalCandidates || []) : (publicCandidates || []));
+    const filteredCandidates = mentionQuery
+      ? candidatesList.filter((u) => {
+          const q = mentionQuery.toLowerCase();
+          return (
+            u.fullName.toLowerCase().includes(q) ||
+            (u.email?.toLowerCase().includes(q) ?? false) ||
+            (u.orgName?.toLowerCase().includes(q) ?? false)
+          );
+        })
+      : candidatesList;
     
     if (!canPost) {
       return (
@@ -507,13 +573,62 @@ const previousWorkOrderId = useRef<string | null>(null);
           </div>
         )}
 
-        <Textarea
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder={forInternal ? "Add an internal note..." : "Type your message..."}
-          className="min-h-[100px] resize-none"
-          disabled={postMessage.isPending}
-        />
+        <div className="relative">
+          <Textarea
+            ref={textareaRef}
+            value={newMessage}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              detectMentionTrigger(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (!mentionOpen) return;
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setMentionActiveIndex((idx) => Math.min(idx + 1, Math.max(0, filteredCandidates.length - 1)));
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setMentionActiveIndex((idx) => Math.max(idx - 1, 0));
+              } else if (e.key === 'Enter') {
+                const sel = filteredCandidates[mentionActiveIndex];
+                if (sel) {
+                  e.preventDefault();
+                  handleSelectMention(sel as MentionCandidate);
+                }
+              } else if (e.key === 'Escape') {
+                setMentionOpen(false);
+              }
+            }}
+            placeholder={forInternal ? "Add an internal note..." : "Type your message..."}
+            className="min-h-[100px] resize-none"
+            disabled={postMessage.isPending}
+          />
+          {mentionOpen && (
+            <div className="absolute z-50 left-0 right-0 mt-1 max-h-64 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+              {filteredCandidates.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+              ) : (
+                filteredCandidates.slice(0, 8).map((u, idx) => (
+                  <button
+                    type="button"
+                    key={u.id}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-muted ${idx === mentionActiveIndex ? 'bg-muted' : ''}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelectMention(u as MentionCandidate);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span>{u.fullName}</span>
+                      {u.orgName && <span className="text-xs text-muted-foreground">{u.orgName}</span>}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         
         {/* Mentions */}
         {selectedMentions.length > 0 && (
