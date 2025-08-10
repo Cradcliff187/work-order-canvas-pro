@@ -455,7 +455,7 @@ export default function AdminWorkOrders() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0" role="toolbar" aria-label="Work order actions">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0 max-w-full justify-end" role="toolbar" aria-label="Work order actions">
           <KeyboardShortcutsTooltip />
           <ViewModeSwitcher
             value={viewMode}
@@ -472,7 +472,18 @@ export default function AdminWorkOrders() {
             aria-pressed={bulkMode}
           >
             <CheckSquare className="w-4 h-4 mr-2" />
-            {bulkMode ? 'Exit Bulk Mode' : 'Bulk Actions'}
+            {/* Short labels on mobile */}
+            {bulkMode ? (
+              <>
+                <span className="hidden sm:inline">Exit Bulk Mode</span>
+                <span className="sm:hidden">Exit</span>
+              </>
+            ) : (
+              <>
+                <span className="hidden sm:inline">Bulk Actions</span>
+                <span className="sm:hidden">Bulk</span>
+              </>
+            )}
           </Button>
           <Button 
             size="sm" 
@@ -481,7 +492,8 @@ export default function AdminWorkOrders() {
             aria-label="Create new work order"
           >
             <Plus className="w-4 h-4 mr-2" />
-            New Work Order
+            <span className="hidden sm:inline">New Work Order</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </header>

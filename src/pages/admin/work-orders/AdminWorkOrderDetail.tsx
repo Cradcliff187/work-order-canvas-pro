@@ -112,7 +112,7 @@ export default function AdminWorkOrderDetail() {
           </div>
         </div>
         
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0">
           <WorkOrderStatusBadge
             status={workOrder.status}
             size="sm"
@@ -128,7 +128,7 @@ export default function AdminWorkOrderDetail() {
       </div>
 
       <Tabs defaultValue="details" className="space-y-6">
-        <div className="w-full overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+        <div className="w-full overflow-x-auto">
           <TabsList className="min-w-max">
             <TabsTrigger value="details" className="whitespace-nowrap">Details</TabsTrigger>
             <TabsTrigger value="reports" className="whitespace-nowrap">Reports</TabsTrigger>

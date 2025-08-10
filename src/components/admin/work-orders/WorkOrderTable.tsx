@@ -178,9 +178,9 @@ export function WorkOrderTable({
     return (
       <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
         <Card className="w-full max-w-full overflow-hidden">
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 min-w-0">
             <CardTitle>Work Orders</CardTitle>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
               {bulkMode && (
                 <Button 
                   variant="ghost" 
@@ -189,7 +189,9 @@ export function WorkOrderTable({
                   disabled={selectedIds.length === 0}
                   aria-label={`Clear selection (${selectedIds.length} selected)`}
                 >
-                  Clear Selection
+                  {/* Responsive label */}
+                  <span className="hidden sm:inline">Clear Selection</span>
+                  <span className="sm:hidden">Clear</span>
                 </Button>
               )}
             </div>
