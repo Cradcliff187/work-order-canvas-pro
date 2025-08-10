@@ -139,6 +139,38 @@ export type Database = {
           },
         ]
       }
+      direct_pairs: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_pairs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           created_at: string | null
@@ -1964,6 +1996,13 @@ export type Database = {
       get_user_id_from_legacy_path: {
         Args: { file_path: string }
         Returns: string
+      }
+      get_user_org_ids_by_type: {
+        Args: {
+          p_profile_id: string
+          p_type: Database["public"]["Enums"]["organization_type"]
+        }
+        Returns: string[]
       }
       get_user_org_type: {
         Args: Record<PropertyKey, never>
