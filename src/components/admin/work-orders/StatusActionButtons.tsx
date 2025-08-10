@@ -263,7 +263,7 @@ export function StatusActionButtons({
 
   return (
     <>
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Quick Actions:</span>
           <ChevronRight className="h-3 w-3" />
@@ -278,7 +278,7 @@ export function StatusActionButtons({
               variant={transition.variant}
               onClick={() => handleTransitionClick(transition)}
               disabled={isTransitioning || isDisabled}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 min-h-[44px] h-11 whitespace-nowrap w-full sm:w-auto"
               title={isDisabled ? 'Assignment required before this action' : undefined}
             >
               {transition.icon}

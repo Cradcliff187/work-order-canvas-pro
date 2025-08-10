@@ -177,7 +177,7 @@ export function WorkOrderTable({
   if (isMobile) {
     return (
       <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
-        <Card className="w-full max-w-full overflow-hidden">
+        <Card className="w-full max-w-full">
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 min-w-0">
             <CardTitle>Work Orders</CardTitle>
             <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -196,7 +196,7 @@ export function WorkOrderTable({
               )}
             </div>
           </CardHeader>
-          <CardContent className="p-0 overflow-hidden">
+          <CardContent className="p-0">
             {!data?.length ? (
               <EmptyState
                 icon={ClipboardList}
@@ -212,7 +212,7 @@ export function WorkOrderTable({
                 } : undefined}
               />
             ) : (
-              <div className="w-full max-w-full overflow-hidden space-y-4">
+              <div className="space-y-4">
                 {table.getRowModel().rows.map((row) => {
                   const workOrder = row.original;
                   // Transform the work order data to match MobileWorkOrderCard's expected format

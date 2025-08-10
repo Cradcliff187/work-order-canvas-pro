@@ -247,7 +247,7 @@ export default function AdminWorkOrderDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background w-full max-w-full p-0 md:p-6 space-y-6">
+    <div className="min-h-screen bg-background w-full max-w-full p-4 md:p-6 space-y-6">
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />
       
@@ -268,7 +268,7 @@ export default function AdminWorkOrderDetail() {
             <p className="text-muted-foreground">{workOrder.title}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <WorkOrderStatusBadge
             status={workOrder.status}
             size="sm"
@@ -315,7 +315,7 @@ export default function AdminWorkOrderDetail() {
       {/* Tabs for detailed sections */}
       <Tabs defaultValue="details" className="space-y-6">
         <div className="overflow-x-auto -mx-4 px-4">
-          <TabsList className="inline-flex min-w-full lg:grid lg:grid-cols-5">
+          <TabsList className="inline-flex min-w-max lg:grid lg:grid-cols-5">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
@@ -349,7 +349,7 @@ export default function AdminWorkOrderDetail() {
                     <p className="text-sm">{workOrder.description}</p>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Work Order #</label>
                     <p className="font-mono">{workOrder.work_order_number}</p>
@@ -541,7 +541,7 @@ export default function AdminWorkOrderDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <label className="font-medium text-muted-foreground">Created</label>
                     <p>{formatDateTime(workOrder.date_submitted)}</p>
@@ -571,7 +571,7 @@ export default function AdminWorkOrderDetail() {
                 {(workOrder.estimated_hours || workOrder.actual_hours) && (
                   <>
                     <Separator />
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       {workOrder.estimated_hours && (
                         <div>
                           <label className="font-medium text-muted-foreground flex items-center gap-1">
