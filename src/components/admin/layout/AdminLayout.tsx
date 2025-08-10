@@ -23,10 +23,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       >
         Skip to main content
       </a>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-svh flex w-full bg-background">
         <AdminSidebar />
         
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Header with single toggle - matches SubcontractorLayout structure */}
           <header role="banner" className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
             <SidebarTrigger />
@@ -34,8 +34,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </header>
 
           {/* Main content with consistent container and padding */}
-          <main id="main-content" role="main" tabIndex={-1} className="flex-1 overflow-y-auto">
-            <div className={`container mx-auto ${contentPaddingClass} w-full max-w-full ${maxWidthClass}`}>
+          <main id="main-content" role="main" tabIndex={-1} className="flex-1 overflow-auto pb-20 md:pb-0">
+            <div className={`container mx-auto ${contentPaddingClass} ${maxWidthClass}`}>
               {children}
             </div>
           </main>
