@@ -65,7 +65,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
     {
       id: "name",
       accessorKey: "first_name",
-      header: "Name",
+      header: ({ column }) => <SortableHeader column={column} label="Name" />,
       cell: ({ row }) => {
         const user = row.original as any;
         const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase();
@@ -83,7 +83,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
     },
     {
       accessorKey: "email",
-      header: "Email",
+      header: ({ column }) => <SortableHeader column={column} label="Email" />,
       cell: ({ row }) => {
         const email = row.getValue("email") as string;
         return <span className="text-sm text-muted-foreground">{email}</span>;
@@ -115,7 +115,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
     },
     {
       accessorKey: "is_active",
-      header: "Status",
+      header: ({ column }) => <SortableHeader column={column} label="Status" />,
       cell: ({ row }) => {
         const u = row.original as any;
         const suspended = u?.status === "suspended" || u?.is_suspended === true;
@@ -134,7 +134,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
     },
     {
       accessorKey: "last_login",
-      header: "Last Login",
+      header: ({ column }) => <SortableHeader column={column} label="Last Login" />,
       cell: ({ row }) => {
         const value = row.getValue("last_login") as string | null;
         return value ? new Date(value).toLocaleString() : (
@@ -144,7 +144,7 @@ export function createUserColumns(handlers: UserColumnHandlers): ColumnDef<User>
     },
     {
       accessorKey: "created_at",
-      header: "Created",
+      header: ({ column }) => <SortableHeader column={column} label="Created" />,
       cell: ({ row }) => {
         const value = row.getValue("created_at") as string | null;
         return value ? new Date(value).toLocaleDateString() : "";

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { Button } from '@/components/ui/button';
@@ -86,6 +86,55 @@ export default function AdminPartnerLocations() {
 
     return matchesSearch && matchesOrganization && matchesStatus;
   });
+
+  // Sorting state and helpers
+  type SortKey = 'organization' | 'location_name' | 'location_number' | 'address' | 'status';
+  const [sortKey, setSortKey] = useState<SortKey>('organization');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+  const sortedLocations = useMemo(() => {
+    const rows = [...filteredLocations];
+    rows.sort((a, b) => {
+      let av: any = '';
+      let bv: any = '';
+      switch (sortKey) {
+        case 'organization':
+          av = organizationMap[a.organization_id]?.name || '';
+          bv = organizationMap[b.organization_id]?.name || '';
+          break;
+        case 'location_name':
+          av = a.location_name || '';
+          bv = b.location_name || '';
+          break;
+        case 'location_number':
+          av = a.location_number || '';
+          bv = b.location_number || '';
+          break;
+        case 'address':
+          av = [a.city, a.state, a.zip_code].filter(Boolean).join(', ');
+          bv = [b.city, b.state, b.zip_code].filter(Boolean).join(', ');
+          break;
+        case 'status':
+          av = a.is_active ? 1 : 0;
+          bv = b.is_active ? 1 : 0;
+          break;
+      }
+      if (typeof av === 'string' && typeof bv === 'string') {
+        av = av.toLowerCase();
+        bv = bv.toLowerCase();
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return rows;
+  }, [filteredLocations, sortKey, sortDir, organizationMap]);
 
   // Get statistics
   const stats = {
@@ -336,22 +385,47 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
               <TableHeader>
                 <TableRow>
                   {columnVisibility['organization'] && (
-                    <TableHead>Organization</TableHead>
+                    <TableHead>
+                      <button type="button" onClick={() => handleSort('organization')} className="inline-flex items-center gap-1" aria-label={`Sort by Organization${sortKey==='organization'?` (${sortDir})`:''}`}>
+                        <span>Organization</span>
+                        {sortKey==='organization' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                      </button>
+                    </TableHead>
                   )}
                   {columnVisibility['location_name'] && (
-                    <TableHead>Location</TableHead>
+                    <TableHead>
+                      <button type="button" onClick={() => handleSort('location_name')} className="inline-flex items-center gap-1" aria-label={`Sort by Location${sortKey==='location_name'?` (${sortDir})`:''}`}>
+                        <span>Location</span>
+                        {sortKey==='location_name' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                      </button>
+                    </TableHead>
                   )}
                   {columnVisibility['location_number'] && (
-                    <TableHead>Number</TableHead>
+                    <TableHead>
+                      <button type="button" onClick={() => handleSort('location_number')} className="inline-flex items-center gap-1" aria-label={`Sort by Number${sortKey==='location_number'?` (${sortDir})`:''}`}>
+                        <span>Number</span>
+                        {sortKey==='location_number' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                      </button>
+                    </TableHead>
                   )}
                   {columnVisibility['address'] && (
-                    <TableHead>Address</TableHead>
+                    <TableHead>
+                      <button type="button" onClick={() => handleSort('address')} className="inline-flex items-center gap-1" aria-label={`Sort by Address${sortKey==='address'?` (${sortDir})`:''}`}>
+                        <span>Address</span>
+                        {sortKey==='address' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                      </button>
+                    </TableHead>
                   )}
                   {columnVisibility['contact'] && (
                     <TableHead>Contact</TableHead>
                   )}
                   {columnVisibility['status'] && (
-                    <TableHead>Status</TableHead>
+                    <TableHead>
+                      <button type="button" onClick={() => handleSort('status')} className="inline-flex items-center gap-1" aria-label={`Sort by Status${sortKey==='status'?` (${sortDir})`:''}`}>
+                        <span>Status</span>
+                        {sortKey==='status' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                      </button>
+                    </TableHead>
                   )}
                   {columnVisibility['actions'] && (
                     <TableHead className="text-right">Actions</TableHead>
@@ -371,7 +445,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                     colSpan={7}
                   />
                 ) : (
-                  filteredLocations.map((location) => {
+                  sortedLocations.map((location) => {
                     const organization = organizationMap[location.organization_id];
                     return (
                       <TableRow key={location.id}>
@@ -447,7 +521,7 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
                 </Button>
               </div>
             ) : (
-              filteredLocations.map((location) => {
+              sortedLocations.map((location) => {
                 const organization = organizationMap[location.organization_id];
                 const address = [location.city, location.state, location.zip_code].filter(Boolean).join(', ');
                 

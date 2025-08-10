@@ -21,7 +21,7 @@ import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration
 import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
 import { useReportInvoiceDetails } from '@/hooks/useReportInvoiceDetails';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
-import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle } from 'lucide-react';
+import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Breadcrumb,
@@ -37,6 +37,14 @@ export default function SelectReports() {
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
   const [markupPercentage, setMarkupPercentage] = useState<number>(20);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  // Sorting for table
+  type SortKey = 'work_order' | 'submitted' | 'amount';
+  const [sortKey, setSortKey] = useState<SortKey>('submitted');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir('asc'); }
+  };
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -58,6 +66,30 @@ export default function SelectReports() {
   }, [reports, selectedReportIds, markupPercentage]);
 
   const totalSubcontractorCosts = reports?.reduce((sum, report) => sum + (report.subcontractor_costs || 0), 0) || 0;
+
+  const sortedReports = useMemo(() => {
+    const list = [...(reports || [])];
+    list.sort((a, b) => {
+      let av: any = 0; let bv: any = 0;
+      if (sortKey === 'work_order') {
+        const an = a.work_orders?.work_order_number || '';
+        const bn = b.work_orders?.work_order_number || '';
+        return (an.toLowerCase() < bn.toLowerCase() ? (sortDir==='asc'? -1:1) : an.toLowerCase() > bn.toLowerCase() ? (sortDir==='asc'? 1:-1) : 0);
+      }
+      if (sortKey === 'submitted') {
+        av = new Date(a.submitted_at).getTime();
+        bv = new Date(b.submitted_at).getTime();
+      }
+      if (sortKey === 'amount') {
+        av = Number(a.subcontractor_costs || 0);
+        bv = Number(b.subcontractor_costs || 0);
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [reports, sortKey, sortDir]);
 
   const handleReportToggle = (reportId: string, checked: boolean) => {
     const newSet = new Set(selectedReportIds);
@@ -268,18 +300,33 @@ export default function SelectReports() {
                               onCheckedChange={handleSelectAll}
                             />
                           </TableHead>
-                          <TableHead>Work Order</TableHead>
+                          <TableHead>
+                            <button type="button" onClick={() => toggleSort('work_order')} className="inline-flex items-center gap-1" aria-label={`Sort by Work Order${sortKey==='work_order'?` (${sortDir})`:''}`}>
+                              <span>Work Order</span>
+                              {sortKey==='work_order' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                            </button>
+                          </TableHead>
                           <TableHead>Description</TableHead>
                           <TableHead>Subcontractor</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead>Submitted</TableHead>
+                          <TableHead>
+                            <button type="button" onClick={() => toggleSort('submitted')} className="inline-flex items-center gap-1" aria-label={`Sort by Submitted${sortKey==='submitted'?` (${sortDir})`:''}`}>
+                              <span>Submitted</span>
+                              {sortKey==='submitted' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                            </button>
+                          </TableHead>
                            <TableHead>Invoices</TableHead>
-                           <TableHead>Amount</TableHead>
+                           <TableHead>
+                            <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-1" aria-label={`Sort by Amount${sortKey==='amount'?` (${sortDir})`:''}`}>
+                              <span>Amount</span>
+                              {sortKey==='amount' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                            </button>
+                           </TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {reports.map((report) => {
+                        {sortedReports.map((report) => {
                           const isSelected = selectedReportIds.has(report.id);
                           return (
                             <TableRow 
@@ -441,7 +488,7 @@ export default function SelectReports() {
 
                 {/* Mobile Card View */}
                 <div className="block lg:hidden space-y-3">
-                  {reports.map((report) => {
+                  {sortedReports.map((report) => {
                     const isSelected = selectedReportIds.has(report.id);
                     return (
                       <div
