@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import { 
   CheckCircle, 
   Play, 
@@ -9,7 +9,8 @@ import {
   UserPlus,
   AlertCircle,
   ChevronRight,
-  FileText
+  FileText,
+  ListChecks
 } from 'lucide-react';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
 import { 
@@ -23,6 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { AssignWorkOrderModal } from './AssignWorkOrderModal';
 import type { Database } from '@/integrations/supabase/types';
 import type { WorkOrderDetail } from '@/hooks/useWorkOrderDetail';
@@ -65,6 +67,8 @@ export function StatusActionButtons({
     label: '',
     message: ''
   });
+
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const getAvailableTransitions = (status: WorkOrderStatus): StatusTransition[] => {
     switch (status) {
@@ -263,7 +267,53 @@ export function StatusActionButtons({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      {/* Mobile: Bottom sheet trigger */}
+      <div className="md:hidden">
+        <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
+          <DrawerTrigger asChild>
+            <Button size="sm" className="w-full h-11">
+              <ListChecks className="h-4 w-4 mr-2" />
+              Update Status
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>Update Status</DrawerTitle>
+              <DrawerDescription>Choose an action for this work order.</DrawerDescription>
+            </DrawerHeader>
+            <div className="p-4 pt-0 space-y-2">
+              {availableTransitions.map((transition) => {
+                const isDisabled = transition.requiresAssignment && !hasAssignments;
+                return (
+                  <Button
+                    key={`mobile-${transition.status}`}
+                    size="sm"
+                    variant={transition.variant}
+                    className="w-full h-11 justify-start gap-2"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      handleTransitionClick(transition);
+                    }}
+                    disabled={isTransitioning || isDisabled}
+                    title={isDisabled ? 'Assignment required before this action' : undefined}
+                  >
+                    {transition.icon}
+                    {transition.label}
+                  </Button>
+                );
+              })}
+            </div>
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button variant="secondary" className="w-full">Close</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </div>
+
+      {/* Desktop: Inline quick actions */}
+      <div className="hidden md:flex md:flex-wrap md:items-center gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Quick Actions:</span>
           <ChevronRight className="h-3 w-3" />
@@ -278,7 +328,7 @@ export function StatusActionButtons({
               variant={transition.variant}
               onClick={() => handleTransitionClick(transition)}
               disabled={isTransitioning || isDisabled}
-              className="flex items-center gap-1 min-h-[44px] h-11 whitespace-nowrap w-full sm:w-auto"
+              className="flex items-center gap-1 min-h-[44px] h-11 whitespace-nowrap"
               title={isDisabled ? 'Assignment required before this action' : undefined}
             >
               {transition.icon}
