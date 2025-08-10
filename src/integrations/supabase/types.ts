@@ -55,6 +55,90 @@ export type Database = {
           },
         ]
       }
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          joined_at: string
+          last_read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          joined_at?: string
+          last_read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          joined_at?: string
+          last_read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          conversation_type: Database["public"]["Enums"]["conversation_type"]
+          created_at: string
+          created_by: string
+          id: string
+          is_internal: boolean
+          organization_id: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_type: Database["public"]["Enums"]["conversation_type"]
+          created_at?: string
+          created_by: string
+          id?: string
+          is_internal?: boolean
+          organization_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_type?: Database["public"]["Enums"]["conversation_type"]
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_internal?: boolean
+          organization_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           created_at: string | null
@@ -553,6 +637,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "unified_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "message_read_receipts_message_id_fkey"
             columns: ["message_id"]
@@ -1226,6 +1317,13 @@ export type Database = {
             foreignKeyName: "work_order_attachments_work_order_message_id_fkey"
             columns: ["work_order_message_id"]
             isOneToOne: false
+            referencedRelation: "unified_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_attachments_work_order_message_id_fkey"
+            columns: ["work_order_message_id"]
+            isOneToOne: false
             referencedRelation: "work_order_messages"
             referencedColumns: ["id"]
           },
@@ -1241,6 +1339,7 @@ export type Database = {
       work_order_messages: {
         Row: {
           attachment_ids: string[] | null
+          conversation_id: string | null
           created_at: string | null
           crew_member_name: string | null
           id: string
@@ -1252,6 +1351,7 @@ export type Database = {
         }
         Insert: {
           attachment_ids?: string[] | null
+          conversation_id?: string | null
           created_at?: string | null
           crew_member_name?: string | null
           id?: string
@@ -1263,6 +1363,7 @@ export type Database = {
         }
         Update: {
           attachment_ids?: string[] | null
+          conversation_id?: string | null
           created_at?: string | null
           crew_member_name?: string | null
           id?: string
@@ -1273,6 +1374,13 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_order_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_order_messages_sender_id_fkey"
             columns: ["sender_id"]
@@ -1564,7 +1672,46 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      unified_messages: {
+        Row: {
+          attachment_ids: string[] | null
+          context_organization_id: string | null
+          context_type: string | null
+          conversation_id: string | null
+          created_at: string | null
+          crew_member_name: string | null
+          id: string | null
+          is_internal: boolean | null
+          message: string | null
+          message_context: string | null
+          sender_id: string | null
+          updated_at: string | null
+          work_order_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_messages_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       auth_is_admin: {
@@ -2001,6 +2148,10 @@ export type Database = {
         Args: { template_name: string; record_id: string; record_type: string }
         Returns: undefined
       }
+      validate_direct_conversation_participants: {
+        Args: { user1_id: string; user2_id: string }
+        Returns: boolean
+      }
       validate_security_setup: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -2016,6 +2167,7 @@ export type Database = {
     }
     Enums: {
       assignment_type: "internal" | "subcontractor"
+      conversation_type: "direct" | "organization" | "announcement"
       email_status: "sent" | "delivered" | "failed" | "bounced"
       file_type: "photo" | "invoice" | "document"
       organization_role: "owner" | "admin" | "manager" | "employee" | "member"
@@ -2158,6 +2310,7 @@ export const Constants = {
   public: {
     Enums: {
       assignment_type: ["internal", "subcontractor"],
+      conversation_type: ["direct", "organization", "announcement"],
       email_status: ["sent", "delivered", "failed", "bounced"],
       file_type: ["photo", "invoice", "document"],
       organization_role: ["owner", "admin", "manager", "employee", "member"],
