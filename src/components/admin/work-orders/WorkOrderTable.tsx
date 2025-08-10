@@ -212,7 +212,7 @@ export function WorkOrderTable({
                 } : undefined}
               />
             ) : (
-              <div className="w-full max-w-full overflow-hidden space-y-3 px-4">
+              <div className="w-full max-w-full overflow-hidden space-y-4">
                 {table.getRowModel().rows.map((row) => {
                   const workOrder = row.original;
                   // Transform the work order data to match MobileWorkOrderCard's expected format
