@@ -295,13 +295,30 @@ const previousWorkOrderId = useRef<string | null>(null);
     if (!newMessage.trim() && !crewMemberName.trim()) return;
 
     try {
+      // Determine effective visibility for this message
+      const effectiveInternal = isSubcontractor() || (isInternal && (isAdmin() || isEmployee()));
+      
+      // Build candidate map for detection based on visibility
+      const list = effectiveInternal ? (internalCandidates || []) : (publicCandidates || []);
+      const fullNameToId = new Map<string, string>(list.map(u => [u.fullName, u.id]));
+      
+      // Detect any @Full Name occurrences in the text and collect their IDs
+      const detectedIds = new Set<string>();
+      for (const [name, id] of fullNameToId) {
+        const pattern = new RegExp(`(^|\\s)@${name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}(\\b|$)`);
+        if (pattern.test(newMessage)) detectedIds.add(id);
+      }
+      
+      // Merge with explicit selected mentions
+      selectedMentions.forEach(m => detectedIds.add(m.id));
+
       await postMessage.mutateAsync({
         workOrderId,
         message: newMessage,
-        isInternal: isSubcontractor() || (isInternal && (isAdmin() || isEmployee())),
+        isInternal: effectiveInternal,
         attachmentIds: [], // No file attachments in messages anymore
         crewMemberName: crewMemberName.trim() || undefined,
-        mentionedUserIds: selectedMentions.map((m) => m.id),
+        mentionedUserIds: Array.from(detectedIds),
       });
       
       setNewMessage('');
@@ -360,6 +377,51 @@ const previousWorkOrderId = useRef<string | null>(null);
       }
     });
   }, []);
+
+  // Safely render message text with inline @mention highlighting
+  const renderMessageText = useCallback((text: string, message: WorkOrderMessage) => {
+    if (!text) return null;
+
+    const names = (message.mentioned_user_ids || [])
+      .map((id: string) => mentionNameMap[id])
+      .filter(Boolean) as string[];
+
+    if (names.length === 0) {
+      return <>{text}</>;
+    }
+
+    // Build a regex to match any @Full Name present in this message
+    const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`@(?:${escaped.join('|')})`, 'g');
+
+    const nodes: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(text)) !== null) {
+      const start = match.index;
+      const end = regex.lastIndex;
+
+      if (start > lastIndex) {
+        nodes.push(text.slice(lastIndex, start));
+      }
+
+      const token = text.slice(start, end);
+      nodes.push(
+        <span key={`${message.id}-${start}`} className="text-primary font-medium">
+          {token}
+        </span>
+      );
+
+      lastIndex = end;
+    }
+
+    if (lastIndex < text.length) {
+      nodes.push(text.slice(lastIndex));
+    }
+
+    return <>{nodes}</>;
+  }, [mentionNameMap]);
 
   const renderAttachments = (attachments: WorkOrderAttachment[] | undefined) => {
     if (!attachments || attachments.length === 0) return null;
@@ -459,7 +521,7 @@ const previousWorkOrderId = useRef<string | null>(null);
         
         {message.message && (
           <p className={`text-sm text-foreground whitespace-pre-wrap ${isUnread ? 'font-medium' : 'font-normal'}`}>
-            {message.message}
+            {renderMessageText(message.message, message)}
           </p>
         )}
         {renderAttachments(message.attachments)}
