@@ -371,7 +371,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             </Button>
           </SheetTrigger>
 
-          <SheetContent side="bottom" className="h-[85vh] p-0">
+          <SheetContent side="bottom" className="h-[85vh] p-0 max-w-full overflow-x-hidden">
             <SheetHeader className="p-4 border-b sticky top-0 bg-background z-10">
               <div className="flex items-center justify-between">
                 <SheetTitle className="flex items-center gap-2">
