@@ -232,7 +232,7 @@ export function MobileWorkOrderCard({
   };
 
   return (
-    <div className={cn("relative mb-4 overflow-hidden", className)}>
+    <div className={cn("relative mb-4 w-full max-w-full overflow-hidden", className)}>
       {/* Swipe Action Backgrounds */}
       <div className="absolute inset-0 z-0">
         {/* Left (Delete) */}
@@ -264,7 +264,7 @@ export function MobileWorkOrderCard({
       </div>
       
       <Card 
-        className="touch-manipulation transition-transform will-change-transform active:scale-95 duration-200 min-h-[48px] card-hover touch-action-pan-y relative z-10"
+        className="w-full max-w-full overflow-hidden touch-manipulation transition-transform will-change-transform active:scale-95 duration-200 min-h-[48px] card-hover touch-action-pan-y relative z-10"
         style={{
           transform: `translateX(${x}px)`,
           transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)'
@@ -307,7 +307,7 @@ export function MobileWorkOrderCard({
               {workOrder.title}
             </h3>
           </div>
-          <div className="flex items-center gap-1 ml-2">
+          <div className="flex items-center gap-1 ml-2 shrink-0">
             {mapUrl && (
               <Button
                 variant="ghost"
@@ -326,7 +326,7 @@ export function MobileWorkOrderCard({
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm min-w-0">
             <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span className="truncate">
               {getLocationDisplay()}
@@ -334,14 +334,14 @@ export function MobileWorkOrderCard({
           </div>
 
           {shouldShowField('trade') && workOrder.trades && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm min-w-0">
               <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="truncate">{workOrder.trades.name}</span>
             </div>
           )}
 
           {shouldShowField('assignee') && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm min-w-0">
               <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <AssigneeDisplay 
@@ -362,7 +362,7 @@ export function MobileWorkOrderCard({
           {shouldShowField('organization') && (
             <>
               {viewerRole === 'subcontractor' && workOrder.organizations && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm min-w-0">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground">From:</span>
                   <OrganizationBadge 
@@ -373,7 +373,7 @@ export function MobileWorkOrderCard({
                 </div>
               )}
               {viewerRole === 'partner' && workOrder.assigned_organizations && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm min-w-0">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground">Assigned to:</span>
                   <OrganizationBadge 
@@ -385,7 +385,7 @@ export function MobileWorkOrderCard({
               )}
               {/* Show team assignment for organization-wide assignments */}
               {viewerRole === 'subcontractor' && workOrder.work_order_assignments?.some(a => a.assignment_type === 'organization') && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm min-w-0">
                   <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground">Team assignment</span>
                   <Badge variant="secondary" className="text-xs">
@@ -396,7 +396,7 @@ export function MobileWorkOrderCard({
             </>
           )}
 
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm min-w-0">
             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span>
               Submitted {format(new Date(workOrder.date_submitted), 'MMM d, yyyy')}
@@ -409,7 +409,7 @@ export function MobileWorkOrderCard({
           </div>
 
           {workOrder.estimated_completion_date && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm min-w-0">
               <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span>
                 Due {format(new Date(workOrder.estimated_completion_date), 'MMM d, yyyy')}
@@ -418,7 +418,7 @@ export function MobileWorkOrderCard({
           )}
 
           {shouldShowField('invoice') && workOrder.subcontractor_invoice_amount && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm min-w-0">
               <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span>${workOrder.subcontractor_invoice_amount.toFixed(2)}</span>
             </div>
