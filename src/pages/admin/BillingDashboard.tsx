@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,8 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { BillingTransactionFilters } from '@/components/admin/billing/BillingTransactionFilters';
+import { BillingTransactionsTable } from '@/components/admin/billing/BillingTransactionsTable';
 
 interface DashboardMetrics {
   unbilledReports: {
@@ -135,6 +138,81 @@ export default function BillingDashboard() {
   const navigate = useNavigate();
   const { data: metrics, isLoading, error } = useBillingMetrics();
 
+  const [search, setSearch] = React.useState('');
+  const [dateFrom, setDateFrom] = React.useState<string | undefined>(undefined);
+  const [dateTo, setDateTo] = React.useState<string | undefined>(undefined);
+  const [amountMin, setAmountMin] = React.useState<number | undefined>(undefined);
+  const [amountMax, setAmountMax] = React.useState<number | undefined>(undefined);
+  const [transactionTypes, setTransactionTypes] = React.useState<string[]>([]);
+
+  type TransactionRow = {
+    id: string;
+    date: string;
+    amount: number;
+    type: string;
+    reference?: string;
+    organization_name?: string;
+  };
+
+  const allTransactions = React.useMemo<TransactionRow[]>(() => {
+    const rows: TransactionRow[] = [];
+    if (metrics) {
+      metrics.recentPartnerInvoices?.forEach((inv) => {
+        rows.push({
+          id: `partner-${inv.id}`,
+          date: inv.invoice_date,
+          amount: inv.total_amount,
+          type: 'invoice_payment',
+          reference: inv.invoice_number,
+          organization_name: inv.partner_organization?.name,
+        });
+      });
+      metrics.recentSubcontractorInvoices?.forEach((inv) => {
+        rows.push({
+          id: `sub-${inv.id}`,
+          date: inv.submitted_at,
+          amount: inv.total_amount || 0,
+          type: 'invoice_payment',
+          reference: inv.internal_invoice_number,
+          organization_name: inv.subcontractor_organization?.name,
+        });
+      });
+    }
+    return rows;
+  }, [metrics]);
+
+  const filteredTransactions = React.useMemo(() => {
+    let rows = allTransactions;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter((r) =>
+        (r.reference || '').toLowerCase().includes(q) || (r.organization_name || '').toLowerCase().includes(q)
+      );
+    }
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      rows = rows.filter((r) => new Date(r.date) >= from);
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      rows = rows.filter((r) => new Date(r.date) <= to);
+    }
+    if (amountMin !== undefined) rows = rows.filter((r) => r.amount >= amountMin);
+    if (amountMax !== undefined) rows = rows.filter((r) => r.amount <= amountMax);
+    if (transactionTypes.length) rows = rows.filter((r) => transactionTypes.includes(r.type));
+    return rows;
+  }, [allTransactions, search, dateFrom, dateTo, amountMin, amountMax, transactionTypes]);
+
+  const handleDateRangeChange = (from?: string, to?: string) => {
+    setDateFrom(from);
+    setDateTo(to);
+  };
+
+  const handleAmountRangeChange = (min?: number, max?: number) => {
+    setAmountMin(min);
+    setAmountMax(max);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -160,202 +238,230 @@ export default function BillingDashboard() {
         <p className="text-muted-foreground">Monitor billing activities and manage invoices</p>
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unbilled Reports</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-16 mb-1" />
-            ) : (
-              <div className="text-2xl font-bold">{metrics?.unbilledReports.count || 0}</div>
-            )}
-            <div className="text-xs text-muted-foreground">
-              {isLoading ? (
-                <Skeleton className="h-3 w-20" />
-              ) : (
-                `${formatCurrency(metrics?.unbilledReports.totalValue || 0)} total value`
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Partner Invoices</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-8 mb-1" />
-            ) : (
-              <div className="text-2xl font-bold text-primary">{metrics?.monthlyTotals.partnerInvoices || 0}</div>
-            )}
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
+        <TabsContent value="overview">
+          {/* Key Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Unbilled Reports</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-16 mb-1" />
+                ) : (
+                  <div className="text-2xl font-bold">{metrics?.unbilledReports.count || 0}</div>
+                )}
+                <div className="text-xs text-muted-foreground">
+                  {isLoading ? (
+                    <Skeleton className="h-3 w-20" />
+                  ) : (
+                    `${formatCurrency(metrics?.unbilledReports.totalValue || 0)} total value`
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Subcontractor Invoices</CardTitle>
-            <ReceiptText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-8 mb-1" />
-            ) : (
-              <div className="text-2xl font-bold text-primary">{metrics?.monthlyTotals.subcontractorInvoices || 0}</div>
-            )}
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Partner Invoices</CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-8 mb-1" />
+                ) : (
+                  <div className="text-2xl font-bold text-primary">{metrics?.monthlyTotals.partnerInvoices || 0}</div>
+                )}
+                <p className="text-xs text-muted-foreground">This month</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Total</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20 mb-1" />
-            ) : (
-              <div className="text-2xl font-bold text-primary">
-                {formatCurrency(metrics?.monthlyTotals.totalValue || 0)}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">All invoices</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Subcontractor Invoices</CardTitle>
+                <ReceiptText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-8 mb-1" />
+                ) : (
+                  <div className="text-2xl font-bold text-primary">{metrics?.monthlyTotals.subcontractorInvoices || 0}</div>
+                )}
+                <p className="text-xs text-muted-foreground">This month</p>
+              </CardContent>
+            </Card>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Button 
-          className="h-11 flex flex-col gap-1"
-          onClick={() => navigate('/admin/invoices')}
-        >
-          <Plus className="h-5 w-5" />
-          Enter Subcontractor Invoice
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-11 flex flex-col gap-1"
-          onClick={() => navigate('/admin/partner-billing/select-reports')}
-        >
-          <Building2 className="h-5 w-5" />
-          Generate Partner Invoices
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-11 flex flex-col gap-1"
-          onClick={() => navigate('/admin/invoices')}
-        >
-          <FileText className="h-5 w-5" />
-          View All Invoices
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-11 flex flex-col gap-1"
-          onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
-        >
-          <Clock className="h-5 w-5" />
-          View Unbilled Reports
-        </Button>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Partner Invoices */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Partner Invoices</CardTitle>
-            <CardDescription>Latest partner invoices generated</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <div className="space-y-1">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                    <Skeleton className="h-5 w-16" />
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Monthly Total</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20 mb-1" />
+                ) : (
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(metrics?.monthlyTotals.totalValue || 0)}
                   </div>
-                ))}
-              </div>
-            ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
-              <div className="space-y-3">
-                {metrics.recentPartnerInvoices.map((invoice) => (
-                  <div key={invoice.id} className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-sm">{invoice.invoice_number}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {invoice.partner_organization.name} • {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-sm">{formatCurrency(invoice.total_amount)}</p>
-                      <FinancialStatusBadge status={invoice.status} size="sm" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                No recent partner invoices
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+                <p className="text-xs text-muted-foreground">All invoices</p>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Recent Subcontractor Invoices */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Subcontractor Invoices</CardTitle>
-            <CardDescription>Latest subcontractor invoices processed</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <div className="space-y-1">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                    <Skeleton className="h-5 w-16" />
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button 
+              className="h-11 flex flex-col gap-1"
+              onClick={() => navigate('/admin/invoices')}
+            >
+              <Plus className="h-5 w-5" />
+              Enter Subcontractor Invoice
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-11 flex flex-col gap-1"
+              onClick={() => navigate('/admin/partner-billing/select-reports')}
+            >
+              <Building2 className="h-5 w-5" />
+              Generate Partner Invoices
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-11 flex flex-col gap-1"
+              onClick={() => navigate('/admin/invoices')}
+            >
+              <FileText className="h-5 w-5" />
+              View All Invoices
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-11 flex flex-col gap-1"
+              onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
+            >
+              <Clock className="h-5 w-5" />
+              View Unbilled Reports
+            </Button>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Partner Invoices */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Partner Invoices</CardTitle>
+                <CardDescription>Latest partner invoices generated</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex justify-between items-center">
+                        <div className="space-y-1">
+                          <Skeleton className="h-4 w-48" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                        <Skeleton className="h-5 w-16" />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : metrics?.recentSubcontractorInvoices && metrics.recentSubcontractorInvoices.length > 0 ? (
-              <div className="space-y-3">
-                {metrics.recentSubcontractorInvoices.map((invoice) => (
-                  <div key={invoice.id} className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-sm">{invoice.internal_invoice_number}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {invoice.subcontractor_organization?.name || 'Unknown'} • {format(new Date(invoice.submitted_at), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-sm">{formatCurrency(invoice.total_amount || 0)}</p>
-                      <FinancialStatusBadge status={invoice.status} size="sm" />
-                    </div>
+                ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
+                  <div className="space-y-3">
+                    {metrics.recentPartnerInvoices.map((invoice) => (
+                      <div key={invoice.id} className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-sm">{invoice.invoice_number}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {invoice.partner_organization.name} • {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-sm">{formatCurrency(invoice.total_amount)}</p>
+                          <FinancialStatusBadge status={invoice.status} size="sm" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
-                No recent subcontractor invoices
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    No recent partner invoices
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Subcontractor Invoices */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Subcontractor Invoices</CardTitle>
+                <CardDescription>Latest subcontractor invoices processed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex justify-between items-center">
+                        <div className="space-y-1">
+                          <Skeleton className="h-4 w-48" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                        <Skeleton className="h-5 w-16" />
+                      </div>
+                    ))}
+                  </div>
+                ) : metrics?.recentSubcontractorInvoices && metrics.recentSubcontractorInvoices.length > 0 ? (
+                  <div className="space-y-3">
+                    {metrics.recentSubcontractorInvoices.map((invoice) => (
+                      <div key={invoice.id} className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-sm">{invoice.internal_invoice_number}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {invoice.subcontractor_organization?.name || 'Unknown'} • {format(new Date(invoice.submitted_at), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-sm">{formatCurrency(invoice.total_amount || 0)}</p>
+                          <FinancialStatusBadge status={invoice.status} size="sm" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    No recent subcontractor invoices
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="transactions">
+          <div className="space-y-4">
+            <BillingTransactionFilters
+              search={search}
+              onSearchChange={setSearch}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onDateRangeChange={handleDateRangeChange}
+              amountMin={amountMin}
+              amountMax={amountMax}
+              onAmountRangeChange={handleAmountRangeChange}
+              transactionTypes={transactionTypes}
+              onTransactionTypesChange={setTransactionTypes}
+            />
+
+            <BillingTransactionsTable rows={filteredTransactions} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
