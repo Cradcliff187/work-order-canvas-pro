@@ -178,47 +178,36 @@ export function MobileWorkOrderCard({
 
   // Build quick actions based on role and available data
   const quickActions = React.useMemo(() => {
-    if (!showQuickActions) return [];
-    
-    const actions = [];
-    
-    // Map action (always available if address exists)
+    if (!showQuickActions) return [] as any[];
+
+    const actions: any[] = [];
+
+    // Map action (available if address exists)
     if (mapUrl) {
       actions.push(createMapAction(workOrder));
     }
-    
-    // Role-specific actions
-    switch (viewerRole) {
-      case 'admin':
-        if (contactPhone && onCall) {
-          actions.push(createPhoneAction(contactPhone, 'Call'));
-        }
-        if (onMessage) {
-          actions.push(createMessageAction(onMessage));
-        }
-        break;
-        
-      case 'partner':
-        if (onMessage) {
-          actions.push(createMessageAction(onMessage));
-        }
-        if (onViewDetails) {
-          actions.push(createViewDetailsAction(onViewDetails));
-        }
-        break;
-        
-      case 'subcontractor':
-        if (onMessage) {
-          actions.push(createMessageAction(onMessage));
-        }
-        if (onSubmitReport && ['assigned', 'in_progress'].includes(workOrder.status)) {
-          actions.push(createSubmitReportAction(onSubmitReport));
-        }
-        break;
+
+    // Always include core actions when provided
+    if (onMessage) {
+      actions.push(createMessageAction(onMessage));
     }
-    
+    if (onViewDetails) {
+      actions.push(createViewDetailsAction(onViewDetails));
+    }
+
+    // Role-specific extras
+    if (viewerRole === 'admin') {
+      if (contactPhone && onCall) {
+        actions.push(createPhoneAction(contactPhone, 'Call'));
+      }
+    } else if (viewerRole === 'subcontractor') {
+      if (onSubmitReport && ['assigned', 'in_progress'].includes(workOrder.status)) {
+        actions.push(createSubmitReportAction(onSubmitReport));
+      }
+    }
+
     return actions;
-  }, [showQuickActions, viewerRole, mapUrl, contactPhone, onCall, onMessage, onViewDetails, onSubmitReport, workOrder.status]);
+  }, [showQuickActions, mapUrl, onMessage, onViewDetails, viewerRole, contactPhone, onCall, onSubmitReport, workOrder.status, workOrder]);
 
   // Get full address for location display
   const getLocationDisplay = () => {

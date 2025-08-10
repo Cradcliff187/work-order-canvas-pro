@@ -26,7 +26,7 @@ export const QuickFiltersBar: React.FC<QuickFiltersBarProps> = ({
   };
 
   return (
-    <div className="w-full max-w-full flex items-center justify-center gap-2 mb-4">
+    <div className="w-full max-w-full flex items-center justify-start gap-2 mb-4">
       <div className="flex-1 min-w-0 max-w-full flex items-center gap-2 overflow-x-auto scrollbar-hide">
         {QUICK_FILTER_PRESETS.map((preset) => {
           const Icon = preset.icon;
