@@ -178,9 +178,9 @@ export function WorkOrderTable({
     return (
       <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
         <Card className="w-full max-w-full overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle>Work Orders</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {bulkMode && (
                 <Button 
                   variant="ghost" 

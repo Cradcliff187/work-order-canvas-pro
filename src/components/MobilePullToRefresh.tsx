@@ -87,7 +87,7 @@ export function MobilePullToRefresh({
   return (
     <div 
       ref={containerRef}
-      className="relative h-full overflow-auto"
+      className="relative h-full overflow-y-auto overflow-x-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}

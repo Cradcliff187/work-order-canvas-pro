@@ -438,13 +438,13 @@ export default function AdminWorkOrders() {
   }
 
   return (
-    <div className={cn("p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
+    <div className={cn("min-h-screen bg-background w-full max-w-full overflow-x-hidden p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />
       
       {/* Header */}
-      <header className="flex justify-between items-center" role="banner" aria-label="Work orders management header">
-        <div>
+      <header className="flex flex-wrap items-center justify-between gap-3" role="banner" aria-label="Work orders management header">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Work Orders Management</h1>
           <p className="text-muted-foreground">
             {workOrdersData?.totalCount ? `${workOrdersData.totalCount} total work orders` : 'Manage all work orders across organizations'}
@@ -455,7 +455,7 @@ export default function AdminWorkOrders() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2" role="toolbar" aria-label="Work order actions">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0" role="toolbar" aria-label="Work order actions">
           <KeyboardShortcutsTooltip />
           <ViewModeSwitcher
             value={viewMode}
