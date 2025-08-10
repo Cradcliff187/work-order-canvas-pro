@@ -239,10 +239,12 @@ export default function BillingDashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+          <TabsList className="min-w-max">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
           {/* Key Metrics Cards */}

@@ -270,13 +270,13 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumb */}
       <UserBreadcrumb />
       
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">User Management</h1>
           <p className="text-muted-foreground">
             {users?.length
@@ -286,7 +286,7 @@ export default function AdminUsers() {
               : 'Manage system users and their access'}
           </p>
         </div>
-        <div className="flex items-center gap-2" role="toolbar" aria-label="User actions">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0 overflow-x-auto no-scrollbar -mx-1 px-1" role="toolbar" aria-label="User actions">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}

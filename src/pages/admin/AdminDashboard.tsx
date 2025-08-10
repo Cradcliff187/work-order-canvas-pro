@@ -108,10 +108,12 @@ const AdminDashboard = () => {
       </div>
 
       <Tabs defaultValue="executive" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="dashboard">Overview</TabsTrigger>
-          <TabsTrigger value="executive">Executive Summary</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+          <TabsList className="inline-flex min-w-max mb-8">
+            <TabsTrigger value="dashboard">Overview</TabsTrigger>
+            <TabsTrigger value="executive">Executive Summary</TabsTrigger>
+          </TabsList>
+        </div>
         
         <TabsContent value="dashboard" className="space-y-8">
           {/* Overview Cards */}

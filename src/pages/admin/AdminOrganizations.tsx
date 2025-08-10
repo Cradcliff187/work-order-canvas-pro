@@ -193,16 +193,16 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Organizations Management</h1>
           <p className="text-muted-foreground">
             {filteredOrganizations?.length ? `${filteredOrganizations.length} matching organizations` : (organizations?.length ? `${organizations.length} total organizations` : 'Manage all organizations')}
           </p>
         </div>
-        <div className="flex items-center gap-2" role="toolbar" aria-label="Organization actions">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0" role="toolbar" aria-label="Organization actions">
           <ViewModeSwitcher
             value={viewMode}
             onValueChange={setViewMode}

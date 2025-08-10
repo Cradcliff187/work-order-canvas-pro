@@ -314,7 +314,7 @@ export default function AdminWorkOrderDetail() {
 
       {/* Tabs for detailed sections */}
       <Tabs defaultValue="details" className="space-y-6">
-        <div className="overflow-x-auto -mx-4 px-4">
+        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
           <TabsList className="inline-flex min-w-max lg:grid lg:grid-cols-5">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>

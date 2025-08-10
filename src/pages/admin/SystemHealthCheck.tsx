@@ -85,14 +85,16 @@ const SystemHealthCheck = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">System Overview</TabsTrigger>
-          <TabsTrigger value="organization">Organization & Users</TabsTrigger>
-          <TabsTrigger value="data-integrity">Data Integrity</TabsTrigger>
-          <TabsTrigger value="database-performance">Database Performance</TabsTrigger>
-          <TabsTrigger value="messaging-system">Messaging System</TabsTrigger>
-          <TabsTrigger value="active-issues">Active Issues</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+          <TabsList className="min-w-max">
+            <TabsTrigger value="overview">System Overview</TabsTrigger>
+            <TabsTrigger value="organization">Organization & Users</TabsTrigger>
+            <TabsTrigger value="data-integrity">Data Integrity</TabsTrigger>
+            <TabsTrigger value="database-performance">Database Performance</TabsTrigger>
+            <TabsTrigger value="messaging-system">Messaging System</TabsTrigger>
+            <TabsTrigger value="active-issues">Active Issues</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Email Queue Automation */}

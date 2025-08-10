@@ -14,10 +14,12 @@ export default function SecurityAudit() {
       </div>
 
       <Tabs defaultValue="testing" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="testing">Security Testing</TabsTrigger>
-          <TabsTrigger value="audit">Attachment Audit</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+          <TabsList className="min-w-max">
+            <TabsTrigger value="testing">Security Testing</TabsTrigger>
+            <TabsTrigger value="audit">Attachment Audit</TabsTrigger>
+          </TabsList>
+        </div>
         
         <TabsContent value="testing" className="space-y-6">
           <SecurityTestingPanel />

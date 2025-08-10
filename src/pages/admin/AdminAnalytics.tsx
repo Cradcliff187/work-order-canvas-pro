@@ -79,16 +79,16 @@ const AdminAnalytics: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
           <p className="text-muted-foreground">
             Comprehensive insights into work order performance and operations
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0 overflow-x-auto no-scrollbar -mx-1 px-1">
           <Button
             variant="outline"
             size="sm"
@@ -166,13 +166,15 @@ const AdminAnalytics: React.FC = () => {
 
       {/* Charts Section */}
       <Tabs defaultValue="trends" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="trends">Work Order Trends</TabsTrigger>
-          <TabsTrigger value="trades">Trade Performance</TabsTrigger>
-          <TabsTrigger value="organizations">Organizations</TabsTrigger>
-          <TabsTrigger value="subcontractors">Subcontractors</TabsTrigger>
-          <TabsTrigger value="geographic">Geographic</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+          <TabsList className="min-w-max">
+            <TabsTrigger value="trends">Work Order Trends</TabsTrigger>
+            <TabsTrigger value="trades">Trade Performance</TabsTrigger>
+            <TabsTrigger value="organizations">Organizations</TabsTrigger>
+            <TabsTrigger value="subcontractors">Subcontractors</TabsTrigger>
+            <TabsTrigger value="geographic">Geographic</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="trends" className="space-y-4">
           <Card>

@@ -128,7 +128,7 @@ export default function AdminWorkOrderDetail() {
       </div>
 
       <Tabs defaultValue="details" className="space-y-6">
-        <div className="w-full overflow-x-auto">
+        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
           <TabsList className="min-w-max">
             <TabsTrigger value="details" className="whitespace-nowrap">Details</TabsTrigger>
             <TabsTrigger value="reports" className="whitespace-nowrap">Reports</TabsTrigger>
