@@ -42,7 +42,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Employees', url: '/admin/employees', icon: HardHat },
   { title: 'Email Templates', url: '/admin/email-templates', icon: Mail },
   { title: 'Analytics', url: '/admin/analytics', icon: TrendingUp },
-  { title: 'Settings', url: '/admin/settings', icon: Settings },
+  { title: 'Settings', url: '/admin/profile', icon: Settings },
   { title: 'System Health', url: '/admin/system-health', icon: Activity },
   { title: 'Email Testing', url: '/admin/test-email', icon: MailCheck },
 ];

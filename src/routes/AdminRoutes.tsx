@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Route } from 'react-router-dom';
+import { Route, Navigate } from 'react-router-dom';
 import { LazyWrapper } from '@/components/LazyWrapper';
 import { ReceiptUpload } from '@/components/receipts/ReceiptUpload';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -43,6 +43,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminDashboard />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+
+    <Route path="/admin/billing-dashboard" element={
+      <ProtectedRoute requiredUserType="admin">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <BillingDashboard />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
@@ -259,6 +269,7 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
+    <Route path="/admin/settings" element={<Navigate to="/admin/profile" replace />} />
     <Route path="/admin/system-health" element={
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>
@@ -289,6 +300,7 @@ export const AdminRoutes = () => (
       </ProtectedRoute>
     } />
     
+    <Route path="/admin/partner-billing" element={<Navigate to="/admin/partner-billing/select-reports" replace />} />
     <Route path="/admin/partner-billing/select-reports" element={
       <ProtectedRoute requiredUserType="admin">
         <AdminLayout>
