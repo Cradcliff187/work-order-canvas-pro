@@ -177,109 +177,104 @@ export function WorkOrderTable({
   if (isMobile) {
     return (
       <MobilePullToRefresh onRefresh={onRefresh} threshold={refreshThreshold}>
-        <Card className="w-full max-w-full">
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 min-w-0">
-            <CardTitle>Work Orders</CardTitle>
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
-              {bulkMode && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={onClearSelection}
-                  disabled={selectedIds.length === 0}
-                  aria-label={`Clear selection (${selectedIds.length} selected)`}
-                >
-                  {/* Responsive label */}
-                  <span className="hidden sm:inline">Clear Selection</span>
-                  <span className="sm:hidden">Clear</span>
-                </Button>
-              )}
+        <div className="space-y-4">
+          {bulkMode && (
+            <div className="flex items-center justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClearSelection}
+                disabled={selectedIds.length === 0}
+                aria-label={`Clear selection (${selectedIds.length} selected)`}
+              >
+                <span className="hidden sm:inline">Clear Selection</span>
+                <span className="sm:hidden">Clear</span>
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {!data?.length ? (
-              <EmptyState
-                icon={ClipboardList}
-                title="No work orders found"
-                description={totalCount === 0 
-                  ? "No work orders have been created yet. Create your first work order to get started."
-                  : "No work orders match your current filters. Try adjusting your search criteria."
-                }
-                action={totalCount === 0 ? {
-                  label: "Create Work Order",
-                  onClick: onCreateNew,
-                  icon: Plus
-                } : undefined}
-              />
-            ) : (
-              <div className="space-y-4">
-                {table.getRowModel().rows.map((row) => {
-                  const workOrder = row.original;
-                  // Transform the work order data to match MobileWorkOrderCard's expected format
-                  const transformedWorkOrder = {
-                    ...workOrder,
-                    work_order_assignments: workOrder.work_order_assignments?.map(assignment => ({
-                      assigned_to: assignment.assigned_to,
-                      assignment_type: assignment.assignment_type,
-                      assignee_profile: {
-                        first_name: assignment.profiles?.first_name || '',
-                        last_name: assignment.profiles?.last_name || ''
-                      },
-                      assigned_organization: assignment.organizations ? {
-                        name: assignment.organizations.name,
-                        organization_type: 'partner' as const
-                      } : undefined
-                    })) || []
-                  };
+          )}
 
-                  if (bulkMode) {
-                    return (
-                      <div key={row.original.id} className="relative">
-                        <MobileWorkOrderCard
-                          workOrder={transformedWorkOrder}
-                          onTap={() => onWorkOrderClick(row.original)}
-                          viewerRole="admin"
-                          className="max-w-full"
-                          showOrganization={true}
-                          showAssignee={true}
-                          showTrade={true}
-                          showDaysOld={true}
-                        />
-                        <div className="absolute top-2 right-2">
-                          <input
-                            type="checkbox"
-                            checked={row.getIsSelected()}
-                            onChange={row.getToggleSelectedHandler()}
-                            onClick={(e) => e.stopPropagation()}
-                            className="rounded border-gray-300 scale-125"
-                            aria-label={`Select work order ${workOrder.work_order_number || workOrder.title}`}
-                          />
-                        </div>
-                      </div>
-                    );
-                  }
+          {!data?.length ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No work orders found"
+              description={totalCount === 0 
+                ? "No work orders have been created yet. Create your first work order to get started."
+                : "No work orders match your current filters. Try adjusting your search criteria."
+              }
+              action={totalCount === 0 ? {
+                label: "Create Work Order",
+                onClick: onCreateNew,
+                icon: Plus
+              } : undefined}
+            />
+          ) : (
+            <div className="space-y-4">
+              {table.getRowModel().rows.map((row) => {
+                const workOrder = row.original;
+                // Transform the work order data to match MobileWorkOrderCard's expected format
+                const transformedWorkOrder = {
+                  ...workOrder,
+                  work_order_assignments: workOrder.work_order_assignments?.map(assignment => ({
+                    assigned_to: assignment.assigned_to,
+                    assignment_type: assignment.assignment_type,
+                    assignee_profile: {
+                      first_name: assignment.profiles?.first_name || '',
+                      last_name: assignment.profiles?.last_name || ''
+                    },
+                    assigned_organization: assignment.organizations ? {
+                      name: assignment.organizations.name,
+                      organization_type: 'partner' as const
+                    } : undefined
+                  })) || []
+                };
 
+                if (bulkMode) {
                   return (
-                    <MobileWorkOrderCard
-                      key={row.original.id}
-                      workOrder={transformedWorkOrder}
-                      onTap={() => onWorkOrderClick(row.original)}
-                      viewerRole="admin"
-                      className="max-w-full"
-                      showOrganization={true}
-                      showAssignee={true}
-                      showTrade={true}
-                      showDaysOld={true}
-                      showQuickActions={true}
-                      onMessage={() => onMessage(row.original)}
-                      onViewDetails={() => onViewDetails(row.original)}
-                    />
+                    <div key={row.original.id} className="relative">
+                      <MobileWorkOrderCard
+                        workOrder={transformedWorkOrder}
+                        onTap={() => onWorkOrderClick(row.original)}
+                        viewerRole="admin"
+                        className="max-w-full"
+                        showOrganization={true}
+                        showAssignee={true}
+                        showTrade={true}
+                        showDaysOld={true}
+                      />
+                      <div className="absolute top-2 right-2">
+                        <input
+                          type="checkbox"
+                          checked={row.getIsSelected()}
+                          onChange={row.getToggleSelectedHandler()}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-gray-300 scale-125"
+                          aria-label={`Select work order ${workOrder.work_order_number || workOrder.title}`}
+                        />
+                      </div>
+                    </div>
                   );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                }
+
+                return (
+                  <MobileWorkOrderCard
+                    key={row.original.id}
+                    workOrder={transformedWorkOrder}
+                    onTap={() => onWorkOrderClick(row.original)}
+                    viewerRole="admin"
+                    className="max-w-full"
+                    showOrganization={true}
+                    showAssignee={true}
+                    showTrade={true}
+                    showDaysOld={true}
+                    showQuickActions={true}
+                    onMessage={() => onMessage(row.original)}
+                    onViewDetails={() => onViewDetails(row.original)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
       </MobilePullToRefresh>
     );
   }
