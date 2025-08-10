@@ -94,8 +94,8 @@ export default function AdminWorkOrderDetail() {
         currentPage="Details"
       />
       
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-4 min-w-0">
           <Button 
             onClick={() => navigate('/admin/work-orders')} 
             variant="outline" 
@@ -104,15 +104,15 @@ export default function AdminWorkOrderDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Work Orders
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{workOrder.title}</h1>
-            <p className="text-muted-foreground">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold truncate">{workOrder.title}</h1>
+            <p className="text-muted-foreground truncate">
               {workOrder.work_order_number || `Work Order ${workOrder.id?.slice(0, 8)}`}
             </p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
           <WorkOrderStatusBadge
             status={workOrder.status}
             size="sm"
@@ -128,11 +128,13 @@ export default function AdminWorkOrderDetail() {
       </div>
 
       <Tabs defaultValue="details" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="attachments">Attachments</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+          <TabsList className="min-w-max">
+            <TabsTrigger value="details" className="whitespace-nowrap">Details</TabsTrigger>
+            <TabsTrigger value="reports" className="whitespace-nowrap">Reports</TabsTrigger>
+            <TabsTrigger value="attachments" className="whitespace-nowrap">Attachments</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="details" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
