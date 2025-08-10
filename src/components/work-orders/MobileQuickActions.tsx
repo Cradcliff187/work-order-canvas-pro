@@ -29,7 +29,7 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
     cols === 3 ? 'grid-cols-3' : 'grid-cols-4';
 
   return (
-    <div className={`grid ${gridClass} gap-2 p-3 border-t border-border bg-muted/5 w-full max-w-full overflow-hidden ${className}`}>
+    <div className={`grid ${gridClass} gap-2 p-3 border-t border-border bg-muted/5 w-full max-w-full min-w-0 overflow-hidden ${className}`}>
       {actions.map((action) => {
         const Icon = action.icon;
         return (
@@ -37,7 +37,7 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
             key={action.id}
             variant={action.variant || 'ghost'}
             size="sm"
-            className="w-full h-12 flex flex-col items-center gap-1 text-xs min-h-[48px]"
+            className="min-w-0 w-full h-12 flex flex-col items-center gap-1 text-xs min-h-[48px]"
             onClick={(e) => {
               e.stopPropagation();
               action.onClick();

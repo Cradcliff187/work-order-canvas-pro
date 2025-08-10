@@ -247,7 +247,7 @@ export default function AdminWorkOrderDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background w-full max-w-full overflow-x-hidden p-6 space-y-6">
+    <div className="min-h-screen bg-background w-full max-w-full p-0 md:p-6 space-y-6">
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />
       

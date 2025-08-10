@@ -14,7 +14,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   // Use wider layout for work orders pages to accommodate the data-heavy table
   const isWorkOrdersPage = location.pathname.startsWith('/admin/work-orders');
   const maxWidthClass = isWorkOrdersPage ? 'max-w-full' : 'max-w-screen-xl';
-  
+  const contentPaddingClass = isWorkOrdersPage ? 'p-0 md:p-6' : 'p-4 md:p-6';
   return (
     <SidebarProvider>
       <a
@@ -34,8 +34,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </header>
 
           {/* Main content with consistent container and padding */}
-          <main id="main-content" role="main" tabIndex={-1} className="flex-1 overflow-y-auto overflow-x-hidden">
-            <div className={`container mx-auto p-4 md:p-6 w-full max-w-full ${maxWidthClass}`}>
+          <main id="main-content" role="main" tabIndex={-1} className="flex-1 overflow-y-auto">
+            <div className={`container mx-auto ${contentPaddingClass} w-full max-w-full ${maxWidthClass}`}>
               {children}
             </div>
           </main>

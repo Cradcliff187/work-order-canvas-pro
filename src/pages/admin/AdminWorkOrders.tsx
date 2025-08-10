@@ -438,7 +438,7 @@ export default function AdminWorkOrders() {
   }
 
   return (
-    <div className={cn("min-h-screen bg-background w-full max-w-full overflow-x-hidden p-0 md:p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
+    <div className={cn("min-h-screen bg-background w-full max-w-full p-0 md:p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />
       
