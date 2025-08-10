@@ -1344,6 +1344,7 @@ export type Database = {
           crew_member_name: string | null
           id: string
           is_internal: boolean | null
+          mentioned_user_ids: string[]
           message: string
           sender_id: string
           updated_at: string | null
@@ -1356,6 +1357,7 @@ export type Database = {
           crew_member_name?: string | null
           id?: string
           is_internal?: boolean | null
+          mentioned_user_ids?: string[]
           message: string
           sender_id: string
           updated_at?: string | null
@@ -1368,6 +1370,7 @@ export type Database = {
           crew_member_name?: string | null
           id?: string
           is_internal?: boolean | null
+          mentioned_user_ids?: string[]
           message?: string
           sender_id?: string
           updated_at?: string | null
