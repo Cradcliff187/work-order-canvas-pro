@@ -513,6 +513,8 @@ export default function AdminWorkOrders() {
             onFiltersChange={setFilters}
             onSearchChange={setSearchTerm}
             onClearFilters={handleClearFilters}
+            activeQuickPresets={activeQuickFilters}
+            onToggleQuickPreset={handleQuickFilterToggle}
           />
         </div>
       </section>

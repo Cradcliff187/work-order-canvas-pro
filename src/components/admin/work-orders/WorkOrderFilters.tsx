@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { useAllAssignees } from '@/hooks/useEmployeesForAssignment';
+import { QUICK_FILTER_PRESETS } from './quickFilterPresets';
 
 interface WorkOrderFiltersProps {
   filters: {
@@ -34,6 +35,8 @@ interface WorkOrderFiltersProps {
   onFiltersChange: (filters: any) => void;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
+  activeQuickPresets?: string[];
+  onToggleQuickPreset?: (preset: string) => void;
 }
 
 const statusOptions = [
@@ -52,7 +55,7 @@ const organizationTypeOptions = [
   { value: 'subcontractor', label: 'Subcontractor' },
 ];
 
-export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearchChange, onClearFilters }: WorkOrderFiltersProps) {
+export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearchChange, onClearFilters, activeQuickPresets = [], onToggleQuickPreset }: WorkOrderFiltersProps) {
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const { shouldShowSelector } = useAutoOrganization();
@@ -62,10 +65,11 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
 
   // Calculate active filter count for display
   const activeFilterCount = useMemo(() => {
-    return Object.values(filters).filter(value => 
+    const baseCount = Object.values(filters).filter(value => 
       Array.isArray(value) ? value.length > 0 : Boolean(value)
     ).length + (searchTerm ? 1 : 0);
-  }, [filters, searchTerm]);
+    return baseCount + (activeQuickPresets?.length || 0);
+  }, [filters, searchTerm, activeQuickPresets]);
 
   // Get unique locations for the selected organization (or all if no org selected)
   const { data: locations } = useQuery({
@@ -119,9 +123,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     filters.date_to ? new Date(filters.date_to) : undefined
   );
 
-  const hasActiveFilters = searchTerm || Object.values(filters).some(value => 
+  const hasActiveFilters = Boolean(searchTerm) || Object.values(filters).some(value => 
     Array.isArray(value) ? value.length > 0 : Boolean(value)
-  );
+  ) || (activeQuickPresets && activeQuickPresets.length > 0);
 
   const handleDateFromChange = (date: Date | undefined) => {
     setDateFrom(date);
@@ -401,6 +405,40 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              {/* Quick filters */}
+              {onToggleQuickPreset && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Quick Filters
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {QUICK_FILTER_PRESETS.map((preset) => {
+                      const Icon = preset.icon;
+                      const isActive = activeQuickPresets?.includes(preset.id);
+                      return (
+                        <button
+                          key={preset.id}
+                          onClick={() => onToggleQuickPreset(preset.id)}
+                          className={cn(
+                            "inline-flex items-center justify-start gap-1.5 px-3 py-2 rounded-full text-sm font-medium smooth-transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                            isActive
+                              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                              : "bg-background border border-border text-foreground hover:bg-muted hover:text-accent-foreground"
+                          )}
+                          type="button"
+                          role="button"
+                          aria-pressed={isActive}
+                          aria-label={`Filter by ${preset.label}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="truncate">{preset.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Essential filters */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
