@@ -20,17 +20,18 @@ export function useConversationMessages(conversationId: string | null, pageSize 
     initialPageParam: new Date().toISOString(),
     queryFn: async ({ pageParam }) => {
       if (!conversationId) return [];
-      const { data, error } = await supabase.rpc('get_conversation_messages', {
-        p_conversation_id: conversationId,
-        p_limit: pageSize,
-        p_before: pageParam as string,
-      });
+      const { data, error } = await supabase
+        .rpc<any, any>('get_conversation_messages' as any, {
+          p_conversation_id: conversationId,
+          p_limit: pageSize,
+          p_before: pageParam as string,
+        });
       if (error) {
         console.error('[useConversationMessages] RPC error:', error);
         throw error;
       }
       // RPC returns DESC by created_at; keep as-is for pagination math
-      return (data || []).map((row: any) => ({
+      return ((data as any[]) || []).map((row: any) => ({
         id: row.id,
         message: row.message ?? null,
         sender_id: row.sender_id ?? null,

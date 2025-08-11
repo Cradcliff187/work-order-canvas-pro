@@ -1923,14 +1923,28 @@ export type Database = {
         Args: { org_id: string; location_code?: string }
         Returns: string
       }
+      get_conversation_messages: {
+        Args: { p_conversation_id: string; p_limit?: number; p_before?: string }
+        Returns: {
+          id: string
+          message: string
+          sender_id: string
+          created_at: string
+          attachment_ids: string[]
+        }[]
+      }
       get_conversations_overview: {
         Args: Record<PropertyKey, never>
         Returns: {
           conversation_id: string
-          conversation_type: Database["public"]["Enums"]["conversation_type"]
           title: string
+          conversation_type: Database["public"]["Enums"]["conversation_type"]
+          last_message: string
           last_message_at: string
           unread_count: number
+          updated_at: string
+          other_user_id: string
+          organization_id: string
         }[]
       }
       get_current_user_id: {
