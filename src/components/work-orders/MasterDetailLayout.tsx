@@ -13,6 +13,7 @@ interface MasterDetailLayoutProps {
   isLoading?: boolean;
   className?: string;
   items?: Array<{ id: string }>;
+  showDetailHeader?: boolean;
 }
 
 export function MasterDetailLayout({
@@ -23,6 +24,7 @@ export function MasterDetailLayout({
   isLoading = false,
   className,
   items = [],
+  showDetailHeader = true,
 }: MasterDetailLayoutProps) {
   const [showDetailPanel, setShowDetailPanel] = useState(false);
 
@@ -83,18 +85,29 @@ export function MasterDetailLayout({
         <ResizableHandle withHandle />
         
         <ResizablePanel defaultSize={30} minSize={25}>
-          <div className="h-full border-l bg-background">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-semibold text-lg">Work Order Details</h3>
+          <div className="h-full border-l bg-background relative">
+            {showDetailHeader ? (
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="font-semibold text-lg">Work Order Details</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClosePanel}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleClosePanel}
-                className="h-8 w-8 p-0"
+                className="absolute top-2 right-2 h-8 w-8 p-0"
               >
                 <X className="h-4 w-4" />
               </Button>
-            </div>
+            )}
             <div className="h-full overflow-auto">
               {isLoading ? (
                 <div className="p-4 space-y-4">
