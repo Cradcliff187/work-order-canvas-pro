@@ -3,10 +3,13 @@ import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout'
 import { useConversationsOverview } from '@/hooks/messaging/useConversationsOverview';
 import { ConversationsList } from '@/components/messaging/ConversationsList';
 import { ConversationView } from '@/components/messaging/ConversationView';
+import { Button } from '@/components/ui/button';
+import { NewDirectMessageDialog } from '@/components/messaging/NewDirectMessageDialog';
 
 const DirectMessagesPage: React.FC = () => {
   const { data: conversations = [], isLoading } = useConversationsOverview();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isNewOpen, setIsNewOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Direct Messages | WorkOrderPro';
@@ -17,7 +20,10 @@ const DirectMessagesPage: React.FC = () => {
 
   return (
     <main className="container mx-auto py-6">
-      <h1 className="text-2xl font-semibold mb-4">Direct Messages</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Direct Messages</h1>
+        <Button size="sm" onClick={() => setIsNewOpen(true)}>New message</Button>
+      </div>
 
       <MasterDetailLayout
         listContent={
@@ -41,6 +47,12 @@ const DirectMessagesPage: React.FC = () => {
         }
         isLoading={isLoading}
         items={items}
+      />
+
+      <NewDirectMessageDialog
+        open={isNewOpen}
+        onOpenChange={setIsNewOpen}
+        onCreated={(id) => setSelectedId(id)}
       />
     </main>
   );

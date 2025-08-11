@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useMarkConversationRead } from '@/hooks/messaging/useMarkConversationRead';
 import { Button } from '@/components/ui/button';
+import { useConversationSubscription } from '@/hooks/messaging/useConversationSubscription';
+import { MessageComposer } from '@/components/messaging/MessageComposer';
 
 interface ConversationViewProps {
   conversationId: string;
@@ -25,6 +27,21 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
     staleTime: 10_000,
   });
 
+  useConversationSubscription(conversationId);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (messages?.length) {
+      markRead(conversationId);
+    }
+  }, [conversationId, messages?.length, markRead]);
+
   const grouped = useMemo(() => messages, [messages]);
 
   return (
@@ -36,7 +53,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 space-y-3">
+      <div ref={listRef} className="flex-1 overflow-auto p-4 space-y-3">
         {isLoading ? (
           <div className="space-y-2">
             <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
@@ -55,6 +72,9 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
             </div>
           ))
         )}
+      </div>
+      <div className="border-t p-3">
+        <MessageComposer conversationId={conversationId} />
       </div>
     </div>
   );
