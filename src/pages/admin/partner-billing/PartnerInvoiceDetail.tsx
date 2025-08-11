@@ -90,8 +90,11 @@ function usePartnerInvoiceDetail(invoiceId: string) {
 export default function PartnerInvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: invoice, isLoading, error } = usePartnerInvoiceDetail(id!);
-
+  const queryClient = useQueryClient();
+  const { data: invoice, isLoading, error, refetch } = usePartnerInvoiceDetail(id!);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExportCSV = () => {
     try {
@@ -126,6 +129,40 @@ export default function PartnerInvoiceDetail() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!id) return;
+    try {
+      setIsDeleting(true);
+      // Clear references from work_order_reports
+      await supabase
+        .from('work_order_reports')
+        .update({ partner_invoice_id: null, partner_billed_at: null, partner_billed_amount: null })
+        .eq('partner_invoice_id', id);
+
+      // Delete line items
+      await supabase
+        .from('partner_invoice_line_items')
+        .delete()
+        .eq('partner_invoice_id', id);
+
+      // Delete the invoice
+      const { error } = await supabase
+        .from('partner_invoices')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+
+      toast.success('Partner invoice deleted');
+      queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
+      navigate('/admin/partner-billing/select-reports');
+    } catch (e) {
+      console.error('Failed to delete partner invoice', e);
+      toast.error('Failed to delete invoice');
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -191,6 +228,14 @@ export default function PartnerInvoiceDetail() {
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
+          </Button>
+          <Button variant="secondary" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
           </Button>
         </div>
       </div>
@@ -283,6 +328,32 @@ export default function PartnerInvoiceDetail() {
         </CardContent>
       </Card>
       </main>
+
+      <EditPartnerInvoiceSheet
+        open={editOpen}
+        onOpenChange={(open) => setEditOpen(open)}
+        invoice={{
+          id: invoice.id,
+          invoice_number: invoice.invoice_number,
+          invoice_date: invoice.invoice_date,
+          due_date: (invoice as any).due_date || null,
+          status: invoice.status,
+        }}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['partner-invoice-detail', id] });
+          queryClient.invalidateQueries({ queryKey: ['partner-invoices'] });
+          refetch();
+        }}
+      />
+
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={confirmDelete}
+        itemName={invoice.invoice_number}
+        itemType="partner invoice"
+        isLoading={isDeleting}
+      />
     </>
   );
 }
