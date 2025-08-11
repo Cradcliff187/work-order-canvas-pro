@@ -514,7 +514,7 @@ if (error) {
             <div role="region" aria-label="Transactions toolbar" className="flex items-center justify-between gap-2">
               <div className="text-sm text-muted-foreground">{filteredTransactions.length} transactions</div>
               <div className="flex items-center gap-2">
-                <ExportDropdown onExport={handleExport} disabled={filteredTransactions.length === 0} />
+                <ExportDropdown onExport={handleExport} disabled={isLoading || filteredTransactions.length === 0} loading={isLoading} />
                 <ColumnVisibilityDropdown
                   columns={columnOptions}
                   onToggleColumn={toggleColumn}
