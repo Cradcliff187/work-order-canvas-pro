@@ -23,6 +23,7 @@ import { useReportInvoiceDetails } from '@/hooks/useReportInvoiceDetails';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
 import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/utils/formatting';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -110,12 +111,6 @@ export default function SelectReports() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
 
   const handleGenerateInvoice = () => {
     if (!selectedPartnerId || selectedReportIds.size === 0) return;
@@ -152,7 +147,7 @@ export default function SelectReports() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
+      <main id="main-content" role="main" className="space-y-6">
         {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -398,7 +393,7 @@ export default function SelectReports() {
                                         {displayName}
                                       </div>
                                       {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
-                                        <div className="text-xs text-orange-600 font-medium">
+                                        <div className="text-xs text-muted-foreground font-medium">
                                           Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
                                         </div>
                                       )}
@@ -589,7 +584,7 @@ export default function SelectReports() {
                                         {displayName}
                                       </div>
                                       {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
-                                        <div className="text-xs text-orange-600 font-medium">
+                                        <div className="text-xs text-muted-foreground font-medium">
                                           Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
                                         </div>
                                       )}
@@ -658,7 +653,7 @@ export default function SelectReports() {
                   <Label className="text-sm font-medium text-muted-foreground">
                     Markup ({markupPercentage}%)
                   </Label>
-                  <div className="text-lg font-bold text-green-600">
+                  <div className="text-lg font-bold">
                     +{formatCurrency(calculations.markupAmount)}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -689,13 +684,13 @@ export default function SelectReports() {
                       {generateInvoice.isPending ? (
                         "Generating Invoice..."
                       ) : (
-                        `Generate Invoice (${selectedReportIds.size} report${selectedReportIds.size !== 1 ? 's' : ''})`
+                        `Generate Partner Invoices (${selectedReportIds.size} report${selectedReportIds.size !== 1 ? 's' : ''})`
                       )}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Generate Partner Invoice</AlertDialogTitle>
+                      <AlertDialogTitle>Generate Partner Invoices</AlertDialogTitle>
                       <AlertDialogDescription className="space-y-2">
                         <p>You are about to generate an invoice with the following details:</p>
                         <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
@@ -713,9 +708,8 @@ export default function SelectReports() {
                       <AlertDialogAction 
                         onClick={handleGenerateInvoice}
                         disabled={generateInvoice.isPending}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
                       >
-                        {generateInvoice.isPending ? 'Generating...' : 'Generate Invoice'}
+                        {generateInvoice.isPending ? 'Generating...' : 'Generate Partner Invoices'}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -725,7 +719,7 @@ export default function SelectReports() {
           </CardContent>
         </Card>
       )}
-      </div>
+      </main>
     </TooltipProvider>
   );
 }

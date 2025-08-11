@@ -72,13 +72,13 @@ export const ReportPipelineEmptyState: React.FC<ReportPipelineEmptyStateProps> =
             </div>
             
             {reportStats.reportsWithoutInvoices > 0 && (
-              <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+              <div className="text-xs text-muted-foreground bg-muted p-2 rounded border border-border">
                 <strong>Next step:</strong> Subcontractors need to submit invoices for {reportStats.reportsWithoutInvoices} report{reportStats.reportsWithoutInvoices !== 1 ? 's' : ''}.
               </div>
             )}
             
             {reportStats.reportsWithPendingInvoices > 0 && (
-              <div className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-950/20 p-2 rounded border border-blue-200 dark:border-blue-800">
+              <div className="text-xs text-muted-foreground bg-muted p-2 rounded border border-border">
                 <strong>Action needed:</strong> {reportStats.reportsWithPendingInvoices} subcontractor invoice{reportStats.reportsWithPendingInvoices !== 1 ? 's' : ''} need{reportStats.reportsWithPendingInvoices === 1 ? 's' : ''} approval.
               </div>
             )}

@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Separator } from '@/components/ui/separator';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { formatCurrency } from '@/utils/formatting';
 import { ArrowLeft, Download, FileText } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { format } from 'date-fns';
@@ -86,12 +88,6 @@ export default function PartnerInvoiceDetail() {
   const navigate = useNavigate();
   const { data: invoice, isLoading, error } = usePartnerInvoiceDetail(id!);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
 
   const handleExportCSV = () => {
     try {
@@ -128,35 +124,34 @@ export default function PartnerInvoiceDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <LoadingSpinner />
-      </div>
+      <main id="main-content" role="main" className="space-y-6">
+        <div className="space-y-4">
+          <Skeleton className="h-7 w-64" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
+      </main>
     );
   }
 
   if (error || !invoice) {
     return (
-      <div className="space-y-6">
-        <Card className="p-6">
-          <div className="text-center">
-            <h2 className="text-lg font-semibold text-destructive mb-2">Invoice Not Found</h2>
-            <p className="text-muted-foreground mb-4">
-              The requested partner invoice could not be found.
-            </p>
-            <Button onClick={() => navigate('/admin/partner-billing/select-reports')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Billing
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <main id="main-content" role="main" className="space-y-6">
+        <EmptyState
+          title="Invoice Not Found"
+          description="The requested partner invoice could not be found."
+          action={{ label: 'Back to Billing', onClick: () => navigate('/admin/partner-billing/select-reports') }}
+        />
+      </main>
     );
   }
 
   const markupAmount = invoice.subtotal * (invoice.markup_percentage / 100);
 
   return (
-    <div className="space-y-6">
+    <main id="main-content" role="main" className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -197,10 +192,10 @@ export default function PartnerInvoiceDetail() {
       {/* Invoice Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl">Partner Invoice</CardTitle>
-            <FinancialStatusBadge status={invoice.status} />
-          </div>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">Partner Invoice</CardTitle>
+              <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
+            </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -281,6 +276,6 @@ export default function PartnerInvoiceDetail() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

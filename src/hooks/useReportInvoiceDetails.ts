@@ -68,6 +68,7 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
         total_amount: invoices.reduce((sum, inv) => sum + inv.amount, 0)
       }));
     },
+    staleTime: 60000,
     enabled: reportIds.length > 0,
   });
 };

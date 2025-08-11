@@ -123,6 +123,7 @@ export const usePartnerReportStats = (partnerOrgId?: string) => {
         reportsAlreadyBilled: reportsAlreadyBilled || 0
       };
     },
+    staleTime: 60000,
     enabled: !!partnerOrgId
   });
 };

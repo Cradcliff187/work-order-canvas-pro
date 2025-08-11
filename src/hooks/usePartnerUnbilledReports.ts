@@ -121,6 +121,7 @@ export const usePartnerUnbilledReports = (partnerOrgId?: string) => {
         } : null,
       }));
     },
+    staleTime: 60000,
     enabled: !!partnerOrgId,
   });
 };
