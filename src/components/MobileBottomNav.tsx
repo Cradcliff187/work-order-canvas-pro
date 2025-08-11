@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Home, Briefcase, FileText, User, Plus } from 'lucide-react';
+import { Home, Briefcase, FileText, User, Plus, MessageSquare } from 'lucide-react';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 
 interface NavItem {
@@ -49,6 +49,12 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
       icon: FileText,
       path: '/subcontractor/reports',
       badge: pendingCount
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      icon: MessageSquare,
+      path: '/messages'
     },
     {
       id: 'profile',

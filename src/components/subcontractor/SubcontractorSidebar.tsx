@@ -153,6 +153,18 @@ export function SubcontractorSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild
+                  isActive={isActive('/messages')}
+                  className={isActive('/messages') ? "bg-primary/10 text-primary hover:bg-primary/20" : ""}
+                >
+                   <Link to="/messages" className="flex items-center gap-2">
+                     <MessageSquare className="h-4 w-4" />
+                     {!collapsed && <span>Messages</span>}
+                   </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -171,12 +183,6 @@ export function SubcontractorSidebar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
-              <DropdownMenuItem asChild>
-                <Link to="/messages" className="flex items-center">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Messages
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/subcontractor/profile" className="flex items-center">

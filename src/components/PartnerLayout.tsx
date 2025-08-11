@@ -99,21 +99,35 @@ function PartnerSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {useOrgNavigation ? (
-                // Organization-based navigation
-                organizationNavItems.filter(item => item.visible).map((item) => (
-                  <SidebarMenuItem key={item.label}>
+                <>
+                  {/* Organization-based navigation */}
+                  {organizationNavItems.filter(item => item.visible).map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton 
+                        asChild
+                        isActive={isActive(item.path)}
+                        className={isActive(item.path) ? "bg-sidebar-accent" : ""}
+                      >
+                         <Link to={item.path} className="flex items-center gap-2">
+                           <item.icon className="h-4 w-4" />
+                           {!collapsed && <span>{item.label}</span>}
+                         </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                  <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild
-                      isActive={isActive(item.path)}
-                      className={isActive(item.path) ? "bg-sidebar-accent" : ""}
+                      isActive={isActive('/messages')}
+                      className={isActive('/messages') ? "bg-sidebar-accent" : ""}
                     >
-                       <Link to={item.path} className="flex items-center gap-2">
-                         <item.icon className="h-4 w-4" />
-                         {!collapsed && <span>{item.label}</span>}
-                       </Link>
+                      <Link to="/messages" className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        {!collapsed && <span>Messages</span>}
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))
+                </>
               ) : (
                 // Legacy navigation
                 sidebarItems.map((item) => (
@@ -149,13 +163,6 @@ function PartnerSidebar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
-              <DropdownMenuItem asChild>
-                <Link to="/messages" className="flex items-center">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Messages
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/partner/profile" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
@@ -214,6 +221,12 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
       label: 'Reports',
       icon: ClipboardList,
       path: '/partner/reports'
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      icon: MessageSquare,
+      path: '/messages'
     }
   ];
 

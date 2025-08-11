@@ -6,7 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useInvoiceDrafts } from "@/hooks/useInvoiceDrafts";
 import { SubcontractorSidebar } from "@/components/subcontractor/SubcontractorSidebar";
 import { StandardHeader } from "@/components/layout/StandardHeader";
-import { Plus, Home, ClipboardList, Receipt, User } from "lucide-react";
+import { Plus, Home, ClipboardList, Receipt, User, MessageSquare } from "lucide-react";
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
 interface SubcontractorLayoutProps {
@@ -29,8 +29,8 @@ export const SubcontractorLayout = React.memo(function SubcontractorLayout({ chi
   }), []);
 
   // Memoize navigation items to prevent re-renders
-  const subcontractorNavItems = useMemo(() => 
-    organizationNavItems
+  const subcontractorNavItems = useMemo(() => {
+    const base = organizationNavItems
       .filter(item => item.visible)
       .map(item => ({
         id: item.path.split('/').pop() || item.label.toLowerCase().replace(' ', '-'),
@@ -38,8 +38,12 @@ export const SubcontractorLayout = React.memo(function SubcontractorLayout({ chi
         icon: iconMap[item.label as keyof typeof iconMap] || ClipboardList,
         path: item.path,
         badge: item.label === 'Invoices' ? draftCount : undefined
-      })), [organizationNavItems, iconMap, draftCount]
-  );
+      }));
+    return [
+      ...base,
+      { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages' }
+    ];
+  }, [organizationNavItems, iconMap, draftCount]);
 
   return (
     <SidebarProvider>

@@ -90,10 +90,6 @@ export function UserDropdown() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onClick={() => navigate('/messages')}>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Messages
-          </DropdownMenuItem>
           <DropdownMenuItem>
             <User className="mr-2 h-4 w-4" />
             Profile

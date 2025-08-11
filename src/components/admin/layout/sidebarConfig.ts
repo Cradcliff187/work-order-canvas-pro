@@ -16,7 +16,8 @@ import {
   ReceiptText,
   TrendingUp,
   MailCheck,
-  DollarSign
+  DollarSign,
+  MessageSquare
 } from 'lucide-react';
 
 export interface SidebarItem {
@@ -30,6 +31,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Employee Dashboard', url: '/admin/employee-dashboard', icon: HardHat },
   { title: 'Billing Dashboard', url: '/admin/billing-dashboard', icon: DollarSign },
   { title: 'Work Orders', url: '/admin/work-orders', icon: ClipboardList },
+  { title: 'Messages', url: '/messages', icon: MessageSquare },
   { title: 'Reports', url: '/admin/reports', icon: FileBarChart },
   { title: 'Time Reports', url: '/admin/time-reports', icon: Timer },
   { title: 'Receipts', url: '/admin/receipts', icon: ReceiptText },
@@ -48,7 +50,7 @@ export const sidebarItems: SidebarItem[] = [
 ];
 
 export const sidebarSections = {
-  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Reports', 'Time Reports'],
+  OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Messages', 'Reports', 'Time Reports'],
   FINANCIAL: ['Billing Dashboard', 'Receipts', 'Finance Receipts', 'Invoices', 'Partner Billing'],
   MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
@@ -56,4 +58,4 @@ export const sidebarSections = {
 };
 
 export const adminOnlyItems = ['Admin Dashboard', 'Billing Dashboard', 'Finance Receipts', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Partner Billing', 'Settings', 'System Health', 'Email Testing'];
-export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Time Reports', 'Receipts'];
+export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Messages', 'Time Reports', 'Receipts'];
