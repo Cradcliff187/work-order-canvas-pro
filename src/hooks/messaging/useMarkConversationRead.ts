@@ -13,7 +13,7 @@ export function useMarkConversationRead() {
     mutationKey: ['mark-conversation-read'],
     mutationFn: async (conversationId: string) => {
       const { data, error } = await supabase.rpc('mark_conversation_read', {
-        conversation_id: conversationId,
+        p_conversation_id: conversationId,
       });
       if (error) {
         console.error('[useMarkConversationRead] RPC error:', error);

@@ -22,14 +22,21 @@ export function useStartDirectConversation() {
     mutationKey: ['start-direct-conversation'],
     mutationFn: async ({ otherUserId }: StartDirectConversationInput): Promise<StartDirectConversationResult> => {
       const { data, error } = await supabase.rpc('create_direct_conversation', {
-        other_user_id: otherUserId,
+        p_other_user_id: otherUserId,
       });
       if (error) {
         console.error('[useStartDirectConversation] RPC error:', error);
         throw error;
       }
-      const result = data as StartDirectConversationResult;
-      return result;
+      // The RPC may return either a string (conversation_id) or an object
+      if (typeof data === 'string') {
+        return { conversation_id: data };
+      }
+      if (data && typeof data === 'object' && 'conversation_id' in data) {
+        return data as StartDirectConversationResult;
+      }
+      // Fallback: ensure we always return a structured result
+      return { conversation_id: String(data) };
     },
     onSuccess: () => {
       toast({

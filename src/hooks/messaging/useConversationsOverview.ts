@@ -30,7 +30,18 @@ export function useConversationsOverview() {
         console.error('[useConversationsOverview] RPC error:', error);
         throw error;
       }
-      return (data || []) as ConversationSummary[];
+      const rows = (data || []) as any[];
+      return rows.map((row) => ({
+        id: row.conversation_id ?? row.id,
+        title: row.title ?? null,
+        conversation_type: row.conversation_type,
+        last_message: row.last_message ?? null,
+        last_message_at: row.last_message_at ?? null,
+        unread_count: row.unread_count ?? 0,
+        updated_at: row.updated_at ?? row.last_message_at ?? null,
+        other_user_id: row.other_user_id ?? null,
+        organization_id: row.organization_id ?? null,
+      }));
     },
     staleTime: 15_000,
   });

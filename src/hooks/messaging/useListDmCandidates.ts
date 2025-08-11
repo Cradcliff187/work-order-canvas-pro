@@ -30,16 +30,21 @@ export function useListDmCandidates(options: ListDmCandidatesOptions = {}) {
         search: options.search ?? null,
         work_order_id: options.work_order_id ?? null,
         limit: options.limit ?? 50,
-        // forward any extra filters the backend supports
-        ...options,
       };
 
-      const { data, error } = await supabase.rpc('list_dm_candidates', payload);
+      const { data, error } = await supabase.rpc('list_dm_candidates', payload as any);
       if (error) {
         console.error('[useListDmCandidates] RPC error:', error);
         throw error;
       }
-      return (data || []) as DmCandidate[];
+      const rows = (data || []) as any[];
+      return rows.map((row) => ({
+        id: row.id,
+        full_name: [row.first_name, row.last_name].filter(Boolean).join(' '),
+        org_name: row.org_name ?? null,
+        email: row.email ?? null,
+        avatar_url: row.avatar_url ?? null,
+      }));
     },
     enabled: true,
   });
