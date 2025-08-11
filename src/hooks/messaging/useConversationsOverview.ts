@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export type ConversationType = 'direct' | 'organization' | 'announcement';
+export type ConversationType = 'direct' | 'organization' | 'announcement' | 'work_order';
 
 export interface ConversationSummary {
   id: string;

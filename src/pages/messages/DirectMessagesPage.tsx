@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
-import { useConversationsOverview } from '@/hooks/messaging/useConversationsOverview';
+import { useUnifiedInboxOverview } from '@/hooks/messaging/useUnifiedInboxOverview';
 import { ConversationsList } from '@/components/messaging/ConversationsList';
 import { ConversationView } from '@/components/messaging/ConversationView';
 import { Button } from '@/components/ui/button';
 import { NewDirectMessageDialog } from '@/components/messaging/NewDirectMessageDialog';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/hooks/usePermissions';
 const DirectMessagesPage: React.FC = () => {
-  const { data: conversations = [], isLoading } = useConversationsOverview();
+  const { data: conversations = [], isLoading } = useUnifiedInboxOverview();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNewOpen, setIsNewOpen] = useState(false);
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = usePermissions();
@@ -21,8 +21,18 @@ const DirectMessagesPage: React.FC = () => {
     return '/auth';
   }, [isAdmin, isEmployee, isPartner, isSubcontractor]);
   useEffect(() => {
-    document.title = 'Direct Messages | WorkOrderPro';
+    document.title = 'Messages | WorkOrderPro';
   }, []);
+
+  const navigate = useNavigate();
+  const handleSelect = (id: string) => {
+    if (id.startsWith('wo:')) {
+      const woId = id.slice(3);
+      navigate(`/work-orders/${woId}`);
+      return;
+    }
+    setSelectedId(id);
+  };
 
   // Stable items array for keyboard nav in MasterDetailLayout
   const items = useMemo(() => conversations.map((c) => ({ id: c.id })), [conversations]);
@@ -45,7 +55,7 @@ const DirectMessagesPage: React.FC = () => {
         </Breadcrumb>
       </div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Direct Messages</h1>
+        <h1 className="text-2xl font-semibold">Messages</h1>
         <Button size="sm" onClick={() => setIsNewOpen(true)}>New message</Button>
       </div>
 
@@ -54,12 +64,12 @@ const DirectMessagesPage: React.FC = () => {
           <ConversationsList
             conversations={conversations}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={handleSelect}
             isLoading={isLoading}
           />
         }
         selectedId={selectedId}
-        onSelectionChange={setSelectedId}
+        onSelectionChange={handleSelect}
         detailContent={
           selectedId ? (
             <ConversationView conversationId={selectedId} />
