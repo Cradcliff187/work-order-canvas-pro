@@ -365,7 +365,9 @@ const table = useReactTable({
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
+      <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -640,6 +642,7 @@ const table = useReactTable({
         onRejectSelected={handleBulkReject}
         onMarkPaidSelected={handleBulkMarkPaid}
       />
-    </div>
+    </main>
+    </>
   );
 }

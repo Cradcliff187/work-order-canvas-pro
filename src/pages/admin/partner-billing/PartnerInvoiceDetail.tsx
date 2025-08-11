@@ -117,7 +117,7 @@ export default function PartnerInvoiceDetail() {
       exportToCSV(csvData, columns, filename);
       toast.success('Invoice exported successfully');
     } catch (error) {
-      console.error('Export failed:', error);
+      
       toast.error('Failed to export invoice');
     }
   };
@@ -151,7 +151,9 @@ export default function PartnerInvoiceDetail() {
   const markupAmount = invoice.subtotal * (invoice.markup_percentage / 100);
 
   return (
-    <div className="space-y-6">
+    <>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
+      <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -276,6 +278,7 @@ export default function PartnerInvoiceDetail() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </main>
+    </>
   );
 }

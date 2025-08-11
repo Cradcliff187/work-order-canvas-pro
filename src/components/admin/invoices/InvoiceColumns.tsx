@@ -82,7 +82,7 @@ export const createInvoiceColumns = ({
       const count = row.original.attachment_count || 0;
       return count > 0 ? (
         <div className="flex items-center gap-1">
-          <Paperclip className="h-4 w-4 text-blue-600" />
+          <Paperclip className="h-4 w-4 text-muted-foreground" />
           <Badge variant="outline" className="h-5 text-[10px] px-1.5">
             {count}
           </Badge>
@@ -193,18 +193,13 @@ export const createInvoiceColumns = ({
   {
     accessorKey: 'paid_at',
     header: 'Payment Status',
-    cell: ({ row }) => {
-      const paidAt = row.getValue('paid_at') as string | null;
-      return paidAt ? (
-        <Badge className="bg-green-100 text-green-800 border-green-200 h-5 text-[10px] px-1.5 transition-all duration-200">
-          Paid
-        </Badge>
-      ) : (
-        <Badge variant="outline" className="h-5 text-[10px] px-1.5 transition-all duration-200">
-          Unpaid
-        </Badge>
-      );
-    },
+      cell: ({ row }) => {
+        const paidAt = row.getValue('paid_at') as string | null;
+        const status = paidAt ? 'paid' : 'unpaid';
+        return (
+          <FinancialStatusBadge status={status} size="sm" showIcon={false} />
+        );
+      },
   },
   {
     id: 'actions',

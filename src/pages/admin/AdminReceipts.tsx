@@ -225,7 +225,9 @@ export default function AdminReceipts() {
   };
 
   return (
-    <div className="space-y-6">
+      <>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
+        <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin Receipts</h1>
         <div className="flex items-center gap-2">
@@ -467,6 +469,7 @@ export default function AdminReceipts() {
             )}
           </CardContent>
         </Card>
-    </div>
+    </main>
+    </>
   );
 }
