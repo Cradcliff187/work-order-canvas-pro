@@ -1,3 +1,4 @@
+
 # WorkOrderPortal Messaging System
 
 ## Overview
@@ -12,186 +13,81 @@ The WorkOrderPortal messaging system provides **in-app real-time chat functional
 - Read receipt tracking for message acknowledgment
 - Browser notifications for new messages when page is not focused
 
-## Database Tables
+## Unified Inbox
 
-### work_order_messages
+The Messages page provides a unified list of:
+- Direct conversations (DMs) from the `conversations` + `work_order_messages` tables
+- Work order threads from `work_order_messages` grouped by `work_order_id`
 
-**Purpose**: Stores all messages and internal notes for work orders
+Data sources:
+- `get_conversations_overview()` returns DM/org/announcement summaries with title, last_message, updated_at, and accurate unread_count.
+- `get_work_order_threads_overview()` returns work order thread summaries and unread counts using `message_read_receipts`.
 
-**Schema**:
-```sql
-CREATE TABLE work_order_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  work_order_id UUID NOT NULL REFERENCES work_orders(id),
-  sender_id UUID NOT NULL REFERENCES profiles(id),
-  message TEXT NOT NULL,
-  is_internal BOOLEAN NOT NULL DEFAULT false,
-  attachment_ids UUID[], -- References to work_order_attachments
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-```
+Behavior:
+- Filter chips for All / Direct / Work Orders.
+- Selecting a DM opens the in-panel conversation view.
+- Selecting a Work Order routes to `/work-orders/:id` for full context.
 
-**Key Fields**:
-- `is_internal`: Boolean flag that determines message visibility
-  - `false` = Public messages (visible to partners and internal team)
-  - `true` = Internal notes (visible to internal team and assigned subcontractors only)
-- `attachment_ids`: Array of UUIDs linking to work_order_attachments
-- `sender_id`: Profile ID of the message author
+## Unread Logic
 
-### message_read_receipts
+DMs:
+- `get_conversations_overview()` computes unread by comparing `conversation_participants.last_read_at` with `work_order_messages` for the conversation and excluding messages the current user sent.
 
-**Purpose**: Tracks when users have read specific messages for notification management
+Work orders:
+- `get_work_order_threads_overview()` computes unread by counting messages without a `message_read_receipts` row for the current user and excluding messages sent by the current user.
 
-**Schema**:
-```sql
-CREATE TABLE message_read_receipts (
-  message_id UUID NOT NULL REFERENCES work_order_messages(id),
-  user_id UUID NOT NULL REFERENCES profiles(id),
-  read_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  PRIMARY KEY (message_id, user_id)
-);
-```
+Mark as read:
+- `mark_conversation_read(p_conversation_id)` updates the participant’s `last_read_at`.
+- UI immediately invalidates: `conversations-overview`, `unified-inbox-overview`, and the conversation cache.
 
-**Usage**: Prevents showing notifications for already-read messages and provides read status indicators.
+## Realtime
 
-## Visibility Rules
+Published to `supabase_realtime`:
+- `work_order_messages`
+- `message_read_receipts`
+- `conversations`
+- `conversation_participants`
 
-The messaging system enforces strict visibility controls based on the `is_internal` flag and user roles:
+Subscriptions:
+- Conversation view subscribes to `work_order_messages` with `conversation_id=...` and:
+  - Updates message list and unread counters
+  - Shows a toast preview for new incoming messages
 
-### Public Messages (is_internal = false)
-**Visible to:**
-- Partner organizations that submitted the work order
-- All internal team members (admins/employees)
-- All assigned subcontractors for the work order
+Presence:
+- A lightweight presence channel `presence:conv:{conversationId}` indicates whether any other participant is online in the same conversation.
 
-**Purpose**: Client-facing communication, status updates, coordination between all parties
+## RLS Matrix (Summary)
 
-### Internal Messages (is_internal = true)  
-**Visible to:**
-- Internal team members (admins/employees) only
-- Assigned subcontractors for the specific work order only
-- NOT visible to partner organizations
+- Admin/Employees (internal):
+  - DMs: Visible to participants
+  - Work orders: Full access to public and internal messages
+  - Insert allowed on work order messages (internal operations)
+- Partners:
+  - DMs: Visible only if valid direct conversation participants
+  - Work orders: View public messages for their organization’s orders; can insert public messages only
+- Subcontractors:
+  - DMs: Visible only if valid direct conversation participants
+  - Work orders: View all messages on assigned orders; can insert internal messages only
 
-**Purpose**: Operational coordination, sensitive information, internal notes
-
-### Message Creation Restrictions
-
-**Partners:**
-- Can only create public messages (`is_internal = false`)
-- Limited to work orders from their organization
-- Ensures all partner communication is visible to internal team
-
-**Subcontractors:**
-- Can only create internal messages (`is_internal = true`) 
-- Limited to work orders assigned to them
-- Keeps operational details private from clients
-
-**Admins/Employees:**
-- Can create both public and internal messages
-- Full access to all work order conversations
-- Can moderate and manage all communications
+Implementation notes:
+- Internal employee work order message access is explicitly allowed via policies:
+  - `internal_employees_select_work_order_messages` (SELECT)
+  - `internal_employees_insert_work_order_messages` (INSERT)
 
 ## Key Components
 
-### WorkOrderMessages.tsx
-**Location**: `src/components/work-orders/WorkOrderMessages.tsx`
+- `DirectMessagesPage`: Unified list UI and master-detail navigation.
+- `ConversationView`: DM thread view with infinite scroll, mark-as-read, optimistic send, presence indicator, and realtime updates.
+- `MessageComposer`: DM composer with ctrl/cmd+Enter to send and optimistic UI.
+- `WorkOrderMessages`: Full work order thread UI with tabs and realtime.
 
-**Primary component** that renders the messaging interface with:
-- Tabbed interface for Public and Internal messages
-- Real-time message updates via subscriptions
-- Message composition with file attachment support
-- Pagination with "Load More" functionality
-- Read receipt tracking and unread message indicators
-- Offline message queuing with visual indicators
+## Database Functions
 
-**Key Features:**
-```typescript
-// Tab visibility based on user roles
-const showPublicTab = isAdmin() || isEmployee() || isPartner();
-const showInternalTab = isAdmin() || isEmployee() || isSubcontractor();
-
-// Message posting permissions
-const canPostToPublic = isAdmin() || isEmployee() || isPartner();
-const canPostToInternal = isAdmin() || isEmployee() || isSubcontractor();
-```
-
-### Supporting Hooks
-
-**useWorkOrderMessages**: Fetches paginated messages with role-based filtering
-**usePostMessage**: Handles message creation with offline queuing support
-**useMessageSubscription**: Real-time message updates via Supabase subscriptions
-**useOfflineMessageSync**: Manages offline message queue and sync operations
-**useUnreadMessageCounts**: Tracks unread message counts across work orders
-
-### Database Functions
-
-**get_unread_message_counts()**: RPC function that efficiently calculates unread message counts for users across multiple work orders, respecting visibility rules.
+- `get_conversations_overview()` – DM/org/announcement summaries with unread counts.
+- `get_work_order_threads_overview()` – Work order thread summaries with unread counts.
+- `get_conversation_messages()` – Paginated messages for a conversation.
+- `mark_conversation_read()` – Marks a conversation as read for current user.
 
 ## Difference from Email System
 
-**Messaging System (In-App Chat)**:
-- **Purpose**: Real-time communication within the application
-- **Audience**: Internal users (admins, employees, partners, subcontractors)
-- **Delivery**: Instant via WebSocket subscriptions
-- **Storage**: Persisted in `work_order_messages` table
-- **Access**: Role-based visibility with public/internal distinction
-- **Interface**: Tabbed chat interface within work order details
-
-**Email System (External Notifications)**:
-- **Purpose**: External notifications and alerts sent via email
-- **Audience**: All stakeholders including external contacts
-- **Delivery**: Asynchronous via email service (Resend)
-- **Storage**: Tracked in `email_logs` and `email_queue` tables  
-- **Access**: Delivered to email addresses, not role-based
-- **Interface**: Email templates sent to external email clients
-
-**Example Use Cases:**
-
-**In-App Messaging**: 
-- Subcontractor asks admin about materials needed
-- Partner requests status update on work order
-- Admin leaves internal note about customer requirements
-
-**Email Notifications**:
-- Partner receives email when work order is assigned
-- Subcontractor gets email when work order status changes
-- Admin receives email alert for new work order submission
-
-## Real-Time Functionality
-
-The messaging system uses Supabase real-time subscriptions to provide instant updates:
-
-```typescript
-// Real-time subscription setup
-useMessageSubscription(workOrderId, handleBrowserNotification, toast);
-
-// Listens for INSERT/UPDATE events on work_order_messages table
-// Automatically updates UI and shows browser notifications
-```
-
-**Features:**
-- Instant message delivery to all connected users
-- Browser notifications when page is not focused
-- Automatic read receipt tracking
-- Live typing indicators (visual feedback)
-- Offline message queuing with automatic sync when connection restored
-
-## Security Model
-
-**Row Level Security (RLS) Policies:**
-- 8 policies on `work_order_messages` table enforce visibility rules
-- 1 policy on `message_read_receipts` ensures users only manage their own receipts
-- Message visibility strictly controlled by `is_internal` flag and organizational relationships
-- File attachments inherit same security model as messages
-
-**Access Patterns:**
-- Partners: View public messages for their org's work orders only
-- Subcontractors: View all messages for assigned work orders only  
-- Admins/Employees: Full access to all messages across all work orders
-- Read receipts: Private to each user, no cross-user visibility
-
-## Migration References
-
-**Database Schema**: `20250712204423-9a1234b5-6c78-9d01-2e34-56789abcdef0.sql`
-**RLS Policies**: Documented in `docs/RLS_POLICIES.md` under "Messaging System Policies"
+Messaging (in-app chat) vs Email (external notifications) remain separate systems as previously documented.

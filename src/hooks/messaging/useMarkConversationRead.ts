@@ -25,6 +25,8 @@ export function useMarkConversationRead() {
       // Refresh overview and any per-conversation queries the app might use
       queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+      // Ensure unified inbox overview reflects unread changes immediately
+      queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
     },
   });
 }

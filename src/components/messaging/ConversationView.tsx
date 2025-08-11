@@ -1,11 +1,12 @@
 
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { useMarkConversationRead } from '@/hooks/messaging/useMarkConversationRead';
 import { Button } from '@/components/ui/button';
 import { useConversationSubscription } from '@/hooks/messaging/useConversationSubscription';
 import { MessageComposer } from '@/components/messaging/MessageComposer';
 import { useConversationMessages } from '@/hooks/messaging/useConversationMessages';
 import { useToast } from '@/hooks/use-toast';
+import { useConversationPresence } from '@/hooks/messaging/useConversationPresence';
 
 interface ConversationViewProps {
   conversationId: string;
@@ -24,6 +25,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
   } = useConversationMessages(conversationId, 50);
 
   useConversationSubscription(conversationId);
+  const { isOtherOnline } = useConversationPresence(conversationId);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -31,6 +33,9 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
   const loadingOlderRef = useRef(false);
   const prevScrollHeightRef = useRef<number | null>(null);
   const prevScrollTopRef = useRef<number | null>(null);
+
+  // Pending optimistic messages
+  const [pending, setPending] = useState<any[]>([]);
 
   // Maintain scroll position when loading older messages; otherwise auto-scroll to bottom
   useEffect(() => {
@@ -49,7 +54,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
 
     // For new incoming messages (not older fetch), scroll to bottom
     el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  }, [messages, pending.length]);
 
   // Safety: if fetch finishes without changing messages, clear the loading flag
   useEffect(() => {
@@ -87,10 +92,35 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
     } as any);
   }, [markRead, conversationId, toast]);
 
+  // Optimistic helpers
+  const addPending = useCallback((text: string) => {
+    const temp = {
+      id: `temp-${Date.now()}`,
+      message: text,
+      created_at: new Date().toISOString(),
+      // Optional: sender marker; purely for UI
+      __optimistic: true,
+    };
+    setPending((prev) => [...prev, temp]);
+    return temp.id as string;
+  }, []);
+
+  const removePending = useCallback((tempId?: string) => {
+    if (!tempId) return;
+    setPending((prev) => prev.filter((m) => m.id !== tempId));
+  }, []);
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-3 border-b">
-        <div className="font-medium">Conversation</div>
+        <div className="flex items-center gap-2">
+          <div className="font-medium">Conversation</div>
+          <div
+            className={`ml-2 h-2 w-2 rounded-full ${isOtherOnline ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
+            aria-label={isOtherOnline ? 'Other participant online' : 'Other participant offline'}
+            title={isOtherOnline ? 'Online' : 'Offline'}
+          />
+        </div>
         <Button size="sm" variant="secondary" onClick={handleMarkReadClick} disabled={isPending}>
           Mark as read
         </Button>
@@ -116,21 +146,35 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
             <div className="h-4 w-1/3 bg-muted rounded animate-pulse" />
             <div className="h-4 w-2/3 bg-muted rounded animate-pulse" />
           </div>
-        ) : grouped.length === 0 ? (
+        ) : grouped.length === 0 && pending.length === 0 ? (
           <div className="text-sm text-muted-foreground">No messages yet</div>
         ) : (
-          grouped.map((m: any) => (
-            <div key={m.id} className="text-sm">
-              <div className="text-xs text-muted-foreground">
-                {new Date(m.created_at).toLocaleString()}
+          <>
+            {grouped.map((m: any) => (
+              <div key={m.id} className="text-sm">
+                <div className="text-xs text-muted-foreground">
+                  {new Date(m.created_at).toLocaleString()}
+                </div>
+                <div>{m.message}</div>
               </div>
-              <div>{m.message}</div>
-            </div>
-          ))
+            ))}
+            {pending.map((m) => (
+              <div key={m.id} className="text-sm opacity-60">
+                <div className="text-xs text-muted-foreground">
+                  {new Date(m.created_at).toLocaleString()} • Sending…
+                </div>
+                <div>{m.message}</div>
+              </div>
+            ))}
+          </>
         )}
       </div>
       <div className="border-t p-3">
-        <MessageComposer conversationId={conversationId} />
+        <MessageComposer
+          conversationId={conversationId}
+          onOptimisticAdd={addPending}
+          onClearPending={removePending}
+        />
       </div>
     </div>
   );

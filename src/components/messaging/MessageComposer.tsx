@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -5,18 +6,30 @@ import { useSendConversationMessage } from '@/hooks/messaging/useSendConversatio
 
 interface MessageComposerProps {
   conversationId: string;
+  onOptimisticAdd?: (text: string) => string; // returns temp id
+  onClearPending?: (tempId?: string) => void;
 }
 
-export const MessageComposer: React.FC<MessageComposerProps> = ({ conversationId }) => {
+export const MessageComposer: React.FC<MessageComposerProps> = ({ conversationId, onOptimisticAdd, onClearPending }) => {
   const [value, setValue] = useState('');
   const { mutate: send, isPending } = useSendConversationMessage();
 
   const handleSend = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    send({ conversationId, message: trimmed });
+
+    const tempId = onOptimisticAdd?.(trimmed);
+
+    send(
+      { conversationId, message: trimmed },
+      {
+        onSettled: () => {
+          onClearPending?.(tempId);
+        },
+      }
+    );
     setValue('');
-  }, [value, send, conversationId]);
+  }, [value, send, conversationId, onOptimisticAdd, onClearPending]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
