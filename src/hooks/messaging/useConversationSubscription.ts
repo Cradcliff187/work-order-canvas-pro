@@ -23,6 +23,7 @@ export function useConversationSubscription(conversationId: string | null) {
           // Invalidate paginated messages and overview
           queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
           queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
+          queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
         }
       )
       .subscribe();

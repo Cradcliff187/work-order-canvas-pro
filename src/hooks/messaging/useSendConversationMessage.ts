@@ -28,6 +28,7 @@ export function useSendConversationMessage() {
       // Refresh the conversation thread and overview counters
       queryClient.invalidateQueries({ queryKey: ['conversation-messages', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
     },
     onError: (error: any) => {
       console.error('[useSendConversationMessage] error:', error);

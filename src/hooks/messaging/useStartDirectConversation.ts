@@ -1,5 +1,5 @@
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,6 +17,7 @@ interface StartDirectConversationResult {
  */
 export function useStartDirectConversation() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationKey: ['start-direct-conversation'],
@@ -39,9 +40,20 @@ export function useStartDirectConversation() {
       return { conversation_id: String(data) };
     },
     onSuccess: () => {
+      // Refresh overviews so the new conversation appears immediately
+      queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
       toast({
         title: 'Conversation started',
         description: 'You can now message this user directly.',
+      });
+    },
+    onError: (error: any) => {
+      console.error('[useStartDirectConversation] error:', error);
+      toast({
+        title: 'Could not start conversation',
+        description: error?.message ?? 'Please try again or contact support.',
+        variant: 'destructive',
       });
     },
   });
