@@ -233,6 +233,23 @@ export default function BillingDashboard() {
     setAmountMax(max);
   };
 
+  // Export handlers for Transactions
+  const transactionExportColumns: ExportColumn[] = [
+    { key: 'date', label: 'Date', type: 'date' },
+    { key: 'type', label: 'Type', type: 'string' },
+    { key: 'amount', label: 'Amount', type: 'currency' },
+    { key: 'reference', label: 'Reference', type: 'string' },
+    { key: 'organization_name', label: 'Organization', type: 'string' },
+  ];
+
+  const handleExport = (format: 'csv' | 'excel') => {
+    const filename = generateFilename('billing_transactions', format === 'excel' ? 'xlsx' : 'csv');
+    if (format === 'excel') {
+      exportToExcel(filteredTransactions, transactionExportColumns, filename);
+    } else {
+      exportToCSV(filteredTransactions, transactionExportColumns, filename);
+    }
+  };
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -395,7 +412,7 @@ if (error) {
                 <CardTitle>Recent Subcontractor Invoices</CardTitle>
                 <CardDescription>Latest subcontractor invoices processed</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent aria-busy={isLoading}>
                 {isLoading ? (
                   <div className="space-y-3">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -426,9 +443,13 @@ if (error) {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    No recent subcontractor invoices
-                  </div>
+                  <EmptyState
+                    icon={ReceiptText}
+                    title="No recent subcontractor invoices"
+                    description="Enter a subcontractor invoice to see it here."
+                    action={{ label: 'Enter Invoice', onClick: () => navigate('/admin/invoices') }}
+                    variant="card"
+                  />
                 )}
               </CardContent>
             </Card>
@@ -449,8 +470,21 @@ if (error) {
               transactionTypes={transactionTypes}
               onTransactionTypesChange={setTransactionTypes}
             />
+            <div role="region" aria-label="Transactions toolbar" className="flex items-center justify-between gap-2">
+              <div className="text-sm text-muted-foreground">{filteredTransactions.length} transactions</div>
+              <div className="flex items-center gap-2">
+                <ExportDropdown onExport={handleExport} disabled={filteredTransactions.length === 0} />
+                <ColumnVisibilityDropdown
+                  columns={columnOptions}
+                  onToggleColumn={toggleColumn}
+                  onResetToDefaults={resetToDefaults}
+                  visibleCount={getVisibleColumnCount()}
+                  totalCount={columnOptions.length}
+                />
+              </div>
+            </div>
 
-            <BillingTransactionsTable rows={filteredTransactions} />
+            <BillingTransactionsTable rows={filteredTransactions} visibleColumns={visibleTransactionColumns} />
           </div>
         </TabsContent>
       </Tabs>
