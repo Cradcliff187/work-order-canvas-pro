@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 
 interface TransactionRow {
   id: string;
@@ -14,9 +15,10 @@ interface TransactionRow {
 
 interface BillingTransactionsTableProps {
   rows: TransactionRow[];
+  visibleColumns?: Array<keyof TransactionRow>;
 }
 
-export function BillingTransactionsTable({ rows }: BillingTransactionsTableProps) {
+export function BillingTransactionsTable({ rows, visibleColumns }: BillingTransactionsTableProps) {
   const [sortKey, setSortKey] = React.useState<keyof TransactionRow>('date');
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('desc');
 
@@ -59,6 +61,21 @@ const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
+  const allColumns: Array<{ key: keyof TransactionRow; label: string }> = [
+    { key: 'date', label: 'Date' },
+    { key: 'type', label: 'Type' },
+    { key: 'amount', label: 'Amount' },
+    { key: 'reference', label: 'Reference' },
+    { key: 'organization_name', label: 'Organization' },
+  ];
+
+  const displayedColumns = React.useMemo(
+    () => (visibleColumns && visibleColumns.length
+      ? allColumns.filter(c => (visibleColumns as Array<string>).includes(c.key as string))
+      : allColumns),
+    [visibleColumns]
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -78,50 +95,51 @@ const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
         </div>
 
         {/* Desktop table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                {([
-                  { key: 'date', label: 'Date' },
-                  { key: 'type', label: 'Type' },
-                  { key: 'amount', label: 'Amount' },
-                  { key: 'reference', label: 'Reference' },
-                  { key: 'organization_name', label: 'Organization' },
-                ] as Array<{ key: keyof TransactionRow; label: string }>).map(({ key, label }) => {
-                  const active = sortKey === key;
-                  return (
-                    <th key={key as string} className="py-2 px-2">
-                      <button
-                        type="button"
-                        onClick={() => handleSort(key)}
-                        className="inline-flex items-center gap-1 text-left"
-                        aria-label={`Sort by ${label}${active ? ` (${sortDir})` : ''}`}
-                      >
-                        <span>{label}</span>
-                        {active ? (
-                          <SortIcon className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.map((r) => (
-                <tr key={r.id} className="border-b">
-                  <td className="py-2 px-2 whitespace-nowrap">{new Date(r.date).toLocaleDateString()}</td>
-                  <td className="py-2 px-2 capitalize">{r.type.replace(/_/g, ' ')}</td>
-                  <td className="py-2 px-2">{formatCurrency(r.amount)}</td>
-                  <td className="py-2 px-2">{r.reference || '-'}</td>
-                  <td className="py-2 px-2">{r.organization_name || '-'}</td>
+        <div className="hidden md:block">
+          <ResponsiveTableWrapper stickyFirstColumn minWidth="720px">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  {displayedColumns.map(({ key, label }) => {
+                    const active = sortKey === key;
+                    const ariaSort = active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+                    return (
+                      <th key={key as string} className="py-2 px-2" aria-sort={ariaSort}>
+                        <button
+                          type="button"
+                          onClick={() => handleSort(key)}
+                          className="inline-flex items-center gap-1 text-left"
+                          aria-label={`Sort by ${label}${active ? ` (${sortDir})` : ''}`}
+                        >
+                          <span>{label}</span>
+                          {active ? (
+                            <SortIcon className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </th>
+                    );
+                  })}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedRows.map((r) => (
+                  <tr key={r.id} className="border-b">
+                    {displayedColumns.map(({ key }) => (
+                      <td key={key as string} className="py-2 px-2 whitespace-nowrap">
+                        {key === 'date' && new Date(r.date).toLocaleDateString()}
+                        {key === 'type' && <span className="capitalize">{r.type.replace(/_/g, ' ')}</span>}
+                        {key === 'amount' && formatCurrency(r.amount)}
+                        {key === 'reference' && (r.reference || '-')}
+                        {key === 'organization_name' && (r.organization_name || '-')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ResponsiveTableWrapper>
         </div>
       </CardContent>
     </Card>

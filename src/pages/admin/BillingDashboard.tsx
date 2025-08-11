@@ -20,6 +20,10 @@ import { format } from 'date-fns';
 import { BillingTransactionFilters } from '@/components/admin/billing/BillingTransactionFilters';
 import { BillingTransactionsTable } from '@/components/admin/billing/BillingTransactionsTable';
 import { KPICard } from '@/components/analytics/KPICard';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 // Removed QuickActionTile in favor of standard Buttons per gold standard
 
 interface DashboardMetrics {
@@ -145,6 +149,21 @@ export default function BillingDashboard() {
   const [amountMin, setAmountMin] = React.useState<number | undefined>(undefined);
   const [amountMax, setAmountMax] = React.useState<number | undefined>(undefined);
   const [transactionTypes, setTransactionTypes] = React.useState<string[]>([]);
+
+  // Column visibility for Transactions table
+  const { columnVisibility, toggleColumn, resetToDefaults, getVisibleColumnCount, getAllColumns } = useColumnVisibility({
+    storageKey: 'billing_transactions_columns',
+    columnMetadata: {
+      date: { label: 'Date', defaultVisible: true },
+      type: { label: 'Type', defaultVisible: true },
+      amount: { label: 'Amount', defaultVisible: true },
+      reference: { label: 'Reference', defaultVisible: true },
+      organization_name: { label: 'Organization', defaultVisible: true },
+    },
+  });
+
+  const columnOptions = getAllColumns();
+  const visibleTransactionColumns = columnOptions.filter(c => c.visible).map(c => c.id as keyof TransactionRow);
 
   type TransactionRow = {
     id: string;
