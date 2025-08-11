@@ -131,12 +131,13 @@ function useBillingMetrics() {
     queryKey: ['billing-metrics'],
     queryFn: fetchBillingMetrics,
     refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 60 * 1000, // Cache for 1 minute to reduce churn
   });
 }
 
 export default function BillingDashboard() {
   const navigate = useNavigate();
-  const { data: metrics, isLoading, error } = useBillingMetrics();
+  const { data: metrics, isLoading, error, refetch } = useBillingMetrics();
 
   const [search, setSearch] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState<string | undefined>(undefined);
@@ -220,16 +221,17 @@ export default function BillingDashboard() {
     }).format(amount);
   };
 
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Billing Dashboard</h1>
-          <p className="text-muted-foreground">Please try refreshing the page or check your connection.</p>
-        </div>
-      </div>
-    );
-  }
+if (error) {
+  return (
+    <EmptyState
+      icon={FileText}
+      title="We couldn't load billing data"
+      description="Please check your connection and try again."
+      action={{ label: 'Retry', onClick: () => refetch() }}
+      variant="full"
+    />
+  );
+}
 
   return (
     <main id="main-content" role="main" className="space-y-6">
@@ -275,39 +277,58 @@ export default function BillingDashboard() {
             />
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            <QuickActionTile 
-              label="Enter Subcontractor Invoice"
-              icon={Plus}
-              onClick={() => navigate('/admin/invoices')}
-            />
-            <QuickActionTile 
-              label="Generate Partner Invoices"
-              icon={Building2}
-              onClick={() => navigate('/admin/partner-billing/select-reports')}
-            />
-            <QuickActionTile 
-              label="View All Invoices"
-              icon={FileText}
-              onClick={() => navigate('/admin/invoices')}
-            />
-            <QuickActionTile 
-              label="View Unbilled Reports"
-              icon={Clock}
-              onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
-            />
-          </div>
+{/* Quick Actions */}
+<div role="region" aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+  <Button
+    size="lg"
+    onClick={() => navigate('/admin/invoices')}
+    className="w-full justify-center"
+    aria-label="Enter Subcontractor Invoice"
+  >
+    <Plus className="h-4 w-4 mr-2" />
+    Enter Subcontractor Invoice
+  </Button>
+  <Button
+    size="lg"
+    variant="outline"
+    onClick={() => navigate('/admin/partner-billing/select-reports')}
+    className="w-full justify-center"
+    aria-label="Generate Partner Invoices"
+  >
+    <Building2 className="h-4 w-4 mr-2" />
+    Generate Partner Invoices
+  </Button>
+  <Button
+    size="lg"
+    variant="outline"
+    onClick={() => navigate('/admin/invoices')}
+    className="w-full justify-center"
+    aria-label="View All Invoices"
+  >
+    <FileText className="h-4 w-4 mr-2" />
+    View All Invoices
+  </Button>
+  <Button
+    size="lg"
+    variant="outline"
+    onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
+    className="w-full justify-center"
+    aria-label="View Unbilled Reports"
+  >
+    <Clock className="h-4 w-4 mr-2" />
+    View Unbilled Reports
+  </Button>
+</div>
 
           {/* Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Partner Invoices */}
-            <Card>
+            <Card role="region" aria-label="Recent Partner Invoices">
               <CardHeader>
                 <CardTitle>Recent Partner Invoices</CardTitle>
                 <CardDescription>Latest partner invoices generated</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent aria-busy={isLoading}>
                 {isLoading ? (
                   <div className="space-y-3">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -323,7 +344,7 @@ export default function BillingDashboard() {
                 ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
                   <div className="space-y-3">
                     {metrics.recentPartnerInvoices.map((invoice) => (
-                      <div key={invoice.id} className="flex justify-between items-center">
+                      <div key={invoice.id} className="flex justify-between items-center rounded-md px-2 py-2 -mx-2 hover:bg-muted/50 focus-within:bg-muted/50">
                         <div>
                           <p className="font-medium text-sm">{invoice.invoice_number}</p>
                           <p className="text-xs text-muted-foreground">
@@ -338,9 +359,13 @@ export default function BillingDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    No recent partner invoices
-                  </div>
+                  <EmptyState
+                    icon={Building2}
+                    title="No recent partner invoices"
+                    description="Generate partner invoices from approved reports."
+                    action={{ label: 'Generate Partner Invoices', onClick: () => navigate('/admin/partner-billing/select-reports') }}
+                    variant="card"
+                  />
                 )}
               </CardContent>
             </Card>
