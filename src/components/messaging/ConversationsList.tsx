@@ -1,12 +1,14 @@
 import React from 'react';
 import { ConversationSummary } from '@/hooks/messaging/useConversationsOverview';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface ConversationsListProps {
   conversations: ConversationSummary[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   isLoading?: boolean;
+  emptyLabel?: string;
 }
 
 export const ConversationsList: React.FC<ConversationsListProps> = ({
@@ -14,6 +16,7 @@ export const ConversationsList: React.FC<ConversationsListProps> = ({
   selectedId,
   onSelect,
   isLoading,
+  emptyLabel,
 }) => {
   if (isLoading) {
     return (
@@ -27,7 +30,7 @@ export const ConversationsList: React.FC<ConversationsListProps> = ({
 
   if (!conversations.length) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">No conversations yet</div>
+      <div className="p-4 text-sm text-muted-foreground">{emptyLabel ?? 'No conversations yet'}</div>
     );
   }
 
@@ -44,7 +47,12 @@ export const ConversationsList: React.FC<ConversationsListProps> = ({
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-medium truncate">{c.title || 'Direct conversation'}</span>
+              <div className="min-w-0 flex items-center">
+                <span className="font-medium truncate">{c.title || 'Direct conversation'}</span>
+                <Badge variant="secondary" className="ml-2 shrink-0">
+                  {c.conversation_type === 'work_order' ? 'Work Order' : c.conversation_type === 'direct' ? 'DM' : c.conversation_type}
+                </Badge>
+              </div>
               {c.unread_count > 0 && (
                 <span className="inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   {c.unread_count}

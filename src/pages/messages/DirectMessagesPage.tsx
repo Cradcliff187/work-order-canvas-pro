@@ -8,10 +8,12 @@ import { NewDirectMessageDialog } from '@/components/messaging/NewDirectMessageD
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/hooks/usePermissions';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 const DirectMessagesPage: React.FC = () => {
   const { data: conversations = [], isLoading } = useUnifiedInboxOverview();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'direct' | 'work_order'>('all');
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = usePermissions();
   const dashboardPath = useMemo(() => {
     if (isAdmin) return '/admin/dashboard';
@@ -34,8 +36,21 @@ const DirectMessagesPage: React.FC = () => {
     setSelectedId(id);
   };
 
+  // Compute filtered view and counts
+  const filteredConversations = useMemo(() => {
+    if (filter === 'direct') return conversations.filter((c) => c.conversation_type === 'direct');
+    if (filter === 'work_order') return conversations.filter((c) => c.conversation_type === 'work_order' || c.id.startsWith('wo:'));
+    return conversations;
+  }, [conversations, filter]);
+
+  const counts = useMemo(() => {
+    const direct = conversations.filter((c) => c.conversation_type === 'direct').length;
+    const work_order = conversations.filter((c) => c.conversation_type === 'work_order' || c.id.startsWith('wo:')).length;
+    return { all: conversations.length, direct, work_order } as const;
+  }, [conversations]);
+
   // Stable items array for keyboard nav in MasterDetailLayout
-  const items = useMemo(() => conversations.map((c) => ({ id: c.id })), [conversations]);
+  const items = useMemo(() => filteredConversations.map((c) => ({ id: c.id })), [filteredConversations]);
 
   return (
     <main className="container mx-auto py-6">
@@ -61,12 +76,33 @@ const DirectMessagesPage: React.FC = () => {
 
       <MasterDetailLayout
         listContent={
-          <ConversationsList
-            conversations={conversations}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            isLoading={isLoading}
-          />
+          <div className="flex flex-col">
+            <div className="px-3 pb-2">
+              <ToggleGroup
+                type="single"
+                value={filter}
+                onValueChange={(v) => v && setFilter(v as 'all' | 'direct' | 'work_order')}
+                aria-label="Filter conversations"
+              >
+                <ToggleGroupItem value="all" aria-label="All conversations">
+                  All ({counts.all})
+                </ToggleGroupItem>
+                <ToggleGroupItem value="direct" aria-label="Direct messages">
+                  Direct ({counts.direct})
+                </ToggleGroupItem>
+                <ToggleGroupItem value="work_order" aria-label="Work order threads">
+                  Work Orders ({counts.work_order})
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <ConversationsList
+              conversations={filteredConversations}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              isLoading={isLoading}
+              emptyLabel={filter === 'direct' ? 'No direct messages yet' : filter === 'work_order' ? 'No work order messages yet' : 'No conversations yet'}
+            />
+          </div>
         }
         selectedId={selectedId}
         onSelectionChange={handleSelect}
