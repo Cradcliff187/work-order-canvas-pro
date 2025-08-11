@@ -2090,6 +2090,18 @@ export type Database = {
         Args: { file_path: string }
         Returns: string
       }
+      get_work_order_threads_overview: {
+        Args: { p_limit?: number }
+        Returns: {
+          work_order_id: string
+          title: string
+          last_message: string
+          last_message_at: string
+          unread_count: number
+          updated_at: string
+          organization_id: string
+        }[]
+      }
       has_internal_role: {
         Args: {
           allowed_roles: Database["public"]["Enums"]["organization_role"][]
