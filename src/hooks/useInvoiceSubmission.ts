@@ -24,13 +24,17 @@ export const useInvoiceSubmission = () => {
 
   const submitInvoice = useMutation({
     mutationFn: async (data: SubmitInvoiceData) => {
-      // Get current user profile
+      // Get current auth user and their profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (profileError || !profile) throw new Error('User profile not found');
+      if (profileError || !profile?.id) throw new Error('User profile not found');
 
       let organizationId = data.organizationId;
       
@@ -40,9 +44,10 @@ export const useInvoiceSubmission = () => {
           .from('organization_members')
           .select('organization_id')
           .eq('user_id', profile.id)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
-        if (userOrgError || !userOrg) throw new Error('User organization not found');
+        if (userOrgError || !userOrg?.organization_id) throw new Error('User organization not found');
         organizationId = userOrg.organization_id;
       }
 
