@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,9 +34,15 @@ import {
 } from '@/components/ui/breadcrumb';
 
 export default function SelectReports() {
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string>();
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | undefined>(() => {
+    const v = localStorage.getItem('pb.selectedPartnerId');
+    return v || undefined;
+  });
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
-  const [markupPercentage, setMarkupPercentage] = useState<number>(20);
+  const [markupPercentage, setMarkupPercentage] = useState<number>(() => {
+    const v = localStorage.getItem('pb.markupPercentage');
+    return v !== null ? Number(v) : 20;
+  });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   // Sorting for table
   type SortKey = 'work_order' | 'submitted' | 'amount';
@@ -110,7 +116,25 @@ export default function SelectReports() {
       setSelectedReportIds(new Set(reports.map(r => r.id)));
     }
   };
+  useEffect(() => {
+    if (selectedPartnerId) {
+      localStorage.setItem('pb.selectedPartnerId', selectedPartnerId);
+    } else {
+      localStorage.removeItem('pb.selectedPartnerId');
+    }
+  }, [selectedPartnerId]);
 
+  useEffect(() => {
+    localStorage.setItem('pb.markupPercentage', String(markupPercentage));
+  }, [markupPercentage]);
+
+  const clearFilters = () => {
+    setSelectedPartnerId(undefined);
+    setMarkupPercentage(20);
+    setSelectedReportIds(new Set());
+    localStorage.removeItem('pb.selectedPartnerId');
+    localStorage.removeItem('pb.markupPercentage');
+  };
 
   const handleGenerateInvoice = () => {
     if (!selectedPartnerId || selectedReportIds.size === 0) return;
@@ -147,7 +171,7 @@ export default function SelectReports() {
 
   return (
     <TooltipProvider>
-      <main id="main-content" role="main" className="space-y-6">
+      <div className="space-y-6">
         {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -173,6 +197,11 @@ export default function SelectReports() {
             Select approved reports to include in partner invoices
           </p>
         </div>
+        {(selectedPartnerId || markupPercentage !== 20) && (
+          <Button variant="outline" size="sm" onClick={clearFilters} aria-label="Clear filters">
+            Clear filters
+          </Button>
+        )}
       </div>
 
       {/* Partner Selection */}
@@ -719,7 +748,7 @@ export default function SelectReports() {
           </CardContent>
         </Card>
       )}
-      </main>
+      </div>
     </TooltipProvider>
   );
 }

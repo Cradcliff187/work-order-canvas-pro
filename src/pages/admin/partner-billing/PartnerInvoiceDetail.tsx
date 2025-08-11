@@ -124,7 +124,7 @@ export default function PartnerInvoiceDetail() {
 
   if (isLoading) {
     return (
-      <main id="main-content" role="main" className="space-y-6">
+      <div className="space-y-6">
         <div className="space-y-4">
           <Skeleton className="h-7 w-64" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -132,26 +132,26 @@ export default function PartnerInvoiceDetail() {
             <Skeleton className="h-32 w-full" />
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error || !invoice) {
     return (
-      <main id="main-content" role="main" className="space-y-6">
+      <div className="space-y-6">
         <EmptyState
           title="Invoice Not Found"
           description="The requested partner invoice could not be found."
           action={{ label: 'Back to Billing', onClick: () => navigate('/admin/partner-billing/select-reports') }}
         />
-      </main>
+      </div>
     );
   }
 
   const markupAmount = invoice.subtotal * (invoice.markup_percentage / 100);
 
   return (
-    <main id="main-content" role="main" className="space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -276,6 +276,6 @@ export default function PartnerInvoiceDetail() {
           </div>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }
