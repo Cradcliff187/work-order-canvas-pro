@@ -477,11 +477,21 @@ const table = useReactTable({
                         table.getRowModel().rows.map((row) => (
                           <TableRow
                             key={row.id}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`View invoice ${row.original.internal_invoice_number || row.original.id}`}
                             data-state={row.getIsSelected() && 'selected'}
-                            className="cursor-pointer hover:bg-muted/50"
+                            className="cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
                             onClick={() => {
                               const invoice = row.original;
                               handleViewInvoice(invoice);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                const invoice = row.original;
+                                handleViewInvoice(invoice);
+                              }
                             }}
                           >
                             {row.getVisibleCells().map((cell) => (

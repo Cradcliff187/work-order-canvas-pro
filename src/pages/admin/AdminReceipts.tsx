@@ -11,6 +11,10 @@ import { format } from 'date-fns';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
+import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
+import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
+import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 
 interface ReceiptRow {
   id: string;
@@ -48,6 +52,23 @@ export default function AdminReceipts() {
   const [amountMax, setAmountMax] = useState<string>('');
   const [hasAttachment, setHasAttachment] = useState<string>('all');
   const [sort, setSort] = useState<{ key: 'date' | 'vendor' | 'amount' | 'allocation' | 'attachment'; desc: boolean }>({ key: 'date', desc: true });
+
+  // Column visibility for results table
+  const columnMetadata = {
+    date: { label: 'Date', defaultVisible: true },
+    vendor: { label: 'Vendor', defaultVisible: true },
+    amount: { label: 'Amount', defaultVisible: true },
+    work_orders: { label: 'Work Orders', defaultVisible: true },
+    allocation: { label: 'Allocation', defaultVisible: true },
+    attachment: { label: 'Attachment', defaultVisible: true },
+  } as const;
+
+  const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisibleColumnCount } = useColumnVisibility({
+    storageKey: 'admin-receipts-columns-v1',
+    columnMetadata: columnMetadata as any,
+  });
+
+  const columnOptions = getAllColumns().map((c) => ({ ...c, canHide: true }));
 
   useEffect(() => {
     try {
@@ -264,114 +285,188 @@ export default function AdminReceipts() {
 
       <Card>
           <CardHeader>
-            <CardTitle>Results ({sorted.length})</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Results ({sorted.length})</CardTitle>
+              <div role="region" aria-label="Results toolbar" className="flex items-center gap-2">
+                <div className="hidden md:block text-sm text-muted-foreground">{sorted.length} receipts</div>
+                <ColumnVisibilityDropdown
+                  columns={columnOptions}
+                  onToggleColumn={toggleColumn}
+                  onResetToDefaults={resetToDefaults}
+                  variant="outline"
+                  size="sm"
+                  visibleCount={columnOptions.filter(c => c.canHide && c.visible).length}
+                  totalCount={columnOptions.filter(c => c.canHide).length}
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b">
-                    <th className="py-2 px-2">
-                      <button
-                        className="flex items-center gap-1"
-                        onClick={() => setSort((s) => ({ key: 'date', desc: s.key === 'date' ? !s.desc : false }))}
-                        aria-label={`Sort by date ${sort.key === 'date' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+            {receiptsQuery.isError ? (
+              <EmptyState
+                title="Couldn't load receipts"
+                description="We couldn't load receipts. Please try again."
+                action={{ label: 'Retry', onClick: () => receiptsQuery.refetch?.() }}
+              />
+            ) : receiptsQuery.isLoading ? (
+              <EnhancedTableSkeleton rows={5} columns={Math.max((getVisibleColumnCount?.() || 6), 5)} />
+            ) : sorted.length === 0 ? (
+              <EmptyState
+                title="No receipts found"
+                description={(search || organizationId || organizationType.length || allocationStatus.length || dateFrom || dateTo || amountMin || amountMax || hasAttachment !== 'all') ? 'Try adjusting your filters or search.' : 'Receipts will appear here when employees upload them.'}
+              />
+            ) : (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden lg:block">
+                  <ResponsiveTableWrapper stickyFirstColumn>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left border-b">
+                          {columnVisibility.date !== false && (
+                            <th className="py-2 px-2">
+                              <button
+                                className="flex items-center gap-1"
+                                onClick={() => setSort((s) => ({ key: 'date', desc: s.key === 'date' ? !s.desc : false }))}
+                                aria-label={`Sort by date ${sort.key === 'date' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                              >
+                                <span>Date</span>
+                                {sort.key === 'date' ? (
+                                  sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </button>
+                            </th>
+                          )}
+                          {columnVisibility.vendor !== false && (
+                            <th className="py-2 px-2">
+                              <button
+                                className="flex items-center gap-1"
+                                onClick={() => setSort((s) => ({ key: 'vendor', desc: s.key === 'vendor' ? !s.desc : false }))}
+                                aria-label={`Sort by vendor ${sort.key === 'vendor' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                              >
+                                <span>Vendor</span>
+                                {sort.key === 'vendor' ? (
+                                  sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </button>
+                            </th>
+                          )}
+                          {columnVisibility.amount !== false && (
+                            <th className="py-2 px-2">
+                              <button
+                                className="flex items-center gap-1"
+                                onClick={() => setSort((s) => ({ key: 'amount', desc: s.key === 'amount' ? !s.desc : false }))}
+                                aria-label={`Sort by amount ${sort.key === 'amount' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                              >
+                                <span>Amount</span>
+                                {sort.key === 'amount' ? (
+                                  sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </button>
+                            </th>
+                          )}
+                          {columnVisibility.work_orders !== false && <th className="py-2 px-2">Work Orders</th>}
+                          {columnVisibility.allocation !== false && (
+                            <th className="py-2 px-2">
+                              <button
+                                className="flex items-center gap-1"
+                                onClick={() => setSort((s) => ({ key: 'allocation', desc: s.key === 'allocation' ? !s.desc : false }))}
+                                aria-label={`Sort by allocation ${sort.key === 'allocation' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                              >
+                                <span>Allocation</span>
+                                {sort.key === 'allocation' ? (
+                                  sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </button>
+                            </th>
+                          )}
+                          {columnVisibility.attachment !== false && (
+                            <th className="py-2 px-2">
+                              <button
+                                className="flex items-center gap-1"
+                                onClick={() => setSort((s) => ({ key: 'attachment', desc: s.key === 'attachment' ? !s.desc : false }))}
+                                aria-label={`Sort by attachment ${sort.key === 'attachment' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
+                              >
+                                <span>Attachment</span>
+                                {sort.key === 'attachment' ? (
+                                  sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </button>
+                            </th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sorted.map((r) => {
+                          const allocated = (r.receipt_work_orders || []).reduce((s, a) => s + (a.allocated_amount || 0), 0);
+                          const status = allocated === 0 ? 'Unallocated' : (allocated >= r.amount ? 'Full' : 'Partial');
+                          return (
+                            <tr key={r.id} className="border-b hover:bg-accent/30">
+                              {columnVisibility.date !== false && (
+                                <td className="py-2 px-2 whitespace-nowrap">{format(new Date(r.receipt_date), 'MMM d, yyyy')}</td>
+                              )}
+                              {columnVisibility.vendor !== false && <td className="py-2 px-2">{r.vendor_name}</td>}
+                              {columnVisibility.amount !== false && <td className="py-2 px-2">${'{'}r.amount.toFixed(2){'}'}</td>}
+                              {columnVisibility.work_orders !== false && (
+                                <td className="py-2 px-2">
+                                  {(r.receipt_work_orders || []).map((a, idx) => (
+                                    <div key={idx} className="text-xs">
+                                      {a.work_orders?.work_order_number} {a.work_orders?.title ? `— ${'{'}a.work_orders.title{'}'}` : ''}
+                                    </div>
+                                  ))}
+                                </td>
+                              )}
+                              {columnVisibility.allocation !== false && (
+                                <td className="py-2 px-2">
+                                  <Badge variant={status === 'Full' ? 'secondary' : status === 'Partial' ? 'default' : 'outline'}>{status}</Badge>
+                                </td>
+                              )}
+                              {columnVisibility.attachment !== false && <td className="py-2 px-2">{r.receipt_image_url ? 'Yes' : 'No'}</td>}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </ResponsiveTableWrapper>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="block lg:hidden space-y-3">
+                  {sorted.map((r) => {
+                    const allocated = (r.receipt_work_orders || []).reduce((s, a) => s + (a.allocated_amount || 0), 0);
+                    const status = allocated === 0 ? 'Unallocated' : (allocated >= r.amount ? 'Full' : 'Partial');
+                    return (
+                      <MobileTableCard
+                        key={r.id}
+                        title={r.vendor_name}
+                        subtitle={r.receipt_date ? format(new Date(r.receipt_date), 'MMM d, yyyy') : ''}
                       >
-                        <span>Date</span>
-                        {sort.key === 'date' ? (
-                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="py-2 px-2">
-                      <button
-                        className="flex items-center gap-1"
-                        onClick={() => setSort((s) => ({ key: 'vendor', desc: s.key === 'vendor' ? !s.desc : false }))}
-                        aria-label={`Sort by vendor ${sort.key === 'vendor' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                      >
-                        <span>Vendor</span>
-                        {sort.key === 'vendor' ? (
-                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="py-2 px-2">
-                      <button
-                        className="flex items-center gap-1"
-                        onClick={() => setSort((s) => ({ key: 'amount', desc: s.key === 'amount' ? !s.desc : false }))}
-                        aria-label={`Sort by amount ${sort.key === 'amount' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                      >
-                        <span>Amount</span>
-                        {sort.key === 'amount' ? (
-                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="py-2 px-2">Work Orders</th>
-                    <th className="py-2 px-2">
-                      <button
-                        className="flex items-center gap-1"
-                        onClick={() => setSort((s) => ({ key: 'allocation', desc: s.key === 'allocation' ? !s.desc : false }))}
-                        aria-label={`Sort by allocation ${sort.key === 'allocation' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                      >
-                        <span>Allocation</span>
-                        {sort.key === 'allocation' ? (
-                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="py-2 px-2">
-                      <button
-                        className="flex items-center gap-1"
-                        onClick={() => setSort((s) => ({ key: 'attachment', desc: s.key === 'attachment' ? !s.desc : false }))}
-                        aria-label={`Sort by attachment ${sort.key === 'attachment' ? (sort.desc ? '(desc)' : '(asc)') : ''}`}
-                      >
-                        <span>Attachment</span>
-                        {sort.key === 'attachment' ? (
-                          sort.desc ? <ArrowDown className="h-4 w-4 text-muted-foreground" /> : <ArrowUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                {sorted.map((r) => {
-                  const allocated = (r.receipt_work_orders || []).reduce((s, a) => s + (a.allocated_amount || 0), 0);
-                  const status = allocated === 0 ? 'Unallocated' : (allocated >= r.amount ? 'Full' : 'Partial');
-                  return (
-                    <tr key={r.id} className="border-b hover:bg-accent/30">
-                      <td className="py-2 px-2 whitespace-nowrap">{format(new Date(r.receipt_date), 'MMM d, yyyy')}</td>
-                      <td className="py-2 px-2">{r.vendor_name}</td>
-                      <td className="py-2 px-2">${r.amount.toFixed(2)}</td>
-                      <td className="py-2 px-2">
-                        {(r.receipt_work_orders || []).map((a, idx) => (
-                          <div key={idx} className="text-xs">
-                            {a.work_orders?.work_order_number} {a.work_orders?.title ? `— ${a.work_orders.title}` : ''}
-                          </div>
-                        ))}
-                      </td>
-                      <td className="py-2 px-2">
-                        <Badge variant={status === 'Full' ? 'secondary' : status === 'Partial' ? 'default' : 'outline'}>{status}</Badge>
-                      </td>
-                      <td className="py-2 px-2">{r.receipt_image_url ? 'Yes' : 'No'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Amount:</span>
+                          <span className="font-medium">${'{'}r.amount.toFixed(2){'}'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs mt-1">
+                          <Badge variant={status === 'Full' ? 'secondary' : status === 'Partial' ? 'default' : 'outline'} className="h-5 text-[10px] px-1.5">{status}</Badge>
+                          <span className="text-muted-foreground">{(r.receipt_work_orders || [])[0]?.work_orders?.work_order_number || ''}</span>
+                        </div>
+                      </MobileTableCard>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
     </div>
   );
 }
