@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -86,15 +87,28 @@ export const useInvoiceSubmission = () => {
 
       // Upload attachments if provided
       if (data.attachments && data.attachments.length > 0) {
-        try {
-          await uploadFiles(data.attachments);
-        } catch (uploadError) {
-          console.warn('Failed to upload attachments:', uploadError);
-          // Don't fail the entire operation for attachment issues
-          // The invoice is already created and submitted
+        // Option A: require linking each attachment to a specific work order.
+        // For now: if multiple work orders, link to the first one and inform the user.
+        const chosenWorkOrderId = data.workOrders[0]?.workOrderId;
+        if (!chosenWorkOrderId) {
+          console.warn('No work order selected for attachments; skipping upload.');
+        } else {
+          if (data.workOrders.length > 1) {
+            toast({
+              title: 'Heads up',
+              description: 'Multiple work orders detected. Attachments will be linked to the first work order for now.',
+            });
+          }
+
+          try {
+            // Pass both workOrderId and invoiceId (override) so trigger validation passes
+            await uploadFiles(data.attachments, false, chosenWorkOrderId, undefined, invoice.id);
+          } catch (uploadError) {
+            console.warn('Failed to upload attachments:', uploadError);
+            // Don't fail the entire operation for attachment issues
+          }
         }
       }
-
 
       return invoice;
     },

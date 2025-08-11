@@ -48,7 +48,7 @@ const uploadConfigs = {
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ],
-    pathStructure: 'work-orders/{work_order_id}/invoices/{timestamp}_{filename}'
+    pathStructure: 'invoices/{invoice_id}/{work_order_id}/{timestamp}_{filename}'
   },
   report: {
     bucket: 'work-order-attachments' as const,
@@ -101,7 +101,7 @@ interface UseFileUploadOptions {
   // Context-specific identifiers
   workOrderId?: string;
   reportId?: string;
-  invoiceId?: string;
+  invoiceId?: string; // for invoice uploads
   profileId?: string; // for avatar uploads
 }
 
@@ -149,7 +149,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       case 'workOrder':
         return `work-orders/${contextIds.workOrderId || 'temp'}/${timestamp}_${sanitizedFileName}`;
       case 'invoice':
-        return `work-orders/${contextIds.workOrderId}/invoices/${timestamp}_${sanitizedFileName}`;
+        // Store by invoice and work order for clear grouping
+        return `invoices/${contextIds.invoiceId}/${contextIds.workOrderId || 'unassigned'}/${timestamp}_${sanitizedFileName}`;
       case 'report':
         return `work-orders/${contextIds.workOrderId}/reports/${timestamp}_${sanitizedFileName}`;
       case 'receipt':
@@ -378,13 +379,23 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         compressionRatio: compressionRatio
       };
     } else if (context === 'invoice') {
-      // Invoice: save to invoice_attachments table
+      // Require invoiceId and workOrderId per Option A
+      if (!contextIds.invoiceId) {
+        await supabase.storage.from(config.bucket).remove([uploadData.path]);
+        throw new Error("Missing invoiceId for invoice attachment upload");
+      }
+      if (!contextIds.workOrderId) {
+        await supabase.storage.from(config.bucket).remove([uploadData.path]);
+        throw new Error("Missing workOrderId for invoice attachment upload");
+      }
+
       const fileType = getFileTypeForStorage(file);
       
       const { data: attachment, error: attachmentError } = await supabase
         .from("invoice_attachments")
         .insert({
           invoice_id: contextIds.invoiceId!,
+          work_order_id: contextIds.workOrderId!,
           file_name: processedFile.name,
           file_url: uploadData.path,
           file_type: fileType,
@@ -470,7 +481,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     files: File[],
     isInternal: boolean = false,
     workOrderId?: string,
-    reportId?: string
+    reportId?: string,
+    invoiceIdOverride?: string
   ): Promise<UploadedFile[]> => {
     if (!user) {
       const error = "User not authenticated";
@@ -611,7 +623,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       const contextIds = {
         workOrderId: workOrderId || defaultWorkOrderId,
         reportId: reportId || defaultReportId,
-        invoiceId: defaultInvoiceId,
+        invoiceId: invoiceIdOverride || defaultInvoiceId,
         profileId: profileId
       };
 

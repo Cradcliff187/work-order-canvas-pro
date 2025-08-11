@@ -473,6 +473,7 @@ export type Database = {
           id: string
           invoice_id: string
           uploaded_by: string
+          work_order_id: string | null
         }
         Insert: {
           created_at?: string
@@ -483,6 +484,7 @@ export type Database = {
           id?: string
           invoice_id: string
           uploaded_by: string
+          work_order_id?: string | null
         }
         Update: {
           created_at?: string
@@ -493,6 +495,7 @@ export type Database = {
           id?: string
           invoice_id?: string
           uploaded_by?: string
+          work_order_id?: string | null
         }
         Relationships: [
           {
@@ -507,6 +510,13 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_attachments_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
         ]
