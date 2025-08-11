@@ -17,8 +17,9 @@ export interface ReportInvoiceDetails {
 }
 
 export const useReportInvoiceDetails = (reportIds: string[]) => {
+  const sortedIds = [...reportIds].sort();
   return useQuery({
-    queryKey: ['report-invoice-details', reportIds],
+    queryKey: ['report-invoice-details', sortedIds],
     queryFn: async (): Promise<ReportInvoiceDetails[]> => {
       if (reportIds.length === 0) return [];
       
@@ -69,6 +70,6 @@ export const useReportInvoiceDetails = (reportIds: string[]) => {
       }));
     },
     staleTime: 60000,
-    enabled: reportIds.length > 0,
+    enabled: sortedIds.length > 0,
   });
 };

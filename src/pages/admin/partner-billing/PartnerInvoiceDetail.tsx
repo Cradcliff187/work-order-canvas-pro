@@ -166,8 +166,8 @@ export default function PartnerInvoiceDetail() {
       </Breadcrumb>
 
       <div>
-        <h1 className="text-3xl font-bold mb-2">Partner Invoice Detail</h1>
-        <p className="text-muted-foreground">View and export partner invoice information</p>
+        <h1 className="text-3xl font-bold mb-2">Partner Billing</h1>
+        <p className="text-muted-foreground">Invoice {invoice.invoice_number} — View and export partner invoice information</p>
       </div>
 
       {/* Header Actions */}

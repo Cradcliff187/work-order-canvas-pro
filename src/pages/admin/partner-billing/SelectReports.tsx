@@ -399,7 +399,7 @@ export default function SelectReports() {
                                   
                                   // Check if subcontractor is from internal organization
                                   const isInternalSubcontractor = subcontractor?.organization_members?.some(
-                                    (om: any) => om.organizations?.organization_type === 'internal'
+                                    (om) => om.organizations?.organization_type === 'internal'
                                   );
                                   
                                   if (subcontractorOrg) {
@@ -411,7 +411,7 @@ export default function SelectReports() {
                                   } else if (subcontractor) {
                                     // Individual subcontractor from subcontractor org - this shouldn't happen but fallback to org name
                                     const subcontractorOrgFromMember = subcontractor.organization_members?.find(
-                                      (om: any) => om.organizations?.organization_type === 'subcontractor'
+                                      (om) => om.organizations?.organization_type === 'subcontractor'
                                     );
                                     displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
                                   }
@@ -421,7 +421,7 @@ export default function SelectReports() {
                                       <div className="font-medium">
                                         {displayName}
                                       </div>
-                                      {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
+                                      {submittedBy && submittedBy.organization_members?.some((om) => om.organizations?.organization_type === 'internal') && (
                                         <div className="text-xs text-muted-foreground font-medium">
                                           Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
                                         </div>
@@ -589,9 +589,9 @@ export default function SelectReports() {
                                   let displayName = 'N/A';
                                   
                                   // Check if subcontractor is from internal organization
-                                  const isInternalSubcontractor = subcontractor?.organization_members?.some(
-                                    (om: any) => om.organizations?.organization_type === 'internal'
-                                  );
+                                    const isInternalSubcontractor = subcontractor?.organization_members?.some(
+                                      (om) => om.organizations?.organization_type === 'internal'
+                                    );
                                   
                                   if (subcontractorOrg) {
                                     // Organization-level assignment - always show organization name for subcontractors
@@ -601,9 +601,9 @@ export default function SelectReports() {
                                     displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
                                   } else if (subcontractor) {
                                     // Individual subcontractor from subcontractor org - fallback to org name
-                                    const subcontractorOrgFromMember = subcontractor.organization_members?.find(
-                                      (om: any) => om.organizations?.organization_type === 'subcontractor'
-                                    );
+                                      const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+                                        (om) => om.organizations?.organization_type === 'subcontractor'
+                                      );
                                     displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
                                   }
 
@@ -612,7 +612,7 @@ export default function SelectReports() {
                                       <div className="font-medium">
                                         {displayName}
                                       </div>
-                                      {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
+                                      {submittedBy && submittedBy.organization_members?.some((om) => om.organizations?.organization_type === 'internal') && (
                                         <div className="text-xs text-muted-foreground font-medium">
                                           Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
                                         </div>
