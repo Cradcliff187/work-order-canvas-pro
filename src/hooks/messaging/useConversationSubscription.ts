@@ -16,7 +16,7 @@ export function useConversationSubscription(conversationId: string | null) {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'unified_messages',
+          table: 'work_order_messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
         () => {

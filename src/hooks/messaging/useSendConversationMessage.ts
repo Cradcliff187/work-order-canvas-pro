@@ -16,7 +16,7 @@ export function useSendConversationMessage() {
     mutationKey: ['send-conversation-message'],
     mutationFn: async ({ conversationId, message }: SendConversationMessageInput) => {
       const { data, error } = await supabase
-        .from('unified_messages' as any)
+        .from('work_order_messages' as any)
         .insert({ conversation_id: conversationId, message })
         .select('*')
         .single();
