@@ -21,6 +21,9 @@ interface InvoiceColumnsProps {
   onDownloadPdf?: (invoice: Invoice) => void;
   // Optional due date resolver for overdue highlighting
   getDueDate?: (invoice: Invoice) => string | null;
+  // Admin CRUD
+  onEditInvoice?: (invoice: Invoice) => void;
+  onDeleteInvoice?: (invoice: Invoice) => void;
 }
 
 export const createInvoiceColumns = ({

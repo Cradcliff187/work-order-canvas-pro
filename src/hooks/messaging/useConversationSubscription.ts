@@ -27,12 +27,36 @@ export function useConversationSubscription(conversationId: string | null) {
           queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
           queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
 
-          // Simple toast for parity with work orders (may also fire on own messages)
           const preview = payload?.new?.message ? String(payload.new.message).slice(0, 100) : 'New message';
-          toast({
-            title: 'New message',
-            description: preview,
-          });
+          toast({ title: 'New message', description: preview });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'work_order_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        () => {
+          // Handle edits or server-side enrichments
+          queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+          queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
+          queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_read_receipts',
+        },
+        () => {
+          // Unread counts can change
+          queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
+          queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
         }
       )
       .subscribe();

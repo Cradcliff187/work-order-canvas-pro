@@ -27,7 +27,11 @@ const DirectMessagesPage: React.FC = () => {
   }, []);
 
   const navigate = useNavigate();
-  const handleSelect = (id: string) => {
+  const handleSelect = (id: string | null) => {
+    if (!id) {
+      setSelectedId(null);
+      return;
+    }
     if (id.startsWith('wo:')) {
       const woId = id.slice(3);
       navigate(`/work-orders/${woId}`);
@@ -35,7 +39,6 @@ const DirectMessagesPage: React.FC = () => {
     }
     setSelectedId(id);
   };
-
   // Compute filtered view and counts
   const filteredConversations = useMemo(() => {
     if (filter === 'direct') return conversations.filter((c) => c.conversation_type === 'direct');
