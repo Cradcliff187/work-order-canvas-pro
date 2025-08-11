@@ -98,7 +98,7 @@ export const KPICard: React.FC<KPICardProps> = ({
               <TrendIcon 
                 className={cn(
                   "h-4 w-4",
-                  trend === 'up' ? "text-green-600" : "text-red-600"
+                  trend === 'up' ? "text-[hsl(var(--success))]" : "text-[hsl(var(--destructive))]"
                 )} 
               />
             )}
@@ -109,14 +109,14 @@ export const KPICard: React.FC<KPICardProps> = ({
                 <ChangeIcon 
                   className={cn(
                     "h-3 w-3",
-                    change >= 0 ? "text-green-600" : "text-red-600"
+                    change >= 0 ? "text-[hsl(var(--success))]" : "text-[hsl(var(--destructive))]"
                   )} 
                 />
               )}
               <span 
                 className={cn(
                   "text-xs font-medium",
-                  change >= 0 ? "text-green-600" : "text-red-600"
+                  change >= 0 ? "text-[hsl(var(--success))]" : "text-[hsl(var(--destructive))]"
                 )}
               >
                 {formatChange(change)}

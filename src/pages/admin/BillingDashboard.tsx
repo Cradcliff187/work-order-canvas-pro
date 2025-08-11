@@ -4,8 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
@@ -13,14 +11,14 @@ import {
   Plus, 
   DollarSign,
   Clock,
-  TrendingUp,
   ReceiptText,
-  Building2,
-  CheckCircle
+  Building2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { BillingTransactionFilters } from '@/components/admin/billing/BillingTransactionFilters';
 import { BillingTransactionsTable } from '@/components/admin/billing/BillingTransactionsTable';
+import { KPICard } from '@/components/analytics/KPICard';
+import { QuickActionTile } from '@/components/admin/billing/QuickActionTile';
 
 interface DashboardMetrics {
   unbilledReports: {
@@ -247,110 +245,56 @@ export default function BillingDashboard() {
         </div>
 
         <TabsContent value="overview">
-          {/* Key Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="card-hover">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Unbilled Reports</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-16 mb-1" />
-                ) : (
-                  <div className="text-2xl font-bold">{metrics?.unbilledReports.count || 0}</div>
-                )}
-                <div className="text-xs text-muted-foreground">
-                  {isLoading ? (
-                    <Skeleton className="h-3 w-20" />
-                  ) : (
-                    `${formatCurrency(metrics?.unbilledReports.totalValue || 0)} total value`
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="card-hover">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Partner Invoices</CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-8 mb-1" />
-                ) : (
-                  <div className="text-2xl font-bold text-primary">{metrics?.monthlyTotals.partnerInvoices || 0}</div>
-                )}
-                <p className="text-xs text-muted-foreground">This month</p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-hover">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Subcontractor Invoices</CardTitle>
-                <ReceiptText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-8 mb-1" />
-                ) : (
-                  <div className="text-2xl font-bold text-primary">{metrics?.monthlyTotals.subcontractorInvoices || 0}</div>
-                )}
-                <p className="text-xs text-muted-foreground">This month</p>
-              </CardContent>
-            </Card>
-
-            <Card className="card-hover">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Monthly Total</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-20 mb-1" />
-                ) : (
-                  <div className="text-2xl font-bold text-primary">
-                    {formatCurrency(metrics?.monthlyTotals.totalValue || 0)}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">All invoices</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-7">
+            <KPICard
+              title="Unbilled Reports"
+              value={isLoading ? 0 : (metrics?.unbilledReports.count || 0)}
+              icon={Clock}
+              isLoading={isLoading}
+            />
+            <KPICard
+              title="Partner Invoices"
+              value={isLoading ? 0 : (metrics?.monthlyTotals.partnerInvoices || 0)}
+              icon={Building2}
+              isLoading={isLoading}
+            />
+            <KPICard
+              title="Subcontractor Invoices"
+              value={isLoading ? 0 : (metrics?.monthlyTotals.subcontractorInvoices || 0)}
+              icon={ReceiptText}
+              isLoading={isLoading}
+            />
+            <KPICard
+              title="Monthly Total"
+              value={isLoading ? 0 : (metrics?.monthlyTotals.totalValue || 0)}
+              format="currency"
+              icon={DollarSign}
+              isLoading={isLoading}
+            />
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Button 
-              className="h-11 flex flex-col gap-1"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <QuickActionTile 
+              label="Enter Subcontractor Invoice"
+              icon={Plus}
               onClick={() => navigate('/admin/invoices')}
-            >
-              <Plus className="h-5 w-5" />
-              Enter Subcontractor Invoice
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-11 flex flex-col gap-1"
+            />
+            <QuickActionTile 
+              label="Generate Partner Invoices"
+              icon={Building2}
               onClick={() => navigate('/admin/partner-billing/select-reports')}
-            >
-              <Building2 className="h-5 w-5" />
-              Generate Partner Invoices
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-11 flex flex-col gap-1"
+            />
+            <QuickActionTile 
+              label="View All Invoices"
+              icon={FileText}
               onClick={() => navigate('/admin/invoices')}
-            >
-              <FileText className="h-5 w-5" />
-              View All Invoices
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-11 flex flex-col gap-1"
+            />
+            <QuickActionTile 
+              label="View Unbilled Reports"
+              icon={Clock}
               onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
-            >
-              <Clock className="h-5 w-5" />
-              View Unbilled Reports
-            </Button>
+            />
           </div>
 
           {/* Recent Activity */}
