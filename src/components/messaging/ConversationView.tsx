@@ -1,10 +1,11 @@
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useMarkConversationRead } from '@/hooks/messaging/useMarkConversationRead';
 import { Button } from '@/components/ui/button';
 import { useConversationSubscription } from '@/hooks/messaging/useConversationSubscription';
 import { MessageComposer } from '@/components/messaging/MessageComposer';
 import { useConversationMessages } from '@/hooks/messaging/useConversationMessages';
+import { useToast } from '@/hooks/use-toast';
 
 interface ConversationViewProps {
   conversationId: string;
@@ -12,6 +13,7 @@ interface ConversationViewProps {
 
 export const ConversationView: React.FC<ConversationViewProps> = ({ conversationId }) => {
   const { mutate: markRead, isPending } = useMarkConversationRead();
+  const { toast } = useToast();
 
   const {
     messages,
@@ -22,14 +24,41 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
   } = useConversationMessages(conversationId, 50);
 
   useConversationSubscription(conversationId);
+
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Refs to preserve scroll position when loading older messages
+  const loadingOlderRef = useRef(false);
+  const prevScrollHeightRef = useRef<number | null>(null);
+  const prevScrollTopRef = useRef<number | null>(null);
+
+  // Maintain scroll position when loading older messages; otherwise auto-scroll to bottom
   useEffect(() => {
-    if (listRef.current) {
-      // Always scroll to bottom when new messages arrive (not when loading older)
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+    const el = listRef.current;
+    if (!el) return;
+
+    if (loadingOlderRef.current && prevScrollHeightRef.current !== null && prevScrollTopRef.current !== null) {
+      const heightDelta = el.scrollHeight - prevScrollHeightRef.current;
+      el.scrollTop = prevScrollTopRef.current + heightDelta;
+      // Reset flags after adjusting
+      loadingOlderRef.current = false;
+      prevScrollHeightRef.current = null;
+      prevScrollTopRef.current = null;
+      return;
     }
+
+    // For new incoming messages (not older fetch), scroll to bottom
+    el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // Safety: if fetch finishes without changing messages, clear the loading flag
+  useEffect(() => {
+    if (!isFetchingNextPage && loadingOlderRef.current) {
+      loadingOlderRef.current = false;
+      prevScrollHeightRef.current = null;
+      prevScrollTopRef.current = null;
+    }
+  }, [isFetchingNextPage]);
 
   useEffect(() => {
     if (messages?.length) {
@@ -39,11 +68,30 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
 
   const grouped = useMemo(() => messages, [messages]);
 
+  const handleLoadOlder = useCallback(() => {
+    const el = listRef.current;
+    if (el) {
+      loadingOlderRef.current = true;
+      prevScrollHeightRef.current = el.scrollHeight;
+      prevScrollTopRef.current = el.scrollTop;
+    }
+    fetchNextPage();
+  }, [fetchNextPage]);
+
+  const handleMarkReadClick = useCallback(() => {
+    markRead(conversationId, {
+      meta: { onError: undefined, onSettled: undefined },
+      onSuccess: () => {
+        toast({ title: 'Conversation marked as read' });
+      },
+    } as any);
+  }, [markRead, conversationId, toast]);
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-3 border-b">
         <div className="font-medium">Conversation</div>
-        <Button size="sm" variant="secondary" onClick={() => markRead(conversationId)} disabled={isPending}>
+        <Button size="sm" variant="secondary" onClick={handleMarkReadClick} disabled={isPending}>
           Mark as read
         </Button>
       </div>
@@ -53,7 +101,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchNextPage()}
+            onClick={handleLoadOlder}
             disabled={isFetchingNextPage}
           >
             {isFetchingNextPage ? 'Loading…' : 'Load older messages'}
