@@ -2154,7 +2154,7 @@ export type Database = {
       }
       mark_conversation_read: {
         Args: { p_conversation_id: string }
-        Returns: Json
+        Returns: boolean
       }
       monitor_email_queue: {
         Args: Record<PropertyKey, never>
