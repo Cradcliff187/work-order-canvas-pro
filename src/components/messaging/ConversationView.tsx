@@ -1,10 +1,10 @@
+
 import React, { useEffect, useMemo, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useMarkConversationRead } from '@/hooks/messaging/useMarkConversationRead';
 import { Button } from '@/components/ui/button';
 import { useConversationSubscription } from '@/hooks/messaging/useConversationSubscription';
 import { MessageComposer } from '@/components/messaging/MessageComposer';
+import { useConversationMessages } from '@/hooks/messaging/useConversationMessages';
 
 interface ConversationViewProps {
   conversationId: string;
@@ -13,25 +13,20 @@ interface ConversationViewProps {
 export const ConversationView: React.FC<ConversationViewProps> = ({ conversationId }) => {
   const { mutate: markRead, isPending } = useMarkConversationRead();
 
-  const { data: messages = [], isLoading } = useQuery({
-    queryKey: ['conversation', conversationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('unified_messages' as any)
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
-    staleTime: 10_000,
-  });
+  const {
+    messages,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useConversationMessages(conversationId, 50);
 
   useConversationSubscription(conversationId);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (listRef.current) {
+      // Always scroll to bottom when new messages arrive (not when loading older)
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages]);
@@ -51,6 +46,19 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
         <Button size="sm" variant="secondary" onClick={() => markRead(conversationId)} disabled={isPending}>
           Mark as read
         </Button>
+      </div>
+
+      <div className="flex items-center justify-center p-2">
+        {hasNextPage && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? 'Loading…' : 'Load older messages'}
+          </Button>
+        )}
       </div>
 
       <div ref={listRef} className="flex-1 overflow-auto p-4 space-y-3">

@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,8 +25,9 @@ export function useSendConversationMessage() {
       return data;
     },
     onSuccess: (_data, variables) => {
-      // Refresh the conversation thread
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      // Refresh the conversation thread and overview counters
+      queryClient.invalidateQueries({ queryKey: ['conversation-messages', variables.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
     },
     onError: (error: any) => {
       console.error('[useSendConversationMessage] error:', error);

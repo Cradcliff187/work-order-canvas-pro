@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,7 +20,9 @@ export function useConversationSubscription(conversationId: string | null) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+          // Invalidate paginated messages and overview
+          queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+          queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
         }
       )
       .subscribe();
