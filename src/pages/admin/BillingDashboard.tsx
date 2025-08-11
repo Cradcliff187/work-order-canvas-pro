@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { 
   FileText, 
   Plus, 
@@ -18,7 +20,7 @@ import { format } from 'date-fns';
 import { BillingTransactionFilters } from '@/components/admin/billing/BillingTransactionFilters';
 import { BillingTransactionsTable } from '@/components/admin/billing/BillingTransactionsTable';
 import { KPICard } from '@/components/analytics/KPICard';
-import { QuickActionTile } from '@/components/admin/billing/QuickActionTile';
+// Removed QuickActionTile in favor of standard Buttons per gold standard
 
 interface DashboardMetrics {
   unbilledReports: {
