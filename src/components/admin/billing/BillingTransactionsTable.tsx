@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
+import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 
 interface TransactionRow {
   id: string;
@@ -53,7 +54,10 @@ export function BillingTransactionsTable({ rows }: BillingTransactionsTableProps
     return copy;
   }, [rows, sortKey, sortDir]);
 
-  const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
+const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
   return (
     <Card>
@@ -61,7 +65,20 @@ export function BillingTransactionsTable({ rows }: BillingTransactionsTableProps
         <CardTitle>Transactions ({rows.length})</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Mobile list */}
+        <div className="md:hidden space-y-3">
+          {sortedRows.map((r) => (
+            <MobileTableCard
+              key={r.id}
+              title={(r.reference || r.type.replace(/_/g, ' ')).toString()}
+              subtitle={`${r.organization_name || '-' } • ${new Date(r.date).toLocaleDateString()}`}
+              status={<span className="text-sm font-semibold">{formatCurrency(r.amount)}</span>}
+            />
+          ))}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left border-b">
@@ -98,7 +115,7 @@ export function BillingTransactionsTable({ rows }: BillingTransactionsTableProps
                 <tr key={r.id} className="border-b">
                   <td className="py-2 px-2 whitespace-nowrap">{new Date(r.date).toLocaleDateString()}</td>
                   <td className="py-2 px-2 capitalize">{r.type.replace(/_/g, ' ')}</td>
-                  <td className="py-2 px-2">${r.amount.toFixed(2)}</td>
+                  <td className="py-2 px-2">{formatCurrency(r.amount)}</td>
                   <td className="py-2 px-2">{r.reference || '-'}</td>
                   <td className="py-2 px-2">{r.organization_name || '-'}</td>
                 </tr>

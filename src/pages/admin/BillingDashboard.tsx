@@ -232,11 +232,11 @@ export default function BillingDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <main id="main-content" role="main" className="space-y-6">
+      <header>
         <h1 className="text-3xl font-bold mb-2">Billing Dashboard</h1>
         <p className="text-muted-foreground">Monitor billing activities and manage invoices</p>
-      </div>
+      </header>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
@@ -249,7 +249,7 @@ export default function BillingDashboard() {
         <TabsContent value="overview">
           {/* Key Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
+            <Card className="card-hover">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Unbilled Reports</CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -270,7 +270,7 @@ export default function BillingDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="card-hover">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Partner Invoices</CardTitle>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -285,7 +285,7 @@ export default function BillingDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="card-hover">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Subcontractor Invoices</CardTitle>
                 <ReceiptText className="h-4 w-4 text-muted-foreground" />
@@ -300,7 +300,7 @@ export default function BillingDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="card-hover">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Monthly Total</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -319,7 +319,7 @@ export default function BillingDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Button 
               className="h-11 flex flex-col gap-1"
               onClick={() => navigate('/admin/invoices')}
@@ -464,6 +464,6 @@ export default function BillingDashboard() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </main>
   );
 }
