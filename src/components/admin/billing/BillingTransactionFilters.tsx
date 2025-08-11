@@ -1,9 +1,9 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
-
 interface BillingTransactionFiltersProps {
   search: string;
   onSearchChange: (v: string) => void;
@@ -39,6 +39,9 @@ export function BillingTransactionFilters({
   organizationId,
   onOrganizationChange,
 }: BillingTransactionFiltersProps) {
+  const isDirty = Boolean(
+    search || dateFrom || dateTo || amountMin !== undefined || amountMax !== undefined || transactionTypes.length > 0 || organizationId
+  );
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
       <div className="sm:col-span-2 lg:col-span-2">
@@ -69,6 +72,23 @@ export function BillingTransactionFilters({
         <div className="sm:col-span-2 lg:col-span-2">
           <Label className="text-sm font-medium">Organization</Label>
           <OrganizationSelector value={organizationId} onChange={onOrganizationChange} placeholder="All organizations" className="mt-1 w-full" />
+        </div>
+      )}
+      {isDirty && (
+        <div className="sm:col-span-2 lg:col-span-2 flex justify-end">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              onSearchChange('');
+              onDateRangeChange?.(undefined, undefined);
+              onAmountRangeChange?.(undefined, undefined);
+              onTransactionTypesChange([]);
+              onOrganizationChange?.(undefined);
+            }}
+            aria-label="Clear all filters"
+          >
+            Clear filters
+          </Button>
         </div>
       )}
     </div>

@@ -152,7 +152,8 @@ export default function BillingDashboard() {
 
   // Column visibility for Transactions table
   const { columnVisibility, toggleColumn, resetToDefaults, getVisibleColumnCount, getAllColumns } = useColumnVisibility({
-    storageKey: 'billing_transactions_columns',
+    storageKey: 'admin-billing-transactions-columns-v1',
+    legacyKeys: ['billing_transactions_columns'],
     columnMetadata: {
       date: { label: 'Date', defaultVisible: true },
       type: { label: 'Type', defaultVisible: true },
@@ -257,6 +258,27 @@ export default function BillingDashboard() {
     }).format(amount);
   };
 
+  React.useEffect(() => {
+    const title = 'Billing Dashboard | AKC Portal';
+    document.title = title;
+    const description = 'Admin billing dashboard: KPIs, recent invoices, and transactions.';
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'description');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', description.slice(0, 160));
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', window.location.href);
+  }, []);
+
 if (error) {
   return (
     <EmptyState
@@ -270,11 +292,18 @@ if (error) {
 }
 
   return (
-    <main id="main-content" role="main" className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold mb-2">Billing Dashboard</h1>
-        <p className="text-muted-foreground">Monitor billing activities and manage invoices</p>
-      </header>
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 bg-background text-foreground px-3 py-2 rounded-md"
+      >
+        Skip to main content
+      </a>
+      <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
+        <header>
+          <h1 className="text-3xl font-bold mb-2">Billing Dashboard</h1>
+          <p className="text-muted-foreground">Monitor billing activities and manage invoices</p>
+        </header>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
@@ -380,8 +409,14 @@ if (error) {
                 ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
                   <div className="space-y-3">
                     {metrics.recentPartnerInvoices.map((invoice) => (
-                      <div key={invoice.id} className="flex justify-between items-center rounded-md px-2 py-2 -mx-2 hover:bg-muted/50 focus-within:bg-muted/50">
-                        <div>
+                      <button
+                        key={invoice.id}
+                        type="button"
+                        onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
+                        className="w-full flex justify-between items-center rounded-md px-2 py-2 -mx-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
+                        aria-label={`View partner invoice ${invoice.invoice_number} for ${invoice.partner_organization.name} dated ${format(new Date(invoice.invoice_date), 'MMM d, yyyy')}`}
+                      >
+                        <div className="text-left">
                           <p className="font-medium text-sm">{invoice.invoice_number}</p>
                           <p className="text-xs text-muted-foreground">
                             {invoice.partner_organization.name} • {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
@@ -391,7 +426,7 @@ if (error) {
                           <p className="font-medium text-sm">{formatCurrency(invoice.total_amount)}</p>
                           <FinancialStatusBadge status={invoice.status} size="sm" />
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -407,7 +442,7 @@ if (error) {
             </Card>
 
             {/* Recent Subcontractor Invoices */}
-            <Card>
+            <Card role="region" aria-label="Recent Subcontractor Invoices">
               <CardHeader>
                 <CardTitle>Recent Subcontractor Invoices</CardTitle>
                 <CardDescription>Latest subcontractor invoices processed</CardDescription>
@@ -428,8 +463,14 @@ if (error) {
                 ) : metrics?.recentSubcontractorInvoices && metrics.recentSubcontractorInvoices.length > 0 ? (
                   <div className="space-y-3">
                     {metrics.recentSubcontractorInvoices.map((invoice) => (
-                      <div key={invoice.id} className="flex justify-between items-center">
-                        <div>
+                      <button
+                        key={invoice.id}
+                        type="button"
+                        onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                        className="w-full flex justify-between items-center rounded-md px-2 py-2 -mx-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
+                        aria-label={`View subcontractor invoice ${invoice.internal_invoice_number} for ${invoice.subcontractor_organization?.name || 'Unknown'} dated ${format(new Date(invoice.submitted_at), 'MMM d, yyyy')}`}
+                      >
+                        <div className="text-left">
                           <p className="font-medium text-sm">{invoice.internal_invoice_number}</p>
                           <p className="text-xs text-muted-foreground">
                             {invoice.subcontractor_organization?.name || 'Unknown'} • {format(new Date(invoice.submitted_at), 'MMM d, yyyy')}
@@ -439,7 +480,7 @@ if (error) {
                           <p className="font-medium text-sm">{formatCurrency(invoice.total_amount || 0)}</p>
                           <FinancialStatusBadge status={invoice.status} size="sm" />
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -489,5 +530,6 @@ if (error) {
         </TabsContent>
       </Tabs>
     </main>
+  </>
   );
 }
