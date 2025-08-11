@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -16,6 +17,7 @@ import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import {
   useReactTable,
   getCoreRowModel,
@@ -24,6 +26,7 @@ import {
   RowSelectionState,
   SortingState,
 } from '@tanstack/react-table';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -169,6 +172,39 @@ export default function AdminInvoices() {
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleEditInvoice = (invoice: Invoice) => {
+    setInvoiceToEdit(invoice);
+    setEditOpen(true);
+  };
+  const handleDeleteInvoice = (invoice: Invoice) => {
+    setInvoiceToDelete(invoice);
+    setDeleteOpen(true);
+  };
+  const confirmDelete = async () => {
+    if (!invoiceToDelete) return;
+    setIsDeleting(true);
+    try {
+      await supabase.from('invoice_work_orders').delete().eq('invoice_id', invoiceToDelete.id);
+      await supabase.from('invoice_attachments').delete().eq('invoice_id', invoiceToDelete.id);
+      const { error } = await supabase.from('invoices').delete().eq('id', invoiceToDelete.id);
+      if (error) throw error;
+    } catch (e) {
+      console.error('Failed to delete invoice', e);
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
+      setInvoiceToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      refetch();
+    }
+  };
 
   // Initialize filters from URL parameters
   useEffect(() => {
@@ -210,6 +246,8 @@ export default function AdminInvoices() {
     onApproveInvoice: handleApproveInvoice,
     onRejectInvoice: handleRejectInvoice,
     onMarkAsPaid: handleMarkAsPaid,
+    onEditInvoice: handleEditInvoice,
+    onDeleteInvoice: handleDeleteInvoice,
   });
 
   // Column visibility setup for invoices

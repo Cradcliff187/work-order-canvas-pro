@@ -43,6 +43,8 @@ export default function SelectReports() {
     const v = localStorage.getItem('pb.markupPercentage');
     return v !== null ? Number(v) : 20;
   });
+  const [invoiceDate, setInvoiceDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
+  const [dueDate, setDueDate] = useState<string | ''>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   // Sorting for table
   type SortKey = 'work_order' | 'submitted' | 'amount';
@@ -154,7 +156,9 @@ export default function SelectReports() {
       selectedReportIds: Array.from(selectedReportIds),
       markupPercentage,
       subtotal: calculations.subtotal,
-      totalAmount: calculations.total
+      totalAmount: calculations.total,
+      invoiceDate,
+      dueDate: dueDate || undefined,
     }, {
       onSuccess: (result) => {
         // Clear selection
@@ -721,7 +725,7 @@ export default function SelectReports() {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Generate Partner Invoices</AlertDialogTitle>
-                      <AlertDialogDescription className="space-y-2">
+                      <AlertDialogDescription className="space-y-3">
                         <p>You are about to generate an invoice with the following details:</p>
                         <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
                           <p><strong>Partner:</strong> {selectedPartnerId ? 'Selected Partner' : 'Unknown'}</p>
@@ -729,6 +733,16 @@ export default function SelectReports() {
                           <p><strong>Subtotal:</strong> {formatCurrency(calculations.subtotal)}</p>
                           <p><strong>Markup ({markupPercentage}%):</strong> {formatCurrency(calculations.markupAmount)}</p>
                           <p><strong>Total Amount:</strong> {formatCurrency(calculations.total)}</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label htmlFor="invoice_date">Invoice date</Label>
+                            <Input id="invoice_date" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="due_date">Due date (optional)</Label>
+                            <Input id="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                          </div>
                         </div>
                         <p className="text-sm">This action cannot be undone. The selected reports will be marked as billed.</p>
                       </AlertDialogDescription>

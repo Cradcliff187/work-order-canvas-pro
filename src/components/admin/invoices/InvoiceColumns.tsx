@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
-import { Eye, CheckCircle, XCircle, DollarSign, Paperclip, UserCheck, Download } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, DollarSign, Paperclip, UserCheck, Download, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { formatCurrency } from '@/utils/formatting';

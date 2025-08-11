@@ -8,6 +8,8 @@ interface GeneratePartnerInvoiceData {
   markupPercentage: number;
   subtotal: number;
   totalAmount: number;
+  invoiceDate?: string; // YYYY-MM-DD
+  dueDate?: string; // YYYY-MM-DD
 }
 
 interface PartnerInvoiceGenerationResult {
@@ -79,7 +81,8 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     .insert({
       invoice_number: invoiceNumber,
       partner_organization_id: data.partnerOrganizationId,
-      invoice_date: invoiceDate,
+      invoice_date: data.invoiceDate || invoiceDate,
+      due_date: data.dueDate || null,
       subtotal: data.subtotal,
       markup_percentage: data.markupPercentage,
       total_amount: data.totalAmount,
