@@ -34,6 +34,8 @@ export const createInvoiceColumns = ({
   onSendInvoice,
   onDownloadPdf,
   getDueDate,
+  onEditInvoice,
+  onDeleteInvoice,
 }: InvoiceColumnsProps): ColumnDef<Invoice>[] => [
   {
     id: 'select',
@@ -240,7 +242,7 @@ export const createInvoiceColumns = ({
           icon: XCircle,
           onClick: () => onRejectInvoice(invoice),
           show: canReject,
-          variant: 'destructive' as const
+          variant: 'destructive' as 'destructive'
         },
         {
           label: 'Mark as Paid',
@@ -249,10 +251,17 @@ export const createInvoiceColumns = ({
           show: canMarkPaid
         },
         {
-          label: 'Download PDF',
-          icon: Download,
-          onClick: () => onDownloadPdf?.(invoice),
-          show: canDownload
+          label: 'Edit',
+          icon: Pencil,
+          onClick: () => onEditInvoice?.(invoice),
+          show: !!onEditInvoice
+        },
+        {
+          label: 'Delete',
+          icon: Trash2,
+          onClick: () => onDeleteInvoice?.(invoice),
+          show: !!onDeleteInvoice,
+          variant: 'destructive' as 'destructive'
         }
       ];
 

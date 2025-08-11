@@ -17,6 +17,7 @@ import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
+import { EditInvoiceSheet } from '@/components/admin/invoices/EditInvoiceSheet';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import {
   useReactTable,
@@ -679,6 +680,31 @@ const table = useReactTable({
         onApproveSelected={handleBulkApprove}
         onRejectSelected={handleBulkReject}
         onMarkPaidSelected={handleBulkMarkPaid}
+      />
+
+      <EditInvoiceSheet
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setInvoiceToEdit(null);
+        }}
+        invoice={invoiceToEdit}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['invoices'] });
+          refetch();
+        }}
+      />
+
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setInvoiceToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        itemName={invoiceToDelete?.internal_invoice_number || ''}
+        itemType="invoice"
+        isLoading={isDeleting}
       />
     </main>
     </>

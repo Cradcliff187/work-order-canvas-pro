@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,19 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/utils/formatting';
-import { ArrowLeft, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Pencil, Trash2 } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { format } from 'date-fns';
 import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { toast } from 'sonner';
+import { EditPartnerInvoiceSheet } from '@/components/admin/partner-billing/EditPartnerInvoiceSheet';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 interface PartnerInvoiceDetail {
   id: string;
   invoice_number: string;
   invoice_date: string;
+  due_date?: string | null;
   subtotal: number;
   markup_percentage: number;
   total_amount: number;
@@ -48,6 +51,7 @@ async function fetchPartnerInvoiceDetail(invoiceId: string): Promise<PartnerInvo
       id,
       invoice_number,
       invoice_date,
+      due_date,
       subtotal,
       markup_percentage,
       total_amount,
