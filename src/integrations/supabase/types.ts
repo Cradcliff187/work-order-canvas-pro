@@ -1380,7 +1380,7 @@ export type Database = {
           message: string
           sender_id: string
           updated_at: string | null
-          work_order_id: string
+          work_order_id: string | null
         }
         Insert: {
           attachment_ids?: string[] | null
@@ -1393,7 +1393,7 @@ export type Database = {
           message: string
           sender_id: string
           updated_at?: string | null
-          work_order_id: string
+          work_order_id?: string | null
         }
         Update: {
           attachment_ids?: string[] | null
@@ -1406,7 +1406,7 @@ export type Database = {
           message?: string
           sender_id?: string
           updated_at?: string | null
-          work_order_id?: string
+          work_order_id?: string | null
         }
         Relationships: [
           {
@@ -1843,6 +1843,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      create_direct_conversation: {
+        Args: { p_other_user_id: string }
+        Returns: string
+      }
       create_new_user: {
         Args: {
           email: string
@@ -1918,6 +1922,16 @@ export type Database = {
       generate_work_order_number_v2: {
         Args: { org_id: string; location_code?: string }
         Returns: string
+      }
+      get_conversations_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          conversation_id: string
+          conversation_type: Database["public"]["Enums"]["conversation_type"]
+          title: string
+          last_message_at: string
+          unread_count: number
+        }[]
       }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
@@ -2099,9 +2113,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      list_dm_candidates: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          first_name: string
+          last_name: string
+        }[]
+      }
       log_attachment_access_violation: {
         Args: { user_id: string; attachment_id: string; violation_type: string }
         Returns: undefined
+      }
+      mark_conversation_read: {
+        Args: { p_conversation_id: string }
+        Returns: Json
       }
       monitor_email_queue: {
         Args: Record<PropertyKey, never>
