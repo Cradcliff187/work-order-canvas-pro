@@ -9,6 +9,8 @@ import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { format } from 'date-fns';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
+import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 
 interface ReceiptRow {
   id: string;

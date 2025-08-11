@@ -385,9 +385,9 @@ const table = useReactTable({
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
             {submittedCounts && submittedCounts.invoicesCount > 0 && (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+              <FinancialStatusBadge status="pending" size="sm" showIcon>
                 {submittedCounts.invoicesCount} pending
-              </Badge>
+              </FinancialStatusBadge>
             )}
           </div>
           <p className="text-muted-foreground">
