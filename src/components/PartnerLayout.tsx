@@ -40,6 +40,7 @@ import {
   LogOut,
   ClipboardList,
   MapPin,
+  MessageSquare,
 } from 'lucide-react';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
@@ -147,7 +148,14 @@ function PartnerSidebar() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
+              <DropdownMenuItem asChild>
+                <Link to="/messages" className="flex items-center">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Messages
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/partner/profile" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />

@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserAccessibleWorkOrders } from '@/hooks/useUserAccessibleWorkOrders';
@@ -96,6 +96,11 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
+            <DropdownMenuItem onClick={() => navigate('/messages')}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Messages
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleProfileClick}>
               <Settings className="mr-2 h-4 w-4" />
               Profile Settings
@@ -146,6 +151,11 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
+          <DropdownMenuItem onClick={() => navigate('/messages')}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Messages
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleProfileClick}>
             <Settings className="mr-2 h-4 w-4" />
             Profile Settings
