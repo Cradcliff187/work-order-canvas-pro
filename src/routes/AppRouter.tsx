@@ -6,6 +6,7 @@ import { PartnerRoutes } from './PartnerRoutes';
 import { SubcontractorRoutes } from './SubcontractorRoutes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import NotFound from '@/pages/NotFound';
+import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
 
 export const AppRouter: React.FC = () => (
   <ErrorBoundary>
@@ -14,6 +15,8 @@ export const AppRouter: React.FC = () => (
       {AdminRoutes()}
       {PartnerRoutes()}
       {SubcontractorRoutes()}
+      
+      <Route path="/messages" element={<DirectMessagesPage />} />
       
       {/* 404 route */}
       <Route path="*" element={<NotFound />} />

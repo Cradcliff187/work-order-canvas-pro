@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -9,18 +8,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, LogOut, User } from 'lucide-react';
+import { Settings, LogOut, User, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserAccessibleWorkOrders } from '@/hooks/useUserAccessibleWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
+import { useNavigate } from 'react-router-dom';
 
 export function UserDropdown() {
   const { profile, signOut } = useAuth();
   const { primaryRole, isEmployee, isAdmin } = useUserProfile();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const navigate = useNavigate();
 
   // Get accessible work orders and unread counts
   const { data: workOrderIds = [] } = useUserAccessibleWorkOrders();
@@ -88,28 +89,32 @@ export function UserDropdown() {
             </div>
           </Button>
         </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem>
-          <User className="mr-2 h-4 w-4" />
-          Profile
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Settings className="mr-2 h-4 w-4" />
-          Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={() => navigate('/messages')}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Messages
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <User className="mr-2 h-4 w-4" />
+            Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-    <UnreadMessagesDropdown
-      isVisible={showUnreadDropdown}
-      unreadCounts={unreadCounts}
-      onClose={() => setShowUnreadDropdown(false)}
-    />
-  </div>
+      <UnreadMessagesDropdown
+        isVisible={showUnreadDropdown}
+        unreadCounts={unreadCounts}
+        onClose={() => setShowUnreadDropdown(false)}
+      />
+    </div>
   );
 }
