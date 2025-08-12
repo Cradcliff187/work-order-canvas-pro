@@ -292,10 +292,10 @@ export default function SelectReports() {
                     <CheckSquare className="w-4 h-4" />
                     {selectedReportIds.size === reports.length ? 'Deselect All' : 'Select All'}
                   </Button>
-                  <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
+                  <Badge variant="secondary" className="h-5 text-[10px] px-2">
                     {reports.length} report{reports.length !== 1 ? 's' : ''}
                   </Badge>
-                  <Badge variant="outline" className="h-5 text-[10px] px-1.5 flex items-center gap-1">
+                  <Badge variant="outline" className="h-5 text-[10px] px-2 flex items-center gap-2">
                     <DollarSign className="w-3 h-3" />
                     {formatCurrency(totalSubcontractorCosts)} available
                   </Badge>
@@ -330,7 +330,7 @@ export default function SelectReports() {
                             />
                           </TableHead>
                           <TableHead>
-                            <button type="button" onClick={() => toggleSort('work_order')} className="inline-flex items-center gap-1" aria-label={`Sort by Work Order${sortKey==='work_order'?` (${sortDir})`:''}`}>
+                            <button type="button" onClick={() => toggleSort('work_order')} className="inline-flex items-center gap-2" aria-label={`Sort by Work Order${sortKey==='work_order'?` (${sortDir})`:''}`}>
                               <span>Work Order</span>
                               {sortKey==='work_order' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
                             </button>
@@ -339,14 +339,14 @@ export default function SelectReports() {
                           <TableHead>Subcontractor</TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead>
-                            <button type="button" onClick={() => toggleSort('submitted')} className="inline-flex items-center gap-1" aria-label={`Sort by Submitted${sortKey==='submitted'?` (${sortDir})`:''}`}>
+                            <button type="button" onClick={() => toggleSort('submitted')} className="inline-flex items-center gap-2" aria-label={`Sort by Submitted${sortKey==='submitted'?` (${sortDir})`:''}`}>
                               <span>Submitted</span>
                               {sortKey==='submitted' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
                             </button>
                           </TableHead>
                            <TableHead>Invoices</TableHead>
                            <TableHead>
-                            <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-1" aria-label={`Sort by Amount${sortKey==='amount'?` (${sortDir})`:''}`}>
+                            <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-2" aria-label={`Sort by Amount${sortKey==='amount'?` (${sortDir})`:''}`}>
                               <span>Amount</span>
                               {sortKey==='amount' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
                             </button>
@@ -384,7 +384,7 @@ export default function SelectReports() {
                                 {report.work_orders?.work_order_number || 'N/A'}
                               </TableCell>
                               <TableCell className="max-w-[200px]">
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                   <p className="font-medium truncate">
                                     {report.work_orders?.title || 'No title'}
                                   </p>
@@ -448,11 +448,11 @@ export default function SelectReports() {
                                    
                                    return (
                                      <div className="flex items-center gap-2">
-                                       <Badge variant="outline" className="h-5 text-[10px] px-1.5">
+                                       <Badge variant="outline" className="h-5 text-[10px] px-2">
                                          {invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}
                                        </Badge>
                                        {invoiceCount > 0 && (
-                                         <Badge variant="default" className="h-5 text-[10px] px-1.5">
+                                         <Badge variant="default" className="h-5 text-[10px] px-2">
                                            Approved
                                          </Badge>
                                        )}
@@ -469,7 +469,7 @@ export default function SelectReports() {
                                      return (
                                        <Tooltip>
                                          <TooltipTrigger asChild>
-                                           <div className="flex items-center gap-1 cursor-help">
+                                           <div className="flex items-center gap-2 cursor-help">
                                              <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
                                                {formatCurrency(report.subcontractor_costs)}
                                              </Badge>
@@ -488,7 +488,7 @@ export default function SelectReports() {
                                                    <span>{formatCurrency(invoice.amount)}</span>
                                                  </div>
                                                ))}
-                                               <div className="border-t pt-1 flex justify-between gap-4 font-medium">
+                                               <div className="border-t pt-2 flex justify-between gap-4 font-medium">
                                                  <span>Total:</span>
                                                  <span>{formatCurrency(reportInvoiceDetail?.total_amount || 0)}</span>
                                                </div>
@@ -516,7 +516,7 @@ export default function SelectReports() {
                 </div>
 
                 {/* Mobile Card View */}
-                <div className="block lg:hidden space-y-3">
+                <div className="block lg:hidden space-y-4">
                   {sortedReports.map((report) => {
                     const isSelected = selectedReportIds.has(report.id);
                     return (
@@ -552,7 +552,7 @@ export default function SelectReports() {
                                      
                                      return (
                                        <div className="flex items-center gap-1">
-                                         <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                                         <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-2">
                                            {formatCurrency(report.subcontractor_costs)}
                                          </Badge>
                                          {invoiceCount > 1 && (
@@ -563,18 +563,18 @@ export default function SelectReports() {
                                    })()
                                  )}
                               </div>
-                               <div className="flex items-center gap-2 pt-1">
+                               <div className="flex items-center gap-2 pt-2">
                                  {(() => {
                                    const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
                                    const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
                                    
                                    return (
                                      <>
-                                       <Badge variant="outline" className="h-4 text-[9px] px-1">
+                                       <Badge variant="outline" className="h-4 text-[9px] px-2">
                                          {invoiceCount} invoice{invoiceCount !== 1 ? 's' : ''}
                                        </Badge>
                                        {invoiceCount > 0 && (
-                                         <Badge variant="default" className="h-4 text-[9px] px-1">
+                                         <Badge variant="default" className="h-4 text-[9px] px-2">
                                            Approved
                                          </Badge>
                                        )}
@@ -582,8 +582,8 @@ export default function SelectReports() {
                                    );
                                  })()}
                                </div>
-                            <div className="text-xs text-muted-foreground space-y-1">
-                              <div className="flex items-center gap-1">
+                            <div className="text-xs text-muted-foreground space-y-2">
+                               <div className="flex items-center gap-2">
                                 <Building2 className="w-3 h-3" />
                                 {(() => {
                                   const subcontractor = report.subcontractor;
@@ -626,12 +626,12 @@ export default function SelectReports() {
                                   );
                                 })()}
                               </div>
-                              <div className="flex items-center gap-1">
+                               <div className="flex items-center gap-2">
                                 <Calendar className="w-3 h-3" />
                                 {format(new Date(report.submitted_at), 'MMM d, yyyy')}
                               </div>
                               {report.work_orders?.store_location && (
-                                <div className="flex items-center gap-1">
+                                 <div className="flex items-center gap-2">
                                   <span>📍</span>
                                   {report.work_orders.store_location}
                                 </div>
@@ -725,21 +725,21 @@ export default function SelectReports() {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Generate Partner Invoices</AlertDialogTitle>
-                      <AlertDialogDescription className="space-y-3">
+                      <AlertDialogDescription className="space-y-4">
                         <p>You are about to generate an invoice with the following details:</p>
-                        <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
+                        <div className="bg-muted p-4 rounded-md space-y-2 text-sm">
                           <p><strong>Partner:</strong> {selectedPartnerId ? 'Selected Partner' : 'Unknown'}</p>
                           <p><strong>Reports:</strong> {selectedReportIds.size} selected</p>
                           <p><strong>Subtotal:</strong> {formatCurrency(calculations.subtotal)}</p>
                           <p><strong>Markup ({markupPercentage}%):</strong> {formatCurrency(calculations.markupAmount)}</p>
                           <p><strong>Total Amount:</strong> {formatCurrency(calculations.total)}</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="space-y-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
                             <Label htmlFor="invoice_date">Invoice date</Label>
                             <Input id="invoice_date" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-2">
                             <Label htmlFor="due_date">Due date (optional)</Label>
                             <Input id="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                           </div>

@@ -46,23 +46,23 @@ export function BillingTransactionFilters({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
       <div className="sm:col-span-2 lg:col-span-2">
         <Label className="text-sm font-medium">Search</Label>
-        <Input value={search} onChange={(e) => onSearchChange(e.target.value)} placeholder="Search reference or org" className="mt-1" />
+        <Input value={search} onChange={(e) => onSearchChange(e.target.value)} placeholder="Search reference or org" className="mt-2" />
       </div>
       <div>
         <Label className="text-sm font-medium">Date From</Label>
-        <Input type="date" value={dateFrom || ''} onChange={(e) => onDateRangeChange?.(e.target.value || undefined, dateTo)} className="mt-1" />
+        <Input type="date" value={dateFrom || ''} onChange={(e) => onDateRangeChange?.(e.target.value || undefined, dateTo)} className="mt-2" />
       </div>
       <div>
         <Label className="text-sm font-medium">Date To</Label>
-        <Input type="date" value={dateTo || ''} onChange={(e) => onDateRangeChange?.(dateFrom, e.target.value || undefined)} className="mt-1" />
+        <Input type="date" value={dateTo || ''} onChange={(e) => onDateRangeChange?.(dateFrom, e.target.value || undefined)} className="mt-2" />
       </div>
       <div>
         <Label className="text-sm font-medium">Amount Min</Label>
-        <Input type="number" value={amountMin ?? ''} onChange={(e) => onAmountRangeChange?.(e.target.value ? Number(e.target.value) : undefined, amountMax)} className="mt-1" />
+        <Input type="number" value={amountMin ?? ''} onChange={(e) => onAmountRangeChange?.(e.target.value ? Number(e.target.value) : undefined, amountMax)} className="mt-2" />
       </div>
       <div>
         <Label className="text-sm font-medium">Amount Max</Label>
-        <Input type="number" value={amountMax ?? ''} onChange={(e) => onAmountRangeChange?.(amountMin, e.target.value ? Number(e.target.value) : undefined)} className="mt-1" />
+        <Input type="number" value={amountMax ?? ''} onChange={(e) => onAmountRangeChange?.(amountMin, e.target.value ? Number(e.target.value) : undefined)} className="mt-2" />
       </div>
       <div className="sm:col-span-2 lg:col-span-2">
         <Label className="text-sm font-medium">Type</Label>
@@ -71,7 +71,7 @@ export function BillingTransactionFilters({
       {onOrganizationChange && (
         <div className="sm:col-span-2 lg:col-span-2">
           <Label className="text-sm font-medium">Organization</Label>
-          <OrganizationSelector value={organizationId} onChange={onOrganizationChange} placeholder="All organizations" className="mt-1 w-full" />
+          <OrganizationSelector value={organizationId} onChange={onOrganizationChange} placeholder="All organizations" className="mt-2 w-full" />
         </div>
       )}
       {isDirty && (

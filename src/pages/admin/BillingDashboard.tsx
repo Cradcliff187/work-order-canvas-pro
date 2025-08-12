@@ -306,15 +306,13 @@ if (error) {
         </header>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
-          <TabsList className="min-w-max">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="min-w-max px-4 md:px-0 overflow-x-auto">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             <KPICard
               title="Unbilled Reports"
               value={isLoading ? 0 : (metrics?.unbilledReports.count || 0)}
@@ -386,7 +384,7 @@ if (error) {
 </div>
 
           {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             {/* Recent Partner Invoices */}
             <Card role="region" aria-label="Recent Partner Invoices">
               <CardHeader>
@@ -395,10 +393,10 @@ if (error) {
               </CardHeader>
               <CardContent aria-busy={isLoading}>
                 {isLoading ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div key={i} className="flex justify-between items-center">
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <Skeleton className="h-4 w-48" />
                           <Skeleton className="h-3 w-24" />
                         </div>
@@ -449,10 +447,10 @@ if (error) {
               </CardHeader>
               <CardContent aria-busy={isLoading}>
                 {isLoading ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div key={i} className="flex justify-between items-center">
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <Skeleton className="h-4 w-48" />
                           <Skeleton className="h-3 w-24" />
                         </div>
@@ -461,7 +459,7 @@ if (error) {
                     ))}
                   </div>
                 ) : metrics?.recentSubcontractorInvoices && metrics.recentSubcontractorInvoices.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {metrics.recentSubcontractorInvoices.map((invoice) => (
                       <button
                         key={invoice.id}

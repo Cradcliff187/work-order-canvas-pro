@@ -83,7 +83,7 @@ const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
       </CardHeader>
       <CardContent>
         {/* Mobile list */}
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden space-y-4">
           {sortedRows.map((r) => (
             <MobileTableCard
               key={r.id}
@@ -108,7 +108,7 @@ const SortIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
                         <button
                           type="button"
                           onClick={() => handleSort(key)}
-                          className="inline-flex items-center gap-1 text-left"
+                          className="inline-flex items-center gap-2 text-left"
                           aria-label={`Sort by ${label}${active ? ` (${sortDir})` : ''}`}
                         >
                           <span>{label}</span>

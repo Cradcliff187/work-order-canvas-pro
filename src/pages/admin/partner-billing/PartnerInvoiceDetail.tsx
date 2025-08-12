@@ -168,7 +168,7 @@ export default function PartnerInvoiceDetail() {
       <div className="space-y-6">
         <div className="space-y-4">
           <Skeleton className="h-7 w-64" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
           </div>
@@ -249,17 +249,17 @@ export default function PartnerInvoiceDetail() {
             </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <div>
               <h3 className="font-medium text-sm text-muted-foreground mb-2">Invoice Details</h3>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <p><span className="font-medium">Invoice Number:</span> {invoice.invoice_number}</p>
                 <p><span className="font-medium">Invoice Date:</span> {format(new Date(invoice.invoice_date), 'PPP')}</p>
               </div>
             </div>
             <div>
               <h3 className="font-medium text-sm text-muted-foreground mb-2">Partner Organization</h3>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <p><span className="font-medium">Name:</span> {invoice.partner_organization.name}</p>
                 <p><span className="font-medium">Email:</span> {invoice.partner_organization.contact_email}</p>
               </div>
@@ -277,9 +277,9 @@ export default function PartnerInvoiceDetail() {
           <div className="space-y-4">
             {invoice.line_items.map((item, index) => (
               <div key={item.id}>
-                <div className="flex items-center justify-between py-3">
+                <div className="flex items-center justify-between py-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
                         {item.work_order_report.work_order.work_order_number}
