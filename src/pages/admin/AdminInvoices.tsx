@@ -256,6 +256,7 @@ export default function AdminInvoices() {
     select: { label: 'Select', defaultVisible: true },
     internal_invoice_number: { label: 'Invoice #', defaultVisible: true },
     external_invoice_number: { label: 'Vendor Invoice #', defaultVisible: true },
+    work_orders: { label: 'Work Orders', defaultVisible: true },
     attachment_count: { label: 'Attachments', defaultVisible: true },
     'subcontractor_organization.name': { label: 'Partner', defaultVisible: true },
     total_amount: { label: 'Amount', defaultVisible: true },
@@ -280,7 +281,7 @@ export default function AdminInvoices() {
 
   const columnOptions = getAllColumns().map((c) => ({
     ...c,
-    canHide: c.id !== 'select' && c.id !== 'actions',
+    canHide: c.id !== 'select' && c.id !== 'actions' && c.id !== 'work_orders',
   }));
 
 const table = useReactTable({
@@ -305,6 +306,7 @@ const table = useReactTable({
   const exportColumns: ExportColumn[] = [
     { key: 'internal_invoice_number', label: 'Invoice #', type: 'string' },
     { key: 'external_invoice_number', label: 'Vendor Invoice #', type: 'string' },
+    { key: 'work_order_numbers', label: 'Work Orders', type: 'string' },
     { key: 'subcontractor_organization.name', label: 'Partner', type: 'string' },
     { key: 'submitted_by_user.first_name', label: 'Submitted By (First)', type: 'string' },
     { key: 'submitted_by_user.last_name', label: 'Submitted By (Last)', type: 'string' },
@@ -318,7 +320,13 @@ const table = useReactTable({
   ];
 
   const handleExport = (format: 'csv' | 'excel') => {
-    const rows = data?.data || [];
+    const rows = (data?.data || []).map((inv) => ({
+      ...inv,
+      work_order_numbers: (inv.invoice_work_orders || [])
+        .map((iwo) => iwo.work_order?.work_order_number)
+        .filter(Boolean)
+        .join(', '),
+    }));
     const filename = generateFilename('invoices', format === 'excel' ? 'xlsx' : 'csv');
     if (format === 'excel') {
       exportToExcel(rows, exportColumns, filename);
