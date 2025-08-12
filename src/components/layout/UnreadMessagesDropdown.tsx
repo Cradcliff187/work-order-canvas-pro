@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +29,15 @@ export function UnreadMessagesDropdown({
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const DROPDOWN_WIDTH = 320;
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const clearCloseTimeout = () => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
   // Get work order IDs that have unread messages
   const workOrderIdsWithUnread = Object.entries(unreadCounts)
     .filter(([, count]) => count > 0)
@@ -57,54 +66,48 @@ export function UnreadMessagesDropdown({
       const el = anchorRef?.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const top = Math.min(window.innerHeight - 8, rect.bottom + 8);
-      const left = Math.max(8, Math.min(window.innerWidth - 8 - DROPDOWN_WIDTH, rect.right - DROPDOWN_WIDTH));
+      const dropdownHeight = containerRef.current?.offsetHeight ?? 0;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const placeBelow = dropdownHeight + 8 <= spaceBelow || spaceBelow >= spaceAbove;
+
+      const top = placeBelow
+        ? Math.min(window.innerHeight - 8, rect.bottom + 8)
+        : Math.max(8, rect.top - dropdownHeight - 8);
+
+      const left = Math.max(
+        8,
+        Math.min(window.innerWidth - 8 - DROPDOWN_WIDTH, rect.right - DROPDOWN_WIDTH)
+      );
       setCoords({ top, left });
     };
 
     updatePosition();
+    const raf = requestAnimationFrame(updatePosition);
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition, true);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
     };
   }, [isVisible, isMobile, anchorRef]);
 
-  const handleWorkOrderClick = (workOrderId: string) => {
-    let route = '';
-    if (isAdmin() || isEmployee()) {
-      route = `/admin/work-orders/${workOrderId}`;
-    } else if (isPartner()) {
-      route = `/partner/work-orders/${workOrderId}`;
-    } else if (isSubcontractor()) {
-      route = `/subcontractor/work-orders/${workOrderId}`;
-    } else {
-      return; // No valid route found
-    }
-    
-    if (route) {
-      navigate(route);
-      onClose();
-    }
+  useEffect(() => {
+    return () => {
+      clearCloseTimeout();
+    };
+  }, []);
+
+
+  const handleWorkOrderClick = (_workOrderId: string) => {
+    navigate('/messages');
+    onClose();
   };
 
   const handleViewAll = () => {
-    let route = '';
-    if (isAdmin() || isEmployee()) {
-      route = '/admin/work-orders';
-    } else if (isPartner()) {
-      route = '/partner/work-orders';
-    } else if (isSubcontractor()) {
-      route = '/subcontractor/work-orders';
-    } else {
-      return; // No valid route found
-    }
-    
-    if (route) {
-      navigate(route);
-      onClose();
-    }
+    navigate('/messages');
+    onClose();
   };
 
   // Don't render if not visible, on mobile, or no unread messages
@@ -116,13 +119,20 @@ export function UnreadMessagesDropdown({
   const hasMore = workOrders.length > 5;
 
   const dropdown = (
-    <div 
-      className="fixed z-[100] animate-in fade-in-0 zoom-in-95"
+    <div
+      ref={containerRef}
+      className="fixed z-[2000] animate-in fade-in-0 zoom-in-95"
       style={{ top: coords.top, left: coords.left }}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => {
+        clearCloseTimeout();
+        setIsHovered(true);
+      }}
       onMouseLeave={() => {
         setIsHovered(false);
-        onClose();
+        clearCloseTimeout();
+        closeTimeoutRef.current = window.setTimeout(() => {
+          onClose();
+        }, 200);
       }}
     >
       <Card className="w-80 shadow-lg border bg-popover">
