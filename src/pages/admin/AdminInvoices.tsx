@@ -568,9 +568,9 @@ const table = useReactTable({
                           subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • ${formatCurrency(Number(invoice.total_amount), true)}`}
                           status={
                             <div className="flex flex-col items-end gap-1">
-                              <FinancialStatusBadge status={invoice.status} size="sm" />
+                              <UIFinancialStatusBadge status={invoice.status} size="sm" />
                               {invoice.paid_at && (
-                                <FinancialStatusBadge status="paid" size="sm" />
+                                <UIFinancialStatusBadge status="paid" size="sm" />
                               )}
                             </div>
                           }
