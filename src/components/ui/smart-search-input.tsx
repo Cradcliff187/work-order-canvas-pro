@@ -284,7 +284,7 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
           {...rest}
         />
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className="p-0 w-[28rem] max-w-[90vw] z-50">
+      <PopoverContent align="start" sideOffset={6} className="p-0 w-[28rem] max-w-[90vw] z-50" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
         {showAny ? (
           <div className="max-h-[60vh] overflow-auto py-2">
             {categorized.recent.length > 0 && (
