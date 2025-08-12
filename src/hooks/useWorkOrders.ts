@@ -106,6 +106,7 @@ export interface WorkOrderFilters {
   status?: string[];
   trade_id?: string[];
   organization_id?: string;
+  organization_type?: string[]; // filter by assigned organization type (internal | subcontractor)
   search?: string;
   date_from?: string;
   date_to?: string;
@@ -158,7 +159,8 @@ export function useWorkOrders(
               id,
               name,
               initials,
-              contact_email
+              contact_email,
+              organization_type
             )
           )
         `,
@@ -222,6 +224,10 @@ export function useWorkOrders(
         }
         if (filters.date_to) {
           query = query.lte('created_at', filters.date_to);
+        }
+        // Filter by assigned organization type (internal | subcontractor)
+        if (filters.organization_type && filters.organization_type.length > 0) {
+          query = query.in('work_order_assignments.organizations.organization_type', filters.organization_type as any);
         }
         
         // Quick filter: My Orders - filter by assigned user

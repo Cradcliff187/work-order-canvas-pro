@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
+import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
 
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
@@ -43,7 +44,7 @@ import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
-import { FinancialStatusBadge } from '@/components/ui/status-badge';
+
 
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
@@ -52,10 +53,6 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useDebounce } from '@/hooks/useDebounce';
-import { SmartSearchInput } from '@/components/ui/smart-search-input';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import type { VisibilityState } from '@tanstack/react-table';
@@ -145,6 +142,13 @@ export default function AdminInvoices() {
     status: ['submitted'] as string[],
     paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
     search: '',
+    organization_id: undefined as string | undefined,
+    trade_id: [] as string[],
+    location_filter: [] as string[],
+    date_from: undefined as string | undefined,
+    date_to: undefined as string | undefined,
+    overdue: false,
+    created_today: false,
   });
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -203,10 +207,20 @@ export default function AdminInvoices() {
   const debouncedSearch = useDebounce(filters.search, 300);
   const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
 
-  // Reset to first page when core filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, filters.status, filters.paymentStatus]);
+  }, [
+    debouncedSearch,
+    filters.status,
+    filters.paymentStatus,
+    filters.organization_id,
+    filters.trade_id,
+    filters.location_filter,
+    filters.date_from,
+    filters.date_to,
+    filters.overdue,
+    filters.created_today,
+  ]);
   
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -426,35 +440,12 @@ const table = useReactTable({
       </div>
 
       {/* Filters */}
-      <AdminFilterBar title="Filters" filterCount={filterCount} onClear={() => { clearFilters(); setPage(1); }}>
-        <SmartSearchInput
-          value={filters.search}
-          onChange={(e) => { setFilters(prev => ({ ...prev, search: e.target.value })); }}
-          onSearchSubmit={(q) => { setFilters(prev => ({ ...prev, search: q })); }}
-          placeholder="Search invoices..."
-          className="w-full"
-          storageKey="admin-invoices-search"
-        />
-        <MultiSelectFilter
-          options={statusOptions}
-          selectedValues={filters.status}
-          onSelectionChange={(values) => { setFilters(prev => ({ ...prev, status: values })); }}
-          placeholder="Status"
-        />
-        <Select
-          value={filters.paymentStatus ?? 'any'}
-          onValueChange={(val) => { setFilters(prev => ({ ...prev, paymentStatus: val === 'any' ? undefined : (val as 'paid' | 'unpaid') })); }}
-        >
-          <SelectTrigger aria-label="Payment status">
-            <SelectValue placeholder="Payment status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Any</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="unpaid">Unpaid</SelectItem>
-          </SelectContent>
-        </Select>
-      </AdminFilterBar>
+      <InvoiceFilters
+        value={filters as any}
+        onChange={(next) => { setFilters(() => next as any); setPage(1); }}
+        onClear={() => { clearFilters(); setPage(1); }}
+        filterCount={filterCount}
+      />
 
       {/* Results */}
       <Card>

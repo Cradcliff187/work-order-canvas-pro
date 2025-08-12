@@ -51,7 +51,6 @@ const statusOptions = [
 
 const organizationTypeOptions = [
   { value: 'internal', label: 'Internal' },
-  { value: 'partner', label: 'Partner' },
   { value: 'subcontractor', label: 'Subcontractor' },
 ];
 

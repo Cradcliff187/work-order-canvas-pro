@@ -8,7 +8,15 @@ export interface InvoiceFilters {
   search?: string;
   page?: number;
   limit?: number;
+  organization_id?: string; // partner organization (via related work order)
+  trade_id?: string[];
+  location_filter?: string[];
+  date_from?: string;
+  date_to?: string;
+  overdue?: boolean;
+  created_today?: boolean;
 }
+
 
 export interface Invoice {
   id: string;
@@ -116,7 +124,10 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
             work_order:work_orders(
               id,
               work_order_number,
-              title
+              title,
+              organization_id,
+              trade_id,
+              store_location
             )
           ),
           attachment_count:invoice_attachments(count)
@@ -136,6 +147,22 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         query = query.is('paid_at', null);
       }
 
+      // Apply partner organization filter (via related work orders)
+      if (otherFilters.organization_id) {
+        query = query.eq('invoice_work_orders.work_orders.organization_id', otherFilters.organization_id);
+      }
+
+      // Apply trade filter (via related work orders)
+      if (otherFilters.trade_id && otherFilters.trade_id.length > 0) {
+        query = query.in('invoice_work_orders.work_orders.trade_id', otherFilters.trade_id);
+      }
+
+      // Apply location filter (via related work orders)
+      if (otherFilters.location_filter && otherFilters.location_filter.length > 0) {
+        const locOr = otherFilters.location_filter.map(loc => `invoice_work_orders.work_orders.store_location.ilike.%${loc}%`).join(',');
+        query = query.or(locOr);
+      }
+
       // Apply search filter (search both internal and external invoice numbers)
       if (otherFilters.search) {
         query = query.or(
@@ -143,6 +170,26 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         );
       }
 
+      // Date range on invoice created_at
+      if (otherFilters.date_from) {
+        query = query.gte('created_at', otherFilters.date_from);
+      }
+      if (otherFilters.date_to) {
+        query = query.lte('created_at', otherFilters.date_to);
+      }
+
+      // Overdue: due_date < today and unpaid
+      if (otherFilters.overdue) {
+        const today = new Date().toISOString().split('T')[0];
+        query = query.lt('due_date', today).is('paid_at', null);
+      }
+
+      // Created today
+      if (otherFilters.created_today) {
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        query = query.gte('created_at', today).lt('created_at', tomorrow);
+      }
       const { data, error, count } = await query;
 
       if (error) {
