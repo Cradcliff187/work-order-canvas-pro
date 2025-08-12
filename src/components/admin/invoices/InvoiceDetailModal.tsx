@@ -52,6 +52,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UniversalUploadSheet } from '@/components/upload';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useToast } from '@/hooks/use-toast';
+import { isImageFile } from '@/utils/fileUtils';
+import { ImageLightbox } from '@/components/work-orders/shared/ImageLightbox';
 
 interface InvoiceDetailModalProps {
   invoice: Invoice | null;
@@ -67,6 +69,11 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
   const [paymentDate, setPaymentDate] = useState<Date>(new Date());
+
+  // Image lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxItems, setLightboxItems] = useState<GridAttachmentItem[]>([]);
 
   // Attachments state and upload helpers
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
@@ -196,6 +203,17 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     window.open(data.publicUrl, '_blank');
   };
 
+  const handleAttachmentView = (list: GridAttachmentItem[]) => (a: GridAttachmentItem) => {
+    if (isImageFile(a.file_name, a.file_type)) {
+      const images = list.filter((x) => isImageFile(x.file_name, x.file_type));
+      const start = images.findIndex((x) => x.id === a.id);
+      setLightboxItems(images);
+      setLightboxIndex(start >= 0 ? start : 0);
+      setLightboxOpen(true);
+    } else {
+      handleDownload(a.file_url);
+    }
+  };
   const invDate = (invoice as any).invoice_date ? new Date((invoice as any).invoice_date) : null;
   const dueDate = (invoice as any).due_date ? new Date((invoice as any).due_date) : null;
   const isOverdue = !!dueDate && isBefore(dueDate, new Date()) && !invoice.paid_at;
@@ -490,7 +508,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                       <TabsContent value="all" className="mt-4">
                         <AttachmentGrid
                           attachments={allItems}
-                          onView={(a) => handleDownload(a.file_url)}
+                          onView={handleAttachmentView(allItems)}
                           onDownload={(a) => handleDownload(a.file_url)}
                           onDelete={(a) => handleRemoveAttachment(a.id)}
                         />
@@ -500,7 +518,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                         <TabsContent key={g.key} value={g.key} className="mt-4">
                           <AttachmentGrid
                             attachments={g.items}
-                            onView={(a) => handleDownload(a.file_url)}
+                            onView={handleAttachmentView(g.items)}
                             onDownload={(a) => handleDownload(a.file_url)}
                             onDelete={(a) => handleRemoveAttachment(a.id)}
                           />
@@ -668,6 +686,15 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImageLightbox
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        items={lightboxItems}
+        index={lightboxIndex}
+        onIndexChange={setLightboxIndex}
+        onDownload={(item) => handleDownload(item.file_url)}
+      />
     </>
   );
 }
