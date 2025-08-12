@@ -11,7 +11,6 @@ import {
 import { Settings, LogOut, User, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useUserAccessibleWorkOrders } from '@/hooks/useUserAccessibleWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
 import { useNavigate } from 'react-router-dom';
@@ -25,9 +24,8 @@ export function UserDropdown() {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const isMobile = useIsMobile();
 
-  // Get accessible work orders and unread counts
-  const { data: workOrderIds = [] } = useUserAccessibleWorkOrders();
-  const { data: unreadCounts = {} } = useUnreadMessageCounts(workOrderIds, profile, isEmployee, isAdmin);
+  // Unread counts (no need to fetch work order IDs)
+  const { data: unreadCounts = {} } = useUnreadMessageCounts([], profile, isEmployee, isAdmin);
 
   // Calculate total unread messages
   const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);

@@ -1,27 +1,19 @@
 import { useEffect, useMemo } from 'react';
-import { useUserAccessibleWorkOrders } from './useUserAccessibleWorkOrders';
-import { useUnreadMessageCounts } from './useUnreadMessageCounts';
 import { useUserProfile } from './useUserProfile';
 import { useDebounce } from './useDebounce';
+import { useTotalUnreadCount } from './useTotalUnreadCount';
 
 export function useBrowserTabTitle() {
   const { profile, isEmployee, isAdmin } = useUserProfile();
-  const { data: accessibleWorkOrderIds = [], isLoading: isLoadingWorkOrders } = useUserAccessibleWorkOrders();
-  const { data: unreadCounts = {}, isLoading: isLoadingUnread } = useUnreadMessageCounts(accessibleWorkOrderIds, profile, isEmployee, isAdmin);
+  const { data: totalUnread = 0, isLoading: isLoadingUnread } = useTotalUnreadCount();
 
   // Calculate title string
   const title = useMemo(() => {
-    // Don't calculate title while loading
-    if (isLoadingWorkOrders || isLoadingUnread) {
+    if (isLoadingUnread) {
       return 'AKC Portal';
     }
-
-    // Calculate total unread count
-    const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
-
-    // Return appropriate title
     return totalUnread > 0 ? `(${totalUnread}) AKC Portal` : 'AKC Portal';
-  }, [unreadCounts, isLoadingWorkOrders, isLoadingUnread]);
+  }, [totalUnread, isLoadingUnread]);
 
   // Debounce title updates to prevent flicker
   const debouncedTitle = useDebounce(title, 300);
