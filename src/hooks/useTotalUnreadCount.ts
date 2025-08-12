@@ -1,15 +1,10 @@
 import { useMemo } from 'react';
-import { useUserProfile } from './useUserProfile';
-import { useUnreadMessageCounts } from './useUnreadMessageCounts';
+import { useMessageCounts } from '@/contexts/MessageCountsProvider';
 
 export function useTotalUnreadCount() {
-  const { profile, isEmployee, isAdmin } = useUserProfile();
-  // Pass empty list; hook will return all accessible counts
-  const { data: unreadCounts = {}, isLoading } = useUnreadMessageCounts([], profile, isEmployee, isAdmin);
+  const { totalUnread, isLoading } = useMessageCounts();
 
-  const total = useMemo(() => {
-    return Object.values(unreadCounts).reduce((sum, n) => sum + (Number(n) || 0), 0);
-  }, [unreadCounts]);
-
+  // Maintain the same return shape used elsewhere
+  const total = useMemo(() => totalUnread, [totalUnread]);
   return { data: total, isLoading } as const;
 }

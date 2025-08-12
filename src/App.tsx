@@ -12,6 +12,7 @@ import { StorageDebugPanel } from '@/components/StorageDebugPanel';
 import { OrganizationAuthProvider } from '@/contexts/OrganizationAuthContext';
 import { AppRouter } from '@/routes/AppRouter';
 import { useBrowserTabTitle } from '@/hooks/useBrowserTabTitle';
+import { MessageCountsProvider } from '@/contexts/MessageCountsProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,19 +51,21 @@ const App: React.FC = () => {
       <TooltipProvider>
         <BrowserRouter>
           <OrganizationAuthProvider>
-            <Toaster />
-            <Sonner richColors closeButton />
-            <OfflineIndicator />
-            <PWAUpdateNotification />
-            <PWAInstallPrompt />
-            
-            <AppWithBrowserTitle />
-            {process.env.NODE_ENV !== 'production' && (
-              <StorageDebugPanel 
-                isOpen={showDebugPanel} 
-                onClose={() => setShowDebugPanel(false)} 
-              />
-            )}
+            <MessageCountsProvider>
+              <Toaster />
+              <Sonner richColors closeButton />
+              <OfflineIndicator />
+              <PWAUpdateNotification />
+              <PWAInstallPrompt />
+              
+              <AppWithBrowserTitle />
+              {process.env.NODE_ENV !== 'production' && (
+                <StorageDebugPanel 
+                  isOpen={showDebugPanel} 
+                  onClose={() => setShowDebugPanel(false)} 
+                />
+              )}
+            </MessageCountsProvider>
           </OrganizationAuthProvider>
         </BrowserRouter>
       </TooltipProvider>
