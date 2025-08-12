@@ -420,7 +420,9 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                       <TableCell>
                         {formatCurrency(Number(item.amount), true)}
                       </TableCell>
-                      <TableCell>{item.description || '—'}</TableCell>
+                      <TableCell title={(item.description?.trim() || (item.work_order as any)?.description) ?? undefined}>
+                        {item.description?.trim() || (item.work_order as any)?.description || '—'}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
