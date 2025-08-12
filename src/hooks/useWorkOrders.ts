@@ -227,7 +227,20 @@ export function useWorkOrders(
         }
         // Filter by assigned organization type (internal | subcontractor)
         if (filters.organization_type && filters.organization_type.length > 0) {
-          query = query.in('work_order_assignments.organizations.organization_type', filters.organization_type as any);
+          const types = filters.organization_type;
+          // If both types selected, no filter needed
+          if (!(types.includes('internal') && types.includes('subcontractor'))) {
+            if (types.length === 1 && types[0] === 'subcontractor') {
+              // Only subcontractor assignments
+              query = query.eq('work_order_assignments.organizations.organization_type', 'subcontractor' as any);
+            } else if (types.length === 1 && types[0] === 'internal') {
+              // Internal means either assigned to an internal org OR assigned to an internal user without org
+              // We treat missing assigned_organization_id with a non-null assigned_to as internal
+              query = query.or(
+                'work_order_assignments.organizations.organization_type.eq.internal,and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)'
+              );
+            }
+          }
         }
         
         // Quick filter: My Orders - filter by assigned user
@@ -259,7 +272,29 @@ export function useWorkOrders(
       // Apply sorting
       if (sortBy && sortBy.length > 0) {
         sortBy.forEach((sort) => {
-          query = query.order(sort.id, { ascending: !sort.desc });
+          const mapping: Record<string, { column: string; foreignTable?: string }> = {
+            work_order_number: { column: 'work_order_number' },
+            title: { column: 'title' },
+            store_location: { column: 'store_location' },
+            priority: { column: 'priority' },
+            status: { column: 'status' },
+            date_submitted: { column: 'date_submitted' },
+            organization: { column: 'name', foreignTable: 'organizations' },
+            trade: { column: 'name', foreignTable: 'trades' },
+          };
+
+          const cfg = mapping[sort.id];
+          if (!cfg) {
+            // Unsupported for server-side (e.g., assigned_to) — skip and let client-side sorting handle current page
+            return;
+          }
+
+          if (cfg.foreignTable) {
+            // Order by related table column
+            query = query.order(cfg.column, { ascending: !sort.desc, foreignTable: cfg.foreignTable as any });
+          } else {
+            query = query.order(cfg.column, { ascending: !sort.desc });
+          }
         });
       } else {
         query = query.order('created_at', { ascending: false });

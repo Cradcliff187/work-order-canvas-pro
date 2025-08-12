@@ -79,13 +79,37 @@ export interface Invoice {
 
 export const useInvoices = (filters: InvoiceFilters = {}) => {
   // Stabilize query key to prevent unnecessary re-fetches
-  const stableQueryKey = useMemo(() => ['invoices', filters], [
-    filters.status?.join(','),
+  const stableQueryKey = useMemo(() => {
+    const key = {
+      status: (filters.status || []).join(','),
+      paymentStatus: filters.paymentStatus || 'any',
+      search: filters.search || '',
+      organization_id: filters.organization_id || 'all',
+      trade_id: (filters.trade_id || []).join(','),
+      location_filter: (filters.location_filter || []).join(','),
+      date_from: filters.date_from || '',
+      date_to: filters.date_to || '',
+      overdue: !!filters.overdue,
+      created_today: !!filters.created_today,
+      page: filters.page || 1,
+      limit: filters.limit || 10,
+    };
+    return ['invoices', key] as const;
+  }, [
+    (filters.status || []).join(','),
     filters.paymentStatus,
     filters.search,
+    filters.organization_id,
+    (filters.trade_id || []).join(','),
+    (filters.location_filter || []).join(','),
+    filters.date_from,
+    filters.date_to,
+    filters.overdue,
+    filters.created_today,
     filters.page,
-    filters.limit
+    filters.limit,
   ]);
+
 
   return useQuery({
     queryKey: stableQueryKey,
