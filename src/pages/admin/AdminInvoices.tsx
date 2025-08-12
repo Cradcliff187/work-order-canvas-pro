@@ -53,6 +53,10 @@ import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useDebounce } from '@/hooks/useDebounce';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import type { VisibilityState } from '@tanstack/react-table';
 import { Button as ShadButton } from '@/components/ui/button'; // alias to avoid confusion in JSX sections if needed
@@ -137,39 +141,14 @@ export default function AdminInvoices() {
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [filters, setFilters] = useState({
-    status: ['submitted'] as string[], // Default to showing submitted invoices first
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v1', {
+    status: ['submitted'] as string[],
     paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
     search: '',
-    page: 1,
-    limit: 10,
   });
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
-  // Persist filters
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('admin-invoices-filters-v1');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setFilters(prev => ({
-          ...prev,
-          status: Array.isArray(parsed?.status) ? parsed.status : (parsed?.status ? [parsed.status] : []),
-          paymentStatus: parsed?.paymentStatus,
-          search: parsed?.search || '',
-          page: parsed?.page || 1,
-        }));
-      }
-    } catch (e) {
-      console.warn('Failed to parse invoices filters', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const payload = { status: filters.status, paymentStatus: filters.paymentStatus, search: filters.search, page: filters.page };
-      localStorage.setItem('admin-invoices-filters-v1', JSON.stringify(payload));
-    } catch {}
-  }, [filters.status, filters.paymentStatus, filters.search, filters.page]);
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -217,10 +196,12 @@ export default function AdminInvoices() {
       status: statusParam ? [statusParam] : [],
       paymentStatus: paymentStatusParam as 'paid' | 'unpaid' | undefined,
     }));
-  }, [searchParams]);
+    // Reset pagination when filters change from URL
+    setPage(1);
+  }, [searchParams, setFilters]);
 
   const debouncedSearch = useDebounce(filters.search, 300);
-  const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch });
+  const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
   
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -302,6 +283,12 @@ const table = useReactTable({
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
+  const statusOptions = [
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ];
+
   const exportColumns: ExportColumn[] = [
     { key: 'internal_invoice_number', label: 'Invoice #', type: 'string' },
     { key: 'external_invoice_number', label: 'Vendor Invoice #', type: 'string' },
@@ -357,37 +344,41 @@ const table = useReactTable({
     setRowSelection({});
   };
 
-  const handleStatusChange = (status: string[]) => {
-    setFilters(prev => ({ ...prev, status, page: 1 }));
-  };
-
-  const handlePaymentStatusChange = (paymentStatus?: 'paid' | 'unpaid') => {
-    setFilters(prev => ({ ...prev, paymentStatus, page: 1 }));
-  };
-
-  const handleSearchChange = (search: string) => {
-    setFilters(prev => ({ ...prev, search, page: 1 }));
-  };
-
-  const handleClearFilters = () => {
-    setFilters({
-      status: [],
-      paymentStatus: undefined,
-      search: '',
-      page: 1,
-      limit: 10,
-    });
-    try {
-      localStorage.removeItem('admin-invoices-filters-v1');
-      localStorage.removeItem('admin-invoices-search');
-    } catch {}
-  };
+      <AdminFilterBar title="Filters" filterCount={filterCount} onClear={clearFilters}>
+        <SmartSearchInput
+          value={filters.search}
+          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+          onSearchSubmit={(q) => setFilters(prev => ({ ...prev, search: q }))}
+          placeholder="Search invoices..."
+          className="w-full"
+          storageKey="admin-invoices-search"
+        />
+        <MultiSelectFilter
+          options={statusOptions}
+          selectedValues={filters.status}
+          onSelectionChange={(values) => setFilters(prev => ({ ...prev, status: values }))}
+          placeholder="Status"
+        />
+        <Select
+          value={filters.paymentStatus ?? 'any'}
+          onValueChange={(val) => setFilters(prev => ({ ...prev, paymentStatus: val === 'any' ? undefined : (val as 'paid' | 'unpaid') }))}
+        >
+          <SelectTrigger aria-label="Payment status">
+            <SelectValue placeholder="Payment status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Any</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="unpaid">Unpaid</SelectItem>
+          </SelectContent>
+        </Select>
+      </AdminFilterBar>
 
   const handlePageChange = (newPage: number) => {
-    setFilters(prev => ({ ...prev, page: newPage }));
+    setPage(newPage);
   };
 
-  const totalPages = Math.ceil((data?.count || 0) / filters.limit);
+  const totalPages = Math.ceil((data?.count || 0) / limit);
 
   if (error) {
     return (
@@ -436,7 +427,7 @@ const table = useReactTable({
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:block text-sm text-muted-foreground mr-2">
-            Page {filters.page} of {totalPages}
+            Page {page} of {totalPages}
           </div>
           <ColumnVisibilityDropdown
             columns={columnOptions}
@@ -466,22 +457,11 @@ const table = useReactTable({
               {data?.count || 0} Invoice{(data?.count || 0) !== 1 ? 's' : ''}
             </CardTitle>
             <div className="text-sm text-muted-foreground">
-              Page {filters.page} of {totalPages}
+              Page {page} of {totalPages}
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {/* Search */}
-          <div className="flex items-center justify-end mb-4">
-            <SmartSearchInput
-              value={filters.search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onSearchSubmit={(q) => handleSearchChange(q)}
-              placeholder="Search invoices..."
-              className="w-full md:w-80"
-              storageKey="admin-invoices-search"
-            />
-          </div>
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={8} />
           ) : (
@@ -630,20 +610,20 @@ const table = useReactTable({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange(filters.page - 1)}
-                      disabled={filters.page <= 1}
+                      onClick={() => handlePageChange(page - 1)}
+                      disabled={page <= 1}
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Previous
                     </Button>
                     <div className="text-sm font-medium">
-                      Page {filters.page} of {totalPages}
+                      Page {page} of {totalPages}
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange(filters.page + 1)}
-                      disabled={filters.page >= totalPages}
+                      onClick={() => handlePageChange(page + 1)}
+                      disabled={page >= totalPages}
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />
