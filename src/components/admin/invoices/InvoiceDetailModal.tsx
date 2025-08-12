@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, FileText, Table as TableIcon, Image, Download, ExternalLink, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, FileText, Table as TableIcon, Image, Download, ExternalLink, AlertTriangle, Loader2, Trash2, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -46,6 +46,10 @@ import { formatFileSize } from '@/utils/fileUtils';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/formatting';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UniversalUploadSheet } from '@/components/upload';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useToast } from '@/hooks/use-toast';
 
 interface InvoiceDetailModalProps {
   invoice: Invoice | null;
@@ -61,6 +65,49 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
   const [paymentDate, setPaymentDate] = useState<Date>(new Date());
+
+  // Attachments state and upload helpers
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const { toast } = useToast();
+  const { uploadFiles, removeFile, isUploading } = useFileUpload({
+    context: 'invoice',
+    onComplete: () => {
+      // We'll refresh explicitly after uploads complete
+    },
+    onError: (err) => toast({ title: 'Upload failed', description: err, variant: 'destructive' })
+  });
+
+  const refreshAttachments = async () => {
+    if (!invoice) return;
+    const { data, error } = await supabase
+      .from('invoice_attachments')
+      .select('id, file_name, file_url, file_type, file_size, created_at, work_order_id')
+      .eq('invoice_id', invoice.id)
+      .order('created_at', { ascending: false });
+    if (!error) setAttachments(data || []);
+  };
+
+  useEffect(() => {
+    if (!invoice) return;
+    setAttachments((invoice as any).invoice_attachments || []);
+    const def = invoice.invoice_work_orders?.[0]?.work_order_id || null;
+    setSelectedWorkOrderId(def);
+  }, [invoice]);
+
+  const handleFilesSelected = async (files: File[]) => {
+    if (!selectedWorkOrderId) {
+      toast({ title: 'Select a work order', description: 'Link uploads to a work order first.' });
+      return;
+    }
+    await uploadFiles(files, false, selectedWorkOrderId, undefined, invoice?.id);
+    await refreshAttachments();
+  };
+
+  const handleRemoveAttachment = async (id: string) => {
+    await removeFile(id);
+    await refreshAttachments();
+  };
 
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
 
@@ -353,49 +400,91 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             )}
 
             {/* Attachments */}
-            {(invoice as any).invoice_attachments && (invoice as any).invoice_attachments.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Attachments</h3>
-                  <div className="space-y-2">
-                    {invoice.invoice_attachments.map((attachment) => {
-                      const FileIcon = getFileIcon(attachment.file_type, attachment.file_name);
-                      const iconColor = getFileTypeColor(attachment.file_type, attachment.file_name);
-                      
-                      return (
-                        <div 
-                          key={attachment.id} 
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center space-x-3 flex-1">
-                            <FileIcon className={`h-5 w-5 ${iconColor} flex-shrink-0`} />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">
-                                {attachment.file_name}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {attachment.file_size ? formatFileSize(attachment.file_size) : 'Unknown size'}
-                              </div>
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <h3 className="text-lg font-semibold">
+                  Attachments
+                  <Badge variant="secondary" className="ml-2">{attachments.length}</Badge>
+                </h3>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  {invoice.invoice_work_orders.length > 0 ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm text-muted-foreground">Link to</Label>
+                        <Select value={selectedWorkOrderId ?? ''} onValueChange={(v) => setSelectedWorkOrderId(v)}>
+                          <SelectTrigger className="w-[220px]">
+                            <SelectValue placeholder="Select work order" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {invoice.invoice_work_orders.map((iwo) => (
+                              <SelectItem key={iwo.work_order_id} value={iwo.work_order_id}>
+                                {iwo.work_order.work_order_number || iwo.work_order.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <UniversalUploadSheet
+                        onFilesSelected={handleFilesSelected}
+                        context="invoice"
+                        trigger={
+                          <Button disabled={!selectedWorkOrderId || isUploading} aria-label="Upload files">
+                            {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Paperclip className="h-4 w-4 mr-2" />}
+                            Upload files
+                          </Button>
+                        }
+                      />
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      Link at least one work order to enable uploads.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {attachments.length > 0 ? (
+                  attachments.map((attachment) => {
+                    const FileIcon = getFileIcon(attachment.file_type, attachment.file_name);
+                    const iconColor = getFileTypeColor(attachment.file_type, attachment.file_name);
+                    const woLabel = invoice.invoice_work_orders.find((iwo) => iwo.work_order_id === (attachment as any).work_order_id)?.work_order.work_order_number || null;
+
+                    return (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3 flex-1">
+                          <FileIcon className={`${iconColor} h-5 w-5 flex-shrink-0`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{attachment.file_name}</div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              {attachment.file_size ? formatFileSize(attachment.file_size) : 'Unknown size'}
+                              {woLabel && (
+                                <Badge variant="outline" className="font-mono text-[11px]">{woLabel}</Badge>
+                              )}
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(attachment.file_url)}
-                            className="flex items-center space-x-1"
-                          >
-                            <Download className="h-4 w-4" />
-                            <span>Download</span>
-                            <ExternalLink className="h-3 w-3" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleDownload(attachment.file_url)}>
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleRemoveAttachment(attachment.id)}>
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-sm text-muted-foreground">No attachments yet.</div>
+                )}
+              </div>
+            </div>
 
             {/* Work Orders */}
             <Separator />
