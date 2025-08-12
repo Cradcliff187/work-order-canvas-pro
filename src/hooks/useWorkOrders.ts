@@ -105,8 +105,8 @@ export interface WorkOrder {
 export interface WorkOrderFilters {
   status?: string[];
   trade_id?: string[];
-  organization_id?: string;
-  organization_type?: string[]; // filter by assigned organization type (internal | subcontractor)
+  partner_organization_ids?: string[]; // Partner orgs multi-select
+  completed_by?: string[]; // 'internal' and/or subcontractor org UUIDs
   search?: string;
   date_from?: string;
   date_to?: string;
@@ -205,8 +205,8 @@ export function useWorkOrders(
         if (filters.priority && filters.priority.length > 0) {
           query = query.in('priority', filters.priority as ('standard' | 'urgent')[]);
         }
-        if (filters.organization_id) {
-          query = query.eq('organization_id', filters.organization_id);
+        if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
+          query = query.in('organization_id', filters.partner_organization_ids as any);
         }
         if (filters.search) {
           query = query.or(
@@ -225,21 +225,26 @@ export function useWorkOrders(
         if (filters.date_to) {
           query = query.lte('created_at', filters.date_to);
         }
-        // Filter by assigned organization type (internal | subcontractor)
-        if (filters.organization_type && filters.organization_type.length > 0) {
-          const types = filters.organization_type;
-          // If both types selected, no filter needed
-          if (!(types.includes('internal') && types.includes('subcontractor'))) {
-            if (types.length === 1 && types[0] === 'subcontractor') {
-              // Only subcontractor assignments
-              query = query.eq('work_order_assignments.organizations.organization_type', 'subcontractor' as any);
-            } else if (types.length === 1 && types[0] === 'internal') {
-              // Internal means either assigned to an internal org OR assigned to an internal user without org
-              // We treat missing assigned_organization_id with a non-null assigned_to as internal
-              query = query.or(
-                'work_order_assignments.organizations.organization_type.eq.internal,and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)'
-              );
-            }
+        // Filter by who completed/assigned the work (Internal team and/or specific subcontractors)
+        if (filters.completed_by && filters.completed_by.length > 0) {
+          const selections = filters.completed_by;
+          const includesInternal = selections.includes('internal');
+          const subOrgIds = selections.filter((id) => id !== 'internal');
+
+          if (includesInternal && subOrgIds.length === 0) {
+            // Only internal team
+            query = query.or(
+              'work_order_assignments.organizations.organization_type.eq.internal,and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)'
+            );
+          } else if (!includesInternal && subOrgIds.length > 0) {
+            // Only selected subcontractors
+            query = query.in('work_order_assignments.assigned_organization_id', subOrgIds as any);
+          } else if (includesInternal && subOrgIds.length > 0) {
+            // Both internal and specific subcontractors
+            const quoted = subOrgIds.map((id) => `"${id}"`).join(',');
+            query = query.or(
+              `work_order_assignments.assigned_organization_id.in.(${quoted}),and(work_order_assignments.organizations.organization_type.eq.internal,work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)`
+            );
           }
         }
         

@@ -24,8 +24,8 @@ interface WorkOrderFiltersProps {
   filters: {
     status?: string[];
     trade_id?: string[];
-    organization_id?: string;
-    organization_type?: string[]; // new: filter by assignee organization type
+    partner_organization_ids?: string[];
+    completed_by?: string[]; // 'internal' and/or subcontractor org IDs
     search?: string;
     date_from?: string;
     date_to?: string;
@@ -57,6 +57,19 @@ const organizationTypeOptions = [
 export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearchChange, onClearFilters, activeQuickPresets = [], onToggleQuickPreset }: WorkOrderFiltersProps) {
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
+  const { data: subcontractors } = useQuery({
+    queryKey: ['subcontractor-organizations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('organization_type', 'subcontractor')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
   const { shouldShowSelector } = useAutoOrganization();
   const isMobile = useIsMobile();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -72,7 +85,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
 
   // Get unique locations for the selected organization (or all if no org selected)
   const { data: locations } = useQuery({
-    queryKey: ['work-order-locations', filters.organization_id],
+    queryKey: ['work-order-locations', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
       let query = supabase
         .from('work_orders')
@@ -80,9 +93,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         .not('store_location', 'is', null)
         .not('store_location', 'eq', '');
       
-      // If a specific organization is selected, filter by it
-      if (filters.organization_id) {
-        query = query.eq('organization_id', filters.organization_id);
+      // If specific partners are selected, filter by them
+      if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
+        query = query.in('organization_id', filters.partner_organization_ids as any);
       }
       
       const { data, error } = await query;
@@ -97,15 +110,15 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
 
   // Suggestion sources
   const { data: woSuggestionSource } = useQuery({
-    queryKey: ['work-order-suggestions', filters.organization_id],
+    queryKey: ['work-order-suggestions', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
       let query = supabase
         .from('work_orders')
         .select('id, work_order_number, store_location, description')
         .order('created_at', { ascending: false })
         .limit(50);
-      if (filters.organization_id) {
-        query = query.eq('organization_id', filters.organization_id);
+      if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
+        query = query.in('organization_id', filters.partner_organization_ids as any);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -200,44 +213,39 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const renderOrganizationFilter = () => (
     shouldShowSelector ? (
       <div className="space-y-2">
-        <label htmlFor="organization-filter" className="text-sm font-medium text-foreground">Organization</label>
-        <Select
-          value={filters.organization_id || 'all-organizations'}
-          onValueChange={(value) => onFiltersChange({ 
+        <label htmlFor="partner-filter" className="text-sm font-medium text-foreground">Partner</label>
+        <MultiSelectFilter
+          options={Array.isArray(organizations) ? organizations.map((org) => ({ value: org.id || `org-${org.name}`, label: org.name })) : []}
+          selectedValues={filters.partner_organization_ids || []}
+          onSelectionChange={(values) => onFiltersChange({ 
             ...filters, 
-            organization_id: value === 'all-organizations' ? undefined : value,
-            location_filter: undefined // Clear location filter when organization changes
+            partner_organization_ids: values.length > 0 ? values : undefined,
+            location_filter: undefined // Clear location filter when partner changes
           })}
-        >
-          <SelectTrigger className="h-10" id="organization-filter" aria-label="Filter by organization">
-            <SelectValue placeholder="All Organizations" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all-organizations">All Organizations</SelectItem>
-            {Array.isArray(organizations) && organizations.map((org) => (
-              <SelectItem key={org.id} value={org.id || `org-${org.name}`}>
-                {org.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="All Partners"
+          searchPlaceholder="Search partners..."
+          className="h-10"
+        />
       </div>
     ) : null
   );
 
-  // Helper function to render organization type filter
-  const renderOrganizationTypeFilter = () => (
+  // Helper function to render completed-by filter
+  const renderCompletedByFilter = () => (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-foreground">Assignee Org Type</label>
+      <label className="text-sm font-medium text-foreground">Work completed by</label>
       <MultiSelectFilter
-        options={organizationTypeOptions}
-        selectedValues={filters.organization_type || []}
+        options={[
+          { value: 'internal', label: 'Internal Team' },
+          ...((Array.isArray(subcontractors) ? subcontractors : []).map((o: any) => ({ value: o.id, label: o.name })))
+        ]}
+        selectedValues={filters.completed_by || []}
         onSelectionChange={(values) => onFiltersChange({
           ...filters,
-          organization_type: values.length > 0 ? values : undefined,
+          completed_by: values.length > 0 ? values : undefined,
         })}
-        placeholder="All Org Types"
-        searchPlaceholder="Search org types..."
+        placeholder="Internal and/or subcontractors"
+        searchPlaceholder="Search organizations..."
         className="h-10"
       />
     </div>
@@ -456,7 +464,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
                   </h3>
                   <div className="space-y-4">
                     {renderOrganizationFilter()}
-                    {renderOrganizationTypeFilter()}
+                    {renderCompletedByFilter()}
                     {renderLocationFilter()}
                     {renderTradeFilter()}
                     {renderDateRangeFilter()}
@@ -511,7 +519,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         {renderSearchFilter()}
         {renderStatusFilter()}
         {renderOrganizationFilter()}
-        {renderOrganizationTypeFilter()}
+        {renderCompletedByFilter()}
         {renderLocationFilter()}
         {renderTradeFilter()}
         {renderDateRangeFilter()}
