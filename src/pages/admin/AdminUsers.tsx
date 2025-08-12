@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 
 import {
   useReactTable,
@@ -40,13 +40,18 @@ import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
+
 
 interface UserFilters {
   search?: string;
   roleFilter?: string;
   organizationId?: string;
   status?: string;
+  organizationType?: string[];
 }
+
 
 export default function AdminUsers() {
   const { toast } = useToast();
@@ -72,40 +77,11 @@ export default function AdminUsers() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [filters, setFilters] = useState<UserFilters>({
-    search: '',
-    roleFilter: '',
-    organizationId: '',
-    status: '',
-  });
-  const [organizationType, setOrganizationType] = useState<string[]>([]);
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<UserFilters>(
+    'admin-users-filters-v1',
+    { search: '', roleFilter: '', organizationId: '', status: '', organizationType: [] }
+  );
 
-  const FILTERS_STORAGE_KEY = 'admin-users-filters';
-  // Load persisted role/status on mount
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as Partial<UserFilters>;
-        setFilters((prev) => ({
-          ...prev,
-          roleFilter: saved.roleFilter ?? prev.roleFilter,
-          status: saved.status ?? prev.status,
-        }));
-      }
-    } catch {}
-  }, []);
-
-  // Persist role/status when they change
-  useEffect(() => {
-    try {
-      const toSave = {
-        roleFilter: filters.roleFilter || '',
-        status: filters.status || '',
-      };
-      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(toSave));
-    } catch {}
-  }, [filters.roleFilter, filters.status]);
 
   // Fetch data
   const { data: users, isLoading, error, refetch } = useUsers();
@@ -133,7 +109,7 @@ export default function AdminUsers() {
     getVisibleColumnCount,
   } = useColumnVisibility({ storageKey: 'admin-users-columns-v1', columnMetadata, legacyKeys: ['admin-users-columns'] });
 
-  const isFiltered = Boolean(filters.search || filters.roleFilter || filters.status || filters.organizationId || (organizationType && organizationType.length > 0));
+  const isFiltered = filterCount > 0;
 
   // Client-side filtered users
   const filteredUsers = useMemo(() => {
@@ -151,10 +127,10 @@ export default function AdminUsers() {
       const matchesRole = filters.roleFilter ? role === filters.roleFilter : true;
       const matchesStatus = filters.status ? (filters.status === 'active' ? (u as any).is_active : !(u as any).is_active) : true;
       const matchesOrgId = filters.organizationId ? orgIds.includes(filters.organizationId) : true;
-      const matchesOrgType = organizationType && organizationType.length ? organizationType.some((t) => orgTypes.includes(t)) : true;
+      const matchesOrgType = filters.organizationType && filters.organizationType.length ? filters.organizationType.some((t) => orgTypes.includes(t)) : true;
       return matchesSearch && matchesRole && matchesStatus && matchesOrgId && matchesOrgType;
     });
-  }, [users, filters, organizationType]);
+  }, [users, filters]);
 
   const visibilityOptions = getAllColumns().map((c) => ({
     ...c,
@@ -216,12 +192,7 @@ export default function AdminUsers() {
   const selectedIds = selectedRows.map(row => row.original.id);
 
   const handleClearFilters = () => {
-    setFilters({
-      search: '',
-      roleFilter: '',
-      organizationId: '',
-      status: '',
-    });
+    clearFilters();
   };
 
   const handleClearSelection = () => {
@@ -315,25 +286,25 @@ export default function AdminUsers() {
               totalCount={visibilityOptions.filter(c => c.canHide).length}
             />
             <ExportDropdown
-              onExport={handleExport}
-              size="sm"
-              variant="outline"
-              disabled={isLoading || (filteredUsers?.length ?? 0) === 0}
-            />
-            {selectedRows.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleClearSelection}>
-                Clear Selection ({selectedRows.length})
-              </Button>
-            )}
-            {isFiltered && (
-              <Button variant="outline" size="sm" onClick={handleClearFilters}>
-                Clear Filters
-              </Button>
-            )}
+               onExport={handleExport}
+               size="sm"
+               variant="outline"
+               disabled={isLoading || (filteredUsers?.length ?? 0) === 0}
+             />
+             {selectedRows.length > 0 && (
+               <Button variant="outline" size="sm" onClick={handleClearSelection}>
+                 Clear Selection ({selectedRows.length})
+               </Button>
+             )}
+             {isFiltered && (
+               <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                 Clear Filters
+               </Button>
+             )}
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <AdminFilterBar title="Filters" filterCount={filterCount} onClear={clearFilters}>
             <SmartSearchInput
               value={filters.search || ''}
               onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
@@ -370,8 +341,6 @@ export default function AdminUsers() {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
             <OrganizationSelector
               value={filters.organizationId || undefined}
               onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
@@ -384,11 +353,11 @@ export default function AdminUsers() {
                 { value: 'partner', label: 'Partner' },
                 { value: 'subcontractor', label: 'Subcontractor' },
               ]}
-              selectedValues={organizationType}
-              onSelectionChange={setOrganizationType}
+              selectedValues={filters.organizationType || []}
+              onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
               placeholder="All organization types"
             />
-          </div>
+          </AdminFilterBar>
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={6} />
           ) : !users || users.length === 0 ? (
