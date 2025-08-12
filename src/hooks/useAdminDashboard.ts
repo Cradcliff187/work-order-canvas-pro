@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
+import { useQueryPerformance } from '@/hooks/useQueryPerformance';
 interface DashboardMetrics {
   totalWorkOrders: {
     current: number;
@@ -300,40 +300,32 @@ const fetchRecentWorkOrders = async (): Promise<RecentWorkOrder[]> => {
       title,
       work_order_number,
       status,
-      created_at
+      created_at,
+      work_order_assignments:work_order_assignments!work_order_assignments_work_order_id_fkey (
+        profiles:profiles!work_order_assignments_assigned_to_fkey ( first_name, last_name )
+      )
     `)
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(5)
+    .limit(1, { foreignTable: 'work_order_assignments' });
 
   if (!data) return [];
 
-  // Fetch profile names separately for assigned users
-  const workOrdersWithNames = await Promise.all(
-    data.map(async (workOrder) => {
-      let assigned_to_name: string | undefined;
-      
-      // Get assignment names from work_order_assignments
-      const { data: assignments } = await supabase
-        .from('work_order_assignments')
-        .select(`
-          profiles!work_order_assignments_assigned_to_fkey(first_name, last_name)
-        `)
-        .eq('work_order_id', workOrder.id)
-        .limit(1);
-      
-      if (assignments?.[0]?.profiles) {
-        const profile = assignments[0].profiles;
-        assigned_to_name = `${profile.first_name} ${profile.last_name}`;
-      }
+  return (data as any[]).map((wo) => {
+    const assigneeProfile = wo.work_order_assignments?.[0]?.profiles;
+    const assigned_to_name = assigneeProfile
+      ? `${assigneeProfile.first_name} ${assigneeProfile.last_name}`
+      : undefined;
 
-      return {
-        ...workOrder,
-        assigned_to_name,
-      };
-    })
-  );
-
-  return workOrdersWithNames;
+    return {
+      id: wo.id,
+      title: wo.title,
+      work_order_number: wo.work_order_number,
+      status: wo.status,
+      created_at: wo.created_at,
+      assigned_to_name,
+    } as RecentWorkOrder;
+  });
 };
 
 // Fetch recent reports
@@ -344,45 +336,24 @@ const fetchRecentReports = async (): Promise<RecentReport[]> => {
       id,
       status,
       submitted_at,
-      work_order_id,
-      subcontractor_user_id
+      work_orders:work_order_id ( title, work_order_number ),
+      subcontractor:subcontractor_user_id ( first_name, last_name )
     `)
     .order('submitted_at', { ascending: false })
     .limit(5);
 
   if (!data) return [];
 
-  // Fetch work order and profile details separately
-  const reportsWithDetails = await Promise.all(
-    data.map(async (report) => {
-      // Get work order details
-      const { data: workOrder } = await supabase
-        .from('work_orders')
-        .select('title, work_order_number')
-        .eq('id', report.work_order_id)
-        .single();
-
-      // Get subcontractor profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', report.subcontractor_user_id)
-        .single();
-
-      return {
-        id: report.id,
-        work_order_title: workOrder?.title || 'Unknown',
-        work_order_number: workOrder?.work_order_number || 'N/A',
-        status: report.status,
-        submitted_at: report.submitted_at,
-        subcontractor_name: profile 
-          ? `${profile.first_name} ${profile.last_name}`
-          : 'Unknown',
-      };
-    })
-  );
-
-  return reportsWithDetails;
+  return (data as any[]).map((r) => ({
+    id: r.id,
+    work_order_title: r.work_orders?.title || 'Unknown',
+    work_order_number: r.work_orders?.work_order_number || 'N/A',
+    status: r.status,
+    submitted_at: r.submitted_at,
+    subcontractor_name: r.subcontractor
+      ? `${r.subcontractor.first_name} ${r.subcontractor.last_name}`
+      : 'Unknown',
+  }));
 };
 
 export const useAdminDashboard = () => {
@@ -392,42 +363,55 @@ export const useAdminDashboard = () => {
   const metricsQuery = useQuery({
     queryKey: ['admin-dashboard-metrics'],
     queryFn: fetchDashboardMetrics,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 60000,
+    staleTime: 60000,
   });
 
   // Fetch chart data
   const statusDistributionQuery = useQuery({
     queryKey: ['admin-dashboard-status-distribution'],
     queryFn: fetchStatusDistribution,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    staleTime: 60000,
   });
 
   const dailySubmissionsQuery = useQuery({
     queryKey: ['admin-dashboard-daily-submissions'],
     queryFn: fetchDailySubmissions,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    staleTime: 60000,
   });
 
   const tradeVolumesQuery = useQuery({
     queryKey: ['admin-dashboard-trade-volumes'],
     queryFn: fetchTradeVolumes,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    staleTime: 60000,
   });
 
   // Fetch recent activity
   const recentWorkOrdersQuery = useQuery({
     queryKey: ['admin-dashboard-recent-work-orders'],
     queryFn: fetchRecentWorkOrders,
-    refetchInterval: 15000,
+    refetchInterval: 60000,
+    staleTime: 60000,
   });
 
   const recentReportsQuery = useQuery({
     queryKey: ['admin-dashboard-recent-reports'],
     queryFn: fetchRecentReports,
-    refetchInterval: 15000,
+    refetchInterval: 60000,
+    staleTime: 60000,
   });
 
-  // Real-time subscriptions
+  // Instrumentation for performance
+  useQueryPerformance(['admin-dashboard-metrics'], metricsQuery.isLoading, (metricsQuery as any).error, metricsQuery.data);
+  useQueryPerformance(['admin-dashboard-status-distribution'], statusDistributionQuery.isLoading, (statusDistributionQuery as any).error, statusDistributionQuery.data);
+  useQueryPerformance(['admin-dashboard-daily-submissions'], dailySubmissionsQuery.isLoading, (dailySubmissionsQuery as any).error, dailySubmissionsQuery.data);
+  useQueryPerformance(['admin-dashboard-trade-volumes'], tradeVolumesQuery.isLoading, (tradeVolumesQuery as any).error, tradeVolumesQuery.data);
+  useQueryPerformance(['admin-dashboard-recent-work-orders'], recentWorkOrdersQuery.isLoading, (recentWorkOrdersQuery as any).error, recentWorkOrdersQuery.data);
+  useQueryPerformance(['admin-dashboard-recent-reports'], recentReportsQuery.isLoading, (recentReportsQuery as any).error, recentReportsQuery.data);
+
   useEffect(() => {
     const workOrdersChannel = supabase
       .channel('work-orders-changes')
