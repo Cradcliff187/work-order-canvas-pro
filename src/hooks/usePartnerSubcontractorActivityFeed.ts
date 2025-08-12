@@ -105,9 +105,8 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
         .order('created_at', { ascending: false })
         .limit(20);
 
-      // Get unread message counts
-      const { data: unreadCounts } = await supabase.rpc('get_unread_message_counts');
-      const unreadMap = new Map(unreadCounts?.map(uc => [uc.work_order_id, uc.unread_count]) || []);
+      // Use centralized provider counts instead of a duplicate RPC
+      const unreadMap = unreadMapMemo;
 
       messages?.forEach(message => {
         const workOrder = workOrderMap.get(message.work_order_id);

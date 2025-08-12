@@ -100,6 +100,10 @@ export const MessageCountsProvider: React.FC<{ children: React.ReactNode }> = ({
         // Mark-as-read updates
         scheduleRefresh(500);
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'work_order_messages' }, () => {
+        // New messages should update unread counts quickly
+        scheduleRefresh(800);
+      })
       .subscribe((status) => {
         if (process.env.NODE_ENV !== 'production') {
           console.debug('[MessageCountsProvider] realtime status:', status);

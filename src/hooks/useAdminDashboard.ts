@@ -69,21 +69,21 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
   const lastDayLastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
 
   // Total work orders (current vs last month)
-  const { data: currentMonthData } = await supabase
+  const { count: currentMonthCount } = await supabase
     .from('work_orders')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .gte('created_at', firstDayCurrentMonth.toISOString());
 
-  const { data: lastMonthData } = await supabase
+  const { count: lastMonthCount } = await supabase
     .from('work_orders')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .gte('created_at', firstDayLastMonth.toISOString())
     .lt('created_at', firstDayCurrentMonth.toISOString());
 
   // Pending assignments
   const { count: pendingCount } = await supabase
     .from('work_orders')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .eq('status', 'received');
 
   // Today's new work orders
@@ -92,39 +92,39 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
   
   const { count: todayWorkOrdersCount } = await supabase
     .from('work_orders')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .gte('date_submitted', todayStart.toISOString());
 
   // Overdue work orders
   const { count: overdueCount } = await supabase
     .from('work_orders')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .lt('due_date', new Date().toISOString().split('T')[0])
     .not('status', 'in', '(completed,cancelled)');
 
   // Completed this month
   const { count: completedCount } = await supabase
     .from('work_orders')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .eq('status', 'completed')
     .gte('date_completed', firstDayCurrentMonth.toISOString());
 
   // Pending invoices
   const { count: pendingInvoicesCount } = await supabase
     .from('invoices')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .eq('status', 'submitted');
 
   // Pending reports
   const { count: pendingReportsCount } = await supabase
     .from('work_order_reports')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .eq('status', 'submitted');
 
   // Unpaid approved invoices
   const { count: unpaidApprovedCount } = await supabase
     .from('invoices')
-    .select('id', { count: 'exact' })
+    .select('*', { count: 'exact', head: true })
     .eq('status', 'approved')
     .is('paid_at', null);
 
@@ -183,8 +183,8 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     activeSubcontractors?.map(a => a.assigned_organization_id).filter(Boolean) || []
   );
 
-  const currentTotal = currentMonthData?.length || 0;
-  const lastMonthTotal = lastMonthData?.length || 0;
+  const currentTotal = currentMonthCount || 0;
+  const lastMonthTotal = lastMonthCount || 0;
   
   let trend: 'up' | 'down' | 'same' = 'same';
   if (currentTotal > lastMonthTotal) trend = 'up';
@@ -211,21 +211,22 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
 
 // Fetch status distribution for pie chart
 const fetchStatusDistribution = async (): Promise<StatusDistribution[]> => {
-  const { data } = await supabase
-    .from('work_orders')
-    .select('status');
+  const statuses = ['received', 'assigned', 'in_progress', 'completed', 'cancelled'];
 
-  if (!data) return [];
+  const results = await Promise.all(
+    statuses.map(async (s) => {
+      const { count } = await supabase
+        .from('work_orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', s as any);
+      return { status: s, count: count || 0 };
+    })
+  );
 
-  const statusCounts = data.reduce((acc, item) => {
-    acc[item.status] = (acc[item.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const total = results.reduce((sum, r) => sum + r.count, 0) || 1;
 
-  const total = data.length;
-  
-  return Object.entries(statusCounts).map(([status, count]) => ({
-    status: status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+  return results.map(({ status, count }) => ({
+    status: status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
     count,
     percentage: Math.round((count / total) * 100),
   }));
@@ -413,44 +414,49 @@ export const useAdminDashboard = () => {
   useQueryPerformance(['admin-dashboard-recent-reports'], recentReportsQuery.isLoading, (recentReportsQuery as any).error, recentReportsQuery.data);
 
   useEffect(() => {
-    const workOrdersChannel = supabase
-      .channel('work-orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'work_orders',
-        },
-        () => {
-          // Refetch relevant queries on work order changes
+    let timer: number | null = null;
+
+    const schedule = (cb: () => void, delay = 750) => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        cb();
+        timer = null;
+      }, delay);
+    };
+
+    const invalidateForTable = (table: string) => {
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[useAdminDashboard] change detected:', table);
+      }
+      schedule(() => {
+        if (table === 'work_orders') {
           metricsQuery.refetch();
           statusDistributionQuery.refetch();
           dailySubmissionsQuery.refetch();
           tradeVolumesQuery.refetch();
           recentWorkOrdersQuery.refetch();
-        }
-      )
-      .subscribe();
-
-    const reportsChannel = supabase
-      .channel('reports-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'work_order_reports',
-        },
-        () => {
+        } else if (table === 'work_order_reports') {
           recentReportsQuery.refetch();
+          metricsQuery.refetch();
+        } else if (table === 'invoices') {
+          metricsQuery.refetch();
         }
-      )
+      }, 750);
+    };
+
+    const channel = supabase
+      .channel('admin-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_orders' }, () => invalidateForTable('work_orders'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_order_reports' }, () => invalidateForTable('work_order_reports'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => invalidateForTable('invoices'))
       .subscribe();
 
     return () => {
-      supabase.removeChannel(workOrdersChannel);
-      supabase.removeChannel(reportsChannel);
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      supabase.removeChannel(channel);
     };
   }, []);
 
