@@ -271,7 +271,63 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Data Table */}
+       {/* Filters */}
+       <AdminFilterBar title="Filters" filterCount={filterCount} onClear={clearFilters}>
+         <SmartSearchInput
+           value={filters.search || ''}
+           onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+           onSearchSubmit={(q) => setFilters((prev) => ({ ...prev, search: q }))}
+           placeholder="Search users by name, email, or organization…"
+           aria-label="Search users"
+           storageKey="admin-users-search"
+           className="w-full"
+         />
+         <Select
+           value={filters.roleFilter ? filters.roleFilter : 'all'}
+           onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
+         >
+           <SelectTrigger aria-label="Filter by role">
+             <SelectValue placeholder="All roles" />
+           </SelectTrigger>
+           <SelectContent>
+             <SelectItem value="all">All roles</SelectItem>
+             <SelectItem value="admin">Admin</SelectItem>
+             <SelectItem value="employee">Employee</SelectItem>
+             <SelectItem value="member">Member</SelectItem>
+           </SelectContent>
+         </Select>
+         <Select
+           value={filters.status ? filters.status : 'all'}
+           onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
+         >
+           <SelectTrigger aria-label="Filter by status">
+             <SelectValue placeholder="All statuses" />
+           </SelectTrigger>
+           <SelectContent>
+             <SelectItem value="all">All statuses</SelectItem>
+             <SelectItem value="active">Active</SelectItem>
+             <SelectItem value="inactive">Inactive</SelectItem>
+           </SelectContent>
+         </Select>
+         <OrganizationSelector
+           value={filters.organizationId || undefined}
+           onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
+           placeholder="All organizations"
+           className="w-full"
+         />
+         <MultiSelectFilter
+           options={[
+             { value: 'internal', label: 'Internal' },
+             { value: 'partner', label: 'Partner' },
+             { value: 'subcontractor', label: 'Subcontractor' },
+           ]}
+           selectedValues={filters.organizationType || []}
+           onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
+           placeholder="All organization types"
+         />
+       </AdminFilterBar>
+
+       {/* Data Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Users</CardTitle>
@@ -296,68 +352,9 @@ export default function AdminUsers() {
                  Clear Selection ({selectedRows.length})
                </Button>
              )}
-             {isFiltered && (
-               <Button variant="outline" size="sm" onClick={handleClearFilters}>
-                 Clear Filters
-               </Button>
-             )}
           </div>
         </CardHeader>
         <CardContent>
-          <AdminFilterBar title="Filters" filterCount={filterCount} onClear={clearFilters}>
-            <SmartSearchInput
-              value={filters.search || ''}
-              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-              onSearchSubmit={(q) => setFilters((prev) => ({ ...prev, search: q }))}
-              placeholder="Search users by name, email, or organization…"
-              aria-label="Search users"
-              storageKey="admin-users-search"
-              className="w-full"
-            />
-            <Select
-              value={filters.roleFilter ? filters.roleFilter : 'all'}
-              onValueChange={(v) => setFilters((prev) => ({ ...prev, roleFilter: v === 'all' ? '' : v }))}
-            >
-              <SelectTrigger aria-label="Filter by role">
-                <SelectValue placeholder="All roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={filters.status ? filters.status : 'all'}
-              onValueChange={(v) => setFilters((prev) => ({ ...prev, status: v === 'all' ? '' : v }))}
-            >
-              <SelectTrigger aria-label="Filter by status">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <OrganizationSelector
-              value={filters.organizationId || undefined}
-              onChange={(v) => setFilters((prev) => ({ ...prev, organizationId: v || '' }))}
-              placeholder="All organizations"
-              className="w-full"
-            />
-            <MultiSelectFilter
-              options={[
-                { value: 'internal', label: 'Internal' },
-                { value: 'partner', label: 'Partner' },
-                { value: 'subcontractor', label: 'Subcontractor' },
-              ]}
-              selectedValues={filters.organizationType || []}
-              onSelectionChange={(vals) => setFilters((prev) => ({ ...prev, organizationType: vals }))}
-              placeholder="All organization types"
-            />
-          </AdminFilterBar>
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={6} />
           ) : !users || users.length === 0 ? (
