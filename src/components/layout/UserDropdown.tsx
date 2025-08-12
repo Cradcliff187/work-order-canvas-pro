@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -15,13 +15,15 @@ import { useUserAccessibleWorkOrders } from '@/hooks/useUserAccessibleWorkOrders
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
 import { useNavigate } from 'react-router-dom';
-
+import { useIsMobile } from '@/hooks/use-mobile';
 export function UserDropdown() {
   const { profile, signOut } = useAuth();
   const { primaryRole, isEmployee, isAdmin } = useUserProfile();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const isMobile = useIsMobile();
 
   // Get accessible work orders and unread counts
   const { data: workOrderIds = [] } = useUserAccessibleWorkOrders();
@@ -62,10 +64,11 @@ export function UserDropdown() {
   const userInitials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`;
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
+            ref={buttonRef}
             variant="ghost" 
             className="flex items-center gap-2 relative"
             onMouseEnter={handleMouseEnter}
@@ -106,10 +109,27 @@ export function UserDropdown() {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {isMobile && totalUnread > 0 && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={() => navigate('/messages')}
+          aria-label="Open messages"
+        >
+          <MessageSquare className="h-5 w-5" />
+          <span className="sr-only">View unread messages</span>
+          <span className="absolute -top-1 -right-1 text-[10px] leading-none rounded-full px-1 bg-destructive text-destructive-foreground border border-background">
+            {totalUnread}
+          </span>
+        </Button>
+      )}
+
       <UnreadMessagesDropdown
         isVisible={showUnreadDropdown}
         unreadCounts={unreadCounts}
         onClose={() => setShowUnreadDropdown(false)}
+        anchorRef={buttonRef}
       />
     </div>
   );

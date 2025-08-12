@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { MessageSquare, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,16 +13,21 @@ interface UnreadMessagesDropdownProps {
   isVisible: boolean;
   unreadCounts: Record<string, number>;
   onClose: () => void;
+  anchorRef?: React.RefObject<HTMLElement | null>;
 }
 
 export function UnreadMessagesDropdown({ 
   isVisible, 
   unreadCounts, 
-  onClose 
+  onClose,
+  anchorRef
 }: UnreadMessagesDropdownProps) {
   const navigate = useNavigate();
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
   const [isHovered, setIsHovered] = useState(false);
+  const isMobile = useIsMobile();
+  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const DROPDOWN_WIDTH = 320;
 
   // Get work order IDs that have unread messages
   const workOrderIdsWithUnread = Object.entries(unreadCounts)
@@ -41,8 +48,28 @@ export function UnreadMessagesDropdown({
       if (error) throw error;
       return data || [];
     },
-    enabled: workOrderIdsWithUnread.length > 0,
+    enabled: workOrderIdsWithUnread.length > 0 && !isMobile && isVisible,
   });
+
+  useEffect(() => {
+    if (!isVisible || isMobile) return;
+    const updatePosition = () => {
+      const el = anchorRef?.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const top = Math.min(window.innerHeight - 8, rect.bottom + 8);
+      const left = Math.max(8, Math.min(window.innerWidth - 8 - DROPDOWN_WIDTH, rect.right - DROPDOWN_WIDTH));
+      setCoords({ top, left });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isVisible, isMobile, anchorRef]);
 
   const handleWorkOrderClick = (workOrderId: string) => {
     let route = '';
@@ -80,17 +107,18 @@ export function UnreadMessagesDropdown({
     }
   };
 
-  // Don't render if not visible or no unread messages
-  if (!isVisible || workOrderIdsWithUnread.length === 0) {
+  // Don't render if not visible, on mobile, or no unread messages
+  if (!isVisible || isMobile || workOrderIdsWithUnread.length === 0) {
     return null;
   }
 
   const displayedWorkOrders = workOrders.slice(0, 5);
   const hasMore = workOrders.length > 5;
 
-  return (
+  const dropdown = (
     <div 
-      className="absolute top-full right-0 mt-2 z-50"
+      className="fixed z-[100] animate-in fade-in-0 zoom-in-95"
+      style={{ top: coords.top, left: coords.left }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
@@ -150,4 +178,6 @@ export function UnreadMessagesDropdown({
       </Card>
     </div>
   );
+
+  return createPortal(dropdown, document.body);
 }

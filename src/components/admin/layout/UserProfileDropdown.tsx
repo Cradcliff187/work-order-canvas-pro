@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -15,6 +15,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserAccessibleWorkOrders } from '@/hooks/useUserAccessibleWorkOrders';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { UnreadMessagesDropdown } from '@/components/layout/UnreadMessagesDropdown';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UserProfileDropdownProps {
   collapsed?: boolean;
@@ -26,6 +27,8 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
   const navigate = useNavigate();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const isMobile = useIsMobile();
 
   // Get accessible work orders and unread counts
   const { data: workOrderIds = [] } = useUserAccessibleWorkOrders();
@@ -75,6 +78,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
+              ref={buttonRef}
               variant="ghost" 
               size="sm" 
               className="w-full p-2 relative"
@@ -117,16 +121,18 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
           isVisible={showUnreadDropdown}
           unreadCounts={unreadCounts}
           onClose={() => setShowUnreadDropdown(false)}
+          anchorRef={buttonRef}
         />
       </div>
     );
   }
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
+            ref={buttonRef}
             variant="ghost" 
             className="w-full justify-start gap-2 h-auto p-2 relative"
             onMouseEnter={handleMouseEnter}
@@ -168,10 +174,27 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {isMobile && totalUnread > 0 && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={() => navigate('/messages')}
+          aria-label="Open messages"
+        >
+          <MessageSquare className="h-5 w-5" />
+          <span className="sr-only">View unread messages</span>
+          <span className="absolute -top-1 -right-1 text-[10px] leading-none rounded-full px-1 bg-destructive text-destructive-foreground border border-background">
+            {totalUnread}
+          </span>
+        </Button>
+      )}
+
       <UnreadMessagesDropdown
         isVisible={showUnreadDropdown}
         unreadCounts={unreadCounts}
         onClose={() => setShowUnreadDropdown(false)}
+        anchorRef={buttonRef}
       />
     </div>
   );
