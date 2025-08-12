@@ -29,6 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AttachmentGrid, type AttachmentItem as GridAttachmentItem } from '@/components/work-orders/shared/AttachmentGrid';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +44,7 @@ import {
 import { format, isBefore } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
-import { formatFileSize } from '@/utils/fileUtils';
+
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/formatting';
@@ -445,44 +447,68 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
               </div>
 
               <div className="space-y-2">
-                {attachments.length > 0 ? (
-                  attachments.map((attachment) => {
-                    const FileIcon = getFileIcon(attachment.file_type, attachment.file_name);
-                    const iconColor = getFileTypeColor(attachment.file_type, attachment.file_name);
-                    const woLabel = invoice.invoice_work_orders.find((iwo) => iwo.work_order_id === (attachment as any).work_order_id)?.work_order.work_order_number || null;
+                {(() => {
+                  const workOrders = invoice.invoice_work_orders || [];
+                  const mapToItems = (list: any[]): GridAttachmentItem[] =>
+                    list.map((att: any) => ({
+                      id: att.id,
+                      file_name: att.file_name,
+                      file_url: att.file_url,
+                      file_type: att.file_type === 'photo' ? 'photo' : 'document',
+                      file_size: att.file_size || 0,
+                      uploaded_at: att.created_at || new Date().toISOString(),
+                      uploader_name: '',
+                      uploader_email: '',
+                      is_internal: (att as any).is_internal || false,
+                    }));
 
-                    return (
-                      <div
-                        key={attachment.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center space-x-3 flex-1">
-                          <FileIcon className={`${iconColor} h-5 w-5 flex-shrink-0`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate">{attachment.file_name}</div>
-                            <div className="text-sm text-muted-foreground flex items-center gap-2">
-                              {attachment.file_size ? formatFileSize(attachment.file_size) : 'Unknown size'}
-                              {woLabel && (
-                                <Badge variant="outline" className="font-mono text-[11px]">{woLabel}</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleDownload(attachment.file_url)}>
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleRemoveAttachment(attachment.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-sm text-muted-foreground">No attachments yet.</div>
-                )}
+                  const perGroup = workOrders.map((iwo: any) => {
+                    const items = mapToItems(attachments.filter((a) => a.work_order_id === iwo.work_order_id));
+                    return {
+                      key: iwo.work_order_id,
+                      label: iwo.work_order.work_order_number || 'WO',
+                      count: items.length,
+                      items,
+                    };
+                  });
+
+                  const allItems = mapToItems(attachments);
+
+                  return (
+                    <Tabs defaultValue="all" className="w-full">
+                      <TabsList className="inline-flex overflow-x-auto max-w-full">
+                        <TabsTrigger value="all">
+                          All <Badge variant="secondary" className="ml-2">{allItems.length}</Badge>
+                        </TabsTrigger>
+                        {perGroup.map((g) => (
+                          <TabsTrigger key={g.key} value={g.key}>
+                            {g.label} <Badge variant="outline" className="ml-2">{g.count}</Badge>
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+
+                      <TabsContent value="all" className="mt-4">
+                        <AttachmentGrid
+                          attachments={allItems}
+                          onView={(a) => handleDownload(a.file_url)}
+                          onDownload={(a) => handleDownload(a.file_url)}
+                          onDelete={(a) => handleRemoveAttachment(a.id)}
+                        />
+                      </TabsContent>
+
+                      {perGroup.map((g) => (
+                        <TabsContent key={g.key} value={g.key} className="mt-4">
+                          <AttachmentGrid
+                            attachments={g.items}
+                            onView={(a) => handleDownload(a.file_url)}
+                            onDownload={(a) => handleDownload(a.file_url)}
+                            onDelete={(a) => handleRemoveAttachment(a.id)}
+                          />
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  );
+                })()}
               </div>
             </div>
 
