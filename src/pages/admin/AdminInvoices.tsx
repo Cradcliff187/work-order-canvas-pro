@@ -202,6 +202,11 @@ export default function AdminInvoices() {
 
   const debouncedSearch = useDebounce(filters.search, 300);
   const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
+
+  // Reset to first page when core filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters.status, filters.paymentStatus]);
   
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -344,35 +349,6 @@ const table = useReactTable({
     setRowSelection({});
   };
 
-      <AdminFilterBar title="Filters" filterCount={filterCount} onClear={clearFilters}>
-        <SmartSearchInput
-          value={filters.search}
-          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-          onSearchSubmit={(q) => setFilters(prev => ({ ...prev, search: q }))}
-          placeholder="Search invoices..."
-          className="w-full"
-          storageKey="admin-invoices-search"
-        />
-        <MultiSelectFilter
-          options={statusOptions}
-          selectedValues={filters.status}
-          onSelectionChange={(values) => setFilters(prev => ({ ...prev, status: values }))}
-          placeholder="Status"
-        />
-        <Select
-          value={filters.paymentStatus ?? 'any'}
-          onValueChange={(val) => setFilters(prev => ({ ...prev, paymentStatus: val === 'any' ? undefined : (val as 'paid' | 'unpaid') }))}
-        >
-          <SelectTrigger aria-label="Payment status">
-            <SelectValue placeholder="Payment status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Any</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="unpaid">Unpaid</SelectItem>
-          </SelectContent>
-        </Select>
-      </AdminFilterBar>
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -448,6 +424,37 @@ const table = useReactTable({
           </Button>
         </div>
       </div>
+
+      {/* Filters */}
+      <AdminFilterBar title="Filters" filterCount={filterCount} onClear={() => { clearFilters(); setPage(1); }}>
+        <SmartSearchInput
+          value={filters.search}
+          onChange={(e) => { setFilters(prev => ({ ...prev, search: e.target.value })); }}
+          onSearchSubmit={(q) => { setFilters(prev => ({ ...prev, search: q })); }}
+          placeholder="Search invoices..."
+          className="w-full"
+          storageKey="admin-invoices-search"
+        />
+        <MultiSelectFilter
+          options={statusOptions}
+          selectedValues={filters.status}
+          onSelectionChange={(values) => { setFilters(prev => ({ ...prev, status: values })); }}
+          placeholder="Status"
+        />
+        <Select
+          value={filters.paymentStatus ?? 'any'}
+          onValueChange={(val) => { setFilters(prev => ({ ...prev, paymentStatus: val === 'any' ? undefined : (val as 'paid' | 'unpaid') })); }}
+        >
+          <SelectTrigger aria-label="Payment status">
+            <SelectValue placeholder="Payment status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Any</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="unpaid">Unpaid</SelectItem>
+          </SelectContent>
+        </Select>
+      </AdminFilterBar>
 
       {/* Results */}
       <Card>
