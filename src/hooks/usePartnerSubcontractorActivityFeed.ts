@@ -1,8 +1,9 @@
+import { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from './useUserProfile';
-import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useMessageCounts } from '@/contexts/MessageCountsProvider';
 
 export interface ActivityItem {
   id: string;
@@ -25,6 +26,8 @@ export interface ActivityItem {
 export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontractor') {
   const { profile, isPartner, isSubcontractor } = useUserProfile();
   const queryClient = useQueryClient();
+  const { unreadCounts } = useMessageCounts();
+  const unreadMapMemo = useMemo(() => new Map<string, number>(Object.entries(unreadCounts).map(([id, c]) => [id, Number(c) || 0])), [unreadCounts]);
 
   const fetchActivities = async (): Promise<ActivityItem[]> => {
     if (!profile?.id) return [];
@@ -352,7 +355,7 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
     enabled: !!profile?.id && ((role === 'partner' && isPartner()) || (role === 'subcontractor' && isSubcontractor())),
     staleTime: 30 * 1000, // 30 seconds - shorter for faster updates
     gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: true, // Refetch when user returns to dashboard
+    refetchOnWindowFocus: false, // Disable focus refetch to avoid bursts
     refetchOnMount: true, // Always refetch on mount
   });
 
@@ -361,78 +364,52 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
     if (!profile?.id) return;
 
     const queryKey = ['partner-subcontractor-activity-feed', role, profile.id];
-    
-    // Force refetch function for immediate updates
+
+    // Debounced invalidation to reduce churn
+    let timer: number | null = null;
+    const debouncedInvalidate = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey });
+        timer = null;
+      }, 1000);
+    };
+
+    // Immediate refetch for read receipts so "New" badges clear quickly
     const forceRefetch = async () => {
-      console.log('Activity feed: forcing immediate refetch due to read receipt change');
       await queryClient.invalidateQueries({ queryKey });
       await queryClient.refetchQueries({ queryKey });
     };
 
-    const channels = [
-      // Messages
-      supabase
-        .channel('activity-messages')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'work_order_messages'
-        }, () => {
-          queryClient.invalidateQueries({ queryKey });
-        }),
-
-      // Audit logs for status changes
-      supabase
-        .channel('activity-audit')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'audit_logs'
-        }, () => {
-          queryClient.invalidateQueries({ queryKey });
-        }),
-
-      // Assignments
-      supabase
-        .channel('activity-assignments')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'work_order_assignments'
-        }, () => {
-          queryClient.invalidateQueries({ queryKey });
-        }),
-
-      // Reports
-      supabase
-        .channel('activity-reports')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'work_order_reports'
-        }, () => {
-          queryClient.invalidateQueries({ queryKey });
-        }),
-
-      // Message read receipts - IMMEDIATE REFETCH for "New" status updates
-      supabase
-        .channel('activity-read-receipts')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'message_read_receipts',
-          filter: `user_id=eq.${profile.id}`
-        }, (payload) => {
-          console.log('Activity feed: read receipt detected for user', profile.id, payload);
-          // Force immediate refetch instead of just invalidating
-          forceRefetch();
-        })
-    ];
-
-    channels.forEach(channel => channel.subscribe());
+    const channel = supabase
+      .channel('partner-subcontractor-activity')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_order_messages' }, () => {
+        debouncedInvalidate();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'audit_logs' }, () => {
+        debouncedInvalidate();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_order_assignments' }, () => {
+        debouncedInvalidate();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_order_reports' }, () => {
+        debouncedInvalidate();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_read_receipts', filter: `user_id=eq.${profile.id}` }, () => {
+        forceRefetch();
+      })
+      .subscribe((status) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[usePartnerSubcontractorActivityFeed] realtime status:', status);
+        }
+      });
 
     return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      supabase.removeChannel(channel);
     };
   }, [profile?.id, role, queryClient]);
 

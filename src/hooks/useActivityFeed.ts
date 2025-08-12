@@ -130,81 +130,52 @@ export function useActivityFeed() {
   });
 
   useEffect(() => {
-    // Subscribe to work_orders changes
-    const workOrderChannel = supabase
-      .channel('activity-work-orders')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'work_orders',
-        },
-        (payload) => {
-          console.log('New work order activity:', payload);
-          queryClient.invalidateQueries({
-            queryKey: ['activity-feed'],
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'work_orders',
-        },
-        (payload) => {
-          console.log('Work order status change:', payload);
-          queryClient.invalidateQueries({
-            queryKey: ['activity-feed'],
-          });
-        }
-      )
-      .subscribe();
+    const queryKey = ['activity-feed'];
 
-    // Subscribe to work_order_reports changes
-    const reportsChannel = supabase
-      .channel('activity-reports')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'work_order_reports',
-        },
-        (payload) => {
-          console.log('New report activity:', payload);
-          queryClient.invalidateQueries({
-            queryKey: ['activity-feed'],
-          });
-        }
-      )
-      .subscribe();
+    // Debounced invalidation to prevent refetch storms
+    let timer: number | null = null;
+    const debouncedInvalidate = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey });
+        timer = null;
+      }, 1000);
+    };
 
-    // Subscribe to invoices status changes
-    const invoicesChannel = supabase
-      .channel('activity-invoices')
+    const channel = supabase
+      .channel('activity-feed')
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'invoices',
-        },
-        (payload) => {
-          console.log('Invoice status change:', payload);
-          queryClient.invalidateQueries({
-            queryKey: ['activity-feed'],
-          });
-        }
+        { event: 'INSERT', schema: 'public', table: 'work_orders' },
+        () => debouncedInvalidate()
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'work_orders' },
+        () => debouncedInvalidate()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'work_order_reports' },
+        () => debouncedInvalidate()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'invoices' },
+        () => debouncedInvalidate()
+      )
+      .subscribe((status) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[useActivityFeed] realtime status:', status);
+        }
+      });
 
     return () => {
-      supabase.removeChannel(workOrderChannel);
-      supabase.removeChannel(reportsChannel);
-      supabase.removeChannel(invoicesChannel);
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      supabase.removeChannel(channel);
     };
   }, [queryClient]);
 

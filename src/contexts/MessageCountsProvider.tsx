@@ -20,6 +20,7 @@ export const MessageCountsProvider: React.FC<{ children: React.ReactNode }> = ({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const refreshTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
+  const lastRefreshRef = useRef<number>(0);
 
   const fetchCounts = useCallback(async () => {
     if (!profile?.id) {
@@ -40,16 +41,23 @@ export const MessageCountsProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (err) {
       console.error('[MessageCountsProvider] fetchCounts error:', err);
     } finally {
+      lastRefreshRef.current = Date.now();
       if (isMountedRef.current) setIsLoading(false);
     }
   }, [profile?.id]);
 
   const scheduleRefresh = useCallback((delay = 200) => {
+    const MIN_INTERVAL = 4000; // throttle to at most once every 4s
+    const now = Date.now();
+    const timeSinceLast = now - lastRefreshRef.current;
+    const wait = timeSinceLast >= MIN_INTERVAL ? delay : Math.max(delay, MIN_INTERVAL - timeSinceLast);
+
     if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = window.setTimeout(() => {
       fetchCounts();
+      lastRefreshRef.current = Date.now();
       refreshTimerRef.current = null;
-    }, delay);
+    }, wait);
   }, [fetchCounts]);
 
   useEffect(() => {
@@ -82,22 +90,20 @@ export const MessageCountsProvider: React.FC<{ children: React.ReactNode }> = ({
     // Single consolidated realtime channel
     const channel = supabase
       .channel('message-counts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'work_order_messages' }, () => {
-        // New message added anywhere user has access -> refresh counts
-        scheduleRefresh(200);
-      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_read_receipts', filter: `user_id=eq.${profile.id}` }, () => {
-        scheduleRefresh(150);
+        scheduleRefresh(500);
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'message_read_receipts', filter: `user_id=eq.${profile.id}` }, () => {
-        scheduleRefresh(150);
+        scheduleRefresh(500);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants', filter: `user_id=eq.${profile.id}` }, () => {
         // Mark-as-read updates
-        scheduleRefresh(120);
+        scheduleRefresh(500);
       })
       .subscribe((status) => {
-        console.log('[MessageCountsProvider] channel status:', status);
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[MessageCountsProvider] realtime status:', status);
+        }
       });
 
     channelRef.current = channel;
