@@ -306,7 +306,7 @@ if (error) {
         </header>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="min-w-max px-4 md:px-0 overflow-x-auto">
+        <TabsList className="min-w-max px-0 overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
@@ -405,13 +405,13 @@ if (error) {
                     ))}
                   </div>
                 ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {metrics.recentPartnerInvoices.map((invoice) => (
                       <button
                         key={invoice.id}
                         type="button"
                         onClick={() => navigate(`/admin/partner-billing/invoices/${invoice.id}`)}
-                        className="w-full flex justify-between items-center rounded-md px-2 py-2 -mx-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
+                        className="w-full flex justify-between items-center rounded-md px-2 py-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
                         aria-label={`View partner invoice ${invoice.invoice_number} for ${invoice.partner_organization.name} dated ${format(new Date(invoice.invoice_date), 'MMM d, yyyy')}`}
                       >
                         <div className="text-left">
@@ -465,7 +465,7 @@ if (error) {
                         key={invoice.id}
                         type="button"
                         onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
-                        className="w-full flex justify-between items-center rounded-md px-2 py-2 -mx-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
+                        className="w-full flex justify-between items-center rounded-md px-2 py-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
                         aria-label={`View subcontractor invoice ${invoice.internal_invoice_number} for ${invoice.subcontractor_organization?.name || 'Unknown'} dated ${format(new Date(invoice.submitted_at), 'MMM d, yyyy')}`}
                       >
                         <div className="text-left">

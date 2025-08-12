@@ -470,7 +470,7 @@ export default function SelectReports() {
                                        <Tooltip>
                                          <TooltipTrigger asChild>
                                            <div className="flex items-center gap-2 cursor-help">
-                                             <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
+                                             <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-2">
                                                {formatCurrency(report.subcontractor_costs)}
                                              </Badge>
                                              {invoiceCount > 1 && (
@@ -480,7 +480,7 @@ export default function SelectReports() {
                                          </TooltipTrigger>
                                          <TooltipContent className="z-50 bg-popover">
                                            {invoiceCount > 1 ? (
-                                             <div className="space-y-1 text-xs">
+                                             <div className="space-y-2 text-xs">
                                                <p className="font-medium">Invoice Breakdown:</p>
                                                {reportInvoiceDetail?.invoices.map((invoice, index) => (
                                                  <div key={invoice.invoice_id} className="flex justify-between gap-4">
