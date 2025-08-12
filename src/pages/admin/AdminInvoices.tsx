@@ -300,6 +300,7 @@ const table = useReactTable({
   },
 });
 
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
   const exportColumns: ExportColumn[] = [
     { key: 'internal_invoice_number', label: 'Invoice #', type: 'string' },
@@ -428,11 +429,6 @@ const table = useReactTable({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-            {submittedCounts && submittedCounts.invoicesCount > 0 && (
-              <FinancialStatusBadge status="pending" size="sm" showIcon>
-                {submittedCounts.invoicesCount} pending
-              </FinancialStatusBadge>
-            )}
           </div>
           <p className="text-muted-foreground">
             Manage and review subcontractor invoices
