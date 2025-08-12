@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 
 import { cn } from "@/lib/utils"
 import { Clock, ClipboardList, Users, MapPin } from "lucide-react"
@@ -228,7 +228,7 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
-      <PopoverTrigger asChild>
+      <PopoverAnchor asChild>
         <Input
           ref={(el) => {
             triggerRef.current = el
@@ -272,8 +272,8 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
           className={className}
           {...rest}
         />
-      </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className="p-0 w-[28rem] max-w-[90vw] z-50" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {
+      </PopoverAnchor>
+      <PopoverContent align="start" sideOffset={6} className="p-0 w-[28rem] max-w-[90vw] z-50" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()} onFocusOutside={(e) => { const target = e.target as HTMLElement; if (triggerRef.current && (target === triggerRef.current || triggerRef.current.contains(target))) { e.preventDefault(); } }} onPointerDownOutside={(e) => {
         const target = e.target as HTMLElement
         if (triggerRef.current && (target === triggerRef.current || triggerRef.current.contains(target))) {
           e.preventDefault()
