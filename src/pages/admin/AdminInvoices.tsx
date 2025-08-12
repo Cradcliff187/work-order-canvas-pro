@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
-import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
+
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
@@ -44,7 +44,7 @@ import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
 import { FinancialStatusBadge } from '@/components/ui/status-badge';
-import { useSubmittedCounts } from '@/hooks/useSubmittedCounts';
+
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -119,13 +119,13 @@ import { TableHead as UITableHead } from '@/components/ui/table';
 import { TableHeader as UITableHeader } from '@/components/ui/table';
 import { TableRow as UITableRow } from '@/components/ui/table';
 import { FinancialStatusBadge as UIFinancialStatusBadge } from '@/components/ui/status-badge';
-import { useSubmittedCounts as useSubmittedCountsHook } from '@/hooks/useSubmittedCounts';
+
 import { Badge as BadgeUI } from '@/components/ui/badge';
 import { Plus as PlusIcon, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate as useNav } from 'react-router-dom';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
-import { QuickFiltersBar } from '@/components/admin/invoices/QuickFiltersBar';
+
 import { BulkEditSheet } from '@/components/admin/invoices/BulkEditSheet';
 // Note: extra imports above are harmless and tree-shaken; core page uses the key ones added.
 
@@ -221,7 +221,7 @@ export default function AdminInvoices() {
 
   const debouncedSearch = useDebounce(filters.search, 300);
   const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch });
-  const { data: submittedCounts } = useSubmittedCounts();
+  
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setModalOpen(true);
@@ -300,8 +300,6 @@ const table = useReactTable({
   },
 });
 
-  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
-  const quickCounts = { submitted: submittedCounts?.invoicesCount ?? 0 } as Partial<Record<'submitted' | 'approved' | 'paid' | 'rejected', number>>;
 
   const exportColumns: ExportColumn[] = [
     { key: 'internal_invoice_number', label: 'Invoice #', type: 'string' },
@@ -335,9 +333,6 @@ const table = useReactTable({
     }
   };
 
-  const handleQuickFilter = (key: 'submitted' | 'approved' | 'paid' | 'rejected') => {
-    setFilters(prev => ({ ...prev, status: [key], page: 1, paymentStatus: key === 'paid' ? 'paid' : prev.paymentStatus }));
-  };
 
   const handleBulkApprove = () => {
     const ids = table.getFilteredSelectedRowModel().rows.map(r => r.original.id);
@@ -480,22 +475,16 @@ const table = useReactTable({
           </div>
         </CardHeader>
         <CardContent>
-          {/* Quick filters + search */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-4">
-            <QuickFiltersBar onQuickFilter={handleQuickFilter} counts={quickCounts} />
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <SmartSearchInput
-                value={filters.search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onSearchSubmit={(q) => handleSearchChange(q)}
-                placeholder="Search invoices..."
-                className="w-full md:w-80"
-                storageKey="admin-invoices-search"
-              />
-              <Button variant="outline" size="sm" onClick={handleClearFilters} aria-label="Clear all filters">
-                Clear Filters
-              </Button>
-            </div>
+          {/* Search */}
+          <div className="flex items-center justify-end mb-4">
+            <SmartSearchInput
+              value={filters.search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onSearchSubmit={(q) => handleSearchChange(q)}
+              placeholder="Search invoices..."
+              className="w-full md:w-80"
+              storageKey="admin-invoices-search"
+            />
           </div>
           {isLoading ? (
             <EnhancedTableSkeleton rows={5} columns={8} />
