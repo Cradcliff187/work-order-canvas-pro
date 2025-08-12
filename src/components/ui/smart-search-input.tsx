@@ -2,7 +2,7 @@ import * as React from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation"
+
 import { cn } from "@/lib/utils"
 import { Clock, ClipboardList, Users, MapPin } from "lucide-react"
 
@@ -157,24 +157,6 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
     ]
   }, [categorized])
 
-  // Keyboard navigation
-  useKeyboardNavigation({
-    isOpen: open,
-    onEscape: () => setOpen(false),
-    onEnter: () => {
-      if (activeIndex >= 0 && activeIndex < flatList.length) {
-        handleSelect(flatList[activeIndex])
-      } else if (value?.trim()) {
-        handleSubmit(value.trim())
-      }
-    },
-    onArrowDown: () => {
-      setActiveIndex((idx) => (flatList.length ? (idx + 1) % flatList.length : -1))
-    },
-    onArrowUp: () => {
-      setActiveIndex((idx) => (flatList.length ? (idx - 1 + flatList.length) % flatList.length : -1))
-    },
-  })
 
   const handleSubmit = (q: string) => {
     // Update recents
@@ -237,8 +219,15 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
     setActiveIndex(flatList.length ? 0 : -1)
   }, [open, flatList.length])
 
+  // Keep focus on the input when the popover opens
+  useEffect(() => {
+    if (open) {
+      triggerRef.current?.focus()
+    }
+  }, [open])
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Input
           ref={(el) => {
@@ -284,7 +273,12 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
           {...rest}
         />
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={6} className="p-0 w-[28rem] max-w-[90vw] z-50" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent align="start" sideOffset={6} className="p-0 w-[28rem] max-w-[90vw] z-50" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()} onPointerDownOutside={(e) => {
+        const target = e.target as HTMLElement
+        if (triggerRef.current && (target === triggerRef.current || triggerRef.current.contains(target))) {
+          e.preventDefault()
+        }
+      }}>
         {showAny ? (
           <div className="max-h-[60vh] overflow-auto py-2">
             {categorized.recent.length > 0 && (
