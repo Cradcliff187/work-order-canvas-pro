@@ -9,12 +9,14 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Link, useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useUserProfile } from '@/hooks/useUserProfile';
 const DirectMessagesPage: React.FC = () => {
   const { data: conversations = [], isLoading } = useUnifiedInboxOverview();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'direct' | 'work_order'>('all');
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = usePermissions();
+  const { isAdmin: isAdminFn, isEmployee: isEmployeeFn, isPartner: isPartnerFn, isSubcontractor: isSubcontractorFn } = useUserProfile();
   const dashboardPath = useMemo(() => {
     if (isAdmin) return '/admin/dashboard';
     if (isEmployee) return '/admin/employee-dashboard';
@@ -34,7 +36,15 @@ const DirectMessagesPage: React.FC = () => {
     }
     if (id.startsWith('wo:')) {
       const woId = id.slice(3);
-      navigate(`/work-orders/${woId}`);
+      let base = '';
+      if (isAdminFn() || isEmployeeFn()) {
+        base = '/admin';
+      } else if (isPartnerFn()) {
+        base = '/partner';
+      } else if (isSubcontractorFn()) {
+        base = '/subcontractor';
+      }
+      navigate(`${base}/work-orders/${woId}`);
       return;
     }
     setSelectedId(id);
