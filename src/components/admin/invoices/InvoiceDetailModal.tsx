@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -20,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, FileText, Table as TableIcon, Image, Download, ExternalLink } from 'lucide-react';
+import { CalendarIcon, FileText, Table as TableIcon, Image, Download, ExternalLink, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -40,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { format } from 'date-fns';
+import { format, isBefore } from 'date-fns';
 import { Invoice } from '@/hooks/useInvoices';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { formatFileSize } from '@/utils/fileUtils';
@@ -111,7 +110,6 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     );
   };
 
-
   const canApprove = invoice.status === 'submitted';
   const canReject = invoice.status === 'submitted';
   const canMarkPaid = invoice.status === 'approved' && !invoice.paid_at;
@@ -149,6 +147,10 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     window.open(data.publicUrl, '_blank');
   };
 
+  const invDate = (invoice as any).invoice_date ? new Date((invoice as any).invoice_date) : null;
+  const dueDate = (invoice as any).due_date ? new Date((invoice as any).due_date) : null;
+  const isOverdue = !!dueDate && isBefore(dueDate, new Date()) && !invoice.paid_at;
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -184,6 +186,15 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
 
                 <div>
                   <Label className="text-sm font-semibold text-muted-foreground">
+                    Purchase Order #
+                  </Label>
+                  <div className="mt-1">
+                    {(invoice as any).purchase_order_number || '—'}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold text-muted-foreground">
                     Subcontractor
                   </Label>
                   <div className="mt-1 text-lg font-medium">
@@ -204,8 +215,33 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <Label className="text-sm font-semibold text-muted-foreground">
                     Status
                   </Label>
-                  <div className="mt-1">
+                  <div className="mt-1 flex items-center gap-2">
                     <FinancialStatusBadge status={invoice.status} size="sm" showIcon />
+                    {isOverdue && (
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Overdue
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Invoice Date
+                    </Label>
+                    <div className="mt-1">
+                      {invDate ? format(invDate, 'MMM d, yyyy') : '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Due Date
+                    </Label>
+                    <div className="mt-1">
+                      {dueDate ? format(dueDate, 'MMM d, yyyy') : '—'}
+                    </div>
                   </div>
                 </div>
 
@@ -215,10 +251,28 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   </Label>
                   <div className="mt-1">
                     {invoice.submitted_at
-                      ? format(new Date(invoice.submitted_at), 'PPP')
+                      ? format(new Date(invoice.submitted_at), 'MMM d, yyyy')
                       : 'Not submitted'
                     }
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Subcontractor Notes and Terms */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Subcontractor Notes</Label>
+                <div className="mt-1 p-3 bg-muted rounded-md min-h-[48px]">
+                  {(invoice as any).subcontractor_notes || '—'}
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Payment Terms</Label>
+                <div className="mt-1">
+                  {(invoice as any).payment_terms || 'Net 30'}
                 </div>
               </div>
             </div>
@@ -299,7 +353,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
             )}
 
             {/* Attachments */}
-            {invoice.invoice_attachments && invoice.invoice_attachments.length > 0 && (
+            {(invoice as any).invoice_attachments && (invoice as any).invoice_attachments.length > 0 && (
               <>
                 <Separator />
                 <div className="space-y-4">

@@ -581,12 +581,17 @@ export type Database = {
           approved_by: string | null
           created_at: string
           created_by_admin_id: string | null
+          due_date: string
           external_invoice_number: string | null
           id: string
           internal_invoice_number: string
+          invoice_date: string
           paid_at: string | null
           payment_reference: string | null
+          payment_terms: string | null
+          purchase_order_number: string | null
           status: string
+          subcontractor_notes: string | null
           subcontractor_organization_id: string | null
           submitted_at: string | null
           submitted_by: string | null
@@ -600,12 +605,17 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by_admin_id?: string | null
+          due_date?: string
           external_invoice_number?: string | null
           id?: string
           internal_invoice_number: string
+          invoice_date?: string
           paid_at?: string | null
           payment_reference?: string | null
+          payment_terms?: string | null
+          purchase_order_number?: string | null
           status?: string
+          subcontractor_notes?: string | null
           subcontractor_organization_id?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
@@ -619,12 +629,17 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by_admin_id?: string | null
+          due_date?: string
           external_invoice_number?: string | null
           id?: string
           internal_invoice_number?: string
+          invoice_date?: string
           paid_at?: string | null
           payment_reference?: string | null
+          payment_terms?: string | null
+          purchase_order_number?: string | null
           status?: string
+          subcontractor_notes?: string | null
           subcontractor_organization_id?: string | null
           submitted_at?: string | null
           submitted_by?: string | null

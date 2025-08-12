@@ -19,12 +19,21 @@ import { useInvoiceSubmission } from '@/hooks/useInvoiceSubmission';
 import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { InvoiceDatesFields } from '@/components/invoices/InvoiceDatesFields';
+import { addDays, isBefore, format as formatDate } from 'date-fns';
 
 interface InvoiceFormData {
   externalInvoiceNumber: string;
   adminNotes: string;
   selectedWorkOrders: Record<string, number>; // workOrderId -> amount
   selectedOrganizationId?: string; // For admin submissions
+
+  // New fields
+  invoiceDate: Date | null;
+  dueDate: Date | null;
+  paymentTerms: string;
+  purchaseOrderNumber: string;
+  subcontractorNotes: string;
 }
 
 export default function SubmitInvoice() {
@@ -39,7 +48,14 @@ export default function SubmitInvoice() {
     adminNotes: '',
     selectedWorkOrders: {},
     selectedOrganizationId: undefined,
+    invoiceDate: new Date(),
+    dueDate: addDays(new Date(), 30),
+    paymentTerms: 'Net 30',
+    purchaseOrderNumber: '',
+    subcontractorNotes: '',
   });
+
+  const [dateError, setDateError] = useState<string | null>(null);
 
   const isAdminMode = isAdmin();
   
@@ -98,7 +114,11 @@ export default function SubmitInvoice() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        setFormData(parsed);
+        setFormData({
+          ...parsed,
+          invoiceDate: parsed.invoiceDate ? new Date(parsed.invoiceDate) : new Date(),
+          dueDate: parsed.dueDate ? new Date(parsed.dueDate) : addDays(new Date(), 30),
+        });
       } catch (error) {
         console.error('Failed to parse saved form data:', error);
       }
@@ -107,7 +127,12 @@ export default function SubmitInvoice() {
 
   // Save form data to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('invoiceFormData', JSON.stringify(formData));
+    const toSave = {
+      ...formData,
+      invoiceDate: formData.invoiceDate ? formatDate(formData.invoiceDate, 'yyyy-MM-dd') : null,
+      dueDate: formData.dueDate ? formatDate(formData.dueDate, 'yyyy-MM-dd') : null,
+    };
+    localStorage.setItem('invoiceFormData', JSON.stringify(toSave));
   }, [formData]);
 
   const workOrders = completedWorkOrdersForInvoicing?.data || [];
@@ -149,6 +174,19 @@ export default function SubmitInvoice() {
     }));
   };
 
+  const validateDates = () => {
+    if (!formData.invoiceDate || !formData.dueDate) {
+      setDateError('Both dates are required.');
+      return false;
+    }
+    if (isBefore(formData.dueDate, formData.invoiceDate)) {
+      setDateError('Due date must be on or after the invoice date.');
+      return false;
+    }
+    setDateError(null);
+    return true;
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
@@ -170,6 +208,15 @@ export default function SubmitInvoice() {
       return;
     }
 
+    if (!validateDates()) {
+      toast({
+        title: "Invalid dates",
+        description: dateError || "Please fix the date selections.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const workOrdersData = selectedWorkOrderIds.map(workOrderId => ({
         workOrderId,
@@ -184,6 +231,13 @@ export default function SubmitInvoice() {
         organizationId: isAdminMode ? formData.selectedOrganizationId : undefined,
         createdByAdminId: isAdminMode ? profile?.id : undefined,
         adminNotes: isAdminMode && formData.adminNotes ? formData.adminNotes : undefined,
+
+        // New fields
+        invoiceDate: formData.invoiceDate!,
+        dueDate: formData.dueDate!,
+        paymentTerms: formData.paymentTerms || 'Net 30',
+        purchaseOrderNumber: formData.purchaseOrderNumber || undefined,
+        subcontractorNotes: formData.subcontractorNotes || undefined,
       });
       
       // Clear saved form data
@@ -268,23 +322,48 @@ export default function SubmitInvoice() {
               </StandardFormLayout.FieldGroup>
             </StandardFormLayout.Section>
           )}
+
           <StandardFormLayout.Section 
             title="Invoice Details"
-            description="Enter your external invoice number (optional)"
+            description="Enter your external invoice number and related identifiers (optional)"
           >
             <StandardFormLayout.FieldGroup>
-              <div className="space-y-2">
-                <Label htmlFor="externalInvoiceNumber">External Invoice Number</Label>
-                <Input
-                  id="externalInvoiceNumber"
-                  placeholder="INV-2024-001"
-                  value={formData.externalInvoiceNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Optional: Your own invoice number for reference
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="externalInvoiceNumber">External Invoice Number</Label>
+                  <Input
+                    id="externalInvoiceNumber"
+                    placeholder="INV-2024-001"
+                    value={formData.externalInvoiceNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, externalInvoiceNumber: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional: Your own invoice number for reference
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="purchaseOrderNumber">Purchase Order Number</Label>
+                  <Input
+                    id="purchaseOrderNumber"
+                    placeholder="PO-123456"
+                    value={formData.purchaseOrderNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, purchaseOrderNumber: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional: Provide a PO number if applicable
+                  </p>
+                </div>
               </div>
+
+              <InvoiceDatesFields
+                invoiceDate={formData.invoiceDate}
+                dueDate={formData.dueDate}
+                onChangeInvoiceDate={(d) => setFormData(prev => ({ ...prev, invoiceDate: d, dueDate: prev.dueDate && isBefore(prev.dueDate, d) ? addDays(d, 30) : prev.dueDate }))}
+                onChangeDueDate={(d) => setFormData(prev => ({ ...prev, dueDate: d }))}
+                error={dateError}
+                className="mt-2"
+              />
 
               {isAdminMode && (
                 <div className="space-y-2">
@@ -301,6 +380,36 @@ export default function SubmitInvoice() {
                   </p>
                 </div>
               )}
+            </StandardFormLayout.FieldGroup>
+          </StandardFormLayout.Section>
+
+          <StandardFormLayout.Section 
+            title="Notes & Terms"
+            description="Optional notes and payment terms"
+          >
+            <StandardFormLayout.FieldGroup>
+              <div className="space-y-2">
+                <Label htmlFor="subcontractorNotes">Subcontractor Notes</Label>
+                <Textarea
+                  id="subcontractorNotes"
+                  placeholder="Add any relevant notes for the admin to review..."
+                  value={formData.subcontractorNotes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, subcontractorNotes: e.target.value }))}
+                  className="min-h-[80px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paymentTerms">Payment Terms</Label>
+                <Input
+                  id="paymentTerms"
+                  placeholder="Net 30"
+                  value={formData.paymentTerms}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Defaults to "Net 30". Adjust if different terms apply.
+                </p>
+              </div>
             </StandardFormLayout.FieldGroup>
           </StandardFormLayout.Section>
 
@@ -432,3 +541,4 @@ export default function SubmitInvoice() {
     </div>
   );
 }
+
