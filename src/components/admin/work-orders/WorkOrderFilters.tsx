@@ -8,8 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
-import { Search, Filter, Calendar as CalendarIcon, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Filter, Calendar as CalendarIcon, X, ChevronDown, ChevronUp, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { useAutoOrganization } from '@/hooks/useAutoOrganization';
@@ -75,6 +77,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const isMobile = useIsMobile();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [locationTextInput, setLocationTextInput] = useState('');
 
   // Calculate active filter count for display
   const activeFilterCount = useMemo(() => {
@@ -85,7 +88,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   }, [filters, searchTerm, activeQuickPresets]);
 
   // Get unique locations for the selected organization (or all if no org selected)
-  const { data: locations, isLoading: locationsLoading, isFetching: locationsRefetching } = useQuery({
+  const { data: locations, isLoading: locationsLoading, isFetching: locationsRefetching, error: locationsError, refetch: refetchLocations } = useQuery({
     queryKey: ['work-order-locations', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
       try {
@@ -161,6 +164,16 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const hasActiveFilters = Boolean(searchTerm) || Object.values(filters).some(value => 
     Array.isArray(value) ? value.length > 0 : Boolean(value)
   ) || (activeQuickPresets && activeQuickPresets.length > 0);
+
+  const handleLocationTextSubmit = (value: string) => {
+    if (value.trim()) {
+      onFiltersChange({
+        ...filters,
+        location_filter: [value.trim()]
+      });
+      setLocationTextInput('');
+    }
+  };
 
   const handleDateFromChange = (date: Date | undefined) => {
     setDateFrom(date);
@@ -274,13 +287,44 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     </div>
   );
 
-  // Helper function to render location filter
+  // Helper function to render location filter with fallback
   const renderLocationFilter = () => (
     shouldShowSelector ? (
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Location</label>
         {locationsLoading ? (
           <Skeleton className="h-10 w-full" />
+        ) : locationsError ? (
+          <div className="space-y-3">
+            <Alert variant="destructive" className="py-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                Location list unavailable, type location to filter
+              </AlertDescription>
+            </Alert>
+            <Input 
+              placeholder="Enter location name..."
+              value={locationTextInput}
+              onChange={(e) => setLocationTextInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleLocationTextSubmit(locationTextInput);
+                }
+              }}
+              onBlur={() => handleLocationTextSubmit(locationTextInput)}
+              className="h-10"
+              aria-label="Enter location name to filter"
+            />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetchLocations()}
+              className="w-full h-8"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry loading locations
+            </Button>
+          </div>
         ) : (
           <MultiSelectFilter
             options={locations?.filter(Boolean)?.map(location => ({ value: location, label: location })) || []}
