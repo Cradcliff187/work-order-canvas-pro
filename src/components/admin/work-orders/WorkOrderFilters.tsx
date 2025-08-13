@@ -87,25 +87,37 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const { data: locations } = useQuery({
     queryKey: ['work-order-locations', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
-      let query = supabase
-        .from('work_orders')
-        .select('store_location')
-        .not('store_location', 'is', null)
-        .not('store_location', 'eq', '');
-      
-      // If specific partners are selected, filter by them
-      if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
-        query = query.in('organization_id', filters.partner_organization_ids as any);
+      try {
+        let query = supabase
+          .from('work_orders')
+          .select('store_location')
+          .not('store_location', 'is', null)
+          .not('store_location', 'eq', '')
+          .order('created_at', { ascending: false })
+          .limit(500);
+        
+        // If specific partners are selected, filter by them
+        if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
+          query = query.in('organization_id', filters.partner_organization_ids as any);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        // Filter out null/empty locations and get unique values
+        const uniqueLocations = [...new Set(
+          data?.filter(wo => wo.store_location?.trim()).map(wo => wo.store_location) || []
+        )].filter(Boolean);
+        
+        return uniqueLocations.sort();
+      } catch (error) {
+        console.error('Failed to fetch work order locations:', error);
+        return [];
       }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      // Get unique locations
-      const uniqueLocations = [...new Set(data.map(wo => wo.store_location))].filter(Boolean);
-      return uniqueLocations.sort();
     },
     enabled: shouldShowSelector,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Suggestion sources
