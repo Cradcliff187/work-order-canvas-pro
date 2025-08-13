@@ -6,6 +6,7 @@ import { MessageComposer } from '@/components/messaging/MessageComposer';
 import { useConversationMessages } from '@/hooks/messaging/useConversationMessages';
 import { useToast } from '@/hooks/use-toast';
 import { useConversationPresence } from '@/hooks/messaging/useConversationPresence';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,7 @@ export const MobileConversationView: React.FC<MobileConversationViewProps> = ({
 }) => {
   const { mutate: markRead } = useMarkConversationRead();
   const { toast } = useToast();
+  const { profile } = useUserProfile();
 
   const {
     messages,
@@ -60,7 +62,7 @@ export const MobileConversationView: React.FC<MobileConversationViewProps> = ({
       id: `temp-${Date.now()}`,
       message: text,
       created_at: new Date().toISOString(),
-      sender_id: 'current-user', // Will be replaced with actual logic
+      sender_id: profile?.id || 'unknown',
       __optimistic: true,
     };
     setPending((prev) => [...prev, temp]);
@@ -149,7 +151,7 @@ export const MobileConversationView: React.FC<MobileConversationViewProps> = ({
         ) : (
           <div className="space-y-4">
             {allMessages.map((message, index) => {
-              const isCurrentUser = message.sender_id === 'current-user' || message.__optimistic;
+              const isCurrentUser = message.sender_id === profile?.id || message.__optimistic;
               const showTimestamp = index === 0 || 
                 new Date(message.created_at).getTime() - new Date(allMessages[index - 1]?.created_at).getTime() > 300000; // 5 minutes
               

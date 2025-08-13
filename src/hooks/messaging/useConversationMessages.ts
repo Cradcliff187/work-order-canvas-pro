@@ -46,7 +46,7 @@ export function useConversationMessages(conversationId: string | null, pageSize 
       const oldest = lastPage[lastPage.length - 1];
       return oldest?.created_at || undefined;
     },
-    staleTime: 10_000,
+    staleTime: 0, // Enable immediate refetch for real-time updates
   });
 
   const messagesAscending: ConversationMessage[] = (infiniteQuery.data?.pages || [])

@@ -22,6 +22,8 @@ export function useConversationSubscription(conversationId: string | null) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload: any) => {
+          console.log('[ConversationSubscription] New message received:', payload);
+          
           // Invalidate paginated messages and overview
           queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
           queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
@@ -39,7 +41,9 @@ export function useConversationSubscription(conversationId: string | null) {
           table: 'work_order_messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => {
+        (payload: any) => {
+          console.log('[ConversationSubscription] Message updated:', payload);
+          
           // Handle edits or server-side enrichments
           queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
           queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });

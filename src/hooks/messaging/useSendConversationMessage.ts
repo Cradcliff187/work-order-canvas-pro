@@ -25,10 +25,9 @@ export function useSendConversationMessage() {
       return data;
     },
     onSuccess: (_data, variables) => {
-      // Refresh the conversation thread and overview counters
-      queryClient.invalidateQueries({ queryKey: ['conversation-messages', variables.conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
+      console.log('[SendConversationMessage] Message sent successfully:', _data);
+      // Real-time subscription will handle invalidation, so we don't need to do it here
+      // This prevents double-invalidation and race conditions
     },
     onError: (error: any) => {
       console.error('[useSendConversationMessage] error:', error);
