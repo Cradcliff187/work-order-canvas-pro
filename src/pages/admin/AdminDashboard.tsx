@@ -69,18 +69,14 @@ const AdminDashboard = () => {
     navigate(`/admin/invoices?${params.toString()}`);
   };
 
-  if (isError) {
-    return (
-      <div className="container mx-auto px-6 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Dashboard</h1>
-          <p className="text-muted-foreground">Please try refreshing the page or check your connection.</p>
-        </div>
+  return isError ? (
+    <div className="container mx-auto px-6 py-8">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Dashboard</h1>
+        <p className="text-muted-foreground">Please try refreshing the page or check your connection.</p>
       </div>
-    );
-  }
-
-  return (
+    </div>
+  ) : (
     <div className="space-y-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
