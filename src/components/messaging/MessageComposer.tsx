@@ -23,7 +23,11 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ conversationId
     send(
       { conversationId, message: trimmed },
       {
-        onSettled: () => {
+        onSuccess: () => {
+          // Delay clearing optimistic message to ensure real message appears first
+          setTimeout(() => onClearPending?.(tempId), 500);
+        },
+        onError: () => {
           onClearPending?.(tempId);
         },
       }

@@ -24,8 +24,11 @@ export function useConversationSubscription(conversationId: string | null) {
         (payload: any) => {
           console.log('[ConversationSubscription] New message received:', payload);
           
-          // Invalidate paginated messages and overview
-          queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+          // Use refetch for immediate updates instead of invalidateQueries
+          const conversationQuery = queryClient.getQueryState(['conversation-messages', conversationId]);
+          if (conversationQuery) {
+            queryClient.refetchQueries({ queryKey: ['conversation-messages', conversationId] });
+          }
           queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
           queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
 
@@ -44,8 +47,11 @@ export function useConversationSubscription(conversationId: string | null) {
         (payload: any) => {
           console.log('[ConversationSubscription] Message updated:', payload);
           
-          // Handle edits or server-side enrichments
-          queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+          // Handle edits or server-side enrichments with refetch
+          const conversationQuery = queryClient.getQueryState(['conversation-messages', conversationId]);
+          if (conversationQuery) {
+            queryClient.refetchQueries({ queryKey: ['conversation-messages', conversationId] });
+          }
           queryClient.invalidateQueries({ queryKey: ['conversations-overview'] });
           queryClient.invalidateQueries({ queryKey: ['unified-inbox-overview'] });
         }

@@ -26,8 +26,8 @@ export function useSendConversationMessage() {
     },
     onSuccess: (_data, variables) => {
       console.log('[SendConversationMessage] Message sent successfully:', _data);
-      // Real-time subscription will handle invalidation, so we don't need to do it here
-      // This prevents double-invalidation and race conditions
+      // Trigger immediate refetch to ensure message appears without waiting for real-time
+      queryClient.refetchQueries({ queryKey: ['conversation-messages', variables.conversationId] });
     },
     onError: (error: any) => {
       console.error('[useSendConversationMessage] error:', error);

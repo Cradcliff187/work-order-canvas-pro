@@ -17,9 +17,10 @@ export function useConversationMessages(conversationId: string | null, pageSize 
   const infiniteQuery = useInfiniteQuery<MessagesPage>({
     queryKey,
     enabled: Boolean(conversationId),
-    initialPageParam: new Date().toISOString(),
+    initialPageParam: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // Far future timestamp
     queryFn: async ({ pageParam }) => {
       if (!conversationId) return [];
+      console.log('[useConversationMessages] Fetching with pageParam:', pageParam);
       const { data, error } = await supabase
         .rpc<any, any>('get_conversation_messages' as any, {
           p_conversation_id: conversationId,
@@ -31,13 +32,15 @@ export function useConversationMessages(conversationId: string | null, pageSize 
         throw error;
       }
       // RPC returns DESC by created_at; keep as-is for pagination math
-      return ((data as any[]) || []).map((row: any) => ({
+      const messages = ((data as any[]) || []).map((row: any) => ({
         id: row.id,
         message: row.message ?? null,
         sender_id: row.sender_id ?? null,
         created_at: row.created_at,
         attachment_ids: row.attachment_ids ?? null,
       }));
+      console.log('[useConversationMessages] Fetched messages:', messages.length);
+      return messages;
     },
     getNextPageParam: (lastPage) => {
       // If fewer than pageSize, no more pages
