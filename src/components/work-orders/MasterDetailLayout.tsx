@@ -14,6 +14,7 @@ interface MasterDetailLayoutProps {
   className?: string;
   items?: Array<{ id: string }>;
   showDetailHeader?: boolean;
+  detailTitle?: string;
 }
 
 export function MasterDetailLayout({
@@ -25,6 +26,7 @@ export function MasterDetailLayout({
   className,
   items = [],
   showDetailHeader = true,
+  detailTitle = "Details",
 }: MasterDetailLayoutProps) {
   const [showDetailPanel, setShowDetailPanel] = useState(false);
 
@@ -88,7 +90,7 @@ export function MasterDetailLayout({
           <div className="h-full border-l bg-background relative">
             {showDetailHeader ? (
               <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="font-semibold text-lg">Work Order Details</h3>
+                <h3 className="font-semibold text-lg">{detailTitle}</h3>
                 <Button
                   variant="ghost"
                   size="sm"

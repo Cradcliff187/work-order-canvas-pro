@@ -112,14 +112,16 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-3 border-b">
+      <div className="flex items-center justify-between p-3 border-b bg-muted/30">
         <div className="flex items-center gap-2">
-          <div className="font-medium">Conversation</div>
           <div
-            className={`ml-2 h-2 w-2 rounded-full ${isOtherOnline ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
+            className={`h-2 w-2 rounded-full ${isOtherOnline ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
             aria-label={isOtherOnline ? 'Other participant online' : 'Other participant offline'}
             title={isOtherOnline ? 'Online' : 'Offline'}
           />
+          <span className="text-sm text-muted-foreground">
+            {isOtherOnline ? 'Online' : 'Offline'}
+          </span>
         </div>
         <Button size="sm" variant="secondary" onClick={handleMarkReadClick} disabled={isPending}>
           Mark as read

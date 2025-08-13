@@ -115,7 +115,8 @@ export const ResponsiveMessagingLayout: React.FC<ResponsiveMessagingLayoutProps>
       }
       isLoading={isLoading}
       items={items}
-      showDetailHeader={false}
+      showDetailHeader={true}
+      detailTitle={selectedConversation?.title || "Conversation"}
       className="h-full"
     />
   );
