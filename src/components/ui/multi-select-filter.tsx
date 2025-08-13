@@ -19,6 +19,7 @@ interface MultiSelectFilterProps {
   searchPlaceholder?: string;
   className?: string;
   maxDisplayCount?: number;
+  disabled?: boolean;
 }
 
 export function MultiSelectFilter({
@@ -28,7 +29,8 @@ export function MultiSelectFilter({
   placeholder = "Select items",
   searchPlaceholder = "Search...",
   className,
-  maxDisplayCount = 2
+  maxDisplayCount = 2,
+  disabled = false,
 }: MultiSelectFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,6 +70,7 @@ export function MultiSelectFilter({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          disabled={disabled}
           className={cn(
             "justify-between text-left font-normal min-w-[200px]",
             selectedValues.length === 0 && "text-muted-foreground",

@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -85,7 +85,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   }, [filters, searchTerm, activeQuickPresets]);
 
   // Get unique locations for the selected organization (or all if no org selected)
-  const { data: locations, isLoading: locationsLoading } = useQuery({
+  const { data: locations, isLoading: locationsLoading, isFetching: locationsRefetching } = useQuery({
     queryKey: ['work-order-locations', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
       try {
@@ -147,6 +147,16 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const [dateTo, setDateTo] = useState<Date | undefined>(
     filters.date_to ? new Date(filters.date_to) : undefined
   );
+
+  // Clear location filter when refetching locations
+  useEffect(() => {
+    if (locationsRefetching) {
+      onFiltersChange({ 
+        ...filters, 
+        location_filter: [] 
+      });
+    }
+  }, [locationsRefetching, filters, onFiltersChange]);
 
   const hasActiveFilters = Boolean(searchTerm) || Object.values(filters).some(value => 
     Array.isArray(value) ? value.length > 0 : Boolean(value)
@@ -233,7 +243,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
           onSelectionChange={(values) => onFiltersChange({ 
             ...filters, 
             partner_organization_ids: values.length > 0 ? values : undefined,
-            location_filter: undefined // Clear location filter when partner changes
+            location_filter: [] // Clear location filter when partner changes
           })}
           placeholder="All Partners"
           searchPlaceholder="Search partners..."
@@ -282,6 +292,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             placeholder="All Locations"
             searchPlaceholder="Search locations..."
             className="h-10"
+            disabled={!locations || locationsLoading || locationsRefetching}
           />
         )}
       </div>
