@@ -9,9 +9,15 @@ import { useConversationPresence } from '@/hooks/messaging/useConversationPresen
 
 interface ConversationViewProps {
   conversationId: string;
+  title?: string;
+  showHeader?: boolean;
 }
 
-export const ConversationView: React.FC<ConversationViewProps> = ({ conversationId }) => {
+export const ConversationView: React.FC<ConversationViewProps> = ({ 
+  conversationId, 
+  title,
+  showHeader = false 
+}) => {
   const { mutate: markRead, isPending } = useMarkConversationRead();
   const { toast } = useToast();
 
@@ -111,6 +117,19 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
 
   return (
     <div className="h-full flex flex-col">
+      {showHeader && title && (
+        <div className="border-b p-4">
+          <h2 className="font-semibold text-lg">{title}</h2>
+          <div className="flex items-center gap-2 mt-1">
+            <div
+              className={`h-2 w-2 rounded-full ${isOtherOnline ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isOtherOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-center p-2">
         {hasNextPage && (
           <Button

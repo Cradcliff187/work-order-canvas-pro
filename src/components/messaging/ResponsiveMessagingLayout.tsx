@@ -140,7 +140,11 @@ export const ResponsiveMessagingLayout: React.FC<ResponsiveMessagingLayoutProps>
       onSelectionChange={onSelectionChange}
       detailContent={
         selectedId ? (
-          <ConversationView conversationId={selectedId} />
+          <ConversationView 
+            conversationId={selectedId} 
+            title={conversationTitle}
+            showHeader={true}
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground p-6 text-center">
             <div>
