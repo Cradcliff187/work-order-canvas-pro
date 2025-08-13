@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTrades } from '@/hooks/useWorkOrders';
@@ -113,20 +114,26 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: In
       </Select>
 
       {/* Partner Organization Filter (via work orders) */}
-      <OrganizationSelector
-        value={value.partner_organization_id}
-        onChange={(id) => set({ partner_organization_id: id, location_filter: undefined })}
-        organizationType="partner"
-        placeholder="All Partners"
-      />
+      <div className="relative">
+        <Label className="text-xs text-muted-foreground">Partner (Customer)</Label>
+        <OrganizationSelector
+          value={value.partner_organization_id}
+          onChange={(id) => set({ partner_organization_id: id, location_filter: undefined })}
+          organizationType="partner"
+          placeholder="All Partners"
+        />
+      </div>
 
       {/* Subcontractor Organization Filter (direct) */}
-      <OrganizationSelector
-        value={value.subcontractor_organization_id}
-        onChange={(id) => set({ subcontractor_organization_id: id })}
-        organizationType="subcontractor"
-        placeholder="All Subcontractors"
-      />
+      <div className="relative">
+        <Label className="text-xs text-muted-foreground">Subcontractor (Vendor)</Label>
+        <OrganizationSelector
+          value={value.subcontractor_organization_id}
+          onChange={(id) => set({ subcontractor_organization_id: id })}
+          organizationType="subcontractor"
+          placeholder="All Subcontractors"
+        />
+      </div>
 
       {/* Location Filter */}
       <MultiSelectFilter
