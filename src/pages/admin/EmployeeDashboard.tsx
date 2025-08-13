@@ -45,7 +45,7 @@ const EmployeeDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="space-y-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Employee Dashboard</h1>
         <p className="text-muted-foreground">Track your assignments, hours, and expenses</p>

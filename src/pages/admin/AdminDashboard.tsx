@@ -81,7 +81,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="space-y-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
         <p className="text-muted-foreground">Monitor system performance and manage work orders</p>

@@ -70,7 +70,7 @@ const PartnerDashboard = () => {
   ];
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="space-y-6">
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Partner Dashboard</h1>
