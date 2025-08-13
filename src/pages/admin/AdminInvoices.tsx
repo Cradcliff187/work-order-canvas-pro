@@ -147,6 +147,11 @@ export default function AdminInvoices() {
     location_filter: [] as string[],
     date_from: undefined as string | undefined,
     date_to: undefined as string | undefined,
+    due_date_from: undefined as string | undefined,
+    due_date_to: undefined as string | undefined,
+    amount_min: undefined as number | undefined,
+    amount_max: undefined as number | undefined,
+    has_attachments: false,
     overdue: false,
     created_today: false,
   });
@@ -218,6 +223,11 @@ export default function AdminInvoices() {
     filters.location_filter,
     filters.date_from,
     filters.date_to,
+    filters.due_date_from,
+    filters.due_date_to,
+    filters.amount_min,
+    filters.amount_max,
+    filters.has_attachments,
     filters.overdue,
     filters.created_today,
   ]);

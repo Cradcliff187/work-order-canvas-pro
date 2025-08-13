@@ -1,17 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
+import { useTrades } from '@/hooks/useWorkOrders';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -19,11 +19,16 @@ export interface InvoiceFiltersValue {
   status?: string[];
   paymentStatus?: 'paid' | 'unpaid';
   search?: string;
-  organization_id?: string; // partner organization (from work order)
+  organization_id?: string; // subcontractor organization
   trade_id?: string[];
   location_filter?: string[];
   date_from?: string;
   date_to?: string;
+  due_date_from?: string;
+  due_date_to?: string;
+  amount_min?: number;
+  amount_max?: number;
+  has_attachments?: boolean;
   overdue?: boolean; // due_date < today AND unpaid
   created_today?: boolean; // created today
 }
@@ -43,12 +48,11 @@ const statusOptions = [
 ];
 
 export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: InvoiceFiltersProps) {
-  const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
 
   const set = (patch: Partial<InvoiceFiltersValue>) => onChange({ ...value, ...patch });
 
-  // Locations sourced from work orders, optionally filtered by partner org
+  // Locations sourced from work orders, optionally filtered by organization
   const { data: locations } = useQuery({
     queryKey: ['invoice-locations', value.organization_id],
     queryFn: async () => {
@@ -69,163 +73,191 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: In
 
   const [dateFrom, setDateFrom] = useState<Date | undefined>(value.date_from ? new Date(value.date_from) : undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(value.date_to ? new Date(value.date_to) : undefined);
+  const [dueDateFrom, setDueDateFrom] = useState<Date | undefined>(value.due_date_from ? new Date(value.due_date_from) : undefined);
+  const [dueDateTo, setDueDateTo] = useState<Date | undefined>(value.due_date_to ? new Date(value.due_date_to) : undefined);
 
   return (
     <AdminFilterBar title="Filters" filterCount={filterCount} onClear={onClear}>
-      <div className="w-full space-y-4">
-        {/* Search */}
-        <section className="space-y-2">
-          <Label htmlFor="admin-invoices-search">Search</Label>
-          <SmartSearchInput
-            id="admin-invoices-search"
-            value={value.search || ''}
-            onChange={(e) => set({ search: e.target.value })}
-            onSearchSubmit={(q) => set({ search: q })}
-            placeholder="Search invoices..."
-            className="w-full"
-            storageKey="admin-invoices-search"
+      {/* Search - Full width on mobile, grid on desktop */}
+      <div className="col-span-full lg:col-span-1">
+        <SmartSearchInput
+          value={value.search || ''}
+          onChange={(e) => set({ search: e.target.value })}
+          placeholder="Search invoices..."
+          storageKey="admin-invoices-search"
+        />
+      </div>
+
+      {/* Status - MultiSelectFilter */}
+      <MultiSelectFilter
+        options={statusOptions}
+        selectedValues={value.status || []}
+        onSelectionChange={(values) => set({ status: values.length ? values : undefined })}
+        placeholder="All Statuses"
+      />
+
+      {/* Payment Status - Single Select */}
+      <Select
+        value={value.paymentStatus || 'all'}
+        onValueChange={(val) => set({ paymentStatus: val === 'all' ? undefined : val as 'paid' | 'unpaid' })}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Payment Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="paid">Paid</SelectItem>
+          <SelectItem value="unpaid">Unpaid</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* Subcontractor Organization */}
+      <OrganizationSelector
+        value={value.organization_id}
+        onChange={(id) => set({ organization_id: id, location_filter: undefined })}
+        organizationType="subcontractor"
+        placeholder="All Subcontractors"
+      />
+
+      {/* Location Filter */}
+      <MultiSelectFilter
+        options={(locations || []).map((loc) => ({ value: loc, label: loc }))}
+        selectedValues={value.location_filter || []}
+        onSelectionChange={(values) => set({ location_filter: values.length ? values : undefined })}
+        placeholder="All Locations"
+      />
+
+      {/* Trade Filter */}
+      <MultiSelectFilter
+        options={(Array.isArray(trades) ? trades : []).map((t) => ({ value: t.id || `trade-${t.name}`, label: t.name }))}
+        selectedValues={value.trade_id || []}
+        onSelectionChange={(values) => set({ trade_id: values.length ? values : undefined })}
+        placeholder="All Trades"
+      />
+
+      {/* Date Range - Start */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="justify-start">
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dateFrom ? format(dateFrom, 'MMM d, yyyy') : 'From Date'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 z-50" align="start">
+          <Calendar
+            mode="single"
+            selected={dateFrom}
+            onSelect={(date) => {
+              setDateFrom(date || undefined);
+              set({ date_from: date ? format(date, 'yyyy-MM-dd') : undefined });
+            }}
+            className="pointer-events-auto"
           />
-        </section>
+        </PopoverContent>
+      </Popover>
 
-        {/* Quick filters */}
-        <section className="space-y-2">
-          <Label>Quick filters</Label>
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant={value.overdue ? 'secondary' : 'outline'}
-              size="sm"
-              onClick={() => set({ overdue: !value.overdue })}
-            >
-              Overdue
-            </Button>
-            <Button
-              variant={value.created_today ? 'secondary' : 'outline'}
-              size="sm"
-              onClick={() => set({ created_today: !value.created_today })}
-            >
-              Today
-            </Button>
-          </div>
-        </section>
+      {/* Date Range - End */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="justify-start">
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dateTo ? format(dateTo, 'MMM d, yyyy') : 'To Date'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 z-50" align="start">
+          <Calendar
+            mode="single"
+            selected={dateTo}
+            onSelect={(date) => {
+              setDateTo(date || undefined);
+              set({ date_to: date ? format(date, 'yyyy-MM-dd') : undefined });
+            }}
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
 
-        {/* Core filters */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <MultiSelectFilter
-              options={statusOptions}
-              selectedValues={value.status || []}
-              onSelectionChange={(values) => set({ status: values.length ? values : undefined })}
-              placeholder="Status"
-            />
-          </div>
+      {/* Due Date Range - Start */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="justify-start">
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dueDateFrom ? format(dueDateFrom, 'MMM d, yyyy') : 'Due From'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 z-50" align="start">
+          <Calendar
+            mode="single"
+            selected={dueDateFrom}
+            onSelect={(date) => {
+              setDueDateFrom(date || undefined);
+              set({ due_date_from: date ? format(date, 'yyyy-MM-dd') : undefined });
+            }}
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
 
-          <div className="space-y-2">
-            <Label>Payment status</Label>
-            <Select
-              value={value.paymentStatus ?? 'any'}
-              onValueChange={(val) => set({ paymentStatus: val === 'any' ? undefined : (val as 'paid' | 'unpaid') })}
-            >
-              <SelectTrigger aria-label="Payment status">
-                <SelectValue placeholder="Payment status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Any</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="unpaid">Unpaid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Due Date Range - End */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="justify-start">
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dueDateTo ? format(dueDateTo, 'MMM d, yyyy') : 'Due To'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 z-50" align="start">
+          <Calendar
+            mode="single"
+            selected={dueDateTo}
+            onSelect={(date) => {
+              setDueDateTo(date || undefined);
+              set({ due_date_to: date ? format(date, 'yyyy-MM-dd') : undefined });
+            }}
+            className="pointer-events-auto"
+          />
+        </PopoverContent>
+      </Popover>
 
-          <div className="space-y-2">
-            <Label>Partner</Label>
-            <Select
-              value={value.organization_id || 'all-organizations'}
-              onValueChange={(val) => set({ organization_id: val === 'all-organizations' ? undefined : val, location_filter: undefined })}
-            >
-              <SelectTrigger aria-label="Partner organization">
-                <SelectValue placeholder="Partner" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all-organizations">All Partners</SelectItem>
-                {Array.isArray(organizations) && organizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id || `org-${org.name}`}>{org.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Amount Min */}
+      <Input
+        type="number"
+        placeholder="Min Amount"
+        value={value.amount_min || ''}
+        onChange={(e) => set({ amount_min: e.target.value ? Number(e.target.value) : undefined })}
+      />
 
-          <div className="space-y-2">
-            <Label>Location</Label>
-            <MultiSelectFilter
-              options={(locations || []).map((loc) => ({ value: loc, label: loc }))}
-              selectedValues={value.location_filter || []}
-              onSelectionChange={(values) => set({ location_filter: values.length ? values : undefined })}
-              placeholder="Location"
-            />
-          </div>
+      {/* Amount Max */}
+      <Input
+        type="number"
+        placeholder="Max Amount"
+        value={value.amount_max || ''}
+        onChange={(e) => set({ amount_max: e.target.value ? Number(e.target.value) : undefined })}
+      />
 
-          <div className="space-y-2">
-            <Label>Trade</Label>
-            <MultiSelectFilter
-              options={(Array.isArray(trades) ? trades : []).map((t) => ({ value: t.id || `trade-${t.name}`, label: t.name }))}
-              selectedValues={value.trade_id || []}
-              onSelectionChange={(values) => set({ trade_id: values.length ? values : undefined })}
-              placeholder="Trade"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Date range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn('justify-start text-left font-normal h-10', !dateFrom && 'text-muted-foreground')}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, 'MMM dd') : 'From'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={(d) => {
-                      setDateFrom(d || undefined);
-                      set({ date_from: d ? format(d, 'yyyy-MM-dd') : undefined });
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn('justify-start text-left font-normal h-10', !dateTo && 'text-muted-foreground')}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, 'MMM dd') : 'To'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={(d) => {
-                      setDateTo(d || undefined);
-                      set({ date_to: d ? format(d, 'yyyy-MM-dd') : undefined });
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        </section>
+      {/* Quick Filters Section - Full width */}
+      <div className="col-span-full flex gap-2 flex-wrap">
+        <Button
+          variant={value.overdue ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => set({ overdue: !value.overdue })}
+        >
+          Overdue
+        </Button>
+        <Button
+          variant={value.created_today ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => set({ created_today: !value.created_today })}
+        >
+          Created Today
+        </Button>
+        <Button
+          variant={value.has_attachments ? 'secondary' : 'outline'}
+          size="sm"
+          onClick={() => set({ has_attachments: !value.has_attachments })}
+        >
+          Has Attachments
+        </Button>
       </div>
     </AdminFilterBar>
   );
