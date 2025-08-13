@@ -39,18 +39,18 @@ export const useOrganizationNavigation = () => {
       return [
         { label: 'Dashboard', path: '/partner/dashboard', icon: BarChart3, visible: true },
         { label: 'New Service Request', path: '/partner/work-orders/new', icon: Plus, visible: true },
-        { label: 'View Work Orders', path: '/partner/work-orders', icon: FileText, visible: true },
+        { label: 'View Work Orders', path: '/partner/work-orders', icon: ClipboardList, visible: true },
         { label: 'Locations', path: '/partner/locations', icon: MapPin, visible: true },
         { label: 'Reports', path: '/partner/reports', icon: ClipboardList, visible: true },
         { label: 'Profile', path: '/partner/profile', icon: User, visible: true },
       ];
     } else if (isSubcontractor()) {
       return [
-        { label: 'Dashboard', path: '/subcontractor/dashboard', icon: Home, visible: true },
+        { label: 'Dashboard', path: '/subcontractor/dashboard', icon: LayoutDashboard, visible: true },
         { label: 'Work Orders', path: '/subcontractor/work-orders', icon: ClipboardList, visible: true },
-        { label: 'Submit Invoice', path: '/subcontractor/submit-invoice', icon: FileText, visible: true },
+        { label: 'Submit Invoice', path: '/subcontractor/submit-invoice', icon: Receipt, visible: true },
         { label: 'Invoices', path: '/subcontractor/invoices', icon: Receipt, visible: true },
-        { label: 'Report History', path: '/subcontractor/reports', icon: History, visible: true },
+        { label: 'Report History', path: '/subcontractor/reports', icon: FileChartLine, visible: true },
         { label: 'Profile', path: '/subcontractor/profile', icon: User, visible: true },
       ];
     }
