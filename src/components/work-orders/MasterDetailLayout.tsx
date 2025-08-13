@@ -15,6 +15,7 @@ interface MasterDetailLayoutProps {
   items?: Array<{ id: string }>;
   showDetailHeader?: boolean;
   detailTitle?: string;
+  headerActions?: ReactNode;
 }
 
 export function MasterDetailLayout({
@@ -27,6 +28,7 @@ export function MasterDetailLayout({
   items = [],
   showDetailHeader = true,
   detailTitle = "Details",
+  headerActions,
 }: MasterDetailLayoutProps) {
   const [showDetailPanel, setShowDetailPanel] = useState(false);
 
@@ -91,14 +93,17 @@ export function MasterDetailLayout({
             {showDetailHeader ? (
               <div className="flex items-center justify-between p-4 border-b">
                 <h3 className="font-semibold text-lg">{detailTitle}</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClosePanel}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  {headerActions}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClosePanel}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <Button

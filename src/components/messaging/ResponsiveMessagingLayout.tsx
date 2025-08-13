@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
 import { MobileConversationsList } from './MobileConversationsList';
@@ -6,6 +6,10 @@ import { MobileConversationView } from './MobileConversationView';
 import { ConversationsList } from './ConversationsList';
 import { ConversationView } from './ConversationView';
 import { ConversationSummary } from '@/hooks/messaging/useConversationsOverview';
+import { Button } from '@/components/ui/button';
+import { useMarkConversationRead } from '@/hooks/messaging/useMarkConversationRead';
+import { useConversationPresence } from '@/hooks/messaging/useConversationPresence';
+import { useToast } from '@/hooks/use-toast';
 
 interface ResponsiveMessagingLayoutProps {
   conversations: ConversationSummary[];
@@ -26,6 +30,9 @@ export const ResponsiveMessagingLayout: React.FC<ResponsiveMessagingLayoutProps>
 }) => {
   const isMobile = useIsMobile();
   const [showMobileConversation, setShowMobileConversation] = useState(false);
+  const { mutate: markRead, isPending } = useMarkConversationRead();
+  const { isOtherOnline } = useConversationPresence(selectedId);
+  const { toast } = useToast();
 
   // Mobile: Handle conversation selection
   const handleMobileSelect = (id: string) => {
@@ -39,9 +46,37 @@ export const ResponsiveMessagingLayout: React.FC<ResponsiveMessagingLayoutProps>
     onSelectionChange(null);
   };
 
+  const handleMarkReadClick = useCallback(() => {
+    if (!selectedId) return;
+    markRead(selectedId, {
+      meta: { onError: undefined, onSettled: undefined },
+      onSuccess: () => {
+        toast({ title: 'Conversation marked as read' });
+      },
+    } as any);
+  }, [markRead, selectedId, toast]);
+
   // Get conversation title for mobile header
   const selectedConversation = conversations.find(c => c.id === selectedId);
   const conversationTitle = selectedConversation?.title || 'Conversation';
+
+  const headerActions = selectedId ? (
+    <>
+      <div className="flex items-center gap-2">
+        <div
+          className={`h-2 w-2 rounded-full ${isOtherOnline ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
+          aria-label={isOtherOnline ? 'Other participant online' : 'Other participant offline'}
+          title={isOtherOnline ? 'Online' : 'Offline'}
+        />
+        <span className="text-sm text-muted-foreground">
+          {isOtherOnline ? 'Online' : 'Offline'}
+        </span>
+      </div>
+      <Button size="sm" variant="secondary" onClick={handleMarkReadClick} disabled={isPending}>
+        Mark as read
+      </Button>
+    </>
+  ) : null;
 
   if (isMobile) {
     // Mobile: Stack-based navigation
@@ -117,6 +152,7 @@ export const ResponsiveMessagingLayout: React.FC<ResponsiveMessagingLayoutProps>
       items={items}
       showDetailHeader={true}
       detailTitle={selectedConversation?.title || "Conversation"}
+      headerActions={headerActions}
       className="h-full"
     />
   );
