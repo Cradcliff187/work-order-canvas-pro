@@ -3,9 +3,8 @@ import { Package, UserCheck, Clock, FileText, CheckCircle } from 'lucide-react';
 import { useWorkOrderPipeline, type WorkOrderSummary, type PipelineStage } from '@/hooks/useWorkOrderPipeline';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useNavigate } from 'react-router-dom';
+import { PipelineStageModal } from './PipelineStageModal';
 
 const STAGE_ICONS = {
   'New': Package,
@@ -69,134 +68,6 @@ function PipelineStageCard({ stage, onClick }: PipelineStageCardProps) {
   );
 }
 
-interface WorkOrderModalProps {
-  stage: PipelineStage | null;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-function WorkOrderModal({ stage, isOpen, onClose }: WorkOrderModalProps) {
-  const navigate = useNavigate();
-
-  if (!stage) return null;
-
-  const handleWorkOrderClick = (workOrderId: string) => {
-    navigate(`/admin/work-orders/${workOrderId}`);
-    onClose();
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const isOverdue = (dueDateString: string | null) => {
-    if (!dueDateString) return false;
-    return new Date(dueDateString) < new Date();
-  };
-
-  const getPriorityColor = (priority: 'low' | 'standard' | 'high' | 'urgent') => {
-    switch (priority) {
-      case 'urgent': return 'destructive';
-      case 'high': return 'destructive';
-      case 'standard': return 'secondary';
-      case 'low': return 'outline';
-      default: return 'secondary';
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span className="text-foreground">{stage.stageName}</span>
-            <Badge variant="outline" className="ml-2">
-              {stage.totalCount} total
-            </Badge>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="overflow-y-auto space-y-3 pr-2">
-          {stage.workOrders.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No work orders in this stage
-            </div>
-          ) : (
-            stage.workOrders.map((workOrder) => (
-              <Card 
-                key={workOrder.id}
-                className="cursor-pointer hover:shadow-sm smooth-transition-colors hover:border-primary/20"
-                onClick={() => handleWorkOrderClick(workOrder.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-2 flex-1 min-w-0">
-                      {/* Work order number and title */}
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">
-                            {workOrder.work_order_number || 'No Number'}
-                          </span>
-                          <Badge variant={getPriorityColor(workOrder.priority)} className="text-xs">
-                            {workOrder.priority}
-                          </Badge>
-                        </div>
-                        <h4 className="font-semibold text-foreground truncate">
-                          {workOrder.title}
-                        </h4>
-                      </div>
-
-                      {/* Organization and location */}
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        {workOrder.organization_name && (
-                          <div className="truncate">
-                            <span className="font-medium">Organization:</span> {workOrder.organization_name}
-                          </div>
-                        )}
-                        {workOrder.store_location && (
-                          <div className="truncate">
-                            <span className="font-medium">Location:</span> {workOrder.store_location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right side - dates and status */}
-                    <div className="text-right space-y-1 flex-shrink-0">
-                      <div className="text-xs text-muted-foreground">
-                        Submitted: {formatDate(workOrder.date_submitted)}
-                      </div>
-                      {workOrder.due_date && (
-                        <div className={`text-xs ${isOverdue(workOrder.due_date) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                          Due: {formatDate(workOrder.due_date)}
-                          {isOverdue(workOrder.due_date) && (
-                            <Badge variant="destructive" className="ml-1 text-xs">
-                              Overdue
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-
-          {stage.totalCount > 5 && (
-            <div className="text-center py-4 text-sm text-muted-foreground">
-              Showing 5 of {stage.totalCount} work orders
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function PipelineSkeleton() {
   return (
@@ -292,7 +163,7 @@ export function WorkOrderPipeline() {
       </div>
 
       {/* Modal for work order details */}
-      <WorkOrderModal
+      <PipelineStageModal
         stage={selectedStage}
         isOpen={isModalOpen}
         onClose={handleModalClose}
