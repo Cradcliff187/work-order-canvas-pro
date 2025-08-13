@@ -131,6 +131,26 @@ import { BulkEditSheet } from '@/components/admin/invoices/BulkEditSheet';
 // Note: extra imports above are harmless and tree-shaken; core page uses the key ones added.
 
 export default function AdminInvoices() {
+  // Debug component to monitor renders
+  const RenderMonitor = () => {
+    const renderCount = useRef(0);
+    renderCount.current += 1;
+    
+    useEffect(() => {
+      console.log(`🔄 AdminInvoices render #${renderCount.current}`, {
+        filters,
+        filterCount,
+        page
+      });
+      
+      if (renderCount.current > 30) {
+        console.error('❌ Too many renders detected!');
+      }
+    });
+    
+    return null;
+  };
+
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -196,33 +216,55 @@ export default function AdminInvoices() {
     }
   };
 
-  // Initialize filters from URL parameters
+  // Initialize filters from URL parameters - runs only on mount and URL changes
   useEffect(() => {
     const statusParam = searchParams.get('status');
     const paymentStatusParam = searchParams.get('paymentStatus');
     
-    setFilters(prev => ({
-      ...prev,
-      status: statusParam ? [statusParam] : [],
-      paymentStatus: paymentStatusParam as 'paid' | 'unpaid' | undefined,
-    }));
-    // Reset pagination when filters change from URL
-    setPage(1);
-  }, [searchParams, setFilters]);
+    // Only update if URL params actually exist and are different
+    setFilters(prev => {
+      const newFilters = {
+        ...prev,
+        status: statusParam ? [statusParam] : prev.status || [],
+        paymentStatus: paymentStatusParam as 'paid' | 'unpaid' | undefined || prev.paymentStatus,
+      };
+      
+      // Check if anything actually changed
+      if (JSON.stringify(prev) === JSON.stringify(newFilters)) {
+        return prev; // No change, return same reference
+      }
+      
+      return newFilters;
+    });
+    
+    // Reset pagination only if filters actually changed
+    if (statusParam || paymentStatusParam) {
+      setPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]); // Intentionally exclude setFilters - it's now stable
 
   const debouncedSearch = useDebounce(filters.search, 300);
   const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
 
+  // Reset page when filters change (but not on initial mount)
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    console.log('📄 Resetting to page 1 due to filter change');
     setPage(1);
   }, [
     debouncedSearch,
-    filters.status,
+    filters.status?.join(','), // Serialize arrays for stable comparison
     filters.paymentStatus,
     filters.partner_organization_id,
     filters.subcontractor_organization_id,
-    filters.trade_id,
-    filters.location_filter,
+    filters.trade_id?.join(','),
+    filters.location_filter?.join(','),
     filters.date_from,
     filters.date_to,
     filters.due_date_from,
@@ -232,6 +274,7 @@ export default function AdminInvoices() {
     filters.has_attachments,
     filters.overdue,
     filters.created_today,
+    // Don't include setPage or other functions
   ]);
   
   const handleViewInvoice = (invoice: Invoice) => {
@@ -402,6 +445,7 @@ const table = useReactTable({
 
   return (
     <>
+      <RenderMonitor />
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
       <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
       {/* Breadcrumb */}
@@ -454,8 +498,20 @@ const table = useReactTable({
       {/* Filters */}
       <InvoiceFilters
         value={filters as any}
-        onChange={(next) => { setFilters(() => next as any); setPage(1); }}
-        onClear={() => { clearFilters(); setPage(1); }}
+        onChange={(next) => {
+          // Guard against same value updates
+          if (JSON.stringify(filters) === JSON.stringify(next)) {
+            console.log('⚠️ Filter unchanged, skipping');
+            return;
+          }
+          
+          setFilters(next as any);
+          setPage(1);
+        }}
+        onClear={() => { 
+          clearFilters(); 
+          setPage(1); 
+        }}
         filterCount={filterCount}
       />
 

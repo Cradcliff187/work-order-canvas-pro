@@ -86,35 +86,36 @@ export interface Invoice {
 export const useInvoices = (filters: InvoiceFilters = {}) => {
   // Stabilize query key to prevent unnecessary re-fetches
   const stableQueryKey = useMemo(() => {
+    // Serialize complex objects to ensure stability
     const key = {
-      status: (filters.status || []).join(','),
+      status: (filters.status || []).sort().join(','), // Sort for consistency
       paymentStatus: filters.paymentStatus || 'any',
       search: filters.search || '',
       partner_organization_id: filters.partner_organization_id || 'all',
       subcontractor_organization_id: filters.subcontractor_organization_id || 'all',
-      trade_id: (filters.trade_id || []).join(','),
-      location_filter: (filters.location_filter || []).join(','),
+      trade_id: (filters.trade_id || []).sort().join(','),
+      location_filter: (filters.location_filter || []).sort().join(','),
       date_from: filters.date_from || '',
       date_to: filters.date_to || '',
       due_date_from: filters.due_date_from || '',
       due_date_to: filters.due_date_to || '',
       amount_min: filters.amount_min || 0,
       amount_max: filters.amount_max || 0,
-      has_attachments: !!filters.has_attachments,
-      overdue: !!filters.overdue,
-      created_today: !!filters.created_today,
+      has_attachments: filters.has_attachments ? 'true' : 'false',
+      overdue: filters.overdue ? 'true' : 'false',
+      created_today: filters.created_today ? 'true' : 'false',
       page: filters.page || 1,
       limit: filters.limit || 10,
     };
     return ['invoices', key] as const;
   }, [
-    (filters.status || []).join(','),
+    filters.status?.sort().join(','), // Consistent serialization
     filters.paymentStatus,
     filters.search,
     filters.partner_organization_id,
     filters.subcontractor_organization_id,
-    (filters.trade_id || []).join(','),
-    (filters.location_filter || []).join(','),
+    filters.trade_id?.sort().join(','),
+    filters.location_filter?.sort().join(','),
     filters.date_from,
     filters.date_to,
     filters.due_date_from,
@@ -132,6 +133,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
   return useQuery({
     queryKey: stableQueryKey,
     queryFn: async () => {
+      console.log('📡 Fetching invoices with filters:', filters);
       const { page = 1, limit = 10, ...otherFilters } = filters;
       const offset = (page - 1) * limit;
 

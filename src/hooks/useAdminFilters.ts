@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { countActiveFilters } from '@/lib/filters';
 
 interface UseAdminFiltersOptions<T> {
@@ -7,32 +7,65 @@ interface UseAdminFiltersOptions<T> {
 
 export function useAdminFilters<T extends Record<string, any>>(
   storageKey: string,
-  initial: T,
+  initialFilters: T,
   options?: UseAdminFiltersOptions<T>
 ) {
-  const [filters, setFilters] = useState<T>(() => {
+  // Initialize from localStorage only once
+  const [filters, setFiltersInternal] = useState<T>(() => {
     try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        return { ...initial, ...saved } as T;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        console.log('📦 Loaded filters from storage:', storageKey, parsed);
+        return { ...initialFilters, ...parsed };
       }
-    } catch {}
-    return initial;
+    } catch (error) {
+      console.error('Failed to load filters from storage:', error);
+    }
+    return initialFilters;
   });
 
-  // Persist all filters
+  // Stable setFilters with equality check
+  const setFilters = useCallback((update: T | ((prev: T) => T)) => {
+    setFiltersInternal((prev) => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      
+      // Deep equality check to prevent unnecessary updates
+      if (JSON.stringify(prev) === JSON.stringify(next)) {
+        console.log('🔒 Filters unchanged, skipping update');
+        return prev;
+      }
+      
+      console.log('✅ Filters updated:', { from: prev, to: next });
+      return next;
+    });
+  }, []); // Empty deps - function is stable
+
+  // Stable clearFilters
+  const clearFilters = useCallback(() => {
+    console.log('🧹 Clearing filters');
+    setFiltersInternal(initialFilters);
+  }, [JSON.stringify(initialFilters)]); // Serialize for stability
+
+  // Save to localStorage with debounce to prevent rapid writes
   useEffect(() => {
-    try {
+    const timeoutId = setTimeout(() => {
       localStorage.setItem(storageKey, JSON.stringify(filters));
-    } catch {}
+      console.log('💾 Saved filters to storage:', storageKey);
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeoutId);
   }, [storageKey, filters]);
 
-  const clearFilters = useCallback(() => setFilters(initial), [initial]);
-
+  // Calculate filter count
   const filterCount = useMemo(() => {
     return countActiveFilters(filters, options?.excludeKeys as string[] | undefined);
   }, [filters, options?.excludeKeys]);
 
-  return { filters, setFilters, clearFilters, filterCount } as const;
+  return {
+    filters,
+    setFilters,
+    clearFilters,
+    filterCount
+  } as const;
 }
