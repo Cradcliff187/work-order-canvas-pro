@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { 
-  BarChart3, FileText, Plus, Settings, ClipboardList, MapPin,
-  Home, Receipt, History, User, Users, Building2, Activity, type LucideIcon
+  Activity, BarChart3, Building2, ClipboardList, FileText, HardHat, History, Home, 
+  LayoutDashboard, MapPin, Plus, Receipt, Settings, TrendingUp, User, Users, type LucideIcon
 } from 'lucide-react';
 
 export interface NavigationItem {
