@@ -88,17 +88,29 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   }, [filters, searchTerm, activeQuickPresets]);
 
   // Get unique locations for the selected organization (or all if no org selected)
+  // Performance Optimization: This query is designed to prevent timeouts on organizations with many work orders
+  // Strategy: Fetch only the most recent 1000 work orders from the last 6 months
+  // - Recent work orders are more likely to have actively used locations
+  // - 6-month time window captures seasonal business cycles while limiting dataset size
+  // - 1000 record limit provides good location coverage without overwhelming the database
+  // - Combined time + count limits ensure consistent performance regardless of organization size
   const { data: locations, isLoading: locationsLoading, isFetching: locationsRefetching, error: locationsError, refetch: refetchLocations } = useQuery({
     queryKey: ['work-order-locations', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
       try {
+        // Calculate 6 months ago for time-based filtering to improve query performance
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const sixMonthsAgoISO = sixMonthsAgo.toISOString();
+
         let query = supabase
           .from('work_orders')
           .select('store_location')
           .not('store_location', 'is', null)
           .not('store_location', 'eq', '')
+          .gte('created_at', sixMonthsAgoISO) // Only get work orders from last 6 months
           .order('created_at', { ascending: false })
-          .limit(500);
+          .limit(1000); // Increased from 500 to get more recent location coverage
         
         // If specific partners are selected, filter by them
         if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
