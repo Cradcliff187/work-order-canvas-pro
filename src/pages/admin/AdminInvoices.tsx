@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -14,12 +14,13 @@ import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
 import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
-
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
 import { EditInvoiceSheet } from '@/components/admin/invoices/EditInvoiceSheet';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { BulkEditSheet } from '@/components/admin/invoices/BulkEditSheet';
 import {
   useReactTable,
   getCoreRowModel,
@@ -37,119 +38,36 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { ChevronLeft, ChevronRight, FileText, DollarSign } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, DollarSign, Plus, RotateCcw, CheckCircle, XCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
 import { EnhancedTableSkeleton } from '@/components/EnhancedTableSkeleton';
-
-
 import { Badge } from '@/components/ui/badge';
-import { Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
-import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
-import type { VisibilityState } from '@tanstack/react-table';
-import { Button as ShadButton } from '@/components/ui/button'; // alias to avoid confusion in JSX sections if needed
-import { cn } from '@/lib/utils';
-import { StatusBadge } from '@/components/ui/status-badge'; // for consistency
-import { Skeleton as UISkeleton } from '@/components/ui/skeleton'; // in case used later
-import { ColumnDef } from '@tanstack/react-table';
-import { ColumnOption } from '@/components/ui/column-visibility-dropdown';
-import { Eye } from 'lucide-react';
-import { EyeOff } from 'lucide-react';
-import { Settings } from 'lucide-react';
-import { RotateCcw } from 'lucide-react';
-import { Badge as UIBadge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useMemo } from 'react';
-import { useCallback } from 'react';
-import { useRef } from 'react';
-import { useId } from 'react';
-import { useLayoutEffect } from 'react';
-import { useTransition } from 'react';
-import { useDeferredValue } from 'react';
-import { useReducer } from 'react';
-import { useContext } from 'react';
-import { useSyncExternalStore } from 'react';
-import { useInsertionEffect } from 'react';
-import { useImperativeHandle } from 'react';
-import { useMemo as ReactUseMemo } from 'react';
-import { useCallback as ReactUseCallback } from 'react';
-import { useEffect as ReactUseEffect } from 'react';
-import { useState as ReactUseState } from 'react';
-import { useTransition as ReactUseTransition } from 'react';
-import { useDeferredValue as ReactUseDeferredValue } from 'react';
-import { useReducer as ReactUseReducer } from 'react';
-import { useRef as ReactUseRef } from 'react';
-import { useId as ReactUseId } from 'react';
-import { useLayoutEffect as ReactUseLayoutEffect } from 'react';
-import { useImperativeHandle as ReactUseImperativeHandle } from 'react';
-import { useSyncExternalStore as ReactUseSyncExternalStore } from 'react';
-import { useInsertionEffect as ReactUseInsertionEffect } from 'react';
-import { useContext as ReactUseContext } from 'react';
-import { Tabs as UITabs } from '@/components/ui/tabs';
-import { Badge as BadgeComp } from '@/components/ui/badge';
-import { Button as UIButton } from '@/components/ui/button';
-import { Card as UICard } from '@/components/ui/card';
-import { CardHeader as UICardHeader } from '@/components/ui/card';
-import { CardContent as UICardContent } from '@/components/ui/card';
-import { CardTitle as UICardTitle } from '@/components/ui/card';
-import { Breadcrumb as UIBreadcrumb } from '@/components/ui/breadcrumb';
-import { BreadcrumbItem as UIBreadcrumbItem } from '@/components/ui/breadcrumb';
-import { BreadcrumbLink as UIBreadcrumbLink } from '@/components/ui/breadcrumb';
-import { BreadcrumbList as UIBreadcrumbList } from '@/components/ui/breadcrumb';
-import { BreadcrumbPage as UIBreadcrumbPage } from '@/components/ui/breadcrumb';
-import { BreadcrumbSeparator as UIBreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { LoadingSpinner as UILoadingSpinner } from '@/components/LoadingSpinner';
-import { MobileTableCard as UIMobileTableCard } from '@/components/admin/shared/MobileTableCard';
-import { ResponsiveTableWrapper as UIResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
-import { Table as UITable } from '@/components/ui/table';
-import { TableBody as UITableBody } from '@/components/ui/table';
-import { TableCell as UITableCell } from '@/components/ui/table';
-import { TableHead as UITableHead } from '@/components/ui/table';
-import { TableHeader as UITableHeader } from '@/components/ui/table';
-import { TableRow as UITableRow } from '@/components/ui/table';
-import { FinancialStatusBadge as UIFinancialStatusBadge } from '@/components/ui/status-badge';
-
-import { Badge as BadgeUI } from '@/components/ui/badge';
-import { Plus as PlusIcon, CheckCircle, XCircle } from 'lucide-react';
-import { useNavigate as useNav } from 'react-router-dom';
-import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
-
-import { BulkEditSheet } from '@/components/admin/invoices/BulkEditSheet';
-// Note: extra imports above are harmless and tree-shaken; core page uses the key ones added.
+import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { StatusBadge } from '@/components/ui/status-badge';
+import type { VisibilityState } from '@tanstack/react-table';
 
 export default function AdminInvoices() {
-  // Debug component to monitor renders
-  const RenderMonitor = () => {
-    const renderCount = useRef(0);
-    renderCount.current += 1;
-    
-    useEffect(() => {
-      console.log(`🔄 AdminInvoices render #${renderCount.current}`, {
-        filters,
-        filterCount,
-        page
-      });
-      
-      if (renderCount.current > 30) {
-        console.error('❌ Too many renders detected!');
-      }
-    });
-    
-    return null;
-  };
+  // Debug render monitor with proper hook usage
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+  
+  useEffect(() => {
+    console.log(`🔄 AdminInvoices render #${renderCount.current}`);
+    if (renderCount.current > 30) {
+      console.error('❌ Too many renders detected!');
+    }
+  });
 
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -158,6 +76,12 @@ export default function AdminInvoices() {
   const [modalOpen, setModalOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  
+  // Initialize isInitialMount ref at component level
+  const isInitialMount = useRef(true);
+  
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v1', {
     status: ['submitted'] as string[],
     paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
@@ -176,8 +100,6 @@ export default function AdminInvoices() {
     overdue: false,
     created_today: false,
   });
-  const [page, setPage] = useState(1);
-  const limit = 10;
 
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
@@ -248,7 +170,6 @@ export default function AdminInvoices() {
   const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
 
   // Reset page when filters change (but not on initial mount)
-  const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -445,7 +366,6 @@ const table = useReactTable({
 
   return (
     <>
-      <RenderMonitor />
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
       <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
       {/* Breadcrumb */}
@@ -636,9 +556,9 @@ const table = useReactTable({
                           subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • ${formatCurrency(Number(invoice.total_amount), true)}`}
                           status={
                             <div className="flex flex-col items-end gap-1">
-                              <UIFinancialStatusBadge status={invoice.status} size="sm" />
+                              <StatusBadge type="financialStatus" status={invoice.status} size="sm" />
                               {invoice.paid_at && (
-                                <UIFinancialStatusBadge status="paid" size="sm" />
+                                <StatusBadge type="financialStatus" status="paid" size="sm" />
                               )}
                             </div>
                           }
