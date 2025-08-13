@@ -19,7 +19,7 @@ export function ResponsiveTableWrapper({
   const [showRightShadow, setShowRightShadow] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile viewport - but don't render on mobile
+  // Detect mobile viewport
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -30,11 +30,7 @@ export function ResponsiveTableWrapper({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Don't render responsive table wrapper on mobile - should use cards instead
-  if (isMobile) {
-    return <div className="w-full">{children}</div>;
-  }
-
+  // Define scroll handler - always define to maintain hook order
   const handleScroll = () => {
     const element = scrollRef.current;
     if (!element) return;
@@ -44,7 +40,11 @@ export function ResponsiveTableWrapper({
     setShowRightShadow(scrollLeft < scrollWidth - clientWidth - 1);
   };
 
+  // Setup scroll listener - always call hook to maintain hook order
   useEffect(() => {
+    // Skip setup if mobile
+    if (isMobile) return;
+    
     const element = scrollRef.current;
     if (!element) return;
 
@@ -53,7 +53,12 @@ export function ResponsiveTableWrapper({
 
     element.addEventListener('scroll', handleScroll);
     return () => element.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isMobile]);
+
+  // Render simple wrapper on mobile, full featured table on desktop
+  if (isMobile) {
+    return <div className="w-full">{children}</div>;
+  }
 
   return (
     <div className={cn("relative overflow-hidden rounded-lg border", className)}>
@@ -77,7 +82,7 @@ export function ResponsiveTableWrapper({
       <div
         ref={scrollRef}
         className="overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border"
-        style={{ minWidth: isMobile ? 'auto' : minWidth }}
+        style={{ minWidth }}
       >
         <div 
           className={cn(
