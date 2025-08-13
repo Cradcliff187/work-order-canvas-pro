@@ -9,6 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Search, Filter, Calendar as CalendarIcon, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { useOrganizationsForWorkOrders, useTrades } from '@/hooks/useWorkOrders';
 import { useAutoOrganization } from '@/hooks/useAutoOrganization';
@@ -84,7 +85,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   }, [filters, searchTerm, activeQuickPresets]);
 
   // Get unique locations for the selected organization (or all if no org selected)
-  const { data: locations } = useQuery({
+  const { data: locations, isLoading: locationsLoading } = useQuery({
     queryKey: ['work-order-locations', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
       try {
@@ -268,17 +269,21 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     shouldShowSelector ? (
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Location</label>
-        <MultiSelectFilter
-          options={Array.isArray(locations) ? locations.map(location => ({ value: location, label: location })) : []}
-          selectedValues={filters.location_filter || []}
-          onSelectionChange={(values) => onFiltersChange({ 
-            ...filters, 
-            location_filter: values.length > 0 ? values : undefined 
-          })}
-          placeholder="All Locations"
-          searchPlaceholder="Search locations..."
-          className="h-10"
-        />
+        {locationsLoading ? (
+          <Skeleton className="h-10 w-full" />
+        ) : (
+          <MultiSelectFilter
+            options={locations?.filter(Boolean)?.map(location => ({ value: location, label: location })) || []}
+            selectedValues={filters.location_filter || []}
+            onSelectionChange={(values) => onFiltersChange({ 
+              ...filters, 
+              location_filter: values.length > 0 ? values : undefined 
+            })}
+            placeholder="All Locations"
+            searchPlaceholder="Search locations..."
+            className="h-10"
+          />
+        )}
       </div>
     ) : null
   );
