@@ -58,16 +58,26 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import type { VisibilityState } from '@tanstack/react-table';
 
 export default function AdminInvoices() {
-  // Debug render monitor with proper hook usage
+  // EMERGENCY CIRCUIT BREAKER
   const renderCount = useRef(0);
   renderCount.current += 1;
   
-  useEffect(() => {
-    console.log(`🔄 AdminInvoices render #${renderCount.current}`);
-    if (renderCount.current > 30) {
-      console.error('❌ Too many renders detected!');
-    }
-  });
+  if (renderCount.current > 10) {
+    console.error('🚨 EMERGENCY STOP - Too many renders!', {
+      renderCount: renderCount.current,
+      stack: new Error().stack
+    });
+    return (
+      <div className="p-8 text-red-600">
+        <h1>Infinite Loop Detected</h1>
+        <p>The page has been stopped to prevent browser crash.</p>
+        <p>Check console for details.</p>
+        <button onClick={() => window.location.reload()}>Reload Page</button>
+      </div>
+    );
+  }
+
+  console.log(`🔄 AdminInvoices render #${renderCount.current}`);
 
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -134,7 +144,6 @@ export default function AdminInvoices() {
       setDeleteOpen(false);
       setInvoiceToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
-      refetch();
     }
   };
 
@@ -166,7 +175,17 @@ export default function AdminInvoices() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]); // Intentionally exclude setFilters - it's now stable
 
-  const debouncedSearch = useDebounce(filters.search, 300);
+  // Stable debounced search to prevent new function creation
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search || '');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(filters.search || '');
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [filters.search]);
+
   const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
 
   // Reset page when filters change (but not on initial mount)

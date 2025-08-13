@@ -311,14 +311,22 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         count: count || 0,
       };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: (failureCount, error: any) => {
-      // Don't retry permission errors
-      if (error?.code === 'PGRST116' || error?.message?.includes('permission')) {
-        return false;
-      }
-      return failureCount < 3;
+    enabled: true,
+    staleTime: 30000, // 30 seconds
+    cacheTime: 60000, // 60 seconds  
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false, // Disable retries during debugging
+    retryOnMount: false,
+    keepPreviousData: true,
+    // Log when query runs
+    onSuccess: (data) => {
+      console.log('✅ Query success, data length:', data?.data?.length);
     },
+    onError: (error) => {
+      console.error('❌ Query error:', error);
+    }
   });
 };
 
