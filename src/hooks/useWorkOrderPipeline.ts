@@ -3,31 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
-// Pipeline data structure for complete lifecycle view
-export interface WorkOrderPipelineItem {
-  // Core work order info
+export interface WorkOrderSummary {
   id: string;
   work_order_number: string | null;
   title: string;
-  status: 'received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed' | 'estimate_approved';
+  organization_name: string | null;
   store_location: string | null;
-  organization_id: string | null;
+  due_date: string | null;
   date_submitted: string;
-  
-  // Assigned organization
-  assigned_organization_name: string | null;
-  
-  // Latest report status
-  report_status: 'submitted' | 'reviewed' | 'approved' | 'rejected' | null;
-  report_submitted_at: string | null;
-  
-  // Invoice status (subcontractor billing)
-  invoice_status: string | null;
-  invoice_submitted_at: string | null;
-  
-  // Partner billing status
-  partner_bill_status: string | null;
-  partner_billed_at: string | null;
+  priority: 'low' | 'standard' | 'high' | 'urgent';
+}
+
+export interface PipelineStage {
+  stageName: string;
+  totalCount: number;
+  recentCount: number; // last 24 hours
+  overdueCount: number; // past due_date
+  workOrders: WorkOrderSummary[]; // limit 5
+}
+
+export interface WorkOrderPipelineData {
+  new: PipelineStage;
+  assigned: PipelineStage;
+  inProgress: PipelineStage;
+  awaitingReports: PipelineStage;
+  completed: PipelineStage;
 }
 
 export function useWorkOrderPipeline() {
@@ -36,12 +36,13 @@ export function useWorkOrderPipeline() {
 
   return useQuery({
     queryKey: ['work-order-pipeline'],
-    queryFn: async (): Promise<WorkOrderPipelineItem[]> => {
+    queryFn: async (): Promise<WorkOrderPipelineData> => {
       if (!user || !profile) {
         throw new Error('User not authenticated');
       }
 
-      let query = supabase
+      // Build base query with role-based filtering
+      let baseQuery = supabase
         .from('work_orders')
         .select(`
           id,
@@ -49,28 +50,13 @@ export function useWorkOrderPipeline() {
           title,
           status,
           store_location,
-          organization_id,
+          due_date,
           date_submitted,
+          priority,
+          organization_id,
           assigned_organization_id,
-          assigned_organizations:organizations!work_orders_assigned_organization_id_fkey(
-            name
-          ),
-          latest_report:work_order_reports(
-            status,
-            submitted_at,
-            partner_invoices(
-              status,
-              created_at
-            )
-          ),
-          invoice_work_orders(
-            invoices(
-              status,
-              submitted_at
-            )
-          )
-        `)
-        .order('date_submitted', { ascending: false });
+          organizations:organizations!work_orders_organization_id_fkey(name)
+        `);
 
       // Apply role-based filtering
       if (primaryRole === 'admin' || primaryRole === 'employee') {
@@ -79,71 +65,117 @@ export function useWorkOrderPipeline() {
         // Partners can only see their organization's work orders
         const userOrgIds = partnerMemberships?.map(org => org.organization_id) || [];
         if (userOrgIds.length > 0) {
-          query = query.in('organization_id', userOrgIds);
+          baseQuery = baseQuery.in('organization_id', userOrgIds);
         } else {
           // If no organizations, return empty result
-          return [];
+          return createEmptyPipeline();
         }
       } else if (primaryRole === 'subcontractor') {
         // Subcontractors can only see work orders assigned to their organizations
         const userOrgIds = subcontractorMemberships?.map(org => org.organization_id) || [];
         if (userOrgIds.length > 0) {
-          query = query.in('assigned_organization_id', userOrgIds);
+          baseQuery = baseQuery.in('assigned_organization_id', userOrgIds);
         } else {
           // If no organizations, return empty result
-          return [];
+          return createEmptyPipeline();
         }
       } else {
         // Unknown role, return empty result
-        return [];
+        return createEmptyPipeline();
       }
 
-      const { data, error } = await query;
+      const { data: workOrders, error } = await baseQuery;
 
       if (error) {
-        console.error('Error fetching work order pipeline:', error);
+        console.error('Error fetching work orders:', error);
         throw error;
       }
 
-      // Transform the data to match our pipeline structure
-      return (data || []).map((workOrder: any): WorkOrderPipelineItem => {
-        // Get the latest report (assuming they're ordered by submitted_at)
-        const latestReport = workOrder.latest_report?.[0];
-        
-        // Get the first invoice (there should typically be one per work order)
-        const invoice = workOrder.invoice_work_orders?.[0]?.invoices;
-        
-        // Get partner billing info from the latest report
-        const partnerInvoice = latestReport?.partner_invoices?.[0];
+      // Get work order reports for awaiting reports stage
+      const { data: reports } = await supabase
+        .from('work_order_reports')
+        .select('work_order_id, status')
+        .in('status', ['submitted', 'approved']);
 
-        return {
-          id: workOrder.id,
-          work_order_number: workOrder.work_order_number,
-          title: workOrder.title,
-          status: workOrder.status,
-          store_location: workOrder.store_location,
-          organization_id: workOrder.organization_id,
-          date_submitted: workOrder.date_submitted,
-          
-          // Assigned organization
-          assigned_organization_name: workOrder.assigned_organizations?.name || null,
-          
-          // Latest report status
-          report_status: latestReport?.status || null,
-          report_submitted_at: latestReport?.submitted_at || null,
-          
-          // Invoice status (subcontractor billing)
-          invoice_status: invoice?.status || null,
-          invoice_submitted_at: invoice?.submitted_at || null,
-          
-          // Partner billing status
-          partner_bill_status: partnerInvoice?.status || null,
-          partner_billed_at: partnerInvoice?.created_at || null,
-        };
-      });
+      const approvedReports = new Set(
+        reports?.filter(r => r.status === 'approved').map(r => r.work_order_id) || []
+      );
+
+      const now = new Date();
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      // Process work orders into pipeline stages
+      const processedOrders = (workOrders || []).map((wo: any) => ({
+        id: wo.id,
+        work_order_number: wo.work_order_number,
+        title: wo.title,
+        organization_name: wo.organizations?.name || null,
+        store_location: wo.store_location,
+        due_date: wo.due_date,
+        date_submitted: wo.date_submitted,
+        priority: wo.priority || 'standard',
+        status: wo.status,
+        isRecent: new Date(wo.date_submitted) > yesterday,
+        isOverdue: wo.due_date ? new Date(wo.due_date) < now : false,
+        hasApprovedReport: approvedReports.has(wo.id)
+      }));
+
+      return {
+        new: createStageData('New', processedOrders, (wo) => wo.status === 'received'),
+        assigned: createStageData('Assigned', processedOrders, (wo) => wo.status === 'assigned'),
+        inProgress: createStageData('In Progress', processedOrders, (wo) => wo.status === 'in_progress' && wo.hasApprovedReport),
+        awaitingReports: createStageData('Awaiting Reports', processedOrders, (wo) => wo.status === 'in_progress' && !wo.hasApprovedReport),
+        completed: createStageData('Completed', processedOrders, (wo) => wo.status === 'completed')
+      };
     },
     enabled: !!user && !!profile,
     staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 30 * 1000, // Refresh every 30 seconds
     refetchOnWindowFocus: false,
   });
+}
+
+function createStageData(
+  stageName: string, 
+  workOrders: any[], 
+  filter: (wo: any) => boolean
+): PipelineStage {
+  const stageOrders = workOrders.filter(filter);
+  
+  return {
+    stageName,
+    totalCount: stageOrders.length,
+    recentCount: stageOrders.filter(wo => wo.isRecent).length,
+    overdueCount: stageOrders.filter(wo => wo.isOverdue).length,
+    workOrders: stageOrders
+      .slice(0, 5)
+      .map(wo => ({
+        id: wo.id,
+        work_order_number: wo.work_order_number,
+        title: wo.title,
+        organization_name: wo.organization_name,
+        store_location: wo.store_location,
+        due_date: wo.due_date,
+        date_submitted: wo.date_submitted,
+        priority: wo.priority
+      }))
+  };
+}
+
+function createEmptyPipeline(): WorkOrderPipelineData {
+  const emptyStage = (stageName: string): PipelineStage => ({
+    stageName,
+    totalCount: 0,
+    recentCount: 0,
+    overdueCount: 0,
+    workOrders: []
+  });
+
+  return {
+    new: emptyStage('New'),
+    assigned: emptyStage('Assigned'),
+    inProgress: emptyStage('In Progress'),
+    awaitingReports: emptyStage('Awaiting Reports'),
+    completed: emptyStage('Completed')
+  };
 }
