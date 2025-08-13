@@ -216,8 +216,17 @@ export function useWorkOrders(
           );
         }
         if (filters.location_filter && filters.location_filter.length > 0) {
-          const locationConditions = filters.location_filter.map(loc => `store_location.ilike.%${loc}%`).join(',');
-          query = query.or(locationConditions);
+          // Escape special SQL wildcard characters to prevent injection
+          const safeLocations = filters.location_filter.map(loc => 
+            loc.replace(/[%_\\]/g, '\\$&')  // Escapes %, _, and \ characters
+          );
+          
+          // Build OR conditions maintaining partial matching behavior
+          const conditions = safeLocations
+            .map(loc => `store_location.ilike.%${loc}%`)
+            .join(',');
+          
+          query = query.or(conditions);
         }
         if (filters.date_from) {
           query = query.gte('created_at', filters.date_from);

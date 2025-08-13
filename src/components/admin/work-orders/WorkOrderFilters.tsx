@@ -112,7 +112,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
           .not('store_location', 'eq', '')
           .gte('created_at', sixMonthsAgoISO) // Only get work orders from last 6 months
           .order('created_at', { ascending: false })
-          .limit(1000); // Increased from 500 to get more recent location coverage
+          .limit(1000); // Limit to recent 1000 for performance and security
         
         // If specific partners are selected, filter by them
         if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
