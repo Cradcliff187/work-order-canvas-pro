@@ -84,7 +84,7 @@ const WorkOrderList = () => {
       mobile: ['card'],           // Mobile: card view only, no tables
       desktop: ['table', 'card']  // Desktop: table default, cards optional
     },
-    defaultMode: isMobile ? 'card' : 'table'  // Force mobile to use card view
+    defaultMode: 'table'  // Stable default, let the hook handle mobile internally
   });
 
   // Pull to refresh functionality
@@ -228,11 +228,6 @@ const WorkOrderList = () => {
   }
 
   const renderTable = () => {
-    // CRITICAL: Never render table view on mobile - always use cards
-    if (isMobile) {
-      console.log('🚫 Mobile detected: Forcing card view instead of table');
-      return renderCards();
-    }
 
     return (
       <Card>
@@ -301,30 +296,31 @@ const WorkOrderList = () => {
     );
   };
 
+  const renderMobileCards = () => {
+    return (
+      <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
+        <div className="space-y-4 w-full overflow-x-hidden">
+          {filteredAndSortedWorkOrders.map((workOrder) => (
+            <MobileWorkOrderCard
+              key={workOrder.id}
+              workOrder={workOrder}
+              onTap={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+              viewerRole="partner"
+              showQuickActions={true}
+              showOrganization={false}
+              showAssignee={true}
+              showTrade={true}
+              showInvoiceAmount={false}
+              onMessage={() => navigate(`/partner/work-orders/${workOrder.id}?tab=messages`)}
+              onViewDetails={() => navigate(`/partner/work-orders/${workOrder.id}`)}
+            />
+          ))}
+        </div>
+      </MobilePullToRefresh>
+    );
+  };
+
   const renderCards = () => {
-    if (isMobile) {
-      return (
-        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
-          <div className="space-y-4">
-            {filteredAndSortedWorkOrders.map((workOrder) => (
-              <MobileWorkOrderCard
-                key={workOrder.id}
-                workOrder={workOrder}
-                onTap={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-                viewerRole="partner"
-                showQuickActions={true}
-                showOrganization={false}
-                showAssignee={true}
-                showTrade={true}
-                showInvoiceAmount={false}
-                onMessage={() => navigate(`/partner/work-orders/${workOrder.id}?tab=messages`)}
-                onViewDetails={() => navigate(`/partner/work-orders/${workOrder.id}`)}
-              />
-            ))}
-          </div>
-        </MobilePullToRefresh>
-      );
-    }
 
     // Desktop card view - keep original card design for larger screens
     const WorkOrderCard = ({ workOrder }: { workOrder: any }) => (
@@ -395,13 +391,10 @@ const WorkOrderList = () => {
     );
   };
 
-  // Debug mobile detection
-  React.useEffect(() => {
-    console.log('📱 Mobile detection:', { isMobile, viewMode, width: window.innerWidth });
-  }, [isMobile, viewMode]);
 
   return (
-    <div className="space-y-6 overflow-x-hidden max-w-full">
+    <div className="w-full max-w-full overflow-x-hidden">
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -512,19 +505,15 @@ const WorkOrderList = () => {
           }}
         />
       ) : (
-        <div className="w-full max-w-full overflow-hidden">
-          {/* Mobile: Force card view, Desktop: Allow table/card switching */}
-          {isMobile ? (
-            <div className="block lg:hidden">
-              {renderCards()}
-            </div>
-          ) : (
-            <div className="hidden lg:block">
-              {viewMode === 'table' ? renderTable() : renderCards()}
-            </div>
+        <div className="w-full max-w-full overflow-x-hidden">
+          {/* Mobile: Always render cards directly, no table components */}
+          {isMobile ? renderMobileCards() : (
+            /* Desktop: Table or card view based on viewMode */
+            viewMode === 'table' ? renderTable() : renderCards()
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };
