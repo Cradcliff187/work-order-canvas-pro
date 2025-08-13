@@ -8,11 +8,17 @@ export interface InvoiceFilters {
   search?: string;
   page?: number;
   limit?: number;
-  organization_id?: string; // partner organization (via related work order)
+  partner_organization_id?: string; // partner organization (via related work order)
+  subcontractor_organization_id?: string; // subcontractor organization (direct)
   trade_id?: string[];
   location_filter?: string[];
   date_from?: string;
   date_to?: string;
+  due_date_from?: string;
+  due_date_to?: string;
+  amount_min?: number;
+  amount_max?: number;
+  has_attachments?: boolean;
   overdue?: boolean;
   created_today?: boolean;
 }
@@ -84,11 +90,17 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
       status: (filters.status || []).join(','),
       paymentStatus: filters.paymentStatus || 'any',
       search: filters.search || '',
-      organization_id: filters.organization_id || 'all',
+      partner_organization_id: filters.partner_organization_id || 'all',
+      subcontractor_organization_id: filters.subcontractor_organization_id || 'all',
       trade_id: (filters.trade_id || []).join(','),
       location_filter: (filters.location_filter || []).join(','),
       date_from: filters.date_from || '',
       date_to: filters.date_to || '',
+      due_date_from: filters.due_date_from || '',
+      due_date_to: filters.due_date_to || '',
+      amount_min: filters.amount_min || 0,
+      amount_max: filters.amount_max || 0,
+      has_attachments: !!filters.has_attachments,
       overdue: !!filters.overdue,
       created_today: !!filters.created_today,
       page: filters.page || 1,
@@ -99,11 +111,17 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
     (filters.status || []).join(','),
     filters.paymentStatus,
     filters.search,
-    filters.organization_id,
+    filters.partner_organization_id,
+    filters.subcontractor_organization_id,
     (filters.trade_id || []).join(','),
     (filters.location_filter || []).join(','),
     filters.date_from,
     filters.date_to,
+    filters.due_date_from,
+    filters.due_date_to,
+    filters.amount_min,
+    filters.amount_max,
+    filters.has_attachments,
     filters.overdue,
     filters.created_today,
     filters.page,
@@ -171,9 +189,36 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         query = query.is('paid_at', null);
       }
 
-      // Apply partner organization filter (via related work orders)
-      if (otherFilters.organization_id) {
-        query = query.eq('invoice_work_orders.work_orders.organization_id', otherFilters.organization_id);
+      // Apply subcontractor organization filter (direct field on invoice)
+      if (otherFilters.subcontractor_organization_id) {
+        query = query.eq('subcontractor_organization_id', otherFilters.subcontractor_organization_id);
+      }
+
+      // Apply partner organization filter (via related work orders) - complex filtering
+      if (otherFilters.partner_organization_id) {
+        // Get work order IDs for this partner organization first
+        const { data: workOrderIds } = await supabase
+          .from('work_orders')
+          .select('id')
+          .eq('organization_id', otherFilters.partner_organization_id);
+        
+        if (workOrderIds && workOrderIds.length > 0) {
+          // Get invoice IDs that have these work orders
+          const { data: invoiceIds } = await supabase
+            .from('invoice_work_orders')
+            .select('invoice_id')
+            .in('work_order_id', workOrderIds.map(wo => wo.id));
+          
+          if (invoiceIds && invoiceIds.length > 0) {
+            query = query.in('id', invoiceIds.map(iwo => iwo.invoice_id));
+          } else {
+            // No invoices for this partner - return empty result
+            query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+          }
+        } else {
+          // No work orders for this partner - return empty result
+          query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+        }
       }
 
       // Apply trade filter (via related work orders)
@@ -206,6 +251,28 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
       if (otherFilters.overdue) {
         const today = new Date().toISOString().split('T')[0];
         query = query.lt('due_date', today).is('paid_at', null);
+      }
+
+      // Due date range filters
+      if (otherFilters.due_date_from) {
+        query = query.gte('due_date', otherFilters.due_date_from);
+      }
+      if (otherFilters.due_date_to) {
+        query = query.lte('due_date', otherFilters.due_date_to);
+      }
+
+      // Amount range filters
+      if (otherFilters.amount_min) {
+        query = query.gte('total_amount', otherFilters.amount_min);
+      }
+      if (otherFilters.amount_max) {
+        query = query.lte('total_amount', otherFilters.amount_max);
+      }
+
+      // Has attachments filter
+      if (otherFilters.has_attachments) {
+        // Only show invoices that have attachments
+        query = query.gt('attachment_count', 0);
       }
 
       // Created today

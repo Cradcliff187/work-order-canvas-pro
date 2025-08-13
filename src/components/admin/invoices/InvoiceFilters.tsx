@@ -19,7 +19,8 @@ export interface InvoiceFiltersValue {
   status?: string[];
   paymentStatus?: 'paid' | 'unpaid';
   search?: string;
-  organization_id?: string; // subcontractor organization
+  partner_organization_id?: string; // partner organization (via work orders)
+  subcontractor_organization_id?: string; // subcontractor organization (direct)
   trade_id?: string[];
   location_filter?: string[];
   date_from?: string;
@@ -52,17 +53,17 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: In
 
   const set = (patch: Partial<InvoiceFiltersValue>) => onChange({ ...value, ...patch });
 
-  // Locations sourced from work orders, optionally filtered by organization
+  // Locations sourced from work orders, optionally filtered by partner organization
   const { data: locations } = useQuery({
-    queryKey: ['invoice-locations', value.organization_id],
+    queryKey: ['invoice-locations', value.partner_organization_id],
     queryFn: async () => {
       let query = supabase
         .from('work_orders')
         .select('store_location')
         .not('store_location', 'is', null)
         .not('store_location', 'eq', '');
-      if (value.organization_id) {
-        query = query.eq('organization_id', value.organization_id);
+      if (value.partner_organization_id) {
+        query = query.eq('organization_id', value.partner_organization_id);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -111,10 +112,18 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: In
         </SelectContent>
       </Select>
 
-      {/* Subcontractor Organization */}
+      {/* Partner Organization Filter (via work orders) */}
       <OrganizationSelector
-        value={value.organization_id}
-        onChange={(id) => set({ organization_id: id, location_filter: undefined })}
+        value={value.partner_organization_id}
+        onChange={(id) => set({ partner_organization_id: id, location_filter: undefined })}
+        organizationType="partner"
+        placeholder="All Partners"
+      />
+
+      {/* Subcontractor Organization Filter (direct) */}
+      <OrganizationSelector
+        value={value.subcontractor_organization_id}
+        onChange={(id) => set({ subcontractor_organization_id: id })}
         organizationType="subcontractor"
         placeholder="All Subcontractors"
       />
