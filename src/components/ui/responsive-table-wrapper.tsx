@@ -17,6 +17,18 @@ export function ResponsiveTableWrapper({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftShadow, setShowLeftShadow] = useState(false);
   const [showRightShadow, setShowRightShadow] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleScroll = () => {
     const element = scrollRef.current;
@@ -60,7 +72,7 @@ export function ResponsiveTableWrapper({
       <div
         ref={scrollRef}
         className="overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border"
-        style={{ minWidth }}
+        style={{ minWidth: isMobile ? 'auto' : minWidth }}
       >
         <div 
           className={cn(

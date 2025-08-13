@@ -86,8 +86,8 @@ const DirectMessagesPage: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="mb-2">
+    <div className="flex flex-col h-full max-w-full overflow-hidden">
+      <div className="mb-2 flex-shrink-0">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -103,15 +103,15 @@ const DirectMessagesPage: React.FC = () => {
         </Breadcrumb>
       </div>
       
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Messages</h1>
-        <Button size="sm" onClick={() => setIsNewOpen(true)}>
+      <div className="mb-4 flex items-center justify-between flex-shrink-0">
+        <h1 className="text-2xl font-semibold truncate mr-2">Messages</h1>
+        <Button size="sm" onClick={() => setIsNewOpen(true)} className="flex-shrink-0">
           <Plus className="mr-2 h-4 w-4" />
-          New message
+          {isMobile ? 'New' : 'New message'}
         </Button>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 max-w-full overflow-hidden">
         <ResponsiveMessagingLayout
           conversations={filteredConversations}
           selectedId={selectedId}

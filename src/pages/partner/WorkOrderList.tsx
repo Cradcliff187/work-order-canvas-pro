@@ -73,19 +73,19 @@ const WorkOrderList = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
   const [sortOption, setSortOption] = useState('submitted-desc');
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Use responsive view mode hook
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'partner-work-orders',
     config: {
-      mobile: ['list'],           // Mobile: list view with pull-to-refresh
+      mobile: ['list'],           // Mobile: list/card view with pull-to-refresh  
       desktop: ['table', 'card']  // Desktop: table default, cards optional
     },
-    defaultMode: 'table'
+    defaultMode: isMobile ? 'list' : 'table'  // Force mobile to use list/card view
   });
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
-  const isMobile = useIsMobile();
 
   // Pull to refresh functionality
   const { handleRefresh, threshold } = usePullToRefresh({
@@ -228,49 +228,9 @@ const WorkOrderList = () => {
   }
 
   const renderTable = () => {
+    // Mobile devices should use card view, not table view
     if (isMobile) {
-      return (
-        <MobilePullToRefresh onRefresh={handleRefresh} threshold={threshold}>
-          <Card>
-            <CardContent className="p-0">
-              <ResponsiveTableWrapper stickyFirstColumn={true}>
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ResponsiveTableWrapper>
-            </CardContent>
-          </Card>
-        </MobilePullToRefresh>
-      );
+      return renderCards();
     }
 
     return (
@@ -481,17 +441,10 @@ const WorkOrderList = () => {
             {filteredAndSortedWorkOrders.length} of {workOrderList.length} work orders
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <ViewModeSwitcher 
-            value={viewMode} 
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-          />
-          <Button onClick={() => navigate('/partner/work-orders/new')}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Work Order
-          </Button>
-        </div>
+        <Button onClick={() => navigate('/partner/work-orders/new')}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Work Order
+        </Button>
       </div>
 
       {/* Filters */}
@@ -541,7 +494,7 @@ const WorkOrderList = () => {
               </Select>
             </div>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 {hasFilters && (
                   <Button variant="outline" size="sm" onClick={clearAllFilters}>
@@ -551,7 +504,17 @@ const WorkOrderList = () => {
                 )}
               </div>
               
-              {viewMode === 'card' && (
+              {/* View mode switcher for desktop only */}
+              {!isMobile && allowedModes.length > 1 && (
+                <ViewModeSwitcher
+                  value={viewMode}
+                  onValueChange={setViewMode}
+                  allowedModes={allowedModes}
+                />
+              )}
+              
+              {/* Sort dropdown */}
+              {(viewMode === 'card' || viewMode === 'list' || isMobile) && (
                 <SortDropdown 
                   value={sortOption} 
                   onValueChange={setSortOption}
@@ -582,7 +545,10 @@ const WorkOrderList = () => {
             icon: Plus
           }}
         />
-      ) : viewMode === 'table' ? renderTable() : renderCards()}
+      ) : (
+        // Always use cards on mobile, respect viewMode on desktop
+        isMobile || viewMode === 'card' || viewMode === 'list' ? renderCards() : renderTable()
+      )}
     </div>
   );
 };
