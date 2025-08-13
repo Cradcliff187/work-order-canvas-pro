@@ -415,29 +415,25 @@ export default function AdminWorkOrders() {
   const showLoadingOverlay = deleteWorkOrder.isPending || (isFetching && !isLoading);
 
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <p className="text-destructive">We couldn't load work orders. Please try again.</p>
-              <Button 
-                onClick={() => refetch()} 
-                variant="outline"
-                aria-label="Retry loading work orders"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
+  return error ? (
+    <div className="p-6">
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center space-y-4">
+            <p className="text-destructive">We couldn't load work orders. Please try again.</p>
+            <Button 
+              onClick={() => refetch()} 
+              variant="outline"
+              aria-label="Retry loading work orders"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  ) : (
     <div className={cn("min-h-screen bg-background w-full max-w-full p-4 md:p-6 space-y-6", bulkMode && Object.keys(rowSelection).length > 0 && "pb-24 sm:pb-28")}>
       {/* Breadcrumb */}
       <WorkOrderBreadcrumb />

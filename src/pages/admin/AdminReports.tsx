@@ -398,25 +398,21 @@ const table = useReactTable({
     }
   };
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <p className="text-destructive">We couldn't load reports. Please try again.</p>
-              <Button onClick={() => refetch()} variant="outline" aria-label="Retry loading reports">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
+  return error ? (
+    <div className="p-6">
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center space-y-4">
+            <p className="text-destructive">We couldn't load reports. Please try again.</p>
+            <Button onClick={() => refetch()} variant="outline" aria-label="Retry loading reports">
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  ) : (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
