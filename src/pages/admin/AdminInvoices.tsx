@@ -49,7 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-import { useDebounce } from '@/hooks/useDebounce';
+
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useInvoiceMutations } from '@/hooks/useInvoiceMutations';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
@@ -58,27 +58,6 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import type { VisibilityState } from '@tanstack/react-table';
 
 export default function AdminInvoices() {
-  // EMERGENCY CIRCUIT BREAKER
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-  
-  if (renderCount.current > 10) {
-    console.error('🚨 EMERGENCY STOP - Too many renders!', {
-      renderCount: renderCount.current,
-      stack: new Error().stack
-    });
-    return (
-      <div className="p-8 text-red-600">
-        <h1>Infinite Loop Detected</h1>
-        <p>The page has been stopped to prevent browser crash.</p>
-        <p>Check console for details.</p>
-        <button onClick={() => window.location.reload()}>Reload Page</button>
-      </div>
-    );
-  }
-
-  console.log(`🔄 AdminInvoices render #${renderCount.current}`);
-
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -188,18 +167,27 @@ export default function AdminInvoices() {
 
   const { data, isLoading, error, refetch } = useInvoices({ ...filters, search: debouncedSearch, page, limit });
 
-  // Reset page when filters change (but not on initial mount)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    
-    console.log('📄 Resetting to page 1 due to filter change');
-    setPage(1);
-  }, [
+  // Optimize dependencies with useMemo for stable references
+  const stableFilterDeps = useMemo(() => ({
     debouncedSearch,
-    filters.status?.join(','), // Serialize arrays for stable comparison
+    status: filters.status?.join(','),
+    paymentStatus: filters.paymentStatus,
+    partner_organization_id: filters.partner_organization_id,
+    subcontractor_organization_id: filters.subcontractor_organization_id,
+    trade_id: filters.trade_id?.join(','),
+    location_filter: filters.location_filter?.join(','),
+    date_from: filters.date_from,
+    date_to: filters.date_to,
+    due_date_from: filters.due_date_from,
+    due_date_to: filters.due_date_to,
+    amount_min: filters.amount_min,
+    amount_max: filters.amount_max,
+    has_attachments: filters.has_attachments,
+    overdue: filters.overdue,
+    created_today: filters.created_today,
+  }), [
+    debouncedSearch,
+    filters.status?.join(','),
     filters.paymentStatus,
     filters.partner_organization_id,
     filters.subcontractor_organization_id,
@@ -214,8 +202,18 @@ export default function AdminInvoices() {
     filters.has_attachments,
     filters.overdue,
     filters.created_today,
-    // Don't include setPage or other functions
   ]);
+
+  // Reset page when filters change (but not on initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    console.log('📄 Resetting to page 1 due to filter change');
+    setPage(1);
+  }, [stableFilterDeps]); // Use stable dependency object
   
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);

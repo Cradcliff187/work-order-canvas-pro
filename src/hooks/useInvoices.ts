@@ -312,21 +312,20 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
       };
     },
     enabled: true,
-    staleTime: 30000, // 30 seconds
-    cacheTime: 60000, // 60 seconds  
-    refetchOnMount: false,
+    staleTime: 60000, // 1 minute
+    gcTime: 300000, // 5 minutes (renamed from cacheTime in v5) 
+    refetchOnMount: true, // Allow initial mount fetch
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: false, // Disable retries during debugging
-    retryOnMount: false,
-    keepPreviousData: true,
-    // Log when query runs
-    onSuccess: (data) => {
-      console.log('✅ Query success, data length:', data?.data?.length);
+    refetchOnReconnect: true,
+    retry: (failureCount, error: any) => {
+      // Don't retry permission errors
+      if (error?.code === 'PGRST116' || error?.message?.includes('permission')) {
+        return false;
+      }
+      return failureCount < 2; // Reduced retry attempts
     },
-    onError: (error) => {
-      console.error('❌ Query error:', error);
-    }
+    retryOnMount: true,
+    placeholderData: (previousData) => previousData, // v5 syntax for keepPreviousData
   });
 };
 
