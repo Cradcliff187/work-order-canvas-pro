@@ -341,7 +341,7 @@ export function MobileWorkOrderCard({
                     assigned_organization: assignment.assigned_organization
                   }))}
                   showIcons={false}
-                  showOrganization={true}
+                  showOrganization={viewerRole !== 'partner'}
                 />
               </div>
             </div>
@@ -350,6 +350,7 @@ export function MobileWorkOrderCard({
           {/* Enhanced organization context with team member indicator */}
           {shouldShowField('organization') && (
             <>
+              {/* Subcontractor sees submitting org */}
               {viewerRole === 'subcontractor' && workOrder.organizations && (
                 <div className="flex items-center gap-2 text-sm min-w-0">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -361,6 +362,7 @@ export function MobileWorkOrderCard({
                   />
                 </div>
               )}
+              {/* Partner sees assigned-to org only */}
               {viewerRole === 'partner' && workOrder.assigned_organizations && (
                 <div className="flex items-center gap-2 text-sm min-w-0">
                   <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -371,6 +373,33 @@ export function MobileWorkOrderCard({
                     showIcon={false}
                   />
                 </div>
+              )}
+              {/* Admin/Employee sees both when available */}
+              {viewerRole === 'admin' && (
+                <>
+                  {workOrder.organizations && (
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground">From:</span>
+                      <OrganizationBadge 
+                        organization={workOrder.organizations}
+                        size="sm"
+                        showIcon={false}
+                      />
+                    </div>
+                  )}
+                  {workOrder.assigned_organizations && (
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground">Assigned to:</span>
+                      <OrganizationBadge 
+                        organization={workOrder.assigned_organizations}
+                        size="sm"
+                        showIcon={false}
+                      />
+                    </div>
+                  )}
+                </>
               )}
               {/* Show team assignment for organization-wide assignments */}
               {viewerRole === 'subcontractor' && workOrder.work_order_assignments?.some(a => a.assignment_type === 'organization') && (
