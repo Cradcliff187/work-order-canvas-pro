@@ -31,6 +31,8 @@ import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useViewMode } from '@/hooks/useViewMode';
 import { SortDropdown } from '@/components/partner/work-orders/SortDropdown';
 import { ReportCard } from '@/components/partner/reports/ReportCard';
+import { MobileReportCard } from '@/components/partner/reports/MobileReportCard';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
 import { ReportDetailPanel } from '@/components/partner/reports/ReportDetailPanel';
 import { usePartnerReports, usePartnerReportDetail } from '@/hooks/usePartnerReports';
@@ -63,15 +65,16 @@ export default function PartnerReports() {
   const navigate = useNavigate();
   const { organization } = useUserOrganization();
   const { data: locations = [] } = usePartnerLocations(organization?.id);
+  const isMobile = useIsMobile();
   
-  // Use responsive view mode hook
+  // Use responsive view mode hook - force mobile to card view only
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'partner-reports',
     config: {
-      mobile: ['card'],           // Mobile: cards only
+      mobile: ['card'],           // Mobile: cards only, no tables
       desktop: ['table', 'card']  // Desktop: table default, cards optional
     },
-    defaultMode: 'table'
+    defaultMode: 'card'
   });
   
   const [sortBy, setSortBy] = useState('submitted-desc');
@@ -357,14 +360,16 @@ export default function PartnerReports() {
         </CardContent>
       </Card>
 
-      {/* View Controls */}
+      {/* View Controls - Hide view switcher on mobile since only card view is available */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <ViewModeSwitcher 
-            value={viewMode} 
-            onValueChange={setViewMode}
-            allowedModes={allowedModes}
-          />
+          <div className="hidden sm:block">
+            <ViewModeSwitcher 
+              value={viewMode} 
+              onValueChange={setViewMode}
+              allowedModes={allowedModes}
+            />
+          </div>
           {viewMode === 'card' && (
             <SortDropdown 
               value={sortBy} 
@@ -398,24 +403,33 @@ export default function PartnerReports() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedReports.map((report) => (
-                <ReportCard key={report.id} report={report} />
-              ))}
+            <div className={isMobile ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
+              {sortedReports.map((report) => 
+                isMobile ? (
+                  <MobileReportCard 
+                    key={report.id} 
+                    report={report}
+                    onTap={() => navigate(`/partner/reports/${report.id}`)}
+                  />
+                ) : (
+                  <ReportCard key={report.id} report={report} />
+                )
+              )}
             </div>
           )}
         </div>
       ) : (
-        /* Table View with Master-Detail on Desktop */
-        <Card>
-          <CardContent className="p-0">
-            {/* Desktop Master-Detail Layout */}
-            <div className="hidden lg:block">
-              <MasterDetailLayout
-                listContent={
-                  <div>
-                    <ResponsiveTableWrapper stickyFirstColumn={true}>
-                      <Table>
+        /* Table View - Desktop Only (Mobile uses cards) */
+        <div className="hidden sm:block">
+          <Card>
+            <CardContent className="p-0">
+              {/* Desktop Master-Detail Layout */}
+              <div className="hidden lg:block">
+                <MasterDetailLayout
+                  listContent={
+                    <div>
+                      <ResponsiveTableWrapper stickyFirstColumn={true}>
+                        <Table>
                         <TableHeader>
                           {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
@@ -518,97 +532,9 @@ export default function PartnerReports() {
               />
             </div>
 
-            {/* Mobile/Tablet Table */}
-            <div className="block lg:hidden">
-              <ResponsiveTableWrapper stickyFirstColumn={true}>
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id} className="h-12">
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array.from({ length: 5 }).map((_, i) => (
-                        <TableRow key={i}>
-                          {columns.map((_, j) => (
-                            <TableCell key={j}>
-                              <Skeleton className="h-4 w-20" />
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : table.getRowModel().rows.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          className="cursor-pointer"
-                          onClick={() => navigate(`/partner/reports/${row.original.id}`)}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} className="h-24 text-center">
-                          No results.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </ResponsiveTableWrapper>
-              
-              {/* Pagination */}
-              <div className="flex items-center justify-between px-6 py-4 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
-                  {Math.min(
-                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                    reportsData?.totalCount || 0
-                  )}{' '}
-                  of {reportsData?.totalCount || 0} results
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
+        </div>
       )}
     </div>
   );

@@ -77,14 +77,14 @@ const WorkOrderList = () => {
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  // Use responsive view mode hook
+  // Use responsive view mode hook - force mobile to card view only
   const { viewMode, setViewMode, allowedModes } = useViewMode({
     componentKey: 'partner-work-orders',
     config: {
-      mobile: ['list'],           // Mobile: list/card view with pull-to-refresh  
+      mobile: ['card'],           // Mobile: card view only, no tables
       desktop: ['table', 'card']  // Desktop: table default, cards optional
     },
-    defaultMode: isMobile ? 'list' : 'table'  // Force mobile to use list/card view
+    defaultMode: isMobile ? 'card' : 'table'  // Force mobile to use card view
   });
 
   // Pull to refresh functionality

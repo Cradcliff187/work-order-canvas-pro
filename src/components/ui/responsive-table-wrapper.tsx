@@ -19,7 +19,7 @@ export function ResponsiveTableWrapper({
   const [showRightShadow, setShowRightShadow] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile viewport
+  // Detect mobile viewport - but don't render on mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -29,6 +29,11 @@ export function ResponsiveTableWrapper({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Don't render responsive table wrapper on mobile - should use cards instead
+  if (isMobile) {
+    return <div className="w-full">{children}</div>;
+  }
 
   const handleScroll = () => {
     const element = scrollRef.current;
