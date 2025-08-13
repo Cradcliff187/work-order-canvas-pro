@@ -228,15 +228,16 @@ const WorkOrderList = () => {
   }
 
   const renderTable = () => {
-    // Mobile devices should use card view, not table view
+    // CRITICAL: Never render table view on mobile - always use cards
     if (isMobile) {
+      console.log('🚫 Mobile detected: Forcing card view instead of table');
       return renderCards();
     }
 
     return (
       <Card>
         <CardContent className="p-0">
-          {/* Desktop Master-Detail Layout */}
+          {/* Desktop Master-Detail Layout - Hidden on mobile to prevent any rendering */}
           <div className="hidden lg:block">
             <MasterDetailLayout
               listContent={
@@ -394,8 +395,13 @@ const WorkOrderList = () => {
     );
   };
 
+  // Debug mobile detection
+  React.useEffect(() => {
+    console.log('📱 Mobile detection:', { isMobile, viewMode, width: window.innerWidth });
+  }, [isMobile, viewMode]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden max-w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -411,18 +417,18 @@ const WorkOrderList = () => {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="w-full max-w-full overflow-hidden">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="relative">
                   <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
                   <Input
                     placeholder="Search work orders..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 w-full"
                   />
                 </div>
               </div>
@@ -489,28 +495,35 @@ const WorkOrderList = () => {
         </CardContent>
       </Card>
 
-      {/* Content */}
+      {/* Content - Mobile-safe rendering */}
       {filteredAndSortedWorkOrders.length === 0 ? (
         <EmptyState
-          icon={hasFilters ? Filter : ClipboardList}
-          title={hasFilters ? "No results match your criteria" : "No work orders submitted yet"}
-          description={hasFilters 
-            ? "Try adjusting your filters or search terms to find what you're looking for."
-            : "Get started by submitting your first work order to track and manage your maintenance requests."
-          }
+          icon={ClipboardList}
+          title={hasFilters ? "No work orders match your filters" : "No work orders yet"}
+          description={hasFilters ? "Try adjusting your search or filters to find what you're looking for." : "When work orders are submitted, they'll appear here."}
           action={hasFilters ? {
-            label: "Clear Filters",
+            label: "Clear Filters", 
             onClick: clearAllFilters,
-            icon: Filter
+            icon: X
           } : {
-            label: "Submit Your First Work Order",
+            label: "Create Work Order",
             onClick: () => navigate('/partner/work-orders/new'),
             icon: Plus
           }}
         />
       ) : (
-        // Always use cards on mobile, respect viewMode on desktop
-        isMobile || viewMode === 'card' || viewMode === 'list' ? renderCards() : renderTable()
+        <div className="w-full max-w-full overflow-hidden">
+          {/* Mobile: Force card view, Desktop: Allow table/card switching */}
+          {isMobile ? (
+            <div className="block lg:hidden">
+              {renderCards()}
+            </div>
+          ) : (
+            <div className="hidden lg:block">
+              {viewMode === 'table' ? renderTable() : renderCards()}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

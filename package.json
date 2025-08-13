@@ -41,6 +41,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@react-email/components": "^0.2.0",
     "@supabase/supabase-js": "^2.50.4",
+    "@tailwindcss/line-clamp": "^0.4.4",
     "@tanstack/react-query": "^5.56.2",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/pm": "^2.25.1",

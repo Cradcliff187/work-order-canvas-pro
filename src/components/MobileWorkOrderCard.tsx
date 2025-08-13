@@ -223,31 +223,31 @@ export function MobileWorkOrderCard({
   return (
     <div className={cn("relative mb-4 w-full max-w-full overflow-hidden", className)}>
       {/* Swipe Action Backgrounds */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 overflow-hidden">
         {/* Left (Delete) */}
         <div
-          className="absolute inset-y-0 left-0 w-full flex items-center justify-start px-4 bg-destructive text-destructive-foreground"
+          className="absolute inset-y-0 left-0 w-full flex items-center justify-start px-4 bg-destructive text-destructive-foreground overflow-hidden"
           style={{ opacity: direction === 'left' ? progress : 0 }}
         >
           <div
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 min-w-0"
             style={{ transform: `scale(${0.9 + 0.1 * progress})` }}
           >
-            <Trash2 className="h-5 w-5" />
-            <span className="font-medium">Delete</span>
+            <Trash2 className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium truncate">Delete</span>
           </div>
         </div>
         {/* Right (Complete) */}
         <div
-          className="absolute inset-y-0 right-0 w-full flex items-center justify-end px-4 bg-success text-success-foreground"
+          className="absolute inset-y-0 right-0 w-full flex items-center justify-end px-4 bg-success text-success-foreground overflow-hidden"
           style={{ opacity: direction === 'right' ? progress : 0 }}
         >
           <div
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 min-w-0"
             style={{ transform: `scale(${0.9 + 0.1 * progress})` }}
           >
-            <Check className="h-5 w-5" />
-            <span className="font-medium">Complete</span>
+            <Check className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium truncate">Complete</span>
           </div>
         </div>
       </div>
@@ -256,19 +256,21 @@ export function MobileWorkOrderCard({
         className="w-full max-w-full overflow-hidden touch-manipulation transition-transform will-change-transform active:scale-95 duration-200 min-h-[48px] card-hover touch-action-pan-y relative z-10"
         style={{
           transform: `translateX(${x}px)`,
-          transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+          transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+          maxWidth: '100%',
+          width: '100%'
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={isDragging || x !== 0 ? undefined : handleTap}
       >
-      <CardContent className="p-4">
+      <CardContent className="p-4 w-full max-w-full overflow-hidden">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               {workOrder.work_order_number && (
-                <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground text-xs">
+                <Badge variant="default" className="font-mono font-semibold bg-primary/90 text-primary-foreground text-xs truncate max-w-[200px]">
                   {workOrder.work_order_number}
                 </Badge>
               )}
