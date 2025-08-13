@@ -82,11 +82,13 @@ export const ResponsiveMessagingLayout: React.FC<ResponsiveMessagingLayoutProps>
     // Mobile: Stack-based navigation
     if (showMobileConversation && selectedId) {
       return (
-        <MobileConversationView
-          conversationId={selectedId}
-          onBack={handleMobileBack}
-          title={conversationTitle}
-        />
+        <div className="h-full">
+          <MobileConversationView
+            conversationId={selectedId}
+            onBack={handleMobileBack}
+            title={conversationTitle}
+          />
+        </div>
       );
     }
 

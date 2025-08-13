@@ -35,6 +35,7 @@ import {
   SecurityAudit,
   AdminReceipts,
 } from '@/pages/LazyPages';
+import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
 
 export const AdminRoutes = () => (
   <>
@@ -326,6 +327,16 @@ export const AdminRoutes = () => (
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <AdminReceipts />
+          </Suspense>
+        </AdminLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/admin/messages" element={
+      <ProtectedRoute requiredUserType="employee">
+        <AdminLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DirectMessagesPage />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>

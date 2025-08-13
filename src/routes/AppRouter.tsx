@@ -27,10 +27,7 @@ export const AppRouter: React.FC = () => (
       {PartnerRoutes()}
       {SubcontractorRoutes()}
       
-      {/* Role-aware messages routes */}
-      <Route path="/admin/messages" element={<ProtectedRoute><DirectMessagesPage /></ProtectedRoute>} />
-      <Route path="/partner/messages" element={<ProtectedRoute><DirectMessagesPage /></ProtectedRoute>} />
-      <Route path="/subcontractor/messages" element={<ProtectedRoute><DirectMessagesPage /></ProtectedRoute>} />
+      {/* Generic messages redirect */}
       <Route path="/messages" element={<ProtectedRoute><RoleMessagesRedirect /></ProtectedRoute>} />
       
       {/* 404 route */}

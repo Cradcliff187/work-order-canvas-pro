@@ -13,6 +13,7 @@ import {
   PartnerReportDetail,
   PartnerProfile,
 } from '@/pages/LazyPages';
+import DirectMessagesPage from '@/pages/messages/DirectMessagesPage';
 
 export const PartnerRoutes = () => (
   <>
@@ -93,6 +94,16 @@ export const PartnerRoutes = () => (
         <PartnerLayout>
           <Suspense fallback={<LoadingSpinner />}>
             <PartnerProfile />
+          </Suspense>
+        </PartnerLayout>
+      </ProtectedRoute>
+    } />
+    
+    <Route path="/partner/messages" element={
+      <ProtectedRoute requiredUserType="partner">
+        <PartnerLayout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DirectMessagesPage />
           </Suspense>
         </PartnerLayout>
       </ProtectedRoute>

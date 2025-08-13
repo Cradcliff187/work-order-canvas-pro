@@ -86,47 +86,32 @@ const DirectMessagesPage: React.FC = () => {
   );
 
   return (
-    <main className={isMobile ? "h-screen flex flex-col" : "container mx-auto py-6"}>
-      {!isMobile && (
-        <>
-          <div className="mb-2">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to={dashboardPath}>Dashboard</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Messages</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-semibold">Messages</h1>
-            <Button size="sm" onClick={() => setIsNewOpen(true)}>
-              New message
-            </Button>
-          </div>
-        </>
-      )}
+    <div className="flex flex-col h-full">
+      <div className="mb-2">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to={dashboardPath}>Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Messages</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Messages</h1>
+        <Button size="sm" onClick={() => setIsNewOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New message
+        </Button>
+      </div>
 
-      {isMobile && (
-        <div className="flex items-center justify-between p-4 border-b bg-card">
-          <h1 className="text-xl font-semibold">Messages</h1>
-          <Button 
-            size="sm" 
-            onClick={() => setIsNewOpen(true)}
-            className="h-9 w-9 p-0"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      <div className={isMobile ? "flex-1 overflow-hidden" : "h-[calc(100vh-200px)]"}>
+      <div className="flex-1 min-h-0">
         <ResponsiveMessagingLayout
           conversations={filteredConversations}
           selectedId={selectedId}
@@ -142,7 +127,7 @@ const DirectMessagesPage: React.FC = () => {
         onOpenChange={setIsNewOpen}
         onCreated={(id) => setSelectedId(id)}
       />
-    </main>
+    </div>
   );
 };
 
