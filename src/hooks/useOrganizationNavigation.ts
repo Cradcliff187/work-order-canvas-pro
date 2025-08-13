@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { 
-  Activity, BarChart3, Building2, ClipboardList, FileText, HardHat, History, Home, 
+  Activity, BarChart3, Building2, ClipboardList, FileChartLine, FileText, HardHat, History, Home, 
   LayoutDashboard, MapPin, Plus, Receipt, Settings, TrendingUp, User, Users, type LucideIcon
 } from 'lucide-react';
 
@@ -22,18 +22,18 @@ export const useOrganizationNavigation = () => {
     // Organization-based navigation
     if (isAdmin()) {
       return [
-        { label: 'Dashboard', path: '/admin/dashboard', icon: BarChart3, visible: true },
+        { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, visible: true },
         { label: 'Work Orders', path: '/admin/work-orders', icon: ClipboardList, visible: hasPermission('employee') },
         { label: 'Users', path: '/admin/users', icon: Users, visible: hasPermission('admin') },
         { label: 'Organizations', path: '/admin/organizations', icon: Building2, visible: hasPermission('admin') },
-        { label: 'Analytics', path: '/admin/analytics', icon: BarChart3, visible: hasPermission('employee') },
+        { label: 'Analytics', path: '/admin/analytics', icon: TrendingUp, visible: hasPermission('employee') },
         { label: 'System Health', path: '/admin/system-health', icon: Activity, visible: hasPermission('admin') },
       ];
     } else if (isEmployee()) {
       return [
-        { label: 'Dashboard', path: '/admin/employee-dashboard', icon: Home, visible: true },
+        { label: 'Dashboard', path: '/admin/employee-dashboard', icon: HardHat, visible: true },
         { label: 'Work Orders', path: '/admin/work-orders', icon: ClipboardList, visible: hasPermission('employee') },
-        { label: 'Reports', path: '/admin/reports', icon: FileText, visible: true },
+        { label: 'Reports', path: '/admin/reports', icon: FileChartLine, visible: true },
       ];
     } else if (isPartner()) {
       return [
