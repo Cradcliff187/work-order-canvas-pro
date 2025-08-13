@@ -308,7 +308,7 @@ const WorkOrderList = () => {
               viewerRole="partner"
               showQuickActions={true}
               showOrganization={false}
-              showAssignee={true}
+              showAssignee={false}
               showTrade={true}
               showInvoiceAmount={false}
               onMessage={() => navigate(`/partner/work-orders/${workOrder.id}?tab=messages`)}
