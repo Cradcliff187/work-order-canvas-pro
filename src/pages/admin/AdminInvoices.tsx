@@ -363,25 +363,21 @@ const table = useReactTable({
 
   const totalPages = Math.ceil((data?.count || 0) / limit);
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <p className="text-destructive">We couldn't load invoices. Please try again.</p>
-              <Button onClick={() => refetch()} variant="outline">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
+  return error ? (
+    <div className="p-6">
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center space-y-4">
+            <p className="text-destructive">We couldn't load invoices. Please try again.</p>
+            <Button onClick={() => refetch()} variant="outline">
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  ) : (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-popover text-foreground border rounded px-3 py-2 shadow">Skip to main content</a>
       <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
