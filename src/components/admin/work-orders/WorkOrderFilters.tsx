@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,7 @@ const organizationTypeOptions = [
 ];
 
 export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearchChange, onClearFilters, activeQuickPresets = [], onToggleQuickPreset }: WorkOrderFiltersProps) {
+  const { toast } = useToast();
   const { data: organizations } = useOrganizationsForWorkOrders();
   const { data: trades } = useTrades();
   const { data: subcontractors } = useQuery({
@@ -172,6 +174,21 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
       });
     }
   }, [locationsRefetching, filters, onFiltersChange]);
+
+  // Show toast notification when location query fails
+  useEffect(() => {
+    if (locationsError) {
+      // Log full error details for debugging
+      console.error('Location query error details:', locationsError);
+      
+      // Show user-friendly toast notification
+      toast({
+        variant: "destructive",
+        title: "Failed to load location list",
+        description: "You can still type locations manually."
+      });
+    }
+  }, [locationsError, toast]);
 
   const hasActiveFilters = Boolean(searchTerm) || Object.values(filters).some(value => 
     Array.isArray(value) ? value.length > 0 : Boolean(value)
