@@ -100,6 +100,10 @@ export function WorkOrderPipeline() {
     handleRefresh();
   };
 
+  const handleClearFilters = () => {
+    clearFilters();
+  };
+
   // Filter options
   const operationalStatusOptions = [
     { value: 'new', label: 'New' },
@@ -110,7 +114,7 @@ export function WorkOrderPipeline() {
   ];
 
   const financialStatusOptions = [
-    { value: 'pending', label: 'Pending' },
+    { value: 'pending', label: 'Not Invoiced' },
     { value: 'partially_invoiced', label: 'Partially Invoiced' },
     { value: 'fully_invoiced', label: 'Fully Invoiced' },
     { value: 'overdue', label: 'Overdue' },
@@ -250,7 +254,7 @@ export function WorkOrderPipeline() {
       />
 
       {/* Filter Bar */}
-      <AdminFilterBar title="Filters" filterCount={filterCount} onClear={clearFilters}>
+      <AdminFilterBar title="Filters" filterCount={filterCount} onClear={handleClearFilters}>
         <SmartSearchInput
           value={filters.search || ''}
           onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
