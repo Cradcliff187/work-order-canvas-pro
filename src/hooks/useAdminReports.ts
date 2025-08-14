@@ -2,7 +2,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
-import { WorkOrderReport, ReportFilters, PaginationState, SortingState } from '@/types/reports';
+import { WorkOrderReport, PaginationState, SortingState } from '@/types/reports';
+
+interface ReportFilters {
+  status?: string[];
+  trade_id?: string[];
+  partner_organization_ids?: string[];
+  completed_by?: string[]; // 'internal' and/or subcontractor org IDs
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+  location_filter?: string[];
+}
 
 export function useAdminReports(
   pagination: PaginationState,
@@ -70,22 +81,46 @@ export function useAdminReports(
       if (filters.status?.length) {
         query = query.in('status', filters.status as Database['public']['Enums']['report_status'][]);
       }
-      if (filters.subcontractor_organization_id) {
-        // Get user IDs from the selected organization first
-        const { data: orgUsers } = await supabase
-          .from('organization_members')
-          .select('user_id')
-          .eq('organization_id', filters.subcontractor_organization_id);
+      
+      // Handle completed_by filter (maps to subcontractor filtering)
+      if (filters.completed_by?.length) {
+        const conditions: string[] = [];
         
-        const userIds = orgUsers?.map(u => u.user_id) || [];
+        for (const completedBy of filters.completed_by) {
+          if (completedBy === 'internal') {
+            // Filter for internal users - reports where subcontractor is from internal org
+            conditions.push('subcontractor.organization_members.organizations.organization_type.eq.internal');
+          } else {
+            // It's a subcontractor organization ID
+            conditions.push(`subcontractor_organization_id.eq.${completedBy}`);
+          }
+        }
         
-        // Filter for reports assigned to this organization OR to individual users from this organization
-        if (userIds.length > 0) {
-          query = query.or(`subcontractor_organization_id.eq.${filters.subcontractor_organization_id},subcontractor_user_id.in.(${userIds.join(',')})`);
-        } else {
-          query = query.eq('subcontractor_organization_id', filters.subcontractor_organization_id);
+        if (conditions.length > 0) {
+          query = query.or(conditions.join(','));
         }
       }
+      
+      // Handle partner organization filter by looking at work order organization
+      if (filters.partner_organization_ids?.length) {
+        query = query.in('work_orders.organization_id', filters.partner_organization_ids);
+      }
+      
+      // Handle trade filter by looking at work order trade
+      if (filters.trade_id?.length) {
+        query = query.in('work_orders.trade_id', filters.trade_id);
+      }
+      
+      // Handle location filter by looking at work order store_location and partner_location_number
+      if (filters.location_filter?.length) {
+        const locationConditions: string[] = [];
+        for (const loc of filters.location_filter) {
+          locationConditions.push(`work_orders.store_location.ilike.%${loc}%`);
+          locationConditions.push(`work_orders.partner_location_number.ilike.%${loc}%`);
+        }
+        query = query.or(locationConditions.join(','));
+      }
+      
       if (filters.date_from) {
         query = query.gte('submitted_at', filters.date_from);
       }

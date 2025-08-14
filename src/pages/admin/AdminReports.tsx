@@ -44,6 +44,7 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { useAdminReports } from '@/hooks/useAdminReports';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useAdminReportMutations } from '@/hooks/useAdminReportMutations';
 import { useSubcontractorOrganizations } from '@/hooks/useSubcontractorOrganizations';
 import { useToast } from '@/hooks/use-toast';
@@ -60,13 +61,17 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
+import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
 
 interface ReportFilters {
   status?: string[];
-  subcontractor_organization_id?: string;
+  trade_id?: string[];
+  partner_organization_ids?: string[];
+  completed_by?: string[]; // 'internal' and/or subcontractor org IDs
+  search?: string;
   date_from?: string;
   date_to?: string;
-  search?: string;
+  location_filter?: string[];
 }
 
 export default function AdminReports() {
@@ -89,42 +94,21 @@ export default function AdminReports() {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [filters, setFilters] = useState<ReportFilters>({});
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Persist filters
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('admin-reports-filters-v1');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setFilters({
-          search: parsed?.search || '',
-          status: parsed?.status ? [parsed.status] : undefined,
-          subcontractor_organization_id: parsed?.subcontractor_organization_id || undefined,
-        });
-      }
-    } catch (e) {
-      console.warn('Failed to parse admin reports filters', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const payload = {
-        search: filters.search || '',
-        status: filters.status?.[0],
-        subcontractor_organization_id: filters.subcontractor_organization_id,
-      };
-      localStorage.setItem('admin-reports-filters-v1', JSON.stringify(payload));
-    } catch {}
-  }, [filters]);
+  // Persist filters using the same logic as admin work orders
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportFilters>(
+    'admin-reports-filters-v2',
+    {},
+    { excludeKeys: ['search'] }
+  );
 
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
   const { reviewReport, bulkReviewReports, deleteReport } = useAdminReportMutations();
   const { data: submittedCounts } = useSubmittedCounts();
 
   // Debounced search for better UX
-  const debouncedSearch = useDebounce(filters.search || '', 300);
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const effectiveFilters = useMemo(() => ({
     ...filters,
     search: debouncedSearch || undefined,
@@ -342,13 +326,20 @@ const table = useReactTable({
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map(row => row.original.id);
 
-  const handleFilterChange = (key: keyof ReportFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  const handleFiltersChange = (newFilters: ReportFilters) => {
+    setFilters(newFilters);
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
   const handleClearFilters = () => {
-    setFilters({});
+    clearFilters();
+    setSearchTerm('');
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
   const handleBulkApprove = () => {
@@ -440,78 +431,13 @@ const table = useReactTable({
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-4 h-4" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
-              <SmartSearchInput
-                placeholder="Search reports..."
-                value={filters.search || ''}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-                onSearchSubmit={(q) => handleFilterChange('search', q)}
-                storageKey="admin-reports-search"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select
-                value={filters.status?.[0] || 'all'}
-                onValueChange={(value) => 
-                  handleFilterChange('status', value === 'all' ? undefined : [value])
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-popover">
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="reviewed">Reviewed</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Subcontractor</label>
-              <Select
-                value={filters.subcontractor_organization_id || 'all'}
-                onValueChange={(value) => 
-                  handleFilterChange('subcontractor_organization_id', value === 'all' ? undefined : value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by subcontractor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subcontractors</SelectItem>
-                  {subcontractorOrganizations?.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end">
-              <Button variant="outline" onClick={handleClearFilters}>
-                <X className="w-4 h-4 mr-2" />
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <WorkOrderFilters
+        filters={filters}
+        searchTerm={searchTerm}
+        onFiltersChange={handleFiltersChange}
+        onSearchChange={handleSearchChange}
+        onClearFilters={handleClearFilters}
+      />
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (
