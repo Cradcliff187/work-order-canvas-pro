@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,7 +17,7 @@ export interface ReportsFiltersValue {
   date_to?: string;
   submitted_by?: string; // free text or email
   work_order?: string; // work order number or title
-  location_filter?: string[];
+  location?: string; // single location selection
 }
 
 export interface ReportsFiltersProps {
@@ -52,7 +52,6 @@ export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
       
       if (!workOrders) return [];
       
-      // Get unique locations
       const uniqueLocations = [...new Set(workOrders.map(wo => wo.store_location))].filter(Boolean);
       return uniqueLocations.sort();
     }
@@ -147,19 +146,22 @@ export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
         {/* Location */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Location</label>
-          <MultiSelectFilter
-            options={locations.map(location => ({ 
-              value: location, 
-              label: location 
-            }))}
-            selectedValues={value.location_filter || []}
-            onSelectionChange={(values) => set({ 
-              location_filter: values.length > 0 ? values : undefined 
-            })}
-            placeholder="All Locations"
-            searchPlaceholder="Search locations..."
-            className="h-10"
-          />
+          <Select
+            value={value.location || 'all'}
+            onValueChange={(v) => set({ location: v === 'all' ? undefined : v })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by location" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Locations</SelectItem>
+              {locations.map(location => (
+                <SelectItem key={location} value={location}>
+                  {location}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </Card>
