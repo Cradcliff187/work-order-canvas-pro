@@ -318,13 +318,30 @@ export function WorkOrderPipelineTable() {
                 </button>
               </div>
             </HoverCardTrigger>
-            <HoverCardContent className="w-80 z-[100]">
-              <div className="space-y-2">
+            <HoverCardContent className="w-80 z-[9999]">
+              <div className="space-y-3">
                 <h4 className="text-sm font-semibold">{item.work_order_number}</h4>
-                <p className="text-sm">{item.title}</p>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">Work Order Details:</p>
-                  <p className="text-sm mt-1">Click to view full details and description</p>
+                <p className="text-sm font-medium">{item.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {item.partner_organization_name} • {item.store_location || 'No location'}
+                </p>
+                {item.description && (
+                  <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-sm">
+                    {item.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {item.status?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Badge>
+                  <Badge variant={item.is_overdue ? "destructive" : "secondary"} className="text-xs">
+                    {item.age_days || 0} days old
+                  </Badge>
+                  {item.priority && item.priority !== 'low' && (
+                    <Badge variant={item.priority === 'urgent' ? 'destructive' : 'default'} className="text-xs">
+                      {item.priority.toUpperCase()}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Submitted:</span>
@@ -361,7 +378,7 @@ export function WorkOrderPipelineTable() {
                 {title}
               </div>
             </HoverCardTrigger>
-            <HoverCardContent className="z-[100]">
+            <HoverCardContent className="z-[9999]">
               <p className="text-sm">{title}</p>
             </HoverCardContent>
           </HoverCard>
@@ -559,8 +576,8 @@ export function WorkOrderPipelineTable() {
           <>
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-visible">
-              <ResponsiveTableWrapper stickyFirstColumn className="overflow-visible">
-                <Table className="admin-table overflow-visible">
+              <ResponsiveTableWrapper stickyFirstColumn className="overflow-visible relative">
+                <Table className="admin-table overflow-visible relative">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>

@@ -9,6 +9,7 @@ export interface WorkOrderPipelineItem {
   id: string;
   work_order_number: string | null;
   title: string;
+  description: string | null;
   status: 'received' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'estimate_needed' | 'estimate_approved';
   store_location: string | null;
   organization_id: string | null;
@@ -68,6 +69,7 @@ export function useWorkOrderLifecycle() {
           id,
           work_order_number,
           title,
+          description,
           status,
           store_location,
           organization_id,
@@ -210,6 +212,7 @@ export function useWorkOrderLifecycle() {
           id: workOrder.id,
           work_order_number: workOrder.work_order_number,
           title: workOrder.title,
+          description: workOrder.description,
           status: workOrder.status,
           store_location: workOrder.store_location,
           organization_id: workOrder.organization_id,
