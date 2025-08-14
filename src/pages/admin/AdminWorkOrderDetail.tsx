@@ -612,23 +612,44 @@ export default function AdminWorkOrderDetail() {
                 <CardContent>
                   <div className="space-y-4">
                     {reports.map((report) => {
-                      console.log('Processing report:', {
-                        reportId: report.id,
-                        hasSubcontractorUser: !!report.subcontractor_user,
-                        subcontractorUserData: report.subcontractor_user
-                      });
+                      const subcontractor = report.subcontractor_user;
+                      const subcontractorOrg = report.subcontractor_organization;
+                      const submittedBy = report.submitted_by;
                       
-                      if (!report.subcontractor_user) {
-                        console.error('Missing subcontractor_user for report:', report.id);
+                      // Determine what to display based on organization type (same logic as AdminReports)
+                      let displayName = 'N/A';
+                      
+                      // Check if subcontractor is from internal organization
+                      const isInternalSubcontractor = subcontractor?.organization_members?.some(
+                        (om: any) => om.organizations?.organization_type === 'internal'
+                      );
+                      
+                      if (subcontractorOrg) {
+                        // Organization-level assignment - always show organization name for subcontractors
+                        displayName = subcontractorOrg.name;
+                      } else if (subcontractor && isInternalSubcontractor) {
+                        // Individual internal user - show their name
+                        displayName = `${subcontractor.first_name} ${subcontractor.last_name}`;
+                      } else if (subcontractor) {
+                        // Individual subcontractor from subcontractor org - this shouldn't happen but fallback to org name
+                        const subcontractorOrgFromMember = subcontractor.organization_members?.find(
+                          (om: any) => om.organizations?.organization_type === 'subcontractor'
+                        );
+                        displayName = subcontractorOrgFromMember?.organizations?.name || `${subcontractor.first_name} ${subcontractor.last_name}`;
                       }
                       
                       return (
                         <div key={report.id} className="border rounded-lg p-4">
                           <div className="flex items-start justify-between mb-3">
                             <div>
-                              <p className="font-medium">
-                                {report.subcontractor_user?.first_name || 'Unknown'} {report.subcontractor_user?.last_name || 'User'}
-                              </p>
+                              <div className="font-medium">
+                                {displayName}
+                              </div>
+                              {submittedBy && submittedBy.organization_members?.some((om: any) => om.organizations?.organization_type === 'internal') && (
+                                <div className="text-xs text-orange-600 font-medium">
+                                  Submitted by Admin: {submittedBy.first_name} {submittedBy.last_name}
+                                </div>
+                              )}
                               <p className="text-sm text-muted-foreground">
                                 Submitted {formatDateTime(report.submitted_at)}
                               </p>

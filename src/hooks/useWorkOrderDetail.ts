@@ -29,7 +29,35 @@ type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
     subcontractor_user: {
       first_name: string;
       last_name: string;
-    };
+      email: string;
+      phone: string | null;
+      organization_members: Array<{
+        role: string;
+        organizations: {
+          id: string;
+          name: string;
+          organization_type: string;
+        } | null;
+      }>;
+    } | null;
+    subcontractor_organization: {
+      id: string;
+      name: string;
+      initials: string;
+    } | null;
+    submitted_by: {
+      first_name: string;
+      last_name: string;
+      email: string;
+      organization_members: Array<{
+        role: string;
+        organizations: {
+          id: string;
+          name: string;
+          organization_type: string;
+        } | null;
+      }>;
+    } | null;
   }>;
   work_order_attachments: Array<{
     id: string;
@@ -127,7 +155,35 @@ export function useWorkOrderDetail(id: string) {
             hours_worked,
             subcontractor_user:profiles!subcontractor_user_id(
               first_name,
-              last_name
+              last_name,
+              email,
+              phone,
+              organization_members(
+                role,
+                organizations(
+                  id,
+                  name,
+                  organization_type
+                )
+              )
+            ),
+            subcontractor_organization:organizations!subcontractor_organization_id(
+              id,
+              name,
+              initials
+            ),
+            submitted_by:profiles!submitted_by_user_id(
+              first_name,
+              last_name,
+              email,
+              organization_members(
+                role,
+                organizations(
+                  id,
+                  name,
+                  organization_type
+                )
+              )
             )
           `)
           .eq('work_order_id', id),
