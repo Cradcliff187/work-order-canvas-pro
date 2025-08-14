@@ -44,6 +44,12 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   dispute: AlertCircle,
   write_off: XCircle,
   
+  // Computed Financial Status Icons
+  not_billed: Circle,
+  invoice_received: DollarSign,
+  partially_billed: DollarSign, // Backward compatibility
+  fully_billed: CheckCircle,
+  
   // Priority Icons
   low: TrendingUp,
   medium: AlertCircle,
@@ -164,4 +170,8 @@ export function ActiveStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
 
 export function AssignedToStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
   return <StatusBadge type="assignedTo" {...props} />;
+}
+
+export function ComputedFinancialStatusBadge(props: Omit<StatusBadgeProps, 'type'>) {
+  return <StatusBadge type="computedFinancialStatus" {...props} />;
 }

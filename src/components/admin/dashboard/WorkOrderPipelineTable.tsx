@@ -17,7 +17,7 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { WorkOrderStatusBadge, FinancialStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge, ComputedFinancialStatusBadge } from '@/components/ui/status-badge';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
@@ -48,11 +48,9 @@ const operationalStatusOptions = [
 ];
 
 const financialStatusOptions = [
-  { value: 'pending', label: 'Not Invoiced' },
-  { value: 'partially_invoiced', label: 'Partially Invoiced' },
-  { value: 'fully_invoiced', label: 'Fully Invoiced' },
-  { value: 'approved_for_payment', label: 'Approved' },
-  { value: 'paid', label: 'Paid' }
+  { value: 'not_billed', label: 'Not Invoiced' },
+  { value: 'invoice_received', label: 'Invoice Received' },
+  { value: 'paid', label: 'Invoice Paid' }
 ];
 
 export function WorkOrderPipelineTable() {
@@ -283,7 +281,7 @@ export function WorkOrderPipelineTable() {
         const item = row.original;
         return (
           <div className="space-y-1">
-            <FinancialStatusBadge status={item.financial_status} />
+            <ComputedFinancialStatusBadge status={item.financial_status} />
             {item.subcontractor_invoice_amount && (
               <div className="text-xs text-muted-foreground">
                 ${item.subcontractor_invoice_amount.toLocaleString()}
@@ -460,7 +458,7 @@ export function WorkOrderPipelineTable() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Invoice:</span>
-                        <FinancialStatusBadge status={item.financial_status} size="sm" />
+                        <ComputedFinancialStatusBadge status={item.financial_status} size="sm" />
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Billing:</span>

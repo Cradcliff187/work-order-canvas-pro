@@ -48,7 +48,7 @@ export interface WorkOrderPipelineItem {
   age_days: number;
   is_overdue: boolean;
   operational_status: 'on_track' | 'at_risk' | 'overdue' | 'blocked' | 'completed';
-  financial_status: 'not_billed' | 'partially_billed' | 'fully_billed' | 'paid';
+  financial_status: 'not_billed' | 'invoice_received' | 'paid';
 }
 
 export function useWorkOrderLifecycle() {
@@ -170,10 +170,14 @@ export function useWorkOrderLifecycle() {
       const calculateFinancialStatus = (
         invoiceStatus: string | null,
         partnerBillStatus: string | null
-      ): 'not_billed' | 'partially_billed' | 'fully_billed' | 'paid' => {
-        if (!invoiceStatus && !partnerBillStatus) return 'not_billed';
+      ): 'not_billed' | 'invoice_received' | 'paid' => {
+        // If both statuses indicate payment completion
         if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
-        if (invoiceStatus || partnerBillStatus) return 'partially_billed';
+        
+        // If there's any invoice activity (received, submitted, etc.)
+        if (invoiceStatus || partnerBillStatus) return 'invoice_received';
+        
+        // No billing activity yet
         return 'not_billed';
       };
 

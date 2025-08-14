@@ -44,7 +44,7 @@ export const statusConfig = {
       className: "bg-slate-50 text-slate-600 border-slate-200"
     },
     partially_invoiced: {
-      label: "Partial Invoice",
+      label: "Invoice Received",
       className: "bg-amber-50 text-amber-600 border-amber-200"
     },
     fully_invoiced: {
@@ -56,7 +56,7 @@ export const statusConfig = {
       className: "bg-emerald-50 text-emerald-600 border-emerald-200"
     },
     paid: {
-      label: "Paid",
+      label: "Invoice Paid",
       className: "bg-emerald-50 text-emerald-600 border-emerald-200"
     },
     dispute: {
@@ -66,6 +66,34 @@ export const statusConfig = {
     write_off: {
       label: "Write Off",
       className: "bg-slate-50 text-slate-600 border-slate-200"
+    }
+  },
+  // New computed financial status for pipeline views
+  computedFinancialStatus: {
+    not_billed: {
+      label: "Not Invoiced",
+      description: "No invoice has been received",
+      className: "bg-slate-50 text-slate-600 border-slate-200"
+    },
+    partially_billed: {
+      label: "Invoice Received",
+      description: "Invoice received but not yet paid",
+      className: "bg-amber-50 text-amber-600 border-amber-200"
+    },
+    invoice_received: {
+      label: "Invoice Received", 
+      description: "Invoice received but not yet paid",
+      className: "bg-amber-50 text-amber-600 border-amber-200"
+    },
+    fully_billed: {
+      label: "Invoice Paid",
+      description: "All invoices have been paid",
+      className: "bg-blue-50 text-blue-600 border-blue-200"
+    },
+    paid: {
+      label: "Invoice Paid",
+      description: "All invoices have been paid",
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
     }
   },
   priority: {
@@ -175,10 +203,38 @@ export const tableUtils = {
   ),
 };
 
+// Flexible status mapping utilities
+export const statusUtils = {
+  // Get display configuration for any status type
+  getStatusConfig: (statusType: keyof typeof statusConfig, statusValue: string) => {
+    const config = statusConfig[statusType] as any;
+    return config?.[statusValue] || null;
+  },
+
+  // Map computed statuses to display-friendly terms
+  mapComputedFinancialStatus: (computedStatus: string) => {
+    const mapping: Record<string, string> = {
+      'not_billed': 'not_billed',
+      'partially_billed': 'invoice_received',
+      'fully_billed': 'paid',
+      'paid': 'paid'
+    };
+    return mapping[computedStatus] || computedStatus;
+  },
+
+  // Get filter options for computed financial status
+  getComputedFinancialFilterOptions: () => [
+    { value: 'not_billed', label: 'Not Invoiced' },
+    { value: 'invoice_received', label: 'Invoice Received' },
+    { value: 'paid', label: 'Invoice Paid' }
+  ]
+};
+
 // Export types for type safety
 export type EntityType = keyof typeof statusConfig;
 export type WorkOrderStatus = keyof typeof statusConfig.workOrder;
 export type FinancialStatus = keyof typeof statusConfig.financialStatus;
+export type ComputedFinancialStatus = keyof typeof statusConfig.computedFinancialStatus;
 export type Priority = keyof typeof statusConfig.priority;
 export type RoleType = keyof typeof statusConfig.user;
 export type ReportStatus = keyof typeof statusConfig.report;
