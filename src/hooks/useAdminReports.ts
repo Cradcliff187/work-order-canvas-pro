@@ -90,7 +90,7 @@ export function useAdminReports(
         
         // Build OR conditions for both store_location and partner_location_number
         const conditions = safeLocations
-          .map(loc => `work_orders.store_location.ilike.%${loc}%,work_orders.partner_location_number.ilike.%${loc}%`)
+          .map(loc => `store_location.ilike.%${loc}%,partner_location_number.ilike.%${loc}%`)
           .join(',');
         
         query = query.or(conditions);
