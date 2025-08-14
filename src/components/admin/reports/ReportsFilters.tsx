@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+import { useReportLocations } from '@/hooks/useReportLocations';
 
 export interface ReportsFiltersValue {
   status?: string[];
@@ -27,7 +27,7 @@ export interface ReportsFiltersProps {
 export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
   const [open, setOpen] = useState(false);
   const { date_from, date_to } = value || {};
-  const { data: locations } = usePartnerLocations();
+  const { data: locations } = useReportLocations();
   
   const dateLabel = useMemo(() => {
     if (!date_from && !date_to) return 'Date range';
@@ -119,10 +119,7 @@ export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium">Location</label>
           <MultiSelectFilter
-            options={(locations || []).map((location) => ({ 
-              value: location.location_number, 
-              label: `${location.location_name} (${location.location_number})` 
-            }))}
+            options={locations || []}
             selectedValues={value.location_filter || []}
             onSelectionChange={(values) => set({ 
               location_filter: values.length > 0 ? values : undefined 
