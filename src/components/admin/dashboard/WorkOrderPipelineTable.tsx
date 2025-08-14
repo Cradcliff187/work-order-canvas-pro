@@ -16,18 +16,17 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { WorkOrderStatusBadge, FinancialStatusBadge } from '@/components/ui/status-badge';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { ClipboardList, Search } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Filter interface
@@ -49,9 +48,9 @@ const operationalStatusOptions = [
 ];
 
 const financialStatusOptions = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'partially_invoiced', label: 'Partial Invoice' },
-  { value: 'fully_invoiced', label: 'Invoiced' },
+  { value: 'pending', label: 'Not Invoiced' },
+  { value: 'partially_invoiced', label: 'Partially Invoiced' },
+  { value: 'fully_invoiced', label: 'Fully Invoiced' },
   { value: 'approved_for_payment', label: 'Approved' },
   { value: 'paid', label: 'Paid' }
 ];
@@ -74,6 +73,10 @@ export function WorkOrderPipelineTable() {
     initialFilters,
     { excludeKeys: [] }
   );
+
+  const handleClearFilters = () => {
+    clearFilters();
+  };
 
   // Debounce search input
   const debouncedSearch = useDebounce(filters.search || '', 300);
@@ -330,98 +333,56 @@ export function WorkOrderPipelineTable() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Work Order Pipeline</CardTitle>
-      </CardHeader>
       <CardContent>
         {/* Filters */}
         <AdminFilterBar
-          title="Pipeline Filters"
+          title="Filters"
           filterCount={filterCount}
-          onClear={clearFilters}
+          onClear={handleClearFilters}
           className="mb-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {/* Search Input */}
-            <div className="lg:col-span-2">
-              <Label htmlFor="search" className="text-sm font-medium">
-                Search
-              </Label>
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Work order number or title..."
-                  value={filters.search || ''}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  className="pl-9"
-                />
-              </div>
-            </div>
+          <SmartSearchInput
+            value={filters.search || ''}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            placeholder="Work order number or title..."
+            storageKey="pipeline-table-search"
+          />
+          
+          <MultiSelectFilter
+            options={operationalStatusOptions}
+            selectedValues={filters.operational_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, operational_status: values })
+            }
+            placeholder="All statuses"
+            maxDisplayCount={2}
+          />
 
-            {/* Operational Status Filter */}
-            <div>
-              <Label className="text-sm font-medium">Operational Status</Label>
-              <div className="mt-1">
-                <MultiSelectFilter
-                  options={operationalStatusOptions}
-                  selectedValues={filters.operational_status || []}
-                  onSelectionChange={(values) => 
-                    setFilters({ ...filters, operational_status: values })
-                  }
-                  placeholder="All statuses"
-                  maxDisplayCount={2}
-                />
-              </div>
-            </div>
+          <MultiSelectFilter
+            options={financialStatusOptions}
+            selectedValues={filters.financial_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, financial_status: values })
+            }
+            placeholder="All statuses"
+            maxDisplayCount={2}
+          />
 
-            {/* Financial Status Filter */}
-            <div>
-              <Label className="text-sm font-medium">Financial Status</Label>
-              <div className="mt-1">
-                <MultiSelectFilter
-                  options={financialStatusOptions}
-                  selectedValues={filters.financial_status || []}
-                  onSelectionChange={(values) => 
-                    setFilters({ ...filters, financial_status: values })
-                  }
-                  placeholder="All statuses"
-                  maxDisplayCount={2}
-                />
-              </div>
-            </div>
+          <OrganizationSelector
+            value={filters.partner_organization_id || ''}
+            onChange={(value) => 
+              setFilters({ ...filters, partner_organization_id: value })
+            }
+            organizationType="partner"
+            placeholder="All partners"
+          />
 
-            {/* Partner Organization Filter */}
-            <div>
-              <Label className="text-sm font-medium">Partner Organization</Label>
-              <div className="mt-1">
-                <OrganizationSelector
-                  value={filters.partner_organization_id || ''}
-                  onChange={(value) => 
-                    setFilters({ ...filters, partner_organization_id: value })
-                  }
-                  organizationType="partner"
-                  placeholder="All partners"
-                />
-              </div>
-            </div>
-
-            {/* Overdue Toggle */}
-            <div>
-              <Label className="text-sm font-medium">Show Overdue Only</Label>
-              <div className="flex items-center space-x-2 mt-1">
-                <Switch
-                  checked={filters.overdue || false}
-                  onCheckedChange={(checked) => 
-                    setFilters({ ...filters, overdue: checked })
-                  }
-                />
-                <Label htmlFor="overdue-toggle" className="text-sm text-muted-foreground">
-                  Overdue
-                </Label>
-              </div>
-            </div>
-          </div>
+          <Switch
+            checked={filters.overdue || false}
+            onCheckedChange={(checked) => 
+              setFilters({ ...filters, overdue: checked })
+            }
+          />
         </AdminFilterBar>
 
         {isLoading ? (
