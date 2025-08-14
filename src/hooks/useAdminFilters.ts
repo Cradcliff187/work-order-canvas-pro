@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { countActiveFilters } from '@/lib/filters';
 
 interface UseAdminFiltersOptions<T> {
@@ -10,13 +10,33 @@ export function useAdminFilters<T extends Record<string, any>>(
   initialFilters: T,
   options?: UseAdminFiltersOptions<T>
 ) {
+  // Track mount count to detect excessive re-renders
+  const mountCountRef = useRef(0);
+  const lastLoadTimeRef = useRef(0);
+  
   // Initialize from localStorage only once
   const [filters, setFiltersInternal] = useState<T>(() => {
+    mountCountRef.current++;
+    const now = Date.now();
+    
+    // Warn about excessive re-renders in development
+    if (process.env.NODE_ENV === 'development') {
+      if (now - lastLoadTimeRef.current < 100 && mountCountRef.current > 5) {
+        console.warn(`⚠️ useAdminFilters(${storageKey}) mounted ${mountCountRef.current} times rapidly. Possible re-render loop detected.`);
+      }
+      lastLoadTimeRef.current = now;
+    }
+    
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        console.log('📦 Loaded filters from storage:', storageKey, parsed);
+        if (process.env.NODE_ENV === 'development' && mountCountRef.current <= 3) {
+          console.group(`📦 useAdminFilters(${storageKey})`);
+          console.log('Loaded from storage:', parsed);
+          console.log('Mount count:', mountCountRef.current);
+          console.groupEnd();
+        }
         return { ...initialFilters, ...parsed };
       }
     } catch (error) {
@@ -32,26 +52,37 @@ export function useAdminFilters<T extends Record<string, any>>(
       
       // Deep equality check to prevent unnecessary updates
       if (JSON.stringify(prev) === JSON.stringify(next)) {
-        console.log('🔒 Filters unchanged, skipping update');
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🔒 ${storageKey}: Filters unchanged, skipping update`);
+        }
         return prev;
       }
       
-      console.log('✅ Filters updated:', { from: prev, to: next });
+      if (process.env.NODE_ENV === 'development') {
+        console.group(`✅ ${storageKey}: Filters updated`);
+        console.log('From:', prev);
+        console.log('To:', next);
+        console.groupEnd();
+      }
       return next;
     });
-  }, []); // Empty deps - function is stable
+  }, [storageKey]); // Include storageKey for better logging
 
   // Stable clearFilters
   const clearFilters = useCallback(() => {
-    console.log('🧹 Clearing filters');
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🧹 ${storageKey}: Clearing filters`);
+    }
     setFiltersInternal(initialFilters);
-  }, [JSON.stringify(initialFilters)]); // Serialize for stability
+  }, [storageKey, JSON.stringify(initialFilters)]); // Serialize for stability
 
   // Save to localStorage with debounce to prevent rapid writes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       localStorage.setItem(storageKey, JSON.stringify(filters));
-      console.log('💾 Saved filters to storage:', storageKey);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`💾 ${storageKey}: Saved filters to storage`);
+      }
     }, 500); // Debounce 500ms
 
     return () => clearTimeout(timeoutId);
