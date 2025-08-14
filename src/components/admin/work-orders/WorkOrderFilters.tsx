@@ -96,8 +96,8 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   // - 6-month time window captures seasonal business cycles while limiting dataset size
   // - 1000 record limit provides good location coverage without overwhelming the database
   // - Combined time + count limits ensure consistent performance regardless of organization size
-  const { data: locations, isLoading: locationsLoading, isFetching: locationsRefetching, error: locationsError, refetch: refetchLocations } = useQuery({
-    queryKey: ['work-order-locations', (filters.partner_organization_ids || []).join(',')],
+  const { data: locationsWithCounts, isLoading: locationsLoading, isFetching: locationsRefetching, error: locationsError, refetch: refetchLocations } = useQuery({
+    queryKey: ['work-order-locations-with-counts', (filters.partner_organization_ids || []).join(',')],
     queryFn: async () => {
       try {
         // Calculate 6 months ago for time-based filtering to improve query performance
@@ -122,12 +122,21 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         const { data, error } = await query;
         if (error) throw error;
         
-        // Filter out null/empty locations and get unique values
-        const uniqueLocations = [...new Set(
-          data?.filter(wo => wo.store_location?.trim()).map(wo => wo.store_location) || []
-        )].filter(Boolean);
+        // Count occurrences of each location
+        const locationCounts = new Map<string, number>();
+        data?.forEach(wo => {
+          if (wo.store_location?.trim()) {
+            const location = wo.store_location;
+            locationCounts.set(location, (locationCounts.get(location) || 0) + 1);
+          }
+        });
         
-        return uniqueLocations.sort();
+        // Convert to array and sort by location name
+        const locationsWithCounts = Array.from(locationCounts.entries())
+          .map(([location, count]) => ({ location, count }))
+          .sort((a, b) => a.location.localeCompare(b.location));
+        
+        return locationsWithCounts;
       } catch (error) {
         console.error('Failed to fetch work order locations:', error);
         return [];
@@ -244,9 +253,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             label: [emp.first_name, emp.last_name].filter(Boolean).join(' '),
             subtitle: emp.organization,
           }))}
-          locations={(Array.isArray(locations) ? locations : []).map((loc: string) => ({
-            id: `loc-${loc}`,
-            label: loc,
+          locations={(locationsWithCounts || []).map(({ location }) => ({
+            id: `loc-${location}`,
+            label: location,
           }))}
           onSearchSubmit={(q) => onSearchChange(q)}
           onSelectSuggestion={(item) => onSearchChange(item.label)}
@@ -356,7 +365,10 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
           </div>
         ) : (
           <MultiSelectFilter
-            options={locations?.filter(Boolean)?.map(location => ({ value: location, label: location })) || []}
+            options={locationsWithCounts?.map(({ location, count }) => ({ 
+              value: location, 
+              label: `${location} (${count})` 
+            })) || []}
             selectedValues={filters.location_filter || []}
             onSelectionChange={(values) => onFiltersChange({ 
               ...filters, 
@@ -365,7 +377,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             placeholder="All Locations"
             searchPlaceholder="Search locations..."
             className="h-10"
-            disabled={!locations || locationsLoading || locationsRefetching}
+            disabled={!locationsWithCounts || locationsLoading || locationsRefetching}
           />
         )}
       </div>
