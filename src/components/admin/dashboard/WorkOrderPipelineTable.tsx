@@ -17,6 +17,8 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { WorkOrderStatusBadge, ComputedFinancialStatusBadge } from '@/components/ui/status-badge';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
@@ -26,7 +28,8 @@ import { useAdminFilters } from '@/hooks/useAdminFilters';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Copy } from 'lucide-react';
+import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
 
 // Filter interface
@@ -238,50 +241,121 @@ export function WorkOrderPipelineTable() {
 
   const columns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
-      id: 'work_order',
-      header: 'Work Order',
+      id: 'work_order_number',
+      header: 'Work Order #',
+      cell: ({ row }) => {
+        const item = row.original;
+        
+        const copyToClipboard = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(item.work_order_number || '');
+        };
+
+        return (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <div className="flex items-center gap-2 cursor-pointer">
+                <span className="font-medium text-foreground hover:text-primary">
+                  {item.work_order_number}
+                </span>
+                {item.age_days !== undefined && (
+                  <Badge variant={item.is_overdue ? "destructive" : "secondary"} className="text-xs">
+                    {item.age_days}d
+                  </Badge>
+                )}
+                <button 
+                  onClick={copyToClipboard}
+                  className="opacity-0 group-hover:opacity-100 hover:text-primary"
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80">
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">{item.work_order_number}</h4>
+                <p className="text-sm">{item.title}</p>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Submitted:</span>
+                  <span>{item.date_submitted ? formatDate(item.date_submitted) : 'N/A'}</span>
+                </div>
+                {item.due_date && (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Due Date:</span>
+                    <span>{formatDate(item.due_date)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Status:</span>
+                  <span className="capitalize">{item.status}</span>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        );
+      },
+    },
+    {
+      id: 'title',
+      header: 'Title',
+      cell: ({ row }) => {
+        const item = row.original;
+        const title = item.title || 'No title';
+        const isLong = title.length > 40;
+        
+        return isLong ? (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <div className="max-w-[200px] truncate cursor-pointer hover:text-primary">
+                {title}
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent>
+              <p className="text-sm">{title}</p>
+            </HoverCardContent>
+          </HoverCard>
+        ) : (
+          <div className="max-w-[200px]">{title}</div>
+        );
+      },
+    },
+    {
+      id: 'partner',
+      header: 'Partner',
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-foreground">
-                {item.work_order_number}
-              </span>
-              {item.age_days !== undefined && (
-                <Badge variant="secondary" className="text-xs">
-                  {item.age_days}d
-                </Badge>
-              )}
-            </div>
-            <div className="text-sm text-muted-foreground truncate" title={item.title}>
-              {item.title}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {item.partner_organization_name}
-            </div>
-            {item.store_location && (
-              <div className="text-xs text-muted-foreground">
-                {item.store_location}
-              </div>
-            )}
+          <div className="max-w-[150px] truncate" title={item.partner_organization_name}>
+            {item.partner_organization_name}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'location',
+      header: 'Location',
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div className="max-w-[120px] truncate text-sm text-muted-foreground" title={item.store_location}>
+            {item.store_location || 'No location'}
           </div>
         );
       },
     },
     {
       id: 'operational_status',
-      header: 'Operational Status',
+      header: 'Status',
       cell: ({ row }) => getOperationalStatusBadge(row.original),
     },
     {
       id: 'subcontractor_invoice',
-      header: 'Subcontractor Invoice',
+      header: 'Invoice',
       cell: ({ row }) => {
         const item = row.original;
         return (
           <div className="space-y-1">
-            <ComputedFinancialStatusBadge status={item.financial_status} />
+            <ComputedFinancialStatusBadge status={item.financial_status} size="sm" />
             {item.subcontractor_invoice_amount && (
               <div className="text-xs text-muted-foreground">
                 ${item.subcontractor_invoice_amount.toLocaleString()}
@@ -293,7 +367,7 @@ export function WorkOrderPipelineTable() {
     },
     {
       id: 'partner_billing',
-      header: 'Partner Billing',
+      header: 'Billing',
       cell: ({ row }) => getPartnerBillingBadge(row.original),
     },
   ], []);
@@ -306,7 +380,7 @@ export function WorkOrderPipelineTable() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 10 },
+      pagination: { pageSize: 20 },
     },
   });
 
@@ -418,21 +492,21 @@ export function WorkOrderPipelineTable() {
                       </TableRow>
                     ))}
                   </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleRowClick(row.original)}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="py-3">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
+                   <TableBody>
+                     {table.getRowModel().rows.map((row) => (
+                       <TableRow
+                         key={row.id}
+                         className="group cursor-pointer hover:bg-muted/50"
+                         onClick={() => handleRowClick(row.original)}
+                       >
+                         {row.getVisibleCells().map((cell) => (
+                           <TableCell key={cell.id} className="py-2 h-12">
+                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                           </TableCell>
+                         ))}
+                       </TableRow>
+                     ))}
+                   </TableBody>
                 </Table>
               </ResponsiveTableWrapper>
             </div>
@@ -480,8 +554,27 @@ export function WorkOrderPipelineTable() {
 
             {/* Pagination */}
             <div className="flex items-center justify-between space-x-2 py-4 mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {table.getRowModel().rows.length} of {data.length} work orders
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing {table.getRowModel().rows.length} of {data.length} work orders
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Rows per page:</span>
+                  <Select
+                    value={table.getState().pagination.pageSize.toString()}
+                    onValueChange={(value) => table.setPageSize(Number(value))}
+                  >
+                    <SelectTrigger className="w-16 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <button
