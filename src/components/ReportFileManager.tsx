@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { UniversalUploadSheet } from '@/components/upload/UniversalUploadSheet';
+import { AttachmentUpload } from '@/components/work-orders/shared/AttachmentUpload';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,9 +49,9 @@ export function ReportFileManager({
 }: ReportFileManagerProps) {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadNotes, setUploadNotes] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   
   const { toast } = useToast();
+  const { isAdmin } = useUserProfile();
   const { 
     uploadFiles, 
     removeFile, 
@@ -66,7 +67,6 @@ export function ReportFileManager({
         description: `Successfully uploaded ${uploadedFiles.length} file(s)`,
       });
       setShowUploadDialog(false);
-      setSelectedFiles([]);
       setUploadNotes('');
     },
     onError: (error: any) => {
@@ -78,8 +78,8 @@ export function ReportFileManager({
     }
   });
 
-  const handleUpload = async () => {
-    if (selectedFiles.length === 0) {
+  const handleUpload = async (files: File[], isInternal?: boolean) => {
+    if (files.length === 0) {
       toast({
         title: "No Files Selected",
         description: "Please select files to upload",
@@ -89,7 +89,7 @@ export function ReportFileManager({
     }
 
     try {
-      await uploadFiles(selectedFiles, false, workOrderId, reportId);
+      await uploadFiles(files, isInternal || false, workOrderId, reportId);
     } catch (error) {
       console.error('Upload failed:', error);
     }
@@ -174,51 +174,13 @@ export function ReportFileManager({
                   />
                 </div>
                 
-                <UniversalUploadSheet
-                  trigger={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-20 border-dashed border-2 hover:border-primary/50"
-                      disabled={isUploading}
-                    >
-                      <div className="text-center">
-                        <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-medium">Upload Files</p>
-                        <p className="text-xs text-muted-foreground">Click to select files</p>
-                      </div>
-                    </Button>
-                  }
-                  onFilesSelected={setSelectedFiles}
-                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
-                  multiple={true}
+                <AttachmentUpload
+                  onUpload={handleUpload}
+                  showInternalToggle={isAdmin()}
+                  isUploading={isUploading}
+                  maxFiles={10}
+                  isFormContext={false}
                 />
-                
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowUploadDialog(false)}
-                    disabled={isUploading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleUpload}
-                    disabled={isUploading || selectedFiles.length === 0}
-                  >
-                    {isUploading ? (
-                      <>
-                        <Upload className="w-4 h-4 mr-2 animate-pulse" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Files
-                      </>
-                    )}
-                  </Button>
-                </div>
               </div>
             </DialogContent>
           </Dialog>
