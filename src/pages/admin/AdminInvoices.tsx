@@ -71,24 +71,75 @@ export default function AdminInvoices() {
   // Initialize isInitialMount ref at component level
   const isInitialMount = useRef(true);
   
-  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v1', {
-    status: ['submitted'] as string[],
-    paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
-    search: '',
-    partner_organization_id: undefined as string | undefined,
-    subcontractor_organization_id: undefined as string | undefined,
-    trade_id: [] as string[],
-    location_filter: [] as string[],
-    date_from: undefined as string | undefined,
-    date_to: undefined as string | undefined,
-    due_date_from: undefined as string | undefined,
-    due_date_to: undefined as string | undefined,
-    amount_min: undefined as number | undefined,
-    amount_max: undefined as number | undefined,
-    has_attachments: false,
-    overdue: false,
-    created_today: false,
-  });
+  // Get initial filters with conditional default for status
+  const getInitialFilters = () => {
+    try {
+      const stored = localStorage.getItem('admin-invoices-filters-v1');
+      if (stored) {
+        // User has used filters before, don't apply default
+        return {
+          status: [] as string[],
+          paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
+          search: '',
+          partner_organization_id: undefined as string | undefined,
+          subcontractor_organization_id: undefined as string | undefined,
+          trade_id: [] as string[],
+          location_filter: [] as string[],
+          date_from: undefined as string | undefined,
+          date_to: undefined as string | undefined,
+          due_date_from: undefined as string | undefined,
+          due_date_to: undefined as string | undefined,
+          amount_min: undefined as number | undefined,
+          amount_max: undefined as number | undefined,
+          has_attachments: false,
+          overdue: false,
+          created_today: false,
+        };
+      } else {
+        // First time user, apply "submitted" as default
+        return {
+          status: ['submitted'] as string[],
+          paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
+          search: '',
+          partner_organization_id: undefined as string | undefined,
+          subcontractor_organization_id: undefined as string | undefined,
+          trade_id: [] as string[],
+          location_filter: [] as string[],
+          date_from: undefined as string | undefined,
+          date_to: undefined as string | undefined,
+          due_date_from: undefined as string | undefined,
+          due_date_to: undefined as string | undefined,
+          amount_min: undefined as number | undefined,
+          amount_max: undefined as number | undefined,
+          has_attachments: false,
+          overdue: false,
+          created_today: false,
+        };
+      }
+    } catch (error) {
+      // If localStorage access fails, use default with submitted filter
+      return {
+        status: ['submitted'] as string[],
+        paymentStatus: undefined as 'paid' | 'unpaid' | undefined,
+        search: '',
+        partner_organization_id: undefined as string | undefined,
+        subcontractor_organization_id: undefined as string | undefined,
+        trade_id: [] as string[],
+        location_filter: [] as string[],
+        date_from: undefined as string | undefined,
+        date_to: undefined as string | undefined,
+        due_date_from: undefined as string | undefined,
+        due_date_to: undefined as string | undefined,
+        amount_min: undefined as number | undefined,
+        amount_max: undefined as number | undefined,
+        has_attachments: false,
+        overdue: false,
+        created_today: false,
+      };
+    }
+  };
+
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters('admin-invoices-filters-v1', getInitialFilters());
 
   
   const { approveInvoice, rejectInvoice, markAsPaid } = useInvoiceMutations();
