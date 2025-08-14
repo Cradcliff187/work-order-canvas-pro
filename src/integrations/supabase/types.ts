@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1819,24 +1819,24 @@ export type Database = {
         Returns: string
       }
       calculate_completion_time_by_trade: {
-        Args: { start_date?: string; end_date?: string }
+        Args: { end_date?: string; start_date?: string }
         Returns: {
-          trade_name: string
           avg_completion_hours: number
-          total_orders: number
           completed_orders: number
+          total_orders: number
+          trade_name: string
         }[]
       }
       calculate_first_time_fix_rate: {
-        Args: { start_date?: string; end_date?: string }
+        Args: { end_date?: string; start_date?: string }
         Returns: number
       }
       call_send_email_trigger: {
         Args: {
-          template_name: string
+          context_data?: Json
           record_id: string
           record_type?: string
-          context_data?: Json
+          template_name: string
         }
         Returns: undefined
       }
@@ -1894,9 +1894,9 @@ export type Database = {
       debug_upload_attempt: {
         Args: { p_uploaded_by_user_id: string; p_work_order_id: string }
         Returns: {
-          uploaded_by_user_id: string
           auth_profile_id_result: string
           ids_match: boolean
+          uploaded_by_user_id: string
           work_order_check: boolean
         }[]
       }
@@ -1937,39 +1937,39 @@ export type Database = {
         Returns: string
       }
       generate_work_order_number_per_location: {
-        Args: { org_id: string; location_code: string }
+        Args: { location_code: string; org_id: string }
         Returns: string
       }
       generate_work_order_number_simple: {
-        Args: { org_id: string; location_number?: string }
+        Args: { location_number?: string; org_id: string }
         Returns: string
       }
       generate_work_order_number_v2: {
-        Args: { org_id: string; location_code?: string }
+        Args: { location_code?: string; org_id: string }
         Returns: string
       }
       get_conversation_messages: {
-        Args: { p_conversation_id: string; p_limit?: number; p_before?: string }
+        Args: { p_before?: string; p_conversation_id: string; p_limit?: number }
         Returns: {
+          attachment_ids: string[]
+          created_at: string
           id: string
           message: string
           sender_id: string
-          created_at: string
-          attachment_ids: string[]
         }[]
       }
       get_conversations_overview: {
         Args: Record<PropertyKey, never>
         Returns: {
           conversation_id: string
-          title: string
           conversation_type: Database["public"]["Enums"]["conversation_type"]
           last_message: string
           last_message_at: string
+          organization_id: string
+          other_user_id: string
+          title: string
           unread_count: number
           updated_at: string
-          other_user_id: string
-          organization_id: string
         }[]
       }
       get_current_user_id: {
@@ -1985,50 +1985,50 @@ export type Database = {
         Returns: string
       }
       get_geographic_distribution: {
-        Args: { start_date?: string; end_date?: string }
+        Args: { end_date?: string; start_date?: string }
         Returns: {
-          state: string
-          city: string
-          work_order_count: number
           avg_completion_hours: number
+          city: string
+          state: string
+          work_order_count: number
         }[]
       }
       get_partner_unbilled_reports_with_approved_invoices: {
         Args: { partner_org_id: string }
         Returns: {
-          id: string
-          work_order_id: string
-          work_performed: string
-          materials_used: string
-          hours_worked: number
-          notes: string
-          status: Database["public"]["Enums"]["report_status"]
-          submitted_at: string
-          reviewed_at: string
-          partner_billed_at: string
-          partner_billed_amount: number
-          partner_invoice_id: string
-          subcontractor_organization_id: string
-          submitted_by_user_id: string
-          reviewed_by_user_id: string
-          subcontractor_costs: number
-          work_order_number: string
-          title: string
+          city: string
           description: string
+          hours_worked: number
+          id: string
+          materials_used: string
+          notes: string
+          org_id: string
+          org_initials: string
+          org_name: string
+          partner_billed_amount: number
+          partner_billed_at: string
+          partner_invoice_id: string
+          reviewed_at: string
+          reviewed_by_user_id: string
+          state: string
+          status: Database["public"]["Enums"]["report_status"]
           store_location: string
           street_address: string
-          city: string
-          state: string
-          zip_code: string
-          org_id: string
-          org_name: string
-          org_initials: string
+          subcontractor_costs: number
+          subcontractor_email: string
           subcontractor_first_name: string
           subcontractor_last_name: string
-          subcontractor_email: string
+          subcontractor_organization_id: string
+          submitted_at: string
+          submitted_by_email: string
           submitted_by_first_name: string
           submitted_by_last_name: string
-          submitted_by_email: string
+          submitted_by_user_id: string
+          title: string
+          work_order_id: string
+          work_order_number: string
+          work_performed: string
+          zip_code: string
         }[]
       }
       get_profile_id_direct: {
@@ -2038,8 +2038,8 @@ export type Database = {
       get_unread_message_counts: {
         Args: Record<PropertyKey, never>
         Returns: {
-          work_order_id: string
           unread_count: number
+          work_order_id: string
         }[]
       }
       get_uploader_organization_type: {
@@ -2074,15 +2074,15 @@ export type Database = {
       get_user_organizations: {
         Args: { profile_uuid: string }
         Returns: {
-          id: string
-          user_id: string
-          organization_id: string
-          role: string
           created_at: string
+          id: string
+          org_active: boolean
+          org_initials: string
           org_name: string
           org_type: string
-          org_initials: string
-          org_active: boolean
+          organization_id: string
+          role: string
+          user_id: string
         }[]
       }
       get_user_organizations_with_roles: {
@@ -2096,19 +2096,19 @@ export type Database = {
       get_user_profile: {
         Args: { user_uuid: string }
         Returns: {
-          id: string
-          user_id: string
+          avatar_url: string
+          created_at: string
           email: string
           first_name: string
-          last_name: string
-          phone: string
-          avatar_url: string
+          hourly_billable_rate: number
+          hourly_cost_rate: number
+          id: string
           is_active: boolean
           is_employee: boolean
-          hourly_cost_rate: number
-          hourly_billable_rate: number
-          created_at: string
+          last_name: string
+          phone: string
           updated_at: string
+          user_id: string
         }[]
       }
       get_work_order_id_from_path: {
@@ -2118,13 +2118,13 @@ export type Database = {
       get_work_order_threads_overview: {
         Args: { p_limit?: number }
         Returns: {
-          work_order_id: string
-          title: string
           last_message: string
           last_message_at: string
+          organization_id: string
+          title: string
           unread_count: number
           updated_at: string
-          organization_id: string
+          work_order_id: string
         }[]
       }
       has_internal_role: {
@@ -2167,14 +2167,14 @@ export type Database = {
       list_dm_candidates: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
           email: string
           first_name: string
+          id: string
           last_name: string
         }[]
       }
       log_attachment_access_violation: {
-        Args: { user_id: string; attachment_id: string; violation_type: string }
+        Args: { attachment_id: string; user_id: string; violation_type: string }
         Returns: undefined
       }
       mark_conversation_read: {
@@ -2186,7 +2186,7 @@ export type Database = {
         Returns: Json
       }
       preview_work_order_number_per_location: {
-        Args: { org_id: string; location_code: string }
+        Args: { location_code: string; org_id: string }
         Returns: string
       }
       process_email_queue: {
@@ -2202,7 +2202,7 @@ export type Database = {
         Returns: Json
       }
       set_manual_completion_block: {
-        Args: { work_order_id: string; blocked?: boolean }
+        Args: { blocked?: boolean; work_order_id: string }
         Returns: undefined
       }
       setup_bulletproof_test_data: {
@@ -2221,8 +2221,8 @@ export type Database = {
         Args: Record<PropertyKey, never> | { user_uuid: string }
         Returns: {
           auth_uid: string
-          profile_found: boolean
           org_count: number
+          profile_found: boolean
         }[]
       }
       test_auth_system: {
@@ -2236,11 +2236,11 @@ export type Database = {
       test_rls_for_user: {
         Args: { test_email: string }
         Returns: {
-          user_type: string
-          test_scenario: string
-          expected_access: string
           actual_result: boolean
+          expected_access: string
           pass_fail: string
+          test_scenario: string
+          user_type: string
         }[]
       }
       test_user_creation: {
@@ -2253,10 +2253,10 @@ export type Database = {
       }
       transition_work_order_status: {
         Args: {
-          work_order_id: string
           new_status: Database["public"]["Enums"]["work_order_status"]
           reason?: string
           user_id?: string
+          work_order_id: string
         }
         Returns: Json
       }
@@ -2265,7 +2265,7 @@ export type Database = {
         Returns: Json
       }
       trigger_send_email: {
-        Args: { template_name: string; record_id: string; record_type: string }
+        Args: { record_id: string; record_type: string; template_name: string }
         Returns: undefined
       }
       validate_direct_conversation_participants: {
@@ -2277,7 +2277,7 @@ export type Database = {
         Returns: Json
       }
       validate_user_organization_assignment: {
-        Args: { p_user_id: string; p_organization_id: string }
+        Args: { p_organization_id: string; p_user_id: string }
         Returns: boolean
       }
       verify_test_environment_status: {
