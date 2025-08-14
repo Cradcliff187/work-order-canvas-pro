@@ -16,17 +16,127 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { WorkOrderStatusBadge, FinancialStatusBadge } from '@/components/ui/status-badge';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
+import { useAdminFilters } from '@/hooks/useAdminFilters';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
-import { ClipboardList, Calendar } from 'lucide-react';
+import { ClipboardList, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Filter interface
+interface PipelineFiltersValue {
+  search?: string;
+  operational_status?: string[];
+  financial_status?: string[];
+  partner_organization_id?: string;
+  overdue?: boolean;
+}
+
+// Filter options
+const operationalStatusOptions = [
+  { value: 'new', label: 'New' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'reports_pending', label: 'Reports Pending' },
+  { value: 'complete', label: 'Complete' }
+];
+
+const financialStatusOptions = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'partially_invoiced', label: 'Partial Invoice' },
+  { value: 'fully_invoiced', label: 'Invoiced' },
+  { value: 'approved_for_payment', label: 'Approved' },
+  { value: 'paid', label: 'Paid' }
+];
 
 export function WorkOrderPipelineTable() {
   const navigate = useNavigate();
   const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
   
-  const data = useMemo(() => pipelineData || [], [pipelineData]);
+  // Filter state management
+  const initialFilters: PipelineFiltersValue = {
+    search: '',
+    operational_status: [],
+    financial_status: [],
+    partner_organization_id: '',
+    overdue: false
+  };
+
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
+    'admin-pipeline-filters',
+    initialFilters,
+    { excludeKeys: [] }
+  );
+
+  // Debounce search input
+  const debouncedSearch = useDebounce(filters.search || '', 300);
+
+  // Apply client-side filtering
+  const filteredData = useMemo(() => {
+    if (!pipelineData) return [];
+
+    return pipelineData.filter((item) => {
+      // Search filter (work order number and title)
+      if (debouncedSearch && debouncedSearch.trim()) {
+        const searchTerm = debouncedSearch.toLowerCase().trim();
+        const matchesSearch = 
+          item.work_order_number?.toLowerCase().includes(searchTerm) ||
+          item.title?.toLowerCase().includes(searchTerm);
+        if (!matchesSearch) return false;
+      }
+
+      // Operational status filter
+      if (filters.operational_status && filters.operational_status.length > 0) {
+        const itemOperationalStatus = getOperationalStatusKey(item);
+        if (!filters.operational_status.includes(itemOperationalStatus)) return false;
+      }
+
+      // Financial status filter
+      if (filters.financial_status && filters.financial_status.length > 0) {
+        if (!filters.financial_status.includes(item.financial_status)) return false;
+      }
+
+      // Partner organization filter
+      if (filters.partner_organization_id && filters.partner_organization_id.trim()) {
+        if (item.organization_id !== filters.partner_organization_id) return false;
+      }
+
+      // Overdue filter
+      if (filters.overdue) {
+        if (!item.is_overdue) return false;
+      }
+
+      return true;
+    });
+  }, [pipelineData, debouncedSearch, filters]);
+
+  const data = useMemo(() => filteredData, [filteredData]);
+
+  // Helper function to get operational status key for filtering
+  const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
+    switch (item.status) {
+      case 'received':
+        return 'new';
+      case 'assigned':
+        return 'assigned';
+      case 'in_progress':
+        return 'in_progress';
+      case 'completed':
+        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
+          return 'reports_pending';
+        }
+        return 'complete';
+      default:
+        return 'new';
+    }
+  };
 
   // Create operational status badge
   const getOperationalStatusBadge = (item: WorkOrderPipelineItem) => {
@@ -224,13 +334,107 @@ export function WorkOrderPipelineTable() {
         <CardTitle>Work Order Pipeline</CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Filters */}
+        <AdminFilterBar
+          title="Pipeline Filters"
+          filterCount={filterCount}
+          onClear={clearFilters}
+          className="mb-6"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {/* Search Input */}
+            <div className="lg:col-span-2">
+              <Label htmlFor="search" className="text-sm font-medium">
+                Search
+              </Label>
+              <div className="relative mt-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Work order number or title..."
+                  value={filters.search || ''}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {/* Operational Status Filter */}
+            <div>
+              <Label className="text-sm font-medium">Operational Status</Label>
+              <div className="mt-1">
+                <MultiSelectFilter
+                  options={operationalStatusOptions}
+                  selectedValues={filters.operational_status || []}
+                  onSelectionChange={(values) => 
+                    setFilters({ ...filters, operational_status: values })
+                  }
+                  placeholder="All statuses"
+                  maxDisplayCount={2}
+                />
+              </div>
+            </div>
+
+            {/* Financial Status Filter */}
+            <div>
+              <Label className="text-sm font-medium">Financial Status</Label>
+              <div className="mt-1">
+                <MultiSelectFilter
+                  options={financialStatusOptions}
+                  selectedValues={filters.financial_status || []}
+                  onSelectionChange={(values) => 
+                    setFilters({ ...filters, financial_status: values })
+                  }
+                  placeholder="All statuses"
+                  maxDisplayCount={2}
+                />
+              </div>
+            </div>
+
+            {/* Partner Organization Filter */}
+            <div>
+              <Label className="text-sm font-medium">Partner Organization</Label>
+              <div className="mt-1">
+                <OrganizationSelector
+                  value={filters.partner_organization_id || ''}
+                  onChange={(value) => 
+                    setFilters({ ...filters, partner_organization_id: value })
+                  }
+                  organizationType="partner"
+                  placeholder="All partners"
+                />
+              </div>
+            </div>
+
+            {/* Overdue Toggle */}
+            <div>
+              <Label className="text-sm font-medium">Show Overdue Only</Label>
+              <div className="flex items-center space-x-2 mt-1">
+                <Switch
+                  checked={filters.overdue || false}
+                  onCheckedChange={(checked) => 
+                    setFilters({ ...filters, overdue: checked })
+                  }
+                />
+                <Label htmlFor="overdue-toggle" className="text-sm text-muted-foreground">
+                  Overdue
+                </Label>
+              </div>
+            </div>
+          </div>
+        </AdminFilterBar>
+
         {isLoading ? (
           <TableSkeleton rows={5} columns={4} />
         ) : data.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
-            title="No work orders found"
-            description="No work orders are currently in the pipeline."
+            title={filterCount > 0 ? "No matching work orders" : "No work orders found"}
+            description={
+              filterCount > 0 
+                ? "No work orders match your current filters. Try adjusting your criteria."
+                : "No work orders are currently in the pipeline."
+            }
             variant="card"
           />
         ) : (
