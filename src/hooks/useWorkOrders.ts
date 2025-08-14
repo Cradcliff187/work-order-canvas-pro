@@ -237,31 +237,46 @@ export function useWorkOrders(
           const includesInternal = selections.includes('internal');
           const subOrgIds = selections.filter((id) => id !== 'internal');
 
-          // Build an array of work order IDs that match our criteria
           let workOrderIds: string[] = [];
 
-          // First, get work orders with matching assignments
-          const { data: matchingAssignments } = await supabase
-            .from('work_order_assignments')
-            .select('work_order_id, assigned_organization_id, assigned_to, organizations!assigned_organization_id(organization_type)')
-            .or(
-              [
-                // Internal org assignments
-                includesInternal && `organizations.organization_type.eq.internal`,
-                // Direct employee assignments (no org)
-                includesInternal && `assigned_organization_id.is.null,assigned_to.not.is.null`,
-                // Subcontractor assignments
-                subOrgIds.length > 0 && `assigned_organization_id.in.(${subOrgIds.map(id => `"${id}"`).join(',')})`
-              ]
-              .filter(Boolean)
-              .join(',')
-            );
+          // Handle internal organization filtering
+          if (includesInternal) {
+            // Get the internal organization ID
+            const { data: internalOrg } = await supabase
+              .from('organizations')
+              .select('id')
+              .eq('organization_type', 'internal')
+              .single();
 
-          if (matchingAssignments && matchingAssignments.length > 0) {
-            workOrderIds = [...new Set(matchingAssignments.map(a => a.work_order_id))];
-            
-            // Filter the main query by these work order IDs
-            query = query.in('id', workOrderIds);
+            if (internalOrg) {
+              // Get assignments to internal org or direct employee assignments
+              const { data: internalAssignments } = await supabase
+                .from('work_order_assignments')
+                .select('work_order_id')
+                .or(`assigned_organization_id.eq.${internalOrg.id},assigned_organization_id.is.null`);
+
+              if (internalAssignments) {
+                workOrderIds.push(...internalAssignments.map(a => a.work_order_id));
+              }
+            }
+          }
+
+          // Handle subcontractor organization filtering
+          if (subOrgIds.length > 0) {
+            const { data: subAssignments } = await supabase
+              .from('work_order_assignments')
+              .select('work_order_id')
+              .in('assigned_organization_id', subOrgIds);
+
+            if (subAssignments) {
+              workOrderIds.push(...subAssignments.map(a => a.work_order_id));
+            }
+          }
+
+          if (workOrderIds.length > 0) {
+            // Remove duplicates and filter the main query
+            const uniqueWorkOrderIds = [...new Set(workOrderIds)];
+            query = query.in('id', uniqueWorkOrderIds);
           } else {
             // No matching assignments, return empty results
             return { data: [], pageCount: 0, totalCount: 0 };
