@@ -21,7 +21,8 @@ import { usePartnerInvoiceGeneration } from '@/hooks/usePartnerInvoiceGeneration
 import { usePartnerReportStats } from '@/hooks/usePartnerReportStats';
 import { useReportInvoiceDetails } from '@/hooks/useReportInvoiceDetails';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
-import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, X } from 'lucide-react';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
 import {
@@ -295,13 +296,34 @@ export default function SelectReports() {
                   <Badge variant="secondary" className="h-5 text-[10px] px-2">
                     {reports.length} report{reports.length !== 1 ? 's' : ''}
                   </Badge>
-                  <Badge variant="outline" className="h-5 text-[10px] px-2 flex items-center gap-2">
-                    <DollarSign className="w-3 h-3" />
-                    {formatCurrency(totalSubcontractorCosts)} available
-                  </Badge>
-                </div>
-              )}
-            </div>
+                   <Badge variant="outline" className="h-5 text-[10px] px-2 flex items-center gap-2">
+                     <DollarSign className="w-3 h-3" />
+                     {formatCurrency(totalSubcontractorCosts)} available
+                   </Badge>
+                   {selectedReportIds.size > 0 && (
+                     <TableActionsDropdown
+                       actions={[
+                         {
+                           label: `Export Selected (${selectedReportIds.size})`,
+                           icon: Download,
+                           onClick: () => {
+                             // Export selected reports functionality
+                             console.log('Export selected reports:', Array.from(selectedReportIds));
+                           },
+                         },
+                         {
+                           label: 'Clear Selection',
+                           icon: X,
+                           onClick: () => setSelectedReportIds(new Set()),
+                         },
+                       ]}
+                       align="end"
+                       itemName="selected reports"
+                     />
+                   )}
+                 </div>
+               )}
+             </div>
           </CardHeader>
           <CardContent>
             {error ? (
@@ -351,7 +373,8 @@ export default function SelectReports() {
                               {sortKey==='amount' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
                             </button>
                            </TableHead>
-                          <TableHead>Status</TableHead>
+                           <TableHead>Status</TableHead>
+                           <TableHead className="w-12">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -504,10 +527,32 @@ export default function SelectReports() {
                                    '-'
                                 )}
                               </TableCell>
-                              <TableCell>
-                                <ReportStatusBadge status="approved" size="sm" />
-                              </TableCell>
-                            </TableRow>
+                               <TableCell>
+                                 <ReportStatusBadge status="approved" size="sm" />
+                               </TableCell>
+                               <TableCell onClick={(e) => e.stopPropagation()}>
+                                 <TableActionsDropdown
+                                   actions={[
+                                     {
+                                       label: 'View Details',
+                                       icon: Eye,
+                                        onClick: () => {
+                                          // Navigate to work order detail or report detail
+                                          navigate(`/admin/work-orders/${report.work_order_id}`);
+                                        },
+                                     },
+                                     {
+                                       label: 'Remove from Selection',
+                                       icon: X,
+                                       onClick: () => handleReportToggle(report.id, false),
+                                       show: isSelected,
+                                     },
+                                   ]}
+                                   align="end"
+                                   itemName={`report ${report.work_orders?.work_order_number || report.id}`}
+                                 />
+                               </TableCell>
+                             </TableRow>
                           );
                         })}
                       </TableBody>

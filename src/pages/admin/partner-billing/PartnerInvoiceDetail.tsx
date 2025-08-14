@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/utils/formatting';
 import { ArrowLeft, Download, FileText, Pencil, Trash2 } from 'lucide-react';
+import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { format } from 'date-fns';
 import { exportToCSV, ExportColumn } from '@/lib/utils/export';
@@ -224,20 +225,28 @@ export default function PartnerInvoiceDetail() {
           Back to Billing
         </Button>
         
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button variant="secondary" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
+        <TableActionsDropdown
+          actions={[
+            {
+              label: 'Export CSV',
+              icon: Download,
+              onClick: handleExportCSV,
+            },
+            {
+              label: 'Edit Invoice',
+              icon: Pencil,
+              onClick: () => setEditOpen(true),
+            },
+            {
+              label: 'Delete Invoice',
+              icon: Trash2,
+              onClick: () => setDeleteOpen(true),
+              variant: 'destructive',
+            },
+          ]}
+          align="end"
+          itemName={`invoice ${invoice.invoice_number}`}
+        />
       </div>
 
       {/* Invoice Header */}
