@@ -20,7 +20,7 @@ export interface AdminFilterBarProps {
 // It renders no data-fetching logic; consumers pass their filter controls as children.
 export function AdminFilterBar({ title = 'Filters', filterCount = 0, onClear, className, children, collapsible = false }: AdminFilterBarProps) {
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const hasActive = filterCount > 0;
 
   return (
