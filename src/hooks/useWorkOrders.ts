@@ -234,74 +234,49 @@ export function useWorkOrders(
         if (filters.date_to) {
           query = query.lte('created_at', filters.date_to);
         }
-        // DEBUG: Log the filter state
-        console.log('DEBUG useWorkOrders - Filter state:', {
-          completed_by: filters.completed_by,
-          includesInternal: filters.completed_by?.includes('internal'),
-          subOrgIds: filters.completed_by?.filter((id) => id !== 'internal'),
-          allFilters: filters
-        });
-
         // Filter by who completed/assigned the work (Internal team and/or specific subcontractors)
         if (filters.completed_by && filters.completed_by.length > 0) {
-          console.log('DEBUG useWorkOrders - Building completed_by filter');
-          
           const selections = filters.completed_by;
           const includesInternal = selections.includes('internal');
           const subOrgIds = selections.filter((id) => id !== 'internal');
 
-          console.log('DEBUG useWorkOrders - Selections breakdown:', {
-            selections,
-            includesInternal,
-            subOrgIds
-          });
-
           // Get internal organization IDs first
           let internalOrgIds: string[] = [];
           if (includesInternal) {
-            console.log('DEBUG useWorkOrders - Fetching internal organizations...');
-            const { data: internalOrgs, error: internalOrgError } = await supabase
+            const { data: internalOrgs } = await supabase
               .from('organizations')
               .select('id')
               .eq('organization_type', 'internal');
             
-            if (internalOrgError) {
-              console.error('DEBUG useWorkOrders - Error fetching internal orgs:', internalOrgError);
-            }
-            
             internalOrgIds = internalOrgs?.map(org => org.id) || [];
-            console.log('DEBUG useWorkOrders - Internal org IDs:', internalOrgIds);
           }
 
-          if (includesInternal && subOrgIds.length === 0) {
-            console.log('DEBUG useWorkOrders - Applying filter: Internal only');
-            // Only internal team - filter by internal org IDs or direct assignments
-            if (internalOrgIds.length > 0) {
-              const orCondition = `work_order_assignments.assigned_organization_id.in.(${internalOrgIds.join(',')}),and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)`;
-              console.log('DEBUG useWorkOrders - OR condition:', orCondition);
-              query = query.or(orCondition);
-            } else {
-              // No internal orgs found, just check for direct assignments
-              console.log('DEBUG useWorkOrders - No internal orgs, using direct assignment filter');
-              query = query.filter('work_order_assignments.assigned_organization_id', 'is', null)
-                          .filter('work_order_assignments.assigned_to', 'not.is', null);
-            }
-          } else if (!includesInternal && subOrgIds.length > 0) {
-            console.log('DEBUG useWorkOrders - Applying filter: Subcontractors only');
-            console.log('DEBUG useWorkOrders - SubOrgIds:', subOrgIds);
-            // Only selected subcontractors
-            query = query.in('work_order_assignments.assigned_organization_id', subOrgIds as any);
-          } else if (includesInternal && subOrgIds.length > 0) {
-            console.log('DEBUG useWorkOrders - Applying filter: Both internal and subcontractors');
-            // Both internal and specific subcontractors
-            const allOrgIds = [...internalOrgIds, ...subOrgIds];
-            console.log('DEBUG useWorkOrders - All org IDs:', allOrgIds);
-            const orCondition = `work_order_assignments.assigned_organization_id.in.(${allOrgIds.join(',')}),and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)`;
-            console.log('DEBUG useWorkOrders - OR condition:', orCondition);
-            query = query.or(orCondition);
+          // Build filter conditions based on selections
+          const filterConditions: string[] = [];
+
+          // Add internal organization conditions if selected
+          if (includesInternal && internalOrgIds.length > 0) {
+            // Quote UUIDs properly for PostgREST
+            const quotedInternalIds = internalOrgIds.map(id => `"${id}"`).join(',');
+            filterConditions.push(`work_order_assignments.assigned_organization_id.in.(${quotedInternalIds})`);
           }
 
-          console.log('DEBUG useWorkOrders - Query after completed_by filter applied');
+          // Add direct employee assignment condition for internal
+          if (includesInternal) {
+            // Direct assignments (no organization, just user)
+            filterConditions.push(`work_order_assignments.assigned_organization_id.is.null`);
+          }
+
+          // Add subcontractor organization conditions
+          if (subOrgIds.length > 0) {
+            const quotedSubIds = subOrgIds.map(id => `"${id}"`).join(',');
+            filterConditions.push(`work_order_assignments.assigned_organization_id.in.(${quotedSubIds})`);
+          }
+
+          // Apply the filter using OR logic
+          if (filterConditions.length > 0) {
+            query = query.or(filterConditions.join(','));
+          }
         }
         
         // Quick filter: My Orders - filter by assigned user
