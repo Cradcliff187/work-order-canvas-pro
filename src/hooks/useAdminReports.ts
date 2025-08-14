@@ -87,7 +87,7 @@ export function useAdminReports(
       // Handle search term
       if (searchTerm) {
         const search = `%${searchTerm.trim()}%`;
-        query = query.or(`work_performed.ilike.${search},notes.ilike.${search},invoice_number.ilike.${search}`);
+        query = query.or(`work_performed.ilike.${search},notes.ilike.${search},materials_used.ilike.${search}`);
       }
 
       // Apply sorting
