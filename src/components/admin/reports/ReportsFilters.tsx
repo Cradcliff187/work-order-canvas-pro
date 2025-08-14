@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
-import { usePartnerLocations } from '@/hooks/usePartnerLocations';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ReportsFiltersValue {
   status?: string[];
@@ -27,7 +28,35 @@ export interface ReportsFiltersProps {
 export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
   const [open, setOpen] = useState(false);
   const { date_from, date_to } = value || {};
-  const { data: locations } = usePartnerLocations();
+  
+  // Fetch unique store_location values from work_orders that have reports
+  const { data: locations = [] } = useQuery({
+    queryKey: ['report-locations'],
+    queryFn: async () => {
+      // First get all work_order_ids from reports
+      const { data: reports } = await supabase
+        .from('work_order_reports')
+        .select('work_order_id');
+      
+      if (!reports || reports.length === 0) return [];
+      
+      const workOrderIds = [...new Set(reports.map(r => r.work_order_id))];
+      
+      // Then get unique store_locations from those work orders
+      const { data: workOrders } = await supabase
+        .from('work_orders')
+        .select('store_location')
+        .in('id', workOrderIds)
+        .not('store_location', 'is', null)
+        .not('store_location', 'eq', '');
+      
+      if (!workOrders) return [];
+      
+      // Get unique locations
+      const uniqueLocations = [...new Set(workOrders.map(wo => wo.store_location))].filter(Boolean);
+      return uniqueLocations.sort();
+    }
+  });
   
   const dateLabel = useMemo(() => {
     if (!date_from && !date_to) return 'Date range';
@@ -119,9 +148,9 @@ export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium">Location</label>
           <MultiSelectFilter
-            options={(locations || []).map((location) => ({ 
-              value: location.location_number, 
-              label: `${location.location_name} (${location.location_number})` 
+            options={locations.map(location => ({ 
+              value: location, 
+              label: location 
             }))}
             selectedValues={value.location_filter || []}
             onSelectionChange={(values) => set({ 
