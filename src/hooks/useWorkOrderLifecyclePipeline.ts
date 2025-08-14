@@ -98,7 +98,9 @@ export function useWorkOrderLifecycle() {
               status,
               created_at
             )
-          ),
+          )
+          .order('submitted_at', { ascending: false })
+          .limit(1),
           invoice_work_orders(
             invoices(
               status,
@@ -191,8 +193,11 @@ export function useWorkOrderLifecycle() {
         // Get the first invoice (there should typically be one per work order)
         const invoice = workOrder.invoice_work_orders?.[0]?.invoices;
         
-        // Get partner billing info from the latest report
-        const partnerInvoice = latestReport?.partner_invoices?.[0];
+        // Get partner billing info from the latest report - use most recent invoice
+        const partnerInvoices = latestReport?.partner_invoices || [];
+        const partnerInvoice = partnerInvoices.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
 
         // Calculate derived fields
         const ageDays = calculateAgeDays(workOrder.created_at);

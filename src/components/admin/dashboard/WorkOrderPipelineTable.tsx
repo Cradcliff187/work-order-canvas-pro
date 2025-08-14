@@ -263,6 +263,14 @@ export function WorkOrderPipelineTable() {
     let variant: 'default' | 'secondary' | 'outline' | 'destructive' = 'outline';
 
     switch (status) {
+      case 'draft':
+        label = 'Draft';
+        variant = 'secondary';
+        break;
+      case 'sent':
+        label = 'Sent';
+        variant = 'default';
+        break;
       case 'not_billed':
         label = 'Not Billed';
         variant = 'outline';
