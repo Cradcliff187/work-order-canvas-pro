@@ -240,42 +240,34 @@ export function useWorkOrders(
           const includesInternal = selections.includes('internal');
           const subOrgIds = selections.filter((id) => id !== 'internal');
 
-          // Get internal organization IDs first
-          let internalOrgIds: string[] = [];
-          if (includesInternal) {
-            const { data: internalOrgs } = await supabase
-              .from('organizations')
-              .select('id')
-              .eq('organization_type', 'internal');
+          // Build an array of work order IDs that match our criteria
+          let workOrderIds: string[] = [];
+
+          // First, get work orders with matching assignments
+          const { data: matchingAssignments } = await supabase
+            .from('work_order_assignments')
+            .select('work_order_id, assigned_organization_id, assigned_to, organizations!assigned_organization_id(organization_type)')
+            .or(
+              [
+                // Internal org assignments
+                includesInternal && `organizations.organization_type.eq.internal`,
+                // Direct employee assignments (no org)
+                includesInternal && `assigned_organization_id.is.null,assigned_to.not.is.null`,
+                // Subcontractor assignments
+                subOrgIds.length > 0 && `assigned_organization_id.in.(${subOrgIds.map(id => `"${id}"`).join(',')})`
+              ]
+              .filter(Boolean)
+              .join(',')
+            );
+
+          if (matchingAssignments && matchingAssignments.length > 0) {
+            workOrderIds = [...new Set(matchingAssignments.map(a => a.work_order_id))];
             
-            internalOrgIds = internalOrgs?.map(org => org.id) || [];
-          }
-
-          // Build filter conditions based on selections
-          const filterConditions: string[] = [];
-
-          // Add internal organization conditions if selected
-          if (includesInternal && internalOrgIds.length > 0) {
-            // Quote UUIDs properly for PostgREST
-            const quotedInternalIds = internalOrgIds.map(id => `"${id}"`).join(',');
-            filterConditions.push(`work_order_assignments.assigned_organization_id.in.(${quotedInternalIds})`);
-          }
-
-          // Add direct employee assignment condition for internal
-          if (includesInternal) {
-            // Direct assignments (no organization, just user)
-            filterConditions.push(`work_order_assignments.assigned_organization_id.is.null`);
-          }
-
-          // Add subcontractor organization conditions
-          if (subOrgIds.length > 0) {
-            const quotedSubIds = subOrgIds.map(id => `"${id}"`).join(',');
-            filterConditions.push(`work_order_assignments.assigned_organization_id.in.(${quotedSubIds})`);
-          }
-
-          // Apply the filter using OR logic
-          if (filterConditions.length > 0) {
-            query = query.or(filterConditions.join(','));
+            // Filter the main query by these work order IDs
+            query = query.in('id', workOrderIds);
+          } else {
+            // No matching assignments, return empty results
+            return { data: [], pageCount: 0, totalCount: 0 };
           }
         }
         
