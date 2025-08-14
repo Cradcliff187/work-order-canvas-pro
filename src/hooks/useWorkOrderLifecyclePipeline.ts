@@ -13,9 +13,24 @@ export interface WorkOrderPipelineItem {
   store_location: string | null;
   organization_id: string | null;
   date_submitted: string;
+  created_at: string;
+  due_date: string | null;
+  priority: 'low' | 'medium' | 'high' | 'urgent' | null;
   
-  // Assigned organization
+  // Organization info
+  partner_organization_name: string | null;
   assigned_organization_name: string | null;
+  
+  // Financial tracking
+  estimated_hours: number | null;
+  actual_hours: number | null;
+  materials_cost: number | null;
+  labor_cost: number | null;
+  subcontractor_invoice_amount: number | null;
+  
+  // Timeline tracking
+  date_assigned: string | null;
+  date_completed: string | null;
   
   // Latest report status
   report_status: 'submitted' | 'reviewed' | 'approved' | 'rejected' | null;
@@ -28,6 +43,12 @@ export interface WorkOrderPipelineItem {
   // Partner billing status
   partner_bill_status: string | null;
   partner_billed_at: string | null;
+  
+  // Calculated fields
+  age_days: number;
+  is_overdue: boolean;
+  operational_status: 'on_track' | 'at_risk' | 'overdue' | 'blocked' | 'completed';
+  financial_status: 'not_billed' | 'partially_billed' | 'fully_billed' | 'paid';
 }
 
 export function useWorkOrderLifecycle() {
@@ -51,7 +72,20 @@ export function useWorkOrderLifecycle() {
           store_location,
           organization_id,
           date_submitted,
+          created_at,
+          due_date,
+          priority,
+          estimated_hours,
+          actual_hours,
+          materials_cost,
+          labor_cost,
+          subcontractor_invoice_amount,
+          date_assigned,
+          date_completed,
           assigned_organization_id,
+          partner_organization:organizations!work_orders_organization_id_fkey(
+            name
+          ),
           assigned_organizations:organizations!work_orders_assigned_organization_id_fkey(
             name
           ),
@@ -106,6 +140,43 @@ export function useWorkOrderLifecycle() {
         throw error;
       }
 
+      // Helper functions for calculations
+      const calculateAgeDays = (createdAt: string): number => {
+        const created = new Date(createdAt);
+        const now = new Date();
+        const diffTime = now.getTime() - created.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      };
+
+      const isOverdue = (dueDate: string | null): boolean => {
+        if (!dueDate) return false;
+        return new Date(dueDate) < new Date();
+      };
+
+      const calculateOperationalStatus = (
+        status: string,
+        reportStatus: string | null,
+        dueDate: string | null,
+        ageDays: number
+      ): 'on_track' | 'at_risk' | 'overdue' | 'blocked' | 'completed' => {
+        if (status === 'completed') return 'completed';
+        if (dueDate && isOverdue(dueDate)) return 'overdue';
+        if (status === 'received' && ageDays > 3) return 'at_risk';
+        if (status === 'assigned' && ageDays > 7) return 'at_risk';
+        if (status === 'in_progress' && reportStatus === 'rejected') return 'blocked';
+        return 'on_track';
+      };
+
+      const calculateFinancialStatus = (
+        invoiceStatus: string | null,
+        partnerBillStatus: string | null
+      ): 'not_billed' | 'partially_billed' | 'fully_billed' | 'paid' => {
+        if (!invoiceStatus && !partnerBillStatus) return 'not_billed';
+        if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
+        if (invoiceStatus || partnerBillStatus) return 'partially_billed';
+        return 'not_billed';
+      };
+
       // Transform the data to match our pipeline structure
       return (data || []).map((workOrder: any): WorkOrderPipelineItem => {
         // Get the latest report (assuming they're ordered by submitted_at)
@@ -117,6 +188,20 @@ export function useWorkOrderLifecycle() {
         // Get partner billing info from the latest report
         const partnerInvoice = latestReport?.partner_invoices?.[0];
 
+        // Calculate derived fields
+        const ageDays = calculateAgeDays(workOrder.created_at);
+        const overdueStatus = isOverdue(workOrder.due_date);
+        const operationalStatus = calculateOperationalStatus(
+          workOrder.status,
+          latestReport?.status,
+          workOrder.due_date,
+          ageDays
+        );
+        const financialStatus = calculateFinancialStatus(
+          invoice?.status,
+          partnerInvoice?.status
+        );
+
         return {
           id: workOrder.id,
           work_order_number: workOrder.work_order_number,
@@ -125,9 +210,24 @@ export function useWorkOrderLifecycle() {
           store_location: workOrder.store_location,
           organization_id: workOrder.organization_id,
           date_submitted: workOrder.date_submitted,
+          created_at: workOrder.created_at,
+          due_date: workOrder.due_date,
+          priority: workOrder.priority,
           
-          // Assigned organization
+          // Organization info
+          partner_organization_name: workOrder.partner_organization?.name || null,
           assigned_organization_name: workOrder.assigned_organizations?.name || null,
+          
+          // Financial tracking
+          estimated_hours: workOrder.estimated_hours,
+          actual_hours: workOrder.actual_hours,
+          materials_cost: workOrder.materials_cost,
+          labor_cost: workOrder.labor_cost,
+          subcontractor_invoice_amount: workOrder.subcontractor_invoice_amount,
+          
+          // Timeline tracking
+          date_assigned: workOrder.date_assigned,
+          date_completed: workOrder.date_completed,
           
           // Latest report status
           report_status: latestReport?.status || null,
@@ -140,6 +240,12 @@ export function useWorkOrderLifecycle() {
           // Partner billing status
           partner_bill_status: partnerInvoice?.status || null,
           partner_billed_at: partnerInvoice?.created_at || null,
+          
+          // Calculated fields
+          age_days: ageDays,
+          is_overdue: overdueStatus,
+          operational_status: operationalStatus,
+          financial_status: financialStatus,
         };
       });
     },
