@@ -81,12 +81,26 @@ export function useAdminReports(
         query = query.lte('submitted_at', filters.date_to);
       }
 
-      // Location filter - filter by exact store_location match
+      // Location filter - pre-filter work orders by location, then filter reports
       if (filters.location_filter && filters.location_filter.length > 0) {
-        const locationConditions = filters.location_filter
-          .map(loc => `work_orders.store_location.eq.${loc}`)
-          .join(',');
-        query = query.or(locationConditions);
+        try {
+          // First get work_order_ids that match the selected locations
+          const { data: matchingWorkOrders } = await supabase
+            .from('work_orders')
+            .select('id')
+            .in('store_location', filters.location_filter);
+          
+          if (matchingWorkOrders && matchingWorkOrders.length > 0) {
+            const workOrderIds = matchingWorkOrders.map(wo => wo.id);
+            query = query.in('work_order_id', workOrderIds);
+          } else {
+            // No work orders match the filter, return empty result
+            query = query.eq('id', '00000000-0000-0000-0000-000000000000'); // This will return no results
+          }
+        } catch (error) {
+          console.error('Error filtering by location:', error);
+          // On error, don't apply location filter to avoid breaking the entire query
+        }
       }
       
       // Note: Filtering by related table fields (submitted_by, work_order) 
