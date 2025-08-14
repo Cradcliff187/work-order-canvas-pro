@@ -61,18 +61,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
 import { SortableHeader } from '@/components/admin/shared/SortableHeader';
-import { WorkOrderFilters } from '@/components/admin/work-orders/WorkOrderFilters';
-
-interface ReportFilters {
-  status?: string[];
-  trade_id?: string[];
-  partner_organization_ids?: string[];
-  completed_by?: string[]; // 'internal' and/or subcontractor org IDs
-  search?: string;
-  date_from?: string;
-  date_to?: string;
-  location_filter?: string[];
-}
+import { ReportsFilters, ReportsFiltersValue } from '@/components/admin/reports/ReportsFilters';
 
 export default function AdminReports() {
   const navigate = useNavigate();
@@ -95,13 +84,12 @@ export default function AdminReports() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
 
-  // Persist filters using the same logic as admin work orders
-  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportFilters>(
-    'admin-reports-filters-v2',
+  // Persist filters using the simple ReportsFilters structure
+  const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportsFiltersValue>(
+    'admin-reports-filters-v3',
     {},
-    { excludeKeys: ['search'] }
+    { excludeKeys: [] }
   );
 
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
@@ -110,15 +98,12 @@ export default function AdminReports() {
 
   // Debounced search for better UX
   const debouncedSearch = useDebounce(searchTerm, 300);
-  const effectiveFilters = useMemo(() => ({
-    ...filters,
-    search: debouncedSearch || undefined,
-  }), [filters, debouncedSearch]);
 
   const { data: reportsData, isLoading, error, refetch } = useAdminReports(
     pagination,
     sorting,
-    effectiveFilters
+    filters,
+    debouncedSearch
   );
 
   // Delete confirmation state
@@ -327,7 +312,7 @@ const table = useReactTable({
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedIds = selectedRows.map(row => row.original.id);
 
-  const handleFiltersChange = (newFilters: ReportFilters) => {
+  const handleFiltersChange = (newFilters: ReportsFiltersValue) => {
     setFilters(newFilters);
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
@@ -340,17 +325,7 @@ const table = useReactTable({
   const handleClearFilters = () => {
     clearFilters();
     setSearchTerm('');
-    setActiveQuickFilters([]);
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
-  };
-
-  const handleQuickFilterToggle = (preset: string) => {
-    // Simple toggle for quick filters - can be enhanced based on specific needs
-    setActiveQuickFilters(prev => 
-      prev.includes(preset) 
-        ? prev.filter(p => p !== preset)
-        : [...prev, preset]
-    );
   };
 
   const handleBulkApprove = () => {
@@ -442,15 +417,32 @@ const table = useReactTable({
       </div>
 
       {/* Filters */}
-      <WorkOrderFilters
-        filters={filters}
-        searchTerm={searchTerm}
-        onFiltersChange={handleFiltersChange}
-        onSearchChange={handleSearchChange}
-        onClearFilters={handleClearFilters}
-        activeQuickPresets={activeQuickFilters}
-        onToggleQuickPreset={handleQuickFilterToggle}
-      />
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Input
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search work orders, notes, or invoice numbers..."
+            className="flex-1"
+          />
+        </div>
+        <ReportsFilters
+          value={filters}
+          onChange={handleFiltersChange}
+        />
+        {(filterCount > 0 || searchTerm) && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleClearFilters}>
+              <X className="w-4 h-4 mr-2" />
+              Clear all filters
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {filterCount} filter{filterCount !== 1 ? 's' : ''} applied
+              {searchTerm && ' + search'}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Bulk Actions */}
       {selectedRows.length > 0 && (

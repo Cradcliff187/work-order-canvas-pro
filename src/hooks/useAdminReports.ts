@@ -3,25 +3,16 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { WorkOrderReport, PaginationState, SortingState } from '@/types/reports';
-
-interface ReportFilters {
-  status?: string[];
-  trade_id?: string[];
-  partner_organization_ids?: string[];
-  completed_by?: string[]; // 'internal' and/or subcontractor org IDs
-  search?: string;
-  date_from?: string;
-  date_to?: string;
-  location_filter?: string[];
-}
+import { ReportsFiltersValue } from '@/components/admin/reports/ReportsFilters';
 
 export function useAdminReports(
   pagination: PaginationState,
   sorting: SortingState[],
-  filters: ReportFilters
+  filters: ReportsFiltersValue,
+  searchTerm?: string
 ) {
   return useQuery({
-    queryKey: ['admin-reports', pagination, sorting, filters],
+    queryKey: ['admin-reports', pagination, sorting, filters, searchTerm],
     queryFn: async () => {
       let query = supabase
         .from('work_order_reports')
@@ -82,54 +73,29 @@ export function useAdminReports(
         query = query.in('status', filters.status as Database['public']['Enums']['report_status'][]);
       }
       
-      // Handle completed_by filter (maps to subcontractor filtering)
-      if (filters.completed_by?.length) {
-        const conditions: string[] = [];
-        
-        for (const completedBy of filters.completed_by) {
-          if (completedBy === 'internal') {
-            // Filter for internal users - reports where subcontractor is from internal org
-            conditions.push('subcontractor.organization_members.organizations.organization_type.eq.internal');
-          } else {
-            // It's a subcontractor organization ID
-            conditions.push(`subcontractor_organization_id.eq.${completedBy}`);
-          }
-        }
-        
-        if (conditions.length > 0) {
-          query = query.or(conditions.join(','));
-        }
-      }
-      
-      // Handle partner organization filter by looking at work order organization
-      if (filters.partner_organization_ids?.length) {
-        query = query.in('work_orders.organization_id', filters.partner_organization_ids);
-      }
-      
-      // Handle trade filter by looking at work order trade
-      if (filters.trade_id?.length) {
-        query = query.in('work_orders.trade_id', filters.trade_id);
-      }
-      
-      // Handle location filter by looking at work order store_location and partner_location_number
-      if (filters.location_filter?.length) {
-        const locationConditions: string[] = [];
-        for (const loc of filters.location_filter) {
-          locationConditions.push(`work_orders.store_location.ilike.%${loc}%`);
-          locationConditions.push(`work_orders.partner_location_number.ilike.%${loc}%`);
-        }
-        query = query.or(locationConditions.join(','));
-      }
-      
       if (filters.date_from) {
         query = query.gte('submitted_at', filters.date_from);
       }
       if (filters.date_to) {
         query = query.lte('submitted_at', filters.date_to);
       }
-      if (filters.search) {
-        const searchTerm = `%${filters.search.trim()}%`;
-        query = query.or(`work_performed.ilike.${searchTerm},notes.ilike.${searchTerm},invoice_number.ilike.${searchTerm}`);
+      
+      // Handle submitted_by filter
+      if (filters.submitted_by) {
+        const searchTerm = `%${filters.submitted_by.trim()}%`;
+        query = query.or(`subcontractor.first_name.ilike.${searchTerm},subcontractor.last_name.ilike.${searchTerm},subcontractor.email.ilike.${searchTerm}`);
+      }
+      
+      // Handle work_order filter
+      if (filters.work_order) {
+        const searchTerm = `%${filters.work_order.trim()}%`;
+        query = query.or(`work_orders.work_order_number.ilike.${searchTerm},work_orders.title.ilike.${searchTerm}`);
+      }
+      
+      // Handle search term
+      if (searchTerm) {
+        const search = `%${searchTerm.trim()}%`;
+        query = query.or(`work_performed.ilike.${search},notes.ilike.${search},invoice_number.ilike.${search}`);
       }
 
       // Apply sorting
