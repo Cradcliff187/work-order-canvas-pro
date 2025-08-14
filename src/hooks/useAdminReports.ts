@@ -81,11 +81,19 @@ export function useAdminReports(
         query = query.lte('submitted_at', filters.date_to);
       }
 
-      // Location filter - simple exact matching on work order location fields
+      // Location filter - copy exact logic from work orders
       if (filters.location_filter && filters.location_filter.length > 0) {
-        query = query.or(
-          `work_orders.store_location.in.(${filters.location_filter.join(',')}),work_orders.partner_location_number.in.(${filters.location_filter.join(',')})`
+        // Escape special SQL wildcard characters to prevent injection
+        const safeLocations = filters.location_filter.map(loc => 
+          loc.replace(/[%_\\]/g, '\\$&')  // Escapes %, _, and \ characters
         );
+        
+        // Build OR conditions for both store_location and partner_location_number
+        const conditions = safeLocations
+          .map(loc => `work_orders.store_location.ilike.%${loc}%,work_orders.partner_location_number.ilike.%${loc}%`)
+          .join(',');
+        
+        query = query.or(conditions);
       }
       
       // Note: Filtering by related table fields (submitted_by, work_order) 
