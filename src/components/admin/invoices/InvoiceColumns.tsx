@@ -86,35 +86,34 @@ export const createInvoiceColumns = ({
     cell: ({ row }) => {
       const items = row.original.invoice_work_orders || [];
       if (!items.length) return <span className="text-muted-foreground">—</span>;
-      const maxToShow = 3;
-      const shown = items.slice(0, maxToShow);
-      const extra = items.length - shown.length;
+      
+      const count = items.length;
+      const displayText = count === 1 ? '1 Work Order' : `${count} Work Orders`;
+      
       return (
-        <div className="flex flex-wrap gap-1 max-w-[260px]">
-          {shown.map((it) => (
-            <Link key={it.id} to={`/admin/work-orders/${it.work_order.id}`} onClick={(e) => e.stopPropagation()}>
-              <Badge variant="outline" className="font-mono text-[11px]">
-                {it.work_order.work_order_number || 'N/A'}
-              </Badge>
-            </Link>
-          ))}
-          {extra > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="text-[11px]">+{extra} more</Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="space-y-1">
-                    {items.slice(maxToShow).map((it) => (
-                      <div key={it.id} className="font-mono text-xs">{it.work_order.work_order_number || it.work_order.title}</div>
-                    ))}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-sm cursor-pointer hover:text-primary transition-colors">
+                {displayText}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="space-y-1">
+                {items.map((it) => (
+                  <Link 
+                    key={it.id} 
+                    to={`/admin/work-orders/${it.work_order.id}`} 
+                    onClick={(e) => e.stopPropagation()}
+                    className="block font-mono text-xs hover:text-primary transition-colors"
+                  >
+                    {it.work_order.work_order_number || 'N/A'}
+                  </Link>
+                ))}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     },
     enableHiding: false,
