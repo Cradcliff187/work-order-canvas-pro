@@ -81,6 +81,25 @@ export function WorkOrderPipelineTable() {
   // Debounce search input
   const debouncedSearch = useDebounce(filters.search || '', 300);
 
+  // Helper function to get operational status key for filtering
+  const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
+    switch (item.status) {
+      case 'received':
+        return 'new';
+      case 'assigned':
+        return 'assigned';
+      case 'in_progress':
+        return 'in_progress';
+      case 'completed':
+        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
+          return 'reports_pending';
+        }
+        return 'complete';
+      default:
+        return 'new';
+    }
+  };
+
   // Apply client-side filtering
   const filteredData = useMemo(() => {
     if (!pipelineData) return [];
@@ -121,25 +140,6 @@ export function WorkOrderPipelineTable() {
   }, [pipelineData, debouncedSearch, filters]);
 
   const data = useMemo(() => filteredData, [filteredData]);
-
-  // Helper function to get operational status key for filtering
-  const getOperationalStatusKey = (item: WorkOrderPipelineItem): string => {
-    switch (item.status) {
-      case 'received':
-        return 'new';
-      case 'assigned':
-        return 'assigned';
-      case 'in_progress':
-        return 'in_progress';
-      case 'completed':
-        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
-          return 'reports_pending';
-        }
-        return 'complete';
-      default:
-        return 'new';
-    }
-  };
 
   // Create operational status badge
   const getOperationalStatusBadge = (item: WorkOrderPipelineItem) => {
