@@ -435,6 +435,11 @@ export function WorkOrderPipelineTable() {
       },
     },
     {
+      id: 'partner_billing',
+      header: 'Partner Billing',
+      cell: ({ row }) => getPartnerBillingBadge(row.original),
+    },
+    {
       id: 'report_status',
       header: 'Report Status',
       cell: ({ row }) => {
@@ -442,11 +447,6 @@ export function WorkOrderPipelineTable() {
         const reportStatus = item.report_status || 'not_submitted';
         return <ReportStatusBadge status={reportStatus} size="sm" />;
       },
-    },
-    {
-      id: 'partner_billing',
-      header: 'Partner Billing',
-      cell: ({ row }) => getPartnerBillingBadge(row.original),
     },
   ], []);
 
