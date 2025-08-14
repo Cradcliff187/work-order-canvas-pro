@@ -39,6 +39,7 @@ interface PipelineFiltersValue {
   search?: string;
   operational_status?: string[];
   financial_status?: string[];
+  partner_billing_status?: string[];
   partner_organization_id?: string;
   overdue?: boolean;
   priority?: string[];
@@ -50,19 +51,26 @@ interface PipelineFiltersValue {
   age_range?: [number, number];
 }
 
-// Filter options
+// Smart filter options with correct mappings
 const operationalStatusOptions = [
-  { value: 'new', label: 'New' },
+  { value: 'new', label: 'New Orders' },
   { value: 'assigned', label: 'Assigned' },
   { value: 'in_progress', label: 'In Progress' },
-  { value: 'reports_pending', label: 'Reports Pending' },
-  { value: 'complete', label: 'Complete' }
+  { value: 'reports_pending', label: 'Reports Pending Review' },
+  { value: 'complete', label: 'Completed' }
 ];
 
 const financialStatusOptions = [
-  { value: 'not_billed', label: 'No Invoice Received' },
-  { value: 'invoice_received', label: 'Invoice Received from Subcontractor' },
-  { value: 'paid', label: 'Invoice Paid to Subcontractor' }
+  { value: 'not_billed', label: 'No Invoice' },
+  { value: 'invoice_received', label: 'Invoice Received' },
+  { value: 'paid', label: 'Paid' }
+];
+
+const partnerBillingStatusOptions = [
+  { value: 'not_billed', label: 'Not Billed' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'sent', label: 'Sent to Partner' },
+  { value: 'paid', label: 'Paid by Partner' }
 ];
 
 const priorityOptions = [
@@ -75,9 +83,9 @@ const priorityOptions = [
 const reportStatusOptions = [
   { value: 'not_submitted', label: 'Not Submitted' },
   { value: 'submitted', label: 'Submitted' },
-  { value: 'reviewed', label: 'Reviewed' },
+  { value: 'reviewed', label: 'Under Review' },
   { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' }
+  { value: 'rejected', label: 'Needs Revision' }
 ];
 
 export function WorkOrderPipelineTable() {
@@ -85,11 +93,12 @@ export function WorkOrderPipelineTable() {
   const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
   const { data: trades } = useTrades();
   
-  // Filter state management
+  // Smart default filters for actionable items
   const initialFilters: PipelineFiltersValue = {
     search: '',
-    operational_status: [],
+    operational_status: ['new', 'assigned', 'in_progress', 'reports_pending'], // Show actionable items by default
     financial_status: [],
+    partner_billing_status: [],
     partner_organization_id: '',
     overdue: false,
     priority: [],
@@ -121,26 +130,36 @@ export function WorkOrderPipelineTable() {
       case 'in_progress':
         return 'in_progress';
       case 'completed':
+        // Better logic: if work order is completed but reports need review/approval
         if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
           return 'reports_pending';
         }
+        // If report is approved or no report needed, it's complete
         return 'complete';
       default:
         return 'new';
     }
   };
 
-  // Apply client-side filtering
+  // Helper function to get partner billing status
+  const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
+    return item.partner_bill_status || 'not_billed';
+  };
+
+  // Apply client-side filtering with improved logic
   const filteredData = useMemo(() => {
     if (!pipelineData) return [];
 
     return pipelineData.filter((item) => {
-      // Search filter (work order number and title)
+      // Enhanced search filter (work order number, title, partner, location, assigned org)
       if (debouncedSearch && debouncedSearch.trim()) {
         const searchTerm = debouncedSearch.toLowerCase().trim();
         const matchesSearch = 
           item.work_order_number?.toLowerCase().includes(searchTerm) ||
-          item.title?.toLowerCase().includes(searchTerm);
+          item.title?.toLowerCase().includes(searchTerm) ||
+          item.partner_organization_name?.toLowerCase().includes(searchTerm) ||
+          item.store_location?.toLowerCase().includes(searchTerm) ||
+          item.assigned_organization_name?.toLowerCase().includes(searchTerm);
         if (!matchesSearch) return false;
       }
 
@@ -155,6 +174,12 @@ export function WorkOrderPipelineTable() {
         if (!filters.financial_status.includes(item.financial_status)) return false;
       }
 
+      // Partner billing status filter
+      if (filters.partner_billing_status && filters.partner_billing_status.length > 0) {
+        const partnerBillingStatus = getPartnerBillingStatus(item);
+        if (!filters.partner_billing_status.includes(partnerBillingStatus)) return false;
+      }
+
       // Partner organization filter
       if (filters.partner_organization_id && filters.partner_organization_id.trim()) {
         if (item.organization_id !== filters.partner_organization_id) return false;
@@ -165,17 +190,16 @@ export function WorkOrderPipelineTable() {
         if (!item.is_overdue) return false;
       }
 
-      // Priority filter
+      // Priority filter (handle null values properly)
       if (filters.priority && filters.priority.length > 0) {
-        if (!filters.priority.includes(item.priority || 'medium')) return false;
+        const itemPriority = item.priority || 'medium';
+        if (!filters.priority.includes(itemPriority)) return false;
       }
 
-      // Trade filter (we'll need to add this to the data)
-      // TODO: Add trade filtering once trade info is available in pipeline data
-
-      // Assigned organization filter  
+      // Assigned organization filter (fix data type issue)
       if (filters.assigned_organization_id && filters.assigned_organization_id.length > 0) {
-        if (!filters.assigned_organization_id.includes(item.assigned_organization_name || '')) return false;
+        if (!item.assigned_organization_name || 
+            !filters.assigned_organization_id.includes(item.assigned_organization_name)) return false;
       }
 
       // Report status filter
@@ -502,7 +526,7 @@ export function WorkOrderPipelineTable() {
           <SmartSearchInput
             value={filters.search || ''}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            placeholder="Work order number or title..."
+            placeholder="Search work orders, partners, locations..."
             storageKey="pipeline-table-search"
           />
           
@@ -512,7 +536,7 @@ export function WorkOrderPipelineTable() {
             onSelectionChange={(values) => 
               setFilters({ ...filters, operational_status: values })
             }
-            placeholder="All work statuses"
+            placeholder="Show actionable items"
             maxDisplayCount={2}
           />
           
@@ -523,6 +547,16 @@ export function WorkOrderPipelineTable() {
               setFilters({ ...filters, financial_status: values })
             }
             placeholder="All invoice statuses"
+            maxDisplayCount={2}
+          />
+
+          <MultiSelectFilter
+            options={partnerBillingStatusOptions}
+            selectedValues={filters.partner_billing_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, partner_billing_status: values })
+            }
+            placeholder="All billing statuses"
             maxDisplayCount={2}
           />
 
