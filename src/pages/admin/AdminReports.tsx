@@ -95,6 +95,7 @@ export default function AdminReports() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
 
   // Persist filters using the same logic as admin work orders
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters<ReportFilters>(
@@ -339,7 +340,17 @@ const table = useReactTable({
   const handleClearFilters = () => {
     clearFilters();
     setSearchTerm('');
+    setActiveQuickFilters([]);
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  };
+
+  const handleQuickFilterToggle = (preset: string) => {
+    // Simple toggle for quick filters - can be enhanced based on specific needs
+    setActiveQuickFilters(prev => 
+      prev.includes(preset) 
+        ? prev.filter(p => p !== preset)
+        : [...prev, preset]
+    );
   };
 
   const handleBulkApprove = () => {
@@ -437,6 +448,8 @@ const table = useReactTable({
         onFiltersChange={handleFiltersChange}
         onSearchChange={handleSearchChange}
         onClearFilters={handleClearFilters}
+        activeQuickPresets={activeQuickFilters}
+        onToggleQuickPreset={handleQuickFilterToggle}
       />
 
       {/* Bulk Actions */}
