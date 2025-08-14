@@ -88,12 +88,13 @@ export function useAdminReports(
           loc.replace(/[%_\\]/g, '\\$&')  // Escapes %, _, and \ characters
         );
         
-        // Build OR conditions for both store_location and partner_location_number on work_orders
-        const conditions = safeLocations
-          .map(loc => `work_orders.store_location.ilike.%${loc}%,work_orders.partner_location_number.ilike.%${loc}%`)
-          .join(',');
+        // Build proper OR conditions for PostgREST syntax
+        const orConditions = safeLocations.flatMap(loc => [
+          `work_orders.store_location.ilike.*${loc}*`,
+          `work_orders.partner_location_number.ilike.*${loc}*`
+        ]);
         
-        query = query.or(conditions);
+        query = query.or(orConditions.join(','));
       }
       
       // Note: Filtering by related table fields (submitted_by, work_order) 
