@@ -94,21 +94,10 @@ export function MultiSelectFilter({
             />
           </div>
 
-          {/* Clear all button */}
+          {/* Selection count - no individual clear button */}
           {selectedValues.length > 0 && (
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
-                {selectedValues.length} selected
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearAll}
-                className="h-auto p-1"
-              >
-                <X className="h-4 w-4" />
-                Clear all
-              </Button>
+            <div className="text-sm text-muted-foreground px-1">
+              {selectedValues.length} selected
             </div>
           )}
 

@@ -115,6 +115,16 @@ export function OrganizationSelector({
               </CommandEmpty>
             ) : (
               <CommandGroup>
+                {/* Clear selection option */}
+                {value && (
+                  <CommandItem
+                    value="clear-selection"
+                    onSelect={() => handleSelect('')}
+                    className="text-muted-foreground border-b"
+                  >
+                    Clear selection
+                  </CommandItem>
+                )}
                 {filteredOrganizations.map((organization) => (
                   <CommandItem
                     key={organization.id}

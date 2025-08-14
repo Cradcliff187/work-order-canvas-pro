@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
@@ -77,6 +77,23 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: In
   const [dateTo, setDateTo] = useState<Date | undefined>(value.date_to ? new Date(value.date_to) : undefined);
   const [dueDateFrom, setDueDateFrom] = useState<Date | undefined>(value.due_date_from ? new Date(value.due_date_from) : undefined);
   const [dueDateTo, setDueDateTo] = useState<Date | undefined>(value.due_date_to ? new Date(value.due_date_to) : undefined);
+
+  // Sync local date state with filter values when filters are cleared
+  useEffect(() => {
+    setDateFrom(value.date_from ? new Date(value.date_from) : undefined);
+  }, [value.date_from]);
+
+  useEffect(() => {
+    setDateTo(value.date_to ? new Date(value.date_to) : undefined);
+  }, [value.date_to]);
+
+  useEffect(() => {
+    setDueDateFrom(value.due_date_from ? new Date(value.due_date_from) : undefined);
+  }, [value.due_date_from]);
+
+  useEffect(() => {
+    setDueDateTo(value.due_date_to ? new Date(value.due_date_to) : undefined);
+  }, [value.due_date_to]);
 
   return (
     <AdminFilterBar title="Filters" filterCount={filterCount} onClear={onClear} collapsible={true}>
