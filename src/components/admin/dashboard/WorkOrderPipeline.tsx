@@ -260,7 +260,6 @@ export function WorkOrderPipeline() {
           onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
           onSearchSubmit={(q) => setFilters(prev => ({ ...prev, search: q }))}
           placeholder="Search by work order number, location, or description..."
-          className="w-full"
           storageKey="pipeline-search"
         />
         <MultiSelectFilter
@@ -282,7 +281,6 @@ export function WorkOrderPipeline() {
           onChange={(value) => setFilters(prev => ({ ...prev, organizationId: value || '' }))}
           organizationType="partner"
           placeholder="All organizations"
-          className="w-full"
         />
         <div className="flex items-center h-10 px-3 border border-input rounded-md bg-background">
           <Switch
@@ -307,18 +305,15 @@ export function WorkOrderPipeline() {
           ))}
         </div>
 
-        {/* Mobile: horizontal scroll */}
-        <div className="md:hidden">
-          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-            {stages.map((stage) => (
-              <div key={stage.stageName} className="flex-shrink-0 w-40">
-                <EnhancedPipelineStageCard
-                  stage={stage}
-                  onClick={() => handleStageClick(stage)}
-                />
-              </div>
-            ))}
-          </div>
+        {/* Mobile: vertical stack */}
+        <div className="md:hidden space-y-4">
+          {stages.map((stage) => (
+            <EnhancedPipelineStageCard
+              key={stage.stageName}
+              stage={stage}
+              onClick={() => handleStageClick(stage)}
+            />
+          ))}
         </div>
 
         {/* Modal for work order details */}
