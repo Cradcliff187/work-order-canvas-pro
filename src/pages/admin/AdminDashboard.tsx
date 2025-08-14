@@ -116,6 +116,10 @@ const AdminDashboard = () => {
           <WorkOrderPipeline />
         </TabsContent>
         
+        <TabsContent value="executive" className="space-y-6">
+          <ExecutiveSummary />
+        </TabsContent>
+        
       </Tabs>
     </div>
   );
