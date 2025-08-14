@@ -426,6 +426,20 @@ export function WorkOrderPipelineTable() {
       cell: ({ row }) => getOperationalStatusBadge(row.original),
     },
     {
+      id: 'report_status',
+      header: 'Report Status',
+      cell: ({ row }) => {
+        const item = row.original;
+        const reportStatus = item.report_status || 'not_submitted';
+        return <ReportStatusBadge status={reportStatus} size="sm" />;
+      },
+    },
+    {
+      id: 'partner_billing',
+      header: 'Partner Billing',
+      cell: ({ row }) => getPartnerBillingBadge(row.original),
+    },
+    {
       id: 'subcontractor_invoice',
       header: 'Subcontractor Invoice',
       cell: ({ row }) => {
@@ -440,20 +454,6 @@ export function WorkOrderPipelineTable() {
             )}
           </div>
         );
-      },
-    },
-    {
-      id: 'partner_billing',
-      header: 'Partner Billing',
-      cell: ({ row }) => getPartnerBillingBadge(row.original),
-    },
-    {
-      id: 'report_status',
-      header: 'Report Status',
-      cell: ({ row }) => {
-        const item = row.original;
-        const reportStatus = item.report_status || 'not_submitted';
-        return <ReportStatusBadge status={reportStatus} size="sm" />;
       },
     },
   ], []);
