@@ -81,16 +81,16 @@ export function useAdminReports(
         query = query.lte('submitted_at', filters.date_to);
       }
 
-      // Location filter - copy exact logic from work orders
+      // Location filter - use foreign table filtering syntax
       if (filters.location_filter && filters.location_filter.length > 0) {
         // Escape special SQL wildcard characters to prevent injection
         const safeLocations = filters.location_filter.map(loc => 
           loc.replace(/[%_\\]/g, '\\$&')  // Escapes %, _, and \ characters
         );
         
-        // Build OR conditions for both store_location and partner_location_number
+        // Build OR conditions for both store_location and partner_location_number using foreign table syntax
         const conditions = safeLocations
-          .map(loc => `store_location.ilike.%${loc}%,partner_location_number.ilike.%${loc}%`)
+          .map(loc => `work_orders.store_location.ilike.%${loc}%,work_orders.partner_location_number.ilike.%${loc}%`)
           .join(',');
         
         query = query.or(conditions);
