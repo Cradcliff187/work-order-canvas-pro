@@ -254,7 +254,7 @@ export function WorkOrderPipeline() {
       />
 
       {/* Filter Bar */}
-      <AdminFilterBar title="Filters" filterCount={filterCount} onClear={handleClearFilters}>
+      <AdminFilterBar filterCount={filterCount} onClear={handleClearFilters}>
         <SmartSearchInput
           value={filters.search || ''}
           onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
@@ -284,15 +284,13 @@ export function WorkOrderPipeline() {
           placeholder="All organizations"
           className="w-full"
         />
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center h-10 px-3 border border-input rounded-md bg-background">
           <Switch
             id="overdue-only"
             checked={filters.showOverdueOnly || false}
             onCheckedChange={(checked) => setFilters(prev => ({ ...prev, showOverdueOnly: checked }))}
           />
-          <Label htmlFor="overdue-only" className="text-sm font-medium">
-            Show Overdue Only
-          </Label>
+          <span className="ml-2 text-sm">Show Overdue Only</span>
         </div>
       </AdminFilterBar>
 
