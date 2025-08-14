@@ -10,8 +10,9 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/utils/formatting';
-import { ArrowLeft, Download, FileText, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Pencil, Trash2 } from 'lucide-react';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { format } from 'date-fns';
 import { exportToCSV, ExportColumn } from '@/lib/utils/export';
@@ -97,12 +98,12 @@ export default function PartnerInvoiceDetail() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleExportCSV = () => {
+  const handleExport = (exportFormat: 'csv' | 'excel') => {
     try {
       if (!invoice) return;
 
       // Prepare data for QuickBooks import format
-      const csvData = invoice.line_items.map(item => ({
+      const exportData = invoice.line_items.map(item => ({
         customer: invoice.partner_organization.name,
         invoice_number: invoice.invoice_number,
         invoice_date: format(new Date(invoice.invoice_date), 'MM/dd/yyyy'),
@@ -120,12 +121,17 @@ export default function PartnerInvoiceDetail() {
         { key: 'amount', label: 'Amount', type: 'currency' }
       ];
 
-      const filename = `partner_invoice_${invoice.invoice_number.replace(/[^a-zA-Z0-9]/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      const baseFilename = `partner_invoice_${invoice.invoice_number.replace(/[^a-zA-Z0-9]/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}`;
       
-      exportToCSV(csvData, columns, filename);
-      toast.success('Invoice exported successfully');
+      if (exportFormat === 'csv') {
+        exportToCSV(exportData, columns, `${baseFilename}.csv`);
+      } else {
+        // Excel export - using same data structure
+        exportToCSV(exportData, columns, `${baseFilename}.xlsx`);
+      }
+      
+      toast.success(`Invoice exported as ${exportFormat.toUpperCase()} successfully`);
     } catch (error) {
-      
       toast.error('Failed to export invoice');
     }
   };
@@ -225,28 +231,30 @@ export default function PartnerInvoiceDetail() {
           Back to Billing
         </Button>
         
-        <TableActionsDropdown
-          actions={[
-            {
-              label: 'Export CSV',
-              icon: Download,
-              onClick: handleExportCSV,
-            },
-            {
-              label: 'Edit Invoice',
-              icon: Pencil,
-              onClick: () => setEditOpen(true),
-            },
-            {
-              label: 'Delete Invoice',
-              icon: Trash2,
-              onClick: () => setDeleteOpen(true),
-              variant: 'destructive',
-            },
-          ]}
-          align="end"
-          itemName={`invoice ${invoice.invoice_number}`}
-        />
+        <div className="flex gap-2">
+          <ExportDropdown 
+            onExport={handleExport}
+            variant="outline"
+            size="default"
+          />
+          <TableActionsDropdown
+            actions={[
+              {
+                label: 'Edit Invoice',
+                icon: Pencil,
+                onClick: () => setEditOpen(true),
+              },
+              {
+                label: 'Delete Invoice',
+                icon: Trash2,
+                onClick: () => setDeleteOpen(true),
+                variant: 'destructive',
+              },
+            ]}
+            align="end"
+            itemName={`invoice ${invoice.invoice_number}`}
+          />
+        </div>
       </div>
 
       {/* Invoice Header */}

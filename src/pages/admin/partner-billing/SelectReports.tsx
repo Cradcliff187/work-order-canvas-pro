@@ -23,6 +23,8 @@ import { useReportInvoiceDetails } from '@/hooks/useReportInvoiceDetails';
 import { ReportPipelineEmptyState } from '@/components/admin/partner-billing/ReportPipelineEmptyState';
 import { FileBarChart, Building2, DollarSign, Calendar, Receipt, Percent, CheckSquare, Info, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown, Eye, Download, X } from 'lucide-react';
 import { TableActionsDropdown } from '@/components/ui/table-actions-dropdown';
+import { ExportDropdown } from '@/components/ui/export-dropdown';
+import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
 import {
@@ -137,6 +139,62 @@ export default function SelectReports() {
     setSelectedReportIds(new Set());
     localStorage.removeItem('pb.selectedPartnerId');
     localStorage.removeItem('pb.markupPercentage');
+  };
+
+  const handleExportSelected = (exportFormat: 'csv' | 'excel') => {
+    try {
+      if (!reports || selectedReportIds.size === 0) return;
+
+      const selectedReports = reports.filter(report => selectedReportIds.has(report.id));
+      
+      // Prepare export data
+      const exportData = selectedReports.map(report => ({
+        work_order_number: report.work_orders?.work_order_number || 'N/A',
+        work_order_title: report.work_orders?.title || 'No title',
+        description: report.work_orders?.description || 'No description',
+        location: report.work_orders?.store_location || '-',
+        subcontractor: (() => {
+          const subcontractor = report.subcontractor;
+          const subcontractorOrg = report.subcontractor_organization;
+          
+          if (subcontractorOrg) {
+            return subcontractorOrg.name;
+          } else if (subcontractor) {
+            return `${subcontractor.first_name} ${subcontractor.last_name}`;
+          }
+          return 'N/A';
+        })(),
+        submitted_date: format(new Date(report.submitted_at), 'yyyy-MM-dd'),
+        amount: report.subcontractor_costs || 0,
+        status: 'Approved'
+      }));
+
+      const columns: ExportColumn[] = [
+        { key: 'work_order_number', label: 'Work Order #', type: 'string' },
+        { key: 'work_order_title', label: 'Title', type: 'string' },
+        { key: 'description', label: 'Description', type: 'string' },
+        { key: 'location', label: 'Location', type: 'string' },
+        { key: 'subcontractor', label: 'Subcontractor', type: 'string' },
+        { key: 'submitted_date', label: 'Submitted Date', type: 'string' },
+        { key: 'amount', label: 'Amount', type: 'currency' },
+        { key: 'status', label: 'Status', type: 'string' }
+      ];
+
+      const baseFilename = `selected_reports_${format(new Date(), 'yyyy-MM-dd')}`;
+      const filename = exportFormat === 'csv' ? `${baseFilename}.csv` : `${baseFilename}.xlsx`;
+      
+      exportToCSV(exportData, columns, filename);
+      toast({
+        title: "Export Complete",
+        description: `${selectedReports.length} reports exported as ${exportFormat.toUpperCase()} successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export selected reports",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleGenerateInvoice = () => {
@@ -301,25 +359,24 @@ export default function SelectReports() {
                      {formatCurrency(totalSubcontractorCosts)} available
                    </Badge>
                    {selectedReportIds.size > 0 && (
-                     <TableActionsDropdown
-                       actions={[
-                         {
-                           label: `Export Selected (${selectedReportIds.size})`,
-                           icon: Download,
-                           onClick: () => {
-                             // Export selected reports functionality
-                             console.log('Export selected reports:', Array.from(selectedReportIds));
+                     <div className="flex gap-2">
+                       <ExportDropdown 
+                         onExport={handleExportSelected}
+                         variant="outline"
+                         size="sm"
+                       />
+                       <TableActionsDropdown
+                         actions={[
+                           {
+                             label: 'Clear Selection',
+                             icon: X,
+                             onClick: () => setSelectedReportIds(new Set()),
                            },
-                         },
-                         {
-                           label: 'Clear Selection',
-                           icon: X,
-                           onClick: () => setSelectedReportIds(new Set()),
-                         },
-                       ]}
-                       align="end"
-                       itemName="selected reports"
-                     />
+                         ]}
+                         align="end"
+                         itemName="selected reports"
+                       />
+                     </div>
                    )}
                  </div>
                )}
