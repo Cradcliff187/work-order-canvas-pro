@@ -79,7 +79,7 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: In
   const [dueDateTo, setDueDateTo] = useState<Date | undefined>(value.due_date_to ? new Date(value.due_date_to) : undefined);
 
   return (
-    <AdminFilterBar title="Filters" filterCount={filterCount} onClear={onClear}>
+    <AdminFilterBar title="Filters" filterCount={filterCount} onClear={onClear} collapsible={true}>
       {/* Search - Full width on mobile, grid on desktop */}
       <div className="col-span-full lg:col-span-1">
         <SmartSearchInput
