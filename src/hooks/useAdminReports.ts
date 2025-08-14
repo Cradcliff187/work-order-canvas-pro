@@ -80,17 +80,9 @@ export function useAdminReports(
         query = query.lte('submitted_at', filters.date_to);
       }
       
-      // Handle submitted_by filter
-      if (filters.submitted_by) {
-        const searchTerm = `%${filters.submitted_by.trim()}%`;
-        query = query.or(`subcontractor.first_name.ilike.${searchTerm},subcontractor.last_name.ilike.${searchTerm},subcontractor.email.ilike.${searchTerm}`);
-      }
-      
-      // Handle work_order filter
-      if (filters.work_order) {
-        const searchTerm = `%${filters.work_order.trim()}%`;
-        query = query.or(`work_orders.work_order_number.ilike.${searchTerm},work_orders.title.ilike.${searchTerm}`);
-      }
+      // Note: Filtering by related table fields (submitted_by, work_order) 
+      // requires more complex queries and should be implemented with proper PostgREST syntax
+      // For now, these filters are disabled to prevent SQL syntax errors
       
       // Handle search term
       if (searchTerm) {
