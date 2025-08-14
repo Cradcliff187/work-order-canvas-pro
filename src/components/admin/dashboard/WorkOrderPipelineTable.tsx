@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { WorkOrderStatusBadge, ComputedFinancialStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge, ComputedFinancialStatusBadge, ReportStatusBadge } from '@/components/ui/status-badge';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
@@ -52,11 +52,11 @@ interface PipelineFiltersValue {
 
 // Filter options
 const operationalStatusOptions = [
-  { value: 'new', label: 'New Work Order' },
-  { value: 'assigned', label: 'Assigned to Subcontractor' },
-  { value: 'in_progress', label: 'Work In Progress' },
-  { value: 'reports_pending', label: 'Awaiting Report Submission' },
-  { value: 'complete', label: 'Work Complete' }
+  { value: 'new', label: 'New' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'reports_pending', label: 'Reports Pending' },
+  { value: 'complete', label: 'Complete' }
 ];
 
 const financialStatusOptions = [
@@ -180,7 +180,8 @@ export function WorkOrderPipelineTable() {
 
       // Report status filter
       if (filters.report_status && filters.report_status.length > 0) {
-        if (!filters.report_status.includes(item.report_status || 'not_submitted')) return false;
+        const reportStatus = item.report_status || 'not_submitted';
+        if (!filters.report_status.includes(reportStatus)) return false;
       }
 
       return true;
@@ -434,6 +435,15 @@ export function WorkOrderPipelineTable() {
       },
     },
     {
+      id: 'report_status',
+      header: 'Report Status',
+      cell: ({ row }) => {
+        const item = row.original;
+        const reportStatus = item.report_status || 'not_submitted';
+        return <ReportStatusBadge status={reportStatus} size="sm" />;
+      },
+    },
+    {
       id: 'partner_billing',
       header: 'Partner Billing',
       cell: ({ row }) => getPartnerBillingBadge(row.original),
@@ -508,6 +518,16 @@ export function WorkOrderPipelineTable() {
             maxDisplayCount={2}
           />
 
+          <MultiSelectFilter
+            options={reportStatusOptions}
+            selectedValues={filters.report_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, report_status: values })
+            }
+            placeholder="All report statuses"
+            maxDisplayCount={2}
+          />
+
           <OrganizationSelector
             value={filters.partner_organization_id || ''}
             onChange={(value) => 
@@ -524,16 +544,6 @@ export function WorkOrderPipelineTable() {
               setFilters({ ...filters, priority: values })
             }
             placeholder="All priorities"
-            maxDisplayCount={2}
-          />
-
-          <MultiSelectFilter
-            options={reportStatusOptions}
-            selectedValues={filters.report_status || []}
-            onSelectionChange={(values) => 
-              setFilters({ ...filters, report_status: values })
-            }
-            placeholder="All report statuses"
             maxDisplayCount={2}
           />
 
