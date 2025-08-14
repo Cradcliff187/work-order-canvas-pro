@@ -299,20 +299,21 @@ if (error) {
       >
         Skip to main content
       </a>
-      <main id="main-content" role="main" tabIndex={-1} className="space-y-6">
+      <main id="main-content" role="main" tabIndex={-1} className="space-y-8">
         <header>
           <h1 className="text-3xl font-bold mb-2">Billing Dashboard</h1>
           <p className="text-muted-foreground">Monitor billing activities and manage invoices</p>
         </header>
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs defaultValue="overview" className="w-full">
         <TabsList className="min-w-max px-0 overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <TabsContent value="overview" className="space-y-8 mt-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard
               title="Unbilled Reports"
               value={isLoading ? 0 : (metrics?.unbilledReports.count || 0)}
@@ -340,51 +341,51 @@ if (error) {
             />
           </div>
 
-{/* Quick Actions */}
-<div role="region" aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-  <Button
-    size="lg"
-    onClick={() => navigate('/admin/invoices')}
-    className="w-full justify-center"
-    aria-label="Enter Subcontractor Invoice"
-  >
-    <Plus className="h-4 w-4 mr-2" />
-    Enter Subcontractor Invoice
-  </Button>
-  <Button
-    size="lg"
-    variant="outline"
-    onClick={() => navigate('/admin/partner-billing/select-reports')}
-    className="w-full justify-center"
-    aria-label="Generate Partner Invoices"
-  >
-    <Building2 className="h-4 w-4 mr-2" />
-    Generate Partner Invoices
-  </Button>
-  <Button
-    size="lg"
-    variant="outline"
-    onClick={() => navigate('/admin/invoices')}
-    className="w-full justify-center"
-    aria-label="View All Invoices"
-  >
-    <FileText className="h-4 w-4 mr-2" />
-    View All Invoices
-  </Button>
-  <Button
-    size="lg"
-    variant="outline"
-    onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
-    className="w-full justify-center"
-    aria-label="View Unbilled Reports"
-  >
-    <Clock className="h-4 w-4 mr-2" />
-    View Unbilled Reports
-  </Button>
-</div>
+          {/* Quick Actions */}
+          <div role="region" aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Button
+              size="lg"
+              onClick={() => navigate('/admin/invoices')}
+              className="w-full justify-center"
+              aria-label="Enter Subcontractor Invoice"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Enter Subcontractor Invoice
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate('/admin/partner-billing/select-reports')}
+              className="w-full justify-center"
+              aria-label="Generate Partner Invoices"
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Generate Partner Invoices
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate('/admin/invoices')}
+              className="w-full justify-center"
+              aria-label="View All Invoices"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              View All Invoices
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
+              className="w-full justify-center"
+              aria-label="View Unbilled Reports"
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              View Unbilled Reports
+            </Button>
+          </div>
 
           {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Partner Invoices */}
             <Card role="region" aria-label="Recent Partner Invoices">
               <CardHeader>
