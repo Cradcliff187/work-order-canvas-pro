@@ -22,6 +22,7 @@ export function useAdminReports(
             work_order_number,
             title,
             store_location,
+            partner_location_number,
             street_address,
             city,
             state,
@@ -78,6 +79,21 @@ export function useAdminReports(
       }
       if (filters.date_to) {
         query = query.lte('submitted_at', filters.date_to);
+      }
+
+      // Location filter - filter by work order location fields
+      if (filters.location_filter && filters.location_filter.length > 0) {
+        // Escape special SQL wildcard characters to prevent injection
+        const safeLocations = filters.location_filter.map(loc => 
+          loc.replace(/[%_\\]/g, '\\$&')  // Escapes %, _, and \ characters
+        );
+        
+        // Build OR conditions for both store_location and partner_location_number on work_orders
+        const conditions = safeLocations
+          .map(loc => `work_orders.store_location.ilike.%${loc}%,work_orders.partner_location_number.ilike.%${loc}%`)
+          .join(',');
+        
+        query = query.or(conditions);
       }
       
       // Note: Filtering by related table fields (submitted_by, work_order) 

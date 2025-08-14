@@ -7,6 +7,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { usePartnerOrganizationLocations } from '@/hooks/usePartnerOrganizationLocations';
 
 export interface ReportsFiltersValue {
   status?: string[];
@@ -14,6 +16,7 @@ export interface ReportsFiltersValue {
   date_to?: string;
   submitted_by?: string; // free text or email
   work_order?: string; // work order number or title
+  location_filter?: string[];
 }
 
 export interface ReportsFiltersProps {
@@ -24,6 +27,8 @@ export interface ReportsFiltersProps {
 export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
   const [open, setOpen] = useState(false);
   const { date_from, date_to } = value || {};
+  const { data: locations } = usePartnerOrganizationLocations();
+  
   const dateLabel = useMemo(() => {
     if (!date_from && !date_to) return 'Date range';
     const start = date_from ? format(new Date(date_from), 'MMM d, yyyy') : 'Start';
@@ -37,7 +42,7 @@ export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
 
   return (
     <Card className="p-4 space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {/* Status */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Status</label>
@@ -107,6 +112,24 @@ export function ReportsFilters({ value, onChange }: ReportsFiltersProps) {
             placeholder="WO number or title"
             value={value.work_order || ''}
             onChange={(e) => set({ work_order: e.target.value || undefined })}
+          />
+        </div>
+
+        {/* Location */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Location</label>
+          <MultiSelectFilter
+            options={(locations || []).map((location) => ({ 
+              value: location.location_number, 
+              label: `${location.location_name} (${location.location_number})` 
+            }))}
+            selectedValues={value.location_filter || []}
+            onSelectionChange={(values) => set({ 
+              location_filter: values.length > 0 ? values : undefined 
+            })}
+            placeholder="All Locations"
+            searchPlaceholder="Search locations..."
+            className="h-10"
           />
         </div>
       </div>
