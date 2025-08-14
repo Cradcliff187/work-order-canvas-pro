@@ -120,7 +120,7 @@ export function ReportsTable<TData = any>({
       ) : (
         <div className="space-y-3">
           {rows.map((row) => (
-            <React.Fragment key={row.id}>
+            <div key={row.id}>
               {renderMobileCard ? (
                 renderMobileCard(row.original as TData)
               ) : (
@@ -148,7 +148,7 @@ export function ReportsTable<TData = any>({
                   );
                 })()
               )}
-            </React.Fragment>
+            </div>
           ))}
         </div>
       )}
