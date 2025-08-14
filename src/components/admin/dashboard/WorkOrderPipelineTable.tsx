@@ -52,17 +52,17 @@ interface PipelineFiltersValue {
 
 // Filter options
 const operationalStatusOptions = [
-  { value: 'new', label: 'New' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'reports_pending', label: 'Reports Pending' },
-  { value: 'complete', label: 'Complete' }
+  { value: 'new', label: 'New Work Order' },
+  { value: 'assigned', label: 'Assigned to Subcontractor' },
+  { value: 'in_progress', label: 'Work In Progress' },
+  { value: 'reports_pending', label: 'Awaiting Report Submission' },
+  { value: 'complete', label: 'Work Complete' }
 ];
 
 const financialStatusOptions = [
-  { value: 'not_billed', label: 'Not Invoiced' },
-  { value: 'invoice_received', label: 'Invoice Received' },
-  { value: 'paid', label: 'Invoice Paid' }
+  { value: 'not_billed', label: 'No Invoice Received' },
+  { value: 'invoice_received', label: 'Invoice Received from Subcontractor' },
+  { value: 'paid', label: 'Invoice Paid to Subcontractor' }
 ];
 
 const priorityOptions = [
@@ -413,12 +413,12 @@ export function WorkOrderPipelineTable() {
     },
     {
       id: 'operational_status',
-      header: 'Status',
+      header: 'Work Status',
       cell: ({ row }) => getOperationalStatusBadge(row.original),
     },
     {
       id: 'subcontractor_invoice',
-      header: 'Invoice',
+      header: 'Subcontractor Invoice',
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -435,7 +435,7 @@ export function WorkOrderPipelineTable() {
     },
     {
       id: 'partner_billing',
-      header: 'Billing',
+      header: 'Partner Billing',
       cell: ({ row }) => getPartnerBillingBadge(row.original),
     },
   ], []);
@@ -494,17 +494,17 @@ export function WorkOrderPipelineTable() {
             onSelectionChange={(values) => 
               setFilters({ ...filters, operational_status: values })
             }
-            placeholder="All statuses"
+            placeholder="All work statuses"
             maxDisplayCount={2}
           />
-
+          
           <MultiSelectFilter
             options={financialStatusOptions}
             selectedValues={filters.financial_status || []}
             onSelectionChange={(values) => 
               setFilters({ ...filters, financial_status: values })
             }
-            placeholder="All statuses"
+            placeholder="All invoice statuses"
             maxDisplayCount={2}
           />
 
