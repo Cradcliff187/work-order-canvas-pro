@@ -131,26 +131,20 @@ export function InvoiceFilters({ value, onChange, onClear, filterCount = 0 }: In
       </Select>
 
       {/* Partner Organization Filter (via work orders) */}
-      <div className="relative">
-        <Label className="text-xs text-muted-foreground">Partner (Customer)</Label>
-        <OrganizationSelector
-          value={value.partner_organization_id}
-          onChange={(id) => set({ partner_organization_id: id, location_filter: undefined })}
-          organizationType="partner"
-          placeholder="All Partners"
-        />
-      </div>
+      <OrganizationSelector
+        value={value.partner_organization_id}
+        onChange={(id) => set({ partner_organization_id: id, location_filter: undefined })}
+        organizationType="partner"
+        placeholder="All Partners"
+      />
 
       {/* Subcontractor Organization Filter (direct) */}
-      <div className="relative">
-        <Label className="text-xs text-muted-foreground">Subcontractor (Vendor)</Label>
-        <OrganizationSelector
-          value={value.subcontractor_organization_id}
-          onChange={(id) => set({ subcontractor_organization_id: id })}
-          organizationType="subcontractor"
-          placeholder="All Subcontractors"
-        />
-      </div>
+      <OrganizationSelector
+        value={value.subcontractor_organization_id}
+        onChange={(id) => set({ subcontractor_organization_id: id })}
+        organizationType="subcontractor"
+        placeholder="All Subcontractors"
+      />
 
       {/* Location Filter */}
       <MultiSelectFilter
