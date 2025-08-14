@@ -172,27 +172,15 @@ export function ReportDetailPanel({
             </div>
           )}
           
-          <div className="grid grid-cols-2 gap-3">
-            {report.hours_worked && (
-              <div>
-                <label className="font-medium text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-2 w-2" />
-                  Hours
-                </label>
-                <p className="font-medium text-foreground">{report.hours_worked}h</p>
-              </div>
-            )}
-            
-            {report.invoice_amount && (
-              <div>
-                <label className="font-medium text-muted-foreground flex items-center gap-1">
-                  <DollarSign className="h-2 w-2" />
-                  Amount
-                </label>
-                <p className="font-medium text-foreground">${report.invoice_amount}</p>
-              </div>
-            )}
-          </div>
+          {report.hours_worked && (
+            <div>
+              <label className="font-medium text-muted-foreground flex items-center gap-1">
+                <Clock className="h-2 w-2" />
+                Hours
+              </label>
+              <p className="font-medium text-foreground">{report.hours_worked}h</p>
+            </div>
+          )}
 
           {report.materials_used && (
             <div>

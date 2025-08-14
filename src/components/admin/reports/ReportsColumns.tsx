@@ -49,11 +49,6 @@ const getTotalHours = (r: any, totalsMap?: ReportColumnsProps['totalsMap']): str
   return typeof hours === 'number' ? `${hours.toFixed(2)}h` : 'N/A';
 };
 
-const getTotalAmount = (r: any, totalsMap?: ReportColumnsProps['totalsMap']): string => {
-  const id = r?.id as string | undefined;
-  const amount = (id && totalsMap?.[id]?.totalAmount) ?? r?.total_amount ?? r?.invoice_amount;
-  return typeof amount === 'number' ? `$${amount.toLocaleString()}` : 'N/A';
-};
 
 export function createReportColumns<T = any>({
   onView,
@@ -98,12 +93,6 @@ export function createReportColumns<T = any>({
       id: 'total_hours',
       header: 'Total Hours',
       cell: ({ row }) => <span>{getTotalHours(row.original, totalsMap)}</span>,
-      enableSorting: false,
-    },
-    {
-      id: 'total_amount',
-      header: 'Total Amount',
-      cell: ({ row }) => <span>{getTotalAmount(row.original, totalsMap)}</span>,
       enableSorting: false,
     },
     {

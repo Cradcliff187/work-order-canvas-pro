@@ -128,7 +128,7 @@ export function ReportsTable<TData = any>({
                   const data: any = row.original;
                   const number = data?.report_number || data?.invoice_number || data?.work_orders?.work_order_number || (row.id as string) || 'Item';
                   const status = data?.status as string | undefined;
-                  const amount = data?.total_amount ?? data?.invoice_amount;
+                  
                   const submittedAt = data?.submitted_at;
                   const statusOverride = status === 'submitted' ? 'bg-amber-50 text-amber-600 border-amber-200' : undefined;
                   return (
@@ -138,10 +138,6 @@ export function ReportsTable<TData = any>({
                       status={status ? <ReportStatusBadge status={status} size="sm" showIcon className={statusOverride} /> : undefined}
                       onClick={() => onRowClick?.(row.original as TData)}
                     >
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Amount:</span>
-                        <span className="font-medium">{typeof amount === 'number' ? `$${amount.toLocaleString()}` : 'N/A'}</span>
-                      </div>
                       {submittedAt && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Submitted:</span>
