@@ -105,7 +105,8 @@ export function usePartnerReports(
         query = query.lte('submitted_at', filters.date_to);
       }
       if (filters.search) {
-        query = query.or(`work_performed.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
+        const searchTerm = `%${filters.search.trim()}%`;
+        query = query.or(`work_performed.ilike.${searchTerm},notes.ilike.${searchTerm}`);
       }
 
       // Apply sorting

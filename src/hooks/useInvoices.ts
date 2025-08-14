@@ -230,15 +230,14 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
 
       // Apply location filter (via related work orders)
       if (otherFilters.location_filter && otherFilters.location_filter.length > 0) {
-        const locOr = otherFilters.location_filter.map(loc => `invoice_work_orders.work_orders.store_location.ilike.%${loc}%`).join(',');
-        query = query.or(locOr);
+        const locationSearchTerms = otherFilters.location_filter.map(loc => `invoice_work_orders.work_orders.store_location.ilike.%${loc.trim()}%`).join(',');
+        query = query.or(locationSearchTerms);
       }
 
       // Apply search filter (search both internal and external invoice numbers)
       if (otherFilters.search) {
-        query = query.or(
-          `internal_invoice_number.ilike.%${otherFilters.search}%,external_invoice_number.ilike.%${otherFilters.search}%`
-        );
+        const searchTerm = `%${otherFilters.search.trim()}%`;
+        query = query.or(`internal_invoice_number.ilike.${searchTerm},external_invoice_number.ilike.${searchTerm}`);
       }
 
       // Date range on invoice created_at

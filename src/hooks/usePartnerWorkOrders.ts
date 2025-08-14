@@ -67,7 +67,8 @@ export function usePartnerWorkOrders(filters?: WorkOrderFilters) {
         query = query.eq('trade_id', filters.trade_id);
       }
       if (filters?.search) {
-        query = query.or(`work_order_number.ilike.%${filters.search}%,title.ilike.%${filters.search}%,store_location.ilike.%${filters.search}%`);
+        const searchTerm = `%${filters.search.trim()}%`;
+        query = query.or(`work_order_number.ilike.${searchTerm},title.ilike.${searchTerm},store_location.ilike.${searchTerm}`);
       }
       if (filters?.date_from) {
         query = query.gte('date_submitted', filters.date_from);

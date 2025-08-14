@@ -42,9 +42,8 @@ export function UserSelector({
       try {
         let query = supabase.from('profiles').select('id, first_name, last_name, email').limit(50);
         if (debouncedSearch) {
-          query = query.or(
-            `first_name.ilike.%${debouncedSearch}%,last_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
-          );
+          const searchTerm = `%${debouncedSearch.trim()}%`;
+          query = query.or(`first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},email.ilike.${searchTerm}`);
         }
         const { data, error } = await query;
         if (!isMounted) return;

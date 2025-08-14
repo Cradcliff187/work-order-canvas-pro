@@ -209,11 +209,8 @@ export function useWorkOrders(
           query = query.in('organization_id', filters.partner_organization_ids as any);
         }
         if (filters.search) {
-          query = query.or(
-            `work_order_number.ilike.%${filters.search}%,` +
-            `title.ilike.%${filters.search}%,` +
-            `store_location.ilike.%${filters.search}%`
-          );
+          const searchTerm = `%${filters.search.trim()}%`;
+          query = query.or(`work_order_number.ilike.${searchTerm},title.ilike.${searchTerm},store_location.ilike.${searchTerm}`);
         }
         if (filters.location_filter && filters.location_filter.length > 0) {
           // Escape special SQL wildcard characters to prevent injection
