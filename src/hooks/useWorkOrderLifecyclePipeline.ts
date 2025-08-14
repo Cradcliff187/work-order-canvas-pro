@@ -30,12 +30,12 @@ export interface WorkOrderPipelineItem {
   partner_billed_at: string | null;
 }
 
-export function useWorkOrderPipeline() {
+export function useWorkOrderLifecycle() {
   const { user } = useAuth();
   const { profile, primaryRole, partnerMemberships, subcontractorMemberships } = useUserProfile();
 
   return useQuery({
-    queryKey: ['work-order-pipeline'],
+    queryKey: ['work-order-lifecycle'],
     queryFn: async (): Promise<WorkOrderPipelineItem[]> => {
       if (!user || !profile) {
         throw new Error('User not authenticated');
@@ -70,6 +70,7 @@ export function useWorkOrderPipeline() {
             )
           )
         `)
+        .neq('status', 'cancelled')
         .order('date_submitted', { ascending: false });
 
       // Apply role-based filtering
