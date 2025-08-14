@@ -15,14 +15,16 @@ import {
   Plus,
   ClipboardList,
   Users as UsersIcon,
-  DollarSign
+  DollarSign,
+  RefreshCw
 } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 
 import { ExecutiveSummary } from '@/components/admin/dashboard/ExecutiveSummary';
-import { WorkOrderPipeline } from '@/components/admin/dashboard/WorkOrderPipeline';
+import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
+import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SmartSearchInput } from '@/components/ui/smart-search-input';
 
@@ -46,6 +48,8 @@ const AdminDashboard = () => {
     isLoading,
     isError
   } = useAdminDashboard();
+
+  const { refetch: refetchPipeline } = useWorkOrderLifecycle();
 
   const [search, setSearch] = React.useState('');
   const workOrderSuggestions = React.useMemo(
@@ -113,7 +117,14 @@ const AdminDashboard = () => {
         </div>
         
         <TabsContent value="pipeline" className="space-y-6">
-          <WorkOrderPipeline />
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Work Order Pipeline</h2>
+            <Button variant="outline" size="sm" onClick={() => refetchPipeline()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+          <WorkOrderPipelineTable />
         </TabsContent>
         
         <TabsContent value="executive" className="space-y-6">
