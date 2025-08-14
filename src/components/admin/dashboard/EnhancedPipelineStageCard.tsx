@@ -107,6 +107,7 @@ export function EnhancedPipelineStageCard({ stage, onClick }: EnhancedPipelineSt
                   <AnimatePresence mode="wait">
                     {stage.recentCount > 0 && (
                       <motion.div
+                        key="recent-badge"
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
@@ -119,6 +120,7 @@ export function EnhancedPipelineStageCard({ stage, onClick }: EnhancedPipelineSt
                     )}
                     {stage.overdueCount > 0 && (
                       <motion.div
+                        key="overdue-badge"
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
