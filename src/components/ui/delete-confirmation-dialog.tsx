@@ -27,13 +27,17 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
   itemType,
   isLoading = false,
 }) => {
+  // Ensure we have fallback values for accessibility
+  const safeItemName = itemName?.trim() || 'this item';
+  const safeItemType = itemType?.trim() || 'item';
+  
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent role="alertdialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
         <AlertDialogHeader>
-          <AlertDialogTitle id="delete-dialog-title">Delete {itemType}</AlertDialogTitle>
+          <AlertDialogTitle id="delete-dialog-title">Delete {safeItemType}</AlertDialogTitle>
           <AlertDialogDescription id="delete-dialog-description">
-            Are you sure you want to delete {itemType} "{itemName}"? This action cannot be undone.
+            Are you sure you want to delete {safeItemType} "{safeItemName}"? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -42,7 +46,7 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
             onClick={onConfirm}
             disabled={isLoading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            aria-label={isLoading ? `Deleting ${itemName}...` : `Confirm delete ${itemName}`}
+            aria-label={isLoading ? `Deleting ${safeItemName}...` : `Confirm delete ${safeItemName}`}
           >
             {isLoading ? 'Deleting...' : 'Delete'}
           </AlertDialogAction>
