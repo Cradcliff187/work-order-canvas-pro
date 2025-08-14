@@ -218,9 +218,9 @@ export function useWorkOrders(
             loc.replace(/[%_\\]/g, '\\$&')  // Escapes %, _, and \ characters
           );
           
-          // Build OR conditions maintaining partial matching behavior
+          // Build OR conditions for both store_location and partner_location_number
           const conditions = safeLocations
-            .map(loc => `store_location.ilike.%${loc}%`)
+            .map(loc => `store_location.ilike.%${loc}%,partner_location_number.ilike.%${loc}%`)
             .join(',');
           
           query = query.or(conditions);
