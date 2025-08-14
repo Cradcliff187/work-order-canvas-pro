@@ -17,6 +17,7 @@ import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { WorkOrderStatusBadge, ComputedFinancialStatusBadge } from '@/components/ui/status-badge';
@@ -31,6 +32,7 @@ import { WorkOrderPipelineItem } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { ClipboardList, Copy } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils';
+import { useTrades } from '@/hooks/useWorkOrders';
 
 // Filter interface
 interface PipelineFiltersValue {
@@ -39,6 +41,13 @@ interface PipelineFiltersValue {
   financial_status?: string[];
   partner_organization_id?: string;
   overdue?: boolean;
+  priority?: string[];
+  trade_id?: string[];
+  assigned_organization_id?: string[];
+  report_status?: string[];
+  date_from?: string;
+  date_to?: string;
+  age_range?: [number, number];
 }
 
 // Filter options
@@ -56,9 +65,25 @@ const financialStatusOptions = [
   { value: 'paid', label: 'Invoice Paid' }
 ];
 
+const priorityOptions = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' }
+];
+
+const reportStatusOptions = [
+  { value: 'not_submitted', label: 'Not Submitted' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'reviewed', label: 'Reviewed' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' }
+];
+
 export function WorkOrderPipelineTable() {
   const navigate = useNavigate();
   const { data: pipelineData, isLoading, isError } = useWorkOrderLifecycle();
+  const { data: trades } = useTrades();
   
   // Filter state management
   const initialFilters: PipelineFiltersValue = {
@@ -66,7 +91,11 @@ export function WorkOrderPipelineTable() {
     operational_status: [],
     financial_status: [],
     partner_organization_id: '',
-    overdue: false
+    overdue: false,
+    priority: [],
+    trade_id: [],
+    assigned_organization_id: [],
+    report_status: []
   };
 
   const { filters, setFilters, clearFilters, filterCount } = useAdminFilters(
@@ -134,6 +163,24 @@ export function WorkOrderPipelineTable() {
       // Overdue filter
       if (filters.overdue) {
         if (!item.is_overdue) return false;
+      }
+
+      // Priority filter
+      if (filters.priority && filters.priority.length > 0) {
+        if (!filters.priority.includes(item.priority || 'medium')) return false;
+      }
+
+      // Trade filter (we'll need to add this to the data)
+      // TODO: Add trade filtering once trade info is available in pipeline data
+
+      // Assigned organization filter  
+      if (filters.assigned_organization_id && filters.assigned_organization_id.length > 0) {
+        if (!filters.assigned_organization_id.includes(item.assigned_organization_name || '')) return false;
+      }
+
+      // Report status filter
+      if (filters.report_status && filters.report_status.length > 0) {
+        if (!filters.report_status.includes(item.report_status || 'not_submitted')) return false;
       }
 
       return true;
@@ -271,10 +318,14 @@ export function WorkOrderPipelineTable() {
                 </button>
               </div>
             </HoverCardTrigger>
-            <HoverCardContent className="w-80">
+            <HoverCardContent className="w-80 z-[100]">
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">{item.work_order_number}</h4>
                 <p className="text-sm">{item.title}</p>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">Work Order Details:</p>
+                  <p className="text-sm mt-1">Click to view full details and description</p>
+                </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Submitted:</span>
                   <span>{item.date_submitted ? formatDate(item.date_submitted) : 'N/A'}</span>
@@ -310,7 +361,7 @@ export function WorkOrderPipelineTable() {
                 {title}
               </div>
             </HoverCardTrigger>
-            <HoverCardContent>
+            <HoverCardContent className="z-[100]">
               <p className="text-sm">{title}</p>
             </HoverCardContent>
           </HoverCard>
@@ -449,12 +500,46 @@ export function WorkOrderPipelineTable() {
             placeholder="All partners"
           />
 
-          <Switch
-            checked={filters.overdue || false}
-            onCheckedChange={(checked) => 
-              setFilters({ ...filters, overdue: checked })
+          <MultiSelectFilter
+            options={priorityOptions}
+            selectedValues={filters.priority || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, priority: values })
             }
+            placeholder="All priorities"
+            maxDisplayCount={2}
           />
+
+          <MultiSelectFilter
+            options={reportStatusOptions}
+            selectedValues={filters.report_status || []}
+            onSelectionChange={(values) => 
+              setFilters({ ...filters, report_status: values })
+            }
+            placeholder="All report statuses"
+            maxDisplayCount={2}
+          />
+
+          <OrganizationSelector
+            value={filters.assigned_organization_id?.[0] || ''}
+            onChange={(value) => 
+              setFilters({ ...filters, assigned_organization_id: value ? [value] : [] })
+            }
+            organizationType="subcontractor"
+            placeholder="All subcontractors"
+          />
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={filters.overdue || false}
+              onCheckedChange={(checked) => 
+                setFilters({ ...filters, overdue: checked })
+              }
+            />
+            <Label htmlFor="overdue-switch" className="text-sm font-medium">
+              Overdue Only
+            </Label>
+          </div>
         </AdminFilterBar>
 
         {isLoading ? (
@@ -473,9 +558,9 @@ export function WorkOrderPipelineTable() {
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden lg:block">
-              <ResponsiveTableWrapper stickyFirstColumn>
-                <Table className="admin-table">
+            <div className="hidden lg:block overflow-visible">
+              <ResponsiveTableWrapper stickyFirstColumn className="overflow-visible">
+                <Table className="admin-table overflow-visible">
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
