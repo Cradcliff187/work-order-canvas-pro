@@ -118,6 +118,23 @@ async function generatePartnerInvoice(data: GeneratePartnerInvoiceData): Promise
     throw new Error('Failed to create invoice line items');
   }
 
+  // Create invoice_work_orders records to link reports to the invoice
+  const invoiceWorkOrders = selectedReports.map(report => ({
+    invoice_id: partnerInvoice.id,
+    work_order_id: report.work_order_id,
+    work_order_report_id: report.id,
+    amount: report.subcontractor_costs?.reduce((sum: number, cost: any) => sum + Number(cost.amount), 0) || 0,
+    description: report.work_performed.substring(0, 200)
+  }));
+
+  const { error: invoiceWorkOrdersError } = await supabase
+    .from('invoice_work_orders')
+    .insert(invoiceWorkOrders);
+    
+  if (invoiceWorkOrdersError) {
+    throw new Error('Failed to create invoice work orders');
+  }
+
   // Update work order reports with billing info
   const { error: updateError } = await supabase
     .from('work_order_reports')
