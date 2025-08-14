@@ -107,9 +107,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
 
         let query = supabase
           .from('work_orders')
-          .select('store_location')
-          .not('store_location', 'is', null)
-          .not('store_location', 'eq', '')
+          .select('partner_location_number, store_location')
+          .not('partner_location_number', 'is', null)
+          .not('partner_location_number', 'eq', '')
           .gte('created_at', sixMonthsAgoISO) // Only get work orders from last 6 months
           .order('created_at', { ascending: false })
           .limit(1000); // Limit to recent 1000 for performance and security
@@ -122,19 +122,29 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
         const { data, error } = await query;
         if (error) throw error;
         
-        // Count occurrences of each location
-        const locationCounts = new Map<string, number>();
+        // Count occurrences of each location by partner_location_number
+        const locationCounts = new Map<string, { locationName: string; count: number }>();
         data?.forEach(wo => {
-          if (wo.store_location?.trim()) {
-            const location = wo.store_location;
-            locationCounts.set(location, (locationCounts.get(location) || 0) + 1);
+          if (wo.partner_location_number?.trim()) {
+            const locationNumber = wo.partner_location_number;
+            const locationName = wo.store_location || locationNumber;
+            
+            if (locationCounts.has(locationNumber)) {
+              locationCounts.get(locationNumber)!.count += 1;
+            } else {
+              locationCounts.set(locationNumber, { locationName, count: 1 });
+            }
           }
         });
         
         // Convert to array and sort by location name
         const locationsWithCounts = Array.from(locationCounts.entries())
-          .map(([location, count]) => ({ location, count }))
-          .sort((a, b) => a.location.localeCompare(b.location));
+          .map(([locationNumber, { locationName, count }]) => ({ 
+            locationNumber, 
+            locationName, 
+            count 
+          }))
+          .sort((a, b) => a.locationName.localeCompare(b.locationName));
         
         return locationsWithCounts;
       } catch (error) {
@@ -253,9 +263,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             label: [emp.first_name, emp.last_name].filter(Boolean).join(' '),
             subtitle: emp.organization,
           }))}
-          locations={(locationsWithCounts || []).map(({ location }) => ({
-            id: `loc-${location}`,
-            label: location,
+          locations={(locationsWithCounts || []).map(({ locationName }) => ({
+            id: `loc-${locationName}`,
+            label: locationName,
           }))}
           onSearchSubmit={(q) => onSearchChange(q)}
           onSelectSuggestion={(item) => onSearchChange(item.label)}
@@ -365,9 +375,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
           </div>
         ) : (
           <MultiSelectFilter
-            options={locationsWithCounts?.map(({ location, count }) => ({ 
-              value: location, 
-              label: `${location} (${count})` 
+            options={locationsWithCounts?.map(({ locationNumber, locationName, count }) => ({ 
+              value: locationNumber, 
+              label: `${locationName} (${count})` 
             })) || []}
             selectedValues={filters.location_filter || []}
             onSelectionChange={(values) => onFiltersChange({ 
