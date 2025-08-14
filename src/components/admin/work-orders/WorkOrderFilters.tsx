@@ -22,6 +22,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { useAllAssignees } from '@/hooks/useEmployeesForAssignment';
+import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { QUICK_FILTER_PRESETS } from './quickFilterPresets';
 
 interface WorkOrderFiltersProps {
@@ -89,73 +90,8 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     return baseCount + (activeQuickPresets?.length || 0);
   }, [filters, searchTerm, activeQuickPresets]);
 
-  // Get unique locations for the selected organization (or all if no org selected)
-  // Performance Optimization: This query is designed to prevent timeouts on organizations with many work orders
-  // Strategy: Fetch only the most recent 1000 work orders from the last 6 months
-  // - Recent work orders are more likely to have actively used locations
-  // - 6-month time window captures seasonal business cycles while limiting dataset size
-  // - 1000 record limit provides good location coverage without overwhelming the database
-  // - Combined time + count limits ensure consistent performance regardless of organization size
-  const { data: locationsWithCounts, isLoading: locationsLoading, isFetching: locationsRefetching, error: locationsError, refetch: refetchLocations } = useQuery({
-    queryKey: ['work-order-locations-with-counts', (filters.partner_organization_ids || []).join(',')],
-    queryFn: async () => {
-      try {
-        // Calculate 6 months ago for time-based filtering to improve query performance
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        const sixMonthsAgoISO = sixMonthsAgo.toISOString();
-
-        let query = supabase
-          .from('work_orders')
-          .select('partner_location_number, store_location')
-          .not('partner_location_number', 'is', null)
-          .not('partner_location_number', 'eq', '')
-          .gte('created_at', sixMonthsAgoISO) // Only get work orders from last 6 months
-          .order('created_at', { ascending: false })
-          .limit(1000); // Limit to recent 1000 for performance and security
-        
-        // If specific partners are selected, filter by them
-        if (filters.partner_organization_ids && filters.partner_organization_ids.length > 0) {
-          query = query.in('organization_id', filters.partner_organization_ids as any);
-        }
-        
-        const { data, error } = await query;
-        if (error) throw error;
-        
-        // Count occurrences of each location by partner_location_number
-        const locationCounts = new Map<string, { locationName: string; count: number }>();
-        data?.forEach(wo => {
-          if (wo.partner_location_number?.trim()) {
-            const locationNumber = wo.partner_location_number;
-            const locationName = wo.store_location || locationNumber;
-            
-            if (locationCounts.has(locationNumber)) {
-              locationCounts.get(locationNumber)!.count += 1;
-            } else {
-              locationCounts.set(locationNumber, { locationName, count: 1 });
-            }
-          }
-        });
-        
-        // Convert to array and sort by location name
-        const locationsWithCounts = Array.from(locationCounts.entries())
-          .map(([locationNumber, { locationName, count }]) => ({ 
-            locationNumber, 
-            locationName, 
-            count 
-          }))
-          .sort((a, b) => a.locationName.localeCompare(b.locationName));
-        
-        return locationsWithCounts;
-      } catch (error) {
-        console.error('Failed to fetch work order locations:', error);
-        return [];
-      }
-    },
-    enabled: shouldShowSelector,
-    retry: 2,
-    retryDelay: 1000,
-  });
+  // Get partner locations to match partner page format exactly  
+  const { data: locations } = usePartnerLocations();
 
   // Suggestion sources
   const { data: woSuggestionSource } = useQuery({
@@ -184,30 +120,6 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     filters.date_to ? new Date(filters.date_to) : undefined
   );
 
-  // Clear location filter when refetching locations
-  useEffect(() => {
-    if (locationsRefetching) {
-      onFiltersChange({ 
-        ...filters, 
-        location_filter: [] 
-      });
-    }
-  }, [locationsRefetching, filters, onFiltersChange]);
-
-  // Show toast notification when location query fails
-  useEffect(() => {
-    if (locationsError) {
-      // Log full error details for debugging
-      console.error('Location query error details:', locationsError);
-      
-      // Show user-friendly toast notification
-      toast({
-        variant: "destructive",
-        title: "Failed to load location list",
-        description: "You can still type locations manually."
-      });
-    }
-  }, [locationsError, toast]);
 
   const hasActiveFilters = Boolean(searchTerm) || Object.values(filters).some(value => 
     Array.isArray(value) ? value.length > 0 : Boolean(value)
@@ -263,9 +175,9 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
             label: [emp.first_name, emp.last_name].filter(Boolean).join(' '),
             subtitle: emp.organization,
           }))}
-          locations={(locationsWithCounts || []).map(({ locationName }) => ({
-            id: `loc-${locationName}`,
-            label: locationName,
+          locations={(locations || []).map((location) => ({
+            id: `loc-${location.location_number}`,
+            label: `${location.location_name} (${location.location_number})`,
           }))}
           onSearchSubmit={(q) => onSearchChange(q)}
           onSelectSuggestion={(item) => onSearchChange(item.label)}
@@ -335,61 +247,25 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
     </div>
   );
 
-  // Helper function to render location filter with fallback
+  // Helper function to render location filter to match partner format exactly
   const renderLocationFilter = () => (
     shouldShowSelector ? (
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Location</label>
-        {locationsLoading ? (
-          <Skeleton className="h-10 w-full" />
-        ) : locationsError ? (
-          <div className="space-y-3">
-            <Alert variant="destructive" className="py-2">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                Location list unavailable, type location to filter
-              </AlertDescription>
-            </Alert>
-            <Input 
-              placeholder="Enter location name..."
-              value={locationTextInput}
-              onChange={(e) => setLocationTextInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleLocationTextSubmit(locationTextInput);
-                }
-              }}
-              onBlur={() => handleLocationTextSubmit(locationTextInput)}
-              className="h-10"
-              aria-label="Enter location name to filter"
-            />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => refetchLocations()}
-              className="w-full h-8"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry loading locations
-            </Button>
-          </div>
-        ) : (
-          <MultiSelectFilter
-            options={locationsWithCounts?.map(({ locationNumber, locationName, count }) => ({ 
-              value: locationNumber, 
-              label: `${locationName} (${count})` 
-            })) || []}
-            selectedValues={filters.location_filter || []}
-            onSelectionChange={(values) => onFiltersChange({ 
-              ...filters, 
-              location_filter: values.length > 0 ? values : undefined 
-            })}
-            placeholder="All Locations"
-            searchPlaceholder="Search locations..."
-            className="h-10"
-            disabled={!locationsWithCounts || locationsLoading || locationsRefetching}
-          />
-        )}
+        <MultiSelectFilter
+          options={(locations || []).map((location) => ({ 
+            value: location.location_number, 
+            label: `${location.location_name} (${location.location_number})` 
+          }))}
+          selectedValues={filters.location_filter || []}
+          onSelectionChange={(values) => onFiltersChange({ 
+            ...filters, 
+            location_filter: values.length > 0 ? values : undefined 
+          })}
+          placeholder="All Locations"
+          searchPlaceholder="Search locations..."
+          className="h-10"
+        />
       </div>
     ) : null
   );
