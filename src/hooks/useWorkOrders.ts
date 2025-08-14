@@ -240,19 +240,36 @@ export function useWorkOrders(
           const includesInternal = selections.includes('internal');
           const subOrgIds = selections.filter((id) => id !== 'internal');
 
+          // Get internal organization IDs first
+          let internalOrgIds: string[] = [];
+          if (includesInternal) {
+            const { data: internalOrgs } = await supabase
+              .from('organizations')
+              .select('id')
+              .eq('organization_type', 'internal');
+            
+            internalOrgIds = internalOrgs?.map(org => org.id) || [];
+          }
+
           if (includesInternal && subOrgIds.length === 0) {
-            // Only internal team
-            query = query.or(
-              'work_order_assignments.organizations.organization_type.eq.internal,and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)'
-            );
+            // Only internal team - filter by internal org IDs or direct assignments
+            if (internalOrgIds.length > 0) {
+              query = query.or(
+                `work_order_assignments.assigned_organization_id.in.(${internalOrgIds.join(',')}),and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)`
+              );
+            } else {
+              // No internal orgs found, just check for direct assignments
+              query = query.filter('work_order_assignments.assigned_organization_id', 'is', null)
+                          .filter('work_order_assignments.assigned_to', 'not.is', null);
+            }
           } else if (!includesInternal && subOrgIds.length > 0) {
             // Only selected subcontractors
             query = query.in('work_order_assignments.assigned_organization_id', subOrgIds as any);
           } else if (includesInternal && subOrgIds.length > 0) {
             // Both internal and specific subcontractors
-            const quoted = subOrgIds.map((id) => `"${id}"`).join(',');
+            const allOrgIds = [...internalOrgIds, ...subOrgIds];
             query = query.or(
-              `work_order_assignments.assigned_organization_id.in.(${quoted}),and(work_order_assignments.organizations.organization_type.eq.internal,work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)`
+              `work_order_assignments.assigned_organization_id.in.(${allOrgIds.join(',')}),and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)`
             );
           }
         }
