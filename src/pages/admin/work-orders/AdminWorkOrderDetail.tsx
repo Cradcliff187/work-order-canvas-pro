@@ -183,19 +183,6 @@ export default function AdminWorkOrderDetail() {
                   )}
                 </div>
                 
-                {workOrder.partner_location_number && (
-                  <div>
-                    <p className="text-sm font-medium">Location Number</p>
-                    <p className="text-sm text-muted-foreground">{workOrder.partner_location_number}</p>
-                  </div>
-                )}
-                
-                {workOrder.partner_po_number && (
-                  <div>
-                    <p className="text-sm font-medium">PO Number</p>
-                    <p className="text-sm text-muted-foreground">{workOrder.partner_po_number}</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
 

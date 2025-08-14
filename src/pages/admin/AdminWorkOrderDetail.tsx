@@ -437,31 +437,6 @@ export default function AdminWorkOrderDetail() {
               </CardContent>
             </Card>
 
-            {/* Partner References */}
-            {(workOrder.partner_po_number || workOrder.partner_location_number) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Partner References
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {workOrder.partner_po_number && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">PO Number</label>
-                      <p className="font-medium">{workOrder.partner_po_number}</p>
-                    </div>
-                  )}
-                  {workOrder.partner_location_number && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Location Number</label>
-                      <p className="font-medium">{workOrder.partner_location_number}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Trade & Assignment - Full Details */}
             <Card>

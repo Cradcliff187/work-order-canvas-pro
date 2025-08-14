@@ -139,10 +139,6 @@ export default function WorkOrderDetail() {
                   <p className="text-sm">{workOrder.store_location || 'Not specified'}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Location Code</Label>
-                  <p className="text-sm">{workOrder.partner_location_number || 'Not specified'}</p>
-                </div>
-                <div>
                   <Label className="text-sm font-medium text-muted-foreground">Street Address</Label>
                   <p className="text-sm">{workOrder.location_street_address || workOrder.street_address || 'Not specified'}</p>
                 </div>
