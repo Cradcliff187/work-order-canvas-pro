@@ -395,6 +395,7 @@ export function WorkOrderTable({
                       <WorkOrderDetailPanel
                         workOrder={selectedWorkOrder as any}
                         onEdit={() => onEdit(selectedWorkOrder)}
+                        onViewFull={() => onViewDetails(selectedWorkOrder)}
                       />
                     )
                   }
