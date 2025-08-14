@@ -344,39 +344,31 @@ if (error) {
           {/* Quick Actions */}
           <div role="region" aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <Button
-              size="lg"
               onClick={() => navigate('/admin/invoices')}
-              className="w-full justify-center"
               aria-label="Enter Subcontractor Invoice"
             >
               <Plus className="h-4 w-4 mr-2" />
               Enter Subcontractor Invoice
             </Button>
             <Button
-              size="lg"
               variant="outline"
               onClick={() => navigate('/admin/partner-billing/select-reports')}
-              className="w-full justify-center"
               aria-label="Generate Partner Invoices"
             >
               <Building2 className="h-4 w-4 mr-2" />
               Generate Partner Invoices
             </Button>
             <Button
-              size="lg"
               variant="outline"
               onClick={() => navigate('/admin/invoices')}
-              className="w-full justify-center"
               aria-label="View All Invoices"
             >
               <FileText className="h-4 w-4 mr-2" />
               View All Invoices
             </Button>
             <Button
-              size="lg"
               variant="outline"
               onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
-              className="w-full justify-center"
               aria-label="View Unbilled Reports"
             >
               <Clock className="h-4 w-4 mr-2" />
