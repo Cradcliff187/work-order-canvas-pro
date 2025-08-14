@@ -260,6 +260,7 @@ export function WorkOrderPipeline() {
           onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
           onSearchSubmit={(q) => setFilters(prev => ({ ...prev, search: q }))}
           placeholder="Search by work order number, location, or description..."
+          className="w-full"
           storageKey="pipeline-search"
         />
         <MultiSelectFilter
@@ -281,6 +282,7 @@ export function WorkOrderPipeline() {
           onChange={(value) => setFilters(prev => ({ ...prev, organizationId: value || '' }))}
           organizationType="partner"
           placeholder="All organizations"
+          className="w-full"
         />
         <div className="flex items-center h-10 px-3 border border-input rounded-md bg-background">
           <Switch
