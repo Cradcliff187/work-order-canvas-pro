@@ -243,7 +243,7 @@ export function useWorkOrders(
           if (includesInternal && subOrgIds.length === 0) {
             // Only internal team
             query = query.or(
-              'or(work_order_assignments.organizations.organization_type.eq.internal,and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null))'
+              'work_order_assignments.organizations.organization_type.eq.internal,and(work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)'
             );
           } else if (!includesInternal && subOrgIds.length > 0) {
             // Only selected subcontractors
@@ -252,7 +252,7 @@ export function useWorkOrders(
             // Both internal and specific subcontractors
             const quoted = subOrgIds.map((id) => `"${id}"`).join(',');
             query = query.or(
-              `or(work_order_assignments.assigned_organization_id.in.(${quoted}),and(work_order_assignments.organizations.organization_type.eq.internal,work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null))`
+              `work_order_assignments.assigned_organization_id.in.(${quoted}),and(work_order_assignments.organizations.organization_type.eq.internal,work_order_assignments.assigned_organization_id.is.null,work_order_assignments.assigned_to.not.is.null)`
             );
           }
         }
