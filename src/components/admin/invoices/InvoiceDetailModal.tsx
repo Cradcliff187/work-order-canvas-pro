@@ -102,6 +102,8 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
     setAttachments((invoice as any).invoice_attachments || []);
     const def = invoice.invoice_work_orders?.[0]?.work_order_id || null;
     setSelectedWorkOrderId(def);
+    // Refresh attachments to ensure we have full data
+    refreshAttachments();
   }, [invoice]);
 
   const handleFilesSelected = async (files: File[]) => {
