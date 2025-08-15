@@ -5,9 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Invoice } from '@/hooks/useInvoices';
+
+interface InvoiceWorkOrder {
+  id: string;
+  work_order_id: string;
+  amount: number;
+  description?: string;
+  work_orders: {
+    work_order_number: string;
+    title: string;
+  };
+}
 
 interface EditInvoiceSheetProps {
   open: boolean;
@@ -27,6 +40,8 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
   const [invoiceDate, setInvoiceDate] = useState<string>('');
   const [dueDate, setDueDate] = useState<string>('');
   const [paidAt, setPaidAt] = useState<string>('');
+  const [workOrderAmounts, setWorkOrderAmounts] = useState<InvoiceWorkOrder[]>([]);
+  const [workOrdersOpen, setWorkOrdersOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -40,7 +55,47 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
     setInvoiceDate((invoice as any).invoice_date ? new Date((invoice as any).invoice_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
     setDueDate((invoice as any).due_date ? new Date((invoice as any).due_date).toISOString().slice(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
     setPaidAt(invoice.paid_at ? new Date(invoice.paid_at).toISOString().slice(0, 10) : '');
+    
+    // Fetch work order amounts
+    fetchWorkOrderAmounts();
   }, [invoice]);
+
+  const fetchWorkOrderAmounts = async () => {
+    if (!invoice?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('invoice_work_orders')
+        .select(`
+          id,
+          work_order_id,
+          amount,
+          description,
+          work_orders:work_order_id (
+            work_order_number,
+            title
+          )
+        `)
+        .eq('invoice_id', invoice.id);
+      
+      if (error) throw error;
+      setWorkOrderAmounts(data || []);
+    } catch (error) {
+      console.error('Failed to fetch work order amounts:', error);
+    }
+  };
+
+  const updateWorkOrderAmount = (workOrderId: string, newAmount: number) => {
+    setWorkOrderAmounts(prev => 
+      prev.map(wo => 
+        wo.id === workOrderId ? { ...wo, amount: newAmount } : wo
+      )
+    );
+  };
+
+  const getTotalAmount = () => {
+    return workOrderAmounts.reduce((sum, wo) => sum + (wo.amount || 0), 0);
+  };
 
   const handleSave = async () => {
     if (!invoice) return;
@@ -53,7 +108,9 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
 
     try {
       setIsSaving(true);
-      const payload: any = {
+      
+      // Update invoice metadata
+      const invoicePayload: any = {
         external_invoice_number: externalInvoiceNumber || null,
         purchase_order_number: purchaseOrderNumber || null,
         payment_terms: paymentTerms || 'Net 30',
@@ -62,18 +119,28 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
         payment_reference: paymentReference || null,
         invoice_date: invoiceDate || null,
         due_date: dueDate || null,
+        total_amount: getTotalAmount(),
       };
       if (paidAt) {
-        payload.paid_at = new Date(paidAt).toISOString();
+        invoicePayload.paid_at = new Date(paidAt).toISOString();
       } else {
-        payload.paid_at = null;
+        invoicePayload.paid_at = null;
       }
 
-      const { error } = await supabase
+      const { error: invoiceError } = await supabase
         .from('invoices')
-        .update(payload)
+        .update(invoicePayload)
         .eq('id', invoice.id);
-      if (error) throw error;
+      if (invoiceError) throw invoiceError;
+
+      // Update work order amounts
+      for (const workOrder of workOrderAmounts) {
+        const { error: workOrderError } = await supabase
+          .from('invoice_work_orders')
+          .update({ amount: workOrder.amount })
+          .eq('id', workOrder.id);
+        if (workOrderError) throw workOrderError;
+      }
 
       toast({ title: 'Invoice updated' });
       onSaved?.();
@@ -134,6 +201,50 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
             <Label htmlFor="admin_notes">Admin Notes</Label>
             <Textarea id="admin_notes" value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={4} />
           </div>
+          
+          {/* Work Order Amounts Section */}
+          {workOrderAmounts.length > 0 && (
+            <Collapsible open={workOrdersOpen} onOpenChange={setWorkOrdersOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">Work Order Amounts</Label>
+                  <span className="text-xs text-muted-foreground">
+                    ({workOrderAmounts.length} work orders)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    Total: ${getTotalAmount().toFixed(2)}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${workOrdersOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 mt-3">
+                {workOrderAmounts.map((workOrder) => (
+                  <div key={workOrder.id} className="flex items-center gap-3 p-3 border rounded-md">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">
+                        {workOrder.work_orders?.work_order_number}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {workOrder.work_orders?.title}
+                      </div>
+                    </div>
+                    <div className="w-24">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={workOrder.amount || ''}
+                        onChange={(e) => updateWorkOrderAmount(workOrder.id, parseFloat(e.target.value) || 0)}
+                        className="text-right"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
         <SheetFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
