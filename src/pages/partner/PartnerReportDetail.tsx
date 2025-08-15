@@ -148,6 +148,12 @@ export default function PartnerReportDetail() {
                   <label className="text-sm font-medium text-muted-foreground">Title</label>
                   <p className="font-medium">{workOrder?.title || 'N/A'}</p>
                 </div>
+                {workOrder?.description && (
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium text-muted-foreground">Description</label>
+                    <p className="font-medium whitespace-pre-wrap">{workOrder.description}</p>
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Trade</label>
                   <p className="font-medium">{workOrder?.trades?.name || 'N/A'}</p>
