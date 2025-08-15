@@ -397,11 +397,6 @@ export default function AdminWorkOrderDetail() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <WorkOrderStatusBadge
-            status={workOrder.status}
-            size="sm"
-            showIcon
-          />
           {/* Show Submit Report button if no reports exist and not completed */}
           {workOrder.status !== 'completed' && 
            (!workOrder.work_order_reports || workOrder.work_order_reports.length === 0) && (
