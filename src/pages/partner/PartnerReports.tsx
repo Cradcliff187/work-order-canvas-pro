@@ -346,29 +346,30 @@ export default function PartnerReports() {
                 </Button>
               )}
             </div>
+            
+            {/* Bottom row with view controls */}
+            <div className="flex justify-between items-center pt-2">
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:block">
+                  <ViewModeSwitcher 
+                    value={viewMode} 
+                    onValueChange={setViewMode}
+                    allowedModes={allowedModes}
+                  />
+                </div>
+                {viewMode === 'card' && (
+                  <SortDropdown 
+                    value={sortBy} 
+                    onValueChange={setSortBy}
+                    options={reportSortOptions}
+                  />
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* View Controls - Hide view switcher on mobile since only card view is available */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:block">
-            <ViewModeSwitcher 
-              value={viewMode} 
-              onValueChange={setViewMode}
-              allowedModes={allowedModes}
-            />
-          </div>
-          {viewMode === 'card' && (
-            <SortDropdown 
-              value={sortBy} 
-              onValueChange={setSortBy}
-              options={reportSortOptions}
-            />
-          )}
-        </div>
-      </div>
 
       {/* Content */}
       {viewMode === 'card' ? (
