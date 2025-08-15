@@ -10,7 +10,8 @@ import {
   AlertCircle,
   ChevronRight,
   FileText,
-  ListChecks
+  ListChecks,
+  DollarSign
 } from 'lucide-react';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
 import { 
@@ -97,7 +98,7 @@ export function StatusActionButtons({
           {
             status: 'estimate_needed',
             label: 'Request Estimate',
-            icon: <Clock className="h-4 w-4" />,
+            icon: <DollarSign className="h-4 w-4" />,
             variant: 'outline'
           },
           {
@@ -126,6 +127,12 @@ export function StatusActionButtons({
       
       case 'estimate_needed':
         return [
+          {
+            status: 'assigned',
+            label: 'Cancel Estimate',
+            icon: <UserPlus className="h-4 w-4" />,
+            variant: 'outline'
+          },
           {
             status: 'estimate_approved',
             label: 'Approve Estimate',
