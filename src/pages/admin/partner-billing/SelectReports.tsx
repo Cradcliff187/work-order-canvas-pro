@@ -29,6 +29,7 @@ import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { exportToCSV, ExportColumn } from '@/lib/utils/export';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/formatting';
+import { calculateEstimateVariance, formatVariance } from '@/lib/validations/estimate-validations';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -76,6 +77,7 @@ export default function SelectReports() {
     submitted: { label: 'Submitted', description: 'Date when report was submitted', defaultVisible: true },
     invoices: { label: 'Invoices', description: 'Related invoice information', defaultVisible: true },
     amount: { label: 'Approved Invoice Amount', description: 'Approved subcontractor invoice amount', defaultVisible: true },
+    variance: { label: 'Estimate Variance', description: 'Variance between estimate and actual cost', defaultVisible: true },
     status: { label: 'Status', description: 'Report approval status', defaultVisible: true }
   };
 
@@ -610,17 +612,29 @@ export default function SelectReports() {
                           {columnVisibility.invoices !== false && (
                             <TableHead>Invoices</TableHead>
                           )}
-                          {columnVisibility.amount !== false && (
-                            <TableHead>
-                              <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-2" aria-label={`Sort by Amount${sortKey==='amount'?` (${sortDir})`:''}`}>
-                                <span>Amount</span>
-                                {sortKey==='amount' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
-                              </button>
-                            </TableHead>
-                          )}
-                          {columnVisibility.status !== false && (
-                            <TableHead>Status</TableHead>
-                          )}
+                           {columnVisibility.amount !== false && (
+                             <TableHead>
+                               <button type="button" onClick={() => toggleSort('amount')} className="inline-flex items-center gap-2" aria-label={`Sort by Amount${sortKey==='amount'?` (${sortDir})`:''}`}>
+                                 <span>Amount</span>
+                                 {sortKey==='amount' ? (sortDir==='asc'? <ArrowUp className="h-4 w-4 text-muted-foreground"/> : <ArrowDown className="h-4 w-4 text-muted-foreground"/>) : <ArrowUpDown className="h-4 w-4 text-muted-foreground"/>}
+                               </button>
+                             </TableHead>
+                           )}
+                           {columnVisibility.variance !== false && (
+                             <TableHead>
+                               <Tooltip>
+                                 <TooltipTrigger asChild>
+                                   <span className="cursor-help">Estimate Variance</span>
+                                 </TooltipTrigger>
+                                 <TooltipContent>
+                                   <p>Difference between estimate and actual cost</p>
+                                 </TooltipContent>
+                               </Tooltip>
+                             </TableHead>
+                           )}
+                           {columnVisibility.status !== false && (
+                             <TableHead>Status</TableHead>
+                           )}
                           <TableHead className="w-12">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -742,57 +756,62 @@ export default function SelectReports() {
                                   })()}
                                 </TableCell>
                               )}
-                              {columnVisibility.amount !== false && (
-                                <TableCell>
-                                  {report.approved_subcontractor_invoice_amount ? (
-                                    (() => {
-                                      const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
-                                      const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
-                                      
-                                      return (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className="flex items-center gap-2 cursor-help">
-                                              <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-2">
-                                                {formatCurrency(report.approved_subcontractor_invoice_amount)}
-                                              </Badge>
-                                              {invoiceCount > 1 && (
-                                                <Info className="w-3 h-3 text-muted-foreground" />
-                                              )}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent className="z-50 bg-popover">
-                                            {invoiceCount > 1 ? (
-                                              <div className="space-y-2 text-xs">
-                                                <p className="font-medium">Invoice Breakdown:</p>
-                                                {reportInvoiceDetail?.invoices.map((invoice, index) => (
-                                                  <div key={invoice.invoice_id} className="flex justify-between gap-4">
-                                                    <span>{invoice.invoice_number}</span>
-                                                    <span>{formatCurrency(invoice.amount)}</span>
-                                                  </div>
-                                                ))}
-                                                <div className="border-t pt-2 flex justify-between gap-4 font-medium">
-                                                  <span>Total:</span>
-                                                  <span>{formatCurrency(reportInvoiceDetail?.total_amount || 0)}</span>
-                                                </div>
-                                              </div>
-                                            ) : (
-                                              <p>Cost from approved subcontractor invoice</p>
-                                            )}
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      );
-                                    })()
-                                  ) : (
-                                    '-'
-                                 )}
-                                </TableCell>
-                              )}
-                              {columnVisibility.status !== false && (
-                                <TableCell>
-                                  <ReportStatusBadge status="approved" size="sm" />
-                                </TableCell>
-                              )}
+                               {columnVisibility.amount !== false && (
+                                 <TableCell>
+                                   {report.approved_subcontractor_invoice_amount ? (
+                                     (() => {
+                                       const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
+                                       const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
+                                       
+                                       return (
+                                         <Tooltip>
+                                           <TooltipTrigger asChild>
+                                             <div className="flex items-center gap-2 cursor-help">
+                                               <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-2">
+                                                 {formatCurrency(report.approved_subcontractor_invoice_amount)}
+                                               </Badge>
+                                               {invoiceCount > 1 && (
+                                                 <Info className="w-3 h-3 text-muted-foreground" />
+                                               )}
+                                             </div>
+                                           </TooltipTrigger>
+                                           <TooltipContent className="z-50 bg-popover">
+                                             {invoiceCount > 1 ? (
+                                               <div className="space-y-2 text-xs">
+                                                 <p className="font-medium">Invoice Breakdown:</p>
+                                                 {reportInvoiceDetail?.invoices.map((invoice, index) => (
+                                                   <div key={invoice.invoice_id} className="flex justify-between gap-4">
+                                                     <span>{invoice.invoice_number}</span>
+                                                     <span>{formatCurrency(invoice.amount)}</span>
+                                                   </div>
+                                                 ))}
+                                                 <div className="border-t pt-2 flex justify-between gap-4 font-medium">
+                                                   <span>Total:</span>
+                                                   <span>{formatCurrency(reportInvoiceDetail?.total_amount || 0)}</span>
+                                                 </div>
+                                               </div>
+                                             ) : (
+                                               <p>Cost from approved subcontractor invoice</p>
+                                             )}
+                                           </TooltipContent>
+                                         </Tooltip>
+                                       );
+                                     })()
+                                   ) : (
+                                     '-'
+                                  )}
+                                 </TableCell>
+                               )}
+                               {columnVisibility.variance !== false && (
+                                 <TableCell>
+                                   <span className="text-muted-foreground">-</span>
+                                 </TableCell>
+                               )}
+                               {columnVisibility.status !== false && (
+                                 <TableCell>
+                                   <ReportStatusBadge status="approved" size="sm" />
+                                 </TableCell>
+                               )}
                               <TableCell onClick={(e) => e.stopPropagation()}>
                                 <TableActionsDropdown
                                   actions={[

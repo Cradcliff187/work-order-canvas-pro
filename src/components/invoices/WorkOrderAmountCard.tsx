@@ -17,7 +17,8 @@ interface WorkOrderAmountCardProps {
     description?: string;
     completed_at?: string;
     work_order_reports?: Array<{
-      work_performed: string;
+      id?: string;
+      work_performed?: string;
       materials_used?: string;
       hours_worked?: number;
       invoice_amount?: number;

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { validateEstimateBeforeWork } from "@/lib/validations/estimate-validations";
 
 import type { Database } from "@/integrations/supabase/types";
 
@@ -58,6 +59,22 @@ export const useWorkOrderStatusTransitions = () => {
 
   const transitionStatus = useMutation({
     mutationFn: async ({ workOrderId, newStatus, reason }: StatusTransitionData) => {
+      // Validate estimate requirements before transitioning to in_progress
+      if (newStatus === 'in_progress') {
+        const { data: workOrder, error: fetchError } = await supabase
+          .from('work_orders')
+          .select('*')
+          .eq('id', workOrderId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const validation = validateEstimateBeforeWork(workOrder);
+        if (!validation.isValid) {
+          throw new Error(validation.message);
+        }
+      }
+
       const { data, error } = await supabase.rpc('transition_work_order_status', {
         work_order_id: workOrderId,
         new_status: newStatus,

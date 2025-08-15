@@ -20,6 +20,7 @@ import { WorkOrderAmountCard } from '@/components/invoices/WorkOrderAmountCard';
 import { InvoiceTotalSummary } from '@/components/invoices/InvoiceTotalSummary';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { InvoiceDatesFields } from '@/components/invoices/InvoiceDatesFields';
+import { validateReportBeforeInvoice } from '@/lib/validations/estimate-validations';
 import { addDays, isBefore, format as formatDate } from 'date-fns';
 
 interface InvoiceFormData {
@@ -77,7 +78,11 @@ export default function SubmitInvoice() {
         .from('work_orders')
         .select(`
           *,
-          invoice_work_orders (id)
+          invoice_work_orders (id),
+          work_order_reports!inner (
+            id,
+            status
+          )
         `)
         .in('assigned_organization_id', organizationIds)
         .eq('status', 'completed')
@@ -203,6 +208,22 @@ export default function SubmitInvoice() {
       toast({
         title: "Invalid amounts",
         description: "All selected work orders must have an amount greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate that all selected work orders have approved reports
+    const selectedWorkOrders = availableWorkOrders.filter(wo => selectedWorkOrderIds.includes(wo.id));
+    const hasUnapprovedReports = selectedWorkOrders.some(wo => {
+      const reports = wo.work_order_reports || [];
+      return reports.length === 0 || reports.some(report => report.status !== 'approved');
+    });
+    
+    if (hasUnapprovedReports) {
+      toast({
+        title: "Cannot submit invoice",
+        description: "Report must be approved before invoicing",
         variant: "destructive",
       });
       return;
