@@ -275,49 +275,71 @@ export function StatusActionButtons({
 
   return (
     <>
-      {/* Mobile: Bottom sheet trigger */}
+      {/* Mobile: Clean grid layout for fewer actions, drawer for many */}
       <div className="md:hidden">
-        <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
-          <DrawerTrigger asChild>
-            <Button size="sm" className="w-full h-11">
-              <ListChecks className="h-4 w-4 mr-2" />
-              Update Status
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent>
-            <DrawerHeader className="text-left">
-              <DrawerTitle>Update Status</DrawerTitle>
-              <DrawerDescription>Choose an action for this work order.</DrawerDescription>
-            </DrawerHeader>
-            <div className="p-4 pt-0 space-y-2">
-              {availableTransitions.map((transition) => {
-                const isDisabled = transition.requiresAssignment && !hasAssignments;
-                return (
-                  <Button
-                    key={`mobile-${transition.status}`}
-                    size="sm"
-                    variant={transition.variant}
-                    className="w-full h-11 justify-start gap-2"
-                    onClick={() => {
-                      setMobileOpen(false);
-                      handleTransitionClick(transition);
-                    }}
-                    disabled={isTransitioning || isDisabled}
-                    title={isDisabled ? 'Assignment required before this action' : undefined}
-                  >
-                    {transition.icon}
-                    {transition.label}
-                  </Button>
-                );
-              })}
-            </div>
-            <DrawerFooter>
-              <DrawerClose asChild>
-                <Button variant="secondary" className="w-full">Close</Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
+        {availableTransitions.length <= 2 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {availableTransitions.map((transition) => {
+              const isDisabled = transition.requiresAssignment && !hasAssignments;
+              return (
+                <Button
+                  key={`mobile-${transition.status}`}
+                  size="sm"
+                  variant={transition.variant}
+                  className="w-full h-12 justify-center gap-2"
+                  onClick={() => handleTransitionClick(transition)}
+                  disabled={isTransitioning || isDisabled}
+                  title={isDisabled ? 'Assignment required before this action' : undefined}
+                >
+                  {transition.icon}
+                  <span className="text-sm">{transition.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        ) : (
+          <Drawer open={mobileOpen} onOpenChange={setMobileOpen}>
+            <DrawerTrigger asChild>
+              <Button size="sm" className="w-full h-12">
+                <ListChecks className="h-4 w-4 mr-2" />
+                Update Status ({availableTransitions.length} options)
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader className="text-left">
+                <DrawerTitle>Update Status</DrawerTitle>
+                <DrawerDescription>Choose an action for this work order.</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 pt-0 space-y-2">
+                {availableTransitions.map((transition) => {
+                  const isDisabled = transition.requiresAssignment && !hasAssignments;
+                  return (
+                    <Button
+                      key={`mobile-${transition.status}`}
+                      size="sm"
+                      variant={transition.variant}
+                      className="w-full h-12 justify-start gap-3"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        handleTransitionClick(transition);
+                      }}
+                      disabled={isTransitioning || isDisabled}
+                      title={isDisabled ? 'Assignment required before this action' : undefined}
+                    >
+                      {transition.icon}
+                      <span>{transition.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+              <DrawerFooter>
+                <DrawerClose asChild>
+                  <Button variant="secondary" className="w-full">Close</Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        )}
       </div>
 
       {/* Desktop: Inline quick actions */}
