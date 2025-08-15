@@ -60,7 +60,8 @@ export default function WorkOrderDetail() {
         .from('work_orders')
         .update({
           partner_estimate_approved: true,
-          partner_estimate_approved_at: new Date().toISOString()
+          partner_estimate_approved_at: new Date().toISOString(),
+          status: 'estimate_approved'
         })
         .eq('id', workOrder.id);
 
@@ -68,7 +69,7 @@ export default function WorkOrderDetail() {
 
       toast({
         title: "Estimate Approved",
-        description: "The estimate has been approved successfully.",
+        description: "The estimate has been approved and status updated to 'Estimate Approved'.",
       });
       
       await refetch();
@@ -102,7 +103,8 @@ export default function WorkOrderDetail() {
         .update({
           partner_estimate_approved: false,
           partner_estimate_rejection_notes: rejectionNotes.trim(),
-          partner_estimate_approved_at: new Date().toISOString()
+          partner_estimate_approved_at: new Date().toISOString(),
+          status: 'estimate_needed'
         })
         .eq('id', workOrder.id);
 
@@ -110,7 +112,7 @@ export default function WorkOrderDetail() {
 
       toast({
         title: "Estimate Rejected",
-        description: "The estimate has been rejected with your notes.",
+        description: "The estimate has been rejected and status updated to 'Estimate Needed'.",
       });
       
       await refetch();
