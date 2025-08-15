@@ -8,13 +8,19 @@ import { FinancialStatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
+import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { 
   FileText, 
   Plus, 
   DollarSign,
   Clock,
   ReceiptText,
-  Building2
+  Building2,
+  Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { BillingTransactionFilters } from '@/components/admin/billing/BillingTransactionFilters';
@@ -156,6 +162,16 @@ function useBillingMetrics() {
 export default function BillingDashboard() {
   const navigate = useNavigate();
   const { data: metrics, isLoading, error, refetch } = useBillingMetrics();
+  const isMobile = useIsMobile();
+  
+  // Pull to refresh functionality for mobile
+  const { handleRefresh, threshold } = usePullToRefresh({
+    queryKey: ['billing-metrics'],
+    onRefresh: async () => {
+      await refetch();
+    },
+    successMessage: 'Billing data refreshed'
+  });
   
   // Modal state for invoice details
   const [selectedInvoice, setSelectedInvoice] = React.useState<Invoice | null>(null);
@@ -344,17 +360,53 @@ if (error) {
   );
 }
 
+  const renderMobileInvoiceCard = (invoice: any, type: 'partner' | 'subcontractor') => {
+    const isPartner = type === 'partner';
+    const title = isPartner ? invoice.invoice_number : invoice.internal_invoice_number;
+    const subtitle = isPartner 
+      ? `${invoice.partner_organization?.name} • ${format(new Date(invoice.invoice_date), 'MMM d, yyyy')}`
+      : `${invoice.subcontractor_organization?.name} • ${format(new Date(invoice.submitted_at), 'MMM d, yyyy')}`;
+    
+    const handleClick = () => {
+      if (isPartner) {
+        navigate(`/admin/partner-billing/invoices/${invoice.id}`);
+      } else {
+        handleInvoiceClick(invoice.id);
+      }
+    };
+
+    return (
+      <CompactMobileCard
+        key={invoice.id}
+        title={title}
+        subtitle={subtitle}
+        badge={
+          <FinancialStatusBadge 
+            status={invoice.status} 
+          />
+        }
+        trailing={
+          <span className="text-sm font-medium text-right">
+            {formatCurrency(invoice.total_amount)}
+          </span>
+        }
+        onClick={handleClick}
+      />
+    );
+  };
+
   return (
     <>
+      <LoadingOverlay isVisible={isLoading} message="Loading billing data..." />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 bg-background text-foreground px-3 py-2 rounded-md"
       >
         Skip to main content
       </a>
-      <main id="main-content" role="main" tabIndex={-1} className="space-y-8">
+      <main id="main-content" role="main" tabIndex={-1} className={`space-y-6 ${isMobile ? 'p-4' : 'p-6'}`}>
         <header>
-          <h1 className="text-3xl font-bold mb-2">Billing Dashboard</h1>
+          <h1 className={`font-bold mb-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>Billing Dashboard</h1>
           <p className="text-muted-foreground">Monitor billing activities and manage invoices</p>
         </header>
 
@@ -364,9 +416,161 @@ if (error) {
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-8 mt-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <TabsContent value="overview" className={`space-y-6 mt-6`}>
+          {isMobile && (
+            <div className="min-h-screen"
+              onTouchStart={(e) => {
+                if (window.scrollY === 0) {
+                  const touch = e.touches[0];
+                  const startY = touch.clientY;
+                  const handleTouchMove = (moveEvent: TouchEvent) => {
+                    const currentTouch = moveEvent.touches[0];
+                    const pullDistance = currentTouch.clientY - startY;
+                    if (pullDistance > threshold) {
+                      handleRefresh();
+                      document.removeEventListener('touchmove', handleTouchMove);
+                    }
+                  };
+                  document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                  const handleTouchEnd = () => {
+                    document.removeEventListener('touchmove', handleTouchMove);
+                    document.removeEventListener('touchend', handleTouchEnd);
+                  };
+                  document.addEventListener('touchend', handleTouchEnd, { once: true });
+                }
+              }}
+            >
+              <div className="space-y-6">
+                {/* Mobile KPI Cards */}
+                <div className="grid grid-cols-2 gap-4">
+                  <KPICard
+                    title="Unbilled Reports"
+                    value={isLoading ? 0 : (metrics?.unbilledReports.count || 0)}
+                    icon={Clock}
+                    isLoading={isLoading}
+                  />
+                  <KPICard
+                    title="Partner Invoices"
+                    value={isLoading ? 0 : (metrics?.monthlyTotals.partnerInvoices || 0)}
+                    icon={Building2}
+                    isLoading={isLoading}
+                  />
+                  <KPICard
+                    title="Subcontractor Invoices"
+                    value={isLoading ? 0 : (metrics?.monthlyTotals.subcontractorInvoices || 0)}
+                    icon={ReceiptText}
+                    isLoading={isLoading}
+                  />
+                  <KPICard
+                    title="Monthly Total"
+                    value={isLoading ? 0 : (metrics?.monthlyTotals.totalValue || 0)}
+                    format="currency"
+                    icon={DollarSign}
+                    isLoading={isLoading}
+                  />
+                </div>
+
+                {/* Mobile Quick Actions */}
+                <div className="grid grid-cols-1 gap-3">
+                  <Button
+                    onClick={() => navigate('/admin/invoices')}
+                    className="h-12 justify-start"
+                    size="lg"
+                  >
+                    <Plus className="h-4 w-4 mr-3" />
+                    Enter Subcontractor Invoice
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/partner-billing/select-reports')}
+                    className="h-12 justify-start"
+                    size="lg"
+                  >
+                    <Building2 className="h-4 w-4 mr-3" />
+                    Generate Partner Invoices
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/invoices')}
+                    className="h-12 justify-start"
+                    size="lg"
+                  >
+                    <FileText className="h-4 w-4 mr-3" />
+                    View All Invoices
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/reports?status=approved&billing_status=unbilled')}
+                    className="h-12 justify-start"
+                    size="lg"
+                  >
+                    <Clock className="h-4 w-4 mr-3" />
+                    View Unbilled Reports
+                  </Button>
+                </div>
+
+                {/* Mobile Recent Activity */}
+                <div className="space-y-6">
+                  {/* Recent Partner Invoices - Mobile */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Recent Partner Invoices</h3>
+                    {isLoading ? (
+                      <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="p-3 rounded-lg border">
+                            <Skeleton className="h-4 w-3/4 mb-2" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : metrics?.recentPartnerInvoices && metrics.recentPartnerInvoices.length > 0 ? (
+                      <div className="space-y-3">
+                        {metrics.recentPartnerInvoices.slice(0, 3).map((invoice) => 
+                          renderMobileInvoiceCard(invoice, 'partner')
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-sm">No partner invoices</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent Subcontractor Invoices - Mobile */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Recent Subcontractor Invoices</h3>
+                    {isLoading ? (
+                      <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="p-3 rounded-lg border">
+                            <Skeleton className="h-4 w-3/4 mb-2" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : metrics?.recentSubcontractorInvoices && metrics.recentSubcontractorInvoices.length > 0 ? (
+                      <div className="space-y-3">
+                        {metrics.recentSubcontractorInvoices.slice(0, 3).map((invoice) => 
+                          renderMobileInvoiceCard(invoice, 'subcontractor')
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <ReceiptText className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-sm">No subcontractor invoices</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isMobile && (
+            <>
+              {/* Desktop KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard
               title="Unbilled Reports"
               value={isLoading ? 0 : (metrics?.unbilledReports.count || 0)}
@@ -394,8 +598,8 @@ if (error) {
             />
           </div>
 
-          {/* Quick Actions */}
-          <div role="region" aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Desktop Quick Actions */}
+              <div role="region" aria-label="Quick actions" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <Button
               onClick={() => navigate('/admin/invoices')}
               aria-label="Enter Subcontractor Invoice"
@@ -429,8 +633,8 @@ if (error) {
             </Button>
           </div>
 
-          {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Desktop Recent Activity */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Partner Invoices */}
             <Card role="region" aria-label="Recent Partner Invoices">
               <CardHeader>
@@ -543,6 +747,71 @@ if (error) {
                 )}
               </CardContent>
             </Card>
+              </div>
+            </>
+          )}
+
+          {/* Billing Transactions Section */}
+          <div className="space-y-6">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">All Transactions</h2>
+                <p className="text-sm text-muted-foreground">
+                  Recent billing transactions across all invoices
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Columns
+                </Button>
+                <ExportDropdown
+                  onExport={handleExport}
+                  disabled={filteredTransactions.length === 0}
+                />
+              </div>
+            </div>
+
+            <BillingTransactionFilters
+              search={search}
+              onSearchChange={setSearch}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onDateRangeChange={handleDateRangeChange}
+              amountMin={amountMin}
+              amountMax={amountMax}
+              onAmountRangeChange={handleAmountRangeChange}
+              transactionTypes={transactionTypes}
+              onTransactionTypesChange={setTransactionTypes}
+            />
+
+            <Card>
+              <CardContent className="p-0">
+                <div className="p-4">
+                  {filteredTransactions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2" />
+                      <p>No transactions found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredTransactions.map((transaction) => (
+                        <div key={transaction.id} className="flex justify-between items-center p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{transaction.reference}</p>
+                            <p className="text-sm text-muted-foreground">{transaction.organization_name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{formatCurrency(transaction.amount)}</p>
+                            <p className="text-sm text-muted-foreground">{format(new Date(transaction.date), 'MMM d, yyyy')}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
@@ -560,7 +829,7 @@ if (error) {
           setSelectedInvoice(null);
         }}
       />
-    </main>
-  </>
+      </main>
+    </>
   );
 }
