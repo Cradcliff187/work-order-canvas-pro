@@ -83,21 +83,28 @@ export default function SubcontractorWorkOrderDetail() {
     setIsSubmittingEstimate(true);
 
     try {
+      const updateData: any = {
+        subcontractor_estimate_amount: amount,
+        subcontractor_estimate_description: estimateForm.description.trim(),
+        subcontractor_estimate_submitted_at: new Date().toISOString(),
+        subcontractor_estimate_submitted_by: profile.id
+      };
+
+      // If current status is 'assigned', transition to 'estimate_needed'
+      if (workOrder.status === 'assigned') {
+        updateData.status = 'estimate_needed';
+      }
+
       const { error } = await supabase
         .from('work_orders')
-        .update({
-          subcontractor_estimate_amount: amount,
-          subcontractor_estimate_description: estimateForm.description.trim(),
-          subcontractor_estimate_submitted_at: new Date().toISOString(),
-          subcontractor_estimate_submitted_by: profile.id
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
 
       toast({
         title: "Estimate submitted successfully!",
-        description: "Your estimate has been sent for review.",
+        description: "Your estimate has been submitted successfully! Admin has been notified and will review it shortly.",
       });
 
       // Reset form and refresh data
