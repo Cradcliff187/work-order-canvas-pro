@@ -1585,6 +1585,12 @@ export type Database = {
           estimated_hours: number | null
           final_completion_date: string | null
           id: string
+          internal_estimate_amount: number | null
+          internal_estimate_created_at: string | null
+          internal_estimate_created_by: string | null
+          internal_estimate_description: string | null
+          internal_estimate_notes: string | null
+          internal_markup_percentage: number | null
           labor_cost: number | null
           location_address: string | null
           location_city: string | null
@@ -1594,6 +1600,9 @@ export type Database = {
           location_zip_code: string | null
           materials_cost: number | null
           organization_id: string | null
+          partner_estimate_approved: boolean | null
+          partner_estimate_approved_at: string | null
+          partner_estimate_rejection_notes: string | null
           partner_location_number: string | null
           partner_po_number: string | null
           priority: Database["public"]["Enums"]["work_order_priority"]
@@ -1601,6 +1610,10 @@ export type Database = {
           status: Database["public"]["Enums"]["work_order_status"]
           store_location: string | null
           street_address: string | null
+          subcontractor_estimate_amount: number | null
+          subcontractor_estimate_description: string | null
+          subcontractor_estimate_submitted_at: string | null
+          subcontractor_estimate_submitted_by: string | null
           subcontractor_invoice_amount: number | null
           subcontractor_report_submitted: boolean | null
           title: string
@@ -1630,6 +1643,12 @@ export type Database = {
           estimated_hours?: number | null
           final_completion_date?: string | null
           id?: string
+          internal_estimate_amount?: number | null
+          internal_estimate_created_at?: string | null
+          internal_estimate_created_by?: string | null
+          internal_estimate_description?: string | null
+          internal_estimate_notes?: string | null
+          internal_markup_percentage?: number | null
           labor_cost?: number | null
           location_address?: string | null
           location_city?: string | null
@@ -1639,6 +1658,9 @@ export type Database = {
           location_zip_code?: string | null
           materials_cost?: number | null
           organization_id?: string | null
+          partner_estimate_approved?: boolean | null
+          partner_estimate_approved_at?: string | null
+          partner_estimate_rejection_notes?: string | null
           partner_location_number?: string | null
           partner_po_number?: string | null
           priority?: Database["public"]["Enums"]["work_order_priority"]
@@ -1646,6 +1668,10 @@ export type Database = {
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
           street_address?: string | null
+          subcontractor_estimate_amount?: number | null
+          subcontractor_estimate_description?: string | null
+          subcontractor_estimate_submitted_at?: string | null
+          subcontractor_estimate_submitted_by?: string | null
           subcontractor_invoice_amount?: number | null
           subcontractor_report_submitted?: boolean | null
           title: string
@@ -1675,6 +1701,12 @@ export type Database = {
           estimated_hours?: number | null
           final_completion_date?: string | null
           id?: string
+          internal_estimate_amount?: number | null
+          internal_estimate_created_at?: string | null
+          internal_estimate_created_by?: string | null
+          internal_estimate_description?: string | null
+          internal_estimate_notes?: string | null
+          internal_markup_percentage?: number | null
           labor_cost?: number | null
           location_address?: string | null
           location_city?: string | null
@@ -1684,6 +1716,9 @@ export type Database = {
           location_zip_code?: string | null
           materials_cost?: number | null
           organization_id?: string | null
+          partner_estimate_approved?: boolean | null
+          partner_estimate_approved_at?: string | null
+          partner_estimate_rejection_notes?: string | null
           partner_location_number?: string | null
           partner_po_number?: string | null
           priority?: Database["public"]["Enums"]["work_order_priority"]
@@ -1691,6 +1726,10 @@ export type Database = {
           status?: Database["public"]["Enums"]["work_order_status"]
           store_location?: string | null
           street_address?: string | null
+          subcontractor_estimate_amount?: number | null
+          subcontractor_estimate_description?: string | null
+          subcontractor_estimate_submitted_at?: string | null
+          subcontractor_estimate_submitted_by?: string | null
           subcontractor_invoice_amount?: number | null
           subcontractor_report_submitted?: boolean | null
           title?: string
@@ -1715,10 +1754,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "work_orders_internal_estimate_created_by_fkey"
+            columns: ["internal_estimate_created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "work_orders_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_subcontractor_estimate_submitted_by_fkey"
+            columns: ["subcontractor_estimate_submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
