@@ -496,8 +496,8 @@ export default function AdminWorkOrderDetail() {
                         internal_estimate_amount: parseFloat(internalEstimateForm.amount),
                         internal_estimate_description: internalEstimateForm.description,
                         internal_estimate_notes: internalEstimateForm.internal_notes || null,
-                        internal_estimate_submitted_at: new Date().toISOString(),
-                        internal_estimate_markup_percentage: internalEstimateForm.markup_percentage
+                        internal_estimate_created_at: new Date().toISOString(),
+                        internal_markup_percentage: internalEstimateForm.markup_percentage
                       })
                       .eq('id', workOrder.id);
 
@@ -600,8 +600,8 @@ export default function AdminWorkOrderDetail() {
                           updates.internal_estimate_amount = parseFloat(internalEstimateForm.amount);
                           updates.internal_estimate_description = internalEstimateForm.description;
                           updates.internal_estimate_notes = internalEstimateForm.internal_notes || null;
-                          updates.internal_estimate_submitted_at = new Date().toISOString();
-                          updates.internal_estimate_markup_percentage = internalEstimateForm.markup_percentage;
+                          updates.internal_estimate_created_at = new Date().toISOString();
+                          updates.internal_markup_percentage = internalEstimateForm.markup_percentage;
                         }
 
                         const { error } = await supabase
