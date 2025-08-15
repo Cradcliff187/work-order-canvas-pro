@@ -104,10 +104,61 @@ export function useAdminReports(
       // requires more complex queries and should be implemented with proper PostgREST syntax
       // For now, these filters are disabled to prevent SQL syntax errors
       
-      // Handle search term
+      // Handle search term - multi-field search across work orders, locations, and subcontractors
       if (searchTerm) {
         const search = `%${searchTerm.trim()}%`;
-        query = query.or(`work_performed.ilike.${search},notes.ilike.${search},materials_used.ilike.${search}`);
+        
+        try {
+          // Find matching work order IDs (by work order number or store location)
+          const { data: matchingWorkOrders } = await supabase
+            .from('work_orders')
+            .select('id')
+            .or(`work_order_number.ilike.${search},store_location.ilike.${search}`);
+          
+          // Find matching subcontractor organization IDs (by organization name)
+          const { data: matchingSubcontractorOrgs } = await supabase
+            .from('organizations')
+            .select('id')
+            .eq('organization_type', 'subcontractor')
+            .ilike('name', search);
+          
+          const workOrderIds = matchingWorkOrders?.map(wo => wo.id) || [];
+          const subcontractorOrgIds = matchingSubcontractorOrgs?.map(org => org.id) || [];
+          
+          // Build OR conditions for all search fields
+          const searchConditions = [];
+          
+          // Content search (existing functionality)
+          searchConditions.push(`work_performed.ilike.${search}`);
+          searchConditions.push(`notes.ilike.${search}`);
+          searchConditions.push(`materials_used.ilike.${search}`);
+          
+          // Work order search (if any matches found)
+          if (workOrderIds.length > 0) {
+            query = query.in('work_order_id', workOrderIds);
+          } else if (subcontractorOrgIds.length > 0) {
+            query = query.in('subcontractor_organization_id', subcontractorOrgIds);
+          } else {
+            // Only apply content search if no work order or subcontractor matches
+            query = query.or(searchConditions.join(','));
+          }
+          
+          // If we have work order matches, still allow content search as alternative
+          if (workOrderIds.length > 0 || subcontractorOrgIds.length > 0) {
+            const additionalConditions = [...searchConditions];
+            if (workOrderIds.length > 0) {
+              additionalConditions.push(`work_order_id.in.(${workOrderIds.join(',')})`);
+            }
+            if (subcontractorOrgIds.length > 0) {
+              additionalConditions.push(`subcontractor_organization_id.in.(${subcontractorOrgIds.join(',')})`);
+            }
+            query = query.or(additionalConditions.join(','));
+          }
+        } catch (searchError) {
+          console.error('Search error, falling back to content-only search:', searchError);
+          // Fallback to original content search
+          query = query.or(`work_performed.ilike.${search},notes.ilike.${search},materials_used.ilike.${search}`);
+        }
       }
 
       // Apply sorting
