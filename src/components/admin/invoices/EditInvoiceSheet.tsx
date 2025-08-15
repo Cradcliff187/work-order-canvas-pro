@@ -131,98 +131,102 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader>
+      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle>Edit Invoice</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="external_invoice_number">Vendor Invoice #</Label>
-            <Input id="external_invoice_number" value={externalInvoiceNumber} onChange={(e) => setExternalInvoiceNumber(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="purchase_order_number">Purchase Order #</Label>
-            <Input id="purchase_order_number" value={purchaseOrderNumber} onChange={(e) => setPurchaseOrderNumber(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        
+        <div className="flex-1 overflow-y-auto px-1 -mx-1">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="invoice_date">Invoice Date</Label>
-              <Input id="invoice_date" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+              <Label htmlFor="external_invoice_number">Vendor Invoice #</Label>
+              <Input id="external_invoice_number" value={externalInvoiceNumber} onChange={(e) => setExternalInvoiceNumber(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="due_date">Due Date</Label>
-              <Input id="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <Label htmlFor="purchase_order_number">Purchase Order #</Label>
+              <Input id="purchase_order_number" value={purchaseOrderNumber} onChange={(e) => setPurchaseOrderNumber(e.target.value)} />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="payment_terms">Payment Terms</Label>
-            <Input id="payment_terms" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="Net 30" />
-            <p className="text-xs text-muted-foreground">Defaults to "Net 30". Adjust if different terms apply.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="subcontractor_notes">Subcontractor Notes</Label>
-            <Textarea id="subcontractor_notes" value={subcontractorNotes} onChange={(e) => setSubcontractorNotes(e.target.value)} rows={3} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="payment_reference">Payment Reference</Label>
-              <Input id="payment_reference" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="invoice_date">Invoice Date</Label>
+                <Input id="invoice_date" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="due_date">Due Date</Label>
+                <Input id="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="paid_at">Paid At</Label>
-              <Input id="paid_at" type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+              <Label htmlFor="payment_terms">Payment Terms</Label>
+              <Input id="payment_terms" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="Net 30" />
+              <p className="text-xs text-muted-foreground">Defaults to "Net 30". Adjust if different terms apply.</p>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="admin_notes">Admin Notes</Label>
-            <Textarea id="admin_notes" value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={4} />
-          </div>
-          
-          {/* Work Order Amounts Section */}
-          {workOrderAmounts.length > 0 && (
-            <Collapsible open={workOrdersOpen} onOpenChange={setWorkOrdersOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium">Work Order Amounts</Label>
-                  <span className="text-xs text-muted-foreground">
-                    ({workOrderAmounts.length} work orders)
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    Total: ${getTotalAmount().toFixed(2)}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${workOrdersOpen ? 'rotate-180' : ''}`} />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3 mt-3">
-                {workOrderAmounts.map((workOrder) => (
-                  <div key={workOrder.id} className="flex items-center gap-3 p-3 border rounded-md">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">
-                        {workOrder.work_order?.work_order_number}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {workOrder.work_order?.title}
-                      </div>
-                    </div>
-                    <div className="w-24">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={workOrder.amount || ''}
-                        onChange={(e) => updateWorkOrderAmount(workOrder.id, parseFloat(e.target.value) || 0)}
-                        className="text-right"
-                      />
-                    </div>
+            <div className="space-y-2">
+              <Label htmlFor="subcontractor_notes">Subcontractor Notes</Label>
+              <Textarea id="subcontractor_notes" value={subcontractorNotes} onChange={(e) => setSubcontractorNotes(e.target.value)} rows={3} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="payment_reference">Payment Reference</Label>
+                <Input id="payment_reference" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paid_at">Paid At</Label>
+                <Input id="paid_at" type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin_notes">Admin Notes</Label>
+              <Textarea id="admin_notes" value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={4} />
+            </div>
+            
+            {/* Work Order Amounts Section */}
+            {workOrderAmounts.length > 0 && (
+              <Collapsible open={workOrdersOpen} onOpenChange={setWorkOrdersOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium">Work Order Amounts</Label>
+                    <span className="text-xs text-muted-foreground">
+                      ({workOrderAmounts.length} work orders)
+                    </span>
                   </div>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      Total: ${getTotalAmount().toFixed(2)}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${workOrdersOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 mt-3">
+                  {workOrderAmounts.map((workOrder) => (
+                    <div key={workOrder.id} className="flex items-center gap-3 p-3 border rounded-md">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">
+                          {workOrder.work_order?.work_order_number}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {workOrder.work_order?.title}
+                        </div>
+                      </div>
+                      <div className="w-24">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={workOrder.amount || ''}
+                          onChange={(e) => updateWorkOrderAmount(workOrder.id, parseFloat(e.target.value) || 0)}
+                          className="text-right"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+          </div>
         </div>
-        <SheetFooter className="mt-6">
+        
+        <SheetFooter className="flex-shrink-0 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
           <Button onClick={handleSave} disabled={isSaving}>{isSaving ? 'Saving…' : 'Save changes'}</Button>
         </SheetFooter>
