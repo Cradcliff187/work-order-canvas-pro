@@ -473,6 +473,15 @@ export function WorkOrderPipelineTable() {
       cell: ({ row }) => {
         const item = row.original;
         
+        // In the getSubcontractorInvoiceStatus function or where SC Invoice is rendered:
+        if (item.work_order_number === 'BB-525-001') {
+          console.log('📊 BB-525-001 Table Display:', {
+            invoice_status: item.invoice_status,
+            subcontractor_invoice_amount: item.subcontractor_invoice_amount,
+            financial_status: item.financial_status,
+          });
+        }
+        
         const getSubcontractorInvoiceStatus = () => {
           if (!item.invoice_status) {
             if (item.status === 'completed' && item.report_status === 'approved') {

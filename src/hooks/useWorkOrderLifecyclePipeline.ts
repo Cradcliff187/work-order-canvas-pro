@@ -143,11 +143,24 @@ export function useWorkOrderLifecycle() {
       }
 
       const { data, error } = await query;
-
+      
       if (error) {
         console.error('Error fetching work order pipeline:', error);
         throw error;
       }
+      
+      // Add debugging for BB-525-001
+      if (data) {
+        const bb525Work = data.find((wo: any) => wo.work_order_number === 'BB-525-001');
+        if (bb525Work) {
+          console.log('🔍 DEBUG BB-525-001 Raw Data:', {
+            fullWorkOrder: bb525Work,
+            invoiceWorkOrders: (bb525Work as any).work_order_invoices,
+            invoices: (bb525Work as any).invoices,
+          });
+        }
+      }
+
 
       // Helper functions for calculations
       const calculateAgeDays = (createdAt: string): number => {
@@ -221,17 +234,14 @@ export function useWorkOrderLifecycle() {
         // Calculate total invoice amount from work_order_invoices
         const totalInvoiceAmount = workOrderInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
         
-        // Debug logging for troubleshooting
+        // In the map function where you process invoices:
         if (workOrder.work_order_number === 'BB-525-001') {
-          console.log('BB-525-001 Fixed Debug Data:', {
-            workOrderId: workOrder.id,
-            rawWorkOrderInvoices: workOrder.work_order_invoices,
-            allInvoices: workOrderInvoices,
-            extractedInvoice: subcontractorInvoice,
-            invoiceStatus: subcontractorInvoice?.status,
-            reportStatus: latestReport?.status,
-            invoiceNumber: subcontractorInvoice?.internal_invoice_number,
-            calculatedAmount: totalInvoiceAmount
+          console.log('🎯 BB-525-001 Transform Debug:', {
+            raw_invoice_work_orders: workOrder.work_order_invoices,
+            raw_invoices: workOrder.invoices,
+            subcontractorInvoice: subcontractorInvoice,
+            finalInvoiceStatus: subcontractorInvoice?.status,
+            calculatedAmount: totalInvoiceAmount,
           });
         }
         
