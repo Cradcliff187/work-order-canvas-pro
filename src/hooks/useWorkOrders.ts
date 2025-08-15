@@ -78,6 +78,27 @@ export interface WorkOrder {
   location_address: string | null;
   subcontractor_invoice_amount: number | null;
   
+  // Estimate tracking fields
+  internal_estimate_amount: number | null;
+  internal_estimate_description: string | null;
+  internal_estimate_notes: string | null;
+  internal_estimate_created_at: string | null;
+  internal_estimate_created_by: string | null;
+  internal_estimate_approved: boolean | null;
+  internal_estimate_approved_at: string | null;
+  internal_estimate_approved_by: string | null;
+  internal_markup_percentage: number | null;
+  subcontractor_estimate_amount: number | null;
+  subcontractor_estimate_description: string | null;
+  subcontractor_estimate_submitted_at: string | null;
+  subcontractor_estimate_submitted_by: string | null;
+  subcontractor_estimate_approved: boolean | null;
+  subcontractor_estimate_approved_at: string | null;
+  subcontractor_estimate_approved_by: string | null;
+  partner_estimate_approved: boolean | null;
+  partner_estimate_approved_at: string | null;
+  partner_estimate_rejection_notes: string | null;
+  
   // Joined relations - must match exactly what the query returns
   organizations: WorkOrderOrganization | null;
   trades: WorkOrderTrade | null;
@@ -363,7 +384,27 @@ export function useWorkOrders(
         // Transform the data to ensure type safety and add attachment count
         const transformedData = (data || []).map((wo: any) => ({
           ...wo,
-          attachment_count: wo.work_order_attachments?.[0]?.count || 0
+          attachment_count: wo.work_order_attachments?.[0]?.count || 0,
+          // Ensure all estimate fields are properly typed (set null if undefined)
+          internal_estimate_amount: wo.internal_estimate_amount ?? null,
+          internal_estimate_description: wo.internal_estimate_description ?? null,
+          internal_estimate_notes: wo.internal_estimate_notes ?? null,
+          internal_estimate_created_at: wo.internal_estimate_created_at ?? null,
+          internal_estimate_created_by: wo.internal_estimate_created_by ?? null,
+          internal_estimate_approved: wo.internal_estimate_approved ?? null,
+          internal_estimate_approved_at: wo.internal_estimate_approved_at ?? null,
+          internal_estimate_approved_by: wo.internal_estimate_approved_by ?? null,
+          internal_markup_percentage: wo.internal_markup_percentage ?? null,
+          subcontractor_estimate_amount: wo.subcontractor_estimate_amount ?? null,
+          subcontractor_estimate_description: wo.subcontractor_estimate_description ?? null,
+          subcontractor_estimate_submitted_at: wo.subcontractor_estimate_submitted_at ?? null,
+          subcontractor_estimate_submitted_by: wo.subcontractor_estimate_submitted_by ?? null,
+          subcontractor_estimate_approved: wo.subcontractor_estimate_approved ?? null,
+          subcontractor_estimate_approved_at: wo.subcontractor_estimate_approved_at ?? null,
+          subcontractor_estimate_approved_by: wo.subcontractor_estimate_approved_by ?? null,
+          partner_estimate_approved: wo.partner_estimate_approved ?? null,
+          partner_estimate_approved_at: wo.partner_estimate_approved_at ?? null,
+          partner_estimate_rejection_notes: wo.partner_estimate_rejection_notes ?? null,
         })) as WorkOrder[];
 
         return {
@@ -498,7 +539,33 @@ export function useWorkOrder(id: string) {
       const { data, error } = await query.single();
 
       if (error) throw error;
-      return data as WorkOrder;
+      
+      // Transform the data to ensure type safety with estimate fields
+      const transformedData = {
+        ...data,
+        // Ensure all estimate fields are properly typed (set null if undefined)
+        internal_estimate_amount: (data as any).internal_estimate_amount ?? null,
+        internal_estimate_description: (data as any).internal_estimate_description ?? null,
+        internal_estimate_notes: (data as any).internal_estimate_notes ?? null,
+        internal_estimate_created_at: (data as any).internal_estimate_created_at ?? null,
+        internal_estimate_created_by: (data as any).internal_estimate_created_by ?? null,
+        internal_estimate_approved: (data as any).internal_estimate_approved ?? null,
+        internal_estimate_approved_at: (data as any).internal_estimate_approved_at ?? null,
+        internal_estimate_approved_by: (data as any).internal_estimate_approved_by ?? null,
+        internal_markup_percentage: (data as any).internal_markup_percentage ?? null,
+        subcontractor_estimate_amount: (data as any).subcontractor_estimate_amount ?? null,
+        subcontractor_estimate_description: (data as any).subcontractor_estimate_description ?? null,
+        subcontractor_estimate_submitted_at: (data as any).subcontractor_estimate_submitted_at ?? null,
+        subcontractor_estimate_submitted_by: (data as any).subcontractor_estimate_submitted_by ?? null,
+        subcontractor_estimate_approved: (data as any).subcontractor_estimate_approved ?? null,
+        subcontractor_estimate_approved_at: (data as any).subcontractor_estimate_approved_at ?? null,
+        subcontractor_estimate_approved_by: (data as any).subcontractor_estimate_approved_by ?? null,
+        partner_estimate_approved: (data as any).partner_estimate_approved ?? null,
+        partner_estimate_approved_at: (data as any).partner_estimate_approved_at ?? null,
+        partner_estimate_rejection_notes: (data as any).partner_estimate_rejection_notes ?? null,
+      } as WorkOrder;
+      
+      return transformedData;
     },
     enabled: !!id && !!user,
   });

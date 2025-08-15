@@ -4,11 +4,13 @@ import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, MessageCircle } from "lucide-react";
+import { ArrowLeft, Building2, FileText, Clock, MapPin, User, Phone, Mail, MessageCircle, DollarSign, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -21,6 +23,11 @@ import { AttachmentSection } from '@/components/work-orders/shared/AttachmentSec
 import { useFileUpload } from '@/hooks/useFileUpload';
 import type { AttachmentItem } from '@/components/work-orders/shared/AttachmentSection';
 
+interface EstimateFormData {
+  amount: string;
+  description: string;
+}
+
 export default function SubcontractorWorkOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -29,9 +36,83 @@ export default function SubcontractorWorkOrderDetail() {
   const { data: workOrder, isLoading, error, refetch } = useWorkOrderDetail(id || '');
   const { uploadFiles } = useFileUpload();
   
+  // Estimate form state
+  const [estimateForm, setEstimateForm] = useState<EstimateFormData>({
+    amount: '',
+    description: ''
+  });
+  const [isSubmittingEstimate, setIsSubmittingEstimate] = useState(false);
+  
   // Get organization data for all attachment uploaders
   const uploaderIds = workOrder?.work_order_attachments?.map(a => a.uploaded_by_user_id) || [];
   const { data: organizationMap } = useAttachmentOrganizations(uploaderIds);
+
+  // Handle estimate submission
+  const handleEstimateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    const amount = parseFloat(estimateForm.amount);
+    if (!estimateForm.amount || isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid amount greater than $0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!estimateForm.description || estimateForm.description.trim().length < 20) {
+      toast({
+        title: "Description too short",
+        description: "Description must be at least 20 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!profile?.id) {
+      toast({
+        title: "Authentication error",
+        description: "Unable to identify user profile",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmittingEstimate(true);
+
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          subcontractor_estimate_amount: amount,
+          subcontractor_estimate_description: estimateForm.description.trim(),
+          subcontractor_estimate_submitted_at: new Date().toISOString(),
+          subcontractor_estimate_submitted_by: profile.id
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Estimate submitted successfully!",
+        description: "Your estimate has been sent for review.",
+      });
+
+      // Reset form and refresh data
+      setEstimateForm({ amount: '', description: '' });
+      await refetch();
+    } catch (error: any) {
+      toast({
+        title: "Failed to submit estimate",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingEstimate(false);
+    }
+  };
 
   if (isLoading) {
     return <div>Loading work order details...</div>;
@@ -138,6 +219,109 @@ export default function SubcontractorWorkOrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Estimate Submission Section */}
+          {workOrder.status === 'estimate_needed' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Submit Estimate
+                </CardTitle>
+                <CardDescription>
+                  Provide your cost estimate for this work order
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {workOrder.subcontractor_estimate_submitted_at ? (
+                  // Show read-only estimate details
+                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center gap-2 text-green-600">
+                      <FileText className="h-4 w-4" />
+                      <span className="font-medium">Estimate Submitted</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Estimated Amount</Label>
+                        <p className="text-lg font-semibold">
+                          ${workOrder.subcontractor_estimate_amount?.toFixed(2) || '0.00'}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Submitted At</Label>
+                        <p className="text-sm">
+                          {workOrder.subcontractor_estimate_submitted_at
+                            ? format(new Date(workOrder.subcontractor_estimate_submitted_at), 'MMM dd, yyyy hh:mm a')
+                            : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                      <p className="text-sm mt-1 whitespace-pre-wrap">
+                        {workOrder.subcontractor_estimate_description || 'No description provided.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  // Show estimate submission form
+                  <form onSubmit={handleEstimateSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="estimate-amount">Estimated Amount *</Label>
+                      <Input
+                        id="estimate-amount"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="0.00"
+                        value={estimateForm.amount}
+                        onChange={(e) => setEstimateForm(prev => ({ ...prev, amount: e.target.value }))}
+                        required
+                        className="text-lg"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter your estimated cost for this work order
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="estimate-description">Description *</Label>
+                      <Textarea
+                        id="estimate-description"
+                        placeholder="Describe what work will be performed, materials needed, timeline, etc..."
+                        value={estimateForm.description}
+                        onChange={(e) => setEstimateForm(prev => ({ ...prev, description: e.target.value }))}
+                        required
+                        minLength={20}
+                        className="min-h-[100px]"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Minimum 20 characters. Provide details about the work scope and pricing breakdown.
+                      </p>
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isSubmittingEstimate}
+                    >
+                      {isSubmittingEstimate ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          Submit Estimate
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Location & Contact Information */}
           <Card>
