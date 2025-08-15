@@ -206,14 +206,6 @@ export default function AdminReports() {
       cell: ({ row }) => <ReportStatusBadge status={row.getValue('status')} size="sm" showIcon />,
     },
     {
-      accessorKey: 'invoice_amount',
-      header: ({ column }) => <SortableHeader column={column} label="Amount" />,
-      cell: ({ row }) => {
-        const amount = row.getValue('invoice_amount') as number;
-        return amount ? `$${amount.toLocaleString()}` : 'N/A';
-      },
-    },
-    {
       accessorKey: 'submitted_at',
       header: ({ column }) => <SortableHeader column={column} label="Submitted" />,
       cell: ({ row }) => {
@@ -272,7 +264,7 @@ export default function AdminReports() {
     'work_orders.title': { label: 'Title', defaultVisible: true },
     subcontractor: { label: 'Subcontractor', defaultVisible: true },
     status: { label: 'Status', defaultVisible: true },
-    invoice_amount: { label: 'Amount', defaultVisible: true },
+    
     submitted_at: { label: 'Submitted', defaultVisible: true },
     actions: { label: 'Actions', defaultVisible: true },
   } as const;
@@ -359,7 +351,7 @@ const table = useReactTable({
         { key: 'work_orders.work_order_number', label: 'Work Order #', type: 'string' },
         { key: 'work_orders.title', label: 'Title', type: 'string' },
         { key: 'status', label: 'Status', type: 'string' },
-        { key: 'invoice_amount', label: 'Amount', type: 'currency' },
+        
         { key: 'submitted_at', label: 'Submitted', type: 'date' },
         { key: 'subcontractor_organization.name', label: 'Subcontractor', type: 'string' },
       ];
@@ -539,12 +531,6 @@ const table = useReactTable({
                     status={<ReportStatusBadge status={report.status} size="sm" showIcon />}
                     onClick={() => navigate(`/admin/reports/${report.id}`)}
                   >
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Amount:</span>
-                      <span className="font-medium">
-                        {report.invoice_amount ? `$${report.invoice_amount.toLocaleString()}` : 'N/A'}
-                      </span>
-                    </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Submitted:</span>
                       <span>{format(new Date(report.submitted_at), 'MMM dd, yyyy')}</span>
