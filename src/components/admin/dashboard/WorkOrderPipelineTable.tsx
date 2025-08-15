@@ -198,8 +198,8 @@ export function WorkOrderPipelineTable() {
 
       // Assigned organization filter (fix data type issue)
       if (filters.assigned_organization_id && filters.assigned_organization_id.length > 0) {
-        if (!item.assigned_organization_name || 
-            !filters.assigned_organization_id.includes(item.assigned_organization_name)) return false;
+        if (!item.assigned_organization_id || 
+            !filters.assigned_organization_id.includes(item.assigned_organization_id)) return false;
       }
 
       // Report status filter
