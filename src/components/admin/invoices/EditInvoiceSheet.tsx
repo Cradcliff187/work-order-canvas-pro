@@ -16,7 +16,7 @@ interface InvoiceWorkOrder {
   work_order_id: string;
   amount: number;
   description?: string;
-  work_orders: {
+  work_order?: {
     work_order_number: string;
     title: string;
   };
@@ -56,34 +56,10 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
     setDueDate((invoice as any).due_date ? new Date((invoice as any).due_date).toISOString().slice(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
     setPaidAt(invoice.paid_at ? new Date(invoice.paid_at).toISOString().slice(0, 10) : '');
     
-    // Fetch work order amounts
-    fetchWorkOrderAmounts();
+    // Use existing invoice work orders data instead of separate fetch
+    setWorkOrderAmounts(invoice.invoice_work_orders || []);
   }, [invoice]);
 
-  const fetchWorkOrderAmounts = async () => {
-    if (!invoice?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('invoice_work_orders')
-        .select(`
-          id,
-          work_order_id,
-          amount,
-          description,
-          work_orders:work_order_id (
-            work_order_number,
-            title
-          )
-        `)
-        .eq('invoice_id', invoice.id);
-      
-      if (error) throw error;
-      setWorkOrderAmounts(data || []);
-    } catch (error) {
-      console.error('Failed to fetch work order amounts:', error);
-    }
-  };
 
   const updateWorkOrderAmount = (workOrderId: string, newAmount: number) => {
     setWorkOrderAmounts(prev => 
@@ -224,10 +200,10 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
                   <div key={workOrder.id} className="flex items-center gap-3 p-3 border rounded-md">
                     <div className="flex-1">
                       <div className="text-sm font-medium">
-                        {workOrder.work_orders?.work_order_number}
+                        {workOrder.work_order?.work_order_number}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {workOrder.work_orders?.title}
+                        {workOrder.work_order?.title}
                       </div>
                     </div>
                     <div className="w-24">
