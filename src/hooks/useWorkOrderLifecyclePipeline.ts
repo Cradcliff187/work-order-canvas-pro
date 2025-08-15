@@ -45,6 +45,8 @@ export interface WorkOrderPipelineItem {
   // Partner billing status
   partner_bill_status: string | null;
   partner_billed_at: string | null;
+  partner_billed_amount: number | null;
+  internal_markup_percentage: number;
   
   // Calculated fields
   age_days: number;
@@ -106,13 +108,14 @@ export function useWorkOrderLifecycle() {
           created_at,
           due_date,
           priority,
-          estimated_hours,
-          actual_hours,
-          materials_cost,
-          labor_cost,
-          date_assigned,
-          date_completed,
-          assigned_organization_id,
+        estimated_hours,
+        actual_hours,
+        materials_cost,
+        labor_cost,
+        date_assigned,
+        date_completed,
+        assigned_organization_id,
+        internal_markup_percentage,
           partner_organization:organizations!work_orders_organization_id_fkey(
             name
           ),
@@ -122,6 +125,9 @@ export function useWorkOrderLifecycle() {
           latest_report:work_order_reports!left(
             status,
             submitted_at,
+            partner_billed_amount,
+            partner_billed_at,
+            approved_subcontractor_invoice_amount,
             partner_invoices(
               status,
               created_at
@@ -312,9 +318,11 @@ export function useWorkOrderLifecycle() {
           invoice_status: subcontractorInvoice?.status || null,
           invoice_submitted_at: subcontractorInvoice?.submitted_at || null,
           
-          // Partner billing status
-          partner_bill_status: partnerInvoice?.status || null,
-          partner_billed_at: partnerInvoice?.created_at || null,
+          // Partner billing status  
+          internal_markup_percentage: workOrder.internal_markup_percentage || 30,
+          partner_billed_amount: latestReport?.partner_billed_amount || null,
+          partner_bill_status: latestReport?.partner_billed_at ? 'billed' : null,
+          partner_billed_at: latestReport?.partner_billed_at || null,
           
           // Calculated fields
           age_days: ageDays,

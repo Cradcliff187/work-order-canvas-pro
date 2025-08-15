@@ -58,11 +58,19 @@ export default function PipelineDashboard() {
       // Financial metrics
       awaitingReports: data.filter(d => d.status === 'completed' && !d.report_status).length,
       awaitingInvoices: data.filter(d => d.report_status === 'approved' && !d.invoice_status).length,
-      readyToBill: data.filter(d => d.invoice_status === 'approved' && !d.partner_bill_status).length,
+      readyToBill: data.filter(d => d.invoice_status === 'approved' && !d.partner_billed_at).length,
       
-      // Totals
+      // Totals with proper markup calculation
       totalPending: data.filter(d => d.invoice_status === 'submitted').reduce((sum, d) => sum + (d.subcontractor_invoice_amount || 0), 0),
-      totalReadyToBill: data.filter(d => d.invoice_status === 'approved' && !d.partner_bill_status).reduce((sum, d) => sum + (d.subcontractor_invoice_amount || 0), 0)
+      totalReadyToBill: (() => {
+        const readyToBillItems = data.filter(d => d.invoice_status === 'approved' && !d.partner_billed_at);
+        return readyToBillItems.reduce((sum, wo) => {
+          const cost = wo.subcontractor_invoice_amount || 0;
+          const markupPercent = wo.internal_markup_percentage || 30;
+          const revenue = cost * (1 + markupPercent / 100);
+          return sum + revenue;
+        }, 0);
+      })()
     };
   }, [pipelineData]);
 
@@ -93,7 +101,7 @@ export default function PipelineDashboard() {
         item.status === 'estimate_needed' ||
         (item.status === 'completed' && !item.report_status) ||
         (item.report_status === 'approved' && !item.invoice_status) ||
-        (item.invoice_status === 'approved' && !item.partner_bill_status)
+        (item.invoice_status === 'approved' && !item.partner_billed_at)
       );
     }
     
@@ -195,14 +203,11 @@ export default function PipelineDashboard() {
     }
     
     // Billing stage
-    if (item.invoice_status === 'approved' && !item.partner_bill_status) {
+    if (item.invoice_status === 'approved' && !item.partner_billed_at) {
       return <Badge variant="success">Ready to Bill</Badge>;
     }
-    if (item.partner_bill_status === 'billed') {
+    if (item.partner_billed_at) {
       return <Badge variant="success">Billed</Badge>;
-    }
-    if (item.partner_bill_status === 'paid') {
-      return <Badge variant="success">Paid</Badge>;
     }
     
     return <Badge variant="outline">Unknown</Badge>;
