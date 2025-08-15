@@ -104,62 +104,7 @@ export function useAdminReports(
       // requires more complex queries and should be implemented with proper PostgREST syntax
       // For now, these filters are disabled to prevent SQL syntax errors
       
-      // Handle search term - multi-field search across work orders, locations, and subcontractors
-      if (searchTerm) {
-        const search = `%${searchTerm.trim()}%`;
-        
-        try {
-          // Find matching work order IDs (by work order number or store location)
-          const { data: matchingWorkOrders } = await supabase
-            .from('work_orders')
-            .select('id')
-            .or(`work_order_number.ilike.${search},store_location.ilike.${search}`);
-          
-          // Find matching subcontractor organization IDs (by organization name)
-          const { data: matchingSubcontractorOrgs } = await supabase
-            .from('organizations')
-            .select('id')
-            .eq('organization_type', 'subcontractor')
-            .ilike('name', search);
-          
-          const workOrderIds = matchingWorkOrders?.map(wo => wo.id) || [];
-          const subcontractorOrgIds = matchingSubcontractorOrgs?.map(org => org.id) || [];
-          
-          // Build OR conditions for all search fields
-          const searchConditions = [];
-          
-          // Content search (existing functionality)
-          searchConditions.push(`work_performed.ilike.${search}`);
-          searchConditions.push(`notes.ilike.${search}`);
-          searchConditions.push(`materials_used.ilike.${search}`);
-          
-          // Work order search (if any matches found)
-          if (workOrderIds.length > 0) {
-            query = query.in('work_order_id', workOrderIds);
-          } else if (subcontractorOrgIds.length > 0) {
-            query = query.in('subcontractor_organization_id', subcontractorOrgIds);
-          } else {
-            // Only apply content search if no work order or subcontractor matches
-            query = query.or(searchConditions.join(','));
-          }
-          
-          // If we have work order matches, still allow content search as alternative
-          if (workOrderIds.length > 0 || subcontractorOrgIds.length > 0) {
-            const additionalConditions = [...searchConditions];
-            if (workOrderIds.length > 0) {
-              additionalConditions.push(`work_order_id.in.(${workOrderIds.join(',')})`);
-            }
-            if (subcontractorOrgIds.length > 0) {
-              additionalConditions.push(`subcontractor_organization_id.in.(${subcontractorOrgIds.join(',')})`);
-            }
-            query = query.or(additionalConditions.join(','));
-          }
-        } catch (searchError) {
-          console.error('Search error, falling back to content-only search:', searchError);
-          // Fallback to original content search
-          query = query.or(`work_performed.ilike.${search},notes.ilike.${search},materials_used.ilike.${search}`);
-        }
-      }
+      // Note: Search is now handled client-side after data fetching for better reliability
 
       // Apply sorting
       if (sorting.length > 0) {
@@ -177,8 +122,24 @@ export function useAdminReports(
       const { data, error, count } = await query;
       if (error) throw error;
 
+      const allData = (data as any[]) || [];
+
+      // Apply client-side search filtering (similar to WorkOrderList.tsx pattern)
+      const filteredData = searchTerm ? 
+        allData.filter(report => {
+          const searchLower = searchTerm.toLowerCase();
+          return (
+            report.work_orders?.work_order_number?.toLowerCase().includes(searchLower) ||
+            report.work_orders?.store_location?.toLowerCase().includes(searchLower) ||
+            report.subcontractor_organization?.name?.toLowerCase().includes(searchLower) ||
+            report.work_performed?.toLowerCase().includes(searchLower) ||
+            report.notes?.toLowerCase().includes(searchLower) ||
+            report.materials_used?.toLowerCase().includes(searchLower)
+          );
+        }) : allData;
+
       return {
-        data: (data as any[]) || [], // Temporarily bypass type checking during migration
+        data: filteredData,
         totalCount: count || 0,
         pageCount: Math.ceil((count || 0) / pagination.pageSize)
       };
