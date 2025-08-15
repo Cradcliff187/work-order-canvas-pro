@@ -134,8 +134,17 @@ export default function PipelineDashboard() {
   };
 
   const getInvoiceStatusBadge = (item: any) => {
+    // Debug logging for BB-525-001
+    if (item.work_order_number === 'BB-525-001') {
+      console.log('BB-525-001 Badge Debug:', {
+        invoice_status: item.invoice_status,
+        report_status: item.report_status,
+        status: item.status
+      });
+    }
+    
     if (!item.invoice_status) {
-      return <Badge variant="outline">-</Badge>;
+      return <Badge variant="outline">No Invoice</Badge>;
     }
     
     switch (item.invoice_status) {

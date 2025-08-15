@@ -102,8 +102,9 @@ export function useWorkOrderLifecycle() {
           )
           .order('submitted_at', { ascending: false })
           .limit(1),
-          invoice_work_orders(
-            invoices(
+          subcontractor_invoices:invoice_work_orders!inner(
+            invoices!inner(
+              id,
               status,
               submitted_at
             )
@@ -179,8 +180,8 @@ export function useWorkOrderLifecycle() {
         // If both statuses indicate payment completion
         if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
         
-        // If there's any invoice activity (received, submitted, etc.)
-        if (invoiceStatus || partnerBillStatus) return 'invoice_received';
+        // If there's any invoice activity (submitted, approved, etc.)
+        if (invoiceStatus === 'approved' || invoiceStatus === 'submitted' || partnerBillStatus) return 'invoice_received';
         
         // No billing activity yet
         return 'not_billed';
@@ -191,8 +192,19 @@ export function useWorkOrderLifecycle() {
         // Get the latest report (assuming they're ordered by submitted_at)
         const latestReport = workOrder.latest_report?.[0];
         
-        // Get the first invoice (there should typically be one per work order)
-        const invoice = workOrder.invoice_work_orders?.[0]?.invoices;
+        // Get the subcontractor invoice data 
+        const subcontractorInvoice = workOrder.subcontractor_invoices?.[0]?.invoices;
+        
+        // Debug logging for troubleshooting
+        if (workOrder.work_order_number === 'BB-525-001') {
+          console.log('BB-525-001 Debug Data:', {
+            workOrderId: workOrder.id,
+            rawInvoiceData: workOrder.subcontractor_invoices,
+            extractedInvoice: subcontractorInvoice,
+            invoiceStatus: subcontractorInvoice?.status,
+            reportStatus: latestReport?.status
+          });
+        }
         
         // Get partner billing info from the latest report - use most recent invoice
         const partnerInvoices = latestReport?.partner_invoices || [];
@@ -210,7 +222,7 @@ export function useWorkOrderLifecycle() {
           ageDays
         );
         const financialStatus = calculateFinancialStatus(
-          invoice?.status,
+          subcontractorInvoice?.status,
           partnerInvoice?.status
         );
 
@@ -248,8 +260,8 @@ export function useWorkOrderLifecycle() {
           report_submitted_at: latestReport?.submitted_at || null,
           
           // Invoice status (subcontractor billing)
-          invoice_status: invoice?.status || null,
-          invoice_submitted_at: invoice?.submitted_at || null,
+          invoice_status: subcontractorInvoice?.status || null,
+          invoice_submitted_at: subcontractorInvoice?.submitted_at || null,
           
           // Partner billing status
           partner_bill_status: partnerInvoice?.status || null,
