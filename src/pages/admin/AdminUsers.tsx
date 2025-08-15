@@ -26,6 +26,7 @@ import { UserBreadcrumb } from '@/components/admin/users/UserBreadcrumb';
 import { CreateUserModal } from '@/components/admin/users/CreateUserModal';
 import { EditUserModal } from '@/components/admin/users/EditUserModal';
 import { ViewUserModal } from '@/components/admin/users/ViewUserModal';
+import { ResetPasswordModal } from '@/components/admin/users/ResetPasswordModal';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { useViewMode } from '@/hooks/useViewMode';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
@@ -70,6 +71,7 @@ export default function AdminUsers() {
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [editUserModalOpen, setEditUserModalOpen] = useState(false);
   const [viewUserModalOpen, setViewUserModalOpen] = useState(false);
+  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -162,6 +164,10 @@ export default function AdminUsers() {
       if (confirm('Are you sure you want to delete this user?')) {
         deleteUser.mutate(user.id);
       }
+    },
+    onResetPassword: (user) => {
+      setSelectedUser(user);
+      setResetPasswordModalOpen(true);
     },
   }), [deleteUser]);
   const table = useReactTable({
@@ -587,6 +593,14 @@ export default function AdminUsers() {
         isOpen={viewUserModalOpen}
         onClose={() => setViewUserModalOpen(false)}
         user={selectedUser}
+      />
+
+      {/* Reset Password Modal */}
+      <ResetPasswordModal 
+        open={resetPasswordModalOpen}
+        onOpenChange={setResetPasswordModalOpen}
+        userEmail={selectedUser?.email || ''}
+        userName={`${selectedUser?.first_name || ''} ${selectedUser?.last_name || ''}`.trim() || 'Unknown User'}
       />
     </div>
   );
