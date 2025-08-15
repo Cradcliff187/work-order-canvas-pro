@@ -7,7 +7,8 @@ import { Eye, Edit, Trash2, UserPlus, MapPin, Copy, Paperclip, ArrowUpDown, Flam
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatLocationDisplay, formatLocationTooltip, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrder } from '@/hooks/useWorkOrders';
-import { WorkOrderStatusBadge, AssignedToStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { AssignedToStatusBadge } from '@/components/ui/status-badge';
 import { ColumnMetadata } from '@/hooks/useColumnVisibility';
 
 // Column metadata for visibility management
@@ -292,7 +293,7 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
     ),
     size: 100,
     cell: ({ row }) => {
-      const status = row.getValue('status') as string;
+      const status = row.getValue('status') as WorkOrder['status'];
       const isUpdating = updatingRowIds?.has(row.original.id);
       
       return (
@@ -303,7 +304,8 @@ export const createWorkOrderColumns = ({ unreadCounts, updatingRowIds, onEdit, o
           <WorkOrderStatusBadge 
             status={status} 
             size="sm" 
-            showIcon={!isUpdating} 
+            showIcon={!isUpdating}
+            workOrder={row.original}
           />
         </div>
       );
