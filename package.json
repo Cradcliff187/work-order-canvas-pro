@@ -49,6 +49,7 @@
     "@tiptap/starter-kit": "^2.25.1",
     "@types/dompurify": "^3.2.0",
     "@types/web-app-manifest": "^1.0.9",
+    "@vitest/ui": "^3.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -59,6 +60,7 @@
     "framer-motion": "^12.23.12",
     "idb": "^8.0.3",
     "input-otp": "^1.2.4",
+    "jsdom": "^26.1.0",
     "lucide-react": "^0.462.0",
     "lz-string": "^1.5.0",
     "next-themes": "^0.3.0",
@@ -75,6 +77,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.20.3",
     "vaul": "^0.9.3",
+    "vitest": "^3.2.4",
     "workbox-window": "^7.3.0",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
