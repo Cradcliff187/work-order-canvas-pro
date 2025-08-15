@@ -50,7 +50,7 @@ export interface WorkOrderPipelineItem {
   age_days: number;
   is_overdue: boolean;
   operational_status: 'on_track' | 'at_risk' | 'overdue' | 'blocked' | 'completed';
-  financial_status: 'not_billed' | 'invoice_received' | 'paid';
+  financial_status: 'not_billed' | 'invoice_received' | 'paid' | 'invoice_approved' | 'invoice_rejected';
 }
 
 export function useWorkOrderLifecycle() {
@@ -177,19 +177,36 @@ export function useWorkOrderLifecycle() {
       };
 
       const calculateFinancialStatus = (
-        invoiceStatus: string | null,
+        workOrderInvoices: any[],
         partnerBillStatus: string | null
-      ): 'not_billed' | 'invoice_received' | 'paid' => {
-        // If both statuses indicate payment completion
-        if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
+      ): 'not_billed' | 'invoice_received' | 'paid' | 'invoice_approved' | 'invoice_rejected' => {
+        // Check if we have any invoices
+        const hasInvoice = workOrderInvoices && workOrderInvoices.length > 0;
         
-        // If there's any invoice activity (submitted, approved, etc.)
-        if (invoiceStatus === 'approved' || invoiceStatus === 'submitted' || partnerBillStatus) {
-          return 'invoice_received';
+        if (!hasInvoice) {
+          return 'not_billed';
         }
         
-        // No billing activity yet
-        return 'not_billed';
+        // Get the invoice status from the first invoice
+        const invoice = workOrderInvoices.find(inv => inv.invoices)?.invoices;
+        
+        if (!invoice) {
+          return 'not_billed';
+        }
+        
+        // Return the actual invoice status
+        switch (invoice.status) {
+          case 'paid':
+            return 'paid';
+          case 'approved':
+            return 'invoice_approved';  // This will show as "Invoice Approved" badge
+          case 'submitted':
+            return 'invoice_received';  // This will show as "Invoice Received" badge
+          case 'rejected':
+            return 'invoice_rejected';
+          default:
+            return 'not_billed';
+        }
       };
 
       // Transform the data to match our pipeline structure
@@ -202,7 +219,7 @@ export function useWorkOrderLifecycle() {
         const subcontractorInvoice = workOrderInvoices.find(inv => inv.invoices)?.invoices;
         
         // Calculate total invoice amount from work_order_invoices
-        const totalInvoiceAmount = workOrderInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        const totalInvoiceAmount = workOrderInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
         
         // Debug logging for troubleshooting
         if (workOrder.work_order_number === 'BB-525-001') {
@@ -234,7 +251,7 @@ export function useWorkOrderLifecycle() {
           ageDays
         );
         const financialStatus = calculateFinancialStatus(
-          subcontractorInvoice?.status,
+          workOrderInvoices,
           partnerInvoice?.status
         );
 
