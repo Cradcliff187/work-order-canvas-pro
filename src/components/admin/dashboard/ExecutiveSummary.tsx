@@ -8,8 +8,12 @@ import {
   AlertTriangle, 
   Activity, 
   Clock, 
-  Users 
+  Users,
+  DollarSign,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export const ExecutiveSummary = () => {
   const navigate = useNavigate();
@@ -53,6 +57,27 @@ export const ExecutiveSummary = () => {
     today.setHours(0, 0, 0, 0);
     const params = new URLSearchParams();
     params.set('date_from', today.toISOString().split('T')[0]);
+    navigate(`/admin/work-orders?${params.toString()}`);
+  };
+
+  const handleAwaitingEstimatesClick = () => {
+    const params = new URLSearchParams();
+    params.set('status', 'assigned');
+    params.set('missing_estimate', 'true');
+    navigate(`/admin/work-orders?${params.toString()}`);
+  };
+
+  const handleNeedingMarkupClick = () => {
+    const params = new URLSearchParams();
+    params.set('has_subcontractor_estimate', 'true');
+    params.set('missing_internal_estimate', 'true');
+    navigate(`/admin/work-orders?${params.toString()}`);
+  };
+
+  const handleAwaitingApprovalClick = () => {
+    const params = new URLSearchParams();
+    params.set('has_internal_estimate', 'true');
+    params.set('approval_pending', 'true');
     navigate(`/admin/work-orders?${params.toString()}`);
   };
 
@@ -208,6 +233,52 @@ export const ExecutiveSummary = () => {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Estimate Pipeline */}
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Estimate Pipeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div 
+              className="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors"
+              onClick={handleAwaitingEstimatesClick}
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium">Awaiting SC Estimates</span>
+              </div>
+              <Badge variant="outline">{metrics?.workOrdersNeedingEstimates || 0}</Badge>
+            </div>
+            
+            <div 
+              className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={handleNeedingMarkupClick}
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium">Pending Internal Markup</span>
+              </div>
+              <Badge variant="outline">{metrics?.estimatesNeedingMarkup || 0}</Badge>
+            </div>
+            
+            <div 
+              className="flex items-center justify-between p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors"
+              onClick={handleAwaitingApprovalClick}
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-medium">Awaiting Partner Approval</span>
+              </div>
+              <Badge variant="outline">{metrics?.estimatesAwaitingApproval || 0}</Badge>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

@@ -17,6 +17,9 @@ interface DashboardMetrics {
   employeesOnDuty: number;
   activeSubcontractors: number;
   todayWorkOrders: number;
+  workOrdersNeedingEstimates: number;
+  estimatesNeedingMarkup: number;
+  estimatesAwaitingApproval: number;
   recentPayments: Array<{
     id: string;
     internal_invoice_number: string;
@@ -183,6 +186,28 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     activeSubcontractors?.map(a => a.assigned_organization_id).filter(Boolean) || []
   );
 
+  // Estimate pipeline metrics
+  // Work orders assigned to subcontractors but missing subcontractor estimates
+  const { count: needingEstimatesCount } = await supabase
+    .from('work_orders')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'assigned')
+    .is('subcontractor_estimate_amount', null);
+
+  // Work orders with subcontractor estimates but missing internal estimates
+  const { count: needingMarkupCount } = await supabase
+    .from('work_orders')
+    .select('*', { count: 'exact', head: true })
+    .not('subcontractor_estimate_amount', 'is', null)
+    .is('internal_estimate_amount', null);
+
+  // Work orders with internal estimates but pending partner approval
+  const { count: awaitingApprovalCount } = await supabase
+    .from('work_orders')
+    .select('*', { count: 'exact', head: true })
+    .not('internal_estimate_amount', 'is', null)
+    .is('partner_estimate_approved', null);
+
   const currentTotal = currentMonthCount || 0;
   const lastMonthTotal = lastMonthCount || 0;
   
@@ -205,6 +230,9 @@ const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
     employeesOnDuty: uniqueActiveEmployees.size,
     activeSubcontractors: uniqueSubcontractorOrgs.size,
     todayWorkOrders: todayWorkOrdersCount || 0,
+    workOrdersNeedingEstimates: needingEstimatesCount || 0,
+    estimatesNeedingMarkup: needingMarkupCount || 0,
+    estimatesAwaitingApproval: awaitingApprovalCount || 0,
     recentPayments,
   };
 };
