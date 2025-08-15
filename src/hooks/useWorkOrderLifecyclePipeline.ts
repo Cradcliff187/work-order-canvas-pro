@@ -82,7 +82,6 @@ export function useWorkOrderLifecycle() {
           actual_hours,
           materials_cost,
           labor_cost,
-          subcontractor_invoice_amount,
           date_assigned,
           date_completed,
           assigned_organization_id,
@@ -102,14 +101,14 @@ export function useWorkOrderLifecycle() {
           )
           .order('submitted_at', { ascending: false })
           .limit(1),
-          work_order_invoices:invoice_work_orders(
+          invoice_work_orders!left(
+            invoice_id,
             amount,
-            work_order_report_id,
-            invoices(
+            invoices!inner(
               id,
               status,
               submitted_at,
-              internal_invoice_number
+              total_amount
             )
           )
         `)
@@ -155,7 +154,7 @@ export function useWorkOrderLifecycle() {
         if (bb525Work) {
           console.log('🔍 DEBUG BB-525-001 Raw Data:', {
             fullWorkOrder: bb525Work,
-            invoiceWorkOrders: (bb525Work as any).work_order_invoices,
+            invoiceWorkOrders: (bb525Work as any).invoice_work_orders,
             invoices: (bb525Work as any).invoices,
           });
         }
@@ -227,18 +226,28 @@ export function useWorkOrderLifecycle() {
         // Get the latest report (assuming they're ordered by submitted_at)
         const latestReport = workOrder.latest_report?.[0];
         
-        // Get the subcontractor invoice data from work_order_invoices
-        const workOrderInvoices = workOrder.work_order_invoices || [];
-        const subcontractorInvoice = workOrderInvoices.find(inv => inv.invoices)?.invoices;
+        // Get the subcontractor invoice data from invoice_work_orders with improved extraction
+        const invoiceWorkOrders = workOrder.invoice_work_orders || [];
+        const subcontractorInvoice = invoiceWorkOrders
+          .map((iwo: any) => iwo.invoices)
+          .filter((inv: any) => inv)
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.submitted_at || a.created_at || 0);
+            const dateB = new Date(b.submitted_at || b.created_at || 0);
+            return dateB.getTime() - dateA.getTime();
+          })[0];
         
-        // Calculate total invoice amount from work_order_invoices
-        const totalInvoiceAmount = workOrderInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+        // Calculate total invoice amount from invoice_work_orders
+        const totalInvoiceAmount = invoiceWorkOrders.reduce((sum, iwo) => {
+          const amount = iwo.amount || iwo.invoices?.total_amount || 0;
+          return sum + (Number(amount) || 0);
+        }, 0);
         
         // In the map function where you process invoices:
         if (workOrder.work_order_number === 'BB-525-001') {
           console.log('🎯 BB-525-001 Transform Debug:', {
-            raw_invoice_work_orders: workOrder.work_order_invoices,
-            raw_invoices: workOrder.invoices,
+            raw_invoice_work_orders: workOrder.invoice_work_orders,
+            filtered_invoices: invoiceWorkOrders.map((iwo: any) => iwo.invoices).filter((inv: any) => inv),
             subcontractorInvoice: subcontractorInvoice,
             finalInvoiceStatus: subcontractorInvoice?.status,
             calculatedAmount: totalInvoiceAmount,
@@ -261,7 +270,7 @@ export function useWorkOrderLifecycle() {
           ageDays
         );
         const financialStatus = calculateFinancialStatus(
-          workOrderInvoices,
+          invoiceWorkOrders,
           partnerInvoice?.status
         );
 
@@ -288,7 +297,7 @@ export function useWorkOrderLifecycle() {
           actual_hours: workOrder.actual_hours,
           materials_cost: workOrder.materials_cost,
           labor_cost: workOrder.labor_cost,
-          subcontractor_invoice_amount: totalInvoiceAmount || null,
+          subcontractor_invoice_amount: totalInvoiceAmount > 0 ? totalInvoiceAmount : null,
           
           // Timeline tracking
           date_assigned: workOrder.date_assigned,
@@ -298,7 +307,7 @@ export function useWorkOrderLifecycle() {
           report_status: latestReport?.status || null,
           report_submitted_at: latestReport?.submitted_at || null,
           
-          // Invoice status (subcontractor billing)
+          // Invoice status (subcontractor billing) - Fixed extraction
           invoice_status: subcontractorInvoice?.status || null,
           invoice_submitted_at: subcontractorInvoice?.submitted_at || null,
           
