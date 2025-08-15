@@ -4,6 +4,12 @@ import { WorkOrderStatusBadge as UniversalWorkOrderStatusBadge } from './status-
 import { Badge } from './badge';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { getPartnerFriendlyStatus } from '@/lib/status-display';
+// Minimal WorkOrder interface for status badge
+interface WorkOrderForBadge {
+  internal_estimate_amount?: number | null;
+  partner_estimate_approved?: boolean | null;
+  subcontractor_estimate_amount?: number | null;
+}
 
 type WorkOrderStatus = Database["public"]["Enums"]["work_order_status"];
 
@@ -14,7 +20,7 @@ interface WorkOrderStatusBadgeProps {
   mode?: 'badge' | 'full-width' | 'icon-text';
   size?: 'sm' | 'default' | 'lg';
   showEstimateIndicator?: boolean;
-  workOrder?: any;
+  workOrder?: WorkOrderForBadge;
 }
 
 /**

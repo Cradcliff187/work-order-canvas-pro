@@ -1,5 +1,11 @@
 import { Database } from '@/integrations/supabase/types';
 import { hasInternalEstimate } from '@/lib/validations/estimate-validations';
+// Minimal WorkOrder interface for status display functions
+interface WorkOrderForStatus {
+  internal_estimate_amount?: number | null;
+  partner_estimate_approved?: boolean | null;
+  subcontractor_estimate_amount?: number | null;
+}
 
 type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 type UserRole = 'admin' | 'partner' | 'subcontractor' | 'employee';
@@ -11,7 +17,7 @@ interface StatusDisplay {
 
 export function getPartnerFriendlyStatus(
   status: WorkOrderStatus,
-  workOrder: any
+  workOrder: WorkOrderForStatus
 ): string {
   // Special handling for estimate-related statuses when viewed by partners
   if (status === 'estimate_needed') {
@@ -49,7 +55,7 @@ export interface EstimateTabStatus {
   pulseAnimation?: boolean;
 }
 
-export function getEstimateTabStatus(workOrder: any): EstimateTabStatus | null {
+export function getEstimateTabStatus(workOrder: WorkOrderForStatus): EstimateTabStatus | null {
   // Don't show estimate tab if no internal estimate exists
   if (!hasInternalEstimate(workOrder)) {
     return null;
