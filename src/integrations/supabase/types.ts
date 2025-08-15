@@ -1459,6 +1459,7 @@ export type Database = {
       }
       work_order_reports: {
         Row: {
+          approved_subcontractor_invoice_amount: number | null
           hours_worked: number | null
           id: string
           materials_used: string | null
@@ -1479,6 +1480,7 @@ export type Database = {
           work_performed: string
         }
         Insert: {
+          approved_subcontractor_invoice_amount?: number | null
           hours_worked?: number | null
           id?: string
           materials_used?: string | null
@@ -1499,6 +1501,7 @@ export type Database = {
           work_performed: string
         }
         Update: {
+          approved_subcontractor_invoice_amount?: number | null
           hours_worked?: number | null
           id?: string
           materials_used?: string | null
@@ -1586,6 +1589,9 @@ export type Database = {
           final_completion_date: string | null
           id: string
           internal_estimate_amount: number | null
+          internal_estimate_approved: boolean | null
+          internal_estimate_approved_at: string | null
+          internal_estimate_approved_by: string | null
           internal_estimate_created_at: string | null
           internal_estimate_created_by: string | null
           internal_estimate_description: string | null
@@ -1644,6 +1650,9 @@ export type Database = {
           final_completion_date?: string | null
           id?: string
           internal_estimate_amount?: number | null
+          internal_estimate_approved?: boolean | null
+          internal_estimate_approved_at?: string | null
+          internal_estimate_approved_by?: string | null
           internal_estimate_created_at?: string | null
           internal_estimate_created_by?: string | null
           internal_estimate_description?: string | null
@@ -1702,6 +1711,9 @@ export type Database = {
           final_completion_date?: string | null
           id?: string
           internal_estimate_amount?: number | null
+          internal_estimate_approved?: boolean | null
+          internal_estimate_approved_at?: string | null
+          internal_estimate_approved_by?: string | null
           internal_estimate_created_at?: string | null
           internal_estimate_created_by?: string | null
           internal_estimate_description?: string | null
@@ -1749,6 +1761,13 @@ export type Database = {
           {
             foreignKeyName: "work_orders_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_internal_estimate_approved_by_fkey"
+            columns: ["internal_estimate_approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
