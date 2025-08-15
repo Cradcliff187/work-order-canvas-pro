@@ -25,6 +25,8 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import PipelineDashboard from '@/pages/admin/PipelineDashboard';
+import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
+import { Invoice } from '@/hooks/useInvoices';
 
 interface DashboardMetrics {
   unbilledReports: {
@@ -154,6 +156,10 @@ function useBillingMetrics() {
 export default function BillingDashboard() {
   const navigate = useNavigate();
   const { data: metrics, isLoading, error, refetch } = useBillingMetrics();
+  
+  // Modal state for invoice details
+  const [selectedInvoice, setSelectedInvoice] = React.useState<Invoice | null>(null);
+  const [invoiceModalOpen, setInvoiceModalOpen] = React.useState(false);
 
   const [search, setSearch] = React.useState('');
   const [dateFrom, setDateFrom] = React.useState<string | undefined>(undefined);
@@ -268,6 +274,41 @@ export default function BillingDashboard() {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  // Handler for opening invoice modal
+  const handleInvoiceClick = async (invoiceId: string) => {
+    try {
+      // Fetch the full invoice data
+      const { data: invoice, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          subcontractor_organization:organizations!subcontractor_organization_id(*),
+          submitted_by_user:profiles!submitted_by(id, first_name, last_name),
+          approved_by_user:profiles!approved_by(id, first_name, last_name),
+          invoice_work_orders(
+            id,
+            work_order_id,
+            amount,
+            description,
+            work_order:work_orders(
+              id,
+              work_order_number,
+              title
+            )
+          )
+        `)
+        .eq('id', invoiceId)
+        .single();
+
+      if (error) throw error;
+      
+      setSelectedInvoice(invoice);
+      setInvoiceModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching invoice details:', error);
+    }
   };
 
   React.useEffect(() => {
@@ -469,7 +510,7 @@ if (error) {
                       <button
                         key={invoice.id}
                         type="button"
-                        onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                        onClick={() => handleInvoiceClick(invoice.id)}
                         className="w-full flex justify-between items-center rounded-md px-2 py-2 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus:outline-none"
                         aria-label={`View subcontractor invoice ${invoice.internal_invoice_number} for ${invoice.subcontractor_organization?.name || 'Unknown'} dated ${format(new Date(invoice.submitted_at), 'MMM d, yyyy')}`}
                       >
@@ -509,6 +550,16 @@ if (error) {
           <PipelineDashboard />
         </TabsContent>
       </Tabs>
+
+      {/* Invoice Detail Modal */}
+      <InvoiceDetailModal
+        invoice={selectedInvoice}
+        isOpen={invoiceModalOpen}
+        onClose={() => {
+          setInvoiceModalOpen(false);
+          setSelectedInvoice(null);
+        }}
+      />
     </main>
   </>
   );
