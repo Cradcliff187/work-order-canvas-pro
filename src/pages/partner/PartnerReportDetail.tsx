@@ -18,10 +18,12 @@ import {
 import { usePartnerReportDetail } from '@/hooks/usePartnerReports';
 import { ReportStatusBadge } from '@/components/ui/status-badge';
 import { format } from 'date-fns';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 export default function PartnerReportDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isPartner } = useUserProfile();
   
   // Validate ID format and prevent literal ":id" from being used
   const isValidId = id && id !== ':id' && id.length > 8;
@@ -183,12 +185,14 @@ export default function PartnerReportDetail() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Hours Worked</label>
-                  <p className="font-medium">{report.hours_worked || 'N/A'}</p>
+              {!isPartner() && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Hours Worked</label>
+                    <p className="font-medium">{report.hours_worked || 'N/A'}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
