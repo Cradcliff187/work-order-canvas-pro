@@ -12,6 +12,9 @@ import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
 import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
+import { useViewMode, type ViewModeConfig } from '@/hooks/useViewMode';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { formatDate } from '@/lib/utils/date';
 import { formatCurrency } from '@/utils/formatting';
@@ -28,9 +31,89 @@ import {
   Receipt
 } from 'lucide-react';
 
+// Mobile card component for pipeline data
+interface PipelineMobileCardProps {
+  item: any;
+  onSelect: (item: any) => void;
+  getOperationalBadge: (item: any) => React.ReactNode;
+  getReportStatusBadge: (item: any) => React.ReactNode;
+  getInvoiceStatusBadge: (item: any) => React.ReactNode;
+  getFinancialBadge: (item: any) => React.ReactNode;
+}
+
+function PipelineMobileCard({
+  item,
+  onSelect,
+  getOperationalBadge,
+  getReportStatusBadge,
+  getInvoiceStatusBadge,
+  getFinancialBadge
+}: PipelineMobileCardProps) {
+  return (
+    <Card 
+      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={() => onSelect(item)}
+    >
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="font-medium">{item.work_order_number}</p>
+              <p className="text-sm text-muted-foreground">{item.title}</p>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {item.age_days}d
+            </Badge>
+          </div>
+          
+          {/* Location */}
+          <div>
+            <p className="text-sm">{item.partner_organization_name}</p>
+            <p className="text-xs text-muted-foreground">{item.store_location}</p>
+          </div>
+          
+          {/* Status Grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Status</p>
+              {getOperationalBadge(item)}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Report</p>
+              {getReportStatusBadge(item)}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Invoice</p>
+              {getInvoiceStatusBadge(item)}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Billing</p>
+              {getFinancialBadge(item)}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function PipelineDashboard() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { data: pipelineData, isLoading, error } = useWorkOrderLifecycle();
+  
+  // Configure view modes - mobile gets list only, desktop gets table and card options
+  const viewModeConfig: ViewModeConfig = {
+    mobile: ['list'],
+    desktop: ['table', 'card']
+  };
+  
+  const { viewMode, setViewMode, allowedModes } = useViewMode({
+    componentKey: 'pipeline-dashboard',
+    config: viewModeConfig,
+    defaultMode: 'table'
+  });
   
   // Comprehensive filters
   const [filters, setFilters] = useState({
@@ -321,90 +404,128 @@ export default function PipelineDashboard() {
           <AlertCircle className="h-4 w-4 mr-2" />
           Action Required
         </Button>
+        
+        {/* View Mode Switcher - only show on desktop with multiple allowed modes */}
+        {!isMobile && (
+          <ViewModeSwitcher
+            value={viewMode}
+            onValueChange={setViewMode}
+            allowedModes={allowedModes}
+          />
+        )}
       </AdminFilterBar>
 
-      {/* Main Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Complete Work Order Pipeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveTableWrapper>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Work Order</TableHead>
-                  <TableHead>Partner / Location</TableHead>
-                  <TableHead>Operational Status</TableHead>
-                  <TableHead>Report</TableHead>
-                  <TableHead>SC Invoice</TableHead>
-                  <TableHead>Partner Billing</TableHead>
-                  <TableHead>Age</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.map((item) => (
-                  <TableRow 
-                    key={item.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/admin/work-orders/${item.id}`)}
-                  >
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{item.work_order_number}</p>
-                        <p className="text-sm text-muted-foreground">{item.title}</p>
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <div>
-                        <p className="text-sm">{item.partner_organization_name}</p>
-                        <p className="text-xs text-muted-foreground">{item.store_location}</p>
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>{getOperationalBadge(item)}</TableCell>
-                    
-                    <TableCell>{getReportStatusBadge(item)}</TableCell>
-                    
-                    <TableCell>{getInvoiceStatusBadge(item)}</TableCell>
-                    
-                    <TableCell>{getFinancialBadge(item)}</TableCell>
-                    
-                    <TableCell>
-                      <p className="text-sm text-muted-foreground">
-                        {item.age_days}d
-                      </p>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/work-orders/${item.id}`);
-                        }}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
+      {/* Main Content - Responsive Views */}
+      {viewMode === 'table' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Complete Work Order Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveTableWrapper>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Work Order</TableHead>
+                    <TableHead>Partner / Location</TableHead>
+                    <TableHead>Operational Status</TableHead>
+                    <TableHead>Report</TableHead>
+                    <TableHead>SC Invoice</TableHead>
+                    <TableHead>Partner Billing</TableHead>
+                    <TableHead>Age</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ResponsiveTableWrapper>
-          
-          {filteredData.length === 0 && (
-            <EmptyState
-              icon={ClipboardList}
-              title="No work orders found"
-              description="Adjust your filters or create a new work order"
-            />
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((item) => (
+                    <TableRow 
+                      key={item.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/admin/work-orders/${item.id}`)}
+                    >
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{item.work_order_number}</p>
+                          <p className="text-sm text-muted-foreground">{item.title}</p>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div>
+                          <p className="text-sm">{item.partner_organization_name}</p>
+                          <p className="text-xs text-muted-foreground">{item.store_location}</p>
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>{getOperationalBadge(item)}</TableCell>
+                      
+                      <TableCell>{getReportStatusBadge(item)}</TableCell>
+                      
+                      <TableCell>{getInvoiceStatusBadge(item)}</TableCell>
+                      
+                      <TableCell>{getFinancialBadge(item)}</TableCell>
+                      
+                      <TableCell>
+                        <p className="text-sm text-muted-foreground">
+                          {item.age_days}d
+                        </p>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/work-orders/${item.id}`);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ResponsiveTableWrapper>
+            
+            {filteredData.length === 0 && (
+              <EmptyState
+                icon={ClipboardList}
+                title="No work orders found"
+                description="Adjust your filters or create a new work order"
+              />
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        /* Card/List View */
+        <div className={`
+          ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}
+        `}>
+          {filteredData.length === 0 ? (
+            <div className="col-span-full">
+              <EmptyState
+                icon={ClipboardList}
+                title="No work orders found"
+                description="Adjust your filters or create a new work order"
+              />
+            </div>
+          ) : (
+            filteredData.map((item) => (
+              <PipelineMobileCard
+                key={item.id}
+                item={item}
+                onSelect={(item) => navigate(`/admin/work-orders/${item.id}`)}
+                getOperationalBadge={getOperationalBadge}
+                getReportStatusBadge={getReportStatusBadge}
+                getInvoiceStatusBadge={getInvoiceStatusBadge}
+                getFinancialBadge={getFinancialBadge}
+              />
+            ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }
