@@ -31,7 +31,7 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { KeyboardShortcutsTooltip } from '@/components/ui/keyboard-shortcuts-tooltip';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
-import { QuickFiltersBar } from '@/components/admin/work-orders/QuickFiltersBar';
+
 
 interface WorkOrderFiltersState {
   status?: string[];
@@ -41,10 +41,8 @@ interface WorkOrderFiltersState {
   date_from?: string;
   date_to?: string;
   location_filter?: string[];
-  assigned_to_user?: string;
   priority?: string[];
   unassigned?: boolean;
-  overdue?: boolean;
   created_today?: boolean;
 }
 
@@ -92,14 +90,6 @@ export default function AdminWorkOrders() {
       return saved ? JSON.parse(saved) : {};
     } catch {
       return {};
-    }
-  });
-  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('admin-workorders-quick-v1');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
     }
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -178,9 +168,6 @@ export default function AdminWorkOrders() {
     try { localStorage.setItem('admin-workorders-filters-v1', JSON.stringify(filters)); } catch {}
   }, [filters]);
   useEffect(() => {
-    try { localStorage.setItem('admin-workorders-quick-v1', JSON.stringify(activeQuickFilters)); } catch {}
-  }, [activeQuickFilters]);
-  useEffect(() => {
     try { localStorage.setItem('admin-workorders-sorting-v1', JSON.stringify(sorting)); } catch {}
   }, [sorting]);
   useEffect(() => {
@@ -192,48 +179,14 @@ export default function AdminWorkOrders() {
     sortBy: sorting.map(sort => ({ id: sort.id, desc: sort.desc }))
   }), [sorting]);
 
-  // Helper function to map quick filters to actual filter values
-  const mapQuickFiltersToState = (activeFilters: string[], profile: any): Partial<WorkOrderFiltersState> => {
-    const quickFilterState: Partial<WorkOrderFiltersState> = {};
-    
-    activeFilters.forEach(filterId => {
-      switch (filterId) {
-        case 'my-orders':
-          if (profile?.id) {
-            quickFilterState.assigned_to_user = profile.id;
-          }
-          break;
-        case 'urgent':
-          // Map to urgent priority
-          quickFilterState.priority = ['urgent'];
-          break;
-        case 'overdue':
-          quickFilterState.overdue = true;
-          break;
-        case 'unassigned':
-          quickFilterState.unassigned = true;
-          break;
-        case 'today':
-          quickFilterState.created_today = true;
-          break;
-      }
-    });
-    
-    return quickFilterState;
-  };
 
-  // Combine quick filters with regular filters
+  // Combine filters
   const combinedFilters = useMemo(() => {
-    const quickFilterState = mapQuickFiltersToState(activeQuickFilters, profile);
-    
     return {
       ...filters,
-      ...quickFilterState,
-      search: debouncedSearchTerm || undefined,
-      // Merge status arrays if both exist
-      status: [...(filters.status || []), ...(quickFilterState.status || [])].filter((v, i, a) => a.indexOf(v) === i)
+      search: debouncedSearchTerm || undefined
     };
-  }, [filters, activeQuickFilters, profile, debouncedSearchTerm]);
+  }, [filters, debouncedSearchTerm]);
 
   // Update filters when debounced search term changes
   useEffect(() => {
@@ -319,23 +272,13 @@ export default function AdminWorkOrders() {
     try {
       localStorage.removeItem('admin-workorders-search-v1');
       localStorage.removeItem('admin-workorders-filters-v1');
-      localStorage.removeItem('admin-workorders-quick-v1');
     } catch {}
     setSearchTerm('');
     setFilters({});
-    setActiveQuickFilters([]);
     setRowSelection({});
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
   };
 
-  const handleQuickFilterToggle = (preset: string) => {
-    setActiveQuickFilters(prev => 
-      prev.includes(preset) 
-        ? prev.filter(p => p !== preset)
-        : [...prev, preset]
-    );
-    setPagination(prev => ({ ...prev, pageIndex: 0 }));
-  };
 
   const handleExportAll = async (format: 'csv' | 'excel') => {
     try {
@@ -494,11 +437,6 @@ export default function AdminWorkOrders() {
         </div>
       </header>
 
-      {/* Quick Filters */}
-      <QuickFiltersBar
-        activePresets={activeQuickFilters}
-        onTogglePreset={handleQuickFilterToggle}
-      />
 
       {/* Filters */}
       <section className="flex flex-col lg:flex-row gap-4" role="search" aria-label="Work order filters">
@@ -509,8 +447,6 @@ export default function AdminWorkOrders() {
             onFiltersChange={setFilters}
             onSearchChange={setSearchTerm}
             onClearFilters={handleClearFilters}
-            activeQuickPresets={activeQuickFilters}
-            onToggleQuickPreset={handleQuickFilterToggle}
           />
         </div>
       </section>
