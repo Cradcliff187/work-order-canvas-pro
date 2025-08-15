@@ -411,16 +411,20 @@ export default function AdminWorkOrderDetail() {
                     value={internalEstimateForm.amount}
                     onChange={(e) => setInternalEstimateForm(prev => ({ ...prev, amount: e.target.value }))}
                   />
-                  {workOrder.subcontractor_estimate_amount && (
+                  {workOrder.subcontractor_estimate_amount && workOrder.subcontractor_estimate_amount > 0 && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const scAmount = parseFloat(String(workOrder.subcontractor_estimate_amount || '0'));
-                        const markup = internalEstimateForm.markup_percentage / 100;
-                        const newAmount = (scAmount * (1 + markup)).toFixed(2);
-                        setInternalEstimateForm(prev => ({ ...prev, amount: newAmount }));
+                        const scAmount = Number(workOrder.subcontractor_estimate_amount);
+                        const markupPercent = Number(internalEstimateForm.markup_percentage) || 0;
+                        
+                        if (scAmount > 0 && !isNaN(scAmount)) {
+                          const calculatedAmount = scAmount * (1 + markupPercent / 100);
+                          const formattedAmount = calculatedAmount.toFixed(2);
+                          setInternalEstimateForm(prev => ({ ...prev, amount: formattedAmount }));
+                        }
                       }}
                     >
                       Auto-fill (SC amount + markup)
