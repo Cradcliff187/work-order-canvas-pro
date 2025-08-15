@@ -24,6 +24,7 @@ import { ExportDropdown } from '@/components/ui/export-dropdown';
 import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
+import PipelineDashboard from '@/pages/admin/PipelineDashboard';
 // Removed QuickActionTile in favor of standard Buttons per gold standard
 
 interface DashboardMetrics {
@@ -308,7 +309,7 @@ if (error) {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="min-w-max px-0 overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-8 mt-6">
@@ -488,36 +489,8 @@ if (error) {
           </div>
         </TabsContent>
 
-        <TabsContent value="transactions">
-          <div className="space-y-4">
-            <BillingTransactionFilters
-              search={search}
-              onSearchChange={setSearch}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              onDateRangeChange={handleDateRangeChange}
-              amountMin={amountMin}
-              amountMax={amountMax}
-              onAmountRangeChange={handleAmountRangeChange}
-              transactionTypes={transactionTypes}
-              onTransactionTypesChange={setTransactionTypes}
-            />
-            <div role="region" aria-label="Transactions toolbar" className="flex items-center justify-between gap-2">
-              <div className="text-sm text-muted-foreground">{filteredTransactions.length} transactions</div>
-              <div className="flex items-center gap-2">
-                <ExportDropdown onExport={handleExport} disabled={isLoading || filteredTransactions.length === 0} loading={isLoading} />
-                <ColumnVisibilityDropdown
-                  columns={columnOptions}
-                  onToggleColumn={toggleColumn}
-                  onResetToDefaults={resetToDefaults}
-                  visibleCount={getVisibleColumnCount()}
-                  totalCount={columnOptions.length}
-                />
-              </div>
-            </div>
-
-            <BillingTransactionsTable rows={filteredTransactions} visibleColumns={visibleTransactionColumns} />
-          </div>
+        <TabsContent value="pipeline" className="space-y-6">
+          <PipelineDashboard />
         </TabsContent>
       </Tabs>
     </main>

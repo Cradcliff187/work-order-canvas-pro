@@ -23,8 +23,6 @@ import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Resp
 import { format } from 'date-fns';
 
 import { ExecutiveSummary } from '@/components/admin/dashboard/ExecutiveSummary';
-import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
-import { useWorkOrderLifecycle } from '@/hooks/useWorkOrderLifecyclePipeline';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const COLORS = {
@@ -48,7 +46,7 @@ const AdminDashboard = () => {
     isError
   } = useAdminDashboard();
 
-  const { refetch: refetchPipeline } = useWorkOrderLifecycle();
+  
 
 
   const navigateToInvoices = (filter?: string) => {
@@ -79,30 +77,7 @@ const AdminDashboard = () => {
       </div>
 
 
-      <Tabs defaultValue="pipeline" className="w-full">
-        <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
-          <TabsList className="inline-flex min-w-max mb-8">
-            <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-            <TabsTrigger value="executive">Executive Summary</TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="pipeline" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Work Order Pipeline</h2>
-            <Button variant="outline" size="sm" onClick={() => refetchPipeline()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
-          <WorkOrderPipelineTable />
-        </TabsContent>
-        
-        <TabsContent value="executive" className="space-y-6">
-          <ExecutiveSummary />
-        </TabsContent>
-        
-      </Tabs>
+      <ExecutiveSummary />
     </div>
   );
 };
