@@ -161,7 +161,7 @@ export function WorkOrderPipelineTable() {
       return 'billed'; // Already billed to partner
     }
     
-    if (item.invoice_status === 'approved' && item.subcontractor_invoice_amount && item.subcontractor_invoice_amount > 0) {
+    if (item.invoice_status === 'approved') {
       return 'ready_to_bill'; // Has approved invoices, ready to bill partner
     }
     
@@ -472,9 +472,33 @@ export function WorkOrderPipelineTable() {
       header: 'Subcontractor Invoice',
       cell: ({ row }) => {
         const item = row.original;
+        
+        const getSubcontractorInvoiceStatus = () => {
+          if (!item.invoice_status) {
+            if (item.status === 'completed' && item.report_status === 'approved') {
+              return { variant: 'warning' as const, text: 'Invoice Needed' };
+            }
+            return { variant: 'outline' as const, text: 'No Invoice' };
+          }
+          
+          switch (item.invoice_status) {
+            case 'approved':
+              return { variant: 'success' as const, text: 'Approved' };
+            case 'submitted':
+            case 'pending':
+              return { variant: 'warning' as const, text: 'Pending' };
+            default:
+              return { variant: 'outline' as const, text: item.invoice_status };
+          }
+        };
+        
+        const statusInfo = getSubcontractorInvoiceStatus();
+        
         return (
           <div className="space-y-1">
-            <ComputedFinancialStatusBadge status={item.financial_status} size="sm" />
+            <Badge variant={statusInfo.variant}>
+              {statusInfo.text}
+            </Badge>
             {item.subcontractor_invoice_amount && (
               <div className="text-xs text-muted-foreground">
                 ${item.subcontractor_invoice_amount.toLocaleString()}

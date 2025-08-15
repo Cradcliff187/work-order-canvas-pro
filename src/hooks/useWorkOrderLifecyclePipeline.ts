@@ -201,6 +201,9 @@ export function useWorkOrderLifecycle() {
         const workOrderInvoices = workOrder.work_order_invoices || [];
         const subcontractorInvoice = workOrderInvoices.find(inv => inv.invoices)?.invoices;
         
+        // Calculate total invoice amount from work_order_invoices
+        const totalInvoiceAmount = workOrderInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        
         // Debug logging for troubleshooting
         if (workOrder.work_order_number === 'BB-525-001') {
           console.log('BB-525-001 Fixed Debug Data:', {
@@ -210,7 +213,8 @@ export function useWorkOrderLifecycle() {
             extractedInvoice: subcontractorInvoice,
             invoiceStatus: subcontractorInvoice?.status,
             reportStatus: latestReport?.status,
-            invoiceNumber: subcontractorInvoice?.internal_invoice_number
+            invoiceNumber: subcontractorInvoice?.internal_invoice_number,
+            calculatedAmount: totalInvoiceAmount
           });
         }
         
@@ -257,7 +261,7 @@ export function useWorkOrderLifecycle() {
           actual_hours: workOrder.actual_hours,
           materials_cost: workOrder.materials_cost,
           labor_cost: workOrder.labor_cost,
-          subcontractor_invoice_amount: workOrder.subcontractor_invoice_amount,
+          subcontractor_invoice_amount: totalInvoiceAmount || null,
           
           // Timeline tracking
           date_assigned: workOrder.date_assigned,
