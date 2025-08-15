@@ -4,14 +4,15 @@ import { Button } from '@/components/ui/button';
 import { 
   CheckCircle, 
   Play, 
-  Clock, 
   XCircle, 
   UserPlus,
   AlertCircle,
   ChevronRight,
   FileText,
   ListChecks,
-  DollarSign
+  DollarSign,
+  X,
+  PlayCircle
 } from 'lucide-react';
 import { useWorkOrderStatusTransitions } from '@/hooks/useWorkOrderStatusTransitions';
 import { 
@@ -129,8 +130,8 @@ export function StatusActionButtons({
         return [
           {
             status: 'assigned',
-            label: 'Cancel Estimate',
-            icon: <UserPlus className="h-4 w-4" />,
+            label: 'Cancel Estimate Request',
+            icon: <X className="h-4 w-4" />,
             variant: 'outline'
           },
           {
@@ -154,7 +155,7 @@ export function StatusActionButtons({
           {
             status: 'in_progress',
             label: 'Start Work',
-            icon: <Play className="h-4 w-4" />,
+            icon: <PlayCircle className="h-4 w-4" />,
             variant: 'default'
           },
           {
