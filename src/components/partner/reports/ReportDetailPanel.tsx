@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 
 interface ReportDetailPanelProps {
   report: any;
@@ -88,7 +88,7 @@ export function ReportDetailPanel({
           <div>
             <label className="font-medium text-muted-foreground">Status</label>
             <div className="mt-1">
-              <WorkOrderStatusBadge status={workOrder?.status} size="sm" />
+              <WorkOrderStatusBadge status={workOrder?.status} size="sm" workOrder={workOrder} />
             </div>
           </div>
           {workOrder?.description && (

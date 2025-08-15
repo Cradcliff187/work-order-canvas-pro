@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { Eye, ArrowUpDown, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { TableActionsDropdown, TableAction } from '@/components/ui/table-actions-dropdown';
 
 // Work order type from the hook
@@ -76,7 +76,7 @@ export function createWorkOrderColumns({ unreadCounts, onView }: WorkOrderColumn
         </Button>
       ),
       cell: ({ row }) => (
-        <WorkOrderStatusBadge status={row.getValue('status')} />
+        <WorkOrderStatusBadge status={row.getValue('status')} workOrder={row.original} />
       ),
     },
     {

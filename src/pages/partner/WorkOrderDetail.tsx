@@ -151,7 +151,7 @@ export default function WorkOrderDetail() {
             </h1>
           </div>
         </div>
-        <WorkOrderStatusBadge status={workOrder.status} />
+        <WorkOrderStatusBadge status={workOrder.status} workOrder={workOrder} />
       </div>
 
       {/* Tabs */}
@@ -208,7 +208,7 @@ export default function WorkOrderDetail() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                  <WorkOrderStatusBadge status={workOrder.status} />
+                  <WorkOrderStatusBadge status={workOrder.status} workOrder={workOrder} />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Trade</Label>
