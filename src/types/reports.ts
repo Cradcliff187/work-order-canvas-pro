@@ -14,6 +14,8 @@ export type WorkOrderReport = Database['public']['Tables']['work_order_reports']
     zip_code: string | null;
     description: string | null;
     partner_location_number: string | null;
+    internal_estimate_amount: number | null;
+    internal_estimate_description: string | null;
   } | null;
   subcontractor: {
     first_name: string;

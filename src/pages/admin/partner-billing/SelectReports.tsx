@@ -802,11 +802,27 @@ export default function SelectReports() {
                                   )}
                                  </TableCell>
                                )}
-                               {columnVisibility.variance !== false && (
-                                 <TableCell>
-                                   <span className="text-muted-foreground">-</span>
-                                 </TableCell>
-                               )}
+                                {columnVisibility.variance !== false && (
+                                  <TableCell>
+                                    {(() => {
+                                      const workOrder = report.work_orders;
+                                      if (!workOrder?.internal_estimate_amount) return <span className="text-muted-foreground">-</span>;
+                                      
+                                      const estimateAmount = workOrder.internal_estimate_amount;
+                                      const actualAmount = report.approved_subcontractor_invoice_amount || 0;
+                                      const variance = calculateEstimateVariance(estimateAmount, actualAmount);
+                                      
+                                      const badgeVariant = variance.color === 'green' ? 'success' : 
+                                                           variance.color === 'yellow' ? 'warning' : 'destructive';
+                                      
+                                      return (
+                                        <Badge variant={badgeVariant} className="font-mono text-xs">
+                                          {formatVariance(variance.percentage)}
+                                        </Badge>
+                                      );
+                                    })()}
+                                  </TableCell>
+                                )}
                                {columnVisibility.status !== false && (
                                  <TableCell>
                                    <ReportStatusBadge status="approved" size="sm" />
@@ -852,12 +868,22 @@ export default function SelectReports() {
                     return (
                       <MobileTableCard
                         key={report.id}
-                        data={{
+                       data={{
                           'Work Order': report.work_orders?.work_order_number || 'N/A',
                           'Title': report.work_orders?.title || 'No title',
                           'Location': report.work_orders?.store_location || '-',
                           'Submitted': format(new Date(report.submitted_at), 'MMM d, yyyy'),
                           'Amount': report.approved_subcontractor_invoice_amount ? formatCurrency(report.approved_subcontractor_invoice_amount) : '-',
+                          'Variance': (() => {
+                            const workOrder = report.work_orders;
+                            if (!workOrder?.internal_estimate_amount) return '-';
+                            
+                            const estimateAmount = workOrder.internal_estimate_amount;
+                            const actualAmount = report.approved_subcontractor_invoice_amount || 0;
+                            const variance = calculateEstimateVariance(estimateAmount, actualAmount);
+                            
+                            return formatVariance(variance.percentage);
+                          })(),
                           'Status': 'Approved'
                         }}
                         badge={

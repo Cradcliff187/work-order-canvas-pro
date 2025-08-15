@@ -27,6 +27,8 @@ export interface PartnerUnbilledReport {
     city: string | null;
     state: string | null;
     zip_code: string | null;
+    internal_estimate_amount: number | null;
+    internal_estimate_description: string | null;
   } | null;
   subcontractor_organization: {
     id: string;
@@ -101,6 +103,8 @@ export const usePartnerUnbilledReports = (partnerOrgId?: string) => {
           city: row.city,
           state: row.state,
           zip_code: row.zip_code,
+          internal_estimate_amount: row.internal_estimate_amount || null,
+          internal_estimate_description: row.internal_estimate_description || null,
         },
         subcontractor_organization: row.org_id ? {
           id: row.org_id,
