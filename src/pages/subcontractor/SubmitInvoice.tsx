@@ -215,15 +215,16 @@ export default function SubmitInvoice() {
 
     // Validate that all selected work orders have approved reports
     const selectedWorkOrders = availableWorkOrders.filter(wo => selectedWorkOrderIds.includes(wo.id));
-    const hasUnapprovedReports = selectedWorkOrders.some(wo => {
+    const problematicWorkOrders = selectedWorkOrders.filter(wo => {
       const reports = wo.work_order_reports || [];
       return reports.length === 0 || reports.some(report => report.status !== 'approved');
     });
     
-    if (hasUnapprovedReports) {
+    if (problematicWorkOrders.length > 0) {
+      const workOrderNumbers = problematicWorkOrders.map(wo => wo.work_order_number).join(', ');
       toast({
         title: "Cannot submit invoice",
-        description: "Report must be approved before invoicing",
+        description: `The following work orders have missing or unapproved reports: ${workOrderNumbers}. All reports must be approved before invoicing.`,
         variant: "destructive",
       });
       return;
