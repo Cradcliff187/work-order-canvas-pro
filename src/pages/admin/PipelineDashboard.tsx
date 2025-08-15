@@ -136,14 +136,19 @@ export default function PipelineDashboard() {
   const getInvoiceStatusBadge = (item: any) => {
     // Debug logging for BB-525-001
     if (item.work_order_number === 'BB-525-001') {
-      console.log('BB-525-001 Badge Debug:', {
+      console.log('BB-525-001 Fixed Badge Debug:', {
         invoice_status: item.invoice_status,
         report_status: item.report_status,
-        status: item.status
+        status: item.status,
+        financial_status: item.financial_status
       });
     }
     
     if (!item.invoice_status) {
+      // Show different message based on work order status
+      if (item.status === 'completed' && item.report_status === 'approved') {
+        return <Badge variant="warning">Invoice Needed</Badge>;
+      }
       return <Badge variant="outline">No Invoice</Badge>;
     }
     

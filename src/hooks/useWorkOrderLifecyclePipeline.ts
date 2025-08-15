@@ -102,11 +102,14 @@ export function useWorkOrderLifecycle() {
           )
           .order('submitted_at', { ascending: false })
           .limit(1),
-          subcontractor_invoices:invoice_work_orders!inner(
-            invoices!inner(
+          work_order_invoices:invoice_work_orders(
+            amount,
+            work_order_report_id,
+            invoices(
               id,
               status,
-              submitted_at
+              submitted_at,
+              internal_invoice_number
             )
           )
         `)
@@ -181,7 +184,9 @@ export function useWorkOrderLifecycle() {
         if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
         
         // If there's any invoice activity (submitted, approved, etc.)
-        if (invoiceStatus === 'approved' || invoiceStatus === 'submitted' || partnerBillStatus) return 'invoice_received';
+        if (invoiceStatus === 'approved' || invoiceStatus === 'submitted' || partnerBillStatus) {
+          return 'invoice_received';
+        }
         
         // No billing activity yet
         return 'not_billed';
@@ -192,17 +197,20 @@ export function useWorkOrderLifecycle() {
         // Get the latest report (assuming they're ordered by submitted_at)
         const latestReport = workOrder.latest_report?.[0];
         
-        // Get the subcontractor invoice data 
-        const subcontractorInvoice = workOrder.subcontractor_invoices?.[0]?.invoices;
+        // Get the subcontractor invoice data from work_order_invoices
+        const workOrderInvoices = workOrder.work_order_invoices || [];
+        const subcontractorInvoice = workOrderInvoices.find(inv => inv.invoices)?.invoices;
         
         // Debug logging for troubleshooting
         if (workOrder.work_order_number === 'BB-525-001') {
-          console.log('BB-525-001 Debug Data:', {
+          console.log('BB-525-001 Fixed Debug Data:', {
             workOrderId: workOrder.id,
-            rawInvoiceData: workOrder.subcontractor_invoices,
+            rawWorkOrderInvoices: workOrder.work_order_invoices,
+            allInvoices: workOrderInvoices,
             extractedInvoice: subcontractorInvoice,
             invoiceStatus: subcontractorInvoice?.status,
-            reportStatus: latestReport?.status
+            reportStatus: latestReport?.status,
+            invoiceNumber: subcontractorInvoice?.internal_invoice_number
           });
         }
         
