@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 type WorkOrderReport = Database['public']['Tables']['work_order_reports']['Row'] & {
   work_orders: {
@@ -50,9 +51,21 @@ export function usePartnerReports(
   sorting: SortingState[],
   filters: ReportFilters
 ) {
+  const { userOrganizations } = useAuth();
+  
   return useQuery({
     queryKey: ['partner-reports', pagination, sorting, filters],
     queryFn: async () => {
+      // Get organization IDs for filtering
+      const organizationIds = userOrganizations?.map(org => org.organization_id) || [];
+      
+      if (organizationIds.length === 0) {
+        return {
+          data: [],
+          totalCount: 0,
+          pageCount: 0
+        };
+      }
       let query = supabase
         .from('work_order_reports')
         .select(`
@@ -81,7 +94,7 @@ export function usePartnerReports(
         `, { count: 'exact' });
 
       // Filter to only include reports for work orders in partner's organizations
-      query = query.not('work_orders.organization_id', 'is', null);
+      query = query.in('work_orders.organization_id', organizationIds);
 
       // Apply location filter
       if (filters.location_filter && filters.location_filter !== 'all') {
@@ -131,6 +144,7 @@ export function usePartnerReports(
         pageCount: Math.ceil((count || 0) / pagination.pageSize)
       };
     },
+    enabled: !!userOrganizations && userOrganizations.length > 0,
   });
 }
 
