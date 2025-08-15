@@ -71,24 +71,18 @@ function PartnerSidebar() {
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-3 py-2 min-h-[3rem]">
-          {collapsed || isMobile ? (
-            <div className="flex items-center justify-center w-full h-8">
-              <img 
-                src={assets.logos.square} 
-                alt="AKC Logo" 
-                className="h-8 w-8 object-contain flex-shrink-0"
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <img 
-                src={assets.logos.main} 
-                alt="AKC Logo" 
-                className="h-8 w-auto object-contain"
-              />
-              <p className="text-xs text-sidebar-foreground/60 ml-2">AKC Portal</p>
-            </div>
+        <div className="relative flex items-center gap-2 px-3 py-2 min-h-[3rem]">
+          <img 
+            src={assets.logos.main} 
+            alt="AKC Logo" 
+            className={`h-8 w-auto object-contain transition-all duration-200 ${
+              collapsed ? 'absolute left-1/2 transform -translate-x-1/2' : ''
+            }`}
+          />
+          {!collapsed && (
+            <p className="text-xs text-sidebar-foreground/60 ml-2 transition-opacity duration-200">
+              AKC Portal
+            </p>
           )}
         </div>
       </SidebarHeader>
