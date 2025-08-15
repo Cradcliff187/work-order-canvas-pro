@@ -66,6 +66,37 @@ export function usePartnerReports(
           pageCount: 0
         };
       }
+      // First, get filtered work order IDs based on organization and location
+      let workOrderQuery = supabase
+        .from('work_orders')
+        .select('id')
+        .in('organization_id', organizationIds);
+
+      // Apply location filter to work orders first
+      if (filters.location_filter && filters.location_filter !== 'all') {
+        if (filters.location_filter === 'manual') {
+          // Filter for work orders without partner location numbers (manual locations)
+          workOrderQuery = workOrderQuery.is('partner_location_number', null);
+        } else {
+          // Filter for specific partner location number
+          workOrderQuery = workOrderQuery.eq('partner_location_number', filters.location_filter);
+        }
+      }
+
+      const { data: filteredWorkOrders, error: workOrderError } = await workOrderQuery;
+      if (workOrderError) throw workOrderError;
+
+      const workOrderIds = filteredWorkOrders?.map(wo => wo.id) || [];
+      
+      if (workOrderIds.length === 0) {
+        return {
+          data: [],
+          totalCount: 0,
+          pageCount: 0
+        };
+      }
+
+      // Now query reports for the filtered work orders
       let query = supabase
         .from('work_order_reports')
         .select(`
@@ -91,21 +122,8 @@ export function usePartnerReports(
             first_name,
             last_name
           )
-        `, { count: 'exact' });
-
-      // Filter to only include reports for work orders in partner's organizations
-      query = query.in('work_orders.organization_id', organizationIds);
-
-      // Apply location filter
-      if (filters.location_filter && filters.location_filter !== 'all') {
-        if (filters.location_filter === 'manual') {
-          // Filter for work orders without partner location numbers (manual locations)
-          query = query.is('work_orders.partner_location_number', null);
-        } else {
-          // Filter for specific partner location number
-          query = query.eq('work_orders.partner_location_number', filters.location_filter);
-        }
-      }
+        `, { count: 'exact' })
+        .in('work_order_id', workOrderIds);
 
       // Apply additional filters
       if (filters.status?.length) {
