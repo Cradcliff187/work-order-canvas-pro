@@ -25,7 +25,6 @@ import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-drop
 import { useColumnVisibility } from '@/hooks/useColumnVisibility';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import PipelineDashboard from '@/pages/admin/PipelineDashboard';
-// Removed QuickActionTile in favor of standard Buttons per gold standard
 
 interface DashboardMetrics {
   unbilledReports: {
@@ -47,6 +46,7 @@ interface DashboardMetrics {
     submitted_at: string;
     status: string;
     subcontractor_organization: { name: string };
+    work_order_numbers: string[];
   }>;
   monthlyTotals: {
     partnerInvoices: number;
@@ -81,7 +81,7 @@ async function fetchBillingMetrics(): Promise<DashboardMetrics> {
 
   if (partnerError) throw partnerError;
 
-  // Fetch recent subcontractor invoices
+  // Fetch recent subcontractor invoices with work order numbers
   const { data: subcontractorInvoices, error: subError } = await supabase
     .from('invoices')
     .select(`
@@ -90,12 +90,23 @@ async function fetchBillingMetrics(): Promise<DashboardMetrics> {
       total_amount,
       submitted_at,
       status,
-      subcontractor_organization:organizations!subcontractor_organization_id(name)
+      subcontractor_organization:organizations!subcontractor_organization_id(name),
+      invoice_work_orders(
+        work_orders(work_order_number)
+      )
     `)
     .order('created_at', { ascending: false })
     .limit(5);
 
   if (subError) throw subError;
+
+  // Transform subcontractor invoices to include work order numbers
+  const transformedSubcontractorInvoices = subcontractorInvoices?.map(invoice => ({
+    ...invoice,
+    work_order_numbers: invoice.invoice_work_orders?.map(
+      (iwo: any) => iwo.work_orders?.work_order_number
+    ).filter(Boolean) || []
+  })) || [];
 
   // Calculate monthly totals
   const startOfMonth = new Date();
@@ -121,7 +132,7 @@ async function fetchBillingMetrics(): Promise<DashboardMetrics> {
       totalValue: unbilledValue
     },
     recentPartnerInvoices: partnerInvoices || [],
-    recentSubcontractorInvoices: subcontractorInvoices || [],
+    recentSubcontractorInvoices: transformedSubcontractorInvoices,
     monthlyTotals: {
       partnerInvoices: monthlyPartner?.length || 0,
       subcontractorInvoices: monthlySub?.length || 0,
@@ -467,6 +478,11 @@ if (error) {
                           <p className="text-xs text-muted-foreground">
                             {invoice.subcontractor_organization?.name || 'Unknown'} • {format(new Date(invoice.submitted_at), 'MMM d, yyyy')}
                           </p>
+                          {invoice.work_order_numbers.length > 0 && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              WO: {invoice.work_order_numbers.join(', ')}
+                            </p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="font-medium text-sm">{formatCurrency(invoice.total_amount || 0)}</p>
