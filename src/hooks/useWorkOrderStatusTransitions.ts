@@ -59,16 +59,28 @@ export const useWorkOrderStatusTransitions = () => {
 
   const transitionStatus = useMutation({
     mutationFn: async ({ workOrderId, newStatus, reason }: StatusTransitionData) => {
-      // Validate estimate requirements before transitioning to in_progress
+      // Get current work order data for validation
+      const { data: workOrder, error: fetchError } = await supabase
+        .from('work_orders')
+        .select('*')
+        .eq('id', workOrderId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Validate estimate requirements based on current and target status
+      if (workOrder.status === 'estimate_needed' && newStatus !== 'cancelled') {
+        throw new Error("Estimate must be submitted first");
+      }
+
+      if (workOrder.status === 'estimate_approved' && newStatus === 'in_progress') {
+        if (!workOrder.partner_estimate_approved) {
+          throw new Error("Estimate must be approved by partner before work can begin");
+        }
+      }
+
+      // Legacy validation for direct transitions to in_progress
       if (newStatus === 'in_progress') {
-        const { data: workOrder, error: fetchError } = await supabase
-          .from('work_orders')
-          .select('*')
-          .eq('id', workOrderId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
         const validation = validateEstimateBeforeWork(workOrder);
         if (!validation.isValid) {
           throw new Error(validation.message);
