@@ -5,6 +5,11 @@ import { useQueryPerformance } from './useQueryPerformance';
 import { Database } from '@/integrations/supabase/types';
 
 type WorkOrderDetail = Database['public']['Tables']['work_orders']['Row'] & {
+  // Missing estimate approval fields from database schema
+  internal_estimate_approved?: boolean | null;
+  internal_estimate_approved_at?: string | null;
+  internal_estimate_approved_by?: string | null;
+  
   organizations: { 
     name: string; 
     contact_email: string; 
