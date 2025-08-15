@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
@@ -34,16 +36,48 @@ import { format } from 'date-fns';
 export default function AdminReportDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [reviewNotes, setReviewNotes] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedData, setEditedData] = useState({
+    work_performed: '',
+    materials_used: '',
+    hours_worked: 0,
+    notes: ''
+  });
+
+  // Check if we should start in edit mode
+  useEffect(() => {
+    const shouldEdit = searchParams.get('edit') === 'true';
+    setIsEditMode(shouldEdit);
+    if (shouldEdit) {
+      // Remove edit param from URL
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
+
   // Validate ID format and prevent literal ":id" from being used
   const isValidId = id && id !== ':id' && id.length > 8;
   
   console.log('[AdminReportDetail] Route ID:', id, 'Valid:', isValidId);
   
   const { data: report, isLoading, error, refetch } = useAdminReportDetail(isValidId ? id! : '');
-  const { reviewReport, deleteReport } = useAdminReportMutations();
+
+  // Initialize edit data when report loads
+  useEffect(() => {
+    if (report) {
+      setEditedData({
+        work_performed: report.work_performed || '',
+        materials_used: report.materials_used || '',
+        hours_worked: report.hours_worked || 0,
+        notes: report.notes || ''
+      });
+    }
+  }, [report]);
+  const { reviewReport, deleteReport, updateReport } = useAdminReportMutations();
   const { assignSubcontractor, isAssigning } = useSubcontractorAssignment();
   const { data: subcontractorOrganizations } = useSubcontractorOrganizations();
 
@@ -63,6 +97,33 @@ export default function AdminReportDetail() {
       onSuccess: () => navigate('/admin/reports')
     });
     setDeleteDialogOpen(false);
+  };
+
+  const handleSaveReport = () => {
+    if (!id || !isValidId || !editedData.work_performed.trim()) return;
+    updateReport.mutate({
+      reportId: id,
+      work_performed: editedData.work_performed,
+      materials_used: editedData.materials_used || undefined,
+      hours_worked: editedData.hours_worked || undefined,
+      notes: editedData.notes || undefined
+    }, {
+      onSuccess: () => {
+        setIsEditMode(false);
+      }
+    });
+  };
+
+  const handleCancelEdit = () => {
+    if (report) {
+      setEditedData({
+        work_performed: report.work_performed || '',
+        materials_used: report.materials_used || '',
+        hours_worked: report.hours_worked || 0,
+        notes: report.notes || ''
+      });
+    }
+    setIsEditMode(false);
   };
 
   if (isLoading) {
@@ -155,14 +216,34 @@ export default function AdminReportDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash className="w-4 h-4 mr-2" />
-            Delete Report
-          </Button>
+          {isEditMode ? (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleCancelEdit}
+                disabled={updateReport.isPending}
+              >
+                Cancel
+              </Button>
+              <Button 
+                size="sm"
+                onClick={handleSaveReport}
+                disabled={updateReport.isPending || !editedData.work_performed.trim()}
+              >
+                {updateReport.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </>
+          ) : (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Delete Report
+            </Button>
+          )}
           <ReportStatusBadge status={report.status} size="sm" showIcon />
         </div>
       </div>
@@ -211,28 +292,75 @@ export default function AdminReportDetail() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Work Performed</label>
-                <p className="mt-1 whitespace-pre-wrap">{report.work_performed}</p>
+                <Label htmlFor="work_performed" className="text-sm font-medium text-muted-foreground">
+                  Work Performed *
+                </Label>
+                {isEditMode ? (
+                  <Textarea
+                    id="work_performed"
+                    value={editedData.work_performed}
+                    onChange={(e) => setEditedData(prev => ({ ...prev, work_performed: e.target.value }))}
+                    className="mt-1"
+                    rows={4}
+                    required
+                  />
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap">{report.work_performed}</p>
+                )}
               </div>
 
-              {report.materials_used && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Materials Used</label>
-                  <p className="mt-1 whitespace-pre-wrap">{report.materials_used}</p>
-                </div>
-              )}
+              <div>
+                <Label htmlFor="materials_used" className="text-sm font-medium text-muted-foreground">
+                  Materials Used
+                </Label>
+                {isEditMode ? (
+                  <Textarea
+                    id="materials_used"
+                    value={editedData.materials_used}
+                    onChange={(e) => setEditedData(prev => ({ ...prev, materials_used: e.target.value }))}
+                    className="mt-1"
+                    rows={3}
+                  />
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap">{report.materials_used || 'N/A'}</p>
+                )}
+              </div>
 
-              {report.notes && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Additional Notes</label>
-                  <p className="mt-1 whitespace-pre-wrap">{report.notes}</p>
-                </div>
-              )}
+              <div>
+                <Label htmlFor="notes" className="text-sm font-medium text-muted-foreground">
+                  Additional Notes
+                </Label>
+                {isEditMode ? (
+                  <Textarea
+                    id="notes"
+                    value={editedData.notes}
+                    onChange={(e) => setEditedData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="mt-1"
+                    rows={3}
+                  />
+                ) : (
+                  <p className="mt-1 whitespace-pre-wrap">{report.notes || 'N/A'}</p>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Hours Worked</label>
-                  <p className="font-medium">{report.hours_worked || 'N/A'}</p>
+                  <Label htmlFor="hours_worked" className="text-sm font-medium text-muted-foreground">
+                    Hours Worked
+                  </Label>
+                  {isEditMode ? (
+                    <Input
+                      id="hours_worked"
+                      type="number"
+                      value={editedData.hours_worked}
+                      onChange={(e) => setEditedData(prev => ({ ...prev, hours_worked: parseFloat(e.target.value) || 0 }))}
+                      className="mt-1"
+                      min="0"
+                      step="0.5"
+                    />
+                  ) : (
+                    <p className="font-medium">{report.hours_worked || 'N/A'}</p>
+                  )}
                 </div>
               </div>
             </CardContent>

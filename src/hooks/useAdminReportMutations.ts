@@ -239,9 +239,44 @@ export function useAdminReportMutations() {
     },
   });
 
+  const updateReport = useMutation({
+    mutationFn: async (data: { reportId: string; work_performed: string; materials_used?: string; hours_worked?: number; notes?: string }) => {
+      const { data: result, error } = await supabase
+        .from('work_order_reports')
+        .update({
+          work_performed: data.work_performed,
+          materials_used: data.materials_used || null,
+          hours_worked: data.hours_worked || null,
+          notes: data.notes || null,
+        })
+        .eq('id', data.reportId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Report Updated",
+        description: "Report details have been saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['admin-report-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update report.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     reviewReport,
     bulkReviewReports,
     deleteReport,
+    updateReport,
   };
 }

@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Eye, 
+  Edit,
   CheckCircle, 
   XCircle, 
   Clock, 
@@ -225,6 +226,11 @@ export default function AdminReports() {
             label: 'View Details',
             icon: Eye,
             onClick: () => navigate(`/admin/reports/${report.id}`)
+          },
+          {
+            label: 'Edit Report',
+            icon: Edit,
+            onClick: () => navigate(`/admin/reports/${report.id}?edit=true`)
           },
           {
             label: 'Approve',
