@@ -101,14 +101,15 @@ export function useWorkOrderLifecycle() {
           )
           .order('submitted_at', { ascending: false })
           .limit(1),
-          invoice_work_orders!left(
+          invoice_work_orders(
             invoice_id,
             amount,
-            invoices!inner(
+            invoices(
               id,
               status,
+              total_amount,
               submitted_at,
-              total_amount
+              approved_at
             )
           )
         `)
@@ -148,17 +149,13 @@ export function useWorkOrderLifecycle() {
         throw error;
       }
       
-      // Add debugging for BB-525-001
-      if (data) {
-        const bb525Work = data.find((wo: any) => wo.work_order_number === 'BB-525-001');
-        if (bb525Work) {
-          console.log('🔍 DEBUG BB-525-001 Raw Data:', {
-            fullWorkOrder: bb525Work,
-            invoiceWorkOrders: (bb525Work as any).invoice_work_orders,
-            invoices: (bb525Work as any).invoices,
-          });
-        }
-      }
+      // Temporary debug - remove after confirming it works
+      const bb525 = data?.find((wo: any) => wo.work_order_number === 'BB-525-001');
+      console.log('🚨 BB-525-001 RAW DATA CHECK:', {
+        found: !!bb525,
+        invoice_work_orders: (bb525 as any)?.invoice_work_orders,
+        hasInvoice: (bb525 as any)?.invoice_work_orders?.[0]?.invoices
+      });
 
 
       // Helper functions for calculations
@@ -189,36 +186,15 @@ export function useWorkOrderLifecycle() {
       };
 
       const calculateFinancialStatus = (
-        workOrderInvoices: any[],
+        invoiceStatus: string | null,
         partnerBillStatus: string | null
       ): 'not_billed' | 'invoice_received' | 'paid' | 'invoice_approved' | 'invoice_rejected' => {
-        // Check if we have any invoices
-        const hasInvoice = workOrderInvoices && workOrderInvoices.length > 0;
-        
-        if (!hasInvoice) {
-          return 'not_billed';
-        }
-        
-        // Get the invoice status from the first invoice
-        const invoice = workOrderInvoices.find(inv => inv.invoices)?.invoices;
-        
-        if (!invoice) {
-          return 'not_billed';
-        }
-        
-        // Return the actual invoice status
-        switch (invoice.status) {
-          case 'paid':
-            return 'paid';
-          case 'approved':
-            return 'invoice_approved';  // This will show as "Invoice Approved" badge
-          case 'submitted':
-            return 'invoice_received';  // This will show as "Invoice Received" badge
-          case 'rejected':
-            return 'invoice_rejected';
-          default:
-            return 'not_billed';
-        }
+        // Check invoice status specifically
+        if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
+        if (invoiceStatus === 'approved') return 'invoice_approved';
+        if (invoiceStatus === 'submitted') return 'invoice_received';
+        if (partnerBillStatus) return 'invoice_received';
+        return 'not_billed';
       };
 
       // Transform the data to match our pipeline structure
@@ -226,31 +202,27 @@ export function useWorkOrderLifecycle() {
         // Get the latest report (assuming they're ordered by submitted_at)
         const latestReport = workOrder.latest_report?.[0];
         
-        // Get the subcontractor invoice data from invoice_work_orders with improved extraction
+        // Get invoice data from the junction table
         const invoiceWorkOrders = workOrder.invoice_work_orders || [];
+
+        // The invoice is nested inside each invoice_work_order
         const subcontractorInvoice = invoiceWorkOrders
-          .map((iwo: any) => iwo.invoices)
-          .filter((inv: any) => inv)
-          .sort((a: any, b: any) => {
-            const dateA = new Date(a.submitted_at || a.created_at || 0);
-            const dateB = new Date(b.submitted_at || b.created_at || 0);
-            return dateB.getTime() - dateA.getTime();
-          })[0];
-        
-        // Calculate total invoice amount from invoice_work_orders
-        const totalInvoiceAmount = invoiceWorkOrders.reduce((sum, iwo) => {
-          const amount = iwo.amount || iwo.invoices?.total_amount || 0;
-          return sum + (Number(amount) || 0);
-        }, 0);
-        
-        // In the map function where you process invoices:
+          .filter((iwo: any) => iwo.invoices) // Only get entries with invoices
+          .map((iwo: any) => iwo.invoices) // Extract the nested invoice object
+          .find((inv: any) => inv); // Get the first valid invoice
+
+        // Calculate the amount
+        const totalInvoiceAmount = subcontractorInvoice?.total_amount 
+          ? parseFloat(subcontractorInvoice.total_amount.toString()) 
+          : 0;
+
+        // Debug logging for BB-525-001
         if (workOrder.work_order_number === 'BB-525-001') {
-          console.log('🎯 BB-525-001 Transform Debug:', {
-            raw_invoice_work_orders: workOrder.invoice_work_orders,
-            filtered_invoices: invoiceWorkOrders.map((iwo: any) => iwo.invoices).filter((inv: any) => inv),
-            subcontractorInvoice: subcontractorInvoice,
-            finalInvoiceStatus: subcontractorInvoice?.status,
-            calculatedAmount: totalInvoiceAmount,
+          console.log('🔍 BB-525-001 Invoice Debug:', {
+            invoiceWorkOrders: invoiceWorkOrders,
+            extractedInvoice: subcontractorInvoice,
+            status: subcontractorInvoice?.status,
+            amount: totalInvoiceAmount
           });
         }
         
@@ -270,7 +242,7 @@ export function useWorkOrderLifecycle() {
           ageDays
         );
         const financialStatus = calculateFinancialStatus(
-          invoiceWorkOrders,
+          subcontractorInvoice?.status || null,
           partnerInvoice?.status
         );
 
