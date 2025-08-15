@@ -464,16 +464,16 @@ const WorkOrderList = () => {
                     Clear Filters
                   </Button>
                 )}
+                
+                {/* View mode switcher for desktop only */}
+                {!isMobile && allowedModes.length > 1 && (
+                  <ViewModeSwitcher
+                    value={viewMode}
+                    onValueChange={setViewMode}
+                    allowedModes={allowedModes}
+                  />
+                )}
               </div>
-              
-              {/* View mode switcher for desktop only */}
-              {!isMobile && allowedModes.length > 1 && (
-                <ViewModeSwitcher
-                  value={viewMode}
-                  onValueChange={setViewMode}
-                  allowedModes={allowedModes}
-                />
-              )}
               
               {/* Sort dropdown */}
               {(viewMode === 'card' || viewMode === 'list' || isMobile) && (
