@@ -146,6 +146,37 @@ Deno.serve(async (req) => {
 
     console.log('Password updated successfully for:', targetEmail);
 
+    // Get target user's profile ID for audit log
+    const { data: targetProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('user_id', targetUser.id)
+      .single();
+
+    // Insert audit log (non-blocking - log warning if it fails but don't fail the password reset)
+    try {
+      if (targetProfile) {
+        await supabaseAdmin
+          .from('audit_logs')
+          .insert({
+            table_name: 'password_reset',
+            record_id: targetProfile.id,
+            action: 'PASSWORD_RESET',
+            user_id: adminCheck.id,
+            old_values: null,
+            new_values: {
+              admin_email: user.email,
+              target_email: targetEmail,
+              timestamp: new Date().toISOString(),
+              reset_method: 'admin_forced'
+            }
+          });
+        console.log('Audit log created for password reset');
+      }
+    } catch (auditError) {
+      console.warn('Failed to create audit log for password reset:', auditError);
+    }
+
     return createCorsResponse({
       success: true,
       message: 'Password updated successfully',
