@@ -17,6 +17,7 @@ import {
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 interface ReportDetailPanelProps {
   report: any;
@@ -30,6 +31,7 @@ export function ReportDetailPanel({
   showActionButtons = true 
 }: ReportDetailPanelProps) {
   const workOrder = report?.work_orders;
+  const { isPartner } = useUserProfile();
   
   const formatDate = (date: string | null) => {
     if (!date) return 'N/A';
@@ -172,7 +174,7 @@ export function ReportDetailPanel({
             </div>
           )}
           
-          {report.hours_worked && (
+          {!isPartner() && report.hours_worked && (
             <div>
               <label className="font-medium text-muted-foreground flex items-center gap-1">
                 <Clock className="h-2 w-2" />
