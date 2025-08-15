@@ -53,11 +53,7 @@ export default function AdminReportDetail() {
   useEffect(() => {
     const shouldEdit = searchParams.get('edit') === 'true';
     setIsEditMode(shouldEdit);
-    if (shouldEdit) {
-      // Remove edit param from URL
-      setSearchParams({});
-    }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams]);
 
   // Validate ID format and prevent literal ":id" from being used
   const isValidId = id && id !== ':id' && id.length > 8;
