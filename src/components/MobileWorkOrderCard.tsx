@@ -7,19 +7,23 @@ import { MapPin, Calendar, DollarSign, Clock, ChevronRight, User, Building2, Ale
 import { format, differenceInDays } from 'date-fns';
 import { AssigneeDisplay } from '@/components/AssigneeDisplay';
 import { OrganizationBadge } from '@/components/OrganizationBadge';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { formatLocationDisplay, formatAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { MobileQuickActions, createMapAction, createMessageAction, createViewDetailsAction, createSubmitReportAction, createPhoneAction } from '@/components/work-orders/MobileQuickActions';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 import { cn } from '@/lib/utils';
 
+import type { Database } from '@/integrations/supabase/types';
+
+type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
+
 interface WorkOrder {
   id: string;
   work_order_number: string;
   title: string;
   description?: string;
-  status: string;
+  status: WorkOrderStatus;
   store_location?: string;
   partner_location_number?: string;
   location_name?: string;
@@ -278,6 +282,7 @@ export function MobileWorkOrderCard({
                 status={workOrder.status}
                 size="sm"
                 showIcon={false}
+                workOrder={workOrder}
               />
               {(workOrder.attachment_count || 0) > 0 && (
                 <div className="flex items-center gap-1 text-muted-foreground">

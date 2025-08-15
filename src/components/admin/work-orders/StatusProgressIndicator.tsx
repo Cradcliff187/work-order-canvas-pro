@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Circle, Clock, UserPlus, Play, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkOrderStatus = Database['public']['Enums']['work_order_status'];

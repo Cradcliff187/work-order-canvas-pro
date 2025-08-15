@@ -376,7 +376,7 @@ const SubcontractorWorkOrders = () => {
                         {unreadCounts[workOrder.id]}
                       </Badge>
                     )}
-                    <WorkOrderStatusBadge status={workOrder.status} />
+                    <WorkOrderStatusBadge status={workOrder.status} workOrder={workOrder} />
                   </div>
 
                   <h4 className="font-medium text-foreground">{workOrder.title}</h4>

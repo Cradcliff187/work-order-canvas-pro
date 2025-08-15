@@ -29,7 +29,7 @@ import { CompactMobileCard } from '@/components/admin/shared/CompactMobileCard';
 import { ViewModeSwitcher } from '@/components/ui/view-mode-switcher';
 import { MasterDetailLayout } from '@/components/work-orders/MasterDetailLayout';
 import { WorkOrderDetailPanel } from '@/components/work-orders/WorkOrderDetailPanel';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 import { cn } from '@/lib/utils';
 import { MobilePullToRefresh } from '@/components/MobilePullToRefresh';
 import { useToast } from '@/hooks/use-toast';
@@ -418,7 +418,7 @@ export function WorkOrderTable({
                           <CompactMobileCard
                             title={workOrder.title || 'Untitled Work Order'}
                             subtitle={workOrder.organizations?.name || 'No Organization'}
-                            badge={<WorkOrderStatusBadge status={workOrder.status} />}
+                            badge={<WorkOrderStatusBadge status={workOrder.status} workOrder={workOrder} />}
                             onClick={() => handleWorkOrderRowClick(workOrder)}
                           />
                         </div>

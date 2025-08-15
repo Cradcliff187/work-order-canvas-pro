@@ -19,7 +19,7 @@ import { WorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { format } from 'date-fns';
 import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/addressUtils';
 import { cn } from '@/lib/utils';
-import { WorkOrderStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
 
 interface WorkOrderDetailPanelProps {
   workOrder: WorkOrderDetail;
@@ -54,6 +54,7 @@ export function WorkOrderDetailPanel({
           <WorkOrderStatusBadge
             status={workOrder.status}
             size="sm"
+            workOrder={workOrder}
           />
         </div>
         <h3 className="text-sm font-medium text-muted-foreground">{workOrder.title}</h3>

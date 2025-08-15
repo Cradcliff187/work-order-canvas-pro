@@ -52,7 +52,8 @@ import { formatAddressMultiline, hasAddress, generateMapUrl } from '@/lib/utils/
 import { formatFileSize } from '@/utils/fileUtils';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { WorkOrderStatusBadge, ReportStatusBadge } from '@/components/ui/status-badge';
+import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { ReportStatusBadge } from '@/components/ui/status-badge';
 
 const getFileIcon = (fileType: string, fileName: string) => {
   if (fileType === 'photo' || fileName.match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
@@ -485,6 +486,7 @@ export default function AdminWorkOrderDetail() {
                         status={workOrder.status}
                         size="sm"
                         showIcon
+                        workOrder={workOrder}
                       />
                     </div>
                   </div>
