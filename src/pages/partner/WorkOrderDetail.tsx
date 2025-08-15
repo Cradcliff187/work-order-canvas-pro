@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, MessageCircle, DollarSign, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Clock, User, Phone, Mail, Building, Calendar, MessageCircle, DollarSign } from 'lucide-react';
 import { useWorkOrderDetail } from '@/hooks/useWorkOrderDetail';
 import { useAttachmentOrganizations } from '@/hooks/useAttachmentOrganizations';
 import { formatDate } from '@/lib/utils/date';
@@ -21,6 +21,10 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AttachmentItem } from '@/components/work-orders/shared/AttachmentSection';
 import { toast } from '@/hooks/use-toast';
+import { getEstimateTabStatus, getPartnerFriendlyStatus } from '@/lib/status-display';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 
 export default function WorkOrderDetail() {
@@ -156,9 +160,35 @@ export default function WorkOrderDetail() {
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>
           <TabsTrigger value="messages">Messages</TabsTrigger>
-          {hasInternalEstimate && (
-            <TabsTrigger value="estimate">Estimate</TabsTrigger>
-          )}
+          {hasInternalEstimate && (() => {
+            const tabStatus = getEstimateTabStatus(workOrder);
+            if (!tabStatus) return null;
+            
+            return (
+              <TabsTrigger value="estimate" className="relative">
+                <div className="flex items-center gap-2">
+                  <span>Estimate</span>
+                  {tabStatus.showBadge && (
+                    <Badge 
+                      variant={tabStatus.badgeVariant}
+                      className={cn(
+                        "ml-1 text-xs px-1.5 py-0",
+                        tabStatus.pulseAnimation && "animate-pulse"
+                      )}
+                    >
+                      {tabStatus.badgeText}
+                    </Badge>
+                  )}
+                  {tabStatus.pulseAnimation && (
+                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                  )}
+                </div>
+              </TabsTrigger>
+            );
+          })()}
         </TabsList>
         
         <TabsContent value="details" className="space-y-6">
@@ -365,6 +395,42 @@ export default function WorkOrderDetail() {
         {/* Estimate Tab - Only show if internal estimate exists */}
         {hasInternalEstimate && (
           <TabsContent value="estimate" className="space-y-6">
+            {/* Status-specific alerts */}
+            {workOrder.partner_estimate_approved === null && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-900">Action Required</AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  Please review the estimate below. Your approval is required before work can begin.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {workOrder.partner_estimate_approved === false && (
+              <Alert className="border-red-200 bg-red-50">
+                <XCircle className="h-4 w-4 text-red-600" />
+                <AlertTitle className="text-red-900">Estimate Rejected</AlertTitle>
+                <AlertDescription className="text-red-700">
+                  You previously rejected this estimate. Our team will prepare a revised estimate.
+                  {workOrder.partner_estimate_rejection_notes && (
+                    <div className="mt-2 p-2 bg-white rounded border border-red-200">
+                      <strong>Your feedback:</strong> {workOrder.partner_estimate_rejection_notes}
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {workOrder.partner_estimate_approved === true && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-900">Estimate Approved</AlertTitle>
+                <AlertDescription className="text-green-700">
+                  You approved this estimate on {formatDate(workOrder.partner_estimate_approved_at)}. 
+                  Work is authorized to proceed.
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Professional Estimate Display */}
             <Card>
               <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary/10">
