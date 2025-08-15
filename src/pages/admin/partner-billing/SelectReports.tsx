@@ -75,7 +75,7 @@ export default function SelectReports() {
     location: { label: 'Location', description: 'Store or work location', defaultVisible: true },
     submitted: { label: 'Submitted', description: 'Date when report was submitted', defaultVisible: true },
     invoices: { label: 'Invoices', description: 'Related invoice information', defaultVisible: true },
-    amount: { label: 'Amount', description: 'Subcontractor cost amount', defaultVisible: true },
+    amount: { label: 'Approved Invoice Amount', description: 'Approved subcontractor invoice amount', defaultVisible: true },
     status: { label: 'Status', description: 'Report approval status', defaultVisible: true }
   };
 
@@ -116,7 +116,7 @@ export default function SelectReports() {
     // Apply amount range filter
     if (amountRange.min || amountRange.max) {
       filtered = filtered.filter(report => {
-        const amount = report.subcontractor_costs || 0;
+        const amount = report.approved_subcontractor_invoice_amount || 0;
         const min = amountRange.min ? parseFloat(amountRange.min) : 0;
         const max = amountRange.max ? parseFloat(amountRange.max) : Infinity;
         return amount >= min && amount <= max;
@@ -146,8 +146,8 @@ export default function SelectReports() {
         bv = new Date(b.submitted_at).getTime();
       }
       if (sortKey === 'amount') {
-        av = Number(a.subcontractor_costs || 0);
-        bv = Number(b.subcontractor_costs || 0);
+        av = Number(a.approved_subcontractor_invoice_amount || 0);
+        bv = Number(b.approved_subcontractor_invoice_amount || 0);
       }
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
@@ -162,14 +162,14 @@ export default function SelectReports() {
     if (!filteredAndSortedReports) return { subtotal: 0, markupAmount: 0, total: 0, selectedReports: [] };
     
     const selectedReports = filteredAndSortedReports.filter(report => selectedReportIds.has(report.id));
-    const subtotal = selectedReports.reduce((sum, report) => sum + (report.subcontractor_costs || 0), 0);
+    const subtotal = selectedReports.reduce((sum, report) => sum + (report.approved_subcontractor_invoice_amount || 0), 0);
     const markupAmount = subtotal * (markupPercentage / 100);
     const total = subtotal + markupAmount;
     
     return { subtotal, markupAmount, total, selectedReports };
   }, [filteredAndSortedReports, selectedReportIds, markupPercentage]);
 
-  const totalSubcontractorCosts = reports?.reduce((sum, report) => sum + (report.subcontractor_costs || 0), 0) || 0;
+  const totalApprovedInvoiceAmount = reports?.reduce((sum, report) => sum + (report.approved_subcontractor_invoice_amount || 0), 0) || 0;
 
   const handleReportToggle = (reportId: string, checked: boolean) => {
     const newSet = new Set(selectedReportIds);
@@ -238,7 +238,7 @@ export default function SelectReports() {
           return 'N/A';
         })(),
         submitted_date: format(new Date(report.submitted_at), 'yyyy-MM-dd'),
-        amount: report.subcontractor_costs || 0,
+        amount: report.approved_subcontractor_invoice_amount || 0,
         status: 'Approved'
       }));
 
@@ -249,7 +249,7 @@ export default function SelectReports() {
         { key: 'location', label: 'Location', type: 'string' },
         { key: 'subcontractor', label: 'Subcontractor', type: 'string' },
         { key: 'submitted_date', label: 'Submitted Date', type: 'string' },
-        { key: 'amount', label: 'Amount', type: 'currency' },
+        { key: 'amount', label: 'Approved Invoice Amount', type: 'currency' },
         { key: 'status', label: 'Status', type: 'string' }
       ];
 
@@ -331,7 +331,7 @@ export default function SelectReports() {
         <div>
           <h1 className="text-3xl font-bold">Partner Billing</h1>
           <p className="text-muted-foreground">
-            Select approved reports to include in partner invoices
+            Select reports with approved subcontractor invoices to bill partners
           </p>
         </div>
         {(selectedPartnerId || markupPercentage !== 20 || searchQuery || amountRange.min || amountRange.max || dateRange.start || dateRange.end) && (
@@ -360,7 +360,7 @@ export default function SelectReports() {
             />
             {selectedPartnerId && (
               <p className="text-sm text-muted-foreground">
-                Partner selected. Showing unbilled approved reports below.
+                Partner selected. Showing reports with approved subcontractor invoices ready for billing.
               </p>
             )}
           </div>
@@ -544,7 +544,7 @@ export default function SelectReports() {
                       </Badge>
                       <Badge variant="outline" className="h-5 text-[10px] px-2 flex items-center gap-2">
                         <DollarSign className="w-3 h-3" />
-                        {formatCurrency(totalSubcontractorCosts)} available
+                        {formatCurrency(totalApprovedInvoiceAmount)} available
                       </Badge>
                       {selectedReportIds.size > 0 && (
                         <div className="flex gap-2">
@@ -744,7 +744,7 @@ export default function SelectReports() {
                               )}
                               {columnVisibility.amount !== false && (
                                 <TableCell>
-                                  {report.subcontractor_costs ? (
+                                  {report.approved_subcontractor_invoice_amount ? (
                                     (() => {
                                       const reportInvoiceDetail = invoiceDetails?.find(detail => detail.report_id === report.id);
                                       const invoiceCount = reportInvoiceDetail?.invoice_count || 0;
@@ -754,7 +754,7 @@ export default function SelectReports() {
                                           <TooltipTrigger asChild>
                                             <div className="flex items-center gap-2 cursor-help">
                                               <Badge variant={isSelected ? "default" : "secondary"} className="h-5 text-[10px] px-2">
-                                                {formatCurrency(report.subcontractor_costs)}
+                                                {formatCurrency(report.approved_subcontractor_invoice_amount)}
                                               </Badge>
                                               {invoiceCount > 1 && (
                                                 <Info className="w-3 h-3 text-muted-foreground" />
@@ -838,7 +838,7 @@ export default function SelectReports() {
                           'Title': report.work_orders?.title || 'No title',
                           'Location': report.work_orders?.store_location || '-',
                           'Submitted': format(new Date(report.submitted_at), 'MMM d, yyyy'),
-                          'Amount': report.subcontractor_costs ? formatCurrency(report.subcontractor_costs) : '-',
+                          'Amount': report.approved_subcontractor_invoice_amount ? formatCurrency(report.approved_subcontractor_invoice_amount) : '-',
                           'Status': 'Approved'
                         }}
                         badge={

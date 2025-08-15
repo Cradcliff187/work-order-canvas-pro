@@ -67,10 +67,11 @@ const financialStatusOptions = [
 ];
 
 const partnerBillingStatusOptions = [
-  { value: 'not_billed', label: 'Not Billed' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'sent', label: 'Sent to Partner' },
-  { value: 'paid', label: 'Paid by Partner' }
+  { value: 'report_pending', label: 'Report Pending' },
+  { value: 'invoice_needed', label: 'Subcontractor Invoice Needed' },
+  { value: 'invoice_pending', label: 'Invoice Pending Approval' },
+  { value: 'ready_to_bill', label: 'Ready to Bill Partner' },
+  { value: 'billed', label: 'Partner Billed' },
 ];
 
 const priorityOptions = [
@@ -141,9 +142,30 @@ export function WorkOrderPipelineTable() {
     }
   };
 
-  // Helper function to get partner billing status
+  // Helper function to get partner billing status based on workflow
   const getPartnerBillingStatus = (item: WorkOrderPipelineItem): string => {
-    return item.partner_bill_status || 'not_billed';
+    // Based on the 4-step workflow: Report Created → Subcontractor Invoice → Invoice Approved → Bill Partner
+    if (item.status !== 'completed') {
+      return 'report_pending'; // Work not completed yet
+    }
+    
+    if (item.report_status !== 'approved') {
+      return 'invoice_needed'; // Report not approved yet
+    }
+    
+    if (item.invoice_status === 'submitted' || item.invoice_status === 'pending') {
+      return 'invoice_pending'; // Has pending subcontractor invoices
+    }
+    
+    if (item.partner_bill_status === 'billed' || item.partner_billed_at) {
+      return 'billed'; // Already billed to partner
+    }
+    
+    if (item.invoice_status === 'approved' && item.subcontractor_invoice_amount && item.subcontractor_invoice_amount > 0) {
+      return 'ready_to_bill'; // Has approved invoices, ready to bill partner
+    }
+    
+    return 'invoice_needed'; // Default - needs subcontractor invoice
   };
 
   // Apply client-side filtering with improved logic
@@ -280,41 +302,23 @@ export function WorkOrderPipelineTable() {
     );
   };
 
-  // Create partner billing status badge
+  // Create partner billing status badge aligned with workflow
   const getPartnerBillingBadge = (item: WorkOrderPipelineItem) => {
-    const status = item.partner_bill_status || 'not_billed';
-    let label = 'Not Billed';
-    let variant: 'default' | 'secondary' | 'outline' | 'destructive' = 'outline';
-
-    switch (status) {
-      case 'draft':
-        label = 'Draft';
-        variant = 'secondary';
-        break;
-      case 'sent':
-        label = 'Sent';
-        variant = 'default';
-        break;
-      case 'not_billed':
-        label = 'Not Billed';
-        variant = 'outline';
-        break;
-      case 'billed':
-        label = 'Billed';
-        variant = 'default';
-        break;
-      case 'paid':
-        label = 'Paid';
-        variant = 'default';
-        break;
-      default:
-        label = 'Not Billed';
-        variant = 'outline';
-    }
-
+    const status = getPartnerBillingStatus(item);
+    
+    const statusConfig = {
+      report_pending: { variant: 'secondary' as const, label: 'Report Pending' },
+      invoice_needed: { variant: 'destructive' as const, label: 'Invoice Needed' },
+      invoice_pending: { variant: 'outline' as const, label: 'Invoice Pending' },
+      ready_to_bill: { variant: 'default' as const, label: 'Ready to Bill' },
+      billed: { variant: 'default' as const, label: 'Partner Billed' },
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.report_pending;
+    
     return (
-      <Badge variant={variant} className="whitespace-nowrap">
-        {label}
+      <Badge variant={config.variant} className="text-xs">
+        {config.label}
       </Badge>
     );
   };
@@ -460,7 +464,7 @@ export function WorkOrderPipelineTable() {
     },
     {
       id: 'partner_billing',
-      header: 'Partner Billing',
+      header: 'Partner Billing Status',
       cell: ({ row }) => getPartnerBillingBadge(row.original),
     },
     {

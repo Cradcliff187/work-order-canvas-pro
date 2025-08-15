@@ -37,12 +37,12 @@ export const ReportPipelineEmptyState: React.FC<ReportPipelineEmptyStateProps> =
         "font-semibold mb-2",
         isMobile ? "text-xl" : "text-lg"
       )}>
-        No reports ready for partner billing
+        No Reports Ready for Partner Billing
       </h3>
       
       <div className="space-y-3 max-w-md">
         <p className="text-muted-foreground text-sm">
-          Reports must have approved subcontractor invoices before they can be billed to partners.
+          To bill partners, work orders must have: (1) Approved reports, and (2) Approved subcontractor invoices.
         </p>
         
         {reportStats && reportStats.totalApprovedReports > 0 && (
@@ -73,13 +73,13 @@ export const ReportPipelineEmptyState: React.FC<ReportPipelineEmptyStateProps> =
             
             {reportStats.reportsWithoutInvoices > 0 && (
               <div className="text-xs text-muted-foreground bg-muted p-2 rounded border border-border">
-                <strong>Next step:</strong> Subcontractors need to submit invoices for {reportStats.reportsWithoutInvoices} report{reportStats.reportsWithoutInvoices !== 1 ? 's' : ''}.
+                <strong>Next step:</strong> {reportStats.reportsWithoutInvoices} report{reportStats.reportsWithoutInvoices !== 1 ? 's' : ''} need{reportStats.reportsWithoutInvoices === 1 ? 's' : ''} subcontractor invoices.
               </div>
             )}
             
             {reportStats.reportsWithPendingInvoices > 0 && (
               <div className="text-xs text-muted-foreground bg-muted p-2 rounded border border-border">
-                <strong>Action needed:</strong> {reportStats.reportsWithPendingInvoices} subcontractor invoice{reportStats.reportsWithPendingInvoices !== 1 ? 's' : ''} need{reportStats.reportsWithPendingInvoices === 1 ? 's' : ''} approval.
+                <strong>Action needed:</strong> Approve {reportStats.reportsWithPendingInvoices} pending subcontractor invoice{reportStats.reportsWithPendingInvoices !== 1 ? 's' : ''}.
               </div>
             )}
           </div>
