@@ -66,7 +66,7 @@ export function usePartnerReports(
           pageCount: 0
         };
       }
-      // First, get filtered work order IDs based on organization and location
+      // First, get filtered work order IDs based on organization, location, and search
       let workOrderQuery = supabase
         .from('work_orders')
         .select('id')
@@ -81,6 +81,12 @@ export function usePartnerReports(
           // Filter for specific partner location number
           workOrderQuery = workOrderQuery.eq('partner_location_number', filters.location_filter);
         }
+      }
+
+      // Apply search filter to work orders (work order number, title, store location)
+      if (filters.search) {
+        const searchTerm = `%${filters.search.trim()}%`;
+        workOrderQuery = workOrderQuery.or(`work_order_number.ilike.${searchTerm},title.ilike.${searchTerm},store_location.ilike.${searchTerm}`);
       }
 
       const { data: filteredWorkOrders, error: workOrderError } = await workOrderQuery;
