@@ -206,6 +206,10 @@ export default function PartnerReports() {
     setFilters({ location_filter: 'all' });
   };
 
+  const hasActiveFilters = useMemo(() => {
+    return !!(filters.search || (filters.status && filters.status.length > 0) || (filters.location_filter && filters.location_filter !== 'all'));
+  }, [filters]);
+
   const getSelectedLocationName = () => {
     if (!filters.location_filter || filters.location_filter === 'all') {
       return null;
@@ -286,37 +290,28 @@ export default function PartnerReports() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-4 h-4" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search reports..."
-                  value={filters.search || ''}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                  className="pl-9"
-                />
+      <Card className="w-full max-w-full overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Search reports..."
+                    value={filters.search || ''}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
               <Select
                 value={filters.status?.[0] || 'all'}
                 onValueChange={(value) => 
                   handleFilterChange('status', value === 'all' ? undefined : [value])
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -327,15 +322,11 @@ export default function PartnerReports() {
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Location</label>
               <Select
                 value={filters.location_filter || 'all'}
                 onValueChange={(value) => handleFilterChange('location_filter', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -348,13 +339,12 @@ export default function PartnerReports() {
                   <SelectItem value="manual">Manual Locations</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="flex items-end">
-              <Button variant="outline" onClick={handleClearFilters}>
-                <X className="w-4 h-4 mr-2" />
-                Clear Filters
-              </Button>
+              {hasActiveFilters && (
+                <Button variant="outline" onClick={handleClearFilters} className="w-full sm:w-auto">
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -389,7 +379,7 @@ export default function PartnerReports() {
             <Card>
               <CardContent className="p-8">
                 <div className="text-center text-muted-foreground">
-                  {filters.search || filters.status || (filters.location_filter && filters.location_filter !== 'all') ? (
+                  {hasActiveFilters ? (
                     <div className="space-y-2">
                       <p>No reports found matching your criteria.</p>
                       <Button variant="outline" onClick={handleClearFilters}>
