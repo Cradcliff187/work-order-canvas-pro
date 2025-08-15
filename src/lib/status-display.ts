@@ -1,11 +1,15 @@
 import { Database } from '@/integrations/supabase/types';
 import { hasInternalEstimate } from '@/lib/validations/estimate-validations';
-// Minimal WorkOrder interface for status display functions
+
+// Flexible WorkOrder interface for status display functions
 interface WorkOrderForStatus {
   internal_estimate_amount?: number | null;
   partner_estimate_approved?: boolean | null;
   subcontractor_estimate_amount?: number | null;
 }
+
+// Type that satisfies both our interface and the validation function requirements
+type WorkOrderInput = WorkOrderForStatus & Partial<Database['public']['Tables']['work_orders']['Row']>;
 
 type WorkOrderStatus = Database['public']['Enums']['work_order_status'];
 type UserRole = 'admin' | 'partner' | 'subcontractor' | 'employee';
@@ -17,11 +21,12 @@ interface StatusDisplay {
 
 export function getPartnerFriendlyStatus(
   status: WorkOrderStatus,
-  workOrder: WorkOrderForStatus
+  workOrder: WorkOrderInput
 ): string {
   // Special handling for estimate-related statuses when viewed by partners
   if (status === 'estimate_needed') {
-    if (hasInternalEstimate(workOrder)) {
+    // Use our own check for internal estimate to avoid type issues
+    if (workOrder.internal_estimate_amount && workOrder.internal_estimate_amount > 0) {
       // Partner needs to approve the estimate we've prepared
       return 'Pending Your Approval';
     }
@@ -55,9 +60,9 @@ export interface EstimateTabStatus {
   pulseAnimation?: boolean;
 }
 
-export function getEstimateTabStatus(workOrder: WorkOrderForStatus): EstimateTabStatus | null {
+export function getEstimateTabStatus(workOrder: WorkOrderInput): EstimateTabStatus | null {
   // Don't show estimate tab if no internal estimate exists
-  if (!hasInternalEstimate(workOrder)) {
+  if (!(workOrder.internal_estimate_amount && workOrder.internal_estimate_amount > 0)) {
     return null;
   }
   
