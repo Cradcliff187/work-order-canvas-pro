@@ -19,6 +19,27 @@ interface StatusDisplay {
   description?: string;
 }
 
+/**
+ * Translates technical work order statuses to partner-friendly labels
+ * 
+ * Partners see user-friendly labels like "Pending Your Approval" instead of 
+ * technical database values like "estimate_needed". This improves the partner
+ * experience by using business language instead of system terminology.
+ * 
+ * @param status - The database status enum value (e.g., 'estimate_needed')
+ * @param workOrder - Work order object with estimate data for context
+ * @returns Partner-friendly status label or falls back to mapped technical label
+ * 
+ * @example
+ * // Partner with pending estimate approval
+ * getPartnerFriendlyStatus('estimate_needed', { internal_estimate_amount: 1000 })
+ * // Returns: "Pending Your Approval"
+ * 
+ * @example  
+ * // Partner without estimate ready
+ * getPartnerFriendlyStatus('estimate_needed', { internal_estimate_amount: null })
+ * // Returns: "Preparing Estimate"
+ */
 export function getPartnerFriendlyStatus(
   status: WorkOrderStatus,
   workOrder: WorkOrderInput
@@ -60,6 +81,21 @@ export interface EstimateTabStatus {
   pulseAnimation?: boolean;
 }
 
+/**
+ * Determines estimate tab display status and badge information for partners
+ * 
+ * Analyzes work order estimate data to determine what badge (if any) should be
+ * shown on the estimate tab. Returns null if no estimate exists, otherwise
+ * provides badge styling and animation configuration.
+ * 
+ * @param workOrder - Work order object with estimate amounts and approval status
+ * @returns EstimateTabStatus object with badge configuration, or null if no estimate
+ * 
+ * @example
+ * // Work order with pending estimate approval
+ * getEstimateTabStatus({ internal_estimate_amount: 1000, partner_estimate_approved: null })
+ * // Returns: { showBadge: true, badgeVariant: 'warning', badgeText: 'Action Required', pulseAnimation: true }
+ */
 export function getEstimateTabStatus(workOrder: WorkOrderInput): EstimateTabStatus | null {
   // Don't show estimate tab if no internal estimate exists
   if (!(workOrder.internal_estimate_amount && workOrder.internal_estimate_amount > 0)) {

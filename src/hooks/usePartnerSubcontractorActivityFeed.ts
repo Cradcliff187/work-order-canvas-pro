@@ -1,6 +1,7 @@
 import { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getPartnerFriendlyStatus } from '@/lib/status-display';
 import { useUserProfile } from './useUserProfile';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMessageCounts } from '@/contexts/MessageCountsProvider';
@@ -169,6 +170,14 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
                 ? `${(change.profiles as any).first_name} ${(change.profiles as any).last_name}`
                 : 'System');
 
+          // Use partner-friendly status labels for partners
+          const displayOldStatus = role === 'partner' 
+            ? getPartnerFriendlyStatus(oldStatus as any, {})
+            : oldStatus;
+          const displayNewStatus = role === 'partner'
+            ? getPartnerFriendlyStatus(newStatus as any, {})
+            : newStatus;
+
           activities.push({
             id: `status-${change.id}`,
             type: 'status_change',
@@ -177,7 +186,7 @@ export function usePartnerSubcontractorActivityFeed(role: 'partner' | 'subcontra
             work_order_title: workOrder.title,
             location: `${workOrder.store_location}, ${workOrder.city}`,
             timestamp: change.created_at,
-            title: `Status changed: ${oldStatus} → ${newStatus}`,
+            title: `Status changed: ${displayOldStatus} → ${displayNewStatus}`,
             description: `${changerName} changed status from ${oldStatus} to ${newStatus}`,
             actionUrl: `/${role}/work-orders/${change.record_id}`,
             old_status: oldStatus,
