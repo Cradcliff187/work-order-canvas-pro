@@ -221,12 +221,6 @@ export default function PipelineDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Pipeline Dashboard</h1>
-        <p className="text-muted-foreground">Complete work order lifecycle tracking</p>
-      </div>
-
       {/* Metrics Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
