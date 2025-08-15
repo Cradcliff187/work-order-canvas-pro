@@ -41,7 +41,7 @@ export const EditInvoiceSheet: React.FC<EditInvoiceSheetProps> = ({ open, onOpen
   const [dueDate, setDueDate] = useState<string>('');
   const [paidAt, setPaidAt] = useState<string>('');
   const [workOrderAmounts, setWorkOrderAmounts] = useState<InvoiceWorkOrder[]>([]);
-  const [workOrdersOpen, setWorkOrdersOpen] = useState(false);
+  const [workOrdersOpen, setWorkOrdersOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
