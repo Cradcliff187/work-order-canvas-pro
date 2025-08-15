@@ -10,6 +10,13 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useToast } from '@/hooks/use-toast';
 import type { AttachmentItem } from '@/components/work-orders/shared/AttachmentSection';
 import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { 
   ArrowLeft, 
   Edit, 
@@ -116,6 +123,127 @@ export default function AdminWorkOrderDetail() {
     isBulk: false,
     fileIds: []
   });
+
+  // Estimate form schemas
+  const internalEstimateSchema = z.object({
+    amount: z.string().min(1, 'Amount is required'),
+    description: z.string().min(1, 'Description is required'),
+    markup_percentage: z.string().optional(),
+  });
+
+  const proxyEstimateSchema = z.object({
+    subcontractor_amount: z.string().min(1, 'Subcontractor amount is required'),
+    subcontractor_description: z.string().min(1, 'Subcontractor description is required'),
+    internal_amount: z.string().min(1, 'Internal amount is required'),
+    internal_description: z.string().min(1, 'Internal description is required'),
+    markup_percentage: z.string().optional(),
+  });
+
+  // Forms
+  const internalEstimateForm = useForm({
+    resolver: zodResolver(internalEstimateSchema),
+    defaultValues: {
+      amount: '',
+      description: '',
+      markup_percentage: '0',
+    },
+  });
+
+  const proxyEstimateForm = useForm({
+    resolver: zodResolver(proxyEstimateSchema),
+    defaultValues: {
+      subcontractor_amount: '',
+      subcontractor_description: '',
+      internal_amount: '',
+      internal_description: '',
+      markup_percentage: '0',
+    },
+  });
+
+  // Auto-fill handler for internal estimate
+  const handleAutoFill = () => {
+    if (!workOrder?.subcontractor_estimate_amount) return;
+    
+    const markupPercentage = parseFloat(internalEstimateForm.getValues('markup_percentage') || '0');
+    const subAmount = parseFloat(workOrder.subcontractor_estimate_amount.toString());
+    const calculatedAmount = subAmount * (1 + markupPercentage / 100);
+    
+    internalEstimateForm.setValue('amount', calculatedAmount.toFixed(2));
+  };
+
+  // Auto-fill handler for proxy submission
+  const handleProxyAutoFill = () => {
+    const subAmount = proxyEstimateForm.getValues('subcontractor_amount');
+    const markupPercentage = parseFloat(proxyEstimateForm.getValues('markup_percentage') || '0');
+    
+    if (subAmount) {
+      const calculatedAmount = parseFloat(subAmount) * (1 + markupPercentage / 100);
+      proxyEstimateForm.setValue('internal_amount', calculatedAmount.toFixed(2));
+    }
+  };
+
+  // Form submission handlers
+  const onSubmitInternalEstimate = async (data: z.infer<typeof internalEstimateSchema>) => {
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          internal_estimate_amount: parseFloat(data.amount),
+          internal_estimate_description: data.description,
+          internal_markup_percentage: data.markup_percentage ? parseFloat(data.markup_percentage) : null,
+        })
+        .eq('id', workOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Internal estimate submitted successfully',
+      });
+
+      refetch();
+      internalEstimateForm.reset();
+    } catch (error) {
+      console.error('Error submitting internal estimate:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit internal estimate',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const onSubmitProxyEstimate = async (data: z.infer<typeof proxyEstimateSchema>) => {
+    try {
+      const { error } = await supabase
+        .from('work_orders')
+        .update({
+          subcontractor_estimate_amount: parseFloat(data.subcontractor_amount),
+          subcontractor_estimate_description: data.subcontractor_description,
+          internal_estimate_amount: parseFloat(data.internal_amount),
+          internal_estimate_description: data.internal_description,
+          internal_markup_percentage: data.markup_percentage ? parseFloat(data.markup_percentage) : null,
+        })
+        .eq('id', workOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Estimates submitted successfully',
+      });
+
+      refetch();
+      proxyEstimateForm.reset();
+    } catch (error) {
+      console.error('Error submitting proxy estimate:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit estimates',
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (!id) {
     return (
@@ -315,9 +443,10 @@ export default function AdminWorkOrderDetail() {
       {/* Tabs for detailed sections */}
       <Tabs defaultValue="details" className="space-y-6">
         <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
-          <TabsList className="inline-flex min-w-max lg:grid lg:grid-cols-5">
+          <TabsList className="inline-flex min-w-max lg:grid lg:grid-cols-6">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="estimates">Estimates</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
             <TabsTrigger value="messages">
               <MessageCircle className="h-4 w-4 mr-2" />
@@ -683,6 +812,254 @@ export default function AdminWorkOrderDetail() {
               </Card>
             );
           })()}
+        </TabsContent>
+
+        <TabsContent value="estimates" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Subcontractor Estimate Display */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Subcontractor Estimate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {workOrder.subcontractor_estimate_amount ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Amount</label>
+                      <p className="text-2xl font-bold text-green-600">
+                        ${parseFloat(workOrder.subcontractor_estimate_amount.toString()).toFixed(2)}
+                      </p>
+                    </div>
+                    {workOrder.subcontractor_estimate_description && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Description</label>
+                        <p className="text-sm">{workOrder.subcontractor_estimate_description}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Submitted</label>
+                      <p className="text-sm">{formatDateTime(workOrder.subcontractor_estimate_submitted_at)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">
+                    No subcontractor estimate submitted yet
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Internal Estimate Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Create Internal Estimate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {workOrder.internal_estimate_amount ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Amount</label>
+                      <p className="text-2xl font-bold text-blue-600">
+                        ${parseFloat(workOrder.internal_estimate_amount.toString()).toFixed(2)}
+                      </p>
+                    </div>
+                    {workOrder.internal_estimate_description && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Description</label>
+                        <p className="text-sm">{workOrder.internal_estimate_description}</p>
+                      </div>
+                    )}
+                    {workOrder.internal_markup_percentage && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Markup</label>
+                        <p className="text-sm">{workOrder.internal_markup_percentage}%</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Form {...internalEstimateForm}>
+                    <form onSubmit={internalEstimateForm.handleSubmit(onSubmitInternalEstimate)} className="space-y-4">
+                      <FormField
+                        control={internalEstimateForm.control}
+                        name="amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Amount ($)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" step="0.01" placeholder="0.00" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={internalEstimateForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Describe the work to be performed..." />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={internalEstimateForm.control}
+                        name="markup_percentage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Markup Percentage (optional)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" step="0.1" placeholder="0" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {workOrder.subcontractor_estimate_amount && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAutoFill}
+                          className="w-full"
+                        >
+                          Auto-fill from Subcontractor Estimate
+                        </Button>
+                      )}
+
+                      <Button type="submit" className="w-full">
+                        Submit Internal Estimate
+                      </Button>
+                    </form>
+                  </Form>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Admin Proxy Submission */}
+          {!workOrder.subcontractor_estimate_amount && !workOrder.internal_estimate_amount && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Admin Proxy Submission
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Submit both subcontractor and internal estimates simultaneously as an admin.
+                </p>
+                <Form {...proxyEstimateForm}>
+                  <form onSubmit={proxyEstimateForm.handleSubmit(onSubmitProxyEstimate)} className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Subcontractor Section */}
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Subcontractor Estimate</h3>
+                        <FormField
+                          control={proxyEstimateForm.control}
+                          name="subcontractor_amount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Amount ($)</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="number" step="0.01" placeholder="0.00" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={proxyEstimateForm.control}
+                          name="subcontractor_description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Subcontractor's work description..." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Internal Section */}
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Internal Estimate</h3>
+                        <FormField
+                          control={proxyEstimateForm.control}
+                          name="internal_amount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Amount ($)</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="number" step="0.01" placeholder="0.00" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={proxyEstimateForm.control}
+                          name="internal_description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Internal work description..." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={proxyEstimateForm.control}
+                          name="markup_percentage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Markup Percentage (optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="number" step="0.1" placeholder="0" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleProxyAutoFill}
+                          className="w-full"
+                        >
+                          Auto-calculate Internal Amount
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Button type="submit" className="w-full">
+                      Submit Both Estimates
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="attachments">
