@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { MessageSquare, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface UnreadMessagesDropdownProps {
   isVisible: boolean;
@@ -43,7 +44,7 @@ export function UnreadMessagesDropdown({
     .filter(([, count]) => count > 0)
     .map(([id]) => id);
 
-  const { data: workOrders = [] } = useQuery({
+  const { data: workOrders = [], isLoading } = useQuery({
     queryKey: ['work-orders-for-dropdown', workOrderIdsWithUnread],
     queryFn: async () => {
       if (workOrderIdsWithUnread.length === 0) return [];
@@ -141,10 +142,21 @@ export function UnreadMessagesDropdown({
           onMouseEnter={() => setIsHovered(true)}
         />
         <CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-            <MessageSquare className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm">Unread Messages</span>
+          <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">Unread Messages</span>
+            </div>
+            <Badge variant="destructive" className="text-xs">
+              {Object.values(unreadCounts).reduce((sum, count) => sum + count, 0)} new
+            </Badge>
           </div>
+          
+          {(isLoading || !workOrders) && (
+            <div className="flex items-center justify-center py-4">
+              <span className="text-sm text-muted-foreground">Loading messages...</span>
+            </div>
+          )}
           
           <div className="space-y-1">
             {displayedWorkOrders.map((workOrder) => {

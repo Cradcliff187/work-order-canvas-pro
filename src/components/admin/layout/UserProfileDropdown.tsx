@@ -9,12 +9,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip';
 import { Settings, LogOut, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { UnreadMessagesDropdown } from '@/components/layout/UnreadMessagesDropdown';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface UserProfileDropdownProps {
   collapsed?: boolean;
@@ -75,19 +82,26 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
       <div className="relative">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              ref={buttonRef}
-              variant="ghost" 
-              size="sm" 
-              className="w-full p-2 relative"
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => {
-                if (totalUnread > 0 && !isMobile) {
-                  setShowUnreadDropdown(true);
-                }
-              }}
-            >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    ref={buttonRef}
+                    variant="ghost" 
+                    size="sm" 
+                    className={cn(
+                      "w-full p-2 relative transition-all",
+                      totalUnread > 0 && "hover:ring-2 hover:ring-destructive/30",
+                      showUnreadDropdown && totalUnread > 0 && "ring-2 ring-destructive/30"
+                    )}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                    onClick={() => {
+                      if (totalUnread > 0 && !isMobile) {
+                        setShowUnreadDropdown(true);
+                      }
+                    }}
+                  >
               <div className="relative">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">
@@ -95,12 +109,20 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
                   </AvatarFallback>
                 </Avatar>
                 {totalUnread > 0 && (
-                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full border border-background">
+                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full border border-background animate-pulse">
                     <span className="sr-only">{totalUnread} unread messages</span>
                   </div>
                 )}
               </div>
-            </Button>
+                  </Button>
+                </TooltipTrigger>
+                {totalUnread > 0 && (
+                  <TooltipContent>
+                    <p>{totalUnread} unread messages - hover to view</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
             <DropdownMenuItem onClick={() => navigate('/messages')}>
@@ -134,18 +156,25 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
     <div className="relative flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            ref={buttonRef}
-            variant="ghost" 
-            className="w-full justify-start gap-2 h-auto p-2 relative"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onClick={() => {
-              if (totalUnread > 0 && !isMobile) {
-                setShowUnreadDropdown(true);
-              }
-            }}
-          >
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  ref={buttonRef}
+                  variant="ghost" 
+                  className={cn(
+                    "w-full justify-start gap-2 h-auto p-2 relative transition-all",
+                    totalUnread > 0 && "hover:ring-2 hover:ring-destructive/30",
+                    showUnreadDropdown && totalUnread > 0 && "ring-2 ring-destructive/30"
+                  )}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                  onClick={() => {
+                    if (totalUnread > 0 && !isMobile) {
+                      setShowUnreadDropdown(true);
+                    }
+                  }}
+                >
             <div className="relative">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="text-xs">
@@ -153,7 +182,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
                 </AvatarFallback>
               </Avatar>
               {totalUnread > 0 && (
-                <div className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full border border-background">
+                <div className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full border border-background animate-pulse">
                   <span className="sr-only">{totalUnread} unread messages</span>
                 </div>
               )}
@@ -162,7 +191,15 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
               <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
               <span className="text-muted-foreground capitalize">{primaryRole}</span>
             </div>
-          </Button>
+                </Button>
+              </TooltipTrigger>
+              {totalUnread > 0 && (
+                <TooltipContent>
+                  <p>{totalUnread} unread messages - hover to view</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
           <DropdownMenuItem onClick={() => navigate('/messages')}>
