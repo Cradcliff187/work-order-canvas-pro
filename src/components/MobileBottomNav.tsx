@@ -23,6 +23,10 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
   const location = useLocation();
   const { pendingCount } = useOfflineStorage();
 
+  // DEBUG: Log received nav items
+  console.log('🔍 [MobileBottomNav] Received customNavItems:', customNavItems);
+  console.log('🔍 [MobileBottomNav] Current location:', location.pathname);
+
   // Default subcontractor navigation (for backward compatibility)
   const defaultNavItems: NavItem[] = [
     {
@@ -67,13 +71,25 @@ export function MobileBottomNav({ navItems: customNavItems }: MobileBottomNavPro
   // Use custom nav items if provided, otherwise use defaults
   const navItems = customNavItems || defaultNavItems;
 
+  // DEBUG: Log final nav items being used
+  console.log('🔍 [MobileBottomNav] Final navItems being used:', navItems);
+  console.log('🔍 [MobileBottomNav] Using custom items?', !!customNavItems);
+
   const handleNavClick = (item: NavItem) => {
+    // DEBUG: Log click events
+    console.log('🔍 [MobileBottomNav] Nav item clicked:', item.label, 'path:', item.path);
+    
     // Add haptic feedback
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
     }
 
-    navigate(item.path);
+    try {
+      navigate(item.path);
+      console.log('🔍 [MobileBottomNav] Navigation successful to:', item.path);
+    } catch (error) {
+      console.error('🔍 [MobileBottomNav] Navigation error:', error);
+    }
   };
 
   const isActive = (path: string) => {

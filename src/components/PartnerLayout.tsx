@@ -186,6 +186,9 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const organizationNavItems = useOrganizationNavigation();
 
+  // DEBUG: Log organization navigation items
+  console.log('🔍 [PartnerLayout] organizationNavItems:', organizationNavItems);
+
   // Stable icon mapping
   const iconMap = useMemo(() => ({
     'Dashboard': BarChart3,
@@ -207,10 +210,17 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
         path: item.path,
       }));
     
-    return [
+    const final = [
       ...base,
       { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages' }
     ];
+
+    // DEBUG: Log partner navigation items
+    console.log('🔍 [PartnerLayout] filtered organizationNavItems:', organizationNavItems.filter(item => item.visible));
+    console.log('🔍 [PartnerLayout] mapped base items:', base);
+    console.log('🔍 [PartnerLayout] final partnerNavItems:', final);
+    
+    return final;
   }, [organizationNavItems, iconMap]);
 
   return (
@@ -233,7 +243,12 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
           </main>
         </div>
         
-        {isMobile && <MobileBottomNav navItems={partnerNavItems} />}
+        {isMobile && (
+          <>
+            {console.log('🔍 [PartnerLayout] Passing to MobileBottomNav:', partnerNavItems)}
+            <MobileBottomNav navItems={partnerNavItems} />
+          </>
+        )}
       </div>
     </SidebarProvider>
   );

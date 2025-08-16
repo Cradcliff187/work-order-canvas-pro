@@ -13,19 +13,34 @@ export const useUserProfile = () => {
   const { profile, loading, userOrganizations } = useAuth();
   
   // Memoize organization memberships for stable references
-  const memberships = useMemo(() => ({
-    internal: getInternalMembership(userOrganizations),
-    partner: filterMembershipsByType(userOrganizations, 'partner'),
-    subcontractor: filterMembershipsByType(userOrganizations, 'subcontractor')
-  }), [userOrganizations]);
+  const memberships = useMemo(() => {
+    const internal = getInternalMembership(userOrganizations);
+    const partner = filterMembershipsByType(userOrganizations, 'partner');
+    const subcontractor = filterMembershipsByType(userOrganizations, 'subcontractor');
+
+    // DEBUG: Log organization memberships
+    console.log('🔍 [useUserProfile] userOrganizations:', userOrganizations);
+    console.log('🔍 [useUserProfile] internal membership:', internal);
+    console.log('🔍 [useUserProfile] partner memberships:', partner);
+    console.log('🔍 [useUserProfile] subcontractor memberships:', subcontractor);
+
+    return { internal, partner, subcontractor };
+  }, [userOrganizations]);
 
   // Memoize permission checks to prevent unnecessary re-computations
-  const permissionChecks = useMemo(() => ({
-    isAdmin: organizationCheckers.isAdmin(memberships.internal),
-    isEmployee: organizationCheckers.isEmployee(memberships.internal),
-    isPartner: organizationCheckers.isPartner(memberships.partner),
-    isSubcontractor: organizationCheckers.isSubcontractor(memberships.subcontractor)
-  }), [
+  const permissionChecks = useMemo(() => {
+    const checks = {
+      isAdmin: organizationCheckers.isAdmin(memberships.internal),
+      isEmployee: organizationCheckers.isEmployee(memberships.internal),
+      isPartner: organizationCheckers.isPartner(memberships.partner),
+      isSubcontractor: organizationCheckers.isSubcontractor(memberships.subcontractor)
+    };
+
+    // DEBUG: Log permission checks
+    console.log('🔍 [useUserProfile] Permission checks:', checks);
+
+    return checks;
+  }, [
     memberships.internal?.role,
     memberships.partner.length,
     memberships.subcontractor.length
