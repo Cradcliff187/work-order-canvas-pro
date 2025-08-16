@@ -16,6 +16,7 @@ import { TableSkeleton } from '@/components/admin/shared/TableSkeleton';
 import { MobileTableCard } from '@/components/admin/shared/MobileTableCard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
+
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -237,92 +238,6 @@ export function WorkOrderPipelineTable() {
 
   const data = useMemo(() => filteredData, [filteredData]);
 
-  // Create operational status badge
-  const getOperationalStatusBadge = (item: WorkOrderPipelineItem) => {
-    let status = 'New';
-    let variant: 'default' | 'secondary' | 'outline' | 'destructive' = 'outline';
-    
-    switch (item.status) {
-      case 'received':
-        status = 'New';
-        variant = 'outline';
-        break;
-      case 'assigned':
-        status = 'Assigned';
-        variant = 'secondary';
-        break;
-      case 'in_progress':
-        status = 'In Progress';
-        variant = 'default';
-        break;
-      case 'completed':
-        if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
-          status = 'Reports Pending';
-          variant = 'default';
-        } else {
-          status = 'Complete';
-          variant = 'default';
-        }
-        break;
-      default:
-        status = 'New';
-        variant = 'outline';
-    }
-
-    // Override with operational status if available
-    if (item.operational_status) {
-      switch (item.operational_status) {
-        case 'on_track':
-          variant = 'default';
-          break;
-        case 'at_risk':
-          variant = 'secondary';
-          break;
-        case 'overdue':
-          variant = 'destructive';
-          break;
-        case 'blocked':
-          variant = 'destructive';
-          break;
-        case 'completed':
-          variant = 'default';
-          status = 'Complete';
-          break;
-      }
-    }
-
-    // Apply overdue styling
-    if (item.is_overdue) {
-      variant = 'destructive';
-    }
-
-    return (
-      <Badge variant={variant} className="whitespace-nowrap">
-        {status}
-      </Badge>
-    );
-  };
-
-  // Create partner billing status badge aligned with workflow
-  const getPartnerBillingBadge = (item: WorkOrderPipelineItem) => {
-    const status = getPartnerBillingStatus(item);
-    
-    const statusConfig = {
-      report_pending: { variant: 'secondary' as const, label: 'Report Pending' },
-      invoice_needed: { variant: 'destructive' as const, label: 'Invoice Needed' },
-      invoice_pending: { variant: 'outline' as const, label: 'Invoice Pending' },
-      ready_to_bill: { variant: 'default' as const, label: 'Ready to Bill' },
-      billed: { variant: 'default' as const, label: 'Partner Billed' },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.report_pending;
-    
-    return (
-      <Badge variant={config.variant} className="text-xs">
-        {config.label}
-      </Badge>
-    );
-  };
 
   const columns: ColumnDef<WorkOrderPipelineItem>[] = useMemo(() => [
     {
@@ -701,7 +616,7 @@ export function WorkOrderPipelineTable() {
                     key={row.id}
                     title={`${item.work_order_number} - ${item.title}`}
                     subtitle={`${item.partner_organization_name} • ${item.store_location || 'No location'}`}
-                    status={getOperationalStatusBadge(item)}
+                    status={<WorkOrderStatusBadge status={item.status} size="sm" showIcon />}
                     onClick={() => handleRowClick(item)}
                   >
                     <div className="space-y-2">
@@ -717,7 +632,7 @@ export function WorkOrderPipelineTable() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Billing:</span>
-                        {getPartnerBillingBadge(item)}
+                        <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(item)} size="sm" showIcon />
                       </div>
                       {item.subcontractor_invoice_amount && (
                         <div className="flex justify-between items-center">
