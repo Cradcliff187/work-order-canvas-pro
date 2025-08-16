@@ -40,7 +40,10 @@ export const MessageCountsProvider: React.FC<{ children: React.ReactNode }> = ({
       // Add work order unread counts with "wo:" prefix
       if (!workOrderResult.error && Array.isArray(workOrderResult.data)) {
         for (const row of workOrderResult.data as Array<{ work_order_id: string; unread_count: number }>) {
-          next[`wo:${row.work_order_id}`] = Number(row.unread_count) || 0;
+          // Only add entries for valid work order IDs (not null/undefined)
+          if (row.work_order_id && row.work_order_id !== 'null') {
+            next[`wo:${row.work_order_id}`] = Number(row.unread_count) || 0;
+          }
         }
       }
       

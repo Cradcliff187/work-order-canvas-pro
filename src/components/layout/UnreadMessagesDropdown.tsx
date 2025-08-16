@@ -48,9 +48,16 @@ export function UnreadMessagesDropdown({
   Object.entries(unreadCounts).forEach(([key, count]) => {
     if (count > 0) {
       if (key.startsWith('wo:')) {
-        workOrderIds.push(key.substring(3)); // Remove "wo:" prefix
+        const workOrderId = key.substring(3); // Remove "wo:" prefix
+        // Only add valid UUIDs, filter out null/undefined values
+        if (workOrderId && workOrderId !== 'null' && workOrderId !== 'undefined') {
+          workOrderIds.push(workOrderId);
+        }
       } else if (key.startsWith('conv:')) {
-        conversationIds.push(key.substring(5)); // Remove "conv:" prefix  
+        const conversationId = key.substring(5); // Remove "conv:" prefix
+        if (conversationId && conversationId !== 'null' && conversationId !== 'undefined') {
+          conversationIds.push(conversationId);
+        }
       }
     }
   });
