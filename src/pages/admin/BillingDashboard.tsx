@@ -19,17 +19,10 @@ import {
   DollarSign,
   Clock,
   ReceiptText,
-  Building2,
-  Filter
+  Building2
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { BillingTransactionFilters } from '@/components/admin/billing/BillingTransactionFilters';
-import { BillingTransactionsTable } from '@/components/admin/billing/BillingTransactionsTable';
 import { KPICard } from '@/components/analytics/KPICard';
-import { ExportDropdown } from '@/components/ui/export-dropdown';
-import { ColumnVisibilityDropdown } from '@/components/ui/column-visibility-dropdown';
-import { useColumnVisibility } from '@/hooks/useColumnVisibility';
-import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import PipelineDashboard from '@/pages/admin/PipelineDashboard';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
@@ -176,115 +169,6 @@ export default function BillingDashboard() {
   // Modal state for invoice details
   const [selectedInvoice, setSelectedInvoice] = React.useState<Invoice | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = React.useState(false);
-
-  const [search, setSearch] = React.useState('');
-  const [dateFrom, setDateFrom] = React.useState<string | undefined>(undefined);
-  const [dateTo, setDateTo] = React.useState<string | undefined>(undefined);
-  const [amountMin, setAmountMin] = React.useState<number | undefined>(undefined);
-  const [amountMax, setAmountMax] = React.useState<number | undefined>(undefined);
-  const [transactionTypes, setTransactionTypes] = React.useState<string[]>([]);
-
-  // Column visibility for Transactions table
-  const { columnVisibility, toggleColumn, resetToDefaults, getVisibleColumnCount, getAllColumns } = useColumnVisibility({
-    storageKey: 'admin-billing-transactions-columns-v1',
-    legacyKeys: ['billing_transactions_columns'],
-    columnMetadata: {
-      date: { label: 'Date', defaultVisible: true },
-      type: { label: 'Type', defaultVisible: true },
-      amount: { label: 'Amount', defaultVisible: true },
-      reference: { label: 'Reference', defaultVisible: true },
-      organization_name: { label: 'Organization', defaultVisible: true },
-    },
-  });
-
-  const columnOptions = getAllColumns();
-  const visibleTransactionColumns = columnOptions.filter(c => c.visible).map(c => c.id as keyof TransactionRow);
-
-  type TransactionRow = {
-    id: string;
-    date: string;
-    amount: number;
-    type: string;
-    reference?: string;
-    organization_name?: string;
-  };
-
-  const allTransactions = React.useMemo<TransactionRow[]>(() => {
-    const rows: TransactionRow[] = [];
-    if (metrics) {
-      metrics.recentPartnerInvoices?.forEach((inv) => {
-        rows.push({
-          id: `partner-${inv.id}`,
-          date: inv.invoice_date,
-          amount: inv.total_amount,
-          type: 'invoice_payment',
-          reference: inv.invoice_number,
-          organization_name: inv.partner_organization?.name,
-        });
-      });
-      metrics.recentSubcontractorInvoices?.forEach((inv) => {
-        rows.push({
-          id: `sub-${inv.id}`,
-          date: inv.submitted_at,
-          amount: inv.total_amount || 0,
-          type: 'invoice_payment',
-          reference: inv.internal_invoice_number,
-          organization_name: inv.subcontractor_organization?.name,
-        });
-      });
-    }
-    return rows;
-  }, [metrics]);
-
-  const filteredTransactions = React.useMemo(() => {
-    let rows = allTransactions;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      rows = rows.filter((r) =>
-        (r.reference || '').toLowerCase().includes(q) || (r.organization_name || '').toLowerCase().includes(q)
-      );
-    }
-    if (dateFrom) {
-      const from = new Date(dateFrom);
-      rows = rows.filter((r) => new Date(r.date) >= from);
-    }
-    if (dateTo) {
-      const to = new Date(dateTo);
-      rows = rows.filter((r) => new Date(r.date) <= to);
-    }
-    if (amountMin !== undefined) rows = rows.filter((r) => r.amount >= amountMin);
-    if (amountMax !== undefined) rows = rows.filter((r) => r.amount <= amountMax);
-    if (transactionTypes.length) rows = rows.filter((r) => transactionTypes.includes(r.type));
-    return rows;
-  }, [allTransactions, search, dateFrom, dateTo, amountMin, amountMax, transactionTypes]);
-
-  const handleDateRangeChange = (from?: string, to?: string) => {
-    setDateFrom(from);
-    setDateTo(to);
-  };
-
-  const handleAmountRangeChange = (min?: number, max?: number) => {
-    setAmountMin(min);
-    setAmountMax(max);
-  };
-
-  // Export handlers for Transactions
-  const transactionExportColumns: ExportColumn[] = [
-    { key: 'date', label: 'Date', type: 'date' },
-    { key: 'type', label: 'Type', type: 'string' },
-    { key: 'amount', label: 'Amount', type: 'currency' },
-    { key: 'reference', label: 'Reference', type: 'string' },
-    { key: 'organization_name', label: 'Organization', type: 'string' },
-  ];
-
-  const handleExport = (format: 'csv' | 'excel') => {
-    const filename = generateFilename('billing_transactions', format === 'excel' ? 'xlsx' : 'csv');
-    if (format === 'excel') {
-      exportToExcel(filteredTransactions, transactionExportColumns, filename);
-    } else {
-      exportToCSV(filteredTransactions, transactionExportColumns, filename);
-    }
-  };
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -751,68 +635,6 @@ if (error) {
             </>
           )}
 
-          {/* Billing Transactions Section */}
-          <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
-              <div>
-                <h2 className="text-xl font-semibold">All Transactions</h2>
-                <p className="text-sm text-muted-foreground">
-                  Recent billing transactions across all invoices
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Columns
-                </Button>
-                <ExportDropdown
-                  onExport={handleExport}
-                  disabled={filteredTransactions.length === 0}
-                />
-              </div>
-            </div>
-
-            <BillingTransactionFilters
-              search={search}
-              onSearchChange={setSearch}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              onDateRangeChange={handleDateRangeChange}
-              amountMin={amountMin}
-              amountMax={amountMax}
-              onAmountRangeChange={handleAmountRangeChange}
-              transactionTypes={transactionTypes}
-              onTransactionTypesChange={setTransactionTypes}
-            />
-
-            <Card>
-              <CardContent className="p-0">
-                <div className="p-4">
-                  {filteredTransactions.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <FileText className="h-8 w-8 mx-auto mb-2" />
-                      <p>No transactions found</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredTransactions.map((transaction) => (
-                        <div key={transaction.id} className="flex justify-between items-center p-3 border rounded-lg">
-                          <div>
-                            <p className="font-medium">{transaction.reference}</p>
-                            <p className="text-sm text-muted-foreground">{transaction.organization_name}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">{formatCurrency(transaction.amount)}</p>
-                            <p className="text-sm text-muted-foreground">{format(new Date(transaction.date), 'MMM d, yyyy')}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="pipeline" className="space-y-6">
