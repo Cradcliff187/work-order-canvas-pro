@@ -26,6 +26,7 @@ export const SubcontractorLayout = React.memo(function SubcontractorLayout({ chi
     'Reports': ClipboardList,
     'Submit Report': Plus,
     'Invoices': Receipt,
+    'Profile': User,
   }), []);
 
   // Memoize navigation items to prevent re-renders
