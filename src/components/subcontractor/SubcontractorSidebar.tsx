@@ -20,24 +20,14 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
 import {
   Home,
   ClipboardList,
   Receipt,
   FileText,
   History,
-  Settings,
-  LogOut,
   MessageSquare,
 } from 'lucide-react';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
@@ -53,7 +43,7 @@ const sidebarItems = [
 export function SubcontractorSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
-  const { profile, signOut, userOrganizations } = useAuth();
+  const { userOrganizations } = useAuth();
   const { draftCount } = useInvoiceDrafts();
   const { assets } = useBranding();
   const isMobile = useIsMobile();
@@ -89,10 +79,6 @@ export function SubcontractorSidebar() {
   ).length;
 
   const isActive = (path: string) => location.pathname === path;
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
@@ -166,31 +152,7 @@ export function SubcontractorSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="p-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full p-2">
-                <Avatar className={collapsed ? "h-8 w-8" : "h-8 w-8"}>
-                  <AvatarFallback className="text-xs">
-                    {profile?.first_name?.[0]}{profile?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/subcontractor/profile" className="flex items-center">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Profile Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserProfileDropdown collapsed={collapsed} />
         </div>
       </SidebarFooter>
     </Sidebar>
