@@ -72,8 +72,8 @@ export function UnreadMessagesDropdown({
       const placeBelow = dropdownHeight + 8 <= spaceBelow || spaceBelow >= spaceAbove;
 
       const top = placeBelow
-        ? Math.min(window.innerHeight - 8, rect.bottom + 8)
-        : Math.max(8, rect.top - dropdownHeight - 8);
+        ? Math.min(window.innerHeight - 8, rect.bottom + 2)
+        : Math.max(8, rect.top - dropdownHeight - 2);
 
       const left = Math.max(
         8,
@@ -132,10 +132,14 @@ export function UnreadMessagesDropdown({
         clearCloseTimeout();
         closeTimeoutRef.current = window.setTimeout(() => {
           onClose();
-        }, 200);
+        }, 600);
       }}
     >
       <Card className="w-80 shadow-lg border bg-popover">
+        <div 
+          className="absolute -top-2 left-0 right-0 h-4 pointer-events-auto" 
+          onMouseEnter={() => setIsHovered(true)}
+        />
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-3 pb-2 border-b">
             <MessageSquare className="h-4 w-4 text-primary" />

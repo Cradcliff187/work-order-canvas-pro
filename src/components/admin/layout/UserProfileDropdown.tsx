@@ -47,7 +47,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
     if (totalUnread > 0) {
       const timeout = setTimeout(() => {
         setShowUnreadDropdown(true);
-      }, 500);
+      }, 250);
       setHoverTimeout(timeout);
     }
   };
@@ -82,6 +82,11 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
               className="w-full p-2 relative"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
+              onClick={() => {
+                if (totalUnread > 0 && !isMobile) {
+                  setShowUnreadDropdown(true);
+                }
+              }}
             >
               <div className="relative">
                 <Avatar className="h-8 w-8">
@@ -135,6 +140,11 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
             className="w-full justify-start gap-2 h-auto p-2 relative"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onClick={() => {
+              if (totalUnread > 0 && !isMobile) {
+                setShowUnreadDropdown(true);
+              }
+            }}
           >
             <div className="relative">
               <Avatar className="h-8 w-8">
