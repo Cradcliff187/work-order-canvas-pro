@@ -8,7 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useBranding } from '@/hooks/useBranding';
 import { StandardHeader } from '@/components/layout/StandardHeader';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { UserDropdown } from '@/components/layout/UserDropdown';
+import { UserProfileDropdown } from '@/components/admin/layout/UserProfileDropdown';
 import {
   Sidebar,
   SidebarContent,
@@ -148,30 +148,7 @@ function PartnerSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="p-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full p-2">
-                <Avatar className={collapsed ? "h-8 w-8" : "h-8 w-8"}>
-                  <AvatarFallback className="text-xs">
-                    {profile?.first_name?.[0]}{profile?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-popover z-50">
-              <DropdownMenuItem asChild>
-                <Link to="/partner/profile" className="flex items-center">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Profile Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserProfileDropdown collapsed={collapsed} />
         </div>
       </SidebarFooter>
     </Sidebar>
@@ -234,7 +211,6 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
             <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
               <SidebarTrigger />
               <div className="flex-1" />
-              <UserDropdown />
             </header>
           )}
 

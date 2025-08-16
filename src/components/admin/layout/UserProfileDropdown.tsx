@@ -34,7 +34,15 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
   };
 
   const handleProfileClick = () => {
-    navigate('/admin/profile');
+    // Navigate to appropriate profile page based on current route
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/partner')) {
+      navigate('/partner/profile');
+    } else if (currentPath.startsWith('/subcontractor')) {
+      navigate('/subcontractor/profile');
+    } else {
+      navigate('/admin/profile');
+    }
   };
 
   const userInitials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`;
