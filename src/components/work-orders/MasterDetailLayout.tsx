@@ -132,7 +132,7 @@ export function MasterDetailLayout({
         <ResizableHandle withHandle />
         
         <ResizablePanel defaultSize={30} minSize={25}>
-          <div className="h-full border-l bg-background relative">
+          <div className="h-full border-l bg-background relative flex flex-col">
             {showDetailHeader ? (
               <div className="flex items-center justify-between p-4 border-b">
                 <h3 className="font-semibold text-lg">{detailTitle}</h3>
@@ -158,7 +158,7 @@ export function MasterDetailLayout({
                 <X className="h-4 w-4" />
               </Button>
             )}
-            <div className="h-full">
+            <div className="flex-1">
               {isLoading ? (
                 <div className="p-4 space-y-4">
                   <div className="h-4 bg-muted rounded animate-pulse" />
