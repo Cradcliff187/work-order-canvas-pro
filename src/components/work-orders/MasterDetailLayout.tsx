@@ -103,7 +103,7 @@ export function MasterDetailLayout({
           )}
           
           {/* Detail content */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1">
             {isLoading ? (
               <div className="p-4 space-y-4">
                 <div className="h-4 bg-muted rounded animate-pulse" />
@@ -158,7 +158,7 @@ export function MasterDetailLayout({
                 <X className="h-4 w-4" />
               </Button>
             )}
-            <div className="h-full overflow-auto">
+            <div className="h-full">
               {isLoading ? (
                 <div className="p-4 space-y-4">
                   <div className="h-4 bg-muted rounded animate-pulse" />
