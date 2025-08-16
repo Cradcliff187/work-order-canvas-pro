@@ -15,30 +15,35 @@ export function useSendConversationMessage() {
   return useMutation({
     mutationKey: ['send-conversation-message'],
     mutationFn: async ({ conversationId, message }: SendConversationMessageInput) => {
-      // Get current user profile ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (!profile) throw new Error('Profile not found');
+      try {
+        // Get current user profile ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (!profile) throw new Error('Profile not found');
 
-      const { data, error } = await supabase
-        .from('work_order_messages')
-        .insert({ 
-          conversation_id: conversationId, 
-          message,
-          sender_id: profile.id
-        })
-        .select('*')
-        .single();
+        const { data, error } = await supabase
+          .from('work_order_messages')
+          .insert({ 
+            conversation_id: conversationId, 
+            message,
+            sender_id: profile.id
+          })
+          .select('*')
+          .single();
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        console.error('[useSendConversationMessage] Failed to send message:', error);
+        throw error;
+      }
     },
     onSuccess: (_data, variables) => {
       console.log('[SendConversationMessage] Message sent successfully:', _data);

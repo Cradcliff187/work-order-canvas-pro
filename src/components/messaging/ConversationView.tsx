@@ -174,11 +174,25 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         )}
       </div>
       <div className="border-t p-3">
-        <MessageComposer
-          conversationId={conversationId}
-          onOptimisticAdd={addPending}
-          onClearPending={removePending}
-        />
+        {(() => {
+          console.log('[ConversationView] Rendering MessageComposer for:', conversationId);
+          try {
+            return (
+              <MessageComposer
+                conversationId={conversationId}
+                onOptimisticAdd={addPending}
+                onClearPending={removePending}
+              />
+            );
+          } catch (error) {
+            console.error('[ConversationView] MessageComposer error:', error);
+            return (
+              <div className="p-2 text-sm text-destructive">
+                Unable to load message composer. Please refresh the page.
+              </div>
+            );
+          }
+        })()}
       </div>
     </div>
   );
