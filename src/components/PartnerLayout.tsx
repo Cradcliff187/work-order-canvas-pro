@@ -41,6 +41,7 @@ import {
   ClipboardList,
   MapPin,
   MessageSquare,
+  User,
 } from 'lucide-react';
 import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 
@@ -221,6 +222,12 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
       label: 'Messages',
       icon: MessageSquare,
       path: '/messages'
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: User,
+      path: '/partner/profile'
     }
   ];
 
