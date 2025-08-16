@@ -625,7 +625,7 @@ if (error) {
                     icon={ReceiptText}
                     title="No recent subcontractor invoices"
                     description="Enter a subcontractor invoice to see it here."
-                    action={{ label: 'Enter Invoice', onClick: () => navigate('/admin/invoices') }}
+                    action={{ label: 'Enter Subcontractor Invoice', onClick: () => navigate('/admin/invoices') }}
                     variant="card"
                   />
                 )}
