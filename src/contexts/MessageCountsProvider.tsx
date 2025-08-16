@@ -29,14 +29,32 @@ export const MessageCountsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_unread_message_counts');
-      if (error) throw error;
+      // Fetch both work order and conversation unread counts in parallel
+      const [workOrderResult, conversationResult] = await Promise.all([
+        supabase.rpc('get_unread_message_counts'),
+        supabase.rpc('get_conversations_overview')
+      ]);
+      
       const next: UnreadCountsMap = {};
-      if (Array.isArray(data)) {
-        for (const row of data as Array<{ work_order_id: string; unread_count: number }>) {
-          next[row.work_order_id] = Number(row.unread_count) || 0;
+      
+      // Add work order unread counts with "wo:" prefix
+      if (!workOrderResult.error && Array.isArray(workOrderResult.data)) {
+        for (const row of workOrderResult.data as Array<{ work_order_id: string; unread_count: number }>) {
+          next[`wo:${row.work_order_id}`] = Number(row.unread_count) || 0;
         }
       }
+      
+      // Add conversation unread counts with "conv:" prefix
+      if (!conversationResult.error && Array.isArray(conversationResult.data)) {
+        for (const row of conversationResult.data as Array<any>) {
+          const convId = row.conversation_id || row.id;
+          const unreadCount = row.unread_count || 0;
+          if (unreadCount > 0 && convId) {
+            next[`conv:${convId}`] = Number(unreadCount);
+          }
+        }
+      }
+      
       if (isMountedRef.current) setUnreadCounts(next);
     } catch (err) {
       console.error('[MessageCountsProvider] fetchCounts error:', err);
@@ -120,7 +138,16 @@ export const MessageCountsProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [profile?.id, scheduleRefresh, fetchCounts]);
 
-  const totalUnread = useMemo(() => Object.values(unreadCounts).reduce((s, n) => s + (Number(n) || 0), 0), [unreadCounts]);
+  const totalUnread = useMemo(() => {
+    const total = Object.values(unreadCounts).reduce((s, n) => s + (Number(n) || 0), 0);
+    console.log('[MessageCountsProvider] Unread counts:', { 
+      total, 
+      counts: unreadCounts,
+      workOrders: Object.keys(unreadCounts).filter(k => k.startsWith('wo:')).length,
+      conversations: Object.keys(unreadCounts).filter(k => k.startsWith('conv:')).length
+    });
+    return total;
+  }, [unreadCounts]);
 
   const value: MessageCountsContextValue = useMemo(() => ({
     unreadCounts,
