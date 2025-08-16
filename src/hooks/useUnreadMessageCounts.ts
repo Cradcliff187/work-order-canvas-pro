@@ -19,11 +19,21 @@ export function useUnreadMessageCounts(
 
   const filtered = useMemo(() => {
     if (!Array.isArray(workOrderIds) || workOrderIds.length === 0) return unreadCounts;
+    
     const pick: Record<string, number> = {};
+    
+    // Handle both prefixed and non-prefixed IDs for backward compatibility
     for (const id of workOrderIds) {
-      const v = unreadCounts[id];
-      if (typeof v === 'number') pick[id] = v;
+      // Check for exact match (prefixed)
+      if (unreadCounts[id] !== undefined) {
+        pick[id] = unreadCounts[id];
+      }
+      // Check for wo: prefixed version
+      else if (unreadCounts[`wo:${id}`] !== undefined) {
+        pick[id] = unreadCounts[`wo:${id}`];
+      }
     }
+    
     return pick;
   }, [workOrderIds, unreadCounts]);
 
