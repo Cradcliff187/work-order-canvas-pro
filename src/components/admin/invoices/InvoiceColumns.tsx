@@ -61,7 +61,7 @@ export const createInvoiceColumns = ({
   },
   {
     accessorKey: 'internal_invoice_number',
-    header: ({ column }) => <SortableHeader column={column} label="Invoice #" />,
+    header: ({ column }) => <SortableHeader column={column} label="Subcontractor Invoice #" />,
     cell: ({ row }) => (
       <div className="font-mono text-sm text-right">
         {row.getValue('internal_invoice_number')}
