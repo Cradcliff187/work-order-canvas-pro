@@ -582,8 +582,8 @@ const table = useReactTable({
                       ) : (
                         <EmptyTableState
                           icon={FileText}
-                          title="No invoices found"
-                          description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Invoices will appear here when subcontractors submit them"}
+                          title="No subcontractor invoices found"
+                          description={filters.status.length > 0 || filters.paymentStatus || filters.search ? "Try adjusting your filters or search criteria" : "Subcontractor invoices will appear here when submitted"}
                           colSpan={columns.length}
                         />
                       )}
@@ -641,9 +641,9 @@ const table = useReactTable({
                 ) : (
                   <div className="rounded-md border p-6 text-center text-muted-foreground">
                     <FileText className="mx-auto h-8 w-8 mb-2 opacity-60" />
-                    <div className="font-medium">No invoices found</div>
+                    <div className="font-medium">No subcontractor invoices found</div>
                     <div className="text-sm">
-                      {filters.status.length > 0 || filters.paymentStatus || filters.search ? 'Try adjusting your filters or search criteria' : 'Invoices will appear here when subcontractors submit them'}
+                      {filters.status.length > 0 || filters.paymentStatus || filters.search ? 'Try adjusting your filters or search criteria' : 'Subcontractor invoices will appear here when submitted'}
                     </div>
                   </div>
                 )}
