@@ -88,7 +88,7 @@ export function AdminSidebar() {
                             {submittedCounts.reportsCount}
                           </Badge>
                         )}
-                        {item.title === 'Invoices' && submittedCounts && submittedCounts.invoicesCount > 0 && (
+                        {item.title === 'Subcontractor Invoices' && submittedCounts && submittedCounts.invoicesCount > 0 && (
                           <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 h-5 text-[10px] px-1.5 ml-2">
                             {submittedCounts.invoicesCount}
                           </Badge>

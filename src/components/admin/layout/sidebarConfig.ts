@@ -38,7 +38,7 @@ export const sidebarItems: SidebarItem[] = [
   { title: 'Time Reports', url: '/admin/time-reports', icon: Timer },
   { title: 'Receipts', url: '/admin/receipts', icon: Receipt },
   { title: 'Finance Receipts', url: '/admin/finance/receipts', icon: Wallet },
-  { title: 'Invoices', url: '/admin/invoices', icon: FileText },
+  { title: 'Subcontractor Invoices', url: '/admin/invoices', icon: FileText },
   { title: 'Partner Billing', url: '/admin/partner-billing/select-reports', icon: CreditCard },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Organizations', url: '/admin/organizations', icon: Building2 },
@@ -53,11 +53,11 @@ export const sidebarItems: SidebarItem[] = [
 
 export const sidebarSections = {
   OPERATIONS: ['Admin Dashboard', 'Employee Dashboard', 'Work Orders', 'Messages', 'Reports', 'Time Reports'],
-  FINANCIAL: ['Billing Dashboard', 'Receipts', 'Finance Receipts', 'Invoices', 'Partner Billing'],
+  FINANCIAL: ['Billing Dashboard', 'Receipts', 'Finance Receipts', 'Subcontractor Invoices', 'Partner Billing'],
   MANAGEMENT: ['Users', 'Organizations', 'Partner Locations', 'Employees'],
   INSIGHTS: ['Analytics', 'Email Templates'],
   SYSTEM: ['Settings', 'System Health', 'Email Testing']
 };
 
-export const adminOnlyItems = ['Admin Dashboard', 'Billing Dashboard', 'Finance Receipts', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Invoices', 'Partner Billing', 'Settings', 'System Health', 'Email Testing'];
+export const adminOnlyItems = ['Admin Dashboard', 'Billing Dashboard', 'Finance Receipts', 'Users', 'Organizations', 'Partner Locations', 'Employees', 'Subcontractor Invoices', 'Partner Billing', 'Settings', 'System Health', 'Email Testing'];
 export const employeeAccessItems = ['Employee Dashboard', 'Work Orders', 'Messages', 'Time Reports', 'Receipts'];
