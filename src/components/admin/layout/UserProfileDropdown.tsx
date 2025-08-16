@@ -32,6 +32,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
   const { primaryRole, isEmployee, isAdmin } = useUserProfile();
   const navigate = useNavigate();
   const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
+  const [clickOpened, setClickOpened] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const isMobile = useIsMobile();
@@ -96,9 +97,12 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
                     )}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
-                    onClick={() => {
-                      if (totalUnread > 0 && !isMobile) {
+                    onClick={(e) => {
+                      if (totalUnread > 0 && !isMobile && !showUnreadDropdown) {
+                        e.preventDefault();
+                        e.stopPropagation();
                         setShowUnreadDropdown(true);
+                        setClickOpened(true);
                       }
                     }}
                   >
@@ -116,11 +120,11 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
               </div>
                   </Button>
                 </TooltipTrigger>
-                {totalUnread > 0 && (
-                  <TooltipContent>
-                    <p>{totalUnread} unread messages - hover to view</p>
-                  </TooltipContent>
-                )}
+                  {totalUnread > 0 && (
+                    <TooltipContent>
+                      <p>{totalUnread} unread messages - hover or click to view</p>
+                    </TooltipContent>
+                  )}
               </Tooltip>
             </TooltipProvider>
           </DropdownMenuTrigger>
@@ -145,8 +149,12 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
         <UnreadMessagesDropdown
           isVisible={showUnreadDropdown}
           unreadCounts={unreadCounts}
-          onClose={() => setShowUnreadDropdown(false)}
+          onClose={() => {
+            setShowUnreadDropdown(false);
+            setClickOpened(false);
+          }}
           anchorRef={buttonRef}
+          clickOpened={clickOpened}
         />
       </div>
     );
@@ -169,9 +177,12 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
                   )}
                   onMouseEnter={handleMouseEnter}
                   onMouseLeave={handleMouseLeave}
-                  onClick={() => {
-                    if (totalUnread > 0 && !isMobile) {
+                  onClick={(e) => {
+                    if (totalUnread > 0 && !isMobile && !showUnreadDropdown) {
+                      e.preventDefault();
+                      e.stopPropagation();
                       setShowUnreadDropdown(true);
+                      setClickOpened(true);
                     }
                   }}
                 >
@@ -195,7 +206,7 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
               </TooltipTrigger>
               {totalUnread > 0 && (
                 <TooltipContent>
-                  <p>{totalUnread} unread messages - hover to view</p>
+                  <p>{totalUnread} unread messages - hover or click to view</p>
                 </TooltipContent>
               )}
             </Tooltip>
@@ -238,8 +249,12 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
       <UnreadMessagesDropdown
         isVisible={showUnreadDropdown}
         unreadCounts={unreadCounts}
-        onClose={() => setShowUnreadDropdown(false)}
+        onClose={() => {
+          setShowUnreadDropdown(false);
+          setClickOpened(false);
+        }}
         anchorRef={buttonRef}
+        clickOpened={clickOpened}
       />
     </div>
   );

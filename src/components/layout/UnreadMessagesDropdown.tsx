@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MessageSquare, ChevronRight } from 'lucide-react';
+import { MessageSquare, ChevronRight, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,13 +15,15 @@ interface UnreadMessagesDropdownProps {
   unreadCounts: Record<string, number>;
   onClose: () => void;
   anchorRef?: React.RefObject<HTMLElement | null>;
+  clickOpened?: boolean;
 }
 
 export function UnreadMessagesDropdown({ 
   isVisible, 
   unreadCounts, 
   onClose,
-  anchorRef
+  anchorRef,
+  clickOpened = false
 }: UnreadMessagesDropdownProps) {
   const navigate = useNavigate();
   const { isAdmin, isEmployee, isPartner, isSubcontractor } = useUserProfile();
@@ -129,11 +131,13 @@ export function UnreadMessagesDropdown({
         setIsHovered(true);
       }}
       onMouseLeave={() => {
-        setIsHovered(false);
-        clearCloseTimeout();
-        closeTimeoutRef.current = window.setTimeout(() => {
-          onClose();
-        }, 600);
+        if (!clickOpened) {
+          setIsHovered(false);
+          clearCloseTimeout();
+          closeTimeoutRef.current = window.setTimeout(() => {
+            onClose();
+          }, 600);
+        }
       }}
     >
       <Card className="w-80 shadow-lg border bg-popover">
@@ -141,6 +145,16 @@ export function UnreadMessagesDropdown({
           className="absolute -top-2 left-0 right-0 h-4 pointer-events-auto" 
           onMouseEnter={() => setIsHovered(true)}
         />
+        {clickOpened && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 h-6 w-6 z-10"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
         <CardContent className="p-3">
           <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b">
             <div className="flex items-center gap-2">
