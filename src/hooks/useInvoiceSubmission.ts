@@ -95,10 +95,45 @@ export const useInvoiceSubmission = () => {
 
       if (invoiceError) throw invoiceError;
 
-      // Create invoice work order relationships
+      // Query for approved work order reports to link to invoice_work_orders
+      const workOrderIds = data.workOrders.map(wo => wo.workOrderId);
+      const { data: approvedReports, error: reportsError } = await supabase
+        .from('work_order_reports')
+        .select('id, work_order_id, submitted_at')
+        .in('work_order_id', workOrderIds)
+        .eq('status', 'approved')
+        .order('submitted_at', { ascending: false });
+
+      if (reportsError) throw reportsError;
+
+      // Create mapping of work_order_id to most recent approved report_id
+      const reportMap = new Map<string, string>();
+      const processedWorkOrders = new Set<string>();
+      
+      approvedReports?.forEach(report => {
+        if (!processedWorkOrders.has(report.work_order_id)) {
+          reportMap.set(report.work_order_id, report.id);
+          processedWorkOrders.add(report.work_order_id);
+        }
+      });
+
+      // Count work orders without approved reports for user feedback
+      const workOrdersWithoutReports = workOrderIds.filter(id => !reportMap.has(id));
+      
+      if (workOrdersWithoutReports.length > 0) {
+        console.warn('Work orders without approved reports:', workOrdersWithoutReports);
+        toast({
+          title: 'Warning: Missing Reports',
+          description: `${workOrdersWithoutReports.length} work order(s) don't have approved reports. They may not appear in partner billing until reports are approved.`,
+          variant: 'default',
+        });
+      }
+
+      // Create invoice work order relationships with work_order_report_id
       const workOrderInserts = data.workOrders.map(wo => ({
         invoice_id: invoice.id,
         work_order_id: wo.workOrderId,
+        work_order_report_id: reportMap.get(wo.workOrderId) || null,
         amount: wo.amount,
         description: wo.description || null
       }));
