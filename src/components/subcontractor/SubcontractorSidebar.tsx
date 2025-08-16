@@ -45,7 +45,7 @@ import { useOrganizationNavigation } from '@/hooks/useOrganizationNavigation';
 const sidebarItems = [
   { title: 'Dashboard', url: '/subcontractor/dashboard', icon: Home },
   { title: 'My Work Orders', url: '/subcontractor/work-orders', icon: ClipboardList, hasWorkOrderBadge: true },
-  { title: 'Invoices', url: '/subcontractor/invoices', icon: Receipt },
+  { title: 'Subcontractor Invoices', url: '/subcontractor/invoices', icon: Receipt },
   { title: 'Submit Invoice', url: '/subcontractor/submit-invoice', icon: FileText, hasBadge: true },
   { title: 'Report History', url: '/subcontractor/reports', icon: History },
 ];
