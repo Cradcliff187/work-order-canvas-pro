@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/useUserOrganizations';
@@ -184,52 +184,34 @@ interface PartnerLayoutProps {
 const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const organizationNavItems = useOrganizationNavigation();
 
-  // Convert sidebar items to mobile navigation format
-  const partnerNavItems = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: BarChart3,
-      path: '/partner/dashboard'
-    },
-    {
-      id: 'submit',
-      label: 'Submit',
-      icon: Plus,
-      path: '/partner/work-orders/new'
-    },
-    {
-      id: 'work-orders',
-      label: 'Work Orders',
-      icon: FileText,
-      path: '/partner/work-orders'
-    },
-    {
-      id: 'locations',
-      label: 'Locations',
-      icon: MapPin,
-      path: '/partner/locations'
-    },
-    {
-      id: 'reports',
-      label: 'Reports',
-      icon: ClipboardList,
-      path: '/partner/reports'
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      icon: MessageSquare,
-      path: '/messages'
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: User,
-      path: '/partner/profile'
-    }
-  ];
+  // Stable icon mapping
+  const iconMap = useMemo(() => ({
+    'Dashboard': BarChart3,
+    'New Service Request': Plus,
+    'View Work Orders': FileText,
+    'Locations': MapPin,
+    'Reports': ClipboardList,
+    'Profile': User,
+  }), []);
+
+  // Use organization navigation items
+  const partnerNavItems = useMemo(() => {
+    const base = organizationNavItems
+      .filter(item => item.visible)
+      .map(item => ({
+        id: item.path.split('/').pop() || item.label.toLowerCase().replace(' ', '-'),
+        label: item.label === 'New Service Request' ? 'Submit' : item.label,
+        icon: iconMap[item.label as keyof typeof iconMap] || FileText,
+        path: item.path,
+      }));
+    
+    return [
+      ...base,
+      { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages' }
+    ];
+  }, [organizationNavItems, iconMap]);
 
   return (
     <SidebarProvider>
