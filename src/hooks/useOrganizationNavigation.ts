@@ -48,7 +48,6 @@ export const useOrganizationNavigation = () => {
         { label: 'View Work Orders', path: '/partner/work-orders', icon: ClipboardList, visible: true },
         { label: 'Locations', path: '/partner/locations', icon: MapPin, visible: true },
         { label: 'Reports', path: '/partner/reports', icon: ClipboardList, visible: true },
-        { label: 'Profile', path: '/partner/profile', icon: User, visible: true },
       ];
       
       // DEBUG: Log partner navigation items
