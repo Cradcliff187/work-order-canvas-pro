@@ -7,6 +7,7 @@ import { FormattedInput } from '@/components/ui/formatted-input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import { ChangePasswordCard } from '@/components/profile/ChangePasswordCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -202,6 +203,11 @@ const AdminProfile = () => {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Password Change Section */}
+      <div className="mt-6">
+        <ChangePasswordCard />
       </div>
     </div>
   );
