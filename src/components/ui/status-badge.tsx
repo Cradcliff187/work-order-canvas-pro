@@ -61,6 +61,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   reviewed: Clock,
   approved: CheckCircle,
   rejected: XCircle,
+  not_submitted: FileText,
   
   // User Role Icons
   admin: Users,

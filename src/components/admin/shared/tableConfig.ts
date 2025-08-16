@@ -7,117 +7,117 @@ export const statusConfig = {
   workOrder: {
     received: {
       label: "Received",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     assigned: {
       label: "Assigned", 
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     estimate_needed: {
       label: "Estimate Needed",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     estimate_approved: {
       label: "Estimate Approved",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     in_progress: {
       label: "In Progress",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     work_completed: {
       label: "Work Completed",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     completed: {
       label: "Completed",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     cancelled: {
       label: "Cancelled",
-      className: "bg-red-50 text-red-600 border-red-200"
+      className: "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
     }
   },
   financialStatus: {
     pending: {
       label: "Pending",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     partially_invoiced: {
       label: "Invoice Received",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     fully_invoiced: {
       label: "Invoiced",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     approved_for_payment: {
       label: "Approved",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     paid: {
       label: "Invoice Paid",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     dispute: {
       label: "Dispute",
-      className: "bg-red-50 text-red-600 border-red-200"
+      className: "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
     },
     write_off: {
       label: "Write Off",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     }
   },
   operationalStatus: {
     assigned: {
       label: "Assigned",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     awaiting_estimate: {
       label: "Awaiting Estimate",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     complete: {
       label: "Complete",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     in_progress: {
       label: "In Progress",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     new: {
       label: "New",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     reports_pending: {
       label: "Reports Pending",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     }
   },
   partnerBilling: {
     billed: {
       label: "Billed",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     invoice_needed: {
       label: "Invoice Needed",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     invoice_pending: {
       label: "Invoice Pending",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     not_started: {
       label: "Not Started",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     ready_to_bill: {
       label: "Ready to Bill",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     report_pending: {
       label: "Report Pending",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     }
   },
   // New computed financial status for pipeline views
@@ -125,105 +125,109 @@ export const statusConfig = {
     not_billed: {
       label: "Not Invoiced",
       description: "No invoice has been received",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     partially_billed: {
       label: "Invoice Received",
       description: "Invoice received but not yet paid",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     invoice_received: {
       label: "Invoice Received", 
       description: "Invoice received but not yet paid",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     fully_billed: {
       label: "Invoice Paid",
       description: "All invoices have been paid",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     paid: {
       label: "Invoice Paid",
       description: "All invoices have been paid",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     }
   },
   priority: {
     low: {
       label: "Low",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
     medium: {
       label: "Medium",
-      className: "bg-slate-100 text-slate-700 border-slate-300"
+      className: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600"
     },
     high: {
       label: "High",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     urgent: {
       label: "Urgent",
-      className: "bg-red-50 text-red-600 border-red-200"
+      className: "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
     }
   },
   user: {
     admin: {
       label: "Admin",
-      className: "bg-slate-100 text-slate-700 border-slate-300"
+      className: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600"
     },
     partner: {
       label: "Partner",
-      className: "bg-slate-100 text-slate-700 border-slate-300"
+      className: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600"
     },
     subcontractor: {
       label: "Subcontractor",
-      className: "bg-slate-100 text-slate-700 border-slate-300"
+      className: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600"
     },
     employee: {
       label: "Employee",
-      className: "bg-slate-100 text-slate-700 border-slate-300"
+      className: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600"
     }
   },
   report: {
     submitted: {
       label: "Submitted",
-      className: "bg-blue-50 text-blue-600 border-blue-200"
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     reviewed: {
       label: "Reviewed",
-      className: "bg-amber-50 text-amber-600 border-amber-200"
+      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     approved: {
       label: "Approved",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     rejected: {
       label: "Rejected",
-      className: "bg-red-50 text-red-600 border-red-200"
+      className: "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+    },
+    not_submitted: {
+      label: "Not Submitted",
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     }
   },
   activeStatus: {
     true: {
       label: "Active",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     false: {
       label: "Inactive",
-      className: "bg-slate-50 text-slate-600 border-slate-200"
+      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     }
   },
   assignedTo: {
     internal: {
       label: "Internal",
-      className: "bg-blue-50 text-blue-700 border-blue-200"
+      className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     external: {
       label: "External", 
-      className: "bg-emerald-50 text-emerald-700 border-emerald-200"
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     unassigned: {
       label: "Unassigned",
-      className: "bg-red-50 text-red-700 border-red-200"
+      className: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
     }
   }
 } as const;
