@@ -68,6 +68,58 @@ export const statusConfig = {
       className: "bg-slate-50 text-slate-600 border-slate-200"
     }
   },
+  operationalStatus: {
+    assigned: {
+      label: "Assigned",
+      className: "bg-blue-50 text-blue-600 border-blue-200"
+    },
+    awaiting_estimate: {
+      label: "Awaiting Estimate",
+      className: "bg-amber-50 text-amber-600 border-amber-200"
+    },
+    complete: {
+      label: "Complete",
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+    },
+    in_progress: {
+      label: "In Progress",
+      className: "bg-blue-50 text-blue-600 border-blue-200"
+    },
+    new: {
+      label: "New",
+      className: "bg-slate-50 text-slate-600 border-slate-200"
+    },
+    reports_pending: {
+      label: "Reports Pending",
+      className: "bg-amber-50 text-amber-600 border-amber-200"
+    }
+  },
+  partnerBilling: {
+    billed: {
+      label: "Billed",
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200"
+    },
+    invoice_needed: {
+      label: "Invoice Needed",
+      className: "bg-amber-50 text-amber-600 border-amber-200"
+    },
+    invoice_pending: {
+      label: "Invoice Pending",
+      className: "bg-blue-50 text-blue-600 border-blue-200"
+    },
+    not_started: {
+      label: "Not Started",
+      className: "bg-slate-50 text-slate-600 border-slate-200"
+    },
+    ready_to_bill: {
+      label: "Ready to Bill",
+      className: "bg-blue-50 text-blue-600 border-blue-200"
+    },
+    report_pending: {
+      label: "Report Pending",
+      className: "bg-amber-50 text-amber-600 border-amber-200"
+    }
+  },
   // New computed financial status for pipeline views
   computedFinancialStatus: {
     not_billed: {
@@ -234,6 +286,8 @@ export const statusUtils = {
 export type EntityType = keyof typeof statusConfig;
 export type WorkOrderStatus = keyof typeof statusConfig.workOrder;
 export type FinancialStatus = keyof typeof statusConfig.financialStatus;
+export type OperationalStatus = keyof typeof statusConfig.operationalStatus;
+export type PartnerBillingStatus = keyof typeof statusConfig.partnerBilling;
 export type ComputedFinancialStatus = keyof typeof statusConfig.computedFinancialStatus;
 export type Priority = keyof typeof statusConfig.priority;
 export type RoleType = keyof typeof statusConfig.user;
