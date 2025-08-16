@@ -440,7 +440,7 @@ const table = useReactTable({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Invoices</BreadcrumbPage>
+            <BreadcrumbPage>Subcontractor Invoices</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -449,7 +449,7 @@ const table = useReactTable({
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Subcontractor Invoices</h1>
           </div>
           <p className="text-muted-foreground">
             Manage and review subcontractor invoices
