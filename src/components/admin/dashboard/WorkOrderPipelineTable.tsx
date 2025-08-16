@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
-import { ComputedFinancialStatusBadge, ReportStatusBadge } from '@/components/ui/status-badge';
+import { ComputedFinancialStatusBadge, FinancialStatusBadge, ReportStatusBadge, StatusBadge } from '@/components/ui/status-badge';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
@@ -452,7 +452,7 @@ export function WorkOrderPipelineTable() {
     {
       id: 'operational_status',
       header: 'Work Status',
-      cell: ({ row }) => getOperationalStatusBadge(row.original),
+      cell: ({ row }) => <WorkOrderStatusBadge status={row.original.status} size="sm" showIcon />,
     },
     {
       id: 'report_status',
@@ -466,7 +466,7 @@ export function WorkOrderPipelineTable() {
     {
       id: 'partner_billing',
       header: 'Partner Billing Status',
-      cell: ({ row }) => getPartnerBillingBadge(row.original),
+      cell: ({ row }) => <StatusBadge type="partnerBilling" status={getPartnerBillingStatus(row.original)} size="sm" showIcon />,
     },
     {
       id: 'subcontractor_invoice',
@@ -474,41 +474,30 @@ export function WorkOrderPipelineTable() {
       cell: ({ row }) => {
         const item = row.original;
         
-        // In the getSubcontractorInvoiceStatus function or where SC Invoice is rendered:
-        if (item.work_order_number === 'BB-525-001') {
-          console.log('📊 BB-525-001 Table Display:', {
-            invoice_status: item.invoice_status,
-            subcontractor_invoice_amount: item.subcontractor_invoice_amount,
-            financial_status: item.financial_status,
-          });
-        }
-        
-        const getSubcontractorInvoiceStatus = () => {
+        const getInvoiceStatusForBadge = () => {
           if (!item.invoice_status) {
             if (item.status === 'completed' && item.report_status === 'approved') {
-              return { variant: 'warning' as const, text: 'Invoice Needed' };
+              return 'pending';
             }
-            return { variant: 'outline' as const, text: 'No Invoice' };
+            return 'pending';
           }
           
           switch (item.invoice_status) {
             case 'approved':
-              return { variant: 'success' as const, text: 'Approved' };
+              return 'approved_for_payment';
             case 'submitted':
             case 'pending':
-              return { variant: 'warning' as const, text: 'Pending' };
+              return 'pending';
             default:
-              return { variant: 'outline' as const, text: item.invoice_status };
+              return 'pending';
           }
         };
         
-        const statusInfo = getSubcontractorInvoiceStatus();
+        const statusValue = getInvoiceStatusForBadge();
         
         return (
           <div className="space-y-1">
-            <Badge variant={statusInfo.variant}>
-              {statusInfo.text}
-            </Badge>
+            <FinancialStatusBadge status={statusValue} size="sm" showIcon />
             {item.subcontractor_invoice_amount && (
               <div className="text-xs text-muted-foreground">
                 ${item.subcontractor_invoice_amount.toLocaleString()}
