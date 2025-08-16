@@ -15,9 +15,25 @@ export function useSendConversationMessage() {
   return useMutation({
     mutationKey: ['send-conversation-message'],
     mutationFn: async ({ conversationId, message }: SendConversationMessageInput) => {
+      // Get current user profile ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!profile) throw new Error('Profile not found');
+
       const { data, error } = await supabase
-        .from('work_order_messages' as any)
-        .insert({ conversation_id: conversationId, message })
+        .from('work_order_messages')
+        .insert({ 
+          conversation_id: conversationId, 
+          message,
+          sender_id: profile.id
+        })
         .select('*')
         .single();
 
