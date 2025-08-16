@@ -97,14 +97,6 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
                     )}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
-                    onClick={(e) => {
-                      if (totalUnread > 0 && !isMobile && !showUnreadDropdown) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowUnreadDropdown(true);
-                        setClickOpened(true);
-                      }
-                    }}
                   >
               <div className="relative">
                 <Avatar className="h-8 w-8">
@@ -177,14 +169,6 @@ export function UserProfileDropdown({ collapsed = false }: UserProfileDropdownPr
                   )}
                   onMouseEnter={handleMouseEnter}
                   onMouseLeave={handleMouseLeave}
-                  onClick={(e) => {
-                    if (totalUnread > 0 && !isMobile && !showUnreadDropdown) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowUnreadDropdown(true);
-                      setClickOpened(true);
-                    }
-                  }}
                 >
             <div className="relative">
               <Avatar className="h-8 w-8">
