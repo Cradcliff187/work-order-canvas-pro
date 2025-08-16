@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -15,6 +16,7 @@ import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
 import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+
 export function UserDropdown() {
   const { profile, signOut } = useAuth();
   const { primaryRole, isEmployee, isAdmin } = useUserProfile();
@@ -35,7 +37,7 @@ export function UserDropdown() {
   };
 
   const handleMouseEnter = () => {
-    if (totalUnread > 0) {
+    if (totalUnread > 0 && !isMobile) {
       const timeout = setTimeout(() => {
         setShowUnreadDropdown(true);
       }, 500);
@@ -49,6 +51,13 @@ export function UserDropdown() {
       setHoverTimeout(null);
     }
     // Don't immediately hide - let the dropdown handle its own hover state
+  };
+
+  const handleMobileMessagesClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Mobile messages button clicked'); // Debug log
+    navigate('/messages');
   };
 
   useEffect(() => {
@@ -68,7 +77,7 @@ export function UserDropdown() {
           <Button 
             ref={buttonRef}
             variant="ghost" 
-            className="flex items-center gap-2 relative"
+            className="flex items-center gap-2 relative pointer-events-auto"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -111,24 +120,27 @@ export function UserDropdown() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
-          onClick={() => navigate('/messages')}
+          className="relative pointer-events-auto touch-manipulation min-h-[44px] min-w-[44px] z-10"
+          onClick={handleMobileMessagesClick}
           aria-label="Open messages"
+          type="button"
         >
           <MessageSquare className="h-5 w-5" />
           <span className="sr-only">View unread messages</span>
-          <span className="absolute -top-1 -right-1 text-[10px] leading-none rounded-full px-1 bg-destructive text-destructive-foreground border border-background">
+          <span className="absolute -top-1 -right-1 text-[10px] leading-none rounded-full px-1 bg-destructive text-destructive-foreground border border-background min-w-[16px] h-4 flex items-center justify-center">
             {totalUnread}
           </span>
         </Button>
       )}
 
-      <UnreadMessagesDropdown
-        isVisible={showUnreadDropdown}
-        unreadCounts={unreadCounts}
-        onClose={() => setShowUnreadDropdown(false)}
-        anchorRef={buttonRef}
-      />
+      {!isMobile && (
+        <UnreadMessagesDropdown
+          isVisible={showUnreadDropdown}
+          unreadCounts={unreadCounts}
+          onClose={() => setShowUnreadDropdown(false)}
+          anchorRef={buttonRef}
+        />
+      )}
     </div>
   );
 }
