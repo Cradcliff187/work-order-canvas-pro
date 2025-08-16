@@ -41,26 +41,58 @@ export function UnreadMessagesDropdown({
     }
   };
 
-  // Get work order IDs that have unread messages
-  const workOrderIdsWithUnread = Object.entries(unreadCounts)
-    .filter(([, count]) => count > 0)
-    .map(([id]) => id);
+  // Separate work order IDs from conversation IDs based on prefix
+  const workOrderIds: string[] = [];
+  const conversationIds: string[] = [];
+
+  Object.entries(unreadCounts).forEach(([key, count]) => {
+    if (count > 0) {
+      if (key.startsWith('wo:')) {
+        workOrderIds.push(key.substring(3)); // Remove "wo:" prefix
+      } else if (key.startsWith('conv:')) {
+        conversationIds.push(key.substring(5)); // Remove "conv:" prefix  
+      }
+    }
+  });
 
   const { data: workOrders = [], isLoading } = useQuery({
-    queryKey: ['work-orders-for-dropdown', workOrderIdsWithUnread],
+    queryKey: ['work-orders-for-dropdown', workOrderIds],
     queryFn: async () => {
-      if (workOrderIdsWithUnread.length === 0) return [];
+      if (workOrderIds.length === 0) return [];
 
       const { data, error } = await supabase
         .from('work_orders')
         .select('id, work_order_number, title')
-        .in('id', workOrderIdsWithUnread)
+        .in('id', workOrderIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: workOrderIdsWithUnread.length > 0 && !isMobile && isVisible,
+    enabled: workOrderIds.length > 0 && !isMobile && isVisible,
+  });
+
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['dropdown-conversations', conversationIds],
+    queryFn: async () => {
+      if (conversationIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .rpc('get_conversations_overview')
+        .then(result => {
+          if (result.error) throw result.error;
+          return {
+            data: result.data?.filter((c: any) => 
+              conversationIds.includes(c.conversation_id || c.id)
+            ),
+            error: null
+          };
+        });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: conversationIds.length > 0 && !isMobile && isVisible,
   });
 
   useEffect(() => {
@@ -114,7 +146,7 @@ export function UnreadMessagesDropdown({
   };
 
   // Don't render if not visible, on mobile, or no unread messages
-  if (!isVisible || isMobile || workOrderIdsWithUnread.length === 0) {
+  if (!isVisible || isMobile || (workOrderIds.length === 0 && conversationIds.length === 0)) {
     return null;
   }
 
@@ -172,33 +204,73 @@ export function UnreadMessagesDropdown({
             </div>
           )}
           
-          <div className="space-y-1">
-            {displayedWorkOrders.map((workOrder) => {
-              const unreadCount = unreadCounts[workOrder.id] || 0;
-              return (
-                <Button
-                  key={workOrder.id}
-                  variant="ghost"
-                  className="w-full justify-start p-2 h-auto text-left hover:bg-accent"
-                  onClick={() => handleWorkOrderClick(workOrder.id)}
-                >
-                  <div className="flex flex-col items-start gap-1 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 w-full">
-                      <span className="font-medium text-xs text-primary">
-                        {workOrder.work_order_number}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        ({unreadCount} unread)
-                      </span>
-                    </div>
-                    <span className="text-xs text-muted-foreground truncate w-full">
-                      {workOrder.title}
-                    </span>
-                  </div>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                </Button>
-              );
-            })}
+          <div className="space-y-3">
+            {/* Work Orders Section */}
+            {workOrderIds.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground px-2 mb-1">
+                  Work Orders
+                </div>
+                {displayedWorkOrders.map((workOrder) => {
+                  const unreadCount = unreadCounts[`wo:${workOrder.id}`] || 0;
+                  return (
+                    <Button
+                      key={workOrder.id}
+                      variant="ghost"
+                      className="w-full justify-start p-2 h-auto text-left hover:bg-accent"
+                      onClick={() => handleWorkOrderClick(workOrder.id)}
+                    >
+                      <div className="flex flex-col items-start gap-1 flex-1">
+                        <div className="text-sm font-medium truncate w-full">
+                          {workOrder.work_order_number}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate w-full">
+                          {workOrder.title}
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {unreadCount} unread
+                        </Badge>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground ml-2" />
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Conversations Section */}
+            {conversations.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground px-2 mb-1">
+                  Messages
+                </div>
+                {conversations.slice(0, 3).map((conv: any) => {
+                  const convId = conv.conversation_id || conv.id;
+                  const unreadCount = unreadCounts[`conv:${convId}`] || conv.unread_count || 0;
+                  return (
+                    <Button
+                      key={convId}
+                      variant="ghost"
+                      className="w-full justify-start p-2 h-auto text-left hover:bg-accent"
+                      onClick={() => handleViewAll()}
+                    >
+                      <div className="flex flex-col items-start gap-1 flex-1">
+                        <div className="text-sm font-medium truncate w-full">
+                          {conv.title || 'Direct Message'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {conv.last_message?.substring(0, 50)}...
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {unreadCount} unread
+                        </Badge>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground ml-2" />
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {hasMore && (
