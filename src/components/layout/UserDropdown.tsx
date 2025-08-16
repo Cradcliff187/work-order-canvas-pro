@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -13,18 +13,12 @@ import { Settings, LogOut, User, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUnreadMessageCounts } from '@/hooks/useUnreadMessageCounts';
-import { UnreadMessagesDropdown } from './UnreadMessagesDropdown';
 import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 export function UserDropdown() {
   const { profile, signOut } = useAuth();
   const { primaryRole, isEmployee, isAdmin } = useUserProfile();
-  const [showUnreadDropdown, setShowUnreadDropdown] = useState(false);
-  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const isMobile = useIsMobile();
 
   // Unread counts (no need to fetch work order IDs)
   const { data: unreadCounts = {} } = useUnreadMessageCounts([], profile, isEmployee, isAdmin);
@@ -36,27 +30,7 @@ export function UserDropdown() {
     await signOut();
   };
 
-  const handleMouseEnter = () => {
-    if (totalUnread > 0 && !isMobile) {
-      const timeout = setTimeout(() => {
-        setShowUnreadDropdown(true);
-      }, 500);
-      setHoverTimeout(timeout);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout);
-      setHoverTimeout(null);
-    }
-    // Don't immediately hide - let the dropdown handle its own hover state
-  };
-
-  const handleMobileMessagesClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Mobile messages button clicked'); // Debug log
+  const handleMessagesClick = () => {
     navigate('/messages');
   };
 
@@ -68,14 +42,6 @@ export function UserDropdown() {
     navigate('/partner/profile');
   };
 
-  useEffect(() => {
-    return () => {
-      if (hoverTimeout) {
-        clearTimeout(hoverTimeout);
-      }
-    };
-  }, [hoverTimeout]);
-
   const userInitials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`;
 
   return (
@@ -83,24 +49,14 @@ export function UserDropdown() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
-            ref={buttonRef}
             variant="ghost" 
             className="flex items-center gap-2 relative pointer-events-auto"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
           >
-            <div className="relative">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-              {totalUnread > 0 && (
-                <div className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full border border-background">
-                  <span className="sr-only">{totalUnread} unread messages</span>
-                </div>
-              )}
-            </div>
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="text-xs">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex flex-col items-start text-xs">
               <span className="font-medium">{profile?.first_name} {profile?.last_name}</span>
               <span className="text-muted-foreground capitalize">{primaryRole}</span>
@@ -124,12 +80,12 @@ export function UserDropdown() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {isMobile && totalUnread > 0 && (
+      {totalUnread > 0 && (
         <Button
           variant="ghost"
           size="icon"
-          className="relative pointer-events-auto touch-manipulation min-h-[44px] min-w-[44px] z-10"
-          onClick={handleMobileMessagesClick}
+          className="relative pointer-events-auto touch-manipulation min-h-[44px] min-w-[44px]"
+          onClick={handleMessagesClick}
           aria-label="Open messages"
           type="button"
         >
@@ -139,15 +95,6 @@ export function UserDropdown() {
             {totalUnread}
           </span>
         </Button>
-      )}
-
-      {!isMobile && (
-        <UnreadMessagesDropdown
-          isVisible={showUnreadDropdown}
-          unreadCounts={unreadCounts}
-          onClose={() => setShowUnreadDropdown(false)}
-          anchorRef={buttonRef}
-        />
       )}
     </div>
   );
