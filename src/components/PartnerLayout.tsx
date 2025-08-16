@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useBranding } from '@/hooks/useBranding';
 import { StandardHeader } from '@/components/layout/StandardHeader';
 import { MobileHeader } from '@/components/layout/MobileHeader';
+import { UserDropdown } from '@/components/layout/UserDropdown';
 import {
   Sidebar,
   SidebarContent,
@@ -233,6 +234,7 @@ const PartnerLayout: React.FC<PartnerLayoutProps> = ({ children }) => {
             <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-background">
               <SidebarTrigger />
               <div className="flex-1" />
+              <UserDropdown />
             </header>
           )}
 
