@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
 import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/utils/fileUtils";
+import { validateField, type FieldType } from "@/utils/receiptValidation";
 import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
@@ -82,7 +83,7 @@ interface SmartReceiptFormData {
   work_order_id?: string;
 }
 
-// Form validation schema
+// Progressive validation schema - allows submission with warnings
 const receiptSchema = z.object({
   vendor_name: z.string().min(1, "Vendor name is required"),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -91,6 +92,18 @@ const receiptSchema = z.object({
   notes: z.string().optional(),
   work_order_id: z.string().optional(),
 });
+
+// Helper function to check if form can be submitted (allows warnings, blocks only errors)
+const canSubmitForm = (formData: SmartReceiptFormData, confidence: Record<string, number>) => {
+  const vendorValidation = validateField('vendor', formData.vendor_name, confidence.vendor);
+  const amountValidation = validateField('amount', formData.amount, confidence.total);
+  const dateValidation = validateField('date', formData.receipt_date, confidence.date);
+  
+  // Only block submission for actual errors, not warnings
+  return vendorValidation.severity !== 'error' && 
+         amountValidation.severity !== 'error' && 
+         dateValidation.severity !== 'error';
+};
 
 // Common vendors for quick selection
 const COMMON_VENDORS = [
@@ -218,9 +231,12 @@ export function SmartReceiptFlow() {
     },
   });
 
-  // Watch form values for floating action bar
+  // Watch form values for floating action bar with progressive validation
   const watchedValues = form.watch();
-  const isFormValid = form.formState.isValid && watchedValues.vendor_name && watchedValues.amount > 0 && watchedValues.receipt_date;
+  const isFormValid = canSubmitForm(watchedValues, ocrConfidence) && 
+                     watchedValues.vendor_name && 
+                     watchedValues.amount > 0 && 
+                     watchedValues.receipt_date;
   const isDirty = form.formState.isDirty || !!receiptFile;
 
   // OCR processing function with progress tracking
@@ -890,16 +906,12 @@ export function SmartReceiptFlow() {
                     form.setValue('vendor_name', value, { shouldValidate: true });
                   }}
                   inputType="text"
+                  fieldType="vendor"
                   label="Vendor Name"
                   placeholder="Enter vendor name"
-                  confidence={ocrConfidence.vendor ? ocrConfidence.vendor * 100 : undefined}
+                  confidence={ocrConfidence.vendor}
                   suggestions={COMMON_VENDORS}
-                  validation={(value) => {
-                    if (!value || value.trim().length === 0) {
-                      return 'Vendor name is required';
-                    }
-                    return null;
-                  }}
+                  enableRealtimeValidation={true}
                 />
 
                 <InlineEditField
@@ -908,37 +920,24 @@ export function SmartReceiptFlow() {
                     form.setValue('amount', parseFloat(value) || 0, { shouldValidate: true });
                   }}
                   inputType="currency"
+                  fieldType="amount"
                   label="Amount"
                   placeholder="0.00"
-                  confidence={ocrConfidence.total ? ocrConfidence.total * 100 : undefined}
-                  validation={(value) => {
-                    const numValue = parseFloat(value);
-                    if (isNaN(numValue) || numValue <= 0) {
-                      return 'Amount must be greater than 0';
-                    }
-                    return null;
-                  }}
+                  confidence={ocrConfidence.total}
+                  enableRealtimeValidation={true}
                 />
 
                 <InlineEditField
-                  value={form.watch('receipt_date') ? new Date(form.watch('receipt_date')) : new Date()}
+                  value={form.watch('receipt_date') || format(new Date(), "yyyy-MM-dd")}
                   onSave={(value) => {
                     const dateStr = value instanceof Date ? value.toISOString().split('T')[0] : value;
                     form.setValue('receipt_date', dateStr, { shouldValidate: true });
                   }}
                   inputType="date"
+                  fieldType="date"
                   label="Receipt Date"
-                  confidence={ocrConfidence.date ? ocrConfidence.date * 100 : undefined}
-                  validation={(value) => {
-                    if (!value) {
-                      return 'Receipt date is required';
-                    }
-                    const date = value instanceof Date ? value : new Date(value);
-                    if (date > new Date()) {
-                      return 'Receipt date cannot be in the future';
-                    }
-                    return null;
-                  }}
+                  confidence={ocrConfidence.date}
+                  enableRealtimeValidation={true}
                 />
               </div>
             </FieldGroup>

@@ -2,14 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SmartInput } from './SmartInput';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { Button } from '@/components/ui/button';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  validateField, 
+  getFormatExamples, 
+  getFieldSuggestions, 
+  shouldHighlightField, 
+  getConfidenceHighlight,
+  type FieldType,
+  type ValidationResult 
+} from '@/utils/receiptValidation';
 
 interface InlineEditFieldProps {
   value: string | number | Date;
   onSave: (value: any) => void | Promise<void>;
   inputType: 'text' | 'currency' | 'date' | 'number';
+  fieldType?: FieldType;
   placeholder?: string;
   validation?: (value: any) => string | null;
   confidence?: number;
@@ -18,12 +28,14 @@ interface InlineEditFieldProps {
   className?: string;
   label?: string;
   formatDisplay?: (value: any) => string;
+  enableRealtimeValidation?: boolean;
 }
 
 export const InlineEditField: React.FC<InlineEditFieldProps> = ({
   value,
   onSave,
   inputType,
+  fieldType,
   placeholder,
   validation,
   confidence,
@@ -31,20 +43,47 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
   disabled = false,
   className,
   label,
-  formatDisplay
+  formatDisplay,
+  enableRealtimeValidation = true
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showFormatExample, setShowFormatExample] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEditValue(value);
-  }, [value]);
+    // Reset validation when value changes
+    if (fieldType && enableRealtimeValidation) {
+      const result = validateField(fieldType, value, confidence);
+      setValidationResult(result);
+    }
+  }, [value, fieldType, confidence, enableRealtimeValidation]);
+
+  // Real-time validation as user types
+  useEffect(() => {
+    if (isEditing && fieldType && enableRealtimeValidation) {
+      const debounceTimer = setTimeout(() => {
+        const result = validateField(fieldType, editValue, confidence);
+        setValidationResult(result);
+        
+        // Only set error for severe issues to avoid blocking
+        if (result.severity === 'error') {
+          setError(result.message);
+        } else {
+          setError(null);
+        }
+      }, 300); // Debounce validation
+
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [editValue, isEditing, fieldType, confidence, enableRealtimeValidation]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -64,6 +103,7 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     setIsEditing(true);
     setError(null);
     setShowSuggestions(false);
+    setShowFormatExample(true);
   };
 
   const handleCancel = () => {
@@ -71,9 +111,21 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     setEditValue(value);
     setError(null);
     setShowSuggestions(false);
+    setShowFormatExample(false);
+    setValidationResult(null);
   };
 
   const handleSave = async () => {
+    // Progressive validation - allow save even with warnings
+    if (fieldType && enableRealtimeValidation) {
+      const result = validateField(fieldType, editValue, confidence);
+      if (result.severity === 'error') {
+        setError(result.message);
+        return;
+      }
+    }
+
+    // Legacy validation fallback
     if (validation) {
       const validationError = validation(editValue);
       if (validationError) {
@@ -84,6 +136,7 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
 
     if (editValue === value) {
       setIsEditing(false);
+      setShowFormatExample(false);
       return;
     }
 
@@ -92,6 +145,7 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
       await onSave(editValue);
       setIsEditing(false);
       setError(null);
+      setShowFormatExample(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 1500);
     } catch (err) {
@@ -155,7 +209,18 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     }
   };
 
-  const topSuggestions = suggestions.slice(0, 4);
+  // Get smart suggestions based on field type and current value
+  const smartSuggestions = fieldType 
+    ? getFieldSuggestions(fieldType, typeof editValue === 'string' ? editValue : '') 
+    : suggestions;
+  const topSuggestions = smartSuggestions.slice(0, 4);
+  
+  // Get format examples for the field type
+  const formatExamples = fieldType ? getFormatExamples(fieldType) : [];
+  
+  // Determine if field should be highlighted based on confidence
+  const shouldHighlight = shouldHighlightField(confidence);
+  const confidenceHighlight = getConfidenceHighlight(confidence);
 
   if (isEditing) {
     return (
@@ -185,7 +250,10 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
             suggestions={[]}
             autoFocus
             disabled={isSaving}
-            className="w-full"
+            className={cn(
+              "w-full transition-all duration-200",
+              shouldHighlight && confidenceHighlight
+            )}
           />
           
           {isSaving && (
@@ -194,12 +262,78 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
             </div>
           )}
           
+          {/* Real-time validation feedback */}
+          <AnimatePresence>
+            {validationResult && !isSaving && (
+              <motion.div 
+                className="flex items-start gap-2 mt-2 text-sm"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  {validationResult.severity === 'error' && (
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                  )}
+                  {validationResult.severity === 'warning' && (
+                    <AlertCircle className="h-4 w-4 text-warning" />
+                  )}
+                  {validationResult.severity === 'info' && (
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className={cn(
+                    "font-medium",
+                    validationResult.severity === 'error' && "text-destructive",
+                    validationResult.severity === 'warning' && "text-warning",
+                    validationResult.severity === 'info' && "text-muted-foreground"
+                  )}>
+                    {validationResult.message}
+                  </p>
+                  {validationResult.suggestion && (
+                    <p className="text-muted-foreground mt-1">
+                      {validationResult.suggestion}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Format examples */}
+          <AnimatePresence>
+            {showFormatExample && formatExamples.length > 0 && (
+              <motion.div
+                className="mt-2 p-2 bg-muted/30 rounded-md border"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  Format examples:
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {formatExamples.slice(0, 3).map((example, index) => (
+                    <code 
+                      key={index}
+                      className="text-xs bg-background px-1.5 py-0.5 rounded border"
+                    >
+                      {example}
+                    </code>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           {error && (
             <motion.p 
-              className="text-sm text-destructive mt-1"
+              className="text-sm text-destructive mt-1 flex items-center gap-1"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
+              <AlertCircle className="h-4 w-4" />
               {error}
             </motion.p>
           )}
@@ -228,17 +362,28 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
             "relative py-1 px-1 rounded transition-all duration-200",
             disabled 
               ? "cursor-not-allowed opacity-50" 
-              : "cursor-text hover:bg-muted/30"
+              : "cursor-text hover:bg-muted/30",
+            shouldHighlight && confidenceHighlight
           )}
           whileHover={!disabled ? { scale: 1.01 } : {}}
         >
           <span className={cn(
             "inline-block min-h-[1.25rem] border-b-2 border-dotted border-transparent transition-all duration-200",
             !disabled && "group-hover:border-muted-foreground/30",
-            !value && "text-muted-foreground"
+            !value && "text-muted-foreground",
+            shouldHighlight && "border-warning/40"
           )}>
             {value ? getDisplayValue() : placeholder || 'Click to edit'}
           </span>
+          
+          {/* Low confidence indicator */}
+          {shouldHighlight && (
+            <div className="absolute -top-1 -right-1">
+              <div className="bg-warning text-warning-foreground rounded-full p-0.5">
+                <AlertCircle className="h-2.5 w-2.5" />
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Success Animation */}
