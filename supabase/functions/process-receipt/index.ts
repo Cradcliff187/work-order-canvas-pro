@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Import modular components
+// Import enhanced modular components
 import { findVendor } from "./lib/vendor-detection.ts";
 import { parseReceiptDate } from "./lib/date-parsing.ts";
 import { calculateOverallConfidence, getExtractionQuality, calculateBaseConfidence, FieldConfidence } from "./lib/confidence-scoring.ts";
@@ -9,6 +9,10 @@ import { detectDocumentType } from "./lib/document-types.ts";
 import { extractLineItems, LineItem } from "./lib/line-item-parser.ts";
 import { parseAmounts } from "./lib/amount-parser.ts";
 import { logDebug, createDebugLog, processWithTestMode, ProcessingMetrics, DebugLog, SAMPLE_DOCUMENTS } from "./lib/text-processing.ts";
+
+// Import new universal processing modules
+import { runMultiStrategyExtraction } from "./lib/multi-strategy-extraction.ts";
+import { runUniversalValidation, runAutoFix, recoverFromErrors, boostConfidenceForQuality } from "./lib/universal-validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,103 +50,87 @@ interface OCRResult {
   validation_passed?: boolean;
 }
 
-// Main parsing function using modular components
+// Universal parsing function using multi-strategy extraction
 function parseReceiptText(text: string): OCRResult {
-  console.log('🔍 Starting enhanced OCR parsing with modular approach...');
+  console.log('🚀 Starting universal OCR parsing with multi-strategy approach...');
   
-  // Initialize result with proper confidence structure
+  // Step 1: Run multi-strategy extraction
+  const extractionResult = runMultiStrategyExtraction(text);
+  
+  // Step 2: Convert to OCRResult format
   const result: OCRResult = {
-    vendor: '',
-    total: 0,
-    date: '',
+    vendor: extractionResult.vendor || '',
+    vendor_raw: extractionResult.vendor || '',
+    total: extractionResult.total || 0,
+    subtotal: extractionResult.subtotal,
+    tax: extractionResult.tax,
+    date: extractionResult.date || new Date().toISOString().split('T')[0],
+    lineItems: extractionResult.lineItems || [],
+    document_type: 'receipt',
+    document_confidence: 0.8,
     confidence: {
-      vendor: 0,
-      total: 0,
-      date: 0,
-      lineItems: 0,
-      overall: 0
-    }
+      vendor: extractionResult.vendor_confidence || 0,
+      total: extractionResult.total_confidence || 0,
+      date: extractionResult.date_confidence || 0,
+      lineItems: extractionResult.lineItems && extractionResult.lineItems.length > 0 ? 0.7 : 0,
+      overall: extractionResult.overall_confidence
+    },
+    confidence_details: {
+      vendor: { 
+        score: extractionResult.vendor_confidence || 0, 
+        method: 'multi_strategy' as ExtractionMethod,
+        source: extractionResult.extraction_methods.join(', ')
+      },
+      total: { 
+        score: extractionResult.total_confidence || 0, 
+        method: 'multi_strategy' as ExtractionMethod,
+        source: extractionResult.extraction_methods.join(', ')
+      },
+      date: { 
+        score: extractionResult.date_confidence || 0, 
+        method: 'multi_strategy' as ExtractionMethod,
+        validated: true
+      },
+      lineItems: { 
+        score: extractionResult.lineItems && extractionResult.lineItems.length > 0 ? 0.7 : 0, 
+        method: 'multi_strategy' as ExtractionMethod
+      },
+      document_type: { 
+        score: 0.8, 
+        method: 'pattern_match' as ExtractionMethod
+      }
+    },
+    extraction_quality: getExtractionQuality(extractionResult.overall_confidence),
+    validation_passed: extractionResult.validation_passed
   };
 
-  // Initialize confidence details
-  result.confidence_details = {
-    vendor: { score: 0, method: 'direct_ocr' as ExtractionMethod },
-    total: { score: 0, method: 'pattern_match' as ExtractionMethod },
-    date: { score: 0, method: 'pattern_match' as ExtractionMethod },
-    lineItems: { score: 0, method: 'pattern_match' as ExtractionMethod },
-    document_type: { score: 0, method: 'pattern_match' as ExtractionMethod }
-  };
-
-  // Detect document type
-  const docType = detectDocumentType(text);
-  result.document_type = docType.document_type;
-  result.document_confidence = docType.document_confidence;
-
-  // Extract vendor using modular vendor detection
-  const vendorResult = findVendor(text);
-  if (vendorResult.vendor) {
-    result.vendor = vendorResult.vendor;
-    result.vendor_raw = vendorResult.vendor_raw;
-    result.confidence!.vendor = vendorResult.confidence;
-    result.confidence_details!.vendor = {
-      score: vendorResult.confidence,
-      method: vendorResult.method,
-      source: vendorResult.source,
-      position: vendorResult.position
-    };
-    console.log(`✅ Found vendor: ${result.vendor} (confidence: ${vendorResult.confidence.toFixed(3)})`);
-  }
-
-  // Extract amounts using modular amount parser
-  const amounts = parseAmounts(text);
-  if (amounts.total) {
-    result.total = amounts.total;
-    result.confidence!.total = amounts.total_confidence || 0.8;
-  }
-  if (amounts.subtotal) result.subtotal = amounts.subtotal;
-  if (amounts.tax) result.tax = amounts.tax;
-
-  // Extract line items using modular line item parser
-  result.lineItems = extractLineItems(text);
-  
-  // Calculate line items confidence
-  let lineItemsConfidence = 0.0;
-  if (result.lineItems && result.lineItems.length > 0) {
-    const avgConfidence = result.lineItems.reduce((sum, item) => sum + (item.confidence || 0.5), 0) / result.lineItems.length;
-    lineItemsConfidence = Math.min(0.5 + (avgConfidence * 0.4), 0.9);
-  }
-  result.confidence!.lineItems = lineItemsConfidence;
-
-  // Extract date using modular date parser
-  const dateResult = parseReceiptDate(text);
-  if (dateResult.date) {
-    result.date = dateResult.date;
-    result.confidence!.date = dateResult.confidence;
-    result.confidence_details!.date = {
-      score: dateResult.confidence,
-      method: 'pattern_match' as ExtractionMethod,
-      source: dateResult.format,
-      validated: true
-    };
-  } else {
-    result.date = new Date().toISOString().split('T')[0];
-    result.confidence!.date = 0.3;
-  }
-
-  // Calculate overall confidence and quality
-  const overallConfidence = calculateOverallConfidence({
-    vendor: result.confidence!.vendor,
-    total: result.confidence!.total,
-    date: result.confidence!.date,
-    lineItems: result.confidence!.lineItems,
-    document_confidence: result.document_confidence
+  // Step 3: Run universal validation
+  const validation = runUniversalValidation(result, {
+    documentType: 'receipt',
+    vendor: result.vendor,
+    currency: 'USD',
+    locale: 'en-US'
   });
-  
-  result.confidence!.overall = overallConfidence;
-  result.extraction_quality = getExtractionQuality(overallConfidence);
-  result.validation_passed = (result.confidence!.vendor || 0) > 0.5 && (result.confidence!.total || 0) > 0.5;
 
-  console.log(`🎯 Modular parsing complete - Overall confidence: ${overallConfidence.toFixed(3)} (${result.extraction_quality})`);
+  // Step 4: Apply auto-fixes if needed
+  if (!validation.valid && validation.issues.some(i => i.autoFixable)) {
+    console.log('🔧 Applying auto-fixes...');
+    const fixedResult = runAutoFix(result);
+    Object.assign(result, fixedResult);
+  }
+
+  // Step 5: Apply error recovery if still invalid
+  if (!validation.valid) {
+    console.log('🔄 Applying error recovery...');
+    const recoveredResult = recoverFromErrors(result, validation.issues);
+    Object.assign(result, recoveredResult);
+  }
+
+  // Step 6: Boost confidence for high-quality text
+  const qualityBoostedResult = boostConfidenceForQuality(result, result.extraction_quality || 'fair');
+  Object.assign(result, qualityBoostedResult);
+
+  console.log(`🎯 Universal parsing complete - Methods: [${extractionResult.extraction_methods.join(', ')}], Overall confidence: ${result.confidence!.overall.toFixed(3)} (${result.extraction_quality})`);
   
   return result;
 }
