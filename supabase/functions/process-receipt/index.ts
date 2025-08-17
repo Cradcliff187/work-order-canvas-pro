@@ -19,6 +19,8 @@ interface OCRResult {
   tax?: number;
   date?: string;
   lineItems?: LineItem[];
+  document_type: 'receipt' | 'invoice' | 'statement' | 'unknown';
+  document_confidence: number;
   confidence?: {
     vendor?: number;
     total?: number;
@@ -85,6 +87,8 @@ serve(async (req) => {
           error: 'No text detected in image',
           vendor: '',
           total: 0,
+          document_type: 'unknown',
+          document_confidence: 0,
           confidence: {}
         }),
         { 
@@ -96,8 +100,16 @@ serve(async (req) => {
     const fullText = textAnnotations[0].description || '';
     console.log('Extracted text:', fullText);
 
+    // Detect document type first
+    const documentDetection = detectDocumentType(fullText);
+    console.log('Document detection:', documentDetection);
+
     // Parse receipt data from OCR text
     const result = parseReceiptText(fullText);
+    
+    // Add document type information to result
+    result.document_type = documentDetection.type;
+    result.document_confidence = documentDetection.confidence;
     
     console.log('Parsed result:', result);
 
@@ -116,6 +128,8 @@ serve(async (req) => {
         error: error.message,
         vendor: '',
         total: 0,
+        document_type: 'unknown',
+        document_confidence: 0,
         confidence: {}
       }),
       { 
@@ -370,4 +384,133 @@ function parseReceiptText(text: string): OCRResult {
   }
 
   return result;
+}
+
+function detectDocumentType(text: string): { type: 'receipt' | 'invoice' | 'statement' | 'unknown', confidence: number, reasoning: string } {
+  const textUpper = text.toUpperCase();
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  // Initialize scores
+  let receiptScore = 0;
+  let invoiceScore = 0;
+  let statementScore = 0;
+  
+  const reasoning: string[] = [];
+  
+  // Receipt detection patterns
+  const receiptKeywords = ['RECEIPT', 'SUBTOTAL', 'SALES TAX', 'TAX', 'TOTAL', 'CHANGE', 'THANK YOU'];
+  const receiptVendors = ['HOME DEPOT', 'WALMART', 'TARGET', 'LOWES', 'MENARDS', 'HARBOR FREIGHT', 'COSTCO'];
+  const receiptStructure = [/SUBTOTAL[\s:]*\$?[\d,]+\.?\d{0,2}/i, /TAX[\s:]*\$?[\d,]+\.?\d{0,2}/i, /TOTAL[\s:]*\$?[\d,]+\.?\d{0,2}/i];
+  
+  // Invoice detection patterns
+  const invoiceKeywords = ['INVOICE', 'INVOICE #', 'INVOICE NUMBER', 'NET', 'TERMS', 'DUE DATE', 'PAYMENT DUE', 'REMIT TO'];
+  const invoiceNumbers = [/INVOICE\s*#?\s*[A-Z0-9-]+/i, /INV[-#]?\s*[A-Z0-9]+/i];
+  const invoiceTerms = ['NET 30', 'NET 15', 'DUE UPON RECEIPT', 'PAYMENT TERMS', 'DUE DATE'];
+  
+  // Statement detection patterns
+  const statementKeywords = ['STATEMENT', 'ACCOUNT', 'BALANCE', 'PREVIOUS BALANCE', 'CURRENT BALANCE', 'STATEMENT DATE'];
+  const statementStructure = ['ACCOUNT NUMBER', 'STATEMENT PERIOD', 'PREVIOUS BALANCE', 'PAYMENTS', 'CHARGES'];
+  
+  // Check receipt indicators
+  for (const keyword of receiptKeywords) {
+    if (textUpper.includes(keyword)) {
+      receiptScore += 0.1;
+      reasoning.push(`Receipt keyword: ${keyword}`);
+    }
+  }
+  
+  for (const vendor of receiptVendors) {
+    if (textUpper.includes(vendor)) {
+      receiptScore += 0.15;
+      reasoning.push(`Receipt vendor: ${vendor}`);
+    }
+  }
+  
+  for (const pattern of receiptStructure) {
+    if (pattern.test(text)) {
+      receiptScore += 0.15;
+      reasoning.push(`Receipt structure: ${pattern.source}`);
+    }
+  }
+  
+  // Check for item list structure (strong receipt indicator)
+  const itemLines = lines.filter(line => /\$[\d,]+\.\d{2}$/.test(line));
+  if (itemLines.length >= 2) {
+    receiptScore += 0.2;
+    reasoning.push(`Item list structure: ${itemLines.length} items found`);
+  }
+  
+  // Check invoice indicators
+  for (const keyword of invoiceKeywords) {
+    if (textUpper.includes(keyword)) {
+      invoiceScore += 0.15;
+      reasoning.push(`Invoice keyword: ${keyword}`);
+    }
+  }
+  
+  for (const pattern of invoiceNumbers) {
+    if (pattern.test(text)) {
+      invoiceScore += 0.2;
+      reasoning.push(`Invoice number pattern: ${pattern.source}`);
+    }
+  }
+  
+  for (const term of invoiceTerms) {
+    if (textUpper.includes(term)) {
+      invoiceScore += 0.15;
+      reasoning.push(`Invoice term: ${term}`);
+    }
+  }
+  
+  // Check statement indicators
+  for (const keyword of statementKeywords) {
+    if (textUpper.includes(keyword)) {
+      statementScore += 0.15;
+      reasoning.push(`Statement keyword: ${keyword}`);
+    }
+  }
+  
+  for (const structure of statementStructure) {
+    if (textUpper.includes(structure)) {
+      statementScore += 0.1;
+      reasoning.push(`Statement structure: ${structure}`);
+    }
+  }
+  
+  // Normalize scores to 0-1 range
+  receiptScore = Math.min(receiptScore, 1.0);
+  invoiceScore = Math.min(invoiceScore, 1.0);
+  statementScore = Math.min(statementScore, 1.0);
+  
+  console.log(`📊 Document type scores: Receipt=${receiptScore.toFixed(2)}, Invoice=${invoiceScore.toFixed(2)}, Statement=${statementScore.toFixed(2)}`);
+  
+  // Determine document type
+  const maxScore = Math.max(receiptScore, invoiceScore, statementScore);
+  
+  if (maxScore < 0.3) {
+    console.log('🤷 Document type uncertain - defaulting to unknown');
+    return {
+      type: 'unknown',
+      confidence: maxScore,
+      reasoning: `Low confidence detection. ${reasoning.join('; ')}`
+    };
+  }
+  
+  let detectedType: 'receipt' | 'invoice' | 'statement' | 'unknown';
+  if (receiptScore === maxScore) {
+    detectedType = 'receipt';
+    console.log(`📄 Detected as RECEIPT with confidence ${receiptScore.toFixed(2)}`);
+  } else if (invoiceScore === maxScore) {
+    detectedType = 'invoice';
+    console.log(`📋 Detected as INVOICE with confidence ${invoiceScore.toFixed(2)}`);
+  } else {
+    detectedType = 'statement';
+    console.log(`📊 Detected as STATEMENT with confidence ${statementScore.toFixed(2)}`);
+  }
+  
+  return {
+    type: detectedType,
+    confidence: maxScore,
+    reasoning: reasoning.join('; ')
+  };
 }
