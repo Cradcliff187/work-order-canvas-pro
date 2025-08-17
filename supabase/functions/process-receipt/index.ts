@@ -71,6 +71,33 @@ async function saveToCache(imageUrl: string, result: any): Promise<void> {
   }
 }
 
+// Simple parser for test mode
+function parseReceiptSimple(text: string) {
+  console.log('🧪 Using simple test parser...');
+  
+  const vendorResult = findVendor(text);
+  const dateResult = parseReceiptDate(text);
+  const amountResult = parseAmounts(text);
+  
+  return {
+    vendor: vendorResult.name || 'Test Vendor',
+    total: amountResult.total || 0,
+    date: dateResult.date || new Date().toISOString().split('T')[0],
+    subtotal: amountResult.grandTotal || 0,
+    tax: null,
+    lineItems: [],
+    document_type: 'receipt',
+    confidence: {
+      vendor: vendorResult.confidence || 0.8,
+      total: amountResult.confidence || 0.8,
+      date: dateResult.confidence || 0.8,
+      lineItems: 0,
+      overall: 0.8
+    },
+    extraction_method: 'simple_test'
+  };
+}
+
 // Parse receipt using OpenAI LLM
 async function parseReceiptWithLLM(text: string) {
   console.log('🚀 Starting LLM receipt parsing...');
