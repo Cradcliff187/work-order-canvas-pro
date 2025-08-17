@@ -119,6 +119,9 @@ function parseReceiptText(text: string): OCRResult {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   const result: OCRResult = {
+    vendor: '',
+    total: 0,
+    date: '',
     confidence: {}
   };
 
@@ -127,7 +130,7 @@ function parseReceiptText(text: string): OCRResult {
     /^(HOME DEPOT|LOWES|MENARDS|HARBOR FREIGHT)/i,
     /^(SHELL|BP|SPEEDWAY|CIRCLE K)/i,
     /^(MCDONALD'S|SUBWAY|JIMMY JOHNS)/i,
-    /^([A-Z][A-Z\s&]{2,25})/  // Generic: 2+ uppercase words
+    /^([A-Z][A-Z\s&]{2,30})/  // Generic business name
   ];
 
   for (let i = 0; i < Math.min(5, lines.length); i++) {
@@ -142,58 +145,74 @@ function parseReceiptText(text: string): OCRResult {
     if (result.vendor) break;
   }
 
-  // Extract total amount (look for common total indicators)
-  const amountPatterns = [
-    /(?:TOTAL|AMOUNT|BALANCE|GRAND TOTAL|SUBTOTAL)[\s:]*\$?(\d+\.?\d{0,2})/i,
-    /\$(\d+\.\d{2})(?:\s|$)/g,  // Any dollar amount
-    /(\d+\.\d{2})$/m  // Amount at end of line
-  ];
-
-  let amounts: number[] = [];
+  // Extract amounts - FIXED: Added 'g' flag for global matching
+  const amounts: number[] = [];
+  const amountPattern = /\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g;
   
   for (const line of lines) {
-    for (const pattern of amountPatterns) {
-      const matches = Array.from(line.matchAll(pattern));
+    // Look for lines with TOTAL, AMOUNT, etc.
+    if (/TOTAL|AMOUNT|BALANCE|DUE/i.test(line)) {
+      const matches = Array.from(line.matchAll(amountPattern));
       for (const match of matches) {
-        const amount = parseFloat(match[1]);
-        if (amount > 0 && amount < 10000) {  // Reasonable range
+        const amount = parseFloat(match[1].replace(/,/g, ''));
+        if (amount > 0 && amount < 10000) {
           amounts.push(amount);
         }
       }
     }
   }
 
+  // If no amounts found with TOTAL keyword, look for any amounts
+  if (amounts.length === 0) {
+    const allText = text.replace(/\n/g, ' ');
+    const matches = Array.from(allText.matchAll(amountPattern));
+    for (const match of matches) {
+      const amount = parseFloat(match[1].replace(/,/g, ''));
+      if (amount > 0 && amount < 10000) {
+        amounts.push(amount);
+      }
+    }
+  }
+
   if (amounts.length > 0) {
-    // Use the largest amount found (likely the total)
+    // Usually the largest amount is the total
     result.total = Math.max(...amounts);
     result.confidence!.total = 0.7;
   }
 
-  // Extract date (look for date patterns)
+  // Extract date
   const datePatterns = [
-    /(\d{1,2}\/\d{1,2}\/\d{2,4})/,
-    /(\d{1,2}-\d{1,2}-\d{2,4})/,
-    /(\d{4}-\d{1,2}-\d{1,2})/
+    /(\d{1,2}\/\d{1,2}\/\d{2,4})/g,
+    /(\d{1,2}-\d{1,2}-\d{2,4})/g,
+    /(\d{4}-\d{1,2}-\d{1,2})/g,
+    /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/gi
   ];
 
   for (const line of lines) {
     for (const pattern of datePatterns) {
-      const match = line.match(pattern);
-      if (match) {
+      const matches = Array.from(line.matchAll(pattern));
+      for (const match of matches) {
         try {
           const dateStr = match[1];
           const date = new Date(dateStr);
           if (!isNaN(date.getTime())) {
             result.date = date.toISOString().split('T')[0];
-            result.confidence!.date = 0.6;
+            result.confidence!.date = 0.7;
             break;
           }
         } catch (e) {
           console.log('Date parsing error:', e);
         }
       }
+      if (result.date) break;
     }
     if (result.date) break;
+  }
+
+  // If no date found, use today
+  if (!result.date) {
+    result.date = new Date().toISOString().split('T')[0];
+    result.confidence!.date = 0.3;
   }
 
   return result;
