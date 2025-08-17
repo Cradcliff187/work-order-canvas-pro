@@ -344,32 +344,70 @@ export function runUniversalValidation(data: any, context: ValidationContext = {
   currency: 'USD',
   locale: 'en-US'
 }): ValidationResult {
-  console.log('🔍 Running universal validation...');
+  console.log('🔍 Running comprehensive universal validation...');
   
   const allIssues: ValidationIssue[] = [];
   const confidenceScores: number[] = [];
   const suggestions: string[] = [];
   
+  // Run all validation rules with enhanced error handling
   for (const rule of VALIDATION_RULES) {
-    const result = rule.validate(data);
-    allIssues.push(...result.issues);
-    confidenceScores.push(result.confidence);
-    suggestions.push(...result.suggestions);
+    try {
+      const result = rule.validate(data);
+      allIssues.push(...result.issues);
+      confidenceScores.push(result.confidence);
+      suggestions.push(...result.suggestions);
+      
+      console.log(`✅ ${rule.name}: ${result.issues.length} issues, confidence ${result.confidence.toFixed(3)}`);
+    } catch (error) {
+      console.warn(`⚠️ Validation rule ${rule.name} failed: ${error.message}`);
+      allIssues.push({
+        type: 'error',
+        field: 'validation_system',
+        message: `Validation rule ${rule.name} failed: ${error.message}`,
+        currentValue: null,
+        autoFixable: false
+      });
+      confidenceScores.push(0.3); // Low confidence for failed validation
+    }
   }
   
-  // Calculate overall confidence
-  const overallConfidence = confidenceScores.length > 0 
+  // Enhanced confidence calculation with mathematical validation penalties
+  let overallConfidence = confidenceScores.length > 0 
     ? confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length
     : 0;
+  
+  // Apply mathematical validation penalties
+  const mathIssues = allIssues.filter(i => i.message.includes('match') || i.message.includes('total'));
+  if (mathIssues.length > 0) {
+    overallConfidence *= (1 - mathIssues.length * 0.1); // 10% penalty per math issue
+    console.log(`📉 Applied mathematical validation penalty: ${mathIssues.length} issues`);
+  }
+  
+  // Flag for manual review if confidence is too low
+  const needsManualReview = overallConfidence < 0.6 || allIssues.filter(i => i.type === 'error').length > 2;
+  if (needsManualReview) {
+    allIssues.push({
+      type: 'warning',
+      field: 'overall_confidence',
+      message: 'Low confidence extraction - recommend manual review',
+      currentValue: overallConfidence,
+      autoFixable: false
+    });
+    suggestions.push('Consider manual review for low-confidence extractions');
+  }
   
   const errorCount = allIssues.filter(issue => issue.type === 'error').length;
   const warningCount = allIssues.filter(issue => issue.type === 'warning').length;
   
-  console.log(`🔍 Validation complete: ${errorCount} errors, ${warningCount} warnings, confidence: ${overallConfidence.toFixed(3)}`);
+  console.log(`🔍 Comprehensive validation complete: ${errorCount} errors, ${warningCount} warnings, confidence: ${overallConfidence.toFixed(3)}`);
+  if (needsManualReview) {
+    console.log('🚨 Flagged for manual review due to low confidence');
+  }
   
   return {
     valid: errorCount === 0,
-    confidence: overallConfidence,
+    confidence: Math.max(overallConfidence, 0.05), // Minimum confidence floor
     issues: allIssues,
     suggestions: [...new Set(suggestions)] // Remove duplicates
   };
