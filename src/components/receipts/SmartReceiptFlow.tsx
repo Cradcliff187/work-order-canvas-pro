@@ -777,6 +777,20 @@ export function SmartReceiptFlow() {
               <p className="text-xs text-muted-foreground text-center">
                 Supports images (JPEG, PNG, WebP, HEIC) and PDF files up to {formatFileSize(MAX_FILE_SIZE)}
               </p>
+              
+              {/* Manual Entry Option for capture stage */}
+              <div className="text-center pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={startManualEntry}
+                  className="gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  <Edit className="h-4 w-4" />
+                  Enter Details Manually
+                </Button>
+              </div>
             </div>
           ) : (
             /* Image Preview Section */
@@ -863,20 +877,6 @@ export function SmartReceiptFlow() {
                 </div>
               )}
 
-              {/* Manual Entry Option - Always available in capture stage */}
-              {flowStage === 'capture' && !receiptFile && (
-                <div className="text-center pt-4">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={startManualEntry}
-                    className="gap-2 text-muted-foreground"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Skip OCR - Enter Manually
-                  </Button>
-                </div>
-              )}
             </div>
           )}
 

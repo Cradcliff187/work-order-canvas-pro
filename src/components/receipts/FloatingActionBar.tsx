@@ -36,8 +36,13 @@ export function FloatingActionBar({
   const isMobile = useIsMobile();
   const { onFormSave, onSubmitSuccess } = useHapticFeedback();
   
-  // Only show when in review or manual-entry stages with meaningful data
-  if ((flowStage !== 'review' && flowStage !== 'manual-entry') || (!isDirty && !vendorName && !amount)) {
+  // Only show when in review or manual-entry stages AND has meaningful form data
+  if (flowStage !== 'review' && flowStage !== 'manual-entry') {
+    return null;
+  }
+  
+  // Require either meaningful data or form interaction
+  if (!isDirty && !vendorName && (!amount || amount === 0)) {
     return null;
   }
 
