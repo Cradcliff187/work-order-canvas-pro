@@ -118,6 +118,9 @@ serve(async (req) => {
 function parseReceiptText(text: string): OCRResult {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
+  // DEBUG - Log first 10 lines to see what we're working with
+  console.log('First 10 lines:', lines.slice(0, 10));
+  
   const result: OCRResult = {
     vendor: '',
     total: 0,
@@ -125,59 +128,74 @@ function parseReceiptText(text: string): OCRResult {
     confidence: {}
   };
 
-  // Extract vendor (usually first few lines, look for common indicators)
-  const vendorPatterns = [
-    /^(HOME DEPOT|LOWES|MENARDS|HARBOR FREIGHT)/i,
-    /^(SHELL|BP|SPEEDWAY|CIRCLE K)/i,
-    /^(MCDONALD'S|SUBWAY|JIMMY JOHNS)/i,
-    /^([A-Z][A-Z\s&]{2,30})/  // Generic business name
-  ];
-
-  for (let i = 0; i < Math.min(5, lines.length); i++) {
-    for (const pattern of vendorPatterns) {
-      const match = lines[i].match(pattern);
-      if (match) {
-        result.vendor = match[1] || match[0];
+  // VENDOR - Look for Home Depot specifically first (handles "HO\nDEPOT")
+  const homeDepotRegex = /HOME\s*DEPOT|HOMEDEPOT/i;
+  const fullText = text.toUpperCase();
+  
+  // Check for multi-line Home Depot pattern (HO + DEPOT)
+  const homeDepotMultiline = /HO\s*\n\s*DEPOT/i;
+  if (homeDepotMultiline.test(text) || homeDepotRegex.test(fullText)) {
+    result.vendor = 'Home Depot';
+    result.confidence!.vendor = 0.9;
+    console.log('✅ Found Home Depot (multi-line or standard)');
+  } else {
+    // Check first 5 lines for other store names
+    console.log('🔍 Checking vendor in first 5 lines...');
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      const line = lines[i].toUpperCase();
+      console.log(`Line ${i}: "${line}"`);
+      
+      if (line.includes('LOWE')) result.vendor = 'Lowes';
+      else if (line.includes('MENARDS')) result.vendor = 'Menards';
+      else if (line.includes('DEPOT')) result.vendor = 'Home Depot';
+      else if (line.includes('HARBOR')) result.vendor = 'Harbor Freight';
+      // Add more as needed
+      
+      if (result.vendor) {
         result.confidence!.vendor = 0.8;
+        console.log(`✅ Found vendor: ${result.vendor}`);
         break;
       }
     }
-    if (result.vendor) break;
   }
 
-  // Extract amounts - FIXED: Added 'g' flag for global matching
-  const amounts: number[] = [];
-  const amountPattern = /\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g;
+  // TOTAL - Look for the word TOTAL followed by amount (prioritize this)
+  const totalRegex = /TOTAL[\s:]*\$?([,\d]+\.?\d{0,2})/i;
+  const totalMatch = text.match(totalRegex);
   
-  for (const line of lines) {
-    // Look for lines with TOTAL, AMOUNT, etc.
-    if (/TOTAL|AMOUNT|BALANCE|DUE/i.test(line)) {
-      const matches = Array.from(line.matchAll(amountPattern));
-      for (const match of matches) {
-        const amount = parseFloat(match[1].replace(/,/g, ''));
-        if (amount > 0 && amount < 10000) {
-          amounts.push(amount);
-        }
+  console.log('🔍 Searching for TOTAL amount...');
+  if (totalMatch) {
+    result.total = parseFloat(totalMatch[1].replace(/,/g, ''));
+    result.confidence!.total = 0.9;
+    console.log(`✅ Found TOTAL: ${result.total}`);
+  } else {
+    // Fallback: Look for multi-line TOTAL pattern
+    const multilineTotalRegex = /TOTAL\s*\n\s*\$?([,\d]+\.?\d{0,2})/i;
+    const multilineMatch = text.match(multilineTotalRegex);
+    
+    if (multilineMatch) {
+      result.total = parseFloat(multilineMatch[1].replace(/,/g, ''));
+      result.confidence!.total = 0.8;
+      console.log(`✅ Found multi-line TOTAL: ${result.total}`);
+    } else {
+      // Last resort: Find largest dollar amount (but be more selective)
+      console.log('⚠️ No TOTAL found, looking for largest amount...');
+      const amountRegex = /\$?([,\d]+\.\d{2})/g;
+      const amounts = [...text.matchAll(amountRegex)]
+        .map(m => {
+          const amount = parseFloat(m[1].replace(/,/g, ''));
+          console.log(`Found amount: ${amount} from "${m[0]}"`);
+          return amount;
+        })
+        .filter(a => a > 0 && a < 10000)
+        .sort((a, b) => b - a);
+      
+      if (amounts.length > 0) {
+        result.total = amounts[0]; // Largest amount
+        result.confidence!.total = 0.5; // Lower confidence
+        console.log(`⚠️ Using largest amount as fallback: ${result.total}`);
       }
     }
-  }
-
-  // If no amounts found with TOTAL keyword, look for any amounts
-  if (amounts.length === 0) {
-    const allText = text.replace(/\n/g, ' ');
-    const matches = Array.from(allText.matchAll(amountPattern));
-    for (const match of matches) {
-      const amount = parseFloat(match[1].replace(/,/g, ''));
-      if (amount > 0 && amount < 10000) {
-        amounts.push(amount);
-      }
-    }
-  }
-
-  if (amounts.length > 0) {
-    // Usually the largest amount is the total
-    result.total = Math.max(...amounts);
-    result.confidence!.total = 0.7;
   }
 
   // Extract date
