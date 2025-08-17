@@ -194,6 +194,18 @@ export function SmartReceiptFlow() {
   const showCameraCapture = state.ui.showCameraCapture;
   const cameraStream = state.ui.cameraStream;
 
+  // Debug logging for form visibility and stage transitions
+  useEffect(() => {
+    console.log('🔍 Form visibility state:', {
+      flowStage,
+      isFormVisible: computed.isFormVisible,
+      hasOCRData: computed.hasOCRData,
+      ocrData: ocrData ? 'Present' : 'None',
+      ocrError: ocrError ? 'Present' : 'None',
+      confidence: ocrConfidence
+    });
+  }, [flowStage, computed.isFormVisible, computed.hasOCRData, ocrData, ocrError, ocrConfidence]);
+
   // Memoized file handling functions
   const removeFile = useCallback(() => {
     onSwipeAction(); // Haptic feedback
@@ -1076,6 +1088,27 @@ export function SmartReceiptFlow() {
           >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-tour="form-section">
+            
+            {/* Debug Panel - Development Only */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="border-2 border-dashed border-orange-300 bg-orange-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-orange-800 mb-2">🐛 Debug Info</h3>
+                <div className="text-xs space-y-1 text-orange-700">
+                  <div>Stage: <strong>{flowStage}</strong></div>
+                  <div>Form Visible: <strong>{computed.isFormVisible ? 'YES' : 'NO'}</strong></div>
+                  <div>Has OCR Data: <strong>{computed.hasOCRData ? 'YES' : 'NO'}</strong></div>
+                  <div>OCR Error: <strong>{ocrError ? 'YES' : 'NO'}</strong></div>
+                  {ocrData && (
+                    <div className="mt-2">
+                      <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> (confidence: {(ocrConfidence.vendor * 100).toFixed(1)}%)</div>
+                      <div>Amount: <strong>${ocrData.total || 'None'}</strong> (confidence: {(ocrConfidence.amount * 100).toFixed(1)}%)</div>
+                      <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Essential Details - Always Open */}
             <FieldGroup
               title="Essential Details"

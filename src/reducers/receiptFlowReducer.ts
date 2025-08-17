@@ -293,6 +293,7 @@ export function receiptFlowReducer(
         };
 
       case 'SET_OCR_SUCCESS':
+        console.log('OCR SUCCESS: Transitioning to review stage with data:', action.payload.data);
         return {
           ...state,
           stage: 'review' as FlowStage,
