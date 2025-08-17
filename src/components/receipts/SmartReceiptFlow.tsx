@@ -812,7 +812,7 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('Receipt submission error:', error);
-      const submissionTime = Date.now() - startTime;
+      const submissionTime = Date.now() - submitStartTime;
       trackError(error, { 
         context: 'Receipt submission',
         submissionTime,
