@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findVendor } from "./lib/vendor-detection.ts";
@@ -18,7 +17,7 @@ const supabase = createClient(
 );
 
 // Cache functions
-async function checkCache(imageUrl) {
+async function checkCache(imageUrl: string): Promise<any> {
   try {
     const imageHash = imageUrl.split('/').pop()?.split('?')[0] || imageUrl;
     console.log(`[CACHE] Checking cache for: ${imageHash}`);
@@ -47,7 +46,7 @@ async function checkCache(imageUrl) {
   }
 }
 
-async function saveToCache(imageUrl, result) {
+async function saveToCache(imageUrl: string, result: any): Promise<void> {
   try {
     const imageHash = imageUrl.split('/').pop()?.split('?')[0] || imageUrl;
     console.log(`[CACHE] Saving result for: ${imageHash}`);
@@ -73,7 +72,7 @@ async function saveToCache(imageUrl, result) {
 }
 
 // Parse receipt
-function parseReceiptSimple(text) {
+function parseReceiptSimple(text: string) {
   console.log('🚀 Starting receipt parsing...');
   console.log('First 10 lines of OCR text:');
   text.split('\n').slice(0, 10).forEach((line, i) => {
@@ -157,10 +156,9 @@ serve(async (req) => {
           body: JSON.stringify({
             requests: [{
               image: { source: { imageUri: imageUrl } },
-              features: [
-                { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 },
-                { type: 'TEXT_DETECTION', maxResults: 1 }
-              ]
+                features: [
+                  { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }
+                ]
             }]
           })
         }
@@ -216,8 +214,7 @@ serve(async (req) => {
               requests: [{
                 image: { source: { imageUri: imageUrl } },
                 features: [
-                  { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 },
-                  { type: 'TEXT_DETECTION', maxResults: 1 }
+                  { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }
                 ]
               }]
             })

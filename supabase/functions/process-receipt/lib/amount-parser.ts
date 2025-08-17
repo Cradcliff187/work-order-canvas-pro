@@ -1,5 +1,5 @@
 // Amount parsing - FIXED VERSION for separated TOTAL
-export function parseAmounts(text) {
+export function parseAmounts(text: string) {
   console.log('💰 Looking for amounts in receipt...');
   
   // Fix decimal points that might be missing
