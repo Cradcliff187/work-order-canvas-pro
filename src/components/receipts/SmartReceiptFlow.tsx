@@ -1166,8 +1166,8 @@ export function SmartReceiptFlow() {
                     OCR Confidence
                     {debugMode && ocrData && (
                       <Badge variant="outline" className="text-xs">
-                        {ocrData.from_cache ? 'From Cache' : 'Fresh Scan'}
-                        {ocrData.processing_time && ` (${ocrData.processing_time}ms)`}
+                        {(ocrData as any).from_cache ? 'From Cache' : 'Fresh Scan'}
+                        {(ocrData as any).processing_time && ` (${(ocrData as any).processing_time}ms)`}
                       </Badge>
                     )}
                   </h4>
@@ -1350,11 +1350,11 @@ export function SmartReceiptFlow() {
                         <div>Amount: <strong>${ocrData.total || 'None'}</strong> ({((ocrConfidence.total || 0) * 100).toFixed(1)}%)</div>
                         <div>Date: <strong>{ocrData.date || 'None'}</strong> ({((ocrConfidence.date || 0) * 100).toFixed(1)}%)</div>
                         <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
-                        {ocrData.from_cache && (
+                        {(ocrData as any).from_cache && (
                           <div className="text-green-600 dark:text-green-400 font-medium">✅ From Cache</div>
                         )}
-                        {ocrData.processing_time && (
-                          <div>Processing Time: <strong>{ocrData.processing_time}ms</strong></div>
+                        {(ocrData as any).processing_time && (
+                          <div>Processing Time: <strong>{(ocrData as any).processing_time}ms</strong></div>
                         )}
                       </div>
                     )}
