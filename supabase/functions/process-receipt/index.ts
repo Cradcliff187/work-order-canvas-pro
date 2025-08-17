@@ -12,11 +12,12 @@ import { logDebug, createDebugLog, processWithTestMode, ProcessingMetrics, Debug
 import { parseReceiptText } from "./lib/parseReceiptText.ts";
 
 // Import new spatial processing modules
-import { parseVisionApiResponse, VisionApiResponse } from "./lib/vision-api-spatial.ts";
-import { runSpatialExtraction } from "./lib/spatial-extraction.ts";
+import { parseVisionApiResponse, VisionApiResponse, getAllWords } from "./lib/vision-api-spatial.ts";
+import { runSpatialExtraction, autoCorrectMathematicalErrors } from "./lib/spatial-extraction.ts";
 import { runUniversalValidation, runAutoFix, recoverFromErrors, boostConfidenceForQuality } from "./lib/universal-validation.ts";
-import { preprocessImage, type PreprocessingOptions } from "./lib/image-preprocessing.ts";
+import { preprocessImage, detectRotationFromWords, type PreprocessingOptions } from "./lib/image-preprocessing.ts";
 import { extractLineItemsAdvanced } from "./lib/advanced-line-items.ts";
+import { filterWordsByConfidence, cascadeConfidenceScores } from "./lib/confidence-scoring.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,43 +55,86 @@ interface OCRResult {
   validation_passed?: boolean;
 }
 
-// Enhanced parsing function using spatial extraction
+// Enhanced parsing function using spatial extraction with confidence filtering
 function parseReceiptWithSpatial(visionResponse: VisionApiResponse): OCRResult {
-  console.log('🚀 Starting spatial OCR parsing with Vision API structured data...');
+  console.log('🚀 Starting enhanced spatial OCR parsing with confidence filtering...');
   
-  // Step 1: Run spatial extraction
+  // Step 0: Preprocess and filter words by confidence
+  const allWords = getAllWords(visionResponse, 0.4); // Lower threshold for initial gathering
+  const highConfidenceWords = filterWordsByConfidence(allWords, 0.6); // Filter for processing
+  
+  console.log(`📊 Using ${highConfidenceWords.length}/${allWords.length} high-confidence words`);
+  
+  // Step 0.5: Detect rotation using text line analysis
+  const detectedRotation = detectRotationFromWords(allWords);
+  if (Math.abs(detectedRotation) > 5) {
+    console.log(`🔄 Detected document rotation: ${detectedRotation}°`);
+  }
+  
+  // Step 1: Run enhanced spatial extraction
   const extractionResult = runSpatialExtraction(visionResponse);
   
-  // Step 2: Convert to OCRResult format
+  // Step 1.5: Run advanced line item extraction
+  const advancedLineItems = extractLineItemsAdvanced(visionResponse);
+  
+  // Use advanced line items if they have better confidence
+  const finalLineItems = advancedLineItems.confidence > extractionResult.lineItems_confidence 
+    ? advancedLineItems.items 
+    : extractionResult.lineItems;
+  
+  console.log(`🛍️ Using ${advancedLineItems.confidence > extractionResult.lineItems_confidence ? 'advanced' : 'standard'} line item extraction`);
+  
+  // Step 2: Apply mathematical validation and auto-correction
+  const mathCorrection = autoCorrectMathematicalErrors(finalLineItems, extractionResult.total);
+  const correctedTotal = mathCorrection.correctedTotal || extractionResult.total;
+  
+  if (mathCorrection.corrections.length > 0) {
+    console.log('🔧 Applied mathematical corrections:', mathCorrection.corrections);
+  }
+  
+  // Step 3: Calculate cascaded confidence scores
+  const cascadedVendorConfidence = cascadeConfidenceScores(
+    visionResponse.confidence, 
+    extractionResult.merchant_confidence, 
+    1.0
+  );
+  
+  const cascadedTotalConfidence = cascadeConfidenceScores(
+    visionResponse.confidence, 
+    extractionResult.total_confidence,
+    mathCorrection.corrections.length > 0 ? 1.1 : 1.0 // Boost for auto-correction
+  );
+  
+  // Step 4: Build enhanced OCRResult
   const result: OCRResult = {
     vendor: extractionResult.merchant || '',
     vendor_raw: extractionResult.merchant || '',
-    total: extractionResult.total || 0,
+    total: correctedTotal,
     subtotal: undefined, // Will be calculated if available
-    tax: undefined, // Will be calculated if available
+    tax: undefined, // Will be calculated if available  
     date: extractionResult.date || new Date().toISOString().split('T')[0],
-    lineItems: extractionResult.lineItems || [],
+    lineItems: finalLineItems,
     document_type: 'receipt',
     document_confidence: 0.9,
     confidence: {
-      vendor: extractionResult.merchant_confidence || 0,
-      total: extractionResult.total_confidence || 0,
+      vendor: cascadedVendorConfidence,
+      total: cascadedTotalConfidence,
       date: extractionResult.date_confidence || 0,
-      lineItems: extractionResult.lineItems_confidence || 0,
-      overall: extractionResult.overall_confidence
+      lineItems: advancedLineItems.confidence,
+      overall: 0 // Will be calculated below
     },
     confidence_details: {
       vendor: { 
-        score: extractionResult.merchant_confidence || 0, 
+        score: cascadedVendorConfidence, 
         method: 'spatial_analysis' as ExtractionMethod,
         source: 'top_section_largest_font',
         validated: true
       },
       total: { 
-        score: extractionResult.total_confidence || 0, 
+        score: cascadedTotalConfidence, 
         method: 'spatial_analysis' as ExtractionMethod,
         source: 'keyword_proximity_spatial',
-        validated: extractionResult.spatial_validation.mathematical_consistency
+        validated: mathCorrection.corrections.length === 0
       },
       date: { 
         score: extractionResult.date_confidence || 0, 
@@ -98,8 +142,8 @@ function parseReceiptWithSpatial(visionResponse: VisionApiResponse): OCRResult {
         validated: true
       },
       lineItems: { 
-        score: extractionResult.lineItems_confidence || 0, 
-        method: 'spatial_analysis' as ExtractionMethod,
+        score: advancedLineItems.confidence, 
+        method: 'advanced_table_detection' as ExtractionMethod,
         source: 'spatial_table_construction'
       },
       document_type: { 
@@ -107,11 +151,23 @@ function parseReceiptWithSpatial(visionResponse: VisionApiResponse): OCRResult {
         method: 'pattern_match' as ExtractionMethod
       }
     },
-    extraction_quality: getExtractionQuality(extractionResult.overall_confidence),
-    validation_passed: extractionResult.spatial_validation.mathematical_consistency
+    extraction_quality: 'fair', // Will be updated below
+    validation_passed: advancedLineItems.spatialValidation
   };
 
-  // Step 3: Run universal validation
+  // Step 5: Calculate overall confidence with enhanced spatial validation
+  const enhancedSpatialValidation = {
+    mathematical_consistency: advancedLineItems.spatialValidation,
+    layoutConsistency: advancedLineItems.tableStructure.length > 0,
+    proximityScore: extractionResult.overall_confidence,
+    itemsSumValidation: mathCorrection.corrections.length === 0
+  };
+  
+  const overallConfidence = calculateOverallConfidence(result.confidence!, enhancedSpatialValidation);
+  result.confidence!.overall = overallConfidence;
+  result.extraction_quality = getExtractionQuality(overallConfidence);
+  
+  // Step 6: Run universal validation
   const validation = runUniversalValidation(result, {
     documentType: 'receipt',
     vendor: result.vendor,
@@ -119,25 +175,26 @@ function parseReceiptWithSpatial(visionResponse: VisionApiResponse): OCRResult {
     locale: 'en-US'
   });
 
-  // Step 4: Apply auto-fixes if needed
+  // Step 7: Apply auto-fixes if needed
   if (!validation.valid && validation.issues.some(i => i.autoFixable)) {
     console.log('🔧 Applying auto-fixes...');
     const fixedResult = runAutoFix(result);
     Object.assign(result, fixedResult);
   }
 
-  // Step 5: Apply error recovery if still invalid
+  // Step 8: Apply error recovery if still invalid
   if (!validation.valid) {
     console.log('🔄 Applying error recovery...');
     const recoveredResult = recoverFromErrors(result, validation.issues);
     Object.assign(result, recoveredResult);
   }
 
-  // Step 6: Boost confidence for high-quality text
+  // Step 9: Final confidence boost for high-quality extraction
   const qualityBoostedResult = boostConfidenceForQuality(result, result.extraction_quality || 'fair');
   Object.assign(result, qualityBoostedResult);
 
-  console.log(`🎯 Spatial parsing complete - Method: ${extractionResult.extraction_method}, Overall confidence: ${result.confidence!.overall?.toFixed(3)} (${result.extraction_quality})`);
+  console.log(`🎯 Enhanced parsing complete - Overall confidence: ${result.confidence!.overall?.toFixed(3)} (${result.extraction_quality})`);
+  console.log(`📈 Applied ${mathCorrection.corrections.length} corrections, ${advancedLineItems.items.length} line items extracted`);
   
   return result;
 }
@@ -202,7 +259,7 @@ serve(async (req) => {
       result = parseReceiptText(testResult.text);
       
     } else {
-      // Full Vision API call with enhanced DOCUMENT_TEXT_DETECTION
+      // Enhanced Vision API call with preprocessing and optimal parameters
       const apiKey = Deno.env.get('GOOGLE_VISION_API_KEY');
       if (!apiKey) {
         return createErrorResponse(
@@ -213,7 +270,15 @@ serve(async (req) => {
         );
       }
       
-      logDebug(debugLogs, 'INFO', 'VISION_API_CALL', 'Calling Google Vision API with enhanced DOCUMENT_TEXT_DETECTION');
+      logDebug(debugLogs, 'INFO', 'VISION_API_CALL', 'Calling Google Vision API with enhanced DOCUMENT_TEXT_DETECTION and preprocessing');
+      
+      // Optional: Preprocess image (for future enhancement)
+      // const preprocessingOptions: PreprocessingOptions = {
+      //   enhanceContrast: true,
+      //   autoRotate: true,
+      //   removeNoise: true,
+      //   qualityThreshold: 0.7
+      // };
       
       const visionResponse = await fetch(
         `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
@@ -224,12 +289,20 @@ serve(async (req) => {
             requests: [{
               image: { source: { imageUri: imageUrl } },
               features: [
-                { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }
+                { 
+                  type: 'DOCUMENT_TEXT_DETECTION', 
+                  maxResults: 1 
+                },
+                { 
+                  type: 'TEXT_DETECTION', 
+                  maxResults: 1 
+                }
               ],
               imageContext: {
-                languageHints: ['en'],
+                languageHints: ['en', 'en-US'],
                 textDetectionParams: {
-                  enableTextDetectionConfidenceScore: true
+                  enableTextDetectionConfidenceScore: true,
+                  advancedOcrOptions: []
                 }
               }
             }]

@@ -25,6 +25,33 @@ export function calculateBaseConfidence(method: ExtractionMethod, hasValidation:
   return Math.min(score, 0.95);
 }
 
+// Filter words based on Vision API confidence scores
+export function filterWordsByConfidence(words: any[], minConfidence: number = 0.5): any[] {
+  return words.filter(word => {
+    const confidence = word.confidence || 0;
+    return confidence >= minConfidence;
+  });
+}
+
+// Cascade confidence from Vision API through extraction pipeline
+export function cascadeConfidenceScores(
+  visionConfidence: number,
+  spatialConfidence: number,
+  validationBoost: number = 1.0
+): number {
+  // Vision API confidence forms the base
+  let finalConfidence = visionConfidence * 0.6;
+  
+  // Spatial extraction confidence adds context
+  finalConfidence += spatialConfidence * 0.3;
+  
+  // Validation boost for mathematical consistency
+  finalConfidence *= validationBoost;
+  
+  // Apply confidence floor and ceiling
+  return Math.max(0.05, Math.min(finalConfidence, 0.95));
+}
+
 export function calculateOverallConfidence(confidence: any, spatialValidation?: any): number {
   // Enhanced weighted average with spatial validation integration
   const weights = {
@@ -74,11 +101,14 @@ export function calculateOverallConfidence(confidence: any, spatialValidation?: 
   
   let finalScore = Math.max(overall - penalty, 0);
   
-  // Apply spatial validation boost
+  // Enhanced spatial validation boost
   if (spatialValidation) {
-    if (spatialValidation.mathConsistency) finalScore *= 1.1;
+    if (spatialValidation.mathematical_consistency) finalScore *= 1.15;
     if (spatialValidation.layoutConsistency) finalScore *= 1.05;
-    if (spatialValidation.proximityScore > 0.8) finalScore *= 1.03;
+    if (spatialValidation.proximityScore > 0.8) finalScore *= 1.08;
+    
+    // Mathematical validation is critical for receipts
+    if (spatialValidation.itemsSumValidation) finalScore *= 1.12;
   }
   
   return Math.min(finalScore, 0.95);

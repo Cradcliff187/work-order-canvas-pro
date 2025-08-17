@@ -110,46 +110,93 @@ function extractMerchantSpatial(visionResponse: VisionApiResponse): { merchant: 
   return { merchant: merchantText, confidence };
 }
 
+// Dynamic tolerance calculation based on document dimensions
+function calculateDynamicTolerance(visionResponse: VisionApiResponse): number {
+  const page = visionResponse.pages[0];
+  if (!page) return 10;
+  
+  // Base tolerance on document size - larger documents need more tolerance
+  const avgDimension = (page.width + page.height) / 2;
+  const baseTolerance = Math.max(8, Math.min(20, avgDimension / 100));
+  
+  console.log(`📏 Dynamic tolerance: ${baseTolerance}px for ${page.width}x${page.height} document`);
+  return baseTolerance;
+}
+
 // Extract total amount using enhanced spatial analysis with distance weighting
 function extractTotalSpatial(words: Word[]): { amount: number; confidence: number } {
-  const totalKeywords = ['TOTAL', 'GRAND TOTAL', 'AMOUNT DUE', 'BALANCE', 'CHARGE', 'SUBTOTAL'];
+  const totalKeywords = ['TOTAL', 'GRAND TOTAL', 'AMOUNT DUE', 'BALANCE DUE', 'CHARGE', 'SUBTOTAL'];
   const amountPattern = /\$?(\d+\.\d{2})/;
   
-  // Find total keywords with higher priority and distance-weighted scoring
+  console.log(`🎯 Searching for total among ${words.length} words...`);
+  
+  // Enhanced keyword search with priority weighting
+  const keywordPriority = {
+    'TOTAL': 1.0,
+    'GRAND TOTAL': 1.0,
+    'AMOUNT DUE': 0.9,
+    'BALANCE DUE': 0.9,
+    'CHARGE': 0.7,
+    'SUBTOTAL': 0.6
+  };
+  
+  let bestMatch: { amount: number; confidence: number } | null = null;
+  
   for (const keyword of totalKeywords) {
+    const priority = keywordPriority[keyword as keyof typeof keywordPriority] || 0.5;
     const keywordWords = words.filter(w => 
-      w.text.toUpperCase().includes(keyword)
+      w.text.toUpperCase().includes(keyword) && w.confidence > 0.5
     );
     
     for (const keywordWord of keywordWords) {
-      // Find numbers on the same horizontal line to the right with distance weighting
+      // Enhanced spatial search with multiple strategies
       const candidates = words.filter(w => {
         const amountMatch = w.text.match(amountPattern);
-        if (!amountMatch) return false;
+        if (!amountMatch || w.confidence < 0.5) return false;
         
+        // Strategy 1: Same horizontal line to the right
         const isRightOfKeyword = getRightmostX(keywordWord.boundingBox) < getRightmostX(w.boundingBox);
-        const isSameLine = isSameHorizontalLine(w.boundingBox, keywordWord.boundingBox, 15);
+        const isSameLine = isSameHorizontalLine(w.boundingBox, keywordWord.boundingBox, 20);
         
-        return isRightOfKeyword && isSameLine;
+        // Strategy 2: Below keyword within reasonable distance
+        const isBelow = Math.min(...w.boundingBox.vertices.map(v => v.y)) > 
+                       Math.max(...keywordWord.boundingBox.vertices.map(v => v.y));
+        const distance = calculateDistance(keywordWord.boundingBox, w.boundingBox);
+        const isNearby = distance < 150;
+        
+        return (isRightOfKeyword && isSameLine) || (isBelow && isNearby);
       }).map(w => {
         const distance = calculateDistance(keywordWord.boundingBox, w.boundingBox);
-        const distanceScore = Math.max(0, 1 - (distance / 500)); // Closer = higher score
+        const distanceScore = Math.max(0, 1 - (distance / 300)); // Adjusted for better sensitivity
         const amount = parseFloat(w.text.match(amountPattern)![1]);
-        return { word: w, distance, distanceScore, amount };
-      }).sort((a, b) => b.distanceScore - a.distanceScore);
+        const visionConfidence = w.confidence || 0.5;
+        
+        // Combined confidence score
+        const combinedConfidence = (visionConfidence * distanceScore * priority);
+        
+        return { word: w, distance, distanceScore, amount, combinedConfidence };
+      }).sort((a, b) => b.combinedConfidence - a.combinedConfidence);
       
       if (candidates.length > 0) {
         const best = candidates[0];
-        console.log(`✅ Found total: $${best.amount} near keyword "${keyword}" (distance: ${best.distance.toFixed(1)})`);
-        return {
-          amount: best.amount,
-          confidence: Math.min((best.word.confidence * best.distanceScore) * 1.3, 0.95)
-        };
+        console.log(`💰 Found total candidate: $${best.amount} near "${keyword}" (confidence: ${best.combinedConfidence.toFixed(3)})`);
+        
+        if (!bestMatch || best.combinedConfidence > bestMatch.confidence) {
+          bestMatch = {
+            amount: best.amount,
+            confidence: Math.min(best.combinedConfidence * 1.2, 0.95)
+          };
+        }
       }
     }
   }
   
-  // Fallback to largest amount with improved spatial validation
+  if (bestMatch) {
+    console.log(`✅ Best total match: $${bestMatch.amount} (confidence: ${bestMatch.confidence.toFixed(3)})`);
+    return bestMatch;
+  }
+  
+  // Enhanced fallback with better heuristics
   return findLargestAmountSpatial(words);
 }
 
@@ -338,11 +385,97 @@ function parseLineForItem(line: Word[]): any | null {
   return null;
 }
 
+// Enhanced mathematical validation with auto-correction
 function validateSpatialConsistency(lineItems: any[], total: number): boolean {
-  if (lineItems.length === 0) return false;
+  if (lineItems.length === 0) return total > 0;
   
   const itemsSum = lineItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-  const tolerance = Math.max(total * 0.1, 5); // 10% tolerance or $5
+  const tolerance = Math.max(total * 0.15, 3); // 15% tolerance or $3
   
-  return Math.abs(itemsSum - total) <= tolerance;
+  const isConsistent = Math.abs(itemsSum - total) <= tolerance;
+  
+  if (!isConsistent) {
+    console.log(`⚠️ Mathematical inconsistency: Items sum $${itemsSum.toFixed(2)}, Total $${total.toFixed(2)} (diff: $${Math.abs(itemsSum - total).toFixed(2)})`);
+  } else {
+    console.log(`✅ Mathematical consistency: Items sum $${itemsSum.toFixed(2)} ≈ Total $${total.toFixed(2)}`);
+  }
+  
+  return isConsistent;
+}
+
+// Auto-correct common OCR mathematical errors
+export function autoCorrectMathematicalErrors(lineItems: any[], total: number): { 
+  correctedTotal?: number; 
+  correctedItems?: any[]; 
+  corrections: string[] 
+} {
+  const corrections: string[] = [];
+  let correctedTotal = total;
+  let correctedItems = [...lineItems];
+  
+  if (lineItems.length === 0) return { corrections };
+  
+  const itemsSum = lineItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+  const difference = Math.abs(itemsSum - total);
+  
+  // Only auto-correct if difference is small and likely an OCR error
+  if (difference > 0.01 && difference < Math.max(total * 0.05, 2)) {
+    
+    // Strategy 1: Adjust total to match items (more reliable)
+    if (itemsSum > 0 && lineItems.length >= 2) {
+      correctedTotal = itemsSum;
+      corrections.push(`Adjusted total from $${total.toFixed(2)} to $${itemsSum.toFixed(2)} to match line items`);
+    }
+    
+    // Strategy 2: Check for common OCR digit errors in total
+    else {
+      const potentialTotals = generateOCRVariations(total);
+      for (const potentialTotal of potentialTotals) {
+        if (Math.abs(itemsSum - potentialTotal) < 0.50) {
+          correctedTotal = potentialTotal;
+          corrections.push(`Corrected total OCR error: $${total.toFixed(2)} → $${potentialTotal.toFixed(2)}`);
+          break;
+        }
+      }
+    }
+  }
+  
+  return { correctedTotal, correctedItems, corrections };
+}
+
+// Generate common OCR digit error variations
+function generateOCRVariations(amount: number): number[] {
+  const variations: number[] = [];
+  const amountStr = amount.toFixed(2);
+  const [dollars, cents] = amountStr.split('.');
+  
+  // Common OCR digit confusions
+  const ocrConfusions: { [key: string]: string[] } = {
+    '0': ['8', '6'],
+    '1': ['7', 'l'],
+    '2': ['7', 'z'],
+    '3': ['8', '5'],
+    '4': ['9', '1'],
+    '5': ['6', '8', '3'],
+    '6': ['8', '0', '5'],
+    '7': ['1', '2'],
+    '8': ['0', '6', '3'],
+    '9': ['4', '8']
+  };
+  
+  // Try variations in the dollars part
+  for (let i = 0; i < dollars.length; i++) {
+    const digit = dollars[i];
+    const alternatives = ocrConfusions[digit] || [];
+    
+    for (const alt of alternatives) {
+      const newDollars = dollars.substring(0, i) + alt + dollars.substring(i + 1);
+      const newAmount = parseFloat(`${newDollars}.${cents}`);
+      if (!isNaN(newAmount) && newAmount > 0) {
+        variations.push(newAmount);
+      }
+    }
+  }
+  
+  return variations;
 }
