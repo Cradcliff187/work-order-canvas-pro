@@ -77,6 +77,17 @@ const VENDOR_ALIASES = {
   'Spurlino Materials': ['SPURLINO', 'SPURLINO CONCRETE', 'SPURLIN0'],
   'Cincinnati Ready Mix': ['CINCINNATI READY MIX', 'CINCINNATI READY-MIX', 'C1NCINNATI READY'],
   'All-Rite Ready Mix': ['ALL-RITE READY', 'ALL RITE READY', 'ALLRITE READY', 'ALL R1TE'],
+  'Advance Ready Mix': ['ADVANCE READY MIX', 'ADVANCE CONCRETE', 'ADVANC3 READY'],
+
+  // Additional Specialty Suppliers
+  'Winsupply': ['WINSUPPLY', 'WINSUPPLY INC', 'WINWHOLESALE', 'W1NSUPPLY'],
+  'Winnelson': ['WINNELSON', 'CINCINNATI WINNELSON', 'W1NNELSON'],
+  'Winlectric': ['WINLECTRIC', 'LEXINGTON WINLECTRIC', 'W1NLECTRIC'],
+  'Windustrial': ['WINDUSTRIAL', 'DAYTON WINDUSTRIAL', 'W1NDUSTRIAL'],
+  'Keidel Supply': ['KEIDEL', 'KEIDEL SUPPLY', 'KEIDEL PLUMBING', 'K31DEL'],
+  'Ferguson Bath & Kitchen': ['FERGUSON BATH', 'FERGUSON KITCHEN', 'F3RGUSON BATH'],
+  'Home Depot Tool Rental': ['TOOL RENTAL', 'HOME DEPOT TOOL', 'HD TOOL RENTAL', 'RENTAL DEPT'],
+  'Lowes Tool Rental': ['LOWES TOOL RENTAL', 'LOWE\'S TOOL', 'L0WES TOOL'],
 
   // Service Providers
   'Roto-Rooter': ['ROTO-ROOTER', 'ROTO ROOTER', 'ROTOROOTER', 'R0TO-ROOTER'],
@@ -113,9 +124,27 @@ const VENDOR_ALIASES = {
   'Kentucky Utilities': ['KENTUCKY UTILITIES', 'KU', 'LG&E-KU', 'K3NTUCKY UTILITIES'],
   'Columbia Gas': ['COLUMBIA GAS', 'NISOURCE', 'C0LUMBIA GAS'],
   'CenterPoint Energy': ['CENTERPOINT ENERGY', 'VECTREN', 'CENTERP0INT'],
+  'Greater Cincinnati Water Works': ['CINCINNATI WATER WORKS', 'GCWW', 'CINCINNATI WATER', 'C1NCINNATI WATER'],
+  'Northern Kentucky Water District': ['NORTHERN KENTUCKY WATER', 'NKY WATER', 'NKWD', 'N0RTHERN KY WATER'],
+  'Kentucky American Water': ['KENTUCKY AMERICAN WATER', 'AMERICAN WATER', 'KY AMERICAN', 'K3NTUCKY AMERICAN'],
   'Rumpke': ['RUMPKE', 'RUMPKE WASTE', 'RUMPKE CONSOLIDATED', 'RUMPK3'],
+  'Rumpke Landfill': ['RUMPKE LANDFILL', 'RUMPKE DISPOSAL', 'RUMPK3 LANDFILL'],
   'Waste Management': ['WASTE MANAGEMENT', 'WM', 'WASTE MGMT', 'WAST3 MANAGEMENT'],
-  'Republic Services': ['REPUBLIC SERVICES', 'REPUBLIC WASTE', 'R3PUBLIC SERVICES']
+  'Republic Services': ['REPUBLIC SERVICES', 'REPUBLIC WASTE', 'R3PUBLIC SERVICES'],
+  'Central KY Landfill': ['CENTRAL KY LANDFILL', 'CENTRAL KENTUCKY LANDFILL', 'C3NTRAL KY'],
+  'Transfer Station': ['TRANSFER STATION', 'TRANSFER STA', 'TRANSF3R STATION'],
+  'Landfill': ['LANDFILL', 'LAND FILL', 'LANDF1LL'],
+
+  // Municipal/Government Permits
+  'City of Cincinnati': ['CITY OF CINCINNATI', 'CINCINNATI OH', 'CINCINNATI PERMITS', 'C1TY OF CINCINNATI'],
+  'Cincinnati Building Inspection': ['CINCINNATI BUILDING', 'BUILDINGS & INSPECTIONS', 'C1NCINNATI BUILDING'],
+  'Lexington-Fayette Urban County': ['LEXINGTON-FAYETTE', 'LFUCG', 'LFUCG PERMITS', 'L3XINGTON-FAYETTE'],
+  'LFUCG Building Inspection': ['LFUCG BUILDING', 'LEXINGTON BUILDING', 'LF UCG BUILDING'],
+  'City of Dayton': ['CITY OF DAYTON', 'DAYTON OH', 'DAYTON PERMITS', 'C1TY OF DAYTON'],
+  'Dayton Building Services': ['DAYTON BUILDING', 'BUILDING SERVICES', 'DAYT0N BUILDING'],
+  'Butler County Building': ['BUTLER COUNTY', 'BUTLER CO BUILDING', 'BUTL3R COUNTY'],
+  'Boone County Building': ['BOONE COUNTY', 'BOONE CO BUILDING', 'B00NE COUNTY'],
+  'County Building Department': ['COUNTY BUILDING', 'CO BUILDING DEPT', 'C0UNTY BUILDING']
 };
 
 // Vendor slogans and unique identifiers
