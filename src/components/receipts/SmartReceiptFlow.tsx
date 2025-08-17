@@ -10,10 +10,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAnalytics } from "@/utils/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
@@ -26,6 +28,7 @@ import { InlineEditField } from "./InlineEditField";
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
+import { ReceiptTour, useReceiptTour } from "./ReceiptTour";
 import { useReceiptFlow } from "@/hooks/useReceiptFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -46,7 +49,11 @@ import {
   List,
   PenTool,
   Edit,
-  RefreshCw
+  RefreshCw,
+  HelpCircle,
+  Info,
+  Zap,
+  Target
 } from "lucide-react";
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -130,6 +137,20 @@ export function SmartReceiptFlow() {
   // Hooks
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const { 
+    track, 
+    trackPerformance, 
+    trackError, 
+    trackImageCompression, 
+    trackOCRPerformance, 
+    trackFormInteraction 
+  } = useAnalytics();
+  
+  // Track component mount
+  useEffect(() => {
+    track('receipt_flow_started');
+  }, [track]);
+  const { showTour, hasCompletedTour, completeTour, skipTour, startTour } = useReceiptTour();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { onImageCapture, onFormSave, onSubmitSuccess, onError, onSwipeAction } = useHapticFeedback();
@@ -238,6 +259,8 @@ export function SmartReceiptFlow() {
   // Memoized OCR processing function with progress tracking
   const processWithOCR = useCallback(async (file: File) => {
     actions.startOCRProcessing();
+    const startTime = Date.now();
+    trackOCRPerformance('started', { fileName: file.name, fileSize: file.size });
     
     try {
       // Stage 1: Upload (0-30%)
@@ -272,6 +295,18 @@ export function SmartReceiptFlow() {
 
       // Stage 4: Complete (90-100%)
       if (ocrResult) {
+        const processingTime = Date.now() - startTime;
+        trackOCRPerformance('completed', { 
+          processingTime,
+          confidence: ocrResult.confidence,
+          extractedFields: {
+            vendor: !!ocrResult.vendor,
+            amount: !!ocrResult.total,
+            date: !!ocrResult.date,
+            lineItems: ocrResult.lineItems?.length || 0
+          }
+        });
+        
         if (ocrResult.vendor) form.setValue('vendor_name', ocrResult.vendor);
         if (ocrResult.total) form.setValue('amount', ocrResult.total);
         if (ocrResult.date) form.setValue('receipt_date', ocrResult.date);
@@ -293,6 +328,14 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('OCR processing error:', error);
+      const processingTime = Date.now() - startTime;
+      
+      trackOCRPerformance('failed', { 
+        processingTime,
+        errorMessage: error.message,
+        errorType: error.code || 'unknown'
+      });
+      trackError(error, { context: 'OCR processing', fileName: file.name });
       
       // Enhanced error messages based on error type
       let errorMessage = 'Unable to extract data from receipt';
@@ -308,7 +351,7 @@ export function SmartReceiptFlow() {
       
       // Don't show toast - let the FloatingProgress handle error display
     }
-  }, [actions, form, toast]);
+  }, [actions, form, toast, trackOCRPerformance, trackError]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -339,6 +382,7 @@ export function SmartReceiptFlow() {
         // Show compression progress
         actions.updateOCRProgress('uploading', 5);
         
+        const compressionStartTime = Date.now();
         const compressionResult = await compressImage(file, {
           maxWidth: 1920,
           maxHeight: 1080,
@@ -349,6 +393,10 @@ export function SmartReceiptFlow() {
         });
 
         const compressedFile = compressionResult.file;
+        const compressionTime = Date.now() - compressionStartTime;
+        
+        // Track compression performance
+        trackImageCompression(file.size, compressedFile.size, compressionTime);
         
         // Show compression results
         if (compressionResult.compressionRatio > 1.1) {
@@ -519,6 +567,7 @@ export function SmartReceiptFlow() {
 
   // Memoized form submission
   const onSubmit = useCallback(async (data: SmartReceiptFormData) => {
+    const submitStartTime = Date.now();
     try {
       const receiptData = {
         vendor_name: data.vendor_name,
@@ -534,6 +583,16 @@ export function SmartReceiptFlow() {
       };
 
       await createReceipt.mutateAsync(receiptData);
+      
+      const submissionTime = Date.now() - submitStartTime;
+      track('receipt_submitted', {
+        submissionTime,
+        hasWorkOrder: !!data.work_order_id,
+        hasNotes: !!data.notes,
+        amount: data.amount,
+        vendor: data.vendor_name,
+        hasOCRData: !!ocrData
+      });
       
       onSubmitSuccess(); // Haptic feedback
 
@@ -552,6 +611,12 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('Receipt submission error:', error);
+      const submissionTime = Date.now() - submitStartTime;
+      trackError(error, { 
+        context: 'Receipt submission',
+        submissionTime,
+        formData: data
+      });
       onError(); // Haptic feedback
       toast({
         title: 'Error',
@@ -559,7 +624,7 @@ export function SmartReceiptFlow() {
         variant: 'destructive',
       });
     }
-  }, [receiptFile, createReceipt, onSubmitSuccess, actions, form, toast, onError]);
+  }, [receiptFile, createReceipt, onSubmitSuccess, actions, form, toast, onError, track, trackError, ocrData]);
 
   // Memoized confidence indicator
   const getConfidenceColor = useCallback((field: string) => {
@@ -598,7 +663,8 @@ export function SmartReceiptFlow() {
   }
 
   return (
-    <div ref={containerRef as any} className="max-w-2xl mx-auto space-y-6 relative">
+    <TooltipProvider>
+      <div ref={containerRef as any} className="max-w-2xl mx-auto space-y-6 relative" data-tour="main-container">
       {/* Pull-to-refresh indicator for mobile */}
       <AnimatePresence>
         {isPulling && (
@@ -624,11 +690,30 @@ export function SmartReceiptFlow() {
       </AnimatePresence>
 
       {/* Camera/Upload Capture Section */}
-      <Card>
+      <Card data-tour="upload-section">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Smart Receipt Capture
+          <CardTitle className="flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Smart Receipt Capture
+            </div>
+            {hasCompletedTour && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={startTour}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Restart tutorial</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -754,11 +839,21 @@ export function SmartReceiptFlow() {
                 </div>
               ) : null}
 
-              {/* OCR Processing Status */}
+            {/* OCR Processing Status */}
               {isProcessingOCR && (
-                <div className="flex items-center justify-center py-4 space-x-3">
+                <div className="flex items-center justify-center py-4 space-x-3" data-tour="ocr-section">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Reading receipt with AI...</span>
+                  <div className="flex items-center gap-2">
+                    <span>Reading receipt with AI...</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>AI is extracting vendor, amount, date, and line items from your receipt</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               )}
 
@@ -916,7 +1011,7 @@ export function SmartReceiptFlow() {
             style={{ overflow: 'hidden' }}
           >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-tour="form-section">
             {/* Essential Details - Always Open */}
             <FieldGroup
               title="Essential Details"
@@ -982,14 +1077,32 @@ export function SmartReceiptFlow() {
                   name="work_order_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Work Order (Optional)</FormLabel>
-                      <SmartWorkOrderSelector
-                        availableWorkOrders={availableWorkOrders.data || []}
-                        recentWorkOrders={recentWorkOrders}
-                        selectedWorkOrderId={field.value}
-                        onSelect={field.onChange}
-                        isLoading={availableWorkOrders.isLoading}
-                      />
+                      <div className="flex items-center gap-2">
+                        <FormLabel>Work Order (Optional)</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Link this receipt to a specific work order for better organization</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div data-tour="work-order-section">
+                        <SmartWorkOrderSelector
+                          availableWorkOrders={availableWorkOrders.data || []}
+                          recentWorkOrders={recentWorkOrders}
+                          selectedWorkOrderId={field.value}
+                          onSelect={(value) => {
+                            field.onChange(value);
+                            trackFormInteraction('work_order_id', 'edit', { 
+                              hasWorkOrder: !!value,
+                              workOrderId: value 
+                            });
+                          }}
+                          isLoading={availableWorkOrders.isLoading}
+                        />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1136,7 +1249,7 @@ export function SmartReceiptFlow() {
             </FieldGroup>
 
             {/* Submit Button */}
-            <div className="pt-4">
+            <div className="pt-4" data-tour="submit-section">
               <Button
                 type="submit"
                 className="w-full"
@@ -1191,6 +1304,14 @@ export function SmartReceiptFlow() {
         />
       )}
 
-    </div>
+      {/* Receipt Tour */}
+      <ReceiptTour 
+        isVisible={showTour}
+        onComplete={completeTour}
+        onSkip={skipTour}
+      />
+
+      </div>
+    </TooltipProvider>
   );
 }
