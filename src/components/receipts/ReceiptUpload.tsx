@@ -29,7 +29,8 @@ import {
   Camera,
   X,
   Sparkles,
-  Building2
+  Building2,
+  Copy
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -70,6 +71,7 @@ export function ReceiptUpload() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
   const [ocrConfidence, setOcrConfidence] = useState<Record<string, number>>({});
+  const [ocrData, setOcrData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [showSuccess, setShowSuccess] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -211,6 +213,7 @@ export function ReceiptUpload() {
         }
         
         setOcrConfidence(ocrData.confidence || {});
+        setOcrData(ocrData);
         
         // Add haptic feedback on successful OCR
         if (navigator.vibrate) {
@@ -280,6 +283,7 @@ export function ReceiptUpload() {
     setReceiptFile(null);
     setImagePreview(null);
     setOcrConfidence({});
+    setOcrData(null);
   };
 
   const handleCancel = () => {
@@ -634,6 +638,85 @@ export function ReceiptUpload() {
                         )}
                       />
                     </div>
+
+                    {/* Line Items Section */}
+                    {ocrData?.lineItems && ocrData.lineItems.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Items Detected
+                            <Badge variant="secondary" className="text-xs">
+                              {ocrData.lineItems.length} items
+                            </Badge>
+                            {ocrData.confidence?.lineItems && (
+                              <Badge 
+                                variant={ocrData.confidence.lineItems > 0.6 ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {Math.round(ocrData.confidence.lineItems * 100)}% confident
+                              </Badge>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {ocrData.lineItems.map((item: any, idx: number) => (
+                              <div key={idx} className="flex justify-between items-start text-sm border-b pb-2 last:border-b-0">
+                                <div className="flex-1">
+                                  {item.quantity && (
+                                    <span className="font-medium mr-2">{item.quantity}x</span>
+                                  )}
+                                  <span className="text-muted-foreground">{item.description}</span>
+                                </div>
+                                <span className="font-medium">${item.price.toFixed(2)}</span>
+                              </div>
+                            ))}
+                            
+                            {/* Totals */}
+                            <div className="pt-2 space-y-1 border-t">
+                              {ocrData.subtotal && (
+                                <div className="flex justify-between text-sm">
+                                  <span>Subtotal:</span>
+                                  <span>${ocrData.subtotal.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {ocrData.tax && (
+                                <div className="flex justify-between text-sm">
+                                  <span>Tax:</span>
+                                  <span>${ocrData.tax.toFixed(2)}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between font-medium">
+                                <span>Total:</span>
+                                <span>${(ocrData.total || 0).toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Copy to description button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-3"
+                            onClick={() => {
+                              const itemList = ocrData.lineItems
+                                .map((item: any) => `${item.quantity ? item.quantity + 'x ' : ''}${item.description}`)
+                                .join(', ');
+                              form.setValue('description', itemList);
+                              toast({
+                                title: 'Items copied',
+                                description: 'Line items have been added to the description field',
+                              });
+                            }}
+                          >
+                            <Copy className="h-3 w-3 mr-2" />
+                            Use as Description
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     <FormField
                       control={form.control}
