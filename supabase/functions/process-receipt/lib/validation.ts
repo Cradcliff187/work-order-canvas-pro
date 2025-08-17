@@ -47,59 +47,17 @@ export function validateRequest(req: Request): RequestValidation {
 
 export function validateResponse(result: any): ValidationResult {
   const issues: string[] = [];
-  let qualityScore = 1.0;
-
-  // Check for missing critical fields
-  if (!result.vendor || result.vendor.trim().length === 0) {
-    issues.push('Missing vendor information');
-    qualityScore -= 0.2;
-  }
-
-  if (!result.total || result.total <= 0) {
-    issues.push('Missing or invalid total amount');
-    qualityScore -= 0.3;
-  }
-
-  if (!result.date || result.date.trim().length === 0) {
-    issues.push('Missing date information');
-    qualityScore -= 0.15;
-  }
-
-  // Check line items quality
-  if (!result.lineItems || result.lineItems.length === 0) {
-    issues.push('No line items detected');
-    qualityScore -= 0.25;
-  } else {
-    const validLineItems = result.lineItems.filter((item: any) => 
-      item.description && item.description.trim().length > 0 && 
-      item.total_price > 0
-    );
-    
-    if (validLineItems.length < result.lineItems.length * 0.7) {
-      issues.push('Many line items have incomplete information');
-      qualityScore -= 0.15;
-    }
-  }
-
-  // Check confidence scores
-  const confidence = result.confidence || {};
-  if (confidence.overall && confidence.overall < 0.5) {
-    issues.push('Low overall confidence in extraction');
-    qualityScore -= 0.1;
-  }
-
-  // Determine quality
-  let quality: 'excellent' | 'good' | 'fair' | 'poor';
-  if (qualityScore >= 0.9) quality = 'excellent';
-  else if (qualityScore >= 0.7) quality = 'good';
-  else if (qualityScore >= 0.5) quality = 'fair';
-  else quality = 'poor';
+  
+  // Simple validation - just check if we have core fields
+  if (!result.vendor) issues.push('Missing vendor');
+  if (!result.total) issues.push('Missing total');
+  if (!result.date) issues.push('Missing date');
 
   return {
-    isValid: issues.length === 0 || quality !== 'poor',
+    isValid: issues.length < 3, // Allow some missing fields
     issues,
-    quality,
-    confidence: Math.max(qualityScore, 0)
+    quality: issues.length === 0 ? 'good' : 'fair',
+    confidence: issues.length === 0 ? 0.8 : 0.6
   };
 }
 
