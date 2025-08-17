@@ -88,33 +88,63 @@ export function useReceipts() {
     queryFn: async () => {
       if (!profile?.id) return [];
       
-      // Get work orders assigned to this employee through work_order_assignments
-      const { data: assignmentData, error } = await supabase
-        .from("work_order_assignments")
-        .select(`
-          work_orders!work_order_assignments_work_order_id_fkey (
+      // First, determine if user is internal employee
+      const { data: membershipData } = await supabase
+        .from("organization_members")
+        .select("organizations!inner(organization_type)")
+        .eq("user_id", profile.id)
+        .single();
+      
+      const isInternalEmployee = membershipData?.organizations?.organization_type === 'internal';
+      
+      if (isInternalEmployee) {
+        // Internal employees see ALL active work orders
+        const { data, error } = await supabase
+          .from("work_orders")
+          .select(`
             id, 
             work_order_number, 
             title, 
             store_location, 
-            status
-          )
-        `)
-        .eq("assigned_to", profile.id)
-        .order("created_at", { ascending: false });
+            status,
+            organizations!organization_id(name, initials)
+          `)
+          .in("status", ["assigned", "in_progress"])
+          .order("work_order_number", { ascending: false })
+          .limit(100);
+        
+        if (error) {
+          console.error("Error fetching work orders:", error);
+          throw error;
+        }
+        
+        return data || [];
+      } else {
+        // Non-internal users see only assigned work orders (existing logic)
+        const { data: assignmentData, error } = await supabase
+          .from("work_order_assignments")
+          .select(`
+            work_orders!work_order_assignments_work_order_id_fkey (
+              id, 
+              work_order_number, 
+              title, 
+              store_location, 
+              status
+            )
+          `)
+          .eq("assigned_to", profile.id)
+          .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching work orders:", error);
-        throw error;
+        if (error) {
+          console.error("Error fetching work orders:", error);
+          throw error;
+        }
+        
+        const workOrders = assignmentData?.map(assignment => assignment.work_orders).filter(Boolean) || [];
+        return workOrders.filter(wo => 
+          ["assigned", "in_progress", "completed"].includes(wo.status)
+        );
       }
-
-      // Transform the data to extract work orders and filter by status
-      const workOrders = assignmentData?.map(assignment => assignment.work_orders).filter(Boolean) || [];
-      const filteredWorkOrders = workOrders.filter(wo => 
-        ["assigned", "in_progress", "completed"].includes(wo.status)
-      );
-      
-      return filteredWorkOrders;
     },
     enabled: !!profile?.id,
   });
