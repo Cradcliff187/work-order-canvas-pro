@@ -11,38 +11,48 @@ export function parseAmounts(text: string): AmountResult {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   const amounts: AmountResult = {};
   
-  // Enhanced total patterns - more comprehensive coverage
+  // Universal total patterns - enhanced for all receipt formats
   const totalPatterns = [
-    // Standard patterns
-    { regex: /\btotal\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.95, field: 'total' },
+    // High confidence exact matches
     { regex: /\bfinal\s*total\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.98, field: 'total' },
     { regex: /\bgrand\s*total\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.98, field: 'total' },
-    { regex: /\bamount\s*due\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.9, field: 'total' },
-    { regex: /\btotal\s*amount\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.95, field: 'total' },
+    { regex: /\btotal\s*amount\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.96, field: 'total' },
+    { regex: /\bamount\s*due\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.95, field: 'total' },
+    { regex: /\btotal\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.93, field: 'total' },
     
-    // Universal patterns for various receipt formats
-    { regex: /\btotal\s*\$?(\d{1,6}(?:\.\d{2})?)\s*$/i, confidence: 0.9, field: 'total' },
-    { regex: /^total\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.9, field: 'total' },
-    { regex: /\$(\d{1,6}(?:\.\d{2})?)\s*total/i, confidence: 0.85, field: 'total' },
+    // Universal format variations with currency symbols
+    { regex: /\btotal\s*[\$€£¥](\d{1,6}(?:\.\d{2})?)/i, confidence: 0.92, field: 'total' },
+    { regex: /[\$€£¥](\d{1,6}(?:\.\d{2})?)\s*total/i, confidence: 0.88, field: 'total' },
+    { regex: /\btotal\s*\$?(\d{1,6}(?:\.\d{2})?)\s*$/i, confidence: 0.90, field: 'total' },
+    { regex: /^total\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.90, field: 'total' },
     
-    // Retail specific patterns
-    { regex: /\btender\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.8, field: 'total' },
-    { regex: /\bpayment\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.75, field: 'total' },
-    { regex: /\bcharge\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.7, field: 'total' },
+    // Payment and transaction patterns
+    { regex: /\btender\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.85, field: 'total' },
+    { regex: /\bpayment\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.82, field: 'total' },
+    { regex: /\bcharge\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.80, field: 'total' },
+    { regex: /\bamount\s*paid\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.78, field: 'total' },
     
-    // Format variations
-    { regex: /total[\s\-\.\:]*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.85, field: 'total' },
-    { regex: /tot[\s\-\.\:]*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.8, field: 'total' },
+    // Format variations with separators
+    { regex: /total[\s\-\.\:]+\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.85, field: 'total' },
+    { regex: /tot[\s\-\.\:]+\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.80, field: 'total' },
+    { regex: /\btot\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.75, field: 'total' },
     
-    // Subtotal patterns
-    { regex: /\bsubtotal\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.9, field: 'subtotal' },
-    { regex: /\bsub\s*total\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.9, field: 'subtotal' },
+    // Multi-language patterns
+    { regex: /\btotal[\s]*[\$€£¥]?(\d{1,6}(?:[,\.]\d{2})?)/i, confidence: 0.87, field: 'total' },
+    { regex: /\bsum[\s]*[\$€£¥]?(\d{1,6}(?:[,\.]\d{2})?)/i, confidence: 0.75, field: 'total' },
+    
+    // Subtotal patterns - enhanced
+    { regex: /\bsubtotal\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.92, field: 'subtotal' },
+    { regex: /\bsub[\s\-]*total\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.90, field: 'subtotal' },
     { regex: /\bmerchandise\s*subtotal\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.95, field: 'subtotal' },
+    { regex: /\bitem\s*total\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.88, field: 'subtotal' },
     
-    // Tax patterns
-    { regex: /\btax\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.9, field: 'tax' },
+    // Tax patterns - enhanced
     { regex: /\bsales\s*tax\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.95, field: 'tax' },
-    { regex: /\btotal\s*tax\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.95, field: 'tax' }
+    { regex: /\btotal\s*tax\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.93, field: 'tax' },
+    { regex: /\btax\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.90, field: 'tax' },
+    { regex: /\bvat\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.88, field: 'tax' },
+    { regex: /\b(?:gst|hst)\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i, confidence: 0.85, field: 'tax' }
   ];
   
   let bestTotal = { amount: 0, confidence: 0 };
