@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Save, Send, DollarSign, Building2, Clock, GripHorizontal } from "lucide-react";
+import { CheckCircle, Save, Send, DollarSign, Building2, Clock, GripHorizontal, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -15,6 +15,7 @@ interface FloatingActionBarProps {
   isSubmitting: boolean;
   onSaveDraft: () => void;
   onSubmit: () => void;
+  onStartOver?: () => void;
   showDraftSaved?: boolean;
   className?: string;
   flowStage?: 'capture' | 'processing' | 'review' | 'manual-entry';
@@ -29,6 +30,7 @@ const FloatingActionBarComponent: React.FC<FloatingActionBarProps> = ({
   isSubmitting,
   onSaveDraft,
   onSubmit,
+  onStartOver,
   showDraftSaved,
   className,
   flowStage
@@ -114,14 +116,28 @@ const FloatingActionBarComponent: React.FC<FloatingActionBarProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-2">
+          {/* Start Over Button */}
+          {onStartOver && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onStartOver}
+              disabled={isSubmitting}
+              className="min-h-[48px] px-4"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Start Over
+            </Button>
+          )}
+          
           {/* Save Draft Button */}
           <Button
             type="button"
             variant="outline"
             onClick={handleSaveDraft}
             disabled={isSubmitting || !isDirty}
-            className="flex-1 min-h-[48px]" // Enhanced touch target
+            className="flex-1 min-h-[48px]"
           >
             <Save className="h-4 w-4 mr-2" />
             Save Draft
@@ -132,7 +148,7 @@ const FloatingActionBarComponent: React.FC<FloatingActionBarProps> = ({
             type="button"
             onClick={handleSubmit}
             disabled={!isFormValid || isSubmitting}
-            className="flex-1 min-h-[48px]" // Enhanced touch target
+            className="flex-1 min-h-[48px]"
           >
             {isSubmitting ? (
               <>
@@ -162,6 +178,7 @@ export const FloatingActionBar = React.memo(FloatingActionBarComponent, (prevPro
     prevProps.isDirty === nextProps.isDirty &&
     prevProps.isSubmitting === nextProps.isSubmitting &&
     prevProps.showDraftSaved === nextProps.showDraftSaved &&
-    prevProps.flowStage === nextProps.flowStage
+    prevProps.flowStage === nextProps.flowStage &&
+    prevProps.onStartOver === nextProps.onStartOver
   );
 });

@@ -1345,27 +1345,8 @@ export function SmartReceiptFlow() {
               />
             </FieldGroup>
 
-            {/* Submit Button */}
-            <div className="pt-4" data-tour="submit-section">
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={isUploading || isProcessingOCR}
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving Receipt...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Save Receipt
-                  </>
-                )}
-              </Button>
-            </div>
+            {/* Bottom padding to account for FloatingActionBar */}
+            <div className="pb-32" />
           </form>
         </Form>
           </motion.div>
@@ -1398,6 +1379,7 @@ export function SmartReceiptFlow() {
           isSubmitting={isUploading}
           onSaveDraft={saveDraft}
           onSubmit={form.handleSubmit(onSubmit)}
+          onStartOver={actions.resetFlow}
           showDraftSaved={showDraftSaved}
           flowStage={flowStage}
         />
