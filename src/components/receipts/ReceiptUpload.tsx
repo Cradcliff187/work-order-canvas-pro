@@ -209,7 +209,15 @@ export function ReceiptUpload() {
         }
         
         if (ocrData.total) {
+          // Use the total (not subtotal)
           form.setValue('amount', ocrData.total, { 
+            shouldValidate: true, 
+            shouldDirty: true 
+          });
+        } else if (ocrData.subtotal && ocrData.tax) {
+          // Fallback: calculate if needed
+          const calculatedTotal = ocrData.subtotal + ocrData.tax;
+          form.setValue('amount', calculatedTotal, { 
             shouldValidate: true, 
             shouldDirty: true 
           });
@@ -683,24 +691,35 @@ export function ReceiptUpload() {
                               </div>
                             ))}
                             
-                            {/* Totals */}
+                            {/* Totals - Show all financial data */}
                             <div className="pt-2 space-y-1 border-t">
                               {ocrData.subtotal && (
                                 <div className="flex justify-between text-sm">
-                                  <span>Subtotal:</span>
+                                  <span className="text-muted-foreground">Subtotal:</span>
                                   <span>${ocrData.subtotal.toFixed(2)}</span>
                                 </div>
                               )}
                               {ocrData.tax && (
                                 <div className="flex justify-between text-sm">
-                                  <span>Tax:</span>
+                                  <span className="text-muted-foreground">Tax:</span>
                                   <span>${ocrData.tax.toFixed(2)}</span>
                                 </div>
                               )}
-                              <div className="flex justify-between font-medium">
+                              <div className="flex justify-between font-medium text-base pt-1 border-t">
                                 <span>Total:</span>
-                                <span>${(ocrData.total || 0).toFixed(2)}</span>
+                                <span className="text-lg">
+                                  ${(ocrData.total || (ocrData.subtotal + ocrData.tax) || 0).toFixed(2)}
+                                </span>
                               </div>
+                              
+                              {/* Show calculation validation */}
+                              {ocrData.subtotal && ocrData.tax && ocrData.total && (
+                                Math.abs((ocrData.subtotal + ocrData.tax) - ocrData.total) > 0.01 && (
+                                  <div className="text-xs text-amber-600 pt-1">
+                                    ⚠️ Total doesn't match subtotal + tax
+                                  </div>
+                                )
+                              )}
                             </div>
                           </div>
                           
