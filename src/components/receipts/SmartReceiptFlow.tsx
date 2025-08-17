@@ -41,8 +41,13 @@ import {
   Briefcase,
   List,
   PenTool,
-  Edit
+  Edit,
+  RefreshCw
 } from "lucide-react";
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useCamera } from '@/hooks/useCamera';
 import { format } from "date-fns";
 
 // TypeScript interfaces
@@ -127,6 +132,38 @@ export function SmartReceiptFlow() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { onImageCapture, onFormSave, onSubmitSuccess, onError, onSwipeAction } = useHapticFeedback();
+  
+  // Camera functionality
+  const { 
+    isSupported: cameraSupported,
+    captureImageFromCamera,
+    checkCameraPermission,
+    requestCameraPermission 
+  } = useCamera();
+  
+  // Camera state
+  const [showCameraCapture, setShowCameraCapture] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  
+  // Swipe gesture for image removal
+  const swipeGesture = useSwipeGesture({
+    onSwipeLeft: removeFile,
+    onSwipeRight: removeFile
+  });
+  
+  // Pull to refresh for form reset
+  const { containerRef, pullDistance, isPulling, isRefreshable } = usePullToRefresh({
+    queryKey: ['receipts'],
+    onFormReset: () => {
+      form.reset();
+      removeFile();
+      setOcrError(null);
+      setFlowStage('capture');
+      setIsProcessingOCR(false);
+    },
+    enableTouchGesture: isMobile
+  });
   
   const { receipts, availableWorkOrders, createReceipt, isUploading } = useReceipts();
 
@@ -302,6 +339,7 @@ export function SmartReceiptFlow() {
   };
 
   const removeFile = () => {
+    onSwipeAction(); // Haptic feedback
     setReceiptFile(null);
     setImagePreview(null);
     setOcrData(null);
@@ -312,6 +350,85 @@ export function SmartReceiptFlow() {
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
+  // Enhanced camera capture with preview
+  const handleCameraCapture = async () => {
+    try {
+      const permission = await checkCameraPermission();
+      if (permission?.state !== 'granted') {
+        const granted = await requestCameraPermission();
+        if (!granted) {
+          toast({
+            title: "Camera access required",
+            description: "Please allow camera access to capture receipts",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      setShowCameraCapture(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Use rear camera for documents
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
+      });
+      setCameraStream(stream);
+    } catch (error) {
+      console.error('Camera access error:', error);
+      onError();
+      toast({
+        title: "Camera error",
+        description: "Unable to access camera. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const captureFromCamera = async () => {
+    try {
+      if (!cameraStream) return;
+      
+      const file = await captureImageFromCamera();
+      if (file) {
+        onImageCapture();
+        setReceiptFile(file);
+        setShowCameraCapture(false);
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
+        }
+        
+        // Create image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+        
+        // Process with OCR
+        processWithOCR(file);
+      }
+    } catch (error) {
+      console.error('Image capture error:', error);
+      onError();
+      toast({
+        title: "Capture failed",
+        description: "Failed to capture image. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const closeCameraCapture = () => {
+    setShowCameraCapture(false);
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+  };
+
   // Manual entry function
   const startManualEntry = () => {
     setFlowStage('manual-entry');
@@ -320,6 +437,7 @@ export function SmartReceiptFlow() {
 
   // Draft save functionality
   const saveDraft = () => {
+    onFormSave(); // Haptic feedback
     const draftData = {
       ...form.getValues(),
       receiptFile: receiptFile?.name,
@@ -361,7 +479,9 @@ export function SmartReceiptFlow() {
         receipt_image: receiptFile,
       };
 
-        await createReceipt.mutateAsync(receiptData);
+      await createReceipt.mutateAsync(receiptData);
+      
+      onSubmitSuccess(); // Haptic feedback
 
       // Success state
       setShowSuccess(true);
@@ -380,6 +500,7 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('Receipt submission error:', error);
+      onError(); // Haptic feedback
       toast({
         title: 'Error',
         description: error.message || 'Failed to save receipt',
@@ -425,7 +546,30 @@ export function SmartReceiptFlow() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div ref={containerRef as any} className="max-w-2xl mx-auto space-y-6 relative">
+      {/* Pull-to-refresh indicator for mobile */}
+      <AnimatePresence>
+        {isPulling && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-0 left-0 right-0 z-10 text-center py-2"
+            style={{ transform: `translateY(${pullDistance}px)` }}
+          >
+            <div className={cn(
+              "inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-background/80 backdrop-blur-sm border",
+              isRefreshable ? "text-primary border-primary/20" : "text-muted-foreground border-border"
+            )}>
+              <RefreshCw className={cn(
+                "h-4 w-4",
+                isPulling && "animate-spin"
+              )} />
+              {isRefreshable ? "Release to refresh" : "Pull to refresh"}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Camera/Upload Capture Section */}
       <Card>
         <CardHeader>
@@ -444,17 +588,19 @@ export function SmartReceiptFlow() {
                     type="button"
                     variant="outline"
                     size="lg"
-                    className="h-20 flex-col"
-                    onClick={() => cameraInputRef.current?.click()}
+                    className="h-20 flex-col min-h-[80px]"
+                    onClick={cameraSupported ? handleCameraCapture : () => cameraInputRef.current?.click()}
                   >
                     <Camera className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Camera</span>
+                    <span className="text-sm">
+                      {cameraSupported ? "Camera Preview" : "Camera"}
+                    </span>
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="lg"
-                    className="h-20 flex-col"
+                    className="h-20 flex-col min-h-[80px]"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="h-6 w-6 mb-2" />
@@ -499,7 +645,7 @@ export function SmartReceiptFlow() {
             </div>
           ) : (
             /* Image Preview Section */
-            <div className="space-y-4">
+            <div className="space-y-4" {...(isMobile ? swipeGesture : {})}>
               {imagePreview ? (
                 <div className="relative">
                   <img
@@ -511,11 +657,17 @@ export function SmartReceiptFlow() {
                     type="button"
                     variant="destructive"
                     size="sm"
-                    className="absolute top-2 right-2"
+                    className="absolute top-2 right-2 min-h-[48px] min-w-[48px]"
                     onClick={removeFile}
                   >
                     <X className="h-4 w-4" />
                   </Button>
+                  {/* Swipe instruction for mobile */}
+                  {isMobile && (
+                    <p className="text-xs text-muted-foreground text-center mt-2">
+                      Swipe left or right to remove
+                    </p>
+                  )}
                 </div>
               ) : receiptFile ? (
                 <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -533,6 +685,7 @@ export function SmartReceiptFlow() {
                     variant="ghost"
                     size="sm"
                     onClick={removeFile}
+                    className="min-h-[48px] min-w-[48px]"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -582,6 +735,63 @@ export function SmartReceiptFlow() {
               )}
             </div>
           )}
+
+          {/* Camera Viewfinder Modal for Mobile */}
+          <AnimatePresence>
+            {showCameraCapture && cameraStream && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 bg-black"
+              >
+                <div className="relative w-full h-full">
+                  <video
+                    ref={(video) => {
+                      if (video && cameraStream) {
+                        video.srcObject = cameraStream;
+                        video.play();
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                  
+                  {/* Camera controls overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
+                    <div className="flex items-center justify-center gap-6">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        onClick={closeCameraCapture}
+                        className="bg-black/50 border-white/20 text-white hover:bg-black/70 min-h-[56px] min-w-[56px]"
+                      >
+                        <X className="h-6 w-6" />
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        size="lg"
+                        onClick={captureFromCamera}
+                        className="bg-primary text-primary-foreground min-w-[80px] min-h-[80px] rounded-full"
+                      >
+                        <Camera className="h-8 w-8" />
+                      </Button>
+                      
+                      <div className="w-16" /> {/* Spacer for symmetry */}
+                    </div>
+                    
+                    <p className="text-center text-white/80 text-sm mt-4">
+                      Position receipt in frame and tap to capture
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Hidden file inputs */}
           <input

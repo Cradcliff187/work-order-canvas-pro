@@ -1,8 +1,10 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Save, Send, DollarSign, Building2, Clock } from "lucide-react";
+import { CheckCircle, Save, Send, DollarSign, Building2, Clock, GripHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
 interface FloatingActionBarProps {
   vendorName?: string;
@@ -31,18 +33,39 @@ export function FloatingActionBar({
   className,
   flowStage
 }: FloatingActionBarProps) {
+  const isMobile = useIsMobile();
+  const { onFormSave, onSubmitSuccess } = useHapticFeedback();
+  
   // Only show when in review or manual-entry stages with meaningful data
   if ((flowStage !== 'review' && flowStage !== 'manual-entry') || (!isDirty && !vendorName && !amount)) {
     return null;
   }
+
+  const handleSaveDraft = () => {
+    onFormSave();
+    onSaveDraft();
+  };
+
+  const handleSubmit = () => {
+    onSubmitSuccess();
+    onSubmit();
+  };
 
   return (
     <div className={cn(
       "fixed bottom-0 left-0 right-0 z-50 animate-slide-in-bottom",
       "bg-background/80 backdrop-blur-lg border-t border-border",
       "safe-area-pb", // For mobile safe area
+      isMobile && "rounded-t-xl border-x", // Mobile bottom sheet style
       className
     )}>
+      {/* Mobile drag handle */}
+      {isMobile && (
+        <div className="flex justify-center pt-2 pb-1">
+          <GripHorizontal className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
+      
       <div className="max-w-2xl mx-auto px-4 py-3">
         {/* Quick Stats Section */}
         <div className="flex items-center justify-between mb-3">
@@ -96,9 +119,9 @@ export function FloatingActionBar({
           <Button
             type="button"
             variant="outline"
-            onClick={onSaveDraft}
+            onClick={handleSaveDraft}
             disabled={isSubmitting || !isDirty}
-            className="flex-1 min-h-[44px]" // Touch-friendly height
+            className="flex-1 min-h-[48px]" // Enhanced touch target
           >
             <Save className="h-4 w-4 mr-2" />
             Save Draft
@@ -107,9 +130,9 @@ export function FloatingActionBar({
           {/* Submit Button */}
           <Button
             type="button"
-            onClick={onSubmit}
+            onClick={handleSubmit}
             disabled={!isFormValid || isSubmitting}
-            className="flex-1 min-h-[44px]" // Touch-friendly height
+            className="flex-1 min-h-[48px]" // Enhanced touch target
           >
             {isSubmitting ? (
               <>
