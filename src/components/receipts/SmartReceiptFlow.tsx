@@ -23,7 +23,7 @@ import { InlineEditField } from "./InlineEditField";
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
 import { 
   Loader2, 
   Upload, 
@@ -107,6 +107,56 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 type FlowStage = 'capture' | 'processing' | 'review' | 'manual-entry';
 
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100,
+      damping: 12
+    }
+  }
+};
+
+const successVariants = {
+  hidden: { scale: 0.8, opacity: 0 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 200,
+      damping: 20
+    }
+  },
+  celebration: {
+    scale: [1, 1.1, 1],
+    transition: {
+      duration: 0.6,
+      times: [0, 0.5, 1]
+    }
+  }
+};
+
+const buttonVariants = {
+  hover: { scale: 1.02, transition: { duration: 0.2 } },
+  tap: { scale: 0.98, transition: { duration: 0.1 } }
+};
+
 export function SmartReceiptFlow() {
   console.log('SmartReceiptFlow component mounted');
   
@@ -126,6 +176,7 @@ export function SmartReceiptFlow() {
   const [progressValue, setProgressValue] = useState(0);
   const [showDraftSaved, setShowDraftSaved] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   
   // Hooks
   const isMobile = useIsMobile();
@@ -361,7 +412,7 @@ export function SmartReceiptFlow() {
   const handleCameraCapture = async () => {
     try {
       const permission = await checkCameraPermission();
-      if (permission?.state !== 'granted') {
+      if (!permission?.granted) {
         const granted = await requestCameraPermission();
         if (!granted) {
           toast({
@@ -490,15 +541,21 @@ export function SmartReceiptFlow() {
       
       onSubmitSuccess(); // Haptic feedback
 
-      // Success state
+      // Success state with celebration animation
       setShowSuccess(true);
+      setShowSuccessAnimation(true);
+      
+      setTimeout(() => {
+        setShowSuccessAnimation(false);
+      }, 1000);
+      
       setTimeout(() => {
         // Reset form and state
         form.reset();
         removeFile();
         setShowSuccess(false);
         setFlowStage('capture');
-      }, 2000);
+      }, 2500);
 
       toast({
         title: 'Receipt Saved!',
@@ -540,20 +597,64 @@ export function SmartReceiptFlow() {
 
   if (showSuccess) {
     return (
-      <Card className="max-w-md mx-auto mt-8">
-        <CardContent className="pt-6 text-center">
-          <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-success" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Receipt Saved!</h3>
-          <p className="text-muted-foreground">Your receipt has been processed and saved successfully.</p>
-        </CardContent>
-      </Card>
+      <motion.div
+        variants={successVariants}
+        initial="hidden"
+        animate={showSuccessAnimation ? "celebration" : "visible"}
+        className="flex items-center justify-center min-h-[60vh]"
+      >
+        <Card className="max-w-md mx-auto">
+          <CardContent className="pt-6 text-center">
+            <motion.div 
+              className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4"
+              animate={{
+                boxShadow: showSuccessAnimation 
+                  ? "0 0 30px rgba(34, 197, 94, 0.4)" 
+                  : "0 0 0px rgba(34, 197, 94, 0.4)"
+              }}
+              transition={{ duration: 0.6 }}
+            >
+              <motion.div
+                animate={showSuccessAnimation ? { 
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 5, -5, 0]
+                } : {}}
+                transition={{ duration: 0.6 }}
+              >
+                <CheckCircle className="h-8 w-8 text-success" />
+              </motion.div>
+            </motion.div>
+            <motion.h3 
+              className="text-lg font-semibold mb-2"
+              animate={showSuccessAnimation ? { 
+                scale: [1, 1.1, 1]
+              } : {}}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              Receipt Saved!
+            </motion.h3>
+            <motion.p 
+              className="text-muted-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              Your receipt has been processed and saved successfully.
+            </motion.p>
+          </CardContent>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <div ref={containerRef as any} className="max-w-2xl mx-auto space-y-6 relative">
+    <motion.div 
+      ref={containerRef as any} 
+      className="max-w-2xl mx-auto space-y-6 relative"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Pull-to-refresh indicator for mobile */}
       <AnimatePresence>
         {isPulling && (
@@ -579,7 +680,8 @@ export function SmartReceiptFlow() {
       </AnimatePresence>
 
       {/* Camera/Upload Capture Section */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
@@ -592,28 +694,32 @@ export function SmartReceiptFlow() {
               {/* Mobile-optimized capture buttons */}
               {isMobile ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="h-20 flex-col min-h-[80px]"
-                    onClick={cameraSupported ? handleCameraCapture : () => cameraInputRef.current?.click()}
-                  >
-                    <Camera className="h-6 w-6 mb-2" />
-                    <span className="text-sm">
-                      {cameraSupported ? "Camera Preview" : "Camera"}
-                    </span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="h-20 flex-col min-h-[80px]"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Upload</span>
-                  </Button>
+                  <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="h-20 flex-col min-h-[80px] w-full"
+                      onClick={cameraSupported ? handleCameraCapture : () => cameraInputRef.current?.click()}
+                    >
+                      <Camera className="h-6 w-6 mb-2" />
+                      <span className="text-sm">
+                        {cameraSupported ? "Camera Preview" : "Camera"}
+                      </span>
+                    </Button>
+                  </motion.div>
+                  <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="h-20 flex-col min-h-[80px] w-full"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-6 w-6 mb-2" />
+                      <span className="text-sm">Upload</span>
+                    </Button>
+                  </motion.div>
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-border rounded-lg p-8 text-center space-y-4">
@@ -828,25 +934,32 @@ export function SmartReceiptFlow() {
           />
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Progressive Review Form Section - Only show in review or manual-entry stages */}
       <AnimatePresence>
         {(flowStage === 'review' || flowStage === 'manual-entry') && (
           <motion.div
+            variants={itemVariants}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ 
+              duration: 0.4, 
+              ease: [0.4, 0, 0.2, 1],
+              staggerChildren: 0.1
+            }}
             style={{ overflow: 'hidden' }}
           >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Essential Details - Always Open */}
-            <FieldGroup
-              title="Essential Details"
-              icon={<FileText className="h-4 w-4" />}
-              defaultOpen={true}
-            >
+            <motion.div variants={itemVariants}>
+              <FieldGroup
+                title="Essential Details"
+                icon={<FileText className="h-4 w-4" />}
+                defaultOpen={true}
+              >
               <div className="space-y-4">
                 <InlineEditField
                   value={form.watch('vendor_name') || ''}
@@ -906,18 +1019,20 @@ export function SmartReceiptFlow() {
                 />
               </div>
             </FieldGroup>
+            </motion.div>
 
             {/* Assign to Project */}
             {availableWorkOrders.data && availableWorkOrders.data.length > 0 && (
-              <FieldGroup
-                title="Assign to Project"
-                icon={<Briefcase className="h-4 w-4" />}
-                badge={form.watch('work_order_id') && (
-                  <Badge variant="secondary" className="ml-2">
-                    Assigned
-                  </Badge>
-                )}
-              >
+              <motion.div variants={itemVariants}>
+                <FieldGroup
+                  title="Assign to Project"
+                  icon={<Briefcase className="h-4 w-4" />}
+                  badge={form.watch('work_order_id') && (
+                    <Badge variant="secondary" className="ml-2">
+                      Assigned
+                    </Badge>
+                  )}
+                >
                 <FormField
                   control={form.control}
                   name="work_order_id"
@@ -935,6 +1050,7 @@ export function SmartReceiptFlow() {
                   )}
                 />
               </FieldGroup>
+              </motion.div>
             )}
 
             {/* Line Items */}
@@ -1072,26 +1188,28 @@ export function SmartReceiptFlow() {
             </FieldGroup>
 
             {/* Submit Button */}
-            <div className="pt-4">
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={isUploading || isProcessingOCR}
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving Receipt...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Save Receipt
-                  </>
-                )}
-              </Button>
-            </div>
+            <motion.div className="pt-4" variants={itemVariants}>
+              <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={isUploading || isProcessingOCR}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving Receipt...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Save Receipt
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            </motion.div>
           </form>
         </Form>
           </motion.div>
@@ -1126,6 +1244,6 @@ export function SmartReceiptFlow() {
         />
       )}
 
-    </div>
+    </motion.div>
   );
 }
