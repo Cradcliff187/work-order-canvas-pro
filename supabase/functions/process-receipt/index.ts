@@ -448,82 +448,234 @@ function parseReceiptText(text: string): OCRResult {
     }
   }
 
-  // EXTRACT LINE ITEMS - REWRITTEN FOR HOME DEPOT
-  console.log('🔍 Extracting line items...');
+  // EXTRACT LINE ITEMS - ENHANCED WITH MULTI-LINE GROUPING
+  console.log('🔍 Extracting line items with enhanced parsing...');
   const lineItems: LineItem[] = [];
 
-  // Home Depot formats:
-  // "098168701990 2X8-8 PT 2P <A>"
-  // "2X8-8FT #2PRIME PT GC    207.57    15.14"
-  // "885196000214 6068 RD PD <A>    578.00"
+  // Helper function to analyze receipt structure and identify price columns
+  function analyzeReceiptStructure(lines: string[]) {
+    const priceColumnPositions: number[] = [];
+    let rightAlignedPrices = 0;
+    
+    for (const line of lines) {
+      const priceMatch = line.match(/\$?(\d+\.\d{2})$/);
+      if (priceMatch) {
+        const position = line.lastIndexOf(priceMatch[0]);
+        priceColumnPositions.push(position);
+        rightAlignedPrices++;
+      }
+    }
+    
+    const avgPricePosition = priceColumnPositions.length > 0 
+      ? priceColumnPositions.reduce((sum, pos) => sum + pos, 0) / priceColumnPositions.length 
+      : -1;
+    
+    return {
+      hasStructuredLayout: rightAlignedPrices > 2,
+      avgPricePosition,
+      totalLines: lines.length
+    };
+  }
 
+  // Helper function to detect if a line is likely a continuation of an item description
+  function isDescriptionContinuation(currentLine: string, previousLine: string, structure: any): boolean {
+    // If current line has no price but previous line didn't either, likely continuation
+    const currentHasPrice = /\$?\d+\.\d{2}/.test(currentLine);
+    const previousHasPrice = /\$?\d+\.\d{2}/.test(previousLine);
+    
+    if (currentHasPrice) return false; // Lines with prices are typically complete items
+    
+    // Check for indentation pattern (continuation lines often have leading whitespace)
+    const currentIndent = currentLine.length - currentLine.trimLeft().length;
+    const isIndented = currentIndent > 0;
+    
+    // Check if line is too short to be a complete item
+    const isTooShort = currentLine.trim().length < 15;
+    
+    // Check if previous line ended abruptly (no price, reasonable length)
+    const previousTrimmed = previousLine.trim();
+    const previousEndedAbruptly = !previousHasPrice && previousTrimmed.length > 5 && previousTrimmed.length < 50;
+    
+    return (isIndented || isTooShort) && previousEndedAbruptly;
+  }
+
+  // Helper function to extract quantity from various patterns
+  function extractQuantity(text: string): { quantity: number; cleanText: string } {
+    const patterns = [
+      { regex: /^(\d+)x\s+(.+)/i, multiplier: true },           // "3x ITEM NAME"
+      { regex: /^(\d+)\s*@\s*(.+)/i, multiplier: true },        // "2 @ ITEM NAME"
+      { regex: /^qty:?\s*(\d+)\s+(.+)/i, multiplier: true },    // "QTY: 5 ITEM NAME"
+      { regex: /^(\d+\.\d+)\s*lbs?\s+(.+)/i, multiplier: true }, // "2.5 lbs ITEM NAME"
+      { regex: /^(\d+)\s+(.+)/i, multiplier: false },           // "3 ITEM NAME" (less confident)
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern.regex);
+      if (match) {
+        const qty = parseFloat(match[1]);
+        if (qty > 0 && qty <= 999) { // Reasonable quantity range
+          return {
+            quantity: qty,
+            cleanText: match[2].trim()
+          };
+        }
+      }
+    }
+    
+    return { quantity: 1, cleanText: text };
+  }
+
+  // Helper function to extract prices and detect price structure
+  function extractPrices(line: string): { totalPrice?: number; unitPrice?: number; confidence: number } {
+    // Enhanced price patterns for different receipt formats
+    const pricePatterns = [
+      // Two prices: total and unit price (e.g., "123.45  12.99")
+      { regex: /(\d+\.\d{2})\s+(\d+\.\d{2})$/, totalIndex: 1, unitIndex: 2, confidence: 0.9 },
+      // Single price at end
+      { regex: /\$?(\d+\.\d{2})$/, totalIndex: 1, unitIndex: null, confidence: 0.8 },
+      // Price with currency symbol
+      { regex: /\$(\d+\.\d{2})\s*$/, totalIndex: 1, unitIndex: null, confidence: 0.85 },
+      // Multiple prices in line (take the rightmost as total)
+      { regex: /.*\$?(\d+\.\d{2})\s*$/, totalIndex: 1, unitIndex: null, confidence: 0.7 }
+    ];
+    
+    for (const pattern of pricePatterns) {
+      const match = line.match(pattern.regex);
+      if (match) {
+        const totalPrice = parseFloat(match[pattern.totalIndex]);
+        const unitPrice = pattern.unitIndex ? parseFloat(match[pattern.unitIndex]) : undefined;
+        
+        // Validate prices are reasonable
+        if (totalPrice > 0 && totalPrice < 10000) {
+          return {
+            totalPrice,
+            unitPrice: unitPrice && unitPrice > 0 && unitPrice < 1000 ? unitPrice : undefined,
+            confidence: pattern.confidence
+          };
+        }
+      }
+    }
+    
+    return { confidence: 0 };
+  }
+
+  // Analyze receipt structure first
+  const structure = analyzeReceiptStructure(lines);
+  console.log(`📊 Receipt structure: ${structure.hasStructuredLayout ? 'structured' : 'unstructured'}, avg price position: ${structure.avgPricePosition}`);
+
+  // Group related lines and extract items
+  const processedLines: Array<{ combined: string; confidence: number; lineNumbers: number[] }> = [];
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
     // Skip non-item lines
-    if (!line || line.length < 10) continue;
-    if (line.match(/HOME|DEPOT|MARKET|DRIVE|CASHIER|SUBTOTAL|TAX|TOTAL|CARD|GIFT|BALANCE|RETURN|POLICY|DAYS|EXPIRES|\*{3,}/i)) continue;
+    if (!line || line.length < 5) continue;
+    if (line.match(/HOME|DEPOT|MARKET|DRIVE|CASHIER|SUBTOTAL|TAX|TOTAL|CARD|GIFT|BALANCE|RETURN|POLICY|DAYS|EXPIRES|\*{3,}|PHONE|ADDRESS|THANK YOU/i)) continue;
     
-    // Find ALL numbers that look like prices at the end of the line
-    const pricePattern = /(\d+\.\d{2})(?:\s+(\d+\.\d{2}))?$/;
-    const priceMatch = line.match(pricePattern);
+    let combinedLine = line;
+    let confidence = 0.8;
+    const lineNumbers = [i];
     
-    if (priceMatch) {
-      // Extract description (everything before the price)
-      const beforePrice = line.substring(0, line.indexOf(priceMatch[0])).trim();
+    // Check if next line(s) might be continuation of current item
+    let j = i + 1;
+    while (j < lines.length && j - i <= 3) { // Limit to 3 continuation lines max
+      const nextLine = lines[j].trim();
+      if (!nextLine) break;
       
-      // Clean the description
-      let description = beforePrice
-        .replace(/^\d{10,12}\s*/, '') // Remove UPC (10-12 digits)
-        .replace(/^\d{4}\s+\d{5}\s*/, '') // Remove SKU patterns
+      if (isDescriptionContinuation(nextLine, combinedLine, structure)) {
+        combinedLine += ' ' + nextLine;
+        lineNumbers.push(j);
+        confidence *= 0.9; // Slightly lower confidence for multi-line items
+        j++;
+      } else {
+        break;
+      }
+    }
+    
+    processedLines.push({ combined: combinedLine, confidence, lineNumbers });
+    i = j - 1; // Skip the lines we've already processed
+  }
+
+  console.log(`📋 Processed ${processedLines.length} potential items from ${lines.length} lines`);
+
+  // Extract items from processed lines
+  for (const processedLine of processedLines) {
+    const { combined, confidence: groupConfidence, lineNumbers } = processedLine;
+    
+    const prices = extractPrices(combined);
+    if (prices.totalPrice) {
+      // Extract description (everything before the price)
+      const priceText = combined.match(/\$?\d+\.\d{2}.*$/)?.[0] || '';
+      const beforePrice = combined.substring(0, combined.lastIndexOf(priceText)).trim();
+      
+      // Extract quantity and clean description
+      const { quantity, cleanText } = extractQuantity(beforePrice);
+      
+      // Clean the description further
+      let description = cleanText
+        .replace(/^\d{10,14}\s*/, '') // Remove UPC/EAN (10-14 digits)
+        .replace(/^\d{4,6}\s+\d{4,6}\s*/, '') // Remove SKU patterns
         .replace(/<[A-Z]>\s*$/, '') // Remove <A> type markers
         .replace(/\s{2,}/g, ' ') // Collapse multiple spaces
+        .replace(/[^\w\s\-\.\/&%#]+/g, ' ') // Remove excessive special characters
         .trim();
       
       // Skip if no meaningful description
-      if (!description || description.length < 3) continue;
-      
-      const totalPrice = parseFloat(priceMatch[1]);
-      
-      // If there's a second price, it might be unit price
-      if (priceMatch[2]) {
-        const unitPrice = parseFloat(priceMatch[2]);
-        const quantity = Math.round(totalPrice / unitPrice);
-        
-        lineItems.push({
-          description: description,
-          quantity: quantity > 1 ? quantity : 1,
-          unit_price: unitPrice,
-          total_price: totalPrice
-        });
-        
-        console.log(`✅ Found item (with unit price): ${quantity}x ${description} @ $${unitPrice} = $${totalPrice}`);
-      } else {
-        // Single price - check next line for quantity indicator
-        let quantity = 1;
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1];
-          const qtyMatch = nextLine.match(/^(\d+)[@xX]\s*(\d+\.\d{2})/);
-          if (qtyMatch) {
-            quantity = parseInt(qtyMatch[1]);
-            i++; // Skip the quantity line
-          }
-        }
-        
-        lineItems.push({
-          description: description,
-          quantity: quantity > 1 ? quantity : undefined,
-          total_price: totalPrice
-        });
-        
-        console.log(`✅ Found item: ${description} - $${totalPrice}`);
+      if (!description || description.length < 2) {
+        console.log(`⏭️ Skipping item with insufficient description: "${combined}"`);
+        continue;
       }
+      
+      // Calculate unit price if not provided
+      let finalUnitPrice = prices.unitPrice;
+      if (!finalUnitPrice && quantity > 1) {
+        finalUnitPrice = prices.totalPrice / quantity;
+      }
+      
+      // Create line item with confidence scoring
+      const item: LineItem = {
+        description,
+        total_price: prices.totalPrice
+      };
+      
+      if (quantity > 1) {
+        item.quantity = quantity;
+      }
+      
+      if (finalUnitPrice && finalUnitPrice !== prices.totalPrice) {
+        item.unit_price = Math.round(finalUnitPrice * 100) / 100; // Round to 2 decimal places
+      }
+      
+      lineItems.push(item);
+      
+      const qtyText = quantity > 1 ? `${quantity}x ` : '';
+      const unitText = finalUnitPrice && finalUnitPrice !== prices.totalPrice ? ` @ $${finalUnitPrice}` : '';
+      console.log(`✅ Found item: ${qtyText}${description}${unitText} = $${prices.totalPrice} (confidence: ${(groupConfidence * prices.confidence).toFixed(2)}, lines: ${lineNumbers.join(',')})`);
     }
   }
 
   // ALWAYS set lineItems, even if empty
   result.lineItems = lineItems;
-  result.confidence!.lineItems = lineItems.length > 0 ? 0.7 : 0.0;
+  
+  // Enhanced confidence scoring based on extraction success
+  let lineItemsConfidence = 0.0;
+  if (lineItems.length > 0) {
+    const hasQuantities = lineItems.filter(item => item.quantity && item.quantity > 1).length;
+    const hasUnitPrices = lineItems.filter(item => item.unit_price).length;
+    const avgDescriptionLength = lineItems.reduce((sum, item) => sum + item.description.length, 0) / lineItems.length;
+    
+    lineItemsConfidence = 0.5; // Base confidence
+    if (structure.hasStructuredLayout) lineItemsConfidence += 0.1;
+    if (hasQuantities > 0) lineItemsConfidence += 0.1;
+    if (hasUnitPrices > 0) lineItemsConfidence += 0.1;
+    if (avgDescriptionLength > 10) lineItemsConfidence += 0.1;
+    if (lineItems.length >= 3) lineItemsConfidence += 0.1;
+    
+    lineItemsConfidence = Math.min(lineItemsConfidence, 0.9); // Cap at 0.9
+  }
+  
+  result.confidence!.lineItems = lineItemsConfidence;
 
   console.log(`✅ Total items extracted: ${lineItems.length}`);
   if (lineItems.length === 0) {
