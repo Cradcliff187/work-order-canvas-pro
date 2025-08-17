@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SmartInput } from './SmartInput';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { Button } from '@/components/ui/button';
-import { Check, X, Loader2, Edit } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface InlineEditFieldProps {
   value: string | number | Date;
@@ -36,7 +37,10 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
   const [editValue, setEditValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEditValue(value);
@@ -59,12 +63,14 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     if (disabled) return;
     setIsEditing(true);
     setError(null);
+    setShowSuggestions(false);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setEditValue(value);
     setError(null);
+    setShowSuggestions(false);
   };
 
   const handleSave = async () => {
@@ -86,6 +92,8 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
       await onSave(editValue);
       setIsEditing(false);
       setError(null);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -106,6 +114,32 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     }
   };
 
+  const handleSuggestionClick = async (suggestion: string) => {
+    setEditValue(suggestion);
+    // Auto-save when suggestion is selected
+    if (validation) {
+      const validationError = validation(suggestion);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    try {
+      await onSave(suggestion);
+      setIsEditing(false);
+      setShowSuggestions(false);
+      setError(null);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const getDisplayValue = () => {
     if (formatDisplay) {
       return formatDisplay(value);
@@ -121,9 +155,17 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     }
   };
 
+  const topSuggestions = suggestions.slice(0, 4);
+
   if (isEditing) {
     return (
-      <div ref={containerRef} className={cn("space-y-2", className)}>
+      <motion.div 
+        ref={containerRef} 
+        className={cn("space-y-2", className)}
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.15 }}
+      >
         {label && (
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{label}</span>
@@ -133,51 +175,36 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
           </div>
         )}
         
-        <div className="flex items-start gap-2">
-          <div className="flex-1">
-            <SmartInput
-              value={editValue}
-              onChange={setEditValue}
-              onKeyDown={handleKeyDown}
-              type={inputType}
-              placeholder={placeholder}
-              suggestions={suggestions}
-              autoFocus
-              disabled={isSaving}
-            />
-            {error && (
-              <p className="text-sm text-destructive mt-1">{error}</p>
-            )}
-          </div>
+        <div className="relative">
+          <SmartInput
+            value={editValue}
+            onChange={setEditValue}
+            onKeyDown={handleKeyDown}
+            type={inputType}
+            placeholder={placeholder}
+            suggestions={[]}
+            autoFocus
+            disabled={isSaving}
+            className="w-full"
+          />
           
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="h-8 w-8 p-0"
+          {isSaving && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          
+          {error && (
+            <motion.p 
+              className="text-sm text-destructive mt-1"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
             >
-              {isSaving ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Check className="h-3 w-3" />
-              )}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isSaving}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
+              {error}
+            </motion.p>
+          )}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -192,25 +219,72 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
         </div>
       )}
       
-      <div
-        onClick={handleEdit}
-        className={cn(
-          "flex items-center justify-between p-2 rounded-md border transition-colors",
-          disabled 
-            ? "bg-muted cursor-not-allowed opacity-50" 
-            : "cursor-pointer hover:bg-muted/50 hover:border-muted-foreground/50"
-        )}
-      >
-        <span className={cn(
-          "flex-1",
-          !value && "text-muted-foreground"
-        )}>
-          {value ? getDisplayValue() : placeholder || 'Click to edit'}
-        </span>
-        
-        {!disabled && (
-          <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        )}
+      <div className="relative">
+        <motion.div
+          onClick={handleEdit}
+          onMouseEnter={() => !disabled && setShowSuggestions(true)}
+          onMouseLeave={() => setShowSuggestions(false)}
+          className={cn(
+            "relative py-1 px-1 rounded transition-all duration-200",
+            disabled 
+              ? "cursor-not-allowed opacity-50" 
+              : "cursor-text hover:bg-muted/30"
+          )}
+          whileHover={!disabled ? { scale: 1.01 } : {}}
+        >
+          <span className={cn(
+            "inline-block min-h-[1.25rem] border-b-2 border-dotted border-transparent transition-all duration-200",
+            !disabled && "group-hover:border-muted-foreground/30",
+            !value && "text-muted-foreground"
+          )}>
+            {value ? getDisplayValue() : placeholder || 'Click to edit'}
+          </span>
+        </motion.div>
+
+        {/* Success Animation */}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              className="absolute -right-1 top-1/2 -translate-y-1/2"
+              initial={{ opacity: 0, scale: 0, x: -10 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="bg-green-500 text-white rounded-full p-1">
+                <Check className="h-3 w-3" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Quick Suggestion Pills */}
+        <AnimatePresence>
+          {showSuggestions && topSuggestions.length > 0 && !disabled && (
+            <motion.div
+              className="absolute top-full left-0 mt-1 flex flex-wrap gap-1 z-10"
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.15 }}
+            >
+              {topSuggestions.map((suggestion, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSuggestionClick(suggestion);
+                  }}
+                  className="h-6 px-2 text-xs bg-background/80 backdrop-blur-sm border-muted hover:bg-muted/80"
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
