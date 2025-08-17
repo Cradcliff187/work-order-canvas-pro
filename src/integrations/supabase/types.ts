@@ -1054,6 +1054,50 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_line_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          line_number: number | null
+          quantity: number | null
+          receipt_id: string
+          total_price: number
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          line_number?: number | null
+          quantity?: number | null
+          receipt_id: string
+          total_price: number
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          line_number?: number | null
+          quantity?: number | null
+          receipt_id?: string
+          total_price?: number
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_line_items_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receipt_work_orders: {
         Row: {
           allocated_amount: number
@@ -1103,9 +1147,13 @@ export type Database = {
           description: string | null
           employee_user_id: string
           id: string
+          line_items_extracted: boolean | null
           notes: string | null
+          ocr_confidence: number | null
           receipt_date: string
           receipt_image_url: string | null
+          subtotal: number | null
+          tax_amount: number | null
           updated_at: string
           vendor_name: string
         }
@@ -1115,9 +1163,13 @@ export type Database = {
           description?: string | null
           employee_user_id: string
           id?: string
+          line_items_extracted?: boolean | null
           notes?: string | null
+          ocr_confidence?: number | null
           receipt_date: string
           receipt_image_url?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
           updated_at?: string
           vendor_name: string
         }
@@ -1127,9 +1179,13 @@ export type Database = {
           description?: string | null
           employee_user_id?: string
           id?: string
+          line_items_extracted?: boolean | null
           notes?: string | null
+          ocr_confidence?: number | null
           receipt_date?: string
           receipt_image_url?: string | null
+          subtotal?: number | null
+          tax_amount?: number | null
           updated_at?: string
           vendor_name?: string
         }

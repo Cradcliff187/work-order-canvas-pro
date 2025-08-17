@@ -126,11 +126,21 @@ export function ReceiptUpload() {
       await createReceipt.mutateAsync({
         vendor_name: data.vendor_name,
         amount: data.amount,
+        subtotal: ocrData?.subtotal,
+        tax_amount: ocrData?.tax,
+        ocr_confidence: ocrData?.confidence?.overall,
+        line_items_extracted: Boolean(ocrData?.lineItems?.length),
         description: data.description,
         receipt_date: data.receipt_date,
         notes: data.notes,
         allocations,
         receipt_image: receiptFile || undefined,
+        line_items: ocrData?.lineItems?.map((item: any) => ({
+          description: item.description,
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+        })) || [],
       });
 
       // Show success animation

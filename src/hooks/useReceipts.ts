@@ -5,17 +5,34 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/useFileUpload";
 
+export interface ReceiptLineItem {
+  id: string;
+  receipt_id: string;
+  description: string;
+  quantity: number;
+  unit_price?: number;
+  total_price: number;
+  line_number?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Receipt {
   id: string;
   employee_user_id: string;
   vendor_name: string;
   amount: number;
+  subtotal?: number;
+  tax_amount?: number;
+  ocr_confidence?: number;
+  line_items_extracted?: boolean;
   description?: string;
   receipt_date: string;
   receipt_image_url?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
+  receipt_line_items?: ReceiptLineItem[];
 }
 
 export interface ReceiptWorkOrder {
@@ -36,6 +53,10 @@ export interface ReceiptWorkOrder {
 export interface CreateReceiptData {
   vendor_name: string;
   amount: number;
+  subtotal?: number;
+  tax_amount?: number;
+  ocr_confidence?: number;
+  line_items_extracted?: boolean;
   description?: string;
   receipt_date: string;
   notes?: string;
@@ -45,6 +66,7 @@ export interface CreateReceiptData {
     allocation_notes?: string;
   }[];
   receipt_image?: File;
+  line_items?: Omit<ReceiptLineItem, 'id' | 'receipt_id' | 'created_at' | 'updated_at'>[];
 }
 
 export function useReceipts() {
@@ -71,7 +93,8 @@ export function useReceipts() {
               title,
               store_location
             )
-          )
+          ),
+          receipt_line_items (*)
         `)
         .eq("employee_user_id", profile.id)
         .order("receipt_date", { ascending: false });
@@ -164,6 +187,10 @@ export function useReceipts() {
             employee_user_id: profile.id,
             vendor_name: data.vendor_name,
             amount: data.amount,
+            subtotal: data.subtotal,
+            tax_amount: data.tax_amount,
+            ocr_confidence: data.ocr_confidence,
+            line_items_extracted: data.line_items_extracted,
             description: data.description,
             receipt_date: data.receipt_date,
             notes: data.notes,
@@ -194,6 +221,27 @@ export function useReceipts() {
 
           if (updateError) throw updateError;
           receipt_image_url = uploadData.path;
+        }
+
+        // Create line items if provided
+        if (data.line_items && data.line_items.length > 0) {
+          const { error: lineItemsError } = await supabase
+            .from("receipt_line_items")
+            .insert(
+              data.line_items.map((item, index) => ({
+                receipt_id: receipt.id,
+                description: item.description,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                total_price: item.total_price,
+                line_number: index + 1,
+              }))
+            );
+
+          if (lineItemsError) {
+            console.error('Error creating line items:', lineItemsError);
+            throw lineItemsError;
+          }
         }
 
         // Create allocation records
