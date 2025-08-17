@@ -300,19 +300,24 @@ export function SmartReceiptFlow() {
     } catch (error: any) {
       console.error('OCR processing error:', error);
       setProgressStage('error');
-      setOcrError(error.message || 'Could not read receipt');
       
-      toast({
-        title: 'OCR Failed',
-        description: 'Could not read receipt. Please enter details manually.',
-        variant: 'destructive',
-      });
+      // Enhanced error messages based on error type
+      let errorMessage = 'Unable to extract data from receipt';
+      if (error.message?.includes('network')) {
+        errorMessage = 'Network issue - check your connection';
+      } else if (error.message?.includes('file') || error.message?.includes('format')) {
+        errorMessage = 'Image quality too low or unsupported format';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Processing took too long - try a clearer image';
+      }
       
-      // Stay in processing stage to show manual entry option
-      // Hide error progress after delay
+      setOcrError(errorMessage);
+      
+      // Don't show toast - let the FloatingProgress handle error display
+      // Keep processing visible to show error recovery options
       setTimeout(() => {
         setIsProcessingOCR(false);
-      }, 3000);
+      }, 5000); // Longer delay to show recovery options
     }
   };
 
@@ -361,7 +366,7 @@ export function SmartReceiptFlow() {
   const handleCameraCapture = async () => {
     try {
       const permission = await checkCameraPermission();
-      if (permission?.state !== 'granted') {
+      if (!permission.granted) {
         const granted = await requestCameraPermission();
         if (!granted) {
           toast({
@@ -717,23 +722,54 @@ export function SmartReceiptFlow() {
                 </div>
               )}
 
-              {/* Manual Entry Option - Show when OCR fails or processing stage */}
+              {/* Enhanced Error Recovery Section - Show when OCR fails */}
               {(flowStage === 'processing' && !isProcessingOCR && ocrError) && (
-                <div className="text-center py-4 space-y-3">
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm">OCR couldn't read this receipt</span>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="border border-destructive/20 bg-destructive/5 rounded-lg p-4 space-y-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <h4 className="font-medium text-destructive">OCR Processing Failed</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {ocrError}
+                      </p>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p>💡 <strong>Tips for better results:</strong></p>
+                        <ul className="list-disc list-inside space-y-1 ml-4">
+                          <li>Ensure good lighting and clear image</li>
+                          <li>Avoid shadows or reflections on the receipt</li>
+                          <li>Make sure text is straight and readable</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={startManualEntry}
-                    className="gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Enter Details Manually
-                  </Button>
-                </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={retryOCR}
+                      className="flex-1 gap-2 bg-background hover:bg-muted"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Try Again
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={startManualEntry}
+                      className="flex-1 gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Enter Manually
+                    </Button>
+                  </div>
+                </motion.div>
               )}
 
               {/* Manual Entry Option - Always available in capture stage */}
@@ -1108,6 +1144,7 @@ export function SmartReceiptFlow() {
           ocrError || undefined
         }
         onRetry={retryOCR}
+        onManualEntry={startManualEntry}
       />
 
       {/* Floating Action Bar - Only show in review or manual-entry stages */}

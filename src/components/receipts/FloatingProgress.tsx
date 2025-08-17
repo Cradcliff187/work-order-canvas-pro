@@ -1,7 +1,7 @@
 import React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, AlertCircle, Upload, FileText, Sparkles, RefreshCw } from "lucide-react";
+import { CheckCircle, AlertCircle, Upload, FileText, Sparkles, RefreshCw, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FloatingProgressProps {
@@ -10,6 +10,7 @@ interface FloatingProgressProps {
   progress: number;
   message?: string;
   onRetry?: () => void;
+  onManualEntry?: () => void;
   className?: string;
 }
 
@@ -52,6 +53,7 @@ export function FloatingProgress({
   progress,
   message,
   onRetry,
+  onManualEntry,
   className
 }: FloatingProgressProps) {
   if (!isVisible) {
@@ -94,15 +96,28 @@ export function FloatingProgress({
             </p>
           </div>
 
-          {/* Retry button for errors */}
-          {stage === 'error' && onRetry && (
-            <button
-              onClick={onRetry}
-              className="p-2 hover:bg-muted rounded-md transition-colors"
-              title="Retry OCR processing"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
+          {/* Error recovery actions */}
+          {stage === 'error' && (onRetry || onManualEntry) && (
+            <div className="flex gap-1">
+              {onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="p-2 hover:bg-muted rounded-md transition-colors text-xs"
+                  title="Try OCR again"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
+              )}
+              {onManualEntry && (
+                <button
+                  onClick={onManualEntry}
+                  className="p-2 hover:bg-muted rounded-md transition-colors text-xs"
+                  title="Enter details manually"
+                >
+                  <Edit className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -133,12 +148,41 @@ export function FloatingProgress({
           </div>
         )}
 
-        {/* Error details for error state */}
+        {/* Error details with actionable recovery */}
         {stage === 'error' && (
-          <div className="mt-2 p-2 bg-destructive/10 rounded-md">
-            <p className="text-sm text-destructive">
-              {message || "Please try again or enter details manually"}
-            </p>
+          <div className="mt-2 space-y-2">
+            <div className="p-2 bg-destructive/10 rounded-md">
+              <p className="text-sm text-destructive font-medium">
+                {message || "Unable to read receipt"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try again with better lighting or enter details manually
+              </p>
+            </div>
+            
+            {/* Action buttons in FloatingProgress */}
+            {(onRetry || onManualEntry) && (
+              <div className="flex gap-2">
+                {onRetry && (
+                  <button
+                    onClick={onRetry}
+                    className="flex-1 px-3 py-2 text-xs bg-muted hover:bg-muted/80 rounded-md transition-colors flex items-center justify-center gap-1"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Try Again
+                  </button>
+                )}
+                {onManualEntry && (
+                  <button
+                    onClick={onManualEntry}
+                    className="flex-1 px-3 py-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Edit className="h-3 w-3" />
+                    Manual Entry
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
