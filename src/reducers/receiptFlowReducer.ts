@@ -34,6 +34,17 @@ export interface WorkOrderAllocation {
   allocation_notes?: string;
 }
 
+interface AllocationSuggestionCache {
+  vendor?: string;
+  amount: number;
+  patterns: Array<{
+    type: string;
+    allocations: WorkOrderAllocation[];
+    confidence: number;
+    timestamp: number;
+  }>;
+}
+
 // Receipt flow state interface
 export interface ReceiptFlowState {
   // Core state machine
@@ -68,6 +79,7 @@ export interface ReceiptFlowState {
   allocation: {
     mode: 'single' | 'split';
     allocations: WorkOrderAllocation[];
+    suggestionCache: AllocationSuggestionCache | null;
   };
   
   // UI state
@@ -128,6 +140,8 @@ export type ReceiptFlowAction =
   | { type: 'UPDATE_ALLOCATIONS'; payload: { allocations: WorkOrderAllocation[] } }
   | { type: 'SET_SINGLE_ALLOCATION'; payload: { workOrderId: string; amount: number } }
   | { type: 'RESET_ALLOCATIONS' }
+  | { type: 'CACHE_ALLOCATION_SUGGESTIONS'; payload: { cache: AllocationSuggestionCache } }
+  | { type: 'CLEAR_SUGGESTION_CACHE' }
   | { type: 'RESET_FLOW' }
   | { type: 'HYDRATE_STATE'; payload: Partial<ReceiptFlowState> };
 
@@ -155,6 +169,7 @@ export const initialReceiptFlowState: ReceiptFlowState = {
   allocation: {
     mode: 'single',
     allocations: [],
+    suggestionCache: null,
   },
   ui: {
     showSuccess: false,
@@ -487,6 +502,7 @@ export function receiptFlowReducer(
               work_order_id: action.payload.workOrderId,
               allocated_amount: action.payload.amount,
             }],
+            suggestionCache: state.allocation.suggestionCache,
           },
         };
 
@@ -496,8 +512,27 @@ export function receiptFlowReducer(
           allocation: {
             mode: 'single',
             allocations: [],
+            suggestionCache: state.allocation.suggestionCache,
           },
         };
+
+    case 'CACHE_ALLOCATION_SUGGESTIONS':
+      return {
+        ...state,
+        allocation: {
+          ...state.allocation,
+          suggestionCache: action.payload.cache
+        }
+      };
+
+    case 'CLEAR_SUGGESTION_CACHE':
+      return {
+        ...state,
+        allocation: {
+          ...state.allocation,
+          suggestionCache: null
+        }
+      };
 
       case 'HYDRATE_STATE':
         // Carefully merge payload while preserving type safety
