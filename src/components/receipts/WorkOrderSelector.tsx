@@ -1,13 +1,23 @@
 import React, { useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Search, Zap, MapPin, X, AlertCircle } from "lucide-react";
+import { MobilePullToRefresh } from "@/components/MobilePullToRefresh";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  Search, 
+  Zap, 
+  X, 
+  MapPin, 
+  AlertCircle,
+  AlertTriangle 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WorkOrder {
@@ -38,6 +48,13 @@ export function WorkOrderSelector({
   onAllocationChange,
 }: WorkOrderSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const isMobile = useIsMobile();
+
+  // Pull to refresh functionality
+  const { handleRefresh } = usePullToRefresh({
+    queryKey: ["employee-work-orders"],
+    successMessage: 'Work orders refreshed'
+  });
   
   // Filter work orders based on search
   const filteredWorkOrders = workOrders.filter(wo => {
@@ -155,91 +172,89 @@ export function WorkOrderSelector({
           placeholder="Search work orders..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className={cn("pl-10", isMobile && "h-11")}
         />
       </div>
 
       {/* Work Orders List */}
-      <ScrollArea className="h-[400px] pr-4">
-        {filteredWorkOrders.length === 0 ? (
-          <div className="text-center py-8">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">
-              {searchQuery ? "No matching work orders" : "No work orders available"}
-            </p>
-            {!searchQuery && (
-              <p className="text-sm text-muted-foreground mt-1">
-                You need to be assigned to work orders to allocate receipts.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredWorkOrders.map((workOrder) => {
-              const allocation = allocations.find(a => a.work_order_id === workOrder.id);
-              const isSelected = !!allocation;
+      <MobilePullToRefresh onRefresh={handleRefresh} disabled={!isMobile}>
+        <ScrollArea className="h-[400px] pr-4">
+            {filteredWorkOrders.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">
+                  {searchQuery ? "No matching work orders" : "No work orders available"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredWorkOrders.map((workOrder) => {
+                  const allocation = allocations.find(a => a.work_order_id === workOrder.id);
+                  const isSelected = !!allocation;
 
-              return (
-                <Card 
-                  key={workOrder.id}
-                  className={cn(
-                    "transition-colors cursor-pointer",
-                    isSelected && "border-primary bg-primary/5"
-                  )}
-                  onClick={() => !isSelected && handleAddWorkOrder(workOrder.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline">
-                            {workOrder.work_order_number}
-                          </Badge>
-                        </div>
-                        <p className="font-medium">{workOrder.title}</p>
-                        {workOrder.store_location && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {workOrder.store_location}
-                          </p>
-                        )}
-                      </div>
-                      
-                      {isSelected && (
-                        <div className="ml-4">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max={totalAmount}
-                              value={allocation.allocated_amount}
-                              onChange={(e) => handleAmountChange(workOrder.id, parseFloat(e.target.value) || 0)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-24 h-8"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveWorkOrder(workOrder.id);
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
+                  return (
+                    <Card 
+                      key={workOrder.id}
+                      className={cn(
+                        "transition-colors cursor-pointer",
+                        isSelected && "border-primary bg-primary/5"
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </ScrollArea>
+                      onClick={() => !isSelected && handleAddWorkOrder(workOrder.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline">
+                                {workOrder.work_order_number}
+                              </Badge>
+                            </div>
+                            <p className="font-medium">{workOrder.title}</p>
+                            {workOrder.store_location && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                <MapPin className="h-3 w-3" />
+                                {workOrder.store_location}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {isSelected && (
+                            <div className="ml-4">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  max={totalAmount}
+                                  value={allocation.allocated_amount}
+                                  onChange={(e) => handleAmountChange(workOrder.id, parseFloat(e.target.value) || 0)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className={cn("w-24", isMobile ? "h-11" : "h-8")}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size={isMobile ? "default" : "sm"}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveWorkOrder(workOrder.id);
+                                  }}
+                                  className={cn(isMobile && "h-11 w-11")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </ScrollArea>
+        </MobilePullToRefresh>
 
       {/* Validation Alert */}
       {!isFullyAllocated && totalAllocated > 0 && (
