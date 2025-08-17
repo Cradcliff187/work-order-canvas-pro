@@ -14,6 +14,7 @@ interface LineItem {
 
 interface OCRResult {
   vendor?: string;
+  vendor_raw?: string;
   total?: number;
   subtotal?: number;
   tax?: number;
@@ -27,6 +28,96 @@ interface OCRResult {
     date?: number;
     lineItems?: number;
   };
+}
+
+// Vendor normalization map
+const VENDOR_ALIASES: Record<string, string[]> = {
+  'Home Depot': ['HD', 'HOME DEPOT', 'HOMEDEPOT', 'THE HOME DEPOT', 'HOME\\s*DEPOT'],
+  'Lowes': ['LOWES', 'LOWE\'S', 'LOWE S', 'LOWES HOME IMPROVEMENT'],
+  'Walmart': ['WALMART', 'WAL-MART', 'WAL MART', 'WMT', 'WALMART SUPERCENTER'],
+  'Target': ['TARGET', 'TGT', 'TARGET CORP'],
+  'Costco': ['COSTCO', 'COSTCO WHOLESALE'],
+  'Sams Club': ['SAM\'S CLUB', 'SAMS CLUB', 'SAMSCLUB'],
+  'Harbor Freight': ['HARBOR FREIGHT', 'HARBOR FREIGHT TOOLS', 'HF', 'HARBORFREIGHT'],
+  'Ace Hardware': ['ACE HARDWARE', 'ACE', 'ACE HDW'],
+  'Menards': ['MENARDS', 'MENARD\'S'],
+  'Best Buy': ['BEST BUY', 'BESTBUY'],
+  'CVS': ['CVS', 'CVS PHARMACY', 'CVS/PHARMACY'],
+  'Walgreens': ['WALGREENS', 'WALGREEN'],
+  'Kroger': ['KROGER', 'KROGER CO'],
+  'Safeway': ['SAFEWAY'],
+  'Whole Foods': ['WHOLE FOODS', 'WHOLEFOODS', 'WHOLE FOODS MARKET'],
+  'Dollar General': ['DOLLAR GENERAL', 'DG', 'DOLLARGENERAL'],
+  'Dollar Tree': ['DOLLAR TREE', 'DOLLARTREE'],
+  'RadioShack': ['RADIOSHACK', 'RADIO SHACK'],
+  'H-E-B': ['HEB', 'H-E-B', 'H E B'],
+  'Tractor Supply': ['TRACTOR SUPPLY', 'TSC', 'TRACTORSUPPLY']
+};
+
+function normalizeVendorText(text: string): string {
+  return text
+    .toUpperCase()
+    .replace(/[^\w\s-']/g, ' ') // Remove special chars except hyphens and apostrophes
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .trim();
+}
+
+function findVendor(text: string): { vendor: string; vendor_raw: string; confidence: number } {
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  const fullTextNormalized = normalizeVendorText(text);
+  
+  let bestMatch = { vendor: '', vendor_raw: '', confidence: 0 };
+  
+  // Check each vendor and its aliases
+  for (const [vendorName, aliases] of Object.entries(VENDOR_ALIASES)) {
+    for (const alias of aliases) {
+      const aliasRegex = new RegExp(alias.replace(/\s/g, '\\s*'), 'gi');
+      
+      // Check full text first
+      const fullTextMatch = fullTextNormalized.match(aliasRegex);
+      if (fullTextMatch) {
+        const confidence = alias === vendorName ? 0.95 : 0.85; // Higher confidence for exact name matches
+        if (confidence > bestMatch.confidence) {
+          bestMatch = { 
+            vendor: vendorName, 
+            vendor_raw: fullTextMatch[0], 
+            confidence 
+          };
+        }
+      }
+      
+      // Check first 5 lines for better accuracy
+      for (let i = 0; i < Math.min(5, lines.length); i++) {
+        const lineNormalized = normalizeVendorText(lines[i]);
+        const lineMatch = lineNormalized.match(aliasRegex);
+        if (lineMatch) {
+          const confidence = alias === vendorName ? 0.9 : 0.8; // Slightly lower confidence for line matches
+          if (confidence > bestMatch.confidence) {
+            bestMatch = { 
+              vendor: vendorName, 
+              vendor_raw: lines[i], 
+              confidence 
+            };
+          }
+        }
+      }
+    }
+  }
+  
+  // Handle special case for Home Depot multi-line pattern (HO\nDEPOT)
+  const homeDepotMultiline = /HO\s*\n\s*DEPOT/i;
+  if (homeDepotMultiline.test(text)) {
+    const match = text.match(homeDepotMultiline);
+    if (match && 0.9 > bestMatch.confidence) {
+      bestMatch = { 
+        vendor: 'Home Depot', 
+        vendor_raw: match[0], 
+        confidence: 0.9 
+      };
+    }
+  }
+  
+  return bestMatch;
 }
 
 serve(async (req) => {
@@ -153,35 +244,20 @@ function parseReceiptText(text: string): OCRResult {
     confidence: {}
   };
 
-  // VENDOR - Look for Home Depot specifically first (handles "HO\nDEPOT")
-  const homeDepotRegex = /HOME\s*DEPOT|HOMEDEPOT/i;
-  const fullText = text.toUpperCase();
+  // VENDOR - Use new vendor normalization
+  console.log('🔍 Searching for vendor using normalization...');
+  const vendorMatch = findVendor(text);
   
-  // Check for multi-line Home Depot pattern (HO + DEPOT)
-  const homeDepotMultiline = /HO\s*\n\s*DEPOT/i;
-  if (homeDepotMultiline.test(text) || homeDepotRegex.test(fullText)) {
-    result.vendor = 'Home Depot';
-    result.confidence!.vendor = 0.9;
-    console.log('✅ Found Home Depot (multi-line or standard)');
+  if (vendorMatch.vendor) {
+    result.vendor = vendorMatch.vendor;
+    result.vendor_raw = vendorMatch.vendor_raw;
+    result.confidence!.vendor = vendorMatch.confidence;
+    console.log(`✅ Found vendor: ${vendorMatch.vendor} (raw: "${vendorMatch.vendor_raw}") with confidence ${vendorMatch.confidence}`);
   } else {
-    // Check first 5 lines for other store names
-    console.log('🔍 Checking vendor in first 5 lines...');
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
-      const line = lines[i].toUpperCase();
-      console.log(`Line ${i}: "${line}"`);
-      
-      if (line.includes('LOWE')) result.vendor = 'Lowes';
-      else if (line.includes('MENARDS')) result.vendor = 'Menards';
-      else if (line.includes('DEPOT')) result.vendor = 'Home Depot';
-      else if (line.includes('HARBOR')) result.vendor = 'Harbor Freight';
-      // Add more as needed
-      
-      if (result.vendor) {
-        result.confidence!.vendor = 0.8;
-        console.log(`✅ Found vendor: ${result.vendor}`);
-        break;
-      }
-    }
+    console.log('❌ No vendor detected');
+    result.vendor = '';
+    result.vendor_raw = '';
+    result.confidence!.vendor = 0;
   }
 
   // SUBTOTAL - Extract subtotal first
