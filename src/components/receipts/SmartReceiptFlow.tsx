@@ -19,6 +19,7 @@ import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
 import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/utils/fileUtils";
 import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
+import { InlineEditField } from "./InlineEditField";
 import { 
   Loader2, 
   Upload, 
@@ -466,106 +467,62 @@ export function SmartReceiptFlow() {
               icon={<FileText className="h-4 w-4" />}
               defaultOpen={true}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Vendor Name */}
-                <FormField
-                  control={form.control}
-                  name="vendor_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        Vendor Name
-                        {ocrConfidence.vendor && (
-                          <ConfidenceBadge confidence={ocrConfidence.vendor * 100} />
-                        )}
-                      </FormLabel>
-                      <FormControl>
-                        <div className="space-y-2">
-                          <Input placeholder="Enter vendor name" {...field} />
-                          {isMobile && (
-                            <div className="flex flex-wrap gap-2">
-                              {COMMON_VENDORS.slice(0, 6).map((vendor) => (
-                                <Button
-                                  key={vendor}
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => form.setValue('vendor_name', vendor)}
-                                >
-                                  {vendor}
-                                </Button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div className="space-y-4">
+                <InlineEditField
+                  value={form.watch('vendor_name') || ''}
+                  onSave={(value) => {
+                    form.setValue('vendor_name', value, { shouldValidate: true });
+                  }}
+                  inputType="text"
+                  label="Vendor Name"
+                  placeholder="Enter vendor name"
+                  confidence={ocrConfidence.vendor ? ocrConfidence.vendor * 100 : undefined}
+                  suggestions={COMMON_VENDORS}
+                  validation={(value) => {
+                    if (!value || value.trim().length === 0) {
+                      return 'Vendor name is required';
+                    }
+                    return null;
+                  }}
                 />
 
-                {/* Amount */}
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        Amount
-                        {ocrConfidence.total && (
-                          <ConfidenceBadge confidence={ocrConfidence.total * 100} />
-                        )}
-                      </FormLabel>
-                      <FormControl>
-                        <div className="space-y-2">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                          {isMobile && (
-                            <div className="flex flex-wrap gap-2">
-                              {QUICK_AMOUNTS.map((amount) => (
-                                <Button
-                                  key={amount}
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => form.setValue('amount', amount)}
-                                >
-                                  ${amount}
-                                </Button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <InlineEditField
+                  value={form.watch('amount') || 0}
+                  onSave={(value) => {
+                    form.setValue('amount', parseFloat(value) || 0, { shouldValidate: true });
+                  }}
+                  inputType="currency"
+                  label="Amount"
+                  placeholder="0.00"
+                  confidence={ocrConfidence.total ? ocrConfidence.total * 100 : undefined}
+                  validation={(value) => {
+                    const numValue = parseFloat(value);
+                    if (isNaN(numValue) || numValue <= 0) {
+                      return 'Amount must be greater than 0';
+                    }
+                    return null;
+                  }}
                 />
 
-                {/* Receipt Date */}
-                <FormField
-                  control={form.control}
-                  name="receipt_date"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Receipt Date
-                        {ocrConfidence.date && (
-                          <ConfidenceBadge confidence={ocrConfidence.date * 100} />
-                        )}
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} className="md:w-1/2" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <InlineEditField
+                  value={form.watch('receipt_date') ? new Date(form.watch('receipt_date')) : new Date()}
+                  onSave={(value) => {
+                    const dateStr = value instanceof Date ? value.toISOString().split('T')[0] : value;
+                    form.setValue('receipt_date', dateStr, { shouldValidate: true });
+                  }}
+                  inputType="date"
+                  label="Receipt Date"
+                  confidence={ocrConfidence.date ? ocrConfidence.date * 100 : undefined}
+                  validation={(value) => {
+                    if (!value) {
+                      return 'Receipt date is required';
+                    }
+                    const date = value instanceof Date ? value : new Date(value);
+                    if (date > new Date()) {
+                      return 'Receipt date cannot be in the future';
+                    }
+                    return null;
+                  }}
                 />
               </div>
             </FieldGroup>
