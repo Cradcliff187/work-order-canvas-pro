@@ -16,6 +16,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAnalytics } from "@/utils/analytics";
+import { ErrorDisplay, getErrorForToast } from '@/components/receipts/ErrorDisplay';
+import { getErrorMessage, canRetryError, shouldOfferManualEntry } from '@/utils/errorMessages';
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
@@ -474,10 +476,11 @@ export function SmartReceiptFlow() {
         await processWithOCR(compressedFile);
       } catch (error: any) {
         console.error('Image compression error:', error);
+        const toastError = getErrorForToast(error);
         toast({
-          title: 'Image Processing Error',
-          description: error.message || 'Failed to process image',
-          variant: 'destructive',
+          title: toastError.title,
+          description: toastError.description,
+          variant: toastError.variant,
         });
         
         // Fall back to original file if compression fails
@@ -532,10 +535,11 @@ export function SmartReceiptFlow() {
     } catch (error) {
       console.error('Camera access error:', error);
       onError();
+      const toastError = getErrorForToast(error);
       toast({
-        title: "Camera error",
-        description: "Unable to access camera. Please try again.",
-        variant: "destructive"
+        title: toastError.title,
+        description: toastError.description,
+        variant: toastError.variant
       });
     }
   }, [checkCameraPermission, requestCameraPermission, toast, onError, actions, isProcessingLocked]);
@@ -586,10 +590,11 @@ export function SmartReceiptFlow() {
     } catch (error) {
       console.error('Image capture error:', error);
       onError();
+      const toastError = getErrorForToast(error);
       toast({
-        title: "Capture failed",
-        description: "Failed to capture image. Please try again.",
-        variant: "destructive"
+        title: toastError.title,
+        description: toastError.description,
+        variant: toastError.variant
       });
     }
   }, [cameraStream, captureImageFromCamera, onImageCapture, onError, toast, actions, processWithOCR]);
@@ -940,25 +945,12 @@ export function SmartReceiptFlow() {
                   transition={{ duration: 0.3 }}
                   className="border border-destructive/20 bg-destructive/5 rounded-lg p-4 space-y-4"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="h-4 w-4 text-destructive" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <h4 className="font-medium text-destructive">OCR Processing Failed</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {ocrError}
-                      </p>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <p>💡 <strong>Tips for better results:</strong></p>
-                        <ul className="list-disc list-inside space-y-1 ml-4">
-                          <li>Ensure good lighting and clear image</li>
-                          <li>Avoid shadows or reflections on the receipt</li>
-                          <li>Make sure text is straight and readable</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
+                <ErrorDisplay
+                  error={ocrError}
+                  onRetry={retryOCR}
+                  onManualEntry={startManualEntry}
+                  className="border-0 p-0"
+                />
                   
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button

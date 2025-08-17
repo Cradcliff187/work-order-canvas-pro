@@ -89,6 +89,23 @@ THANK YOU!`,
   }
 };
 
+// User-friendly error message mapping
+function getUserFriendlyMessage(errorCode: string): string {
+  const messages: Record<string, string> = {
+    'NETWORK_ERROR': 'Connection problem. Please check your internet and try again.',
+    'OCR_SERVICE_ERROR': 'Our scanning service is temporarily unavailable. You can enter details manually.',
+    'NO_TEXT_DETECTED': 'No text found in your image. Make sure the receipt is clearly visible.',
+    'POOR_IMAGE_QUALITY': 'Image quality is too low. Please take a clearer photo.',
+    'FILE_TOO_LARGE': 'Image file is too large. Please use a smaller file.',
+    'INVALID_FILE_TYPE': 'Please upload an image file (JPG, PNG, WebP, or HEIC).',
+    'PROCESSING_TIMEOUT': 'Processing took too long. Try a clearer image or enter details manually.',
+    'INSUFFICIENT_TEXT': 'Not enough readable text found. Please provide a clearer image.',
+    'SERVICE_UNAVAILABLE': 'Service temporarily unavailable. Please try again later.',
+    'INTERNAL_ERROR': 'Something went wrong. Please try again or enter details manually.'
+  };
+  return messages[errorCode] || 'An unexpected error occurred. Please try again.';
+}
+
 // Logging utility
 function createDebugLog(level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG', step: string, message: string, data?: any, startTime?: number): DebugLog {
   const timestamp = new Date().toISOString();
@@ -786,11 +803,12 @@ function validateResponse(result: OCRResult): ValidationResult {
   };
 }
 
-function createErrorResponse(error: string, code: string = 'PROCESSING_ERROR', status: number = 400, debugLogs?: DebugLog[]): Response {
+function createErrorResponse(error: string, code: string = 'PROCESSING_ERROR', status: number = 400, debugLogs?: DebugLog[], userFriendlyMessage?: string): Response {
   const response = {
     success: false,
     error: error,
     error_code: code,
+    user_friendly_message: userFriendlyMessage || getUserFriendlyMessage(code),
     vendor: '',
     total: 0,
     document_type: 'unknown' as const,
@@ -910,7 +928,8 @@ serve(async (req) => {
           'OCR service not configured',
           'SERVICE_UNAVAILABLE',
           503,
-          debugLogs
+          debugLogs,
+          'Our scanning service is temporarily unavailable. You can enter details manually.'
         );
       }
 
