@@ -146,14 +146,12 @@ export async function checkForDuplicates(
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const response = await supabase
+    const { data, error } = await supabase
       .from('receipts')
       .select('id, vendor_name, amount, receipt_date')
-      .eq('user_id', currentUserId)
+      .eq('employee_user_id', currentUserId)
       .gte('receipt_date', thirtyDaysAgo.toISOString().split('T')[0])
       .order('receipt_date', { ascending: false });
-    
-    const { data, error } = response;
 
     if (error || !data) {
       console.error('Error fetching receipts for duplicate check:', error);
