@@ -20,6 +20,7 @@ import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/ut
 import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
+import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
 import { motion, AnimatePresence } from "framer-motion";
@@ -127,7 +128,24 @@ export function SmartReceiptFlow() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
-  const { availableWorkOrders, createReceipt, isUploading } = useReceipts();
+  const { receipts, availableWorkOrders, createReceipt, isUploading } = useReceipts();
+
+  // Get recent work orders from receipts data for smart suggestions
+  const getRecentWorkOrders = () => {
+    if (!receipts.data || !availableWorkOrders.data) return [];
+    
+    // Extract work order IDs from recent receipts
+    const recentWorkOrderIds = receipts.data
+      .slice(0, 10) // Last 10 receipts
+      .flatMap(receipt => receipt.receipt_work_orders?.map(rwo => rwo.work_order_id) || [])
+      .filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
+    
+    // Map to actual work order objects
+    return recentWorkOrderIds
+      .map(id => availableWorkOrders.data?.find(wo => wo.id === id))
+      .filter(Boolean) // Remove undefined
+      .slice(0, 3); // Top 3
+  };
 
   // Form setup
   const form = useForm<SmartReceiptFormData>({
@@ -679,21 +697,12 @@ export function SmartReceiptFlow() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Work Order (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select work order..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="">No work order</SelectItem>
-                          {availableWorkOrders.data?.map((wo) => (
-                            <SelectItem key={wo.id} value={wo.id}>
-                              {wo.work_order_number} - {wo.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SmartWorkOrderSelector
+                        availableWorkOrders={availableWorkOrders.data || []}
+                        recentWorkOrders={getRecentWorkOrders()}
+                        selectedWorkOrderId={field.value}
+                        onSelect={field.onChange}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
