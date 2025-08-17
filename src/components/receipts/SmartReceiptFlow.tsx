@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
 import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/utils/fileUtils";
+import { FieldGroup } from "./FieldGroup";
+import { ConfidenceBadge } from "./ConfidenceBadge";
 import { 
   Loader2, 
   Upload, 
@@ -30,7 +32,10 @@ import {
   Building2,
   AlertCircle,
   Plus,
-  Calculator
+  Calculator,
+  Briefcase,
+  List,
+  PenTool
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -451,123 +456,137 @@ export function SmartReceiptFlow() {
         </CardContent>
       </Card>
 
-      {/* Form Section */}
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Receipt Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Vendor Name */}
-              <FormField
-                control={form.control}
-                name="vendor_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center">
-                      Vendor Name
-                      {renderConfidenceBadge('vendor', field.value)}
-                    </FormLabel>
-                    <FormControl>
-                      <div className="space-y-2">
-                        <Input placeholder="Enter vendor name" {...field} />
-                        {isMobile && (
-                          <div className="flex flex-wrap gap-2">
-                            {COMMON_VENDORS.slice(0, 6).map((vendor) => (
-                              <Button
-                                key={vendor}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => form.setValue('vendor_name', vendor)}
-                              >
-                                {vendor}
-                              </Button>
-                            ))}
-                          </div>
+      {/* Progressive Review Form Section - Only show after file selection */}
+      {(ocrData || receiptFile) && (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Essential Details - Always Open */}
+            <FieldGroup
+              title="Essential Details"
+              icon={<FileText className="h-4 w-4" />}
+              defaultOpen={true}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Vendor Name */}
+                <FormField
+                  control={form.control}
+                  name="vendor_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        Vendor Name
+                        {ocrConfidence.vendor && (
+                          <ConfidenceBadge confidence={ocrConfidence.vendor * 100} />
                         )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      </FormLabel>
+                      <FormControl>
+                        <div className="space-y-2">
+                          <Input placeholder="Enter vendor name" {...field} />
+                          {isMobile && (
+                            <div className="flex flex-wrap gap-2">
+                              {COMMON_VENDORS.slice(0, 6).map((vendor) => (
+                                <Button
+                                  key={vendor}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => form.setValue('vendor_name', vendor)}
+                                >
+                                  {vendor}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Amount */}
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center">
-                      Amount
-                      {renderConfidenceBadge('total', field.value)}
-                    </FormLabel>
-                    <FormControl>
-                      <div className="space-y-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                        {isMobile && (
-                          <div className="flex flex-wrap gap-2">
-                            {QUICK_AMOUNTS.map((amount) => (
-                              <Button
-                                key={amount}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => form.setValue('amount', amount)}
-                              >
-                                ${amount}
-                              </Button>
-                            ))}
-                          </div>
+                {/* Amount */}
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        Amount
+                        {ocrConfidence.total && (
+                          <ConfidenceBadge confidence={ocrConfidence.total * 100} />
                         )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      </FormLabel>
+                      <FormControl>
+                        <div className="space-y-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                          {isMobile && (
+                            <div className="flex flex-wrap gap-2">
+                              {QUICK_AMOUNTS.map((amount) => (
+                                <Button
+                                  key={amount}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => form.setValue('amount', amount)}
+                                >
+                                  ${amount}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Receipt Date */}
-              <FormField
-                control={form.control}
-                name="receipt_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Receipt Date
-                      {renderConfidenceBadge('date', field.value)}
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {/* Receipt Date */}
+                <FormField
+                  control={form.control}
+                  name="receipt_date"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Receipt Date
+                        {ocrConfidence.date && (
+                          <ConfidenceBadge confidence={ocrConfidence.date * 100} />
+                        )}
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} className="md:w-1/2" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </FieldGroup>
 
-              {/* Work Order Selection */}
-              {availableWorkOrders.data && availableWorkOrders.data.length > 0 && (
+            {/* Assign to Project */}
+            {availableWorkOrders.data && availableWorkOrders.data.length > 0 && (
+              <FieldGroup
+                title="Assign to Project"
+                icon={<Briefcase className="h-4 w-4" />}
+                badge={form.watch('work_order_id') && (
+                  <Badge variant="secondary" className="ml-2">
+                    Assigned
+                  </Badge>
+                )}
+              >
                 <FormField
                   control={form.control}
                   name="work_order_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center">
-                        <Building2 className="h-4 w-4 mr-2" />
-                        Allocate to Work Order (Optional)
-                      </FormLabel>
+                      <FormLabel>Work Order (Optional)</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -575,6 +594,7 @@ export function SmartReceiptFlow() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">No work order</SelectItem>
                           {availableWorkOrders.data?.map((wo) => (
                             <SelectItem key={wo.id} value={wo.id}>
                               {wo.work_order_number} - {wo.title}
@@ -586,9 +606,124 @@ export function SmartReceiptFlow() {
                     </FormItem>
                   )}
                 />
-              )}
+              </FieldGroup>
+            )}
 
-              {/* Notes */}
+            {/* Line Items */}
+            {ocrData?.lineItems && ocrData.lineItems.length > 0 && (
+              <FieldGroup
+                title="Line Items"
+                icon={<List className="h-4 w-4" />}
+                badge={
+                  <Badge variant="secondary" className="ml-2">
+                    {ocrData.lineItems.length} items
+                  </Badge>
+                }
+              >
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground border-b pb-2">
+                    <span>Description</span>
+                    <span>Quantity × Price</span>
+                    <span className="text-right">Total</span>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {ocrData.lineItems.map((item, index) => (
+                      <div key={index} className="grid grid-cols-3 gap-4 text-sm p-2 bg-muted rounded">
+                        <span className="font-medium">{item.description}</span>
+                        <span className="text-muted-foreground">
+                          {item.quantity && item.unit_price 
+                            ? `${item.quantity} × $${item.unit_price.toFixed(2)}`
+                            : 'N/A'
+                          }
+                        </span>
+                        <span className="text-right font-medium">
+                          ${item.total_price?.toFixed(2) || 'N/A'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {(ocrData.subtotal || ocrData.tax || ocrData.total) && (
+                    <div className="border-t pt-4 space-y-2">
+                      {ocrData.subtotal && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Subtotal:</span>
+                          <span>${ocrData.subtotal.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {ocrData.tax && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Tax:</span>
+                          <span>${ocrData.tax.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {ocrData.total && (
+                        <div className="flex justify-between font-medium border-t pt-2">
+                          <span>Total:</span>
+                          <span>${ocrData.total.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Quick correction buttons */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const item = prompt('Enter item description:');
+                        const price = prompt('Enter price:');
+                        if (item && price) {
+                          setOcrData(prev => ({
+                            ...prev!,
+                            lineItems: [...(prev?.lineItems || []), {
+                              description: item,
+                              total_price: parseFloat(price)
+                            }]
+                          }));
+                        }
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Item
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (ocrData?.subtotal && ocrData?.tax) {
+                          const correct = ocrData.subtotal + ocrData.tax;
+                          form.setValue('amount', correct, { shouldValidate: true });
+                          setOcrData(prev => ({ ...prev!, total: correct }));
+                          toast({
+                            title: 'Total Recalculated',
+                            description: `New total: $${correct.toFixed(2)}`,
+                          });
+                        }
+                      }}
+                    >
+                      <Calculator className="h-3 w-3 mr-1" />
+                      Recalculate
+                    </Button>
+                  </div>
+                </div>
+              </FieldGroup>
+            )}
+
+            {/* Additional Details */}
+            <FieldGroup
+              title="Additional Details"
+              icon={<PenTool className="h-4 w-4" />}
+              badge={form.watch('notes') && (
+                <Badge variant="secondary" className="ml-2">
+                  Notes added
+                </Badge>
+              )}
+            >
               <FormField
                 control={form.control}
                 name="notes"
@@ -606,152 +741,10 @@ export function SmartReceiptFlow() {
                   </FormItem>
                 )}
               />
-            </CardContent>
-          </Card>
+            </FieldGroup>
 
-          {/* OCR Results Display */}
-          {ocrData && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    OCR Results
-                  </span>
-                  <Badge variant="outline">AI Extracted</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Tax and Subtotal Display */}
-                {(ocrData.subtotal || ocrData.tax) && (
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                    {ocrData.subtotal && (
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal:</span>
-                        <span>${ocrData.subtotal.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {ocrData.tax && (
-                      <div className="flex justify-between text-sm">
-                        <span>Tax:</span>
-                        <span>${ocrData.tax.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-medium border-t pt-2">
-                      <span>Total:</span>
-                      <span>${ocrData.total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Line Items */}
-                {ocrData.lineItems && ocrData.lineItems.length > 0 && (
-                  <div>
-                    <h4 className="font-medium mb-2">Items Found:</h4>
-                    <div className="space-y-2">
-                      {ocrData.lineItems.slice(0, 5).map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm bg-muted/30 rounded p-2">
-                          <span className="flex-1">{item.description}</span>
-                          {item.total_price && (
-                            <span>${item.total_price.toFixed(2)}</span>
-                          )}
-                        </div>
-                      ))}
-                      {ocrData.lineItems.length > 5 && (
-                        <p className="text-xs text-muted-foreground">
-                          +{ocrData.lineItems.length - 5} more items
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Manual Override Controls */}
-          {ocrData && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center justify-between">
-                  <span>Quick Corrections</span>
-                  <Badge variant="outline" className="text-xs">
-                    Manual Override
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 space-y-3">
-                {/* Add Missing Item */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    const item = prompt('Enter item description:');
-                    const price = prompt('Enter price:');
-                    if (item && price) {
-                      setOcrData(prev => ({
-                        ...prev!,
-                        lineItems: [...(prev?.lineItems || []), {
-                          description: item,
-                          total_price: parseFloat(price)
-                        }]
-                      }));
-                    }
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Missing Item
-                </Button>
-                
-                {/* Recalculate Total */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    if (ocrData?.subtotal && ocrData?.tax) {
-                      const correct = ocrData.subtotal + ocrData.tax;
-                      form.setValue('amount', correct, { shouldValidate: true });
-                      setOcrData(prev => ({ ...prev!, total: correct }));
-                      toast({
-                        title: 'Total Recalculated',
-                        description: `New total: $${correct.toFixed(2)}`,
-                      });
-                    }
-                  }}
-                >
-                  <Calculator className="h-4 w-4 mr-2" />
-                  Recalculate Total
-                </Button>
-                
-                {/* Clear and Manual Entry */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-muted-foreground"
-                  onClick={() => {
-                    setOcrData(null);
-                    form.reset();
-                    toast({
-                      title: 'Cleared OCR Data',
-                      description: 'Enter receipt details manually',
-                    });
-                  }}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear OCR & Enter Manually
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Submit Section */}
-          <Card>
-            <CardContent className="pt-6">
+            {/* Submit Button */}
+            <div className="pt-4">
               <Button
                 type="submit"
                 className="w-full"
@@ -770,10 +763,11 @@ export function SmartReceiptFlow() {
                   </>
                 )}
               </Button>
-            </CardContent>
-          </Card>
-        </form>
-      </Form>
+            </div>
+          </form>
+        </Form>
+      )}
+
     </div>
   );
 }
