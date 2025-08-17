@@ -1,106 +1,118 @@
-// Amount parsing functionality for totals, subtotals, and tax
-
-interface AmountResult {
-  subtotal?: number;
-  tax?: number;
-  total?: number;
-  total_confidence?: number;
-}
-
-// Helper function to preprocess OCR text for better matching
-function preprocessOCRText(text: string): string {
-  return text
-    // Fix common OCR character substitutions
-    .replace(/[O0]/g, match => match) // Keep both O and 0, context will determine
-    .replace(/[Il1]/g, match => match) // Keep variations, let patterns handle
-    // Normalize spacing around currency and numbers
-    .replace(/\$\s*(\d)/g, '$$$1')
-    .replace(/(\d)\s*\$/, '$1$')
-    // Fix common spacing issues around keywords
-    .replace(/t\s*o\s*t\s*a\s*l/gi, 'total')
-    .replace(/s\s*u\s*b\s*t\s*o\s*t\s*a\s*l/gi, 'subtotal')
-    .replace(/t\s*a\s*x/gi, 'tax');
-}
-
-// Function to extract all monetary amounts from text for fallback detection
-function extractAllAmounts(text: string): Array<{amount: number, position: number, context: string}> {
-  const amounts: Array<{amount: number, position: number, context: string}> = [];
+// Amount parsing - SIMPLIFIED VERSION
+export function parseAmounts(text) {
+  console.log('💰 Looking for amounts in receipt...');
   
-  // Enhanced patterns to catch all monetary amounts
-  const amountPatterns = [
-    /\$(\d{1,6}(?:\.\d{2})?)/g,
-    /(\d{1,6}(?:\.\d{2})?)\s*\$/g,
-    /\b(\d{1,6}\.\d{2})\b/g,
-    /\b(\d{2,6})\b/g // Whole dollar amounts over $10
+  // Fix decimal points that might be missing
+  const fixedText = text.replace(/(\d{2,})(\d{2})\b/g, (match, dollars, cents) => {
+    // If it looks like dollars and cents without a decimal
+    if (parseInt(dollars) < 10000 && parseInt(cents) < 100) {
+      return `${dollars}.${cents}`;
+    }
+    return match;
+  });
+  
+  // Look for TOTAL patterns
+  const totalPatterns = [
+    /TOTAL\s+\$?([\d,]+\.?\d*)/i,
+    /TOTAL[\s:]*\$?([\d,]+\.?\d*)/i,
+    /GRAND\s*TOTAL[\s:]*\$?([\d,]+\.?\d*)/i,
+    /AMOUNT\s*DUE[\s:]*\$?([\d,]+\.?\d*)/i,
+    /BALANCE\s*DUE[\s:]*\$?([\d,]+\.?\d*)/i,
+    /TOTAL.*?(\d+\.\d{2})/i,
+    /(\d+\.\d{2}).*?TOTAL/i
   ];
   
-  for (const pattern of amountPatterns) {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const amount = parseFloat(match[1]);
-      if (amount >= 0.01 && amount < 999999) {
-        // Get context around the amount (30 chars before and after)
-        const start = Math.max(0, match.index - 30);
-        const end = Math.min(text.length, match.index + match[0].length + 30);
-        const context = text.substring(start, end);
-        
-        amounts.push({
-          amount,
-          position: match.index,
-          context: context.replace(/\n/g, ' ').trim()
-        });
+  let foundAmounts = [];
+  
+  // Try each pattern
+  for (const pattern of totalPatterns) {
+    const matches = fixedText.matchAll(new RegExp(pattern, 'gi'));
+    for (const match of matches) {
+      const amountStr = match[1].replace(/,/g, '');
+      const amount = parseFloat(amountStr);
+      
+      // Validate amount
+      if (amount > 0 && amount < 100000) {
+        console.log(`[AMOUNT] Found: $${amount} with pattern: ${pattern.source}`);
+        foundAmounts.push(amount);
       }
     }
   }
   
-  // Remove duplicates and sort by position
-  const uniqueAmounts = amounts.filter((amount, index, arr) => 
-    arr.findIndex(a => Math.abs(a.amount - amount.amount) < 0.01 && 
-                      Math.abs(a.position - amount.position) < 10) === index
-  );
-  
-  return uniqueAmounts.sort((a, b) => a.position - b.position);
-}
-
-export function parseAmounts(text: string): AmountResult {
-  console.log('🔍 Looking for total amount...');
-  
-  // Simple patterns for finding totals
-  const totalPatterns = [
-    /\btotal\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i,
-    /\bgrand\s*total\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i,
-    /\bamount\s*due\s*:?\s*\$?(\d{1,6}(?:\.\d{2})?)/i,
-    /[\$](\d{1,6}(?:\.\d{2})?)\s*total/i
-  ];
-  
-  const lines = text.split('\n');
-  let bestTotal = 0;
-  
-  // Look for total in each line
-  for (const line of lines) {
-    for (const pattern of totalPatterns) {
-      const match = line.match(pattern);
-      if (match) {
-        const amount = parseFloat(match[1]);
-        if (amount > bestTotal && amount < 999999) {
-          bestTotal = amount;
-          console.log(`Found total: $${amount} in line: ${line.trim()}`);
+  // If no explicit total found, look for all amounts
+  if (foundAmounts.length === 0) {
+    console.log('[AMOUNT] No TOTAL found, looking for all amounts...');
+    
+    // Find all money amounts
+    const allAmountPatterns = [
+      /\$\s*(\d+\.?\d*)/g,
+      /(\d+\.\d{2})/g,
+      /(\d{2,4})\s*(?=\n|$)/g  // Numbers at end of lines
+    ];
+    
+    let allAmounts = [];
+    for (const pattern of allAmountPatterns) {
+      const matches = fixedText.matchAll(pattern);
+      for (const match of matches) {
+        const amount = parseFloat(match[1].replace(/,/g, ''));
+        if (amount > 0.01 && amount < 100000) {
+          // Get context
+          const start = Math.max(0, match.index - 20);
+          const end = Math.min(fixedText.length, match.index + 20);
+          const context = fixedText.substring(start, end).toLowerCase();
+          
+          allAmounts.push({
+            amount,
+            hasTotal: /total|due|balance/i.test(context),
+            position: match.index / fixedText.length  // Position in document
+          });
         }
       }
     }
-  }
-  
-  // Fallback: find largest dollar amount
-  if (!bestTotal) {
-    const allAmounts = text.match(/\$(\d{1,6}(?:\.\d{2})?)/g);
-    if (allAmounts) {
-      bestTotal = Math.max(...allAmounts.map(a => parseFloat(a.replace('$', ''))));
-      console.log(`Fallback: using largest amount $${bestTotal}`);
+    
+    // Sort by relevance
+    allAmounts.sort((a, b) => {
+      // Prefer amounts with "total" nearby
+      if (a.hasTotal && !b.hasTotal) return -1;
+      if (!a.hasTotal && b.hasTotal) return 1;
+      // Prefer amounts near the end
+      if (b.position - a.position > 0.2) return 1;
+      // Prefer larger amounts
+      return b.amount - a.amount;
+    });
+    
+    console.log(`[AMOUNT] Found ${allAmounts.length} amounts`);
+    if (allAmounts.length > 0) {
+      console.log(`[AMOUNT] Top 3:`, allAmounts.slice(0, 3).map(a => `$${a.amount}`));
+      foundAmounts.push(allAmounts[0].amount);
     }
   }
   
-  return { 
-    total: bestTotal || undefined,
-    grandTotal: bestTotal || undefined 
+  // Check for amounts that might be missing decimal points
+  if (foundAmounts.length > 0) {
+    foundAmounts = foundAmounts.map(amount => {
+      // If amount looks too big, might be missing decimal
+      if (amount > 1000 && amount % 100 < 100) {
+        const fixed = amount / 100;
+        console.log(`[AMOUNT] Fixing decimal: ${amount} -> ${fixed}`);
+        return fixed;
+      }
+      return amount;
+    });
+  }
+  
+  // Return the best total
+  const bestTotal = foundAmounts.length > 0 ? Math.max(...foundAmounts) : undefined;
+  
+  if (bestTotal) {
+    console.log(`[AMOUNT] ✅ Final total: $${bestTotal}`);
+  } else {
+    console.log(`[AMOUNT] ❌ No total found`);
+  }
+  
+  return {
+    total: bestTotal,
+    grandTotal: bestTotal,
+    confidence: bestTotal ? 0.9 : 0.1
   };
 }
