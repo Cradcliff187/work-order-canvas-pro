@@ -794,7 +794,14 @@ export function SmartReceiptFlow() {
             </div>
           ) : (
             /* Image Preview Section */
-            <div className="space-y-4" {...(isMobile ? swipeGesture : {})}>
+            <div 
+              className="space-y-4" 
+              {...(isMobile ? {
+                onTouchStart: swipeGesture.onTouchStart,
+                onTouchMove: swipeGesture.onTouchMove,
+                onTouchEnd: swipeGesture.onTouchEnd
+              } : {})}
+            >
               {imagePreview ? (
                 <div className="relative">
                   <img

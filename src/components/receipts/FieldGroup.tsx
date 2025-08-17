@@ -29,9 +29,8 @@ export const FieldGroup: React.FC<FieldGroupProps> = ({
   return (
     <div className="w-full">
       <motion.button
-        className="flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors"
+        className="flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
         onClick={() => setOpen(!open)}
-        whileHover={{ backgroundColor: "hsl(var(--muted) / 0.5)" }}
         whileTap={{ scale: 0.995 }}
         type="button"
       >
