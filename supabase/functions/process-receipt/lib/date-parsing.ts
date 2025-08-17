@@ -106,21 +106,27 @@ export function parseReceiptDate(text) {
   uniqueDates.sort((a, b) => a.position - b.position);
   
   if (uniqueDates.length > 0) {
-    // Prefer dates that are not in the future
+    // Only filter out dates that are clearly in the future (more than 1 day ahead)
     const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
     const validDates = uniqueDates.filter(d => {
       const date = new Date(d.date);
-      return date <= today;
+      return date <= tomorrow; // Allow dates up to tomorrow to handle timezone issues
     });
     
+    // Accept old dates without restriction - receipts can be old
     const bestDate = validDates.length > 0 ? validDates[0] : uniqueDates[0];
-    console.log(`[DATE] ✅ Best date: ${bestDate.date} (from "${bestDate.original}")`);
+    console.log(`[DATE] ✅ Best date selected: ${bestDate.date} (from "${bestDate.original}")`);
+    console.log(`[DATE] Total dates found: ${uniqueDates.length}, Valid dates: ${validDates.length}`);
     return bestDate.date;
   }
   
-  // Fallback to today's date if no valid date found
+  console.log(`[DATE] ❌ No dates found in receipt text`);
+  // Only use fallback if absolutely no dates were found
   const today = new Date();
   const fallbackDate = today.toISOString().split('T')[0];
-  console.log(`[DATE] ❌ No valid date found, using today: ${fallbackDate}`);
+  console.log(`[DATE] Using fallback date: ${fallbackDate}`);
   return fallbackDate;
 }
