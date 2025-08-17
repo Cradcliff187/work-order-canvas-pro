@@ -236,6 +236,230 @@ function findVendor(text: string): { vendor: string; vendor_raw: string; confide
   return bestMatch;
 }
 
+function parseReceiptDate(text: string): { date: string | null; confidence: number; format: string } {
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  const currentYear = new Date().getFullYear();
+  
+  // Comprehensive date patterns with format identification
+  const datePatterns = [
+    // US Format patterns (MM/DD/YYYY, MM-DD-YYYY, MM.DD.YYYY)
+    {
+      regex: /\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})\b/g,
+      format: 'US_FULL',
+      confidence: 0.9,
+      parser: (match: RegExpMatchArray) => {
+        const month = parseInt(match[1]);
+        const day = parseInt(match[2]);
+        const year = parseInt(match[3]);
+        return { month, day, year, isAmbiguous: month <= 12 && day <= 12 };
+      }
+    },
+    // US Format 2-digit year (MM/DD/YY)
+    {
+      regex: /\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})\b/g,
+      format: 'US_SHORT',
+      confidence: 0.8,
+      parser: (match: RegExpMatchArray) => {
+        const month = parseInt(match[1]);
+        const day = parseInt(match[2]);
+        const year = parseInt(match[3]);
+        const fullYear = year >= 30 ? 1900 + year : 2000 + year;
+        return { month, day, year: fullYear, isAmbiguous: month <= 12 && day <= 12 };
+      }
+    },
+    // ISO Format (YYYY-MM-DD, YYYY.MM.DD)
+    {
+      regex: /\b(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})\b/g,
+      format: 'ISO',
+      confidence: 0.95,
+      parser: (match: RegExpMatchArray) => {
+        const year = parseInt(match[1]);
+        const month = parseInt(match[2]);
+        const day = parseInt(match[3]);
+        return { month, day, year, isAmbiguous: false };
+      }
+    },
+    // Named months (Jan 15 2024, January 15, 2024, 15 Jan 2024)
+    {
+      regex: /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{2,4})\b/gi,
+      format: 'NAMED_MONTH',
+      confidence: 0.9,
+      parser: (match: RegExpMatchArray) => {
+        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const monthName = match[1].toLowerCase().substring(0, 3);
+        const month = monthNames.indexOf(monthName) + 1;
+        const day = parseInt(match[2]);
+        let year = parseInt(match[3]);
+        if (year < 100) year = year >= 30 ? 1900 + year : 2000 + year;
+        return { month, day, year, isAmbiguous: false };
+      }
+    },
+    // Reverse named months (15 Jan 2024)
+    {
+      regex: /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{2,4})\b/gi,
+      format: 'REVERSE_NAMED',
+      confidence: 0.9,
+      parser: (match: RegExpMatchArray) => {
+        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const day = parseInt(match[1]);
+        const monthName = match[2].toLowerCase().substring(0, 3);
+        const month = monthNames.indexOf(monthName) + 1;
+        let year = parseInt(match[3]);
+        if (year < 100) year = year >= 30 ? 1900 + year : 2000 + year;
+        return { month, day, year, isAmbiguous: false };
+      }
+    },
+    // Compact formats (YYYYMMDD, DDMMYYYY)
+    {
+      regex: /\b(\d{8})\b/g,
+      format: 'COMPACT',
+      confidence: 0.7,
+      parser: (match: RegExpMatchArray) => {
+        const dateStr = match[1];
+        // Try YYYYMMDD first
+        if (dateStr.substring(0, 4) >= '1900' && dateStr.substring(0, 4) <= '2100') {
+          const year = parseInt(dateStr.substring(0, 4));
+          const month = parseInt(dateStr.substring(4, 6));
+          const day = parseInt(dateStr.substring(6, 8));
+          return { month, day, year, isAmbiguous: false };
+        }
+        // Try DDMMYYYY
+        const day = parseInt(dateStr.substring(0, 2));
+        const month = parseInt(dateStr.substring(2, 4));
+        const year = parseInt(dateStr.substring(4, 8));
+        return { month, day, year, isAmbiguous: false };
+      }
+    }
+  ];
+
+  const candidates: Array<{
+    date: Date;
+    confidence: number;
+    format: string;
+    rawMatch: string;
+    isAmbiguous: boolean;
+  }> = [];
+
+  console.log('🔍 Searching for dates with comprehensive patterns...');
+
+  // Search through all text for date patterns
+  for (const pattern of datePatterns) {
+    const matches = Array.from(text.matchAll(pattern.regex));
+    
+    for (const match of matches) {
+      try {
+        const parsed = pattern.parser(match);
+        const { month, day, year, isAmbiguous } = parsed;
+        
+        // Validate parsed components
+        if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900 || year > currentYear + 1) {
+          console.log(`❌ Invalid date components: ${month}/${day}/${year} from "${match[0]}"`);
+          continue;
+        }
+        
+        // Create date object and validate it's a real date
+        const dateObj = new Date(year, month - 1, day);
+        if (dateObj.getFullYear() !== year || dateObj.getMonth() !== month - 1 || dateObj.getDate() !== day) {
+          console.log(`❌ Invalid date: ${match[0]} -> ${dateObj.toISOString()}`);
+          continue;
+        }
+        
+        // Check if date is reasonable for a receipt (not future, not too old)
+        const now = new Date();
+        const daysDiff = (now.getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24);
+        
+        if (daysDiff < -1) { // More than 1 day in future
+          console.log(`❌ Future date rejected: ${match[0]}`);
+          continue;
+        }
+        
+        if (daysDiff > 3650) { // More than 10 years old
+          console.log(`❌ Too old date rejected: ${match[0]}`);
+          continue;
+        }
+        
+        let adjustedConfidence = pattern.confidence;
+        
+        // Reduce confidence for ambiguous dates (could be DD/MM or MM/DD)
+        if (isAmbiguous && pattern.format.includes('US')) {
+          adjustedConfidence *= 0.8;
+          console.log(`⚠️ Ambiguous date format detected: ${match[0]}`);
+        }
+        
+        // Boost confidence for dates in first few lines (more likely to be receipt date)
+        const lineIndex = lines.findIndex(line => line.includes(match[0]));
+        if (lineIndex >= 0 && lineIndex < 5) {
+          adjustedConfidence *= 1.1;
+        }
+        
+        // Boost confidence for recent dates (more likely to be recent receipts)
+        if (daysDiff < 365) { // Within last year
+          adjustedConfidence *= 1.05;
+        }
+        
+        candidates.push({
+          date: dateObj,
+          confidence: Math.min(adjustedConfidence, 0.95), // Cap at 0.95
+          format: pattern.format,
+          rawMatch: match[0],
+          isAmbiguous
+        });
+        
+        console.log(`✅ Found date candidate: ${match[0]} -> ${dateObj.toISOString().split('T')[0]} (${pattern.format}, confidence: ${adjustedConfidence.toFixed(2)})`);
+        
+      } catch (error) {
+        console.log(`❌ Error parsing date "${match[0]}": ${error.message}`);
+      }
+    }
+  }
+
+  // If we have ambiguous US format dates, try to resolve using context
+  const ambiguousUS = candidates.filter(c => c.isAmbiguous && c.format.includes('US'));
+  if (ambiguousUS.length > 0) {
+    console.log('🔄 Attempting to resolve ambiguous US format dates...');
+    
+    // Look for vendor context clues
+    const textUpper = text.toUpperCase();
+    const isUSVendor = ['HOME DEPOT', 'WALMART', 'TARGET', 'LOWES', 'BEST BUY', 'CVS'].some(vendor => 
+      textUpper.includes(vendor)
+    );
+    
+    if (isUSVendor) {
+      console.log('🇺🇸 US vendor detected, prioritizing MM/DD format');
+      ambiguousUS.forEach(candidate => {
+        candidate.confidence *= 1.2; // Boost MM/DD interpretation
+      });
+    }
+  }
+
+  // Sort candidates by confidence and select the best one
+  candidates.sort((a, b) => b.confidence - a.confidence);
+
+  if (candidates.length === 0) {
+    console.log('❌ No valid dates found');
+    return { date: null, confidence: 0, format: 'none' };
+  }
+
+  const best = candidates[0];
+  const isoDate = best.date.toISOString().split('T')[0];
+  
+  console.log(`🎯 Selected best date: ${best.rawMatch} -> ${isoDate} (${best.format}, confidence: ${best.confidence.toFixed(2)})`);
+  
+  // Log other candidates for debugging
+  if (candidates.length > 1) {
+    console.log('📋 Other date candidates:');
+    candidates.slice(1, 3).forEach(candidate => {
+      console.log(`   ${candidate.rawMatch} -> ${candidate.date.toISOString().split('T')[0]} (${candidate.format}, confidence: ${candidate.confidence.toFixed(2)})`);
+    });
+  }
+
+  return {
+    date: isoDate,
+    confidence: best.confidence,
+    format: best.format
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -683,38 +907,16 @@ function parseReceiptText(text: string): OCRResult {
   }
 
   // Extract date
-  const datePatterns = [
-    /(\d{1,2}\/\d{1,2}\/\d{2,4})/g,
-    /(\d{1,2}-\d{1,2}-\d{2,4})/g,
-    /(\d{4}-\d{1,2}-\d{1,2})/g,
-    /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/gi
-  ];
-
-  for (const line of lines) {
-    for (const pattern of datePatterns) {
-      const matches = Array.from(line.matchAll(pattern));
-      for (const match of matches) {
-        try {
-          const dateStr = match[1];
-          const date = new Date(dateStr);
-          if (!isNaN(date.getTime())) {
-            result.date = date.toISOString().split('T')[0];
-            result.confidence!.date = 0.7;
-            break;
-          }
-        } catch (e) {
-          console.log('Date parsing error:', e);
-        }
-      }
-      if (result.date) break;
-    }
-    if (result.date) break;
-  }
-
-  // If no date found, use today
-  if (!result.date) {
+  // Enhanced date parsing with comprehensive format support
+  const parsedDate = parseReceiptDate(text);
+  if (parsedDate.date) {
+    result.date = parsedDate.date;
+    result.confidence!.date = parsedDate.confidence;
+    console.log(`📅 Found date: ${result.date} (confidence: ${parsedDate.confidence}, format: ${parsedDate.format})`);
+  } else {
     result.date = new Date().toISOString().split('T')[0];
     result.confidence!.date = 0.3;
+    console.log('📅 No valid date found, using current date');
   }
 
   // After all extraction, validate the math
