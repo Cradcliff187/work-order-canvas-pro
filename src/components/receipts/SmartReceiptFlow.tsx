@@ -361,7 +361,7 @@ export function SmartReceiptFlow() {
   const handleCameraCapture = async () => {
     try {
       const permission = await checkCameraPermission();
-      if (permission?.name !== 'granted') {
+      if (permission?.state !== 'granted') {
         const granted = await requestCameraPermission();
         if (!granted) {
           toast({
