@@ -1,173 +1,211 @@
-// Amount parsing - FIXED VERSION for separated TOTAL
+// Enhanced amount parsing with improved multi-line TOTAL detection
 export function parseAmounts(text: string) {
   console.log('💰 Looking for amounts in receipt...');
   
-  // Fix decimal points that might be missing
-  const fixedText = text.replace(/(\d{2,})(\d{2})\b/g, (match, dollars, cents) => {
-    if (parseInt(dollars) < 10000 && parseInt(cents) < 100) {
-      return `${dollars}.${cents}`;
+  // Normalize text for better pattern matching
+  const normalizedText = text.replace(/\s+/g, ' ').trim();
+  
+  // Enhanced decimal point fixing - handle amounts like 79117 -> 791.17
+  const fixedText = text.replace(/(\d{3,})\b/g, (match) => {
+    const num = parseInt(match);
+    // If it's a large number without decimal, likely missing decimal point
+    if (num > 999 && num < 100000 && !match.includes('.')) {
+      const withDecimal = (num / 100).toFixed(2);
+      console.log(`[AMOUNT] Fixed decimal: ${match} -> ${withDecimal}`);
+      return withDecimal;
     }
     return match;
   });
   
-  // Special handling for TOTAL on its own line
-  // Look for pattern where TOTAL is alone, then amount appears later
-  const separatedTotalPattern = /\bTOTAL\s*\n(?:.*\n){0,4}.*?\$?\s*(\d+\.\d{2})/i;
-  const separatedMatch = fixedText.match(separatedTotalPattern);
+  // Priority 1: Multi-line TOTAL patterns (most reliable)
+  const multiLineTotalPatterns = [
+    // TOTAL on one line, amount on next line(s) - enhanced for Home Depot format
+    /\bTOTAL\s*\n\s*\$?\s*(\d+\.?\d*)/i,
+    /\bTOTAL\s*\n.*?\n\s*\$?\s*(\d+\.\d{2})/i,
+    /\bTOTAL\s*\$?\s*(\d+\.\d{2})/i,
+    // Handle cases where TOTAL and amount are separated by other text
+    /\bTOTAL\b[^S\d]*\$?\s*(\d+\.\d{2})/i
+  ];
   
-  if (separatedMatch) {
-    // Make sure we're not getting SUBTOTAL's amount
-    const amountStr = separatedMatch[1];
-    const amount = parseFloat(amountStr);
-    
-    // Check if this amount appears AFTER the word TOTAL (not as part of SUBTOTAL)
-    const totalIndex = fixedText.indexOf('TOTAL');
-    const subtotalIndex = fixedText.indexOf('SUBTOTAL');
-    const amountIndex = fixedText.indexOf(amountStr);
-    
-    // Only use this amount if it appears after TOTAL and not as part of SUBTOTAL
-    if (totalIndex > -1 && amountIndex > totalIndex && 
-        (subtotalIndex === -1 || amountIndex > subtotalIndex + 20)) {
-      console.log(`[AMOUNT] Found separated TOTAL: $${amount}`);
-      return {
-        total: amount,
-        grandTotal: amount,
-        confidence: 0.95
-      };
+  for (const pattern of multiLineTotalPatterns) {
+    const match = fixedText.match(pattern);
+    if (match) {
+      const amount = parseFloat(match[1]);
+      if (amount > 0 && amount < 100000) {
+        // Verify this isn't from SUBTOTAL context
+        const matchIndex = fixedText.indexOf(match[0]);
+        const beforeMatch = fixedText.substring(Math.max(0, matchIndex - 20), matchIndex);
+        
+        if (!/SUBTOTAL/i.test(beforeMatch)) {
+          console.log(`[AMOUNT] ✅ Found multi-line TOTAL: $${amount}`);
+          return {
+            total: amount,
+            grandTotal: amount,
+            confidence: 0.95
+          };
+        }
+      }
     }
   }
   
-  // Look for TOTAL patterns (existing logic)
+  // Priority 2: Standard TOTAL patterns with context awareness
   const totalPatterns = [
-    // Look for TOTAL followed by amount within next few lines
-    /\bTOTAL\b[^S][\s\S]{0,30}\$?\s*(\d+\.\d{2})/i,  // TOTAL (not SUBTOTAL) then amount
-    /TOTAL\s+\$?([\d,]+\.?\d*)/i,
-    /TOTAL[\s:]*\$?([\d,]+\.?\d*)/i,
-    /GRAND\s*TOTAL[\s:]*\$?([\d,]+\.?\d*)/i,
-    /AMOUNT\s*DUE[\s:]*\$?([\d,]+\.?\d*)/i,
-    /BALANCE\s*DUE[\s:]*\$?([\d,]+\.?\d*)/i,
-    // Skip these patterns as they can match SUBTOTAL
-    // /TOTAL.*?(\d+\.\d{2})/i,
-    // /(\d+\.\d{2}).*?TOTAL/i
+    /GRAND\s*TOTAL[\s:]*\$?\s*(\d+\.\d{2})/i,
+    /AMOUNT\s*DUE[\s:]*\$?\s*(\d+\.\d{2})/i,
+    /BALANCE\s*DUE[\s:]*\$?\s*(\d+\.\d{2})/i,
+    /\bTOTAL\b(?!\s*SUB)[\s:$]*(\d+\.\d{2})/i,  // TOTAL but not followed by SUB
+    /FINAL\s*TOTAL[\s:]*\$?\s*(\d+\.\d{2})/i
   ];
   
-  let foundAmounts: number[] = [];
+  let foundAmounts: Array<{amount: number, confidence: number, context: string}> = [];
   
-  // Try each pattern
+  // Try each pattern with context scoring
   for (const pattern of totalPatterns) {
     const matches = fixedText.matchAll(new RegExp(pattern, 'gi'));
     for (const match of matches) {
       const amountStr = match[1].replace(/,/g, '');
       const amount = parseFloat(amountStr);
       
-      // Validate amount
       if (amount > 0 && amount < 100000) {
-        console.log(`[AMOUNT] Found: $${amount} with pattern: ${pattern.source}`);
-        foundAmounts.push(amount);
+        const matchIndex = match.index || 0;
+        const context = fixedText.substring(Math.max(0, matchIndex - 30), matchIndex + 30);
+        
+        // Score based on context quality
+        let confidence = 0.7;
+        if (/GRAND\s*TOTAL/i.test(context)) confidence = 0.9;
+        if (/AMOUNT\s*DUE/i.test(context)) confidence = 0.85;
+        if (!/SUBTOTAL/i.test(context)) confidence += 0.1;
+        
+        foundAmounts.push({amount, confidence, context});
+        console.log(`[AMOUNT] Found: $${amount} (confidence: ${confidence})`);
       }
     }
   }
   
-  // Additional logic: Look for amounts after the word TOTAL specifically
+  // Priority 3: Line-by-line TOTAL scanning with better pattern detection
   if (foundAmounts.length === 0) {
-    console.log('[AMOUNT] Looking for amounts after TOTAL keyword...');
+    console.log('[AMOUNT] Scanning line-by-line for TOTAL patterns...');
     
-    // Find where TOTAL appears (not SUBTOTAL)
     const lines = fixedText.split('\n');
-    let totalLineIndex = -1;
     
     for (let i = 0; i < lines.length; i++) {
-      if (/^\s*TOTAL\s*$/i.test(lines[i])) {
-        totalLineIndex = i;
-        console.log(`[AMOUNT] Found TOTAL on line ${i}: "${lines[i]}"`);
-        break;
-      }
-    }
-    
-    // If we found TOTAL on its own line, look for amounts in next few lines
-    if (totalLineIndex >= 0) {
-      for (let i = totalLineIndex + 1; i < Math.min(totalLineIndex + 6, lines.length); i++) {
-        const amountMatch = lines[i].match(/\$?\s*(\d+\.\d{2})/);
-        if (amountMatch) {
-          const amount = parseFloat(amountMatch[1]);
-          if (amount > 0 && amount < 100000) {
-            console.log(`[AMOUNT] Found amount after TOTAL line: $${amount} on line ${i}`);
-            foundAmounts.push(amount);
-            break; // Take first amount after TOTAL
+      const line = lines[i].trim();
+      
+      // Look for standalone TOTAL line
+      if (/^TOTAL\s*$/i.test(line)) {
+        console.log(`[AMOUNT] Found standalone TOTAL on line ${i}`);
+        
+        // Check next few lines for amounts
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          const nextLine = lines[j].trim();
+          const amountMatch = nextLine.match(/^\$?\s*(\d+\.\d{2})\s*$/);
+          
+          if (amountMatch) {
+            const amount = parseFloat(amountMatch[1]);
+            if (amount > 0 && amount < 100000) {
+              console.log(`[AMOUNT] Found amount after standalone TOTAL: $${amount}`);
+              foundAmounts.push({amount, confidence: 0.9, context: `Line ${i}-${j}: TOTAL -> ${amount}`});
+              break;
+            }
           }
+        }
+      }
+      
+      // Look for TOTAL with amount on same line (fallback)
+      const sameLine = line.match(/TOTAL\s*\$?\s*(\d+\.\d{2})/i);
+      if (sameLine && !/SUBTOTAL/i.test(line)) {
+        const amount = parseFloat(sameLine[1]);
+        if (amount > 0 && amount < 100000) {
+          foundAmounts.push({amount, confidence: 0.8, context: `Same line: ${line}`});
         }
       }
     }
   }
   
-  // If still no total found, fall back to looking for all amounts
+  // Priority 4: Fallback to all amounts with smart filtering
   if (foundAmounts.length === 0) {
-    console.log('[AMOUNT] No TOTAL found, looking for all amounts...');
+    console.log('[AMOUNT] No TOTAL patterns found, analyzing all amounts...');
     
     const allAmountPatterns = [
-      /\$\s*(\d+\.?\d*)/g,
-      /(\d+\.\d{2})/g,
-      /(\d{2,4})\s*(?=\n|$)/g
+      /\$\s*(\d+\.\d{2})/g,
+      /(\d+\.\d{2})\s*$/gm,  // Amounts at end of line
+      /(\d{2,4}\.\d{2})/g    // Any decimal amounts
     ];
     
-    let allAmounts: Array<{ amount: number; hasTotal: boolean; position: number }> = [];
+    let allAmounts: Array<{amount: number, score: number, context: string, position: number}> = [];
+    
     for (const pattern of allAmountPatterns) {
       const matches = fixedText.matchAll(pattern);
       for (const match of matches) {
         const amount = parseFloat(match[1].replace(/,/g, ''));
         if (amount > 0.01 && amount < 100000) {
-          const start = Math.max(0, (match.index || 0) - 20);
-          const end = Math.min(fixedText.length, (match.index || 0) + 20);
-          const context = fixedText.substring(start, end).toLowerCase();
+          const matchIndex = match.index || 0;
+          const contextStart = Math.max(0, matchIndex - 40);
+          const contextEnd = Math.min(fixedText.length, matchIndex + 40);
+          const context = fixedText.substring(contextStart, contextEnd);
+          
+          // Score amounts based on context and position
+          let score = 0;
+          if (/\btotal\b/i.test(context) && !/subtotal/i.test(context)) score += 50;
+          if (/\$/.test(match[0])) score += 10; // Has dollar sign
+          if (matchIndex > fixedText.length * 0.6) score += 20; // Appears later in text
+          if (/\b(due|owed|pay|amount)\b/i.test(context)) score += 15;
+          
+          // Penalize if near subtotal, tax, etc.
+          if (/subtotal|tax|discount/i.test(context)) score -= 30;
           
           allAmounts.push({
             amount,
-            hasTotal: /\btotal\b(?!.*sub)/i.test(context), // TOTAL but not SUBTOTAL
-            position: (match.index || 0) / fixedText.length
+            score,
+            context: context.replace(/\s+/g, ' ').trim(),
+            position: matchIndex / fixedText.length
           });
         }
       }
     }
     
-    // Sort by relevance
-    allAmounts.sort((a, b) => {
-      if (a.hasTotal && !b.hasTotal) return -1;
-      if (!a.hasTotal && b.hasTotal) return 1;
-      if (b.position - a.position > 0.2) return 1;
-      return b.amount - a.amount;
-    });
+    // Sort by score (highest first)
+    allAmounts.sort((a, b) => b.score - a.score);
     
-    console.log(`[AMOUNT] Found ${allAmounts.length} amounts`);
+    console.log(`[AMOUNT] Found ${allAmounts.length} candidate amounts`);
     if (allAmounts.length > 0) {
-      console.log(`[AMOUNT] Top 3:`, allAmounts.slice(0, 3).map(a => `$${a.amount}`));
-      foundAmounts.push(allAmounts[0].amount);
+      const topAmounts = allAmounts.slice(0, 3);
+      console.log(`[AMOUNT] Top candidates:`, topAmounts.map(a => `$${a.amount} (score: ${a.score})`));
+      
+      foundAmounts.push({
+        amount: topAmounts[0].amount,
+        confidence: Math.min(0.7, topAmounts[0].score / 100),
+        context: topAmounts[0].context
+      });
     }
   }
   
-  // Check for amounts that might be missing decimal points
+  // Select best amount based on confidence and validation
   if (foundAmounts.length > 0) {
-    foundAmounts = foundAmounts.map(amount => {
-      if (amount > 1000 && amount % 100 < 100) {
-        const fixed = amount / 100;
-        console.log(`[AMOUNT] Fixing decimal: ${amount} -> ${fixed}`);
-        return fixed;
+    // Sort by confidence, then by amount (larger amounts preferred for totals)
+    foundAmounts.sort((a, b) => {
+      const confDiff = b.confidence - a.confidence;
+      if (Math.abs(confDiff) < 0.1) {
+        return b.amount - a.amount; // Prefer larger amounts when confidence is similar
       }
-      return amount;
+      return confDiff;
     });
+    
+    const bestMatch = foundAmounts[0];
+    console.log(`[AMOUNT] ✅ Final total: $${bestMatch.amount} (confidence: ${bestMatch.confidence})`);
+    console.log(`[AMOUNT] Context: ${bestMatch.context}`);
+    
+    return {
+      total: bestMatch.amount,
+      grandTotal: bestMatch.amount,
+      confidence: bestMatch.confidence
+    };
   }
   
-  // Return the best total (prefer larger amounts as they're usually the total)
-  const bestTotal = foundAmounts.length > 0 ? Math.max(...foundAmounts) : undefined;
-  
-  if (bestTotal) {
-    console.log(`[AMOUNT] ✅ Final total: $${bestTotal}`);
-  } else {
-    console.log(`[AMOUNT] ❌ No total found`);
-  }
-  
+  console.log(`[AMOUNT] ❌ No total found`);
   return {
-    total: bestTotal,
-    grandTotal: bestTotal,
-    confidence: bestTotal ? 0.9 : 0.1
+    total: undefined,
+    grandTotal: undefined,
+    confidence: 0.1
   };
 }

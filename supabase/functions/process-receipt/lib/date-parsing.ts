@@ -4,18 +4,20 @@ export function parseReceiptDate(text) {
   
   // Common date patterns found on receipts
   const datePatterns = [
-    // MM/DD/YY or MM/DD/YYYY
-    /\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g,
-    // MM-DD-YY or MM-DD-YYYY
-    /\b(\d{1,2})-(\d{1,2})-(\d{2,4})\b/g,
-    // DD/MM/YY or DD/MM/YYYY (European format)
-    /\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/g,
-    // YYYY-MM-DD
-    /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g,
-    // Month DD, YYYY
-    /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/gi,
+    // Enhanced MM/DD/YY patterns with timestamp support
+    /(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/gi,
+    // YYYY-MM-DD with optional time
+    /(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/g,
+    // MM-DD-YY and MM-DD-YYYY with optional time
+    /(\d{1,2})-(\d{1,2})-(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?/gi,
+    // Month DD, YYYY with better spacing handling
+    /(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(\d{4})/gi,
     // DD Month YYYY
-    /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})\b/gi
+    /(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/gi,
+    // YYYYMMDD (compact format)
+    /\b(\d{4})(\d{2})(\d{2})\b/g,
+    // Receipt-specific patterns (common in receipts like "09/10/19 03:37 PM")
+    /\b(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{2})\s*(AM|PM)\b/gi
   ];
   
   let foundDates = [];

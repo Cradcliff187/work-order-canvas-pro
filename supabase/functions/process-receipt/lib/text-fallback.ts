@@ -30,13 +30,21 @@ export function runTextFallback(text: string): TextFallbackResult {
   
   const confidence = {
     vendor: vendorResult.confidence || 0.5,
-    total: amountResult.total_confidence || 0.5,
-    date: dateResult.confidence || 0.5,
-    lineItems: lineItemsResult.length > 0 ? 0.6 : 0
+    total: amountResult.confidence || 0.5,
+    date: dateResult.confidence || 0.8, // Enhanced date parsing is more reliable
+    lineItems: lineItemsResult.length > 0 ? 0.7 : 0
   };
   
   const overallConfidence = calculateOverallConfidence(confidence);
   
+  console.log(`📊 Text parsing results:
+    Vendor: ${vendorResult.name || 'Unknown'} (confidence: ${confidence.vendor})
+    Total: $${amountResult.total || 0} (confidence: ${confidence.total})
+    Date: ${dateResult.date || 'Unknown'} (confidence: ${confidence.date})
+    Line Items: ${lineItemsResult.length} items (confidence: ${confidence.lineItems})
+    Overall: ${overallConfidence}
+  `);
+
   return {
     vendor: vendorResult.name || '',
     vendor_confidence: confidence.vendor,
@@ -47,6 +55,6 @@ export function runTextFallback(text: string): TextFallbackResult {
     lineItems: lineItemsResult || [],
     lineItems_confidence: confidence.lineItems,
     overall_confidence: overallConfidence,
-    extraction_method: 'text_fallback'
+    extraction_method: 'optimized_text_parsing'
   };
 }
