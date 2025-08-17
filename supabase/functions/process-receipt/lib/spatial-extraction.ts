@@ -110,51 +110,47 @@ function extractMerchantSpatial(visionResponse: VisionApiResponse): { merchant: 
   return { merchant: merchantText, confidence };
 }
 
-// Extract total amount using keyword + spatial proximity
+// Extract total amount using enhanced spatial analysis with distance weighting
 function extractTotalSpatial(words: Word[]): { amount: number; confidence: number } {
-  const totalKeywords = ['TOTAL', 'GRAND TOTAL', 'AMOUNT DUE', 'BALANCE', 'CHARGE'];
+  const totalKeywords = ['TOTAL', 'GRAND TOTAL', 'AMOUNT DUE', 'BALANCE', 'CHARGE', 'SUBTOTAL'];
   const amountPattern = /\$?(\d+\.\d{2})/;
   
-  // Find total keyword
-  let totalKeywordWord: Word | null = null;
-  
-  for (const word of words) {
-    const upperText = word.text.toUpperCase();
-    if (totalKeywords.some(keyword => upperText.includes(keyword))) {
-      totalKeywordWord = word;
-      break;
-    }
-  }
-  
-  if (!totalKeywordWord) {
-    // Fallback: find largest amount (spatial fallback)
-    return findLargestAmountSpatial(words);
-  }
-  
-  // Find number on same horizontal line, furthest to the right
-  let bestMatch: { word: Word; amount: number; distance: number } | null = null;
-  
-  for (const word of words) {
-    const amountMatch = word.text.match(amountPattern);
-    if (amountMatch && isSameHorizontalLine(totalKeywordWord.boundingBox, word.boundingBox)) {
-      const amount = parseFloat(amountMatch[1]);
-      const distance = calculateDistance(totalKeywordWord.boundingBox, word.boundingBox);
+  // Find total keywords with higher priority and distance-weighted scoring
+  for (const keyword of totalKeywords) {
+    const keywordWords = words.filter(w => 
+      w.text.toUpperCase().includes(keyword)
+    );
+    
+    for (const keywordWord of keywordWords) {
+      // Find numbers on the same horizontal line to the right with distance weighting
+      const candidates = words.filter(w => {
+        const amountMatch = w.text.match(amountPattern);
+        if (!amountMatch) return false;
+        
+        const isRightOfKeyword = getRightmostX(keywordWord.boundingBox) < getRightmostX(w.boundingBox);
+        const isSameLine = isSameHorizontalLine(w.boundingBox, keywordWord.boundingBox, 15);
+        
+        return isRightOfKeyword && isSameLine;
+      }).map(w => {
+        const distance = calculateDistance(keywordWord.boundingBox, w.boundingBox);
+        const distanceScore = Math.max(0, 1 - (distance / 500)); // Closer = higher score
+        const amount = parseFloat(w.text.match(amountPattern)![1]);
+        return { word: w, distance, distanceScore, amount };
+      }).sort((a, b) => b.distanceScore - a.distanceScore);
       
-      if (!bestMatch || getRightmostX(word.boundingBox) > getRightmostX(bestMatch.word.boundingBox)) {
-        bestMatch = { word, amount, distance };
+      if (candidates.length > 0) {
+        const best = candidates[0];
+        console.log(`✅ Found total: $${best.amount} near keyword "${keyword}" (distance: ${best.distance.toFixed(1)})`);
+        return {
+          amount: best.amount,
+          confidence: Math.min((best.word.confidence * best.distanceScore) * 1.3, 0.95)
+        };
       }
     }
   }
   
-  if (bestMatch) {
-    // High confidence for keyword + spatial match
-    const confidence = Math.min(totalKeywordWord.confidence * bestMatch.word.confidence * 1.2, 0.95);
-    return { amount: bestMatch.amount, confidence };
-  }
-  
-  // Fallback to largest amount with lower confidence
-  const fallback = findLargestAmountSpatial(words);
-  return { amount: fallback.amount, confidence: fallback.confidence * 0.6 };
+  // Fallback to largest amount with improved spatial validation
+  return findLargestAmountSpatial(words);
 }
 
 // Fallback: find largest amount using spatial context

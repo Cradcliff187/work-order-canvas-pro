@@ -15,6 +15,8 @@ import { parseReceiptText } from "./lib/parseReceiptText.ts";
 import { parseVisionApiResponse, VisionApiResponse } from "./lib/vision-api-spatial.ts";
 import { runSpatialExtraction } from "./lib/spatial-extraction.ts";
 import { runUniversalValidation, runAutoFix, recoverFromErrors, boostConfidenceForQuality } from "./lib/universal-validation.ts";
+import { preprocessImage, type PreprocessingOptions } from "./lib/image-preprocessing.ts";
+import { extractLineItemsAdvanced } from "./lib/advanced-line-items.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -200,7 +202,7 @@ serve(async (req) => {
       result = parseReceiptText(testResult.text);
       
     } else {
-      // Full Vision API call with DOCUMENT_TEXT_DETECTION
+      // Full Vision API call with enhanced DOCUMENT_TEXT_DETECTION
       const apiKey = Deno.env.get('GOOGLE_VISION_API_KEY');
       if (!apiKey) {
         return createErrorResponse(
@@ -211,7 +213,7 @@ serve(async (req) => {
         );
       }
       
-      logDebug(debugLogs, 'INFO', 'VISION_API_CALL', 'Calling Google Vision API with DOCUMENT_TEXT_DETECTION');
+      logDebug(debugLogs, 'INFO', 'VISION_API_CALL', 'Calling Google Vision API with enhanced DOCUMENT_TEXT_DETECTION');
       
       const visionResponse = await fetch(
         `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
@@ -223,7 +225,13 @@ serve(async (req) => {
               image: { source: { imageUri: imageUrl } },
               features: [
                 { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }
-              ]
+              ],
+              imageContext: {
+                languageHints: ['en'],
+                textDetectionParams: {
+                  enableTextDetectionConfidenceScore: true
+                }
+              }
             }]
           })
         }
@@ -246,16 +254,20 @@ serve(async (req) => {
       try {
         // Parse structured Vision API response
         const parsedVisionResponse = parseVisionApiResponse(visionData);
+        logDebug(debugLogs, 'INFO', 'SPATIAL_PARSE_SUCCESS', `Parsed ${parsedVisionResponse.pages.length} pages with confidence ${parsedVisionResponse.confidence}`);
         
-        // Use spatial extraction
+        // Use enhanced spatial extraction
         result = parseReceiptWithSpatial(parsedVisionResponse);
+        logDebug(debugLogs, 'INFO', 'ENHANCED_EXTRACTION', `Enhanced spatial extraction completed with confidence ${result.confidence?.overall}`);
         
       } catch (spatialError) {
         // Fallback to text-only extraction if spatial parsing fails
-        logDebug(debugLogs, 'WARN', 'SPATIAL_FALLBACK', `Spatial parsing failed: ${spatialError.message}, falling back to text extraction`);
+        logDebug(debugLogs, 'WARN', 'SPATIAL_FALLBACK', `Enhanced spatial parsing failed: ${spatialError.message}, falling back to text extraction`);
         
-        const fallbackText = visionData.responses?.[0]?.textAnnotations?.[0]?.description || '';
+        const fallbackText = visionData.responses?.[0]?.fullTextAnnotation?.text || 
+                           visionData.responses?.[0]?.textAnnotations?.[0]?.description || '';
         result = parseReceiptText(fallbackText);
+        logDebug(debugLogs, 'INFO', 'FALLBACK_SUCCESS', 'Text-only fallback extraction completed');
       }
     }
     
