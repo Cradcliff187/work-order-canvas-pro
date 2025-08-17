@@ -98,118 +98,48 @@ function parseReceiptSimple(text: string) {
   };
 }
 
-// Parse receipt using OpenAI LLM
-async function parseReceiptWithLLM(text: string) {
-  console.log('🚀 Starting LLM receipt parsing...');
+// Parse receipt using Google Vision + Custom Parsing Libraries
+function parseReceiptWithCustomParsers(text: string) {
+  console.log('🔍 Using Google Vision + Custom Parsing...');
   
-  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!openAIApiKey) {
-    console.error('❌ OpenAI API key not found');
-    throw new Error('OpenAI API key not configured');
-  }
-
-  const prompt = `Parse this receipt text and extract the information in JSON format. The text was extracted from an OCR scan, so some formatting may be off.
-
-Receipt text:
-"""
-${text}
-"""
-
-Return ONLY a valid JSON object with this exact structure:
-{
-  "vendor": "store name (e.g., Home Depot, Walmart, etc.)",
-  "total": 123.45,
-  "date": "YYYY-MM-DD",
-  "subtotal": 123.45,
-  "tax": 12.34,
-  "lineItems": [
-    {"description": "item name", "amount": 12.34},
-    {"description": "item name", "amount": 56.78}
-  ],
-  "confidence": 0.9
-}
-
-Rules:
-- Extract the final TOTAL amount (not subtotal)
-- Format date as YYYY-MM-DD
-- Include individual line items with descriptions and amounts
-- Set confidence between 0.0-1.0 based on how clear the data is
-- If a field cannot be determined, use null
-- Return ONLY the JSON object, no explanation`;
-
-  try {
-    console.log('🤖 Calling OpenAI API...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are a receipt parsing expert. Extract information accurately from OCR text and return only valid JSON.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.1,
-        max_tokens: 1500
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ OpenAI API error:', response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const llmResponse = data.choices[0].message.content.trim();
-    console.log('🤖 LLM Raw Response:', llmResponse);
-
-    // Parse the JSON response
-    let parsedResult;
-    try {
-      // Remove any potential markdown formatting
-      const cleanJson = llmResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      parsedResult = JSON.parse(cleanJson);
-    } catch (parseError) {
-      console.error('❌ JSON parsing error:', parseError);
-      console.error('Raw LLM response:', llmResponse);
-      throw new Error('Failed to parse LLM response as JSON');
-    }
-
-    console.log('✅ LLM Results:', {
-      vendor: parsedResult.vendor,
-      total: parsedResult.total,
-      date: parsedResult.date,
-      lineItems: parsedResult.lineItems?.length || 0
-    });
-
-    // Ensure proper structure and types
-    return {
-      vendor: parsedResult.vendor || 'Unknown Vendor',
-      total: parsedResult.total || 0,
-      date: parsedResult.date || null,
-      lineItems: parsedResult.lineItems || [],
-      subtotal: parsedResult.subtotal || null,
-      tax: parsedResult.tax || null,
-      document_type: 'receipt',
-      confidence: {
-        vendor: parsedResult.vendor ? 0.9 : 0.1,
-        total: parsedResult.total ? 0.95 : 0.1,
-        date: parsedResult.date ? 0.9 : 0.1,
-        lineItems: (parsedResult.lineItems?.length || 0) > 0 ? 0.9 : 0.1,
-        overall: parsedResult.confidence || 0.8
-      }
-    };
-
-  } catch (error) {
-    console.error('❌ LLM parsing failed:', error);
-    throw error;
-  }
+  // Use existing parsing libraries
+  const vendorResult = findVendor(text);
+  const dateResult = parseReceiptDate(text);
+  const amountResult = parseAmounts(text);
+  
+  // Calculate overall confidence based on individual confidences
+  const avgConfidence = (
+    (vendorResult.confidence || 0) + 
+    (dateResult.confidence || 0) + 
+    (amountResult.confidence || 0)
+  ) / 3;
+  
+  const result = {
+    vendor: vendorResult.name || 'Unknown Vendor',
+    total: amountResult.total || 0,
+    date: dateResult.date || new Date().toISOString().split('T')[0],
+    subtotal: amountResult.grandTotal || amountResult.total || 0,
+    tax: null, // Custom parser doesn't extract tax separately yet
+    lineItems: [], // Custom parser doesn't extract line items yet
+    document_type: 'receipt',
+    confidence: {
+      vendor: vendorResult.confidence || 0.5,
+      total: amountResult.confidence || 0.5,
+      date: dateResult.confidence || 0.5,
+      lineItems: 0, // Not implemented in custom parsers
+      overall: avgConfidence
+    },
+    extraction_method: 'google_vision_custom_parsing'
+  };
+  
+  console.log('✅ Custom Parsing Results:', {
+    vendor: result.vendor,
+    total: result.total,
+    date: result.date,
+    confidence: result.confidence.overall
+  });
+  
+  return result;
 }
 
 // Main handler
@@ -340,7 +270,7 @@ serve(async (req) => {
         console.log(text);
         console.log('================== END RAW TEXT ==================');
         
-        result = await parseReceiptWithLLM(text);
+        result = parseReceiptWithCustomParsers(text);
         
         // Save to cache
         await saveToCache(imageUrl, result);
