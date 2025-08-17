@@ -90,15 +90,6 @@ export function StatusBadge({
 }: StatusBadgeProps) {
   const config = statusConfig[type]?.[status];
   
-  if (!config) {
-    // Fallback for unknown statuses
-    return (
-      <Badge variant="outline" className={className}>
-        {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-      </Badge>
-    );
-  }
-  
   const sizeClasses = {
     sm: {
       text: 'text-xs',
@@ -122,6 +113,26 @@ export function StatusBadge({
       minWidth: 'min-w-[120px]'
     }
   };
+  
+  if (!config) {
+    // Fallback for unknown statuses
+    return (
+      <Badge 
+        variant={variant}
+        className={cn(
+          'inline-flex items-center justify-center font-medium rounded-md border transition-colors text-center',
+          sizeClasses[size].padding,
+          sizeClasses[size].height,
+          sizeClasses[size].minWidth,
+          'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+          variant === 'outline' && 'bg-transparent',
+          className
+        )}
+      >
+        {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+      </Badge>
+    );
+  }
   
   const Icon = showIcon ? iconMap[status] : null;
   
