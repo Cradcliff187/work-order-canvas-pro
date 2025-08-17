@@ -149,6 +149,7 @@ const VENDOR_ALIASES = {
 
 // Vendor slogans and unique identifiers
 const VENDOR_SLOGANS = {
+  // Fuel/Gas Stations
   'Home Depot': [
     'How doers get more done',
     'More saving. More doing',
@@ -195,6 +196,14 @@ const VENDOR_SLOGANS = {
     'Synergy Fuel',
     'Mobil 1'
   ],
+  'Sunoco': [
+    'Rewards Tie-In'
+  ],
+  'TravelCenters of America': [
+    'TA Petro'
+  ],
+  
+  // Hardware & Tool Retailers
   'Lowes': [
     'Never Stop Improving',
     'Do it right for less'
@@ -220,21 +229,104 @@ const VENDOR_SLOGANS = {
   'Grainger': [
     'For the ones who get it done'
   ],
-  'Ferguson': [
-    'Nobody expects more from us than we do.'
-  ],
   'Love\'s Travel Stops': [
     'Clean Places, Friendly Faces'
   ],
   'Pilot Flying J': [
     'Pilot Rewards'
   ],
+  
+  // Building Material Suppliers
+  'Ferguson': [
+    'Nobody expects more from us than we do.'
+  ],
+  'HD Supply': [
+    'We get you'
+  ],
+  'SiteOne Landscape Supply': [
+    'All Together Now'
+  ],
+  'United Rentals': [
+    'United We Deliver'
+  ],
+  'Sunbelt Rentals': [
+    'Rent Anything',
+    'We Rent What You Need'
+  ],
+  
+  // Specialty Suppliers
   'Champion Windows': [
-    'Champion Windows & Home Exteriors'
+    'Champion Windows & Home Exteriors',
+    'A Pella Company'
+  ],
+  'Pella Windows': [
+    'Built to last',
+    'The window and door experts'
+  ],
+  'Binswanger Glass': [
+    'Glass solutions for every need'
+  ],
+  'Trane Supply': [
+    'It\'s Hard To Stop A Trane'
+  ],
+  'Lennox PartsPlus': [
+    'Innovation Never Felt So Good'
+  ],
+  'Carrier Enterprise': [
+    'Turn to the experts'
+  ],
+  'Winsupply': [
+    'Your Local Wholesale Distributor'
+  ],
+  'Winnelson': [
+    'Plumbing, HVAC & More'
+  ],
+  'Winlectric': [
+    'Electrical Wholesale'
+  ],
+  'Windustrial': [
+    'Industrial Supply Solutions'
+  ],
+  'Keidel Supply': [
+    'Plumbing & HVAC Supply'
+  ],
+  'Ferguson Bath & Kitchen': [
+    'Nobody expects more from us than we do.'
+  ],
+  
+  // Service Providers
+  'Roto-Rooter': [
+    'And Away Go Troubles',
+    'Plumbing & Drain Service'
   ],
   'Jani-King': [
     'The King of Clean'
   ],
+  'Stanley Steemer': [
+    'Your carpet never had it so good',
+    'Cleaner. Healthier. Happier.'
+  ],
+  'TruGreen': [
+    'Live life outside',
+    'Green It Up'
+  ],
+  'Davey Tree': [
+    'Tree care experts since 1880',
+    'Your partners in growth'
+  ],
+  'Cintas': [
+    'Ready for the Workday',
+    'Get Ready'
+  ],
+  'ServiceMaster': [
+    'Restore. Rebuild. Recover.',
+    'We restore more than property'
+  ],
+  'Caterpillar Financial': [
+    'Solutions that work'
+  ],
+  
+  // Office & Janitorial Suppliers
   'Staples': [
     'That Was Easy'
   ],
@@ -244,8 +336,69 @@ const VENDOR_SLOGANS = {
   'W.B. Mason': [
     'Who But W.B. Mason'
   ],
+  'Fastenal': [
+    'Where Industry Works'
+  ],
+  'MSC Industrial Supply': [
+    'Metalworking. Maintenance. MRO.'
+  ],
+  'Uline': [
+    'Shipping Supply Specialists'
+  ],
+  
+  // Utilities & Waste Management
+  'Duke Energy': [
+    'Helping you use energy more efficiently'
+  ],
+  'AEP': [
+    'Powered by You'
+  ],
+  'Kentucky Utilities': [
+    'LG&E and KU'
+  ],
+  'Columbia Gas': [
+    'Your Energy Connection'
+  ],
+  'CenterPoint Energy': [
+    'Energy Forward'
+  ],
+  'Greater Cincinnati Water Works': [
+    'Pure Water for Life'
+  ],
+  'Northern Kentucky Water District': [
+    'Water for Life'
+  ],
+  'Kentucky American Water': [
+    'Keep Life Flowing'
+  ],
   'Waste Management': [
     'Think Green'
+  ],
+  'Rumpke': [
+    'Making a difference in your community'
+  ],
+  'Republic Services': [
+    'Partners in Possibility'
+  ],
+  
+  // Municipal/Government
+  'City of Cincinnati': [
+    'America\'s Next Great City'
+  ],
+  'Cincinnati Building Inspection': [
+    'Building Cincinnati\'s Future'
+  ],
+  'Lexington-Fayette Urban County': [
+    'Horse Capital of the World'
+  ],
+  'LFUCG Building Inspection': [
+    'Building Excellence'
+  ],
+  'City of Dayton': [
+    'Gem City'
+  ],
+  'Dayton Building Services': [
+    'Building a Better Dayton'
   ]
 };
 
