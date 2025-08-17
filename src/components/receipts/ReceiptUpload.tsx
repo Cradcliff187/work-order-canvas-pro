@@ -7,13 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkOrderSelector } from "./WorkOrderSelector";
-import { UniversalUploadSheet } from "@/components/upload/UniversalUploadSheet";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { 
   Loader2, 
@@ -22,7 +25,11 @@ import {
   DollarSign, 
   FileText, 
   Calendar,
-  Edit3
+  Edit3,
+  Camera,
+  X,
+  Sparkles,
+  Building2
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -50,15 +57,28 @@ const receiptSchema = z.object({
 
 type ReceiptFormData = z.infer<typeof receiptSchema>;
 
+// Common vendors for quick selection
+const COMMON_VENDORS = [
+  'Home Depot', 'Lowes', 'Menards', 'Harbor Freight',
+  'Grainger', 'Ferguson', 'Shell', 'BP', 'Speedway',
+  'Circle K', 'McDonald\'s', 'Subway', 'Jimmy Johns'
+];
+
 export function ReceiptUpload() {
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
+  const [ocrConfidence, setOcrConfidence] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState("details");
   const [showSuccess, setShowSuccess] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   
   const { availableWorkOrders, createReceipt, isUploading } = useReceipts();
 
@@ -126,14 +146,94 @@ export function ReceiptUpload() {
     }
   };
 
-  const handleFileSelect = (files: File[]) => {
-    if (files.length > 0) {
-      setReceiptFile(files[0]);
+  // Process image with Google Vision OCR
+  const processWithOCR = async (file: File) => {
+    setIsProcessingOCR(true);
+    
+    try {
+      // Upload image to Supabase Storage first
+      const timestamp = Date.now();
+      const fileName = `temp_ocr_${timestamp}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('work-order-attachments')
+        .upload(`receipts/temp/${fileName}`, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('work-order-attachments')
+        .getPublicUrl(uploadData.path);
+
+      // Call OCR Edge Function
+      const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-receipt', {
+        body: { imageUrl: publicUrl }
+      });
+
+      if (ocrError) throw ocrError;
+
+      // Auto-fill form with OCR results
+      if (ocrData && !ocrData.error) {
+        if (ocrData.vendor) form.setValue('vendor_name', ocrData.vendor);
+        if (ocrData.total) form.setValue('amount', ocrData.total);
+        if (ocrData.date) form.setValue('receipt_date', ocrData.date);
+        
+        setOcrConfidence(ocrData.confidence || {});
+        
+        toast({
+          title: '✨ Receipt Scanned!',
+          description: 'Please verify the extracted information',
+        });
+      }
+
+      // Clean up temp file
+      await supabase.storage
+        .from('work-order-attachments')
+        .remove([`receipts/temp/${fileName}`]);
+
+    } catch (error) {
+      console.error('OCR processing error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Scan Failed',
+        description: 'Could not read receipt. Please enter manually.',
+      });
+    } finally {
+      setIsProcessingOCR(false);
     }
+  };
+
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Maximum size is 10MB',
+      });
+      return;
+    }
+
+    setReceiptFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Process with OCR
+    await processWithOCR(file);
   };
 
   const handleFileRemove = () => {
     setReceiptFile(null);
+    setImagePreview(null);
+    setOcrConfidence({});
   };
 
   const handleCancel = () => {
@@ -225,7 +325,21 @@ export function ReceiptUpload() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
-            <CardTitle>Upload Receipt</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Upload Receipt</CardTitle>
+              {isProcessingOCR && (
+                <Badge variant="secondary" className="animate-pulse">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Scanning...
+                </Badge>
+              )}
+              {ocrConfidence.vendor && (
+                <Badge variant="default" className="bg-green-600">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Scanned
+                </Badge>
+              )}
+            </div>
             {watchedAmount > 0 && (
               <div className="text-right">
                 <div className="text-lg font-semibold">${watchedAmount.toFixed(2)}</div>
@@ -290,51 +404,83 @@ export function ReceiptUpload() {
             <TabsContent value="details" className="mt-6">
               <Card>
                 <CardContent className="space-y-6 pt-6">
-                  {/* Receipt Image Upload */}
+                  {/* Camera-First Receipt Capture */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Receipt Image</h3>
-                    <UniversalUploadSheet
-                      trigger={
+                    
+                    {!imagePreview ? (
+                      <div className="grid grid-cols-2 gap-4">
                         <Button
                           type="button"
                           variant="outline"
-                          className={cn("w-full border-dashed border-2 hover:border-primary/50", 
-                            isMobile ? "h-11" : "h-20"
-                          )}
+                          className="h-24 flex flex-col gap-2 border-dashed border-2 hover:border-primary/50"
+                          onClick={() => cameraInputRef.current?.click()}
                         >
-                          {isMobile ? (
-                            <>
-                              <Upload className="h-5 w-5 mr-2" />
-                              Upload Receipt
-                            </>
-                          ) : (
-                            <div className="text-center">
-                              <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                              <p className="text-sm font-medium">Upload Receipt Image</p>
-                              <p className="text-xs text-muted-foreground">Camera, scanner, or file</p>
-                            </div>
-                          )}
+                          <Camera className="h-8 w-8" />
+                          <span>Take Photo</span>
                         </Button>
-                      }
-                      onFilesSelected={handleFileSelect}
-                      context="invoice"
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-24 flex flex-col gap-2 border-dashed border-2 hover:border-primary/50"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Upload className="h-8 w-8" />
+                          <span>Upload File</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <img 
+                          src={imagePreview} 
+                          alt="Receipt" 
+                          className="w-full rounded-lg max-h-64 object-contain bg-muted/20"
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-2 right-2"
+                          onClick={handleFileRemove}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        
+                        {isProcessingOCR && (
+                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                            <div className="text-white text-center">
+                              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                              <p>Extracting text...</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Hidden inputs */}
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={handleFileSelect}
                     />
                     
-                    {receiptFile && (
+                    {receiptFile && !isProcessingOCR && (
                       <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-4 w-4 text-green-600" />
                           <span className="text-sm font-medium">{receiptFile.name}</span>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleFileRemove}
-                          className="h-11"
-                        >
-                          Remove
-                        </Button>
                       </div>
                     )}
                   </div>
@@ -348,9 +494,31 @@ export function ReceiptUpload() {
                           name="vendor_name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Vendor Name *</FormLabel>
+                              <FormLabel className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                Vendor Name *
+                                {ocrConfidence.vendor && (
+                                  <Badge 
+                                    variant={ocrConfidence.vendor > 0.7 ? 'default' : 'secondary'}
+                                    className="text-xs"
+                                  >
+                                    {Math.round(ocrConfidence.vendor * 100)}% confident
+                                  </Badge>
+                                )}
+                              </FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter vendor name" className="h-11" {...field} />
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger className="h-11">
+                                    <SelectValue placeholder="Select or type vendor" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {COMMON_VENDORS.map(vendor => (
+                                      <SelectItem key={vendor} value={vendor}>
+                                        {vendor}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -379,13 +547,24 @@ export function ReceiptUpload() {
                         name="amount"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Total Amount *</FormLabel>
+                            <FormLabel className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4" />
+                              Total Amount *
+                              {ocrConfidence.total && (
+                                <Badge 
+                                  variant={ocrConfidence.total > 0.7 ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {Math.round(ocrConfidence.total * 100)}% confident
+                                </Badge>
+                              )}
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 step="0.01"
                                 placeholder="0.00"
-                                className="h-11"
+                                className="h-11 text-lg font-medium"
                                 {...field}
                                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                               />
