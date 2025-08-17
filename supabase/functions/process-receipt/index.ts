@@ -71,97 +71,118 @@ async function saveToCache(imageUrl: string, result: any): Promise<void> {
   }
 }
 
-// Basic line item extraction
-function extractLineItems(text: string) {
-  const lines = text.split('\n');
-  const lineItems = [];
+// Parse receipt using OpenAI LLM
+async function parseReceiptWithLLM(text: string) {
+  console.log('🚀 Starting LLM receipt parsing...');
   
-  // Look for lines that contain item descriptions and prices
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Skip empty lines and common headers/footers
-    if (!line || 
-        line.includes('RECEIPT') ||
-        line.includes('THANK YOU') ||
-        line.includes('TOTAL') ||
-        line.includes('TAX') ||
-        line.includes('SUBTOTAL') ||
-        line.includes('PAYMENT') ||
-        line.includes('CHANGE') ||
-        line.length < 5) {
-      continue;
-    }
-    
-    // Look for price patterns at the end of lines
-    const priceMatch = line.match(/\$?(\d+\.?\d{0,2})$/);
-    if (priceMatch && parseFloat(priceMatch[1]) > 0) {
-      const description = line.replace(/\$?(\d+\.?\d{0,2})$/, '').trim();
-      if (description.length > 2) {
-        lineItems.push({
-          description,
-          amount: parseFloat(priceMatch[1])
-        });
-      }
-    }
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openAIApiKey) {
+    console.error('❌ OpenAI API key not found');
+    throw new Error('OpenAI API key not configured');
   }
-  
-  return lineItems.slice(0, 20); // Limit to first 20 items
+
+  const prompt = `Parse this receipt text and extract the information in JSON format. The text was extracted from an OCR scan, so some formatting may be off.
+
+Receipt text:
+"""
+${text}
+"""
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "vendor": "store name (e.g., Home Depot, Walmart, etc.)",
+  "total": 123.45,
+  "date": "YYYY-MM-DD",
+  "subtotal": 123.45,
+  "tax": 12.34,
+  "lineItems": [
+    {"description": "item name", "amount": 12.34},
+    {"description": "item name", "amount": 56.78}
+  ],
+  "confidence": 0.9
 }
 
-// Parse receipt
-function parseReceiptSimple(text: string) {
-  console.log('🚀 Starting receipt parsing...');
-  console.log('First 10 lines of OCR text:');
-  text.split('\n').slice(0, 10).forEach((line, i) => {
-    console.log(`  ${i}: "${line}"`);
-  });
-  
-  // Extract vendor
-  const vendor = findVendor(text);
-  
-  // Extract amounts
-  const amounts = parseAmounts(text);
-  const total = amounts.total || amounts.grandTotal;
-  
-  // Extract date
-  const date = parseReceiptDate(text);
-  
-  // Extract line items
-  const lineItems = extractLineItems(text);
-  
-  // Extract subtotal and tax (basic patterns)
-  const subtotalMatch = text.match(/SUBTOTAL[\s:]*\$?(\d+\.?\d{0,2})/i);
-  const taxMatch = text.match(/TAX[\s:]*\$?(\d+\.?\d{0,2})/i);
-  
-  const subtotal = subtotalMatch ? parseFloat(subtotalMatch[1]) : undefined;
-  const tax = taxMatch ? parseFloat(taxMatch[1]) : undefined;
-  
-  // Calculate confidence
-  const vendorConfidence = vendor && vendor !== 'Unknown Vendor' ? 0.85 : 0.1;
-  const totalConfidence = total ? 0.9 : 0.1;
-  const dateConfidence = date ? 0.8 : 0.1;
-  const lineItemsConfidence = lineItems.length > 0 ? 0.7 : 0.1;
-  const overallConfidence = (vendorConfidence + totalConfidence + dateConfidence + lineItemsConfidence) / 4;
-  
-  console.log(`✅ Results - Vendor: ${vendor}, Total: $${total}, Date: ${date}, Line Items: ${lineItems.length}`);
-  
-  return {
-    vendor,
-    total,
-    date,
-    lineItems,
-    subtotal,
-    tax,
-    document_type: 'receipt',
-    confidence: {
-      vendor: vendorConfidence,
-      total: totalConfidence,
-      date: dateConfidence,
-      lineItems: lineItemsConfidence,
-      overall: overallConfidence
+Rules:
+- Extract the final TOTAL amount (not subtotal)
+- Format date as YYYY-MM-DD
+- Include individual line items with descriptions and amounts
+- Set confidence between 0.0-1.0 based on how clear the data is
+- If a field cannot be determined, use null
+- Return ONLY the JSON object, no explanation`;
+
+  try {
+    console.log('🤖 Calling OpenAI API...');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a receipt parsing expert. Extract information accurately from OCR text and return only valid JSON.' 
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 1500
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    const llmResponse = data.choices[0].message.content.trim();
+    console.log('🤖 LLM Raw Response:', llmResponse);
+
+    // Parse the JSON response
+    let parsedResult;
+    try {
+      // Remove any potential markdown formatting
+      const cleanJson = llmResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      parsedResult = JSON.parse(cleanJson);
+    } catch (parseError) {
+      console.error('❌ JSON parsing error:', parseError);
+      console.error('Raw LLM response:', llmResponse);
+      throw new Error('Failed to parse LLM response as JSON');
+    }
+
+    console.log('✅ LLM Results:', {
+      vendor: parsedResult.vendor,
+      total: parsedResult.total,
+      date: parsedResult.date,
+      lineItems: parsedResult.lineItems?.length || 0
+    });
+
+    // Ensure proper structure and types
+    return {
+      vendor: parsedResult.vendor || 'Unknown Vendor',
+      total: parsedResult.total || 0,
+      date: parsedResult.date || null,
+      lineItems: parsedResult.lineItems || [],
+      subtotal: parsedResult.subtotal || null,
+      tax: parsedResult.tax || null,
+      document_type: 'receipt',
+      confidence: {
+        vendor: parsedResult.vendor ? 0.9 : 0.1,
+        total: parsedResult.total ? 0.95 : 0.1,
+        date: parsedResult.date ? 0.9 : 0.1,
+        lineItems: (parsedResult.lineItems?.length || 0) > 0 ? 0.9 : 0.1,
+        overall: parsedResult.confidence || 0.8
+      }
+    };
+
+  } catch (error) {
+    console.error('❌ LLM parsing failed:', error);
+    throw error;
+  }
 }
 
 // Main handler
@@ -292,7 +313,7 @@ serve(async (req) => {
         console.log(text);
         console.log('================== END RAW TEXT ==================');
         
-        result = parseReceiptSimple(text);
+        result = await parseReceiptWithLLM(text);
         
         // Save to cache
         await saveToCache(imageUrl, result);
