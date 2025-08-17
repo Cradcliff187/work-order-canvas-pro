@@ -5,6 +5,103 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Validation interfaces
+interface RequestValidation {
+  isValid: boolean;
+  error?: string;
+  sanitizedImageUrl?: string;
+}
+
+interface ProcessingMetrics {
+  startTime: number;
+  ocrTime?: number;
+  parsingTime?: number;
+  totalTime?: number;
+  memoryUsage?: number;
+}
+
+interface DebugLog {
+  timestamp: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+  step: string;
+  message: string;
+  data?: any;
+  processingTime?: number;
+}
+
+interface ValidationResult {
+  isValid: boolean;
+  issues: string[];
+  quality: 'excellent' | 'good' | 'fair' | 'poor';
+  confidence: number;
+}
+
+// Sample test documents for testing mode
+const SAMPLE_DOCUMENTS = {
+  home_depot: {
+    text: `THE HOME DEPOT #1234
+123 MAIN STREET
+AUSTIN TX 78701
+
+05/15/2024 2:45 PM
+
+CASHIER: JOHN DOE
+
+DESCRIPTION                  QTY   PRICE
+------------------------    ----  ------
+2X4 LUMBER 8FT              4     $6.47
+SCREWS DECK 2.5"            1     $12.99
+DRILL BIT SET               1     $19.99
+SANDPAPER 220 GRIT          2     $4.25
+
+SUBTOTAL                          $52.68
+TAX                               $4.32
+TOTAL                            $57.00
+
+PAYMENT METHOD: CREDIT CARD
+THANK YOU FOR SHOPPING AT THE HOME DEPOT`,
+    expectedVendor: 'Home Depot',
+    expectedTotal: 57.00
+  },
+  lowes: {
+    text: `LOWE'S HOME IMPROVEMENT
+STORE #2567
+456 OAK AVENUE
+DALLAS TX 75201
+
+06/22/2024 11:30 AM
+
+ITEM                         QTY   AMOUNT
+----                        ----   ------
+PAINT PRIMER GALLON         2     $28.98
+PAINT BRUSH 3"              1     $8.99
+ROLLER TRAY                 1     $5.47
+DROP CLOTH 9X12             1     $12.99
+
+MERCHANDISE SUBTOTAL             $56.43
+SALES TAX                        $4.51
+TOTAL                           $60.94
+
+VISA ****1234
+THANK YOU!`,
+    expectedVendor: 'Lowes',
+    expectedTotal: 60.94
+  }
+};
+
+// Logging utility
+function createDebugLog(level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG', step: string, message: string, data?: any, startTime?: number): DebugLog {
+  const timestamp = new Date().toISOString();
+  const processingTime = startTime ? Date.now() - startTime : undefined;
+  return { timestamp, level, step, message, data, processingTime };
+}
+
+function logDebug(logs: DebugLog[], level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG', step: string, message: string, data?: any, startTime?: number): void {
+  const log = createDebugLog(level, step, message, data, startTime);
+  logs.push(log);
+  console.log(`[${log.level}] ${log.step}: ${log.message}`, log.data ? JSON.stringify(log.data, null, 2) : '');
+}
+
 // Enhanced interfaces for confidence tracking
 type ExtractionMethod = 'direct_ocr' | 'pattern_match' | 'fuzzy_match' | 'calculated' | 'inferred' | 'fallback';
 
@@ -567,80 +664,379 @@ function parseReceiptDate(text: string): { date: string | null; confidence: numb
   };
 }
 
+// Input validation functions
+function validateImageUrl(url: string): RequestValidation {
+  if (!url || typeof url !== 'string') {
+    return { isValid: false, error: 'Image URL is required and must be a string' };
+  }
+  
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) {
+    return { isValid: false, error: 'Image URL cannot be empty' };
+  }
+  
+  // Check URL format
+  try {
+    const urlObj = new URL(trimmedUrl);
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      return { isValid: false, error: 'Image URL must use HTTP or HTTPS protocol' };
+    }
+    
+    // Check for supported image types in URL
+    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif'];
+    const hasImageExtension = supportedExtensions.some(ext => 
+      trimmedUrl.toLowerCase().includes(ext)
+    );
+    
+    // Allow URLs without extensions (cloud storage URLs)
+    if (!hasImageExtension && !trimmedUrl.includes('storage.googleapis.com') && 
+        !trimmedUrl.includes('amazonaws.com') && !trimmedUrl.includes('cloudinary.com')) {
+      return { 
+        isValid: false, 
+        error: 'Image URL must point to a supported image format (JPG, PNG, WebP, BMP, GIF) or cloud storage' 
+      };
+    }
+    
+    return { isValid: true, sanitizedImageUrl: trimmedUrl };
+  } catch (error) {
+    return { isValid: false, error: 'Invalid URL format' };
+  }
+}
+
+function validateRequest(req: Request): { isValid: boolean; error?: string; data?: any } {
+  // Check method
+  if (req.method !== 'POST') {
+    return { isValid: false, error: 'Only POST method is allowed' };
+  }
+  
+  // Check content type
+  const contentType = req.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    return { isValid: false, error: 'Content-Type must be application/json' };
+  }
+  
+  return { isValid: true };
+}
+
+function validateResponse(result: OCRResult): ValidationResult {
+  const issues: string[] = [];
+  let confidence = 1.0;
+  
+  // Check required fields
+  if (!result.vendor || result.vendor.trim() === '') {
+    issues.push('Vendor not detected');
+    confidence -= 0.2;
+  }
+  
+  if (!result.total || result.total <= 0) {
+    issues.push('Total amount not detected or invalid');
+    confidence -= 0.25;
+  }
+  
+  if (!result.date || result.date === '') {
+    issues.push('Date not detected');
+    confidence -= 0.15;
+  }
+  
+  // Check line items
+  if (!result.lineItems || result.lineItems.length === 0) {
+    issues.push('No line items extracted');
+    confidence -= 0.2;
+  } else {
+    const invalidItems = result.lineItems.filter(item => 
+      !item.description || item.description.trim() === '' || 
+      !item.total_price || item.total_price <= 0
+    );
+    
+    if (invalidItems.length > 0) {
+      issues.push(`${invalidItems.length} invalid line items`);
+      confidence -= (invalidItems.length / result.lineItems.length) * 0.1;
+    }
+  }
+  
+  // Check mathematical consistency
+  if (result.subtotal && result.tax && result.total) {
+    const calculatedTotal = result.subtotal + result.tax;
+    const difference = Math.abs(calculatedTotal - result.total);
+    if (difference > 0.01) {
+      issues.push(`Math inconsistency: subtotal (${result.subtotal}) + tax (${result.tax}) ≠ total (${result.total})`);
+      confidence -= 0.15;
+    }
+  }
+  
+  // Check confidence scores
+  if (result.confidence?.overall && result.confidence.overall < 0.5) {
+    issues.push('Low overall extraction confidence');
+    confidence -= 0.1;
+  }
+  
+  confidence = Math.max(confidence, 0);
+  
+  let quality: 'excellent' | 'good' | 'fair' | 'poor';
+  if (confidence >= 0.8) quality = 'excellent';
+  else if (confidence >= 0.65) quality = 'good';
+  else if (confidence >= 0.45) quality = 'fair';
+  else quality = 'poor';
+  
+  return {
+    isValid: issues.length === 0,
+    issues,
+    quality,
+    confidence
+  };
+}
+
+function createErrorResponse(error: string, code: string = 'PROCESSING_ERROR', status: number = 400, debugLogs?: DebugLog[]): Response {
+  const response = {
+    success: false,
+    error: error,
+    error_code: code,
+    vendor: '',
+    total: 0,
+    document_type: 'unknown' as const,
+    document_confidence: 0,
+    confidence: {},
+    debug_logs: debugLogs || [],
+    timestamp: new Date().toISOString()
+  };
+  
+  return new Response(
+    JSON.stringify(response),
+    { 
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
+}
+
+async function processWithTestMode(isTestMode: boolean, testDocument?: string, debugLogs?: DebugLog[]): Promise<{ text: string; source: string }> {
+  if (isTestMode && testDocument && SAMPLE_DOCUMENTS[testDocument as keyof typeof SAMPLE_DOCUMENTS]) {
+    const sample = SAMPLE_DOCUMENTS[testDocument as keyof typeof SAMPLE_DOCUMENTS];
+    logDebug(debugLogs || [], 'INFO', 'TEST_MODE', `Using sample document: ${testDocument}`, { expectedVendor: sample.expectedVendor, expectedTotal: sample.expectedTotal });
+    return { text: sample.text, source: 'test_sample' };
+  }
+  return { text: '', source: 'vision_api' };
+}
+
 serve(async (req) => {
+  const startTime = Date.now();
+  const debugLogs: DebugLog[] = [];
+  const metrics: ProcessingMetrics = { startTime };
+  
+  logDebug(debugLogs, 'INFO', 'REQUEST_START', 'OCR processing request received', { 
+    method: req.method, 
+    url: req.url,
+    userAgent: req.headers.get('user-agent')
+  });
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { imageUrl } = await req.json();
-    
-    if (!imageUrl) {
-      throw new Error('Missing imageUrl parameter');
-    }
-
-    const apiKey = Deno.env.get('GOOGLE_VISION_API_KEY');
-    if (!apiKey) {
-      throw new Error('Google Cloud Vision API key not configured');
-    }
-
-    console.log('Processing receipt OCR for image:', imageUrl);
-
-    // Call Google Cloud Vision API
-    const visionResponse = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requests: [{
-            image: {
-              source: {
-                imageUri: imageUrl
-              }
-            },
-            features: [
-              { type: 'TEXT_DETECTION', maxResults: 1 },
-              { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }
-            ]
-          }]
-        })
-      }
-    );
-
-    if (!visionResponse.ok) {
-      throw new Error(`Vision API error: ${visionResponse.status}`);
-    }
-
-    const visionData = await visionResponse.json();
-    const textAnnotations = visionData.responses?.[0]?.textAnnotations;
-    
-    if (!textAnnotations || textAnnotations.length === 0) {
-      console.log('No text detected in image');
-      return new Response(
-        JSON.stringify({ 
-          error: 'No text detected in image',
-          vendor: '',
-          total: 0,
-          document_type: 'unknown',
-          document_confidence: 0,
-          confidence: {}
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+    // Validate request format
+    const requestValidation = validateRequest(req);
+    if (!requestValidation.isValid) {
+      logDebug(debugLogs, 'ERROR', 'REQUEST_VALIDATION', requestValidation.error || 'Invalid request', undefined, startTime);
+      return createErrorResponse(
+        requestValidation.error || 'Invalid request format',
+        'INVALID_REQUEST',
+        400,
+        debugLogs
       );
     }
 
-    const fullText = textAnnotations[0].description || '';
-    console.log('Extracted text:', fullText);
+    // Parse and validate JSON body
+    let requestData: any;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      logDebug(debugLogs, 'ERROR', 'JSON_PARSE', 'Failed to parse JSON body', { error: error.message }, startTime);
+      return createErrorResponse(
+        'Invalid JSON in request body',
+        'INVALID_JSON',
+        400,
+        debugLogs
+      );
+    }
+
+    // Validate required fields
+    const { imageUrl, testMode = false, testDocument = 'home_depot' } = requestData;
+    
+    const urlValidation = validateImageUrl(imageUrl);
+    if (!urlValidation.isValid) {
+      logDebug(debugLogs, 'ERROR', 'URL_VALIDATION', urlValidation.error || 'Invalid image URL', { imageUrl }, startTime);
+      return createErrorResponse(
+        urlValidation.error || 'Invalid image URL',
+        'INVALID_URL',
+        400,
+        debugLogs
+      );
+    }
+
+    const sanitizedImageUrl = urlValidation.sanitizedImageUrl!;
+    
+    logDebug(debugLogs, 'INFO', 'VALIDATION_PASSED', 'Request validation successful', {
+      imageUrl: sanitizedImageUrl,
+      testMode,
+      testDocument: testMode ? testDocument : undefined
+    }, startTime);
+
+    // Check if we're in test mode
+    let fullText: string;
+    let textSource: string;
+    
+    if (testMode) {
+      const testResult = await processWithTestMode(testMode, testDocument, debugLogs);
+      fullText = testResult.text;
+      textSource = testResult.source;
+      
+      if (!fullText) {
+        logDebug(debugLogs, 'ERROR', 'TEST_MODE', 'Invalid test document specified', { testDocument }, startTime);
+        return createErrorResponse(
+          `Invalid test document: ${testDocument}. Available: ${Object.keys(SAMPLE_DOCUMENTS).join(', ')}`,
+          'INVALID_TEST_DOCUMENT',
+          400,
+          debugLogs
+        );
+      }
+    } else {
+      // Production mode - call Google Vision API
+      const apiKey = Deno.env.get('GOOGLE_VISION_API_KEY');
+      if (!apiKey) {
+        logDebug(debugLogs, 'ERROR', 'CONFIG', 'Google Cloud Vision API key not configured', undefined, startTime);
+        return createErrorResponse(
+          'OCR service not configured',
+          'SERVICE_UNAVAILABLE',
+          503,
+          debugLogs
+        );
+      }
+
+      logDebug(debugLogs, 'INFO', 'VISION_API_START', 'Calling Google Cloud Vision API', { imageUrl: sanitizedImageUrl }, startTime);
+      const visionStartTime = Date.now();
+
+      try {
+        const visionResponse = await fetch(
+          `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              requests: [{
+                image: {
+                  source: {
+                    imageUri: sanitizedImageUrl
+                  }
+                },
+                features: [
+                  { type: 'TEXT_DETECTION', maxResults: 1 },
+                  { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }
+                ]
+              }]
+            })
+          }
+        );
+
+        metrics.ocrTime = Date.now() - visionStartTime;
+        logDebug(debugLogs, 'INFO', 'VISION_API_COMPLETE', 'Google Cloud Vision API call completed', {
+          status: visionResponse.status,
+          statusText: visionResponse.statusText,
+          processingTime: metrics.ocrTime
+        }, visionStartTime);
+
+        if (!visionResponse.ok) {
+          const errorText = await visionResponse.text();
+          logDebug(debugLogs, 'ERROR', 'VISION_API_ERROR', 'Vision API returned error', {
+            status: visionResponse.status,
+            statusText: visionResponse.statusText,
+            error: errorText
+          }, visionStartTime);
+          
+          return createErrorResponse(
+            `OCR service error: ${visionResponse.status} ${visionResponse.statusText}`,
+            'OCR_SERVICE_ERROR',
+            502,
+            debugLogs
+          );
+        }
+
+        const visionData = await visionResponse.json();
+        const textAnnotations = visionData.responses?.[0]?.textAnnotations;
+        
+        if (!textAnnotations || textAnnotations.length === 0) {
+          logDebug(debugLogs, 'WARN', 'NO_TEXT_DETECTED', 'No text detected in image', { visionData }, startTime);
+          return createErrorResponse(
+            'No text detected in the provided image. Please ensure the image is clear and contains readable text.',
+            'NO_TEXT_DETECTED',
+            400,
+            debugLogs
+          );
+        }
+
+        if (visionData.responses?.[0]?.error) {
+          const visionError = visionData.responses[0].error;
+          logDebug(debugLogs, 'ERROR', 'VISION_API_RESPONSE_ERROR', 'Vision API response contains error', visionError, startTime);
+          return createErrorResponse(
+            `Image processing error: ${visionError.message || 'Unknown error'}`,
+            'IMAGE_PROCESSING_ERROR',
+            400,
+            debugLogs
+          );
+        }
+
+        fullText = textAnnotations[0].description || '';
+        textSource = 'vision_api';
+        
+        logDebug(debugLogs, 'INFO', 'TEXT_EXTRACTED', 'Text successfully extracted from image', {
+          textLength: fullText.length,
+          lineCount: fullText.split('\n').length,
+          source: textSource
+        }, visionStartTime);
+
+      } catch (fetchError) {
+        logDebug(debugLogs, 'ERROR', 'NETWORK_ERROR', 'Network error calling Vision API', {
+          error: fetchError.message,
+          name: fetchError.name
+        }, visionStartTime);
+        
+        return createErrorResponse(
+          'Failed to connect to OCR service. Please try again later.',
+          'NETWORK_ERROR',
+          503,
+          debugLogs
+        );
+      }
+    }
+
+    // Validate extracted text
+    if (!fullText || fullText.trim().length < 10) {
+      logDebug(debugLogs, 'WARN', 'INSUFFICIENT_TEXT', 'Extracted text is too short', {
+        textLength: fullText?.length || 0,
+        text: fullText?.substring(0, 100)
+      }, startTime);
+      
+      return createErrorResponse(
+        'Insufficient text detected. Please provide a clearer image with more readable content.',
+        'INSUFFICIENT_TEXT',
+        400,
+        debugLogs
+      );
+    }
+
+    // Start parsing phase
+    const parseStartTime = Date.now();
+    logDebug(debugLogs, 'INFO', 'PARSING_START', 'Starting text parsing and extraction', {
+      textLength: fullText.length,
+      lineCount: fullText.split('\n').length
+    }, parseStartTime);
 
     // Detect document type first
     const documentDetection = detectDocumentType(fullText);
-    console.log('Document detection:', documentDetection);
+    logDebug(debugLogs, 'INFO', 'DOCUMENT_TYPE_DETECTED', 'Document type detection completed', documentDetection, parseStartTime);
 
     // Parse receipt data from OCR text
     const result = parseReceiptText(fullText);
@@ -649,31 +1045,64 @@ serve(async (req) => {
     result.document_type = documentDetection.type;
     result.document_confidence = documentDetection.confidence;
     
-    console.log('Parsed result:', result);
+    metrics.parsingTime = Date.now() - parseStartTime;
+    metrics.totalTime = Date.now() - startTime;
+    
+    logDebug(debugLogs, 'INFO', 'PARSING_COMPLETE', 'Text parsing completed', {
+      vendor: result.vendor,
+      total: result.total,
+      date: result.date,
+      lineItemsCount: result.lineItems?.length || 0,
+      processingTime: metrics.parsingTime
+    }, parseStartTime);
+
+    // Validate the extraction results
+    const validation = validateResponse(result);
+    logDebug(debugLogs, 'INFO', 'VALIDATION_COMPLETE', 'Response validation completed', validation, startTime);
+
+    // Add metadata to response
+    const response = {
+      ...result,
+      success: true,
+      extraction_metadata: {
+        text_source: textSource,
+        processing_time_ms: metrics.totalTime,
+        ocr_time_ms: metrics.ocrTime,
+        parsing_time_ms: metrics.parsingTime,
+        text_length: fullText.length,
+        line_count: fullText.split('\n').length,
+        validation: validation,
+        timestamp: new Date().toISOString()
+      },
+      debug_logs: debugLogs
+    };
+    
+    logDebug(debugLogs, 'INFO', 'REQUEST_COMPLETE', 'OCR processing completed successfully', {
+      totalTime: metrics.totalTime,
+      extractionQuality: result.extraction_quality,
+      overallConfidence: result.confidence?.overall
+    }, startTime);
 
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify(response),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
   } catch (error) {
-    console.error('OCR processing error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logDebug(debugLogs, 'ERROR', 'UNHANDLED_ERROR', 'Unhandled error in OCR processing', {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      totalTime: Date.now() - startTime
+    }, startTime);
     
-    return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        vendor: '',
-        total: 0,
-        document_type: 'unknown',
-        document_confidence: 0,
-        confidence: {}
-      }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+    return createErrorResponse(
+      'An unexpected error occurred during processing. Please try again.',
+      'INTERNAL_ERROR',
+      500,
+      debugLogs
     );
   }
 });
