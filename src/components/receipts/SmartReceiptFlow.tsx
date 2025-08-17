@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,6 +24,7 @@ import { InlineEditField } from "./InlineEditField";
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
+import { useReceiptFlow } from "@/hooks/useReceiptFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Loader2, 
@@ -118,27 +119,11 @@ const QUICK_AMOUNTS = [20, 50, 100, 200, 500];
 // File size limit (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-type FlowStage = 'capture' | 'processing' | 'review' | 'manual-entry';
-
 export function SmartReceiptFlow() {
   console.log('SmartReceiptFlow component mounted');
   
-  // Progressive disclosure state
-  const [flowStage, setFlowStage] = useState<FlowStage>('capture');
-  
-  // State management
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
-  const [ocrData, setOcrData] = useState<OCRResult | null>(null);
-  const [ocrConfidence, setOcrConfidence] = useState<Record<string, number>>({});
-  const [showSuccess, setShowSuccess] = useState(false);
-  
-  // Floating components state
-  const [progressStage, setProgressStage] = useState<'uploading' | 'processing' | 'extracting' | 'complete' | 'error'>('uploading');
-  const [progressValue, setProgressValue] = useState(0);
-  const [showDraftSaved, setShowDraftSaved] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
+  // Centralized state management with useReceiptFlow hook
+  const { state, actions, computed, persistence } = useReceiptFlow();
   
   // Hooks
   const isMobile = useIsMobile();
@@ -155,19 +140,25 @@ export function SmartReceiptFlow() {
     requestCameraPermission 
   } = useCamera();
   
-  // Camera state
-  const [showCameraCapture, setShowCameraCapture] = useState(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  // Extract commonly used state for readability
+  const flowStage = state.stage;
+  const receiptFile = state.receipt.file;
+  const imagePreview = state.receipt.imagePreview;
+  const isProcessingOCR = computed.isOCRProcessing;
+  const ocrData = state.ocr.data;
+  const ocrConfidence = state.ocr.confidence;
+  const showSuccess = state.ui.showSuccess;
+  const progressStage = state.progress.stage;
+  const progressValue = state.progress.value;
+  const showDraftSaved = state.ui.showDraftSaved;
+  const ocrError = state.ocr.error;
+  const showCameraCapture = state.ui.showCameraCapture;
+  const cameraStream = state.ui.cameraStream;
 
   // File handling functions
   const removeFile = () => {
     onSwipeAction(); // Haptic feedback
-    setReceiptFile(null);
-    setImagePreview(null);
-    setOcrData(null);
-    setOcrConfidence({});
-    setOcrError(null);
-    setFlowStage('capture');
+    actions.resetFlow();
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
@@ -191,10 +182,7 @@ export function SmartReceiptFlow() {
     queryKey: ['receipts'],
     onFormReset: () => {
       form.reset();
-      removeFile();
-      setOcrError(null);
-      setFlowStage('capture');
-      setIsProcessingOCR(false);
+      actions.resetFlow();
     },
     enableTouchGesture: isMobile
   });
@@ -237,19 +225,15 @@ export function SmartReceiptFlow() {
                      watchedValues.vendor_name && 
                      watchedValues.amount > 0 && 
                      watchedValues.receipt_date;
-  const isDirty = form.formState.isDirty || !!receiptFile;
+  const isDirty = form.formState.isDirty || computed.hasReceiptFile;
 
   // OCR processing function with progress tracking
   const processWithOCR = async (file: File) => {
-    setFlowStage('processing');
-    setIsProcessingOCR(true);
-    setOcrError(null);
-    setProgressStage('uploading');
-    setProgressValue(0);
+    actions.startOCRProcessing();
     
     try {
       // Stage 1: Upload (0-30%)
-      setProgressValue(10);
+      actions.updateOCRProgress('uploading', 10);
       const timestamp = Date.now();
       const fileName = `temp_ocr_${timestamp}_${file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -257,28 +241,26 @@ export function SmartReceiptFlow() {
         .upload(`receipts/temp/${fileName}`, file);
 
       if (uploadError) throw uploadError;
-      setProgressValue(30);
+      actions.updateOCRProgress('uploading', 30);
 
       // Stage 2: Processing (30-70%)
-      setProgressStage('processing');
-      setProgressValue(40);
+      actions.updateOCRProgress('processing', 40);
       
       const { data: { publicUrl } } = supabase.storage
         .from('work-order-attachments')
         .getPublicUrl(uploadData.path);
 
-      setProgressValue(60);
+      actions.updateOCRProgress('processing', 60);
 
       // Stage 3: OCR Extraction (70-90%)
-      setProgressStage('extracting');
-      setProgressValue(70);
+      actions.updateOCRProgress('extracting', 70);
       
       const { data: ocrResult, error: ocrError } = await supabase.functions.invoke('process-receipt', {
         body: { imageUrl: publicUrl }
       });
 
       if (ocrError) throw ocrError;
-      setProgressValue(90);
+      actions.updateOCRProgress('extracting', 90);
 
       // Stage 4: Complete (90-100%)
       if (ocrResult) {
@@ -286,11 +268,7 @@ export function SmartReceiptFlow() {
         if (ocrResult.total) form.setValue('amount', ocrResult.total);
         if (ocrResult.date) form.setValue('receipt_date', ocrResult.date);
         
-        setOcrData(ocrResult);
-        setOcrConfidence(ocrResult.confidence || {});
-        
-        setProgressStage('complete');
-        setProgressValue(100);
+        actions.setOCRSuccess(ocrResult, ocrResult.confidence || {});
         
         const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
         
@@ -298,14 +276,6 @@ export function SmartReceiptFlow() {
           title: '✨ Receipt Scanned!',
           description: successMessage,
         });
-
-        // Transition to review stage
-        setFlowStage('review');
-        
-        // Hide progress after delay
-        setTimeout(() => {
-          setIsProcessingOCR(false);
-        }, 2000);
       }
 
       // Clean up temp file
@@ -315,7 +285,6 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('OCR processing error:', error);
-      setProgressStage('error');
       
       // Enhanced error messages based on error type
       let errorMessage = 'Unable to extract data from receipt';
@@ -327,13 +296,9 @@ export function SmartReceiptFlow() {
         errorMessage = 'Processing took too long - try a clearer image';
       }
       
-      setOcrError(errorMessage);
+      actions.setOCRError(errorMessage);
       
       // Don't show toast - let the FloatingProgress handle error display
-      // Keep processing visible to show error recovery options
-      setTimeout(() => {
-        setIsProcessingOCR(false);
-      }, 5000); // Longer delay to show recovery options
     }
   };
 
@@ -360,13 +325,12 @@ export function SmartReceiptFlow() {
       return;
     }
 
-    setReceiptFile(file);
-
     // Create image preview for images
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
+        const preview = e.target?.result as string;
+        actions.setFile(file, preview);
       };
       reader.readAsDataURL(file);
 
@@ -374,7 +338,7 @@ export function SmartReceiptFlow() {
       await processWithOCR(file);
     } else {
       // For PDFs, no preview but still process OCR
-      setImagePreview(null);
+      actions.setFile(file);
       await processWithOCR(file);
     }
   };
@@ -394,7 +358,6 @@ export function SmartReceiptFlow() {
         }
       }
 
-      setShowCameraCapture(true);
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'environment', // Use rear camera for documents
@@ -402,7 +365,7 @@ export function SmartReceiptFlow() {
           height: { ideal: 1080 }
         } 
       });
-      setCameraStream(stream);
+      actions.setCameraState(true, stream);
     } catch (error) {
       console.error('Camera access error:', error);
       onError();
@@ -421,17 +384,16 @@ export function SmartReceiptFlow() {
       const file = await captureImageFromCamera();
       if (file) {
         onImageCapture();
-        setReceiptFile(file);
-        setShowCameraCapture(false);
+        actions.setCameraState(false);
         if (cameraStream) {
           cameraStream.getTracks().forEach(track => track.stop());
-          setCameraStream(null);
         }
         
         // Create image preview
         const reader = new FileReader();
         reader.onload = (e) => {
-          setImagePreview(e.target?.result as string);
+          const preview = e.target?.result as string;
+          actions.setFile(file, preview);
         };
         reader.readAsDataURL(file);
         
@@ -450,30 +412,22 @@ export function SmartReceiptFlow() {
   };
 
   const closeCameraCapture = () => {
-    setShowCameraCapture(false);
+    actions.setCameraState(false);
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
-      setCameraStream(null);
     }
   };
 
   // Manual entry function
   const startManualEntry = () => {
-    setFlowStage('manual-entry');
-    setOcrError(null);
+    actions.startManualEntry();
   };
 
   // Draft save functionality
   const saveDraft = () => {
     onFormSave(); // Haptic feedback
-    const draftData = {
-      ...form.getValues(),
-      receiptFile: receiptFile?.name,
-      savedAt: new Date().toISOString(),
-    };
-    
-    localStorage.setItem('receipt-draft', JSON.stringify(draftData));
-    setShowDraftSaved(true);
+    persistence.saveDraft();
+    actions.showDraftSaved(true);
     
     toast({
       title: 'Draft Saved',
@@ -481,12 +435,13 @@ export function SmartReceiptFlow() {
     });
     
     // Hide draft saved indicator after 3 seconds
-    setTimeout(() => setShowDraftSaved(false), 3000);
+    setTimeout(() => actions.showDraftSaved(false), 3000);
   };
 
   // OCR retry function
   const retryOCR = () => {
     if (receiptFile) {
+      actions.retryOCR();
       processWithOCR(receiptFile);
     }
   };
@@ -512,13 +467,11 @@ export function SmartReceiptFlow() {
       onSubmitSuccess(); // Haptic feedback
 
       // Success state
-      setShowSuccess(true);
+      actions.completeSubmission();
       setTimeout(() => {
         // Reset form and state
         form.reset();
-        removeFile();
-        setShowSuccess(false);
-        setFlowStage('capture');
+        actions.resetFlow();
       }, 2000);
 
       toast({
@@ -608,7 +561,7 @@ export function SmartReceiptFlow() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!imagePreview && !receiptFile ? (
+          {!imagePreview && !computed.hasReceiptFile ? (
             <div className="space-y-4">
               {/* Mobile-optimized capture buttons */}
               {isMobile ? (
@@ -739,7 +692,7 @@ export function SmartReceiptFlow() {
               )}
 
               {/* Enhanced Error Recovery Section - Show when OCR fails */}
-              {(flowStage === 'processing' && !isProcessingOCR && ocrError) && (
+              {computed.isInErrorState && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -789,7 +742,7 @@ export function SmartReceiptFlow() {
               )}
 
               {/* Manual Entry Option - Always available in capture stage */}
-              {flowStage === 'capture' && !receiptFile && (
+              {flowStage === 'capture' && !computed.hasReceiptFile && (
                 <div className="text-center pt-4">
                   <Button
                     type="button"
@@ -883,7 +836,7 @@ export function SmartReceiptFlow() {
 
       {/* Progressive Review Form Section - Only show in review or manual-entry stages */}
       <AnimatePresence>
-        {(flowStage === 'review' || flowStage === 'manual-entry') && (
+        {computed.isFormVisible && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -1038,14 +991,15 @@ export function SmartReceiptFlow() {
                       onClick={() => {
                         const item = prompt('Enter item description:');
                         const price = prompt('Enter price:');
-                        if (item && price) {
-                          setOcrData(prev => ({
-                            ...prev!,
-                            lineItems: [...(prev?.lineItems || []), {
-                              description: item,
-                              total_price: parseFloat(price)
-                            }]
-                          }));
+                        if (item && price && ocrData) {
+                          const newLineItem = {
+                            description: item,
+                            total_price: parseFloat(price)
+                          };
+                          actions.setOCRSuccess({
+                            ...ocrData,
+                            lineItems: [...ocrData.lineItems, newLineItem]
+                          }, ocrConfidence);
                         }
                       }}
                     >
@@ -1061,7 +1015,10 @@ export function SmartReceiptFlow() {
                         if (ocrData?.subtotal && ocrData?.tax) {
                           const correct = ocrData.subtotal + ocrData.tax;
                           form.setValue('amount', correct, { shouldValidate: true });
-                          setOcrData(prev => ({ ...prev!, total: correct }));
+                          actions.setOCRSuccess({
+                            ...ocrData,
+                            total: correct
+                          }, ocrConfidence);
                           toast({
                             title: 'Total Recalculated',
                             description: `New total: $${correct.toFixed(2)}`,
