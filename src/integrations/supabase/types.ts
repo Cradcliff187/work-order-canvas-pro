@@ -2361,6 +2361,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      test_ocr_functionality: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       test_rls_for_user: {
         Args: { test_email: string }
         Returns: {
