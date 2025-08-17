@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { Route, Navigate } from 'react-router-dom';
 import { LazyWrapper } from '@/components/LazyWrapper';
-import { QuickReceiptCapture } from '@/components/receipts/QuickReceiptCapture';
+import { ReceiptUpload } from '@/components/receipts/ReceiptUpload';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminLayout from '@/components/AdminLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -265,7 +265,7 @@ export const AdminRoutes = () => (
       <ProtectedRoute requiredUserType="employee">
         <AdminLayout>
           <Suspense fallback={<LoadingSpinner />}>
-            <QuickReceiptCapture />
+            <ReceiptUpload />
           </Suspense>
         </AdminLayout>
       </ProtectedRoute>
