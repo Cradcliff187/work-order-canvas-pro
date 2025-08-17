@@ -1101,7 +1101,7 @@ export function SmartReceiptFlow() {
                   {ocrData && (
                     <div className="mt-2">
                       <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> (confidence: {(ocrConfidence.vendor * 100).toFixed(1)}%)</div>
-                      <div>Amount: <strong>${ocrData.total || 'None'}</strong> (confidence: {(ocrConfidence.amount * 100).toFixed(1)}%)</div>
+                      <div>Amount: <strong>${ocrData.total || 'None'}</strong> (confidence: {((ocrConfidence.total || 0) * 100).toFixed(1)}%)</div>
                       <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
                     </div>
                   )}

@@ -1136,7 +1136,13 @@ function parseReceiptText(text: string): OCRResult {
     vendor: '',
     total: 0,
     date: '',
-    confidence: {}
+    confidence: {
+      vendor: 0,
+      total: 0,
+      date: 0,
+      lineItems: 0,
+      overall: 0
+    }
   };
 
   // Initialize confidence details
@@ -1415,10 +1421,18 @@ function parseReceiptText(text: string): OCRResult {
         .replace(/[^\w\s\-\.\/&%#]+/g, ' ') // Remove excessive special characters
         .trim();
       
-      // Skip if no meaningful description
-      if (!description || description.length < 2) {
-        console.log(`⏭️ Skipping item with insufficient description: "${combined}"`);
-        continue;
+      // If no description but we have a price, create a fallback description
+      if (!description || description.length < 1) {
+        // Try to extract product codes or use fallback
+        const codeMatch = combined.match(/^(\d{6,14}|\w{3,10})/);
+        if (codeMatch) {
+          description = `Item ${codeMatch[1]}`;
+        } else if (prices.totalPrice) {
+          description = `Item $${prices.totalPrice.toFixed(2)}`;
+        } else {
+          console.log(`⏭️ Skipping item with insufficient description: "${combined}"`);
+          continue;
+        }
       }
       
       // Calculate unit price if not provided
