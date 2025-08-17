@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useRef, useEffect, useMemo, useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -56,7 +57,11 @@ import {
   HelpCircle,
   Info,
   Zap,
-  Target
+  Target,
+  Copy,
+  Bug,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -85,6 +90,8 @@ interface OCRResult {
   subtotal?: number;
   tax?: number;
   lineItems: LineItem[];
+  from_cache?: boolean;
+  processing_time?: number;
 }
 
 interface SmartReceiptFormData {
@@ -136,6 +143,12 @@ export function SmartReceiptFlow() {
   // Centralized state management with useReceiptFlow hook
   const { state, actions, computed, persistence } = useReceiptFlow();
   
+  // ADD DEBUG MODE STATE
+  const [debugMode, setDebugMode] = useState(false);
+  const [rawOCRText, setRawOCRText] = useState<string | null>(null);
+  const [debugOCRData, setDebugOCRData] = useState<any>(null);
+  const [showRawText, setShowRawText] = useState(false);
+  
   // Hooks
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -166,6 +179,7 @@ export function SmartReceiptFlow() {
       clearTimeout(lockSafetyTimeout);
     };
   }, []); // Empty deps - only track on initial mount and cleanup on unmount
+  
   const { showTour, hasCompletedTour, completeTour, skipTour, startTour } = useReceiptTour();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -215,6 +229,8 @@ export function SmartReceiptFlow() {
   const removeFile = useCallback(() => {
     onSwipeAction(); // Haptic feedback
     actions.resetFlow();
+    setRawOCRText(null); // Clear debug data
+    setDebugOCRData(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   }, [onSwipeAction, actions]);
@@ -239,6 +255,8 @@ export function SmartReceiptFlow() {
     onFormReset: () => {
       form.reset();
       actions.resetFlow();
+      setRawOCRText(null);
+      setDebugOCRData(null);
     },
     enableTouchGesture: isMobile
   });
@@ -321,7 +339,7 @@ export function SmartReceiptFlow() {
   // AbortController for cancelling OCR
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Memoized OCR processing function with progress tracking and timeout
+  // ENHANCED OCR processing function with DEBUG MODE
   const processWithOCR = useCallback(async (file: File) => {
     // Check if already processing
     if (isProcessingLocked) {
@@ -373,6 +391,38 @@ export function SmartReceiptFlow() {
       // Stage 3: OCR Extraction (70-90%)
       actions.updateOCRProgress('extracting', 70);
       
+      // DEBUG MODE: Get raw OCR text first if enabled
+      if (debugMode) {
+        console.log('🔍 DEBUG MODE ENABLED - Getting raw OCR text...');
+        
+        const { data: debugData, error: debugError } = await supabase.functions.invoke('process-receipt', {
+          body: { imageUrl: publicUrl, testMode: 'debug' }
+        });
+        
+        if (debugData && !debugError) {
+          console.log('================== RAW OCR TEXT ==================');
+          console.log(debugData.raw_text);
+          console.log('================== FIRST 10 LINES ==================');
+          console.log(debugData.first_10_lines);
+          console.log('================== OCR STATS ==================');
+          console.log('Text length:', debugData.text_length);
+          console.log('Has DOCUMENT_TEXT:', debugData.has_doc_text);
+          console.log('Has SIMPLE_TEXT:', debugData.has_simple_text);
+          console.log('==================================================');
+          
+          // Store raw text and debug data for display
+          setRawOCRText(debugData.raw_text);
+          setDebugOCRData(debugData);
+          
+          // Show debug info in toast
+          toast({
+            title: '🔍 Debug: Raw OCR Text Captured',
+            description: `Extracted ${debugData.text_length} characters. Check debug panel for details.`,
+          });
+        }
+      }
+      
+      // Regular OCR processing
       const { data: ocrResult, error: ocrError } = await supabase.functions.invoke('process-receipt', {
         body: { imageUrl: publicUrl }
       });
@@ -383,6 +433,19 @@ export function SmartReceiptFlow() {
       // Stage 4: Complete (90-100%)
       if (ocrResult) {
         const processingTime = Date.now() - startTime;
+        
+        // Enhanced debug logging
+        if (debugMode) {
+          console.group('🎯 OCR EXTRACTION RESULTS');
+          console.log('Vendor:', ocrResult.vendor || 'NOT FOUND');
+          console.log('Total:', ocrResult.total || 'NOT FOUND');
+          console.log('Date:', ocrResult.date || 'NOT FOUND');
+          console.log('Processing Time:', processingTime + 'ms');
+          console.log('From Cache:', ocrResult.from_cache || false);
+          console.log('Confidence:', ocrResult.confidence);
+          console.groupEnd();
+        }
+        
         trackOCRPerformance('completed', { 
           processingTime,
           confidence: ocrResult.confidence,
@@ -451,12 +514,15 @@ export function SmartReceiptFlow() {
       clearTimeout(timeoutId);
       abortControllerRef.current = null;
     }
-  }, [actions, form, toast, trackOCRPerformance, trackError, isProcessingLocked]);
+  }, [actions, form, toast, trackOCRPerformance, trackError, isProcessingLocked, debugMode]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Clear previous debug data
+    setRawOCRText(null);
+    setDebugOCRData(null);
 
     // File validation
     if (!isValidFileSize(file, MAX_FILE_SIZE)) {
@@ -597,6 +663,10 @@ export function SmartReceiptFlow() {
         // Camera cleanup is handled by the reducer
         actions.setCameraState(false);
         
+        // Clear debug data
+        setRawOCRText(null);
+        setDebugOCRData(null);
+        
         // Compress captured image
         try {
           const compressionResult = await compressImage(file, {
@@ -670,6 +740,8 @@ export function SmartReceiptFlow() {
   // Memoized OCR retry function
   const retryOCR = useCallback(() => {
     if (receiptFile) {
+      setRawOCRText(null);
+      setDebugOCRData(null);
       actions.retryOCR();
       processWithOCR(receiptFile);
     }
@@ -729,6 +801,8 @@ export function SmartReceiptFlow() {
         // Reset form and state
         form.reset();
         actions.resetFlow();
+        setRawOCRText(null);
+        setDebugOCRData(null);
       }, 2000);
 
       toast({
@@ -738,7 +812,7 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('Receipt submission error:', error);
-      const submissionTime = Date.now() - submitStartTime;
+      const submissionTime = Date.now() - startTime;
       trackError(error, { 
         context: 'Receipt submission',
         submissionTime,
@@ -751,7 +825,7 @@ export function SmartReceiptFlow() {
         variant: 'destructive',
       });
     }
-  }, [receiptFile, createReceipt, onSubmitSuccess, actions, form, toast, onError, track, trackError, ocrData]);
+  }, [receiptFile, createReceipt, onSubmitSuccess, actions, form, toast, onError, track, trackError, ocrData, allocations]);
 
   // Memoized confidence indicator
   const getConfidenceColor = useCallback((field: string) => {
@@ -815,6 +889,31 @@ export function SmartReceiptFlow() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* DEBUG MODE TOGGLE - Only show in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="border-dashed border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bug className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm font-medium">Debug OCR Mode</span>
+                <Badge variant="outline" className="text-xs">Dev Only</Badge>
+              </div>
+              <Switch
+                checked={debugMode}
+                onCheckedChange={setDebugMode}
+                className="data-[state=checked]:bg-yellow-600"
+              />
+            </div>
+            {debugMode && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Raw OCR text and parsing details will be captured
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Camera/Upload Capture Section */}
       <Card data-tour="upload-section">
@@ -967,6 +1066,81 @@ export function SmartReceiptFlow() {
                 </div>
               ) : null}
 
+              {/* DEBUG: Raw OCR Text Display */}
+              {debugMode && rawOCRText && (
+                <Card className="border-dashed border-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        Raw OCR Text (Debug)
+                      </h4>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowRawText(!showRawText)}
+                        >
+                          {showRawText ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          {showRawText ? 'Hide' : 'Show'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            navigator.clipboard.writeText(rawOCRText);
+                            toast({ title: 'Copied to clipboard!' });
+                          }}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  {showRawText && (
+                    <CardContent>
+                      <div className="p-3 bg-white dark:bg-gray-900 rounded-lg max-h-48 overflow-auto">
+                        <pre className="text-xs font-mono whitespace-pre-wrap">{rawOCRText}</pre>
+                      </div>
+                      {debugOCRData && (
+                        <div className="mt-3 space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Text Length:</span>
+                            <span>{debugOCRData.text_length} characters</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Detection Method:</span>
+                            <span>{debugOCRData.has_doc_text ? 'DOCUMENT_TEXT' : 'TEXT_DETECTION'}</span>
+                          </div>
+                          {debugOCRData.parsed_result && (
+                            <>
+                              <div className="border-t pt-2 mt-2">
+                                <p className="font-medium mb-1">Parsed Results:</p>
+                                <div className="space-y-1">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Vendor:</span>
+                                    <span className="font-mono">{debugOCRData.parsed_result.vendor || 'NOT FOUND'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Total:</span>
+                                    <span className="font-mono">${debugOCRData.parsed_result.total || 0}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Date:</span>
+                                    <span className="font-mono">{debugOCRData.parsed_result.date || 'NOT FOUND'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              )}
+
             {/* OCR Processing Status */}
               {isProcessingOCR && (
                 <div className="flex items-center justify-center py-4 space-x-3" data-tour="ocr-section">
@@ -981,6 +1155,32 @@ export function SmartReceiptFlow() {
                         <p>AI is extracting vendor, amount, date, and line items from your receipt</p>
                       </TooltipContent>
                     </Tooltip>
+                  </div>
+                </div>
+              )}
+
+              {/* Enhanced Confidence Display with Debug Info */}
+              {ocrConfidence && Object.keys(ocrConfidence).length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    OCR Confidence
+                    {debugMode && ocrData && (
+                      <Badge variant="outline" className="text-xs">
+                        {ocrData.from_cache ? 'From Cache' : 'Fresh Scan'}
+                        {ocrData.processing_time && ` (${ocrData.processing_time}ms)`}
+                      </Badge>
+                    )}
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(ocrConfidence).map(([field, confidence]) => (
+                      <Badge
+                        key={field}
+                        variant={confidence > 0.7 ? 'default' : confidence > 0.4 ? 'secondary' : 'destructive'}
+                        className="text-xs"
+                      >
+                        {field}: {Math.round(confidence * 100)}%
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1115,6 +1315,7 @@ export function SmartReceiptFlow() {
         </CardContent>
       </Card>
 
+      {/* Form sections remain the same... */}
       {/* Progressive Review Form Section - Only show in review or manual-entry stages */}
       <AnimatePresence>
         {computed.isFormVisible && (
@@ -1128,26 +1329,41 @@ export function SmartReceiptFlow() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-tour="form-section">
             
-            {/* Debug Panel - Development Only */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="border-2 border-dashed border-orange-300 bg-orange-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-orange-800 mb-2">🐛 Debug Info</h3>
-                <div className="text-xs space-y-1 text-orange-700">
-                  <div>Stage: <strong>{flowStage}</strong></div>
-                  <div>Form Visible: <strong>{computed.isFormVisible ? 'YES' : 'NO'}</strong></div>
-                  <div>Has OCR Data: <strong>{computed.hasOCRData ? 'YES' : 'NO'}</strong></div>
-                  <div>OCR Error: <strong>{ocrError ? 'YES' : 'NO'}</strong></div>
-                  {ocrData && (
-                    <div className="mt-2">
-                      <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> (confidence: {(ocrConfidence.vendor * 100).toFixed(1)}%)</div>
-                      <div>Amount: <strong>${ocrData.total || 'None'}</strong> (confidence: {((ocrConfidence.total || 0) * 100).toFixed(1)}%)</div>
-                      <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* Enhanced Debug Panel with Better Info */}
+            {debugMode && (
+              <Card className="border-dashed border-orange-400 bg-orange-50 dark:bg-orange-900/20">
+                <CardHeader className="pb-3">
+                  <h3 className="font-semibold text-orange-800 dark:text-orange-200 flex items-center gap-2">
+                    <Bug className="h-4 w-4" />
+                    Debug Info
+                  </h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xs space-y-1 text-orange-700 dark:text-orange-300">
+                    <div>Stage: <strong>{flowStage}</strong></div>
+                    <div>Form Visible: <strong>{computed.isFormVisible ? 'YES' : 'NO'}</strong></div>
+                    <div>Has OCR Data: <strong>{computed.hasOCRData ? 'YES' : 'NO'}</strong></div>
+                    <div>OCR Error: <strong>{ocrError ? 'YES' : 'NO'}</strong></div>
+                    {ocrData && (
+                      <div className="mt-2 border-t pt-2">
+                        <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> ({(ocrConfidence.vendor * 100).toFixed(1)}%)</div>
+                        <div>Amount: <strong>${ocrData.total || 'None'}</strong> ({((ocrConfidence.total || 0) * 100).toFixed(1)}%)</div>
+                        <div>Date: <strong>{ocrData.date || 'None'}</strong> ({((ocrConfidence.date || 0) * 100).toFixed(1)}%)</div>
+                        <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
+                        {ocrData.from_cache && (
+                          <div className="text-green-600 dark:text-green-400 font-medium">✅ From Cache</div>
+                        )}
+                        {ocrData.processing_time && (
+                          <div>Processing Time: <strong>{ocrData.processing_time}ms</strong></div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
+            {/* Rest of the form remains exactly the same... */}
             {/* Essential Details - Always Open */}
             <FieldGroup
               title="Essential Details"
