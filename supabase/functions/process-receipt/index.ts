@@ -9,9 +9,11 @@ import { detectDocumentType } from "./lib/document-types.ts";
 import { extractLineItems, LineItem } from "./lib/line-item-parser.ts";
 import { parseAmounts } from "./lib/amount-parser.ts";
 import { logDebug, createDebugLog, processWithTestMode, ProcessingMetrics, DebugLog, SAMPLE_DOCUMENTS } from "./lib/text-processing.ts";
+import { parseReceiptText } from "./lib/parseReceiptText.ts";
 
-// Import new universal processing modules
-import { runMultiStrategyExtraction } from "./lib/multi-strategy-extraction.ts";
+// Import new spatial processing modules
+import { parseVisionApiResponse, VisionApiResponse } from "./lib/vision-api-spatial.ts";
+import { runSpatialExtraction } from "./lib/spatial-extraction.ts";
 import { runUniversalValidation, runAutoFix, recoverFromErrors, boostConfidenceForQuality } from "./lib/universal-validation.ts";
 
 const corsHeaders = {
@@ -50,58 +52,61 @@ interface OCRResult {
   validation_passed?: boolean;
 }
 
-// Universal parsing function using multi-strategy extraction
-function parseReceiptText(text: string): OCRResult {
-  console.log('🚀 Starting universal OCR parsing with multi-strategy approach...');
+// Enhanced parsing function using spatial extraction
+function parseReceiptWithSpatial(visionResponse: VisionApiResponse): OCRResult {
+  console.log('🚀 Starting spatial OCR parsing with Vision API structured data...');
   
-  // Step 1: Run multi-strategy extraction
-  const extractionResult = runMultiStrategyExtraction(text);
+  // Step 1: Run spatial extraction
+  const extractionResult = runSpatialExtraction(visionResponse);
   
   // Step 2: Convert to OCRResult format
   const result: OCRResult = {
-    vendor: extractionResult.vendor || '',
-    vendor_raw: extractionResult.vendor || '',
+    vendor: extractionResult.merchant || '',
+    vendor_raw: extractionResult.merchant || '',
     total: extractionResult.total || 0,
-    subtotal: extractionResult.subtotal,
-    tax: extractionResult.tax,
+    subtotal: undefined, // Will be calculated if available
+    tax: undefined, // Will be calculated if available
     date: extractionResult.date || new Date().toISOString().split('T')[0],
     lineItems: extractionResult.lineItems || [],
     document_type: 'receipt',
-    document_confidence: 0.8,
+    document_confidence: 0.9,
     confidence: {
-      vendor: extractionResult.vendor_confidence || 0,
+      vendor: extractionResult.merchant_confidence || 0,
       total: extractionResult.total_confidence || 0,
       date: extractionResult.date_confidence || 0,
-      lineItems: extractionResult.lineItems && extractionResult.lineItems.length > 0 ? 0.7 : 0,
+      lineItems: extractionResult.lineItems_confidence || 0,
       overall: extractionResult.overall_confidence
     },
     confidence_details: {
       vendor: { 
-        score: extractionResult.vendor_confidence || 0, 
-        method: 'multi_strategy' as ExtractionMethod,
-        source: extractionResult.extraction_methods.join(', ')
+        score: extractionResult.merchant_confidence || 0, 
+        method: 'spatial_analysis' as ExtractionMethod,
+        source: 'top_section_largest_font',
+        validated: true
       },
       total: { 
         score: extractionResult.total_confidence || 0, 
-        method: 'multi_strategy' as ExtractionMethod,
-        source: extractionResult.extraction_methods.join(', ')
+        method: 'spatial_analysis' as ExtractionMethod,
+        source: 'keyword_proximity_spatial',
+        validated: extractionResult.spatial_validation.mathematical_consistency
       },
       date: { 
         score: extractionResult.date_confidence || 0, 
-        method: 'multi_strategy' as ExtractionMethod,
+        method: 'spatial_analysis' as ExtractionMethod,
         validated: true
       },
       lineItems: { 
-        score: extractionResult.lineItems && extractionResult.lineItems.length > 0 ? 0.7 : 0, 
-        method: 'multi_strategy' as ExtractionMethod
+        score: extractionResult.lineItems_confidence || 0, 
+        method: 'spatial_analysis' as ExtractionMethod,
+        source: 'spatial_table_construction'
       },
       document_type: { 
-        score: 0.8, 
+        score: 0.9, 
         method: 'pattern_match' as ExtractionMethod
       }
     },
     extraction_quality: getExtractionQuality(extractionResult.overall_confidence),
-    validation_passed: extractionResult.validation_passed
+    validation_passed: extractionResult.spatial_validation.mathematical_consistency
   };
 
   // Step 3: Run universal validation
@@ -130,7 +135,7 @@ function parseReceiptText(text: string): OCRResult {
   const qualityBoostedResult = boostConfidenceForQuality(result, result.extraction_quality || 'fair');
   Object.assign(result, qualityBoostedResult);
 
-  console.log(`🎯 Universal parsing complete - Methods: [${extractionResult.extraction_methods.join(', ')}], Overall confidence: ${result.confidence!.overall.toFixed(3)} (${result.extraction_quality})`);
+  console.log(`🎯 Spatial parsing complete - Method: ${extractionResult.extraction_method}, Overall confidence: ${result.confidence!.overall?.toFixed(3)} (${result.extraction_quality})`);
   
   return result;
 }
@@ -164,12 +169,13 @@ serve(async (req) => {
     const requestData = await req.json();
     const { imageUrl, testMode = false, testDocument = 'home_depot' } = requestData;
     
-    // Get text (test mode or Vision API)
-    let fullText: string;
+    // Get Vision API response with spatial data
+    let result: OCRResult;
+    
     if (testMode) {
+      // For test mode, create mock spatial data
       const testResult = await processWithTestMode(testMode, testDocument, debugLogs);
-      fullText = testResult.text;
-      if (!fullText) {
+      if (!testResult.text) {
         return createErrorResponse(
           `Invalid test document: ${testDocument}`,
           'INVALID_TEST_DOCUMENT',
@@ -177,8 +183,24 @@ serve(async (req) => {
           corsHeaders
         );
       }
+      
+      // Create mock vision response for test mode
+      const mockVisionResponse: VisionApiResponse = {
+        pages: [{
+          width: 800,
+          height: 1200,
+          confidence: 0.9,
+          blocks: [] // Simplified for test mode
+        }],
+        text: testResult.text,
+        confidence: 0.9
+      };
+      
+      // Use fallback text parsing for test mode
+      result = parseReceiptText(testResult.text);
+      
     } else {
-      // Vision API call (simplified for time)
+      // Full Vision API call with DOCUMENT_TEXT_DETECTION
       const apiKey = Deno.env.get('GOOGLE_VISION_API_KEY');
       if (!apiKey) {
         return createErrorResponse(
@@ -189,6 +211,8 @@ serve(async (req) => {
         );
       }
       
+      logDebug(debugLogs, 'INFO', 'VISION_API_CALL', 'Calling Google Vision API with DOCUMENT_TEXT_DETECTION');
+      
       const visionResponse = await fetch(
         `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
         {
@@ -198,7 +222,6 @@ serve(async (req) => {
             requests: [{
               image: { source: { imageUri: imageUrl } },
               features: [
-                { type: 'TEXT_DETECTION', maxResults: 1 },
                 { type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }
               ]
             }]
@@ -207,6 +230,8 @@ serve(async (req) => {
       );
 
       if (!visionResponse.ok) {
+        const errorText = await visionResponse.text();
+        logDebug(debugLogs, 'ERROR', 'VISION_API_ERROR', `Vision API error: ${errorText}`);
         return createErrorResponse(
           'OCR service error',
           'OCR_SERVICE_ERROR',
@@ -216,11 +241,23 @@ serve(async (req) => {
       }
 
       const visionData = await visionResponse.json();
-      fullText = visionData.responses?.[0]?.textAnnotations?.[0]?.description || '';
+      logDebug(debugLogs, 'INFO', 'VISION_API_SUCCESS', 'Vision API response received');
+      
+      try {
+        // Parse structured Vision API response
+        const parsedVisionResponse = parseVisionApiResponse(visionData);
+        
+        // Use spatial extraction
+        result = parseReceiptWithSpatial(parsedVisionResponse);
+        
+      } catch (spatialError) {
+        // Fallback to text-only extraction if spatial parsing fails
+        logDebug(debugLogs, 'WARN', 'SPATIAL_FALLBACK', `Spatial parsing failed: ${spatialError.message}, falling back to text extraction`);
+        
+        const fallbackText = visionData.responses?.[0]?.textAnnotations?.[0]?.description || '';
+        result = parseReceiptText(fallbackText);
+      }
     }
-
-    // Parse using modular approach
-    const result = parseReceiptText(fullText);
     
     // Validate response quality
     const validation = validateResponse(result);
