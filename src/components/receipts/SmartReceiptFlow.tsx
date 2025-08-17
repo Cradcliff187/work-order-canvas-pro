@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
 import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/utils/fileUtils";
 import { validateField, type FieldType } from "@/utils/receiptValidation";
+import { compressImage, isSupportedImageType, isValidFileSize } from "@/utils/imageCompression";
 import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
@@ -314,7 +315,7 @@ export function SmartReceiptFlow() {
     if (!file) return;
 
     // File validation
-    if (file.size > MAX_FILE_SIZE) {
+    if (!isValidFileSize(file, MAX_FILE_SIZE)) {
       toast({
         title: 'File Too Large',
         description: `File size must be less than ${formatFileSize(MAX_FILE_SIZE)}`,
@@ -323,7 +324,7 @@ export function SmartReceiptFlow() {
       return;
     }
 
-    if (!isSupportedFileType(file) && !SUPPORTED_IMAGE_TYPES.includes(file.type) && file.type !== 'application/pdf') {
+    if (!isSupportedImageType(file) && file.type !== 'application/pdf') {
       toast({
         title: 'Unsupported File Type',
         description: 'Please upload an image (JPEG, PNG, WebP, HEIC) or PDF file',
@@ -332,17 +333,58 @@ export function SmartReceiptFlow() {
       return;
     }
 
-    // Create image preview for images
+    // For images, compress before processing
     if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const preview = e.target?.result as string;
-        actions.setFile(file, preview);
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Show compression progress
+        actions.updateOCRProgress('uploading', 5);
+        
+        const compressionResult = await compressImage(file, {
+          maxWidth: 1920,
+          maxHeight: 1080,
+          quality: 0.8
+        }, (progress) => {
+          // Map compression progress to 5-25% of total progress
+          actions.updateOCRProgress('uploading', 5 + (progress * 0.2));
+        });
 
-      // Process with OCR
-      await processWithOCR(file);
+        const compressedFile = compressionResult.file;
+        
+        // Show compression results
+        if (compressionResult.compressionRatio > 1.1) {
+          toast({
+            title: 'Image Optimized',
+            description: `Reduced size by ${Math.round((1 - 1/compressionResult.compressionRatio) * 100)}%`,
+          });
+        }
+
+        // Create image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const preview = e.target?.result as string;
+          actions.setFile(compressedFile, preview);
+        };
+        reader.readAsDataURL(compressedFile);
+
+        // Process with OCR using compressed file
+        await processWithOCR(compressedFile);
+      } catch (error: any) {
+        console.error('Image compression error:', error);
+        toast({
+          title: 'Image Processing Error',
+          description: error.message || 'Failed to process image',
+          variant: 'destructive',
+        });
+        
+        // Fall back to original file if compression fails
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const preview = e.target?.result as string;
+          actions.setFile(file, preview);
+        };
+        reader.readAsDataURL(file);
+        await processWithOCR(file);
+      }
     } else {
       // For PDFs, no preview but still process OCR
       actions.setFile(file);
@@ -396,16 +438,38 @@ export function SmartReceiptFlow() {
           cameraStream.getTracks().forEach(track => track.stop());
         }
         
-        // Create image preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const preview = e.target?.result as string;
-          actions.setFile(file, preview);
-        };
-        reader.readAsDataURL(file);
-        
-        // Process with OCR
-        processWithOCR(file);
+        // Compress captured image
+        try {
+          const compressionResult = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1080,
+            quality: 0.8
+          });
+          
+          const compressedFile = compressionResult.file;
+          
+          // Create image preview
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const preview = e.target?.result as string;
+            actions.setFile(compressedFile, preview);
+          };
+          reader.readAsDataURL(compressedFile);
+          
+          // Process with OCR using compressed file
+          processWithOCR(compressedFile);
+        } catch (error: any) {
+          console.error('Image compression error:', error);
+          
+          // Fall back to original file if compression fails
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const preview = e.target?.result as string;
+            actions.setFile(file, preview);
+          };
+          reader.readAsDataURL(file);
+          processWithOCR(file);
+        }
       }
     } catch (error) {
       console.error('Image capture error:', error);
@@ -924,6 +988,7 @@ export function SmartReceiptFlow() {
                         recentWorkOrders={recentWorkOrders}
                         selectedWorkOrderId={field.value}
                         onSelect={field.onChange}
+                        isLoading={availableWorkOrders.isLoading}
                       />
                       <FormMessage />
                     </FormItem>

@@ -78,20 +78,51 @@ async function convertHeicToJpeg(file: File): Promise<File> {
 }
 
 /**
- * Compress image file with aspect ratio preservation
+ * Adaptive quality calculation based on file size and device capabilities
+ */
+function getAdaptiveQuality(originalSize: number, targetSize: number = MAX_FILE_SIZE / 4): number {
+  const sizeRatio = originalSize / targetSize;
+  
+  if (sizeRatio <= 1) return JPEG_QUALITY;
+  if (sizeRatio <= 2) return 0.7;
+  if (sizeRatio <= 4) return 0.6;
+  return 0.5; // Aggressive compression for very large files
+}
+
+/**
+ * Get device-appropriate dimensions based on capabilities
+ */
+function getDeviceDimensions(): { maxWidth: number; maxHeight: number } {
+  // Check available memory and device capabilities
+  const isHighEnd = window.navigator.hardwareConcurrency >= 4;
+  const hasHighMemory = (navigator as any).deviceMemory >= 4;
+  
+  if (isHighEnd && hasHighMemory) {
+    return { maxWidth: MAX_DIMENSION, maxHeight: MAX_HEIGHT };
+  }
+  
+  // Conservative limits for lower-end devices
+  return { maxWidth: 1280, maxHeight: 720 };
+}
+
+/**
+ * Compress image with progressive quality and async processing
  */
 export async function compressImage(
   file: File, 
-  options: CompressionOptions = {}
+  options: CompressionOptions = {},
+  onProgress?: (progress: number) => void
 ): Promise<CompressionResult> {
+  const deviceLimits = getDeviceDimensions();
   const {
-    maxWidth = MAX_DIMENSION,
-    maxHeight = MAX_HEIGHT,
-    quality = JPEG_QUALITY,
+    maxWidth = deviceLimits.maxWidth,
+    maxHeight = deviceLimits.maxHeight,
+    quality = getAdaptiveQuality(file.size),
     maxSizeBytes = MAX_FILE_SIZE
   } = options;
 
   const originalSize = file.size;
+  onProgress?.(10);
 
   // Validate file type
   if (!isSupportedImageType(file)) {
@@ -103,10 +134,13 @@ export async function compressImage(
     throw new Error(`File size exceeds maximum: ${Math.round(maxSizeBytes / 1024 / 1024)}MB`);
   }
 
+  onProgress?.(20);
+
   // Convert HEIC to JPEG if needed
   let processedFile = file;
   if (file.type.toLowerCase().includes('heic') || file.type.toLowerCase().includes('heif')) {
     processedFile = await convertHeicToJpeg(file);
+    onProgress?.(40);
   }
 
   return new Promise((resolve, reject) => {
@@ -119,7 +153,9 @@ export async function compressImage(
       return;
     }
 
-    img.onload = () => {
+    img.onload = async () => {
+      onProgress?.(60);
+      
       // Calculate new dimensions while preserving aspect ratio
       let { width, height } = img;
       const aspectRatio = width / height;
@@ -138,38 +174,56 @@ export async function compressImage(
 
       canvas.width = width;
       canvas.height = height;
+      onProgress?.(70);
 
-      // Draw and compress
-      ctx.drawImage(img, 0, 0, width, height);
+      // Use requestIdleCallback for non-blocking processing when available
+      const processImage = () => {
+        try {
+          // Draw and compress
+          ctx.drawImage(img, 0, 0, width, height);
+          onProgress?.(80);
 
-      const outputFormat = processedFile.type === 'image/png' ? 'image/png' : 'image/jpeg';
-      const outputQuality = outputFormat === 'image/jpeg' ? quality : undefined;
+          const outputFormat = processedFile.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          const outputQuality = outputFormat === 'image/jpeg' ? quality : undefined;
 
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const compressedFile = new File(
-              [blob], 
-              processedFile.name, 
-              { type: outputFormat, lastModified: Date.now() }
-            );
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File(
+                  [blob], 
+                  processedFile.name, 
+                  { type: outputFormat, lastModified: Date.now() }
+                );
 
-            const compressedSize = compressedFile.size;
-            const compressionRatio = originalSize / compressedSize;
+                const compressedSize = compressedFile.size;
+                const compressionRatio = originalSize / compressedSize;
+                onProgress?.(100);
 
-            resolve({
-              file: compressedFile,
-              originalSize,
-              compressedSize,
-              compressionRatio
-            });
-          } else {
-            reject(new Error('Failed to compress image'));
-          }
-        },
-        outputFormat,
-        outputQuality
-      );
+                resolve({
+                  file: compressedFile,
+                  originalSize,
+                  compressedSize,
+                  compressionRatio
+                });
+              } else {
+                reject(new Error('Failed to compress image'));
+              }
+            },
+            outputFormat,
+            outputQuality
+          );
+        } catch (error) {
+          reject(new Error('Failed to process image'));
+        }
+      };
+
+      // Use requestIdleCallback for better performance if available
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(processImage, { timeout: 5000 });
+      } else {
+        // Fallback to setTimeout for older browsers
+        setTimeout(processImage, 0);
+      }
     };
 
     img.onerror = () => reject(new Error('Failed to load image'));
@@ -178,24 +232,42 @@ export async function compressImage(
 }
 
 /**
- * Batch compress multiple images
+ * Batch compress multiple images with concurrent processing
  */
 export async function compressImages(
   files: File[], 
   options: CompressionOptions = {},
-  onProgress?: (completed: number, total: number) => void
+  onProgress?: (completed: number, total: number, currentFile?: string) => void,
+  onFileProgress?: (fileName: string, progress: number) => void
 ): Promise<CompressionResult[]> {
   const results: CompressionResult[] = [];
+  const maxConcurrent = Math.min(3, files.length); // Limit concurrent processing
+  const chunks = [];
   
-  for (let i = 0; i < files.length; i++) {
-    try {
-      const result = await compressImage(files[i], options);
-      results.push(result);
-      onProgress?.(i + 1, files.length);
-    } catch (error) {
-      console.error(`Failed to compress ${files[i].name}:`, error);
-      throw error;
-    }
+  // Split files into chunks for concurrent processing
+  for (let i = 0; i < files.length; i += maxConcurrent) {
+    chunks.push(files.slice(i, i + maxConcurrent));
+  }
+  
+  let completed = 0;
+  
+  for (const chunk of chunks) {
+    const promises = chunk.map(async (file) => {
+      try {
+        const result = await compressImage(file, options, (progress) => {
+          onFileProgress?.(file.name, progress);
+        });
+        completed++;
+        onProgress?.(completed, files.length, file.name);
+        return result;
+      } catch (error) {
+        console.error(`Failed to compress ${file.name}:`, error);
+        throw error;
+      }
+    });
+    
+    const chunkResults = await Promise.all(promises);
+    results.push(...chunkResults);
   }
 
   return results;

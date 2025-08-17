@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Clock, CheckCircle, Hash } from 'lucide-react';
+import { Search, MapPin, Clock, CheckCircle, Hash, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
+import { VirtualizedList } from '@/components/VirtualizedList';
 
 interface WorkOrder {
   id: string;
@@ -25,7 +27,31 @@ interface SmartWorkOrderSelectorProps {
   selectedWorkOrderId?: string;
   onSelect: (workOrderId: string | undefined) => void;
   className?: string;
+  isLoading?: boolean;
 }
+
+// Loading skeleton component
+const WorkOrderSkeleton = () => (
+  <div className="p-4 rounded-lg border bg-card space-y-3">
+    <div className="flex items-center gap-2">
+      <Skeleton className="h-4 w-4" />
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-5 w-16" />
+    </div>
+    <Skeleton className="h-5 w-full" />
+    <div className="flex items-center gap-1">
+      <Skeleton className="h-3 w-3" />
+      <Skeleton className="h-3 w-32" />
+    </div>
+    <div className="flex items-center gap-1">
+      <Skeleton className="h-3 w-3" />
+      <Skeleton className="h-3 w-20" />
+    </div>
+  </div>
+);
+
+const VIRTUALIZATION_THRESHOLD = 20;
+const ITEM_HEIGHT = 120; // Approximate height of each work order card
 
 const SmartWorkOrderSelectorComponent: React.FC<SmartWorkOrderSelectorProps> = ({
   availableWorkOrders,
@@ -33,6 +59,7 @@ const SmartWorkOrderSelectorComponent: React.FC<SmartWorkOrderSelectorProps> = (
   selectedWorkOrderId,
   onSelect,
   className,
+  isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -59,13 +86,22 @@ const SmartWorkOrderSelectorComponent: React.FC<SmartWorkOrderSelectorProps> = (
     if (!debouncedSearchQuery.trim()) return [];
     
     const query = debouncedSearchQuery.toLowerCase();
-    return availableWorkOrders.filter(wo =>
-      wo.work_order_number.toLowerCase().includes(query) ||
-      wo.title.toLowerCase().includes(query) ||
-      wo.store_location?.toLowerCase().includes(query) ||
-      wo.city?.toLowerCase().includes(query)
-    );
+    
+    // Use indexed search for better performance with large datasets
+    return availableWorkOrders.filter(wo => {
+      const searchText = [
+        wo.work_order_number,
+        wo.title,
+        wo.store_location || '',
+        wo.city || ''
+      ].join(' ').toLowerCase();
+      
+      return searchText.includes(query);
+    });
   }, [availableWorkOrders, debouncedSearchQuery]);
+
+  // Determine if we should use virtualization
+  const shouldVirtualize = filteredWorkOrders.length > VIRTUALIZATION_THRESHOLD;
 
   const handleWorkOrderSelect = useCallback((workOrderId: string) => {
     onSelect(workOrderId === selectedWorkOrderId ? undefined : workOrderId);
@@ -200,16 +236,39 @@ const SmartWorkOrderSelectorComponent: React.FC<SmartWorkOrderSelectorProps> = (
             <h3 className="text-sm font-medium text-foreground">
               Search Results ({filteredWorkOrders.length})
             </h3>
-            {filteredWorkOrders.length > 0 ? (
+            {isLoading ? (
               <div className="grid gap-3 max-h-64 overflow-y-auto">
-                {filteredWorkOrders.map((workOrder) => (
-                  <WorkOrderCard
-                    key={workOrder.id}
-                    workOrder={workOrder}
-                    isSelected={workOrder.id === selectedWorkOrderId}
-                  />
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <WorkOrderSkeleton key={i} />
                 ))}
               </div>
+            ) : filteredWorkOrders.length > 0 ? (
+              shouldVirtualize ? (
+                <VirtualizedList
+                  items={filteredWorkOrders}
+                  itemHeight={ITEM_HEIGHT}
+                  containerHeight={256} // max-h-64 = 16rem = 256px
+                  renderItem={(workOrder, index) => (
+                    <div key={workOrder.id} className="mb-3">
+                      <WorkOrderCard
+                        workOrder={workOrder}
+                        isSelected={workOrder.id === selectedWorkOrderId}
+                      />
+                    </div>
+                  )}
+                  className="max-h-64"
+                />
+              ) : (
+                <div className="grid gap-3 max-h-64 overflow-y-auto">
+                  {filteredWorkOrders.map((workOrder) => (
+                    <WorkOrderCard
+                      key={workOrder.id}
+                      workOrder={workOrder}
+                      isSelected={workOrder.id === selectedWorkOrderId}
+                    />
+                  ))}
+                </div>
+              )
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -232,7 +291,13 @@ const SmartWorkOrderSelectorComponent: React.FC<SmartWorkOrderSelectorProps> = (
                   <h3 className="text-sm font-medium text-foreground">Recent Work Orders</h3>
                   <Badge variant="secondary" className="text-xs">Quick Select</Badge>
                 </div>
-                {suggestedWorkOrders.length > 0 ? (
+                {isLoading ? (
+                  <div className="grid gap-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <WorkOrderSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : suggestedWorkOrders.length > 0 ? (
                   <motion.div 
                     className="grid gap-3"
                     initial="hidden"
@@ -286,6 +351,7 @@ export const SmartWorkOrderSelector = React.memo(SmartWorkOrderSelectorComponent
     prevProps.availableWorkOrders.length === nextProps.availableWorkOrders.length &&
     prevProps.recentWorkOrders?.length === nextProps.recentWorkOrders?.length &&
     prevProps.availableWorkOrders === nextProps.availableWorkOrders &&
-    prevProps.recentWorkOrders === nextProps.recentWorkOrders
+    prevProps.recentWorkOrders === nextProps.recentWorkOrders &&
+    prevProps.isLoading === nextProps.isLoading
   );
 });
