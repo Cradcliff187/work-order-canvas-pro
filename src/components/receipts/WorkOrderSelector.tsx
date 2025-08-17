@@ -1,10 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Search, Zap, MapPin, X, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface WorkOrder {
   id: string;
@@ -33,23 +37,62 @@ export function WorkOrderSelector({
   totalAmount,
   onAllocationChange,
 }: WorkOrderSelectorProps) {
-  const selectedWorkOrderIds = allocations.map(a => a.work_order_id);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Filter work orders based on search
+  const filteredWorkOrders = workOrders.filter(wo => {
+    const query = searchQuery.toLowerCase();
+    return (
+      wo.work_order_number.toLowerCase().includes(query) ||
+      wo.title.toLowerCase().includes(query) ||
+      (wo.store_location?.toLowerCase().includes(query) ?? false)
+    );
+  });
+
   const totalAllocated = allocations.reduce((sum, a) => sum + a.allocated_amount, 0);
   const remaining = totalAmount - totalAllocated;
-  const isValidAllocation = Math.abs(remaining) < 0.01; // Allow for floating point precision
+  const isFullyAllocated = Math.abs(remaining) < 0.01;
 
-  const handleWorkOrderToggle = (workOrderId: string, checked: boolean) => {
-    if (checked) {
-      // Add new allocation
-      const newAllocation: Allocation = {
-        work_order_id: workOrderId,
-        allocated_amount: remaining > 0 ? Math.min(remaining, totalAmount) : 0,
-      };
-      onAllocationChange([...allocations, newAllocation]);
-    } else {
-      // Remove allocation
-      onAllocationChange(allocations.filter(a => a.work_order_id !== workOrderId));
+  const handleAutoAllocate = () => {
+    if (workOrders.length === 1) {
+      // Allocate full amount to single work order
+      onAllocationChange([{
+        work_order_id: workOrders[0].id,
+        allocated_amount: totalAmount,
+      }]);
+    } else if (workOrders.length > 1) {
+      // Allocate to first work order
+      const firstWO = workOrders[0];
+      onAllocationChange([{
+        work_order_id: firstWO.id,
+        allocated_amount: totalAmount,
+      }]);
     }
+  };
+
+  const handleSplitEvenly = () => {
+    if (allocations.length > 0) {
+      const amountPerOrder = totalAmount / allocations.length;
+      const newAllocations = allocations.map((a, index) => ({
+        ...a,
+        allocated_amount: index === allocations.length - 1 
+          ? totalAmount - (amountPerOrder * (allocations.length - 1)) // Handle rounding
+          : amountPerOrder
+      }));
+      onAllocationChange(newAllocations);
+    }
+  };
+
+  const handleAddWorkOrder = (workOrderId: string) => {
+    const newAllocation: Allocation = {
+      work_order_id: workOrderId,
+      allocated_amount: remaining > 0 ? Math.min(remaining, totalAmount) : 0,
+    };
+    onAllocationChange([...allocations, newAllocation]);
+  };
+
+  const handleRemoveWorkOrder = (workOrderId: string) => {
+    onAllocationChange(allocations.filter(a => a.work_order_id !== workOrderId));
   };
 
   const handleAmountChange = (workOrderId: string, amount: number) => {
@@ -61,27 +104,145 @@ export function WorkOrderSelector({
     onAllocationChange(updatedAllocations);
   };
 
-  const handleNotesChange = (workOrderId: string, notes: string) => {
-    const updatedAllocations = allocations.map(allocation =>
-      allocation.work_order_id === workOrderId
-        ? { ...allocation, allocation_notes: notes }
-        : allocation
-    );
-    onAllocationChange(updatedAllocations);
-  };
-
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Label className="text-base font-medium">Allocate to Work Orders</Label>
-        <div className="text-sm text-muted-foreground">
-          <span className={remaining > 0.01 ? "text-amber-600" : remaining < -0.01 ? "text-destructive" : "text-green-600"}>
-            Remaining: ${remaining.toFixed(2)}
-          </span>
+      {/* Header with amount summary */}
+      <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+        <div>
+          <p className="text-sm text-muted-foreground">Total Receipt</p>
+          <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground">Remaining</p>
+          <p className={cn(
+            "text-2xl font-bold",
+            isFullyAllocated ? "text-green-600" : "text-amber-600"
+          )}>
+            ${remaining.toFixed(2)}
+          </p>
         </div>
       </div>
 
-      {!isValidAllocation && totalAllocated > 0 && (
+      {/* Quick Actions */}
+      {!isFullyAllocated && workOrders.length > 0 && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAutoAllocate}
+            className="flex items-center gap-2"
+          >
+            <Zap className="h-4 w-4" />
+            Auto-Allocate
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleSplitEvenly}
+            disabled={allocations.length === 0}
+          >
+            Split Evenly
+          </Button>
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search work orders..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Work Orders List */}
+      <ScrollArea className="h-[400px] pr-4">
+        {filteredWorkOrders.length === 0 ? (
+          <div className="text-center py-8">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">
+              {searchQuery ? "No matching work orders" : "No work orders available"}
+            </p>
+            {!searchQuery && (
+              <p className="text-sm text-muted-foreground mt-1">
+                You need to be assigned to work orders to allocate receipts.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredWorkOrders.map((workOrder) => {
+              const allocation = allocations.find(a => a.work_order_id === workOrder.id);
+              const isSelected = !!allocation;
+
+              return (
+                <Card 
+                  key={workOrder.id}
+                  className={cn(
+                    "transition-colors cursor-pointer",
+                    isSelected && "border-primary bg-primary/5"
+                  )}
+                  onClick={() => !isSelected && handleAddWorkOrder(workOrder.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline">
+                            {workOrder.work_order_number}
+                          </Badge>
+                        </div>
+                        <p className="font-medium">{workOrder.title}</p>
+                        {workOrder.store_location && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                            <MapPin className="h-3 w-3" />
+                            {workOrder.store_location}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {isSelected && (
+                        <div className="ml-4">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max={totalAmount}
+                              value={allocation.allocated_amount}
+                              onChange={(e) => handleAmountChange(workOrder.id, parseFloat(e.target.value) || 0)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-24 h-8"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveWorkOrder(workOrder.id);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </ScrollArea>
+
+      {/* Validation Alert */}
+      {!isFullyAllocated && totalAllocated > 0 && (
         <Alert variant={remaining < -0.01 ? "destructive" : "default"}>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -93,87 +254,33 @@ export function WorkOrderSelector({
         </Alert>
       )}
 
-      <div className="space-y-3 max-h-80 overflow-y-auto">
-        {workOrders.map((workOrder) => {
-          const isSelected = selectedWorkOrderIds.includes(workOrder.id);
-          const allocation = allocations.find(a => a.work_order_id === workOrder.id);
-
-          return (
-            <Card key={workOrder.id} className={isSelected ? "ring-2 ring-primary" : ""}>
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={(checked) => 
-                      handleWorkOrderToggle(workOrder.id, checked as boolean)
-                    }
-                    className="mt-1"
-                  />
-                  
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <div className="font-medium text-sm">
-                        {workOrder.work_order_number}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {workOrder.title}
-                      </div>
-                      {workOrder.store_location && (
-                        <div className="text-xs text-muted-foreground">
-                          {workOrder.store_location}
-                        </div>
-                      )}
-                    </div>
-
-                    {isSelected && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor={`amount-${workOrder.id}`} className="text-xs">
-                            Amount
-                          </Label>
-                          <Input
-                            id={`amount-${workOrder.id}`}
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max={totalAmount}
-                            value={allocation?.allocated_amount || 0}
-                            onChange={(e) => 
-                              handleAmountChange(workOrder.id, parseFloat(e.target.value) || 0)
-                            }
-                            className="h-8"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`notes-${workOrder.id}`} className="text-xs">
-                            Notes (optional)
-                          </Label>
-                          <Input
-                            id={`notes-${workOrder.id}`}
-                            value={allocation?.allocation_notes || ""}
-                            onChange={(e) => 
-                              handleNotesChange(workOrder.id, e.target.value)
-                            }
-                            className="h-8"
-                            placeholder="Allocation notes"
-                          />
-                        </div>
-                      </div>
-                    )}
+      {/* Allocation Summary */}
+      {allocations.length > 0 && (
+        <Card className="bg-muted/50">
+          <CardContent className="p-4">
+            <p className="font-medium mb-2">Allocation Summary</p>
+            <div className="space-y-1">
+              {allocations.map(allocation => {
+                const wo = workOrders.find(w => w.id === allocation.work_order_id);
+                return (
+                  <div key={allocation.work_order_id} className="flex justify-between text-sm">
+                    <span>{wo?.work_order_number}</span>
+                    <span className="font-medium">${allocation.allocated_amount.toFixed(2)}</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {workOrders.length === 0 && (
-        <div className="text-center py-6 text-muted-foreground">
-          <p>No work orders available for allocation.</p>
-          <p className="text-sm">You need to be assigned to work orders to allocate receipts.</p>
-        </div>
+                );
+              })}
+              <Separator className="my-2" />
+              <div className="flex justify-between font-medium">
+                <span>Total Allocated</span>
+                <span className={cn(
+                  isFullyAllocated ? "text-green-600" : ""
+                )}>
+                  ${totalAllocated.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
