@@ -149,7 +149,7 @@ export function SmartReceiptFlow() {
   // Track component mount
   useEffect(() => {
     track('receipt_flow_started');
-  }, [track]);
+  }, []); // Empty deps - only track on initial mount
   const { showTour, hasCompletedTour, completeTour, skipTour, startTour } = useReceiptTour();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);

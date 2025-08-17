@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
+import { useMemo } from 'react';
 
 // Analytics event types for receipt flow
 export type AnalyticsEventType = 
@@ -259,8 +260,9 @@ class AnalyticsService {
 export const analytics = new AnalyticsService();
 
 // Helper hooks for React components
+
 export const useAnalytics = () => {
-  return {
+  return useMemo(() => ({
     track: analytics.track.bind(analytics),
     trackPerformance: analytics.trackPerformance.bind(analytics),
     trackError: analytics.trackError.bind(analytics),
@@ -269,5 +271,5 @@ export const useAnalytics = () => {
     trackFormInteraction: analytics.trackFormInteraction.bind(analytics),
     trackTourProgress: analytics.trackTourProgress.bind(analytics),
     generateSummaryReport: analytics.generateSummaryReport.bind(analytics)
-  };
+  }), []);
 };
