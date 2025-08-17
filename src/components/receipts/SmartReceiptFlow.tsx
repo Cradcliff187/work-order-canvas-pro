@@ -891,7 +891,7 @@ export function SmartReceiptFlow() {
       </AnimatePresence>
 
       {/* DEBUG MODE TOGGLE - Only show in development */}
-      {process.env.NODE_ENV === 'development' && (
+      {true && (
         <Card className="border-dashed border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
           <CardContent className="py-3">
             <div className="flex items-center justify-between">
