@@ -83,10 +83,11 @@ async function convertHeicToJpeg(file: File): Promise<File> {
 function getAdaptiveQuality(originalSize: number, targetSize: number = MAX_FILE_SIZE / 4): number {
   const sizeRatio = originalSize / targetSize;
   
-  if (sizeRatio <= 1) return JPEG_QUALITY;
-  if (sizeRatio <= 2) return 0.7;
-  if (sizeRatio <= 4) return 0.6;
-  return 0.5; // Aggressive compression for very large files
+  // Start with more aggressive compression to ensure size reduction
+  if (sizeRatio <= 1) return 0.7;  // Reduced from JPEG_QUALITY (0.85)
+  if (sizeRatio <= 2) return 0.6;  // Reduced from 0.7
+  if (sizeRatio <= 4) return 0.5;  // Reduced from 0.6
+  return 0.4; // More aggressive compression for very large files
 }
 
 /**

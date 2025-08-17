@@ -227,7 +227,7 @@ function findLargestAmountSpatial(words: Word[]): { amount: number; confidence: 
 function extractDateSpatial(words: Word[]): { date: string; confidence: number } {
   const datePatterns = [
     /\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/,
-    /(?i)(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{1,2},\s\d{4}/,
+    /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{1,2},\s\d{4}/i,
     /\d{1,2}[/-]\d{1,2}[/-]\d{2}/
   ];
   
