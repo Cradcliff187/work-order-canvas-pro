@@ -5,11 +5,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Enhanced interfaces for confidence tracking
+type ExtractionMethod = 'direct_ocr' | 'pattern_match' | 'fuzzy_match' | 'calculated' | 'inferred' | 'fallback';
+
+interface FieldConfidence {
+  score: number;
+  method: ExtractionMethod;
+  source?: string;
+  position?: number;
+  validated?: boolean;
+}
+
 interface LineItem {
   description: string;
   quantity?: number;
   unit_price?: number;
   total_price: number;
+  confidence?: number;
 }
 
 interface OCRResult {
@@ -27,7 +39,17 @@ interface OCRResult {
     total?: number;
     date?: number;
     lineItems?: number;
+    overall?: number;
   };
+  confidence_details?: {
+    vendor?: FieldConfidence;
+    total?: FieldConfidence;
+    date?: FieldConfidence;
+    lineItems?: FieldConfidence;
+    document_type?: FieldConfidence;
+  };
+  extraction_quality?: 'excellent' | 'good' | 'fair' | 'poor';
+  validation_passed?: boolean;
 }
 
 // Vendor normalization map
@@ -111,11 +133,84 @@ function calculateSimilarity(str1: string, str2: string): number {
   return maxLength === 0 ? 1 : (maxLength - distance) / maxLength;
 }
 
-function findVendor(text: string): { vendor: string; vendor_raw: string; confidence: number } {
+// Confidence calculation utilities
+function calculateBaseConfidence(method: ExtractionMethod, hasValidation: boolean = false): number {
+  const baseScores = {
+    'direct_ocr': 0.9,
+    'pattern_match': 0.8,
+    'fuzzy_match': 0.65,
+    'calculated': 0.7,
+    'inferred': 0.5,
+    'fallback': 0.3
+  };
+  
+  let score = baseScores[method];
+  if (hasValidation) score *= 1.15; // Boost for cross-validation
+  return Math.min(score, 0.95);
+}
+
+function calculateOverallConfidence(confidence: any): number {
+  // Weighted average based on field importance
+  const weights = {
+    vendor: 0.20,
+    total: 0.30,
+    date: 0.15,
+    lineItems: 0.25,
+    document_type: 0.10
+  };
+  
+  let weightedSum = 0;
+  let totalWeight = 0;
+  
+  if (confidence.vendor !== undefined) {
+    weightedSum += confidence.vendor * weights.vendor;
+    totalWeight += weights.vendor;
+  }
+  
+  if (confidence.total !== undefined) {
+    weightedSum += confidence.total * weights.total;
+    totalWeight += weights.total;
+  }
+  
+  if (confidence.date !== undefined) {
+    weightedSum += confidence.date * weights.date;
+    totalWeight += weights.date;
+  }
+  
+  if (confidence.lineItems !== undefined) {
+    weightedSum += confidence.lineItems * weights.lineItems;
+    totalWeight += weights.lineItems;
+  }
+  
+  // Document type confidence from document_confidence field
+  if (confidence.document_confidence !== undefined) {
+    weightedSum += confidence.document_confidence * weights.document_type;
+    totalWeight += weights.document_type;
+  }
+  
+  const overall = totalWeight > 0 ? weightedSum / totalWeight : 0;
+  
+  // Apply penalties for missing critical fields
+  let penalty = 0;
+  if (!confidence.vendor || confidence.vendor < 0.5) penalty += 0.1;
+  if (!confidence.total || confidence.total < 0.5) penalty += 0.15;
+  if (!confidence.date || confidence.date < 0.5) penalty += 0.05;
+  
+  return Math.max(overall - penalty, 0);
+}
+
+function getExtractionQuality(overallConfidence: number): 'excellent' | 'good' | 'fair' | 'poor' {
+  if (overallConfidence >= 0.8) return 'excellent';
+  if (overallConfidence >= 0.65) return 'good';
+  if (overallConfidence >= 0.45) return 'fair';
+  return 'poor';
+}
+
+function findVendor(text: string): { vendor: string; vendor_raw: string; confidence: number; method: ExtractionMethod; source: string; position: number } {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   const fullTextNormalized = normalizeVendorText(text);
   
-  let bestMatch = { vendor: '', vendor_raw: '', confidence: 0 };
+  let bestMatch = { vendor: '', vendor_raw: '', confidence: 0, method: 'direct_ocr' as ExtractionMethod, source: '', position: -1 };
   
   // Phase 1: Exact matching (existing logic)
   for (const [vendorName, aliases] of Object.entries(VENDOR_ALIASES)) {
@@ -130,7 +225,10 @@ function findVendor(text: string): { vendor: string; vendor_raw: string; confide
           bestMatch = { 
             vendor: vendorName, 
             vendor_raw: fullTextMatch[0], 
-            confidence 
+            confidence,
+            method: 'pattern_match' as ExtractionMethod,
+            source: fullTextMatch[0],
+            position: 0
           };
         }
       }
@@ -145,7 +243,10 @@ function findVendor(text: string): { vendor: string; vendor_raw: string; confide
             bestMatch = { 
               vendor: vendorName, 
               vendor_raw: lines[i], 
-              confidence 
+              confidence,
+              method: 'pattern_match' as ExtractionMethod,
+              source: lines[i],
+              position: i
             };
           }
         }
@@ -161,7 +262,10 @@ function findVendor(text: string): { vendor: string; vendor_raw: string; confide
       bestMatch = { 
         vendor: 'Home Depot', 
         vendor_raw: match[0], 
-        confidence: 0.9 
+        confidence: 0.9,
+        method: 'pattern_match' as ExtractionMethod,
+        source: match[0],
+        position: 0
       };
     }
   }
@@ -228,7 +332,10 @@ function findVendor(text: string): { vendor: string; vendor_raw: string; confide
       bestMatch = {
         vendor: bestFuzzyMatch.vendor,
         vendor_raw: bestFuzzyMatch.vendor_raw,
-        confidence: bestFuzzyMatch.confidence
+        confidence: bestFuzzyMatch.confidence,
+        method: 'fuzzy_match' as ExtractionMethod,
+        source: bestFuzzyMatch.vendor_raw,
+        position: 0
       };
     }
   }
@@ -584,6 +691,9 @@ function parseReceiptText(text: string): OCRResult {
     confidence: {}
   };
 
+  // Initialize confidence details
+  result.confidence_details = {};
+
   // VENDOR - Use new vendor normalization
   console.log('🔍 Searching for vendor using normalization...');
   const vendorMatch = findVendor(text);
@@ -592,12 +702,24 @@ function parseReceiptText(text: string): OCRResult {
     result.vendor = vendorMatch.vendor;
     result.vendor_raw = vendorMatch.vendor_raw;
     result.confidence!.vendor = vendorMatch.confidence;
+    result.confidence_details.vendor = {
+      score: vendorMatch.confidence,
+      method: vendorMatch.method,
+      source: vendorMatch.source,
+      position: vendorMatch.position,
+      validated: false
+    };
     console.log(`✅ Found vendor: ${vendorMatch.vendor} (raw: "${vendorMatch.vendor_raw}") with confidence ${vendorMatch.confidence}`);
   } else {
     console.log('❌ No vendor detected');
     result.vendor = '';
     result.vendor_raw = '';
     result.confidence!.vendor = 0;
+    result.confidence_details.vendor = {
+      score: 0,
+      method: 'fallback',
+      validated: false
+    };
   }
 
   // SUBTOTAL - Extract subtotal first
@@ -906,28 +1028,83 @@ function parseReceiptText(text: string): OCRResult {
     console.warn('⚠️ No line items found - check regex patterns');
   }
 
-  // Extract date
-  // Enhanced date parsing with comprehensive format support
+  // Extract date with comprehensive confidence details
   const parsedDate = parseReceiptDate(text);
   if (parsedDate.date) {
     result.date = parsedDate.date;
     result.confidence!.date = parsedDate.confidence;
+    result.confidence_details.date = {
+      score: parsedDate.confidence,
+      method: 'pattern_match' as ExtractionMethod,
+      source: parsedDate.format,
+      validated: true
+    };
     console.log(`📅 Found date: ${result.date} (confidence: ${parsedDate.confidence}, format: ${parsedDate.format})`);
   } else {
     result.date = new Date().toISOString().split('T')[0];
     result.confidence!.date = 0.3;
+    result.confidence_details.date = {
+      score: 0.3,
+      method: 'fallback' as ExtractionMethod,
+      source: 'current_date',
+      validated: false
+    };
     console.log('📅 No valid date found, using current date');
   }
 
-  // After all extraction, validate the math
-  if (result.subtotal && result.tax && result.total) {
+  // Add total confidence details based on extraction method
+  let totalMethod: ExtractionMethod = 'pattern_match';
+  let totalValidated = false;
+  
+  if (result.total && result.subtotal && result.tax) {
     const calculated = result.subtotal + result.tax;
-    if (Math.abs(calculated - result.total) > 0.01) {
+    totalValidated = Math.abs(calculated - result.total) <= 0.01;
+    
+    if (!totalValidated) {
       console.warn(`⚠️ Total mismatch! Extracted: ${result.total}, Calculated: ${calculated}`);
-      // Use the calculated value as it's more reliable
-      result.total = calculated;
+      result.total = calculated; // Use calculated value
+      totalMethod = 'calculated';
+      totalValidated = true;
+      result.confidence!.total = calculateBaseConfidence('calculated', true);
     }
   }
+  
+  result.confidence_details.total = {
+    score: result.confidence!.total || 0,
+    method: totalMethod,
+    source: totalValidated ? 'validated_calculation' : 'pattern_match',
+    validated: totalValidated
+  };
+
+  // Add line items confidence details
+  result.confidence_details.lineItems = {
+    score: result.confidence!.lineItems || 0,
+    method: 'pattern_match' as ExtractionMethod,
+    source: `${lineItems.length}_items_extracted`,
+    validated: structure.hasStructuredLayout
+  };
+
+  // Calculate overall confidence using enhanced system
+  const overallConfidence = calculateOverallConfidence({
+    vendor: result.confidence!.vendor,
+    total: result.confidence!.total,
+    date: result.confidence!.date,
+    lineItems: result.confidence!.lineItems,
+    document_confidence: result.document_confidence
+  });
+  
+  result.confidence!.overall = overallConfidence;
+  result.extraction_quality = getExtractionQuality(overallConfidence);
+  result.validation_passed = totalValidated && (result.confidence!.vendor || 0) > 0.5;
+
+  console.log(`🎯 Overall extraction confidence: ${overallConfidence.toFixed(3)} (${result.extraction_quality})`);
+  console.log(`📊 Confidence breakdown:`, {
+    vendor: result.confidence!.vendor,
+    total: result.confidence!.total,
+    date: result.confidence!.date,
+    lineItems: result.confidence!.lineItems,
+    overall: overallConfidence
+  });
 
   return result;
 }
