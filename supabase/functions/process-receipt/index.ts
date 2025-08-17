@@ -189,45 +189,55 @@ function parseReceiptText(text: string): OCRResult {
   // TOTAL - Look for the word TOTAL followed by amount (prioritize this)
   console.log('🔍 Searching for TOTAL amount...');
   
-  // Try exact TOTAL pattern first
-  const totalRegex = /TOTAL[\s:]*\$?([,\d]+\.?\d{0,2})/i;
+  // Try word-boundary TOTAL pattern first (prevents matching SUBTOTAL)
+  const totalRegex = /\bTOTAL\b[\s:]*\$?([,\d]+\.?\d{0,2})/i;
   const totalMatch = text.match(totalRegex);
   
   if (totalMatch) {
     result.total = parseFloat(totalMatch[1].replace(/,/g, ''));
     result.confidence!.total = 0.9;
-    console.log(`✅ Found TOTAL: ${result.total}`);
+    console.log(`✅ Found TOTAL: ${result.total} (from pattern: ${totalMatch[0]})`);
   } else {
-    // Fallback: Look for multi-line TOTAL pattern (TOTAL\n$791.17)
-    const multilineTotalRegex = /TOTAL\s*\n\s*\$?([,\d]+\.?\d{0,2})/i;
-    const multilineMatch = text.match(multilineTotalRegex);
+    // Try negative lookbehind to explicitly exclude SUBTOTAL
+    const negativeLookbehindRegex = /(?<!SUB)TOTAL\b[\s:]*\$?([,\d]+\.?\d{0,2})/i;
+    const negativeLookbehindMatch = text.match(negativeLookbehindRegex);
     
-    if (multilineMatch) {
-      result.total = parseFloat(multilineMatch[1].replace(/,/g, ''));
-      result.confidence!.total = 0.8;
-      console.log(`✅ Found multi-line TOTAL: ${result.total}`);
-    } else if (result.subtotal && result.tax) {
-      // Calculate total from subtotal + tax if available
-      result.total = result.subtotal + result.tax;
-      result.confidence!.total = 0.7;
-      console.log(`✅ Calculated TOTAL from subtotal + tax: ${result.total}`);
+    if (negativeLookbehindMatch) {
+      result.total = parseFloat(negativeLookbehindMatch[1].replace(/,/g, ''));
+      result.confidence!.total = 0.9;
+      console.log(`✅ Found TOTAL (negative lookbehind): ${result.total} (from pattern: ${negativeLookbehindMatch[0]})`);
     } else {
-      // Last resort: Find largest dollar amount (but be more selective)
-      console.log('⚠️ No TOTAL found, looking for largest amount...');
-      const amountRegex = /\$?([,\d]+\.\d{2})/g;
-      const amounts = [...text.matchAll(amountRegex)]
-        .map(m => {
-          const amount = parseFloat(m[1].replace(/,/g, ''));
-          console.log(`Found amount: ${amount} from "${m[0]}"`);
-          return amount;
-        })
-        .filter(a => a > 0 && a < 10000)
-        .sort((a, b) => b - a);
+      // Fallback: Look for multi-line TOTAL pattern (TOTAL\n$791.17)
+      const multilineTotalRegex = /\bTOTAL\b\s*\n\s*\$?([,\d]+\.?\d{0,2})/i;
+      const multilineMatch = text.match(multilineTotalRegex);
       
-      if (amounts.length > 0) {
-        result.total = amounts[0]; // Largest amount
-        result.confidence!.total = 0.5; // Lower confidence
-        console.log(`⚠️ Using largest amount as fallback: ${result.total}`);
+      if (multilineMatch) {
+        result.total = parseFloat(multilineMatch[1].replace(/,/g, ''));
+        result.confidence!.total = 0.8;
+        console.log(`✅ Found multi-line TOTAL: ${result.total} (from pattern: ${multilineMatch[0]})`);
+      } else if (result.subtotal && result.tax) {
+        // Calculate total from subtotal + tax if available
+        result.total = result.subtotal + result.tax;
+        result.confidence!.total = 0.7;
+        console.log(`✅ Calculated TOTAL from subtotal + tax: ${result.total}`);
+      } else {
+        // Last resort: Find largest dollar amount (but be more selective)
+        console.log('⚠️ No TOTAL found, looking for largest amount...');
+        const amountRegex = /\$?([,\d]+\.\d{2})/g;
+        const amounts = [...text.matchAll(amountRegex)]
+          .map(m => {
+            const amount = parseFloat(m[1].replace(/,/g, ''));
+            console.log(`Found amount: ${amount} from "${m[0]}"`);
+            return amount;
+          })
+          .filter(a => a > 0 && a < 10000)
+          .sort((a, b) => b - a);
+        
+        if (amounts.length > 0) {
+          result.total = amounts[0]; // Largest amount
+          result.confidence!.total = 0.5; // Lower confidence
+          console.log(`⚠️ Using largest amount as fallback: ${result.total}`);
+        }
       }
     }
   }
