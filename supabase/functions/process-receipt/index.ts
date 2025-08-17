@@ -71,6 +71,44 @@ async function saveToCache(imageUrl: string, result: any): Promise<void> {
   }
 }
 
+// Basic line item extraction
+function extractLineItems(text: string) {
+  const lines = text.split('\n');
+  const lineItems = [];
+  
+  // Look for lines that contain item descriptions and prices
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Skip empty lines and common headers/footers
+    if (!line || 
+        line.includes('RECEIPT') ||
+        line.includes('THANK YOU') ||
+        line.includes('TOTAL') ||
+        line.includes('TAX') ||
+        line.includes('SUBTOTAL') ||
+        line.includes('PAYMENT') ||
+        line.includes('CHANGE') ||
+        line.length < 5) {
+      continue;
+    }
+    
+    // Look for price patterns at the end of lines
+    const priceMatch = line.match(/\$?(\d+\.?\d{0,2})$/);
+    if (priceMatch && parseFloat(priceMatch[1]) > 0) {
+      const description = line.replace(/\$?(\d+\.?\d{0,2})$/, '').trim();
+      if (description.length > 2) {
+        lineItems.push({
+          description,
+          amount: parseFloat(priceMatch[1])
+        });
+      }
+    }
+  }
+  
+  return lineItems.slice(0, 20); // Limit to first 20 items
+}
+
 // Parse receipt
 function parseReceiptSimple(text: string) {
   console.log('🚀 Starting receipt parsing...');
@@ -89,23 +127,38 @@ function parseReceiptSimple(text: string) {
   // Extract date
   const date = parseReceiptDate(text);
   
+  // Extract line items
+  const lineItems = extractLineItems(text);
+  
+  // Extract subtotal and tax (basic patterns)
+  const subtotalMatch = text.match(/SUBTOTAL[\s:]*\$?(\d+\.?\d{0,2})/i);
+  const taxMatch = text.match(/TAX[\s:]*\$?(\d+\.?\d{0,2})/i);
+  
+  const subtotal = subtotalMatch ? parseFloat(subtotalMatch[1]) : undefined;
+  const tax = taxMatch ? parseFloat(taxMatch[1]) : undefined;
+  
   // Calculate confidence
   const vendorConfidence = vendor && vendor !== 'Unknown Vendor' ? 0.85 : 0.1;
   const totalConfidence = total ? 0.9 : 0.1;
   const dateConfidence = date ? 0.8 : 0.1;
-  const overallConfidence = (vendorConfidence + totalConfidence + dateConfidence) / 3;
+  const lineItemsConfidence = lineItems.length > 0 ? 0.7 : 0.1;
+  const overallConfidence = (vendorConfidence + totalConfidence + dateConfidence + lineItemsConfidence) / 4;
   
-  console.log(`✅ Results - Vendor: ${vendor}, Total: $${total}, Date: ${date}`);
+  console.log(`✅ Results - Vendor: ${vendor}, Total: $${total}, Date: ${date}, Line Items: ${lineItems.length}`);
   
   return {
     vendor,
     total,
     date,
+    lineItems,
+    subtotal,
+    tax,
     document_type: 'receipt',
     confidence: {
       vendor: vendorConfidence,
       total: totalConfidence,
       date: dateConfidence,
+      lineItems: lineItemsConfidence,
       overall: overallConfidence
     }
   };
