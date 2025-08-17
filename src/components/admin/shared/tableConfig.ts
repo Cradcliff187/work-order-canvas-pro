@@ -19,7 +19,7 @@ export const statusConfig = {
     },
     estimate_approved: {
       label: "Estimate Approved",
-      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     in_progress: {
       label: "In Progress",
@@ -49,7 +49,7 @@ export const statusConfig = {
     },
     fully_invoiced: {
       label: "Invoiced",
-      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     approved_for_payment: {
       label: "Approved",
