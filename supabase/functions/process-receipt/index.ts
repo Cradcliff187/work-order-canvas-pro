@@ -242,71 +242,87 @@ function parseReceiptText(text: string): OCRResult {
     }
   }
 
-  // EXTRACT LINE ITEMS
+  // EXTRACT LINE ITEMS - REWRITTEN FOR HOME DEPOT
   console.log('🔍 Extracting line items...');
   const lineItems: LineItem[] = [];
-  
-  // Pattern for line items with prices at the end
-  const priceAtEndPattern = /(.+?)\s+(\d+\.\d{2})$/;
-  const quantityPattern = /^(\d+)[@xX×]\s*(.+)/; // Matches "2@7.57" or "2x description"
-  
+
+  // Home Depot formats:
+  // "098168701990 2X8-8 PT 2P <A>"
+  // "2X8-8FT #2PRIME PT GC    207.57    15.14"
+  // "885196000214 6068 RD PD <A>    578.00"
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    // Skip headers, totals, payment info, etc.
-    if (line.match(/SUBTOTAL|TOTAL|TAX|CASHIER|CARD|BALANCE|POLICY|RETURN|^\d{4}\s+\d{5}|^[A-Z]{8,}$/i)) continue;
-    if (line.length < 5) continue; // Skip very short lines
+    // Skip non-item lines
+    if (!line || line.length < 10) continue;
+    if (line.match(/HOME|DEPOT|MARKET|DRIVE|CASHIER|SUBTOTAL|TAX|TOTAL|CARD|GIFT|BALANCE|RETURN|POLICY|DAYS|EXPIRES|\*{3,}/i)) continue;
     
-    // Check for price at end of line
-    const priceMatch = line.match(priceAtEndPattern);
+    // Find ALL numbers that look like prices at the end of the line
+    const pricePattern = /(\d+\.\d{2})(?:\s+(\d+\.\d{2}))?$/;
+    const priceMatch = line.match(pricePattern);
+    
     if (priceMatch) {
-      const description = priceMatch[1].trim();
-      const price = parseFloat(priceMatch[2]);
+      // Extract description (everything before the price)
+      const beforePrice = line.substring(0, line.indexOf(priceMatch[0])).trim();
       
-      // Skip if price is too small or description too short
-      if (price < 0.50 || description.length < 3) continue;
-      
-      // Check for quantity in description (like "2@7.57" from next line)
-      let quantity: number | undefined;
-      let cleanDescription = description;
-      
-      // Look at next line for quantity pattern
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1].trim();
-        const qtyMatch = nextLine.match(/^(\d+)@/);
-        if (qtyMatch) {
-          quantity = parseInt(qtyMatch[1]);
-        }
-      }
-      
-      // Check for quantity in current description
-      const descQtyMatch = description.match(quantityPattern);
-      if (descQtyMatch) {
-        quantity = parseInt(descQtyMatch[1]);
-        cleanDescription = descQtyMatch[2];
-      }
-      
-      // Clean up description
-      cleanDescription = cleanDescription
-        .replace(/^\d+\s+/, '') // Remove leading numbers
-        .replace(/\s+<[A-Z]>$/, '') // Remove trailing <A>
+      // Clean the description
+      let description = beforePrice
+        .replace(/^\d{10,12}\s*/, '') // Remove UPC (10-12 digits)
+        .replace(/^\d{4}\s+\d{5}\s*/, '') // Remove SKU patterns
+        .replace(/<[A-Z]>\s*$/, '') // Remove <A> type markers
+        .replace(/\s{2,}/g, ' ') // Collapse multiple spaces
         .trim();
       
-      if (cleanDescription.length > 2) {
+      // Skip if no meaningful description
+      if (!description || description.length < 3) continue;
+      
+      const totalPrice = parseFloat(priceMatch[1]);
+      
+      // If there's a second price, it might be unit price
+      if (priceMatch[2]) {
+        const unitPrice = parseFloat(priceMatch[2]);
+        const quantity = Math.round(totalPrice / unitPrice);
+        
         lineItems.push({
-          description: cleanDescription,
-          quantity: quantity,
-          unit_price: quantity ? price / quantity : undefined,
-          total_price: price
+          description: description,
+          quantity: quantity > 1 ? quantity : 1,
+          unit_price: unitPrice,
+          total_price: totalPrice
         });
-        console.log(`Found item: ${quantity ? quantity + 'x ' : ''}${cleanDescription} - $${price}`);
+        
+        console.log(`✅ Found item (with unit price): ${quantity}x ${description} @ $${unitPrice} = $${totalPrice}`);
+      } else {
+        // Single price - check next line for quantity indicator
+        let quantity = 1;
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1];
+          const qtyMatch = nextLine.match(/^(\d+)[@xX]\s*(\d+\.\d{2})/);
+          if (qtyMatch) {
+            quantity = parseInt(qtyMatch[1]);
+            i++; // Skip the quantity line
+          }
+        }
+        
+        lineItems.push({
+          description: description,
+          quantity: quantity > 1 ? quantity : undefined,
+          total_price: totalPrice
+        });
+        
+        console.log(`✅ Found item: ${description} - $${totalPrice}`);
       }
     }
   }
-  
+
+  // ALWAYS set lineItems, even if empty
   result.lineItems = lineItems;
-  result.confidence!.lineItems = lineItems.length > 0 ? 0.7 : 0;
-  console.log(`✅ Extracted ${lineItems.length} line items`);
+  result.confidence!.lineItems = lineItems.length > 0 ? 0.7 : 0.0;
+
+  console.log(`✅ Total items extracted: ${lineItems.length}`);
+  if (lineItems.length === 0) {
+    console.warn('⚠️ No line items found - check regex patterns');
+  }
 
   // Extract date
   const datePatterns = [
