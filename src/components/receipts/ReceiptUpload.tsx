@@ -30,7 +30,9 @@ import {
   X,
   Sparkles,
   Building2,
-  Copy
+  Copy,
+  Plus,
+  Calculator
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -809,6 +811,86 @@ export function ReceiptUpload() {
                           </CardContent>
                         </Card>
                       </details>
+                    )}
+
+                    {/* Manual Corrections */}
+                    {ocrData && (
+                      <Card className="mt-4">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center justify-between">
+                            <span>Quick Corrections</span>
+                            <Badge variant="outline" className="text-xs">
+                              Manual Override
+                            </Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-3">
+                          {/* Add Missing Item */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              const item = prompt('Enter item description:');
+                              const price = prompt('Enter price:');
+                              if (item && price) {
+                                setOcrData(prev => ({
+                                  ...prev,
+                                  lineItems: [...(prev?.lineItems || []), {
+                                    description: item,
+                                    total_price: parseFloat(price)
+                                  }]
+                                }));
+                              }
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Missing Item
+                          </Button>
+                          
+                          {/* Recalculate Total */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              if (ocrData?.subtotal && ocrData?.tax) {
+                                const correct = ocrData.subtotal + ocrData.tax;
+                                form.setValue('amount', correct, { shouldValidate: true });
+                                setOcrData(prev => ({ ...prev, total: correct }));
+                                toast({
+                                  title: 'Total Recalculated',
+                                  description: `New total: $${correct.toFixed(2)}`,
+                                });
+                              }
+                            }}
+                          >
+                            <Calculator className="h-4 w-4 mr-2" />
+                            Recalculate Total
+                          </Button>
+                          
+                          {/* Clear and Manual Entry */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-muted-foreground"
+                            onClick={() => {
+                              setOcrData(null);
+                              form.reset();
+                              toast({
+                                title: 'Cleared OCR Data',
+                                description: 'Enter receipt details manually',
+                              });
+                            }}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Clear OCR & Enter Manually
+                          </Button>
+                        </CardContent>
+                      </Card>
                     )}
 
                     <FormField
