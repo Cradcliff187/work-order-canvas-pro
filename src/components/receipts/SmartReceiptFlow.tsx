@@ -98,6 +98,7 @@ const QUICK_AMOUNTS = [20, 50, 100, 200, 500];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export function SmartReceiptFlow() {
+  console.log('SmartReceiptFlow component mounted');
   // State management
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
