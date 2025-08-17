@@ -52,7 +52,7 @@ export const statusConfig = {
       className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     approved_for_payment: {
-      label: "Approved",
+      label: "Ready to Bill",
       className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
     paid: {
