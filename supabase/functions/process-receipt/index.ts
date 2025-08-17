@@ -343,5 +343,15 @@ function parseReceiptText(text: string): OCRResult {
     result.confidence!.date = 0.3;
   }
 
+  // After all extraction, validate the math
+  if (result.subtotal && result.tax && result.total) {
+    const calculated = result.subtotal + result.tax;
+    if (Math.abs(calculated - result.total) > 0.01) {
+      console.warn(`⚠️ Total mismatch! Extracted: ${result.total}, Calculated: ${calculated}`);
+      // Use the calculated value as it's more reliable
+      result.total = calculated;
+    }
+  }
+
   return result;
 }
