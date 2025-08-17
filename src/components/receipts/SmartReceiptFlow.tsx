@@ -131,7 +131,6 @@ const QUICK_AMOUNTS = [20, 50, 100, 200, 500];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export function SmartReceiptFlow() {
-  console.log('SmartReceiptFlow component mounted');
   
   // Centralized state management with useReceiptFlow hook
   const { state, actions, computed, persistence } = useReceiptFlow();
@@ -152,9 +151,18 @@ export function SmartReceiptFlow() {
   useEffect(() => {
     track('receipt_flow_started');
     
-    // Cleanup function to stop all MediaStream tracks on unmount
+    // Safety timeout to clear processing locks (prevent permanent locks)
+    const lockSafetyTimeout = setTimeout(() => {
+      if (computed.isProcessingLocked) {
+        console.warn('Auto-clearing stuck OCR processing lock');
+        actions.cancelOCRProcessing();
+      }
+    }, 45000); // 45 seconds safety timeout
+    
+    // Cleanup function
     return () => {
       actions.cleanupCameraStream();
+      clearTimeout(lockSafetyTimeout);
     };
   }, []); // Empty deps - only track on initial mount and cleanup on unmount
   const { showTour, hasCompletedTour, completeTour, skipTour, startTour } = useReceiptTour();
@@ -403,17 +411,6 @@ export function SmartReceiptFlow() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Prevent file selection if processing is locked
-    if (isProcessingLocked) {
-      toast({
-        title: 'Processing in Progress',
-        description: 'Please wait for current processing to complete or cancel it',
-        variant: 'destructive',
-      });
-      // Reset the input
-      e.target.value = '';
-      return;
-    }
 
     // File validation
     if (!isValidFileSize(file, MAX_FILE_SIZE)) {
@@ -796,7 +793,7 @@ export function SmartReceiptFlow() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!imagePreview && !computed.hasReceiptFile ? (
+          {(!imagePreview && !computed.hasReceiptFile) ? (
             <div className="space-y-4">
               {/* Mobile-optimized capture buttons */}
               {isMobile ? (

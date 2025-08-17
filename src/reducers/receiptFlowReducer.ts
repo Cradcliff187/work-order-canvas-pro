@@ -183,11 +183,6 @@ export function receiptFlowReducer(
         };
 
       case 'SET_FILE':
-        // Reject file selection if OCR is locked (processing)
-        if (state.ocr.isProcessingLocked) {
-          console.warn('Rejected file selection - OCR processing is locked');
-          return state;
-        }
         return {
           ...state,
           stage: 'processing' as FlowStage,
