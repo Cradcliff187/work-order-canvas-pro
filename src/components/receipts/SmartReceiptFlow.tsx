@@ -173,6 +173,7 @@ export function SmartReceiptFlow() {
   const receiptFile = state.receipt.file;
   const imagePreview = state.receipt.imagePreview;
   const isProcessingOCR = computed.isOCRProcessing;
+  const isProcessingLocked = computed.isProcessingLocked;
   const ocrData = state.ocr.data;
   const ocrConfidence = state.ocr.confidence;
   const showSuccess = state.ui.showSuccess;
@@ -261,11 +262,36 @@ export function SmartReceiptFlow() {
   
   const isDirty = form.formState.isDirty || computed.hasReceiptFile;
 
-  // Memoized OCR processing function with progress tracking
+  // AbortController for cancelling OCR
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Memoized OCR processing function with progress tracking and timeout
   const processWithOCR = useCallback(async (file: File) => {
+    // Check if already processing
+    if (isProcessingLocked) {
+      console.warn('OCR processing rejected - already locked');
+      toast({
+        title: 'Processing in Progress',
+        description: 'Please wait for current processing to complete',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     actions.startOCRProcessing();
     const startTime = Date.now();
     trackOCRPerformance('started', { fileName: file.name, fileSize: file.size });
+
+    // Set up timeout (30 seconds)
+    const timeoutId = setTimeout(() => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort('Processing timeout');
+      }
+    }, 30000);
     
     try {
       // Stage 1: Upload (0-30%)
@@ -332,6 +358,15 @@ export function SmartReceiptFlow() {
         .remove([uploadData.path]);
 
     } catch (error: any) {
+      // Clear timeout on completion
+      clearTimeout(timeoutId);
+      
+      // Handle cancellation gracefully
+      if (signal.aborted) {
+        console.log('OCR processing was cancelled');
+        actions.cancelOCRProcessing();
+        return; // Don't show error toast for user-initiated cancellation
+      }
       console.error('OCR processing error:', error);
       const processingTime = Date.now() - startTime;
       
@@ -355,12 +390,28 @@ export function SmartReceiptFlow() {
       actions.setOCRError(errorMessage);
       
       // Don't show toast - let the FloatingProgress handle error display
+    } finally {
+      // Always clear timeout and abort controller
+      clearTimeout(timeoutId);
+      abortControllerRef.current = null;
     }
-  }, [actions, form, toast, trackOCRPerformance, trackError]);
+  }, [actions, form, toast, trackOCRPerformance, trackError, isProcessingLocked]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Prevent file selection if processing is locked
+    if (isProcessingLocked) {
+      toast({
+        title: 'Processing in Progress',
+        description: 'Please wait for current processing to complete or cancel it',
+        variant: 'destructive',
+      });
+      // Reset the input
+      e.target.value = '';
+      return;
+    }
 
     // File validation
     if (!isValidFileSize(file, MAX_FILE_SIZE)) {
@@ -443,9 +494,19 @@ export function SmartReceiptFlow() {
       actions.setFile(file);
       await processWithOCR(file);
     }
-  }, [toast, actions, processWithOCR]);
+  }, [toast, actions, processWithOCR, isProcessingLocked]);
 
   const handleCameraCapture = useCallback(async () => {
+    // Prevent camera capture if processing is locked
+    if (isProcessingLocked) {
+      toast({
+        title: 'Processing in Progress',
+        description: 'Please wait for current processing to complete or cancel it',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const permission = await checkCameraPermission();
       if (!permission.granted) {
@@ -477,7 +538,7 @@ export function SmartReceiptFlow() {
         variant: "destructive"
       });
     }
-  }, [checkCameraPermission, requestCameraPermission, toast, onError, actions]);
+  }, [checkCameraPermission, requestCameraPermission, toast, onError, actions, isProcessingLocked]);
 
   const captureFromCamera = useCallback(async () => {
     try {
@@ -565,6 +626,18 @@ export function SmartReceiptFlow() {
       processWithOCR(receiptFile);
     }
   }, [receiptFile, actions, processWithOCR]);
+
+  // Cancel OCR processing
+  const cancelOCR = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort('User cancelled');
+    }
+    actions.cancelOCRProcessing();
+    toast({
+      title: 'Processing Cancelled',
+      description: 'OCR processing has been cancelled',
+    });
+  }, [actions, toast]);
 
   // Memoized form submission
   const onSubmit = useCallback(async (data: SmartReceiptFormData) => {
@@ -729,6 +802,7 @@ export function SmartReceiptFlow() {
                     size="lg"
                     className="h-20 flex-col min-h-[80px]"
                     onClick={cameraSupported ? handleCameraCapture : () => cameraInputRef.current?.click()}
+                    disabled={isProcessingLocked}
                   >
                     <Camera className="h-6 w-6 mb-2" />
                     <span className="text-sm">
@@ -1287,6 +1361,8 @@ export function SmartReceiptFlow() {
         }
         onRetry={retryOCR}
         onManualEntry={startManualEntry}
+        onCancel={cancelOCR}
+        showCancel={isProcessingLocked && progressStage !== 'complete' && progressStage !== 'error'}
       />
 
       {/* Floating Action Bar - Only show in review or manual-entry stages */}

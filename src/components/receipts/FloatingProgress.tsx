@@ -1,7 +1,7 @@
 import React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, AlertCircle, Upload, FileText, Sparkles, RefreshCw, Edit } from "lucide-react";
+import { CheckCircle, AlertCircle, Upload, FileText, Sparkles, RefreshCw, Edit, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FloatingProgressProps {
@@ -11,6 +11,8 @@ interface FloatingProgressProps {
   message?: string;
   onRetry?: () => void;
   onManualEntry?: () => void;
+  onCancel?: () => void;
+  showCancel?: boolean;
   className?: string;
 }
 
@@ -54,6 +56,8 @@ export function FloatingProgress({
   message,
   onRetry,
   onManualEntry,
+  onCancel,
+  showCancel = false,
   className
 }: FloatingProgressProps) {
   if (!isVisible) {
@@ -96,29 +100,43 @@ export function FloatingProgress({
             </p>
           </div>
 
-          {/* Error recovery actions */}
-          {stage === 'error' && (onRetry || onManualEntry) && (
-            <div className="flex gap-1">
-              {onRetry && (
-                <button
-                  onClick={onRetry}
-                  className="p-2 hover:bg-muted rounded-md transition-colors text-xs"
-                  title="Try OCR again"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                </button>
-              )}
-              {onManualEntry && (
-                <button
-                  onClick={onManualEntry}
-                  className="p-2 hover:bg-muted rounded-md transition-colors text-xs"
-                  title="Enter details manually"
-                >
-                  <Edit className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          )}
+          {/* Action buttons */}
+          <div className="flex gap-1">
+            {/* Cancel button for active processing */}
+            {showCancel && onCancel && stage !== 'complete' && stage !== 'error' && (
+              <button
+                onClick={onCancel}
+                className="p-2 hover:bg-destructive/20 text-destructive rounded-md transition-colors text-xs"
+                title="Cancel processing"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            
+            {/* Error recovery actions */}
+            {stage === 'error' && (onRetry || onManualEntry) && (
+              <>
+                {onRetry && (
+                  <button
+                    onClick={onRetry}
+                    className="p-2 hover:bg-muted rounded-md transition-colors text-xs"
+                    title="Try OCR again"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                  </button>
+                )}
+                {onManualEntry && (
+                  <button
+                    onClick={onManualEntry}
+                    className="p-2 hover:bg-muted rounded-md transition-colors text-xs"
+                    title="Enter details manually"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Progress bar (not shown for complete/error states) */}
@@ -138,6 +156,19 @@ export function FloatingProgress({
                 Extract
               </span>
             </div>
+            
+            {/* Cancel button for mobile */}
+            {showCancel && onCancel && (
+              <div className="flex justify-center pt-2">
+                <button
+                  onClick={onCancel}
+                  className="px-3 py-1 text-xs text-destructive hover:bg-destructive/20 rounded-md transition-colors flex items-center gap-1"
+                >
+                  <X className="h-3 w-3" />
+                  Cancel Processing
+                </button>
+              </div>
+            )}
           </div>
         )}
 

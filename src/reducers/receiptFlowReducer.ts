@@ -43,6 +43,7 @@ export interface ReceiptFlowState {
   // OCR processing state
   ocr: {
     isProcessing: boolean;
+    isProcessingLocked: boolean;
     data: OCRResult | null;
     confidence: Record<string, number>;
     error: string | null;
@@ -96,6 +97,9 @@ export type ReceiptFlowAction =
   | { type: 'SET_FILE'; payload: { file: File; preview?: string; filename?: string; fileSize?: number } }
   | { type: 'REMOVE_FILE' }
   | { type: 'START_OCR_PROCESSING' }
+  | { type: 'LOCK_OCR_PROCESSING' }
+  | { type: 'UNLOCK_OCR_PROCESSING' }
+  | { type: 'CANCEL_OCR_PROCESSING' }
   | { type: 'UPDATE_OCR_PROGRESS'; payload: { stage: ProgressStage; value: number; message?: string } }
   | { type: 'SET_OCR_SUCCESS'; payload: { data: OCRResult; confidence: Record<string, number> } }
   | { type: 'SET_OCR_ERROR'; payload: { error: string } }
@@ -121,6 +125,7 @@ export const initialReceiptFlowState: ReceiptFlowState = {
   },
   ocr: {
     isProcessing: false,
+    isProcessingLocked: false,
     data: null,
     confidence: {},
     error: null,
@@ -178,6 +183,11 @@ export function receiptFlowReducer(
         };
 
       case 'SET_FILE':
+        // Reject file selection if OCR is locked (processing)
+        if (state.ocr.isProcessingLocked) {
+          console.warn('Rejected file selection - OCR processing is locked');
+          return state;
+        }
         return {
           ...state,
           stage: 'processing' as FlowStage,
@@ -208,6 +218,7 @@ export function receiptFlowReducer(
           },
           ocr: {
             isProcessing: false,
+            isProcessingLocked: false,
             data: null,
             confidence: {},
             error: null,
@@ -231,12 +242,48 @@ export function receiptFlowReducer(
           ocr: {
             ...state.ocr,
             isProcessing: true,
+            isProcessingLocked: true,
             error: null,
           },
           progress: {
             stage: 'processing',
             value: 10,
             message: 'Starting OCR processing...',
+          },
+        };
+
+      case 'LOCK_OCR_PROCESSING':
+        return {
+          ...state,
+          ocr: {
+            ...state.ocr,
+            isProcessingLocked: true,
+          },
+        };
+
+      case 'UNLOCK_OCR_PROCESSING':
+        return {
+          ...state,
+          ocr: {
+            ...state.ocr,
+            isProcessingLocked: false,
+          },
+        };
+
+      case 'CANCEL_OCR_PROCESSING':
+        return {
+          ...state,
+          stage: 'capture' as FlowStage,
+          ocr: {
+            ...state.ocr,
+            isProcessing: false,
+            isProcessingLocked: false,
+            error: null,
+          },
+          progress: {
+            stage: 'uploading',
+            value: 0,
+            message: 'OCR processing cancelled',
           },
         };
 
@@ -257,6 +304,7 @@ export function receiptFlowReducer(
           ocr: {
             ...state.ocr,
             isProcessing: false,
+            isProcessingLocked: false,
             data: action.payload.data,
             confidence: action.payload.confidence,
             error: null,
@@ -275,6 +323,7 @@ export function receiptFlowReducer(
           ocr: {
             ...state.ocr,
             isProcessing: false,
+            isProcessingLocked: false,
             error: action.payload.error,
             retryCount: state.ocr.retryCount + 1,
           },
@@ -292,6 +341,7 @@ export function receiptFlowReducer(
           ocr: {
             ...state.ocr,
             isProcessing: true,
+            isProcessingLocked: true,
             error: null,
           },
           progress: {
@@ -308,6 +358,7 @@ export function receiptFlowReducer(
           ocr: {
             ...state.ocr,
             isProcessing: false,
+            isProcessingLocked: false,
             error: null,
           },
           progress: {

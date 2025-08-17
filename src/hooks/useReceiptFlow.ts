@@ -180,6 +180,18 @@ export function useReceiptFlow() {
       dispatch({ type: 'CLEANUP_CAMERA_STREAM' });
     },
 
+    lockOCRProcessing: () => {
+      dispatch({ type: 'LOCK_OCR_PROCESSING' });
+    },
+
+    unlockOCRProcessing: () => {
+      dispatch({ type: 'UNLOCK_OCR_PROCESSING' });
+    },
+
+    cancelOCRProcessing: () => {
+      dispatch({ type: 'CANCEL_OCR_PROCESSING' });
+    },
+
     resetFlow: () => {
       dispatch({ type: 'RESET_FLOW' });
       clearStateFromStorage();
@@ -213,6 +225,7 @@ export function useReceiptFlow() {
     // OCR state helpers
     hasOCRData: state.ocr.data !== null,
     isOCRProcessing: state.ocr.isProcessing,
+    isProcessingLocked: state.ocr.isProcessingLocked,
     ocrConfidenceKeys: Object.keys(state.ocr.confidence),
     hasLowConfidenceFields: Object.values(state.ocr.confidence).some(conf => conf < 0.7),
 
