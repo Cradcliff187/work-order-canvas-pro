@@ -52,7 +52,7 @@ export interface WorkOrderPipelineItem {
   age_days: number;
   is_overdue: boolean;
   operational_status: 'on_track' | 'at_risk' | 'overdue' | 'blocked' | 'completed';
-  financial_status: 'not_billed' | 'invoice_received' | 'paid' | 'invoice_approved' | 'invoice_rejected';
+  financial_status: 'not_billed' | 'invoice_received' | 'paid' | 'fully_billed';
 }
 
 export function useWorkOrderLifecycle() {
@@ -217,10 +217,10 @@ export function useWorkOrderLifecycle() {
       const calculateFinancialStatus = (
         invoiceStatus: string | null,
         partnerBillStatus: string | null
-      ): 'not_billed' | 'invoice_received' | 'paid' | 'invoice_approved' | 'invoice_rejected' => {
-        // Check invoice status specifically
+      ): 'not_billed' | 'invoice_received' | 'paid' | 'fully_billed' => {
+        // Check invoice status specifically - align with computedFinancialStatus config
         if (invoiceStatus === 'paid' || partnerBillStatus === 'paid') return 'paid';
-        if (invoiceStatus === 'approved') return 'invoice_approved';
+        if (invoiceStatus === 'approved') return 'fully_billed'; // Changed from 'invoice_approved'
         if (invoiceStatus === 'submitted') return 'invoice_received';
         if (partnerBillStatus) return 'invoice_received';
         return 'not_billed';

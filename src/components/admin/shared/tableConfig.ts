@@ -43,29 +43,21 @@ export const statusConfig = {
       label: "Pending",
       className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
-    partially_invoiced: {
+    submitted: {
       label: "Invoice Received",
       className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
-    fully_invoiced: {
-      label: "Invoiced",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
-    },
-    approved_for_payment: {
-      label: "Ready to Bill",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
+    approved: {
+      label: "Invoice Approved",
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     paid: {
       label: "Invoice Paid",
       className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
     },
-    dispute: {
-      label: "Dispute",
+    rejected: {
+      label: "Invoice Rejected",
       className: "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
-    },
-    write_off: {
-      label: "Write Off",
-      className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     }
   },
   operationalStatus: {
@@ -127,20 +119,15 @@ export const statusConfig = {
       description: "No invoice has been received",
       className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
     },
-    partially_billed: {
-      label: "Invoice Received",
-      description: "Invoice received but not yet paid",
-      className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
-    },
     invoice_received: {
       label: "Invoice Received", 
       description: "Invoice received but not yet paid",
       className: "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
     },
     fully_billed: {
-      label: "Invoice Paid",
-      description: "All invoices have been paid",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
+      label: "Ready to Bill",
+      description: "Invoice approved and ready for partner billing",
+      className: "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
     },
     paid: {
       label: "Invoice Paid",
