@@ -46,7 +46,7 @@ export function ViewModeSwitcher({
           onValueChange(newValue as ViewMode);
         }
       }}
-      className={cn("bg-muted rounded-lg p-1", className)}
+      className={cn("rounded-lg p-1", className)}
     >
       {allowedModes.map((mode) => {
         const Icon = viewModeIcons[mode];
