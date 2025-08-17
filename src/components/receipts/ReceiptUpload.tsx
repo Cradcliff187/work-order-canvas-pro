@@ -728,6 +728,70 @@ export function ReceiptUpload() {
                       </Card>
                     )}
 
+                    {/* Debug Panel - Only in development */}
+                    {process.env.NODE_ENV === 'development' && ocrData && (
+                      <details className="mt-4">
+                        <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                          🔍 OCR Debug Info
+                        </summary>
+                        <Card className="mt-2">
+                          <CardContent className="p-4">
+                            <div className="space-y-2 text-xs font-mono">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <span className="font-semibold">Vendor:</span> {ocrData.vendor || 'Not found'}
+                                </div>
+                                <div>
+                                  <span className="font-semibold">Confidence:</span> {ocrData.confidence?.vendor ? `${Math.round(ocrData.confidence.vendor * 100)}%` : 'N/A'}
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <span className="font-semibold">Subtotal:</span> ${ocrData.subtotal?.toFixed(2) || '0.00'}
+                                </div>
+                                <div>
+                                  <span className="font-semibold">Tax:</span> ${ocrData.tax?.toFixed(2) || '0.00'}
+                                </div>
+                                <div>
+                                  <span className="font-semibold">Total:</span> ${ocrData.total?.toFixed(2) || '0.00'}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <span className="font-semibold">Line Items:</span> {ocrData.lineItems?.length || 0} found
+                              </div>
+                              
+                              {ocrData.lineItems && ocrData.lineItems.length > 0 && (
+                                <div className="mt-2 p-2 bg-muted rounded">
+                                  <div className="font-semibold mb-1">Extracted Items:</div>
+                                  {ocrData.lineItems.map((item: any, idx: number) => (
+                                    <div key={idx} className="text-xs">
+                                      {item.quantity && `${item.quantity}x `}{item.description}: ${item.total_price}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              <div className="mt-2">
+                                <span className="font-semibold">Math Check:</span>
+                                {ocrData.subtotal && ocrData.tax && (
+                                  <span className={
+                                    Math.abs((ocrData.subtotal + ocrData.tax) - ocrData.total) < 0.01 
+                                      ? "text-green-600" 
+                                      : "text-red-600"
+                                  }>
+                                    {' '}${ocrData.subtotal} + ${ocrData.tax} = ${(ocrData.subtotal + ocrData.tax).toFixed(2)}
+                                    {Math.abs((ocrData.subtotal + ocrData.tax) - ocrData.total) > 0.01 && ' ⚠️ MISMATCH!'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </details>
+                    )}
+
                     <FormField
                       control={form.control}
                       name="notes"
