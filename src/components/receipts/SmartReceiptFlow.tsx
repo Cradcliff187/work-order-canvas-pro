@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,6 +20,8 @@ import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/ut
 import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
+import { FloatingActionBar } from "./FloatingActionBar";
+import { FloatingProgress } from "./FloatingProgress";
 import { 
   Loader2, 
   Upload, 
@@ -104,6 +106,12 @@ export function SmartReceiptFlow() {
   const [ocrConfidence, setOcrConfidence] = useState<Record<string, number>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   
+  // Floating components state
+  const [progressStage, setProgressStage] = useState<'uploading' | 'processing' | 'extracting' | 'complete' | 'error'>('uploading');
+  const [progressValue, setProgressValue] = useState(0);
+  const [showDraftSaved, setShowDraftSaved] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  
   // Hooks
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -125,12 +133,21 @@ export function SmartReceiptFlow() {
     },
   });
 
-  // OCR processing function (preserves exact implementation)
+  // Watch form values for floating action bar
+  const watchedValues = form.watch();
+  const isFormValid = form.formState.isValid && watchedValues.vendor_name && watchedValues.amount > 0 && watchedValues.receipt_date;
+  const isDirty = form.formState.isDirty || !!receiptFile;
+
+  // OCR processing function with progress tracking
   const processWithOCR = async (file: File) => {
     setIsProcessingOCR(true);
+    setOcrError(null);
+    setProgressStage('uploading');
+    setProgressValue(0);
     
     try {
-      // Upload image to Supabase Storage first
+      // Stage 1: Upload (0-30%)
+      setProgressValue(10);
       const timestamp = Date.now();
       const fileName = `temp_ocr_${timestamp}_${file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -138,20 +155,30 @@ export function SmartReceiptFlow() {
         .upload(`receipts/temp/${fileName}`, file);
 
       if (uploadError) throw uploadError;
+      setProgressValue(30);
 
-      // Get public URL
+      // Stage 2: Processing (30-70%)
+      setProgressStage('processing');
+      setProgressValue(40);
+      
       const { data: { publicUrl } } = supabase.storage
         .from('work-order-attachments')
         .getPublicUrl(uploadData.path);
 
-      // Call Edge Function for OCR
+      setProgressValue(60);
+
+      // Stage 3: OCR Extraction (70-90%)
+      setProgressStage('extracting');
+      setProgressValue(70);
+      
       const { data: ocrResult, error: ocrError } = await supabase.functions.invoke('process-receipt', {
         body: { imageUrl: publicUrl }
       });
 
       if (ocrError) throw ocrError;
+      setProgressValue(90);
 
-      // Auto-fill form with OCR results
+      // Stage 4: Complete (90-100%)
       if (ocrResult) {
         if (ocrResult.vendor) form.setValue('vendor_name', ocrResult.vendor);
         if (ocrResult.total) form.setValue('amount', ocrResult.total);
@@ -160,10 +187,20 @@ export function SmartReceiptFlow() {
         setOcrData(ocrResult);
         setOcrConfidence(ocrResult.confidence || {});
         
+        setProgressStage('complete');
+        setProgressValue(100);
+        
+        const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
+        
         toast({
           title: '✨ Receipt Scanned!',
-          description: `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`,
+          description: successMessage,
         });
+
+        // Hide progress after delay
+        setTimeout(() => {
+          setIsProcessingOCR(false);
+        }, 2000);
       }
 
       // Clean up temp file
@@ -173,13 +210,19 @@ export function SmartReceiptFlow() {
 
     } catch (error: any) {
       console.error('OCR processing error:', error);
+      setProgressStage('error');
+      setOcrError(error.message || 'Could not read receipt');
+      
       toast({
         title: 'OCR Failed',
         description: 'Could not read receipt. Please enter details manually.',
         variant: 'destructive',
       });
-    } finally {
-      setIsProcessingOCR(false);
+      
+      // Hide error progress after delay
+      setTimeout(() => {
+        setIsProcessingOCR(false);
+      }, 3000);
     }
   };
 
@@ -231,8 +274,36 @@ export function SmartReceiptFlow() {
     setImagePreview(null);
     setOcrData(null);
     setOcrConfidence({});
+    setOcrError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  // Draft save functionality
+  const saveDraft = () => {
+    const draftData = {
+      ...form.getValues(),
+      receiptFile: receiptFile?.name,
+      savedAt: new Date().toISOString(),
+    };
+    
+    localStorage.setItem('receipt-draft', JSON.stringify(draftData));
+    setShowDraftSaved(true);
+    
+    toast({
+      title: 'Draft Saved',
+      description: 'Your receipt draft has been saved locally.',
+    });
+    
+    // Hide draft saved indicator after 3 seconds
+    setTimeout(() => setShowDraftSaved(false), 3000);
+  };
+
+  // OCR retry function
+  const retryOCR = () => {
+    if (receiptFile) {
+      processWithOCR(receiptFile);
+    }
   };
 
   // Form submission
@@ -724,6 +795,31 @@ export function SmartReceiptFlow() {
           </form>
         </Form>
       )}
+
+      {/* Floating Progress Indicator */}
+      <FloatingProgress
+        isVisible={isProcessingOCR}
+        stage={progressStage}
+        progress={progressValue}
+        message={progressStage === 'complete' && ocrData ? 
+          `Found ${ocrData.vendor || 'vendor'} - $${ocrData.total || 0}` : 
+          ocrError || undefined
+        }
+        onRetry={retryOCR}
+      />
+
+      {/* Floating Action Bar */}
+      <FloatingActionBar
+        vendorName={watchedValues.vendor_name}
+        amount={watchedValues.amount}
+        workOrderAssigned={!!watchedValues.work_order_id}
+        isFormValid={!!isFormValid}
+        isDirty={isDirty}
+        isSubmitting={isUploading}
+        onSaveDraft={saveDraft}
+        onSubmit={form.handleSubmit(onSubmit)}
+        showDraftSaved={showDraftSaved}
+      />
 
     </div>
   );
