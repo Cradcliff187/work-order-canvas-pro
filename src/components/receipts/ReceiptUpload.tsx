@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkOrderSelector } from "./WorkOrderSelector";
+import { UniversalUploadSheet } from "@/components/upload/UniversalUploadSheet";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,7 @@ import {
   DollarSign, 
   FileText, 
   Calendar,
-  Edit3,
-  Camera 
+  Edit3
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -58,8 +58,6 @@ export function ReceiptUpload() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
   
   const { availableWorkOrders, createReceipt, isUploading } = useReceipts();
@@ -145,74 +143,6 @@ export function ReceiptUpload() {
     setActiveTab("details");
   };
 
-  // Image compression utility
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1200;
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = (height * MAX_WIDTH) / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width = (width * MAX_HEIGHT) / height;
-            height = MAX_HEIGHT;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          } else {
-            resolve(file);
-          }
-        }, 'image/jpeg', 0.8);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const handleCameraCapture = () => {
-    cameraInputRef.current?.click();
-  };
-
-  const handleFileInputCapture = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      try {
-        const compressedFile = await compressImage(file);
-        setReceiptFile(compressedFile);
-      } catch (error) {
-        console.error("Image compression error:", error);
-        setReceiptFile(file); // Fallback to original file
-      }
-    }
-  };
-
   // Touch gesture handling for tab navigation
   const minSwipeDistance = 50;
 
@@ -245,9 +175,23 @@ export function ReceiptUpload() {
 
   return (
     <div className={cn("max-w-4xl mx-auto space-y-6", isMobile && "pb-20")}>
+      {/* Screen Reader Announcements */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {availableWorkOrders.isLoading && "Loading work orders..."}
+        {isUploading && "Uploading receipt..."}
+        {showSuccess && "Receipt uploaded successfully!"}
+      </div>
+
+      {/* Error Announcements */}
+      <div role="alert" aria-live="assertive" className="sr-only">
+        {form.formState.errors.vendor_name?.message}
+        {form.formState.errors.amount?.message}
+        {form.formState.errors.receipt_date?.message}
+      </div>
+
       {/* Success Animation Overlay */}
       {showSuccess && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
           <Card className="w-80 mx-4">
             <CardContent className="p-6 text-center">
               <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4 animate-bounce" />
@@ -302,23 +246,43 @@ export function ReceiptUpload() {
       </Card>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={form.handleSubmit(onSubmit)} role="form" aria-label="Receipt upload form">
           <div
             onTouchStart={isMobile ? onTouchStart : undefined}
             onTouchMove={isMobile ? onTouchMove : undefined}
             onTouchEnd={isMobile ? onTouchEnd : undefined}
           >
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 h-11">
-                <TabsTrigger value="details" className="flex items-center gap-2 h-9">
+            <Tabs value={activeTab} onValueChange={setActiveTab} aria-label="Receipt upload steps">
+              <TabsList className="grid w-full grid-cols-3 h-11" role="tablist">
+                <TabsTrigger 
+                  value="details" 
+                  className="flex items-center gap-2 h-9"
+                  role="tab"
+                  aria-selected={activeTab === "details"}
+                  aria-label="Receipt details step"
+                >
                   Details
-                  {isDetailsComplete && <CheckCircle className="h-4 w-4 text-green-600" />}
+                  {isDetailsComplete && <CheckCircle className="h-4 w-4 text-green-600" aria-label="Completed" />}
                 </TabsTrigger>
-                <TabsTrigger value="allocate" disabled={!watchedAmount || watchedAmount <= 0} className="flex items-center gap-2 h-9">
+                <TabsTrigger 
+                  value="allocate" 
+                  disabled={!watchedAmount || watchedAmount <= 0} 
+                  className="flex items-center gap-2 h-9"
+                  role="tab"
+                  aria-selected={activeTab === "allocate"}
+                  aria-label="Work order allocation step"
+                >
                   Allocate
-                  {isAllocationComplete && <CheckCircle className="h-4 w-4 text-green-600" />}
+                  {isAllocationComplete && <CheckCircle className="h-4 w-4 text-green-600" aria-label="Completed" />}
                 </TabsTrigger>
-                <TabsTrigger value="review" disabled={!isComplete} className="flex items-center gap-2 h-9">
+                <TabsTrigger 
+                  value="review" 
+                  disabled={!isComplete} 
+                  className="flex items-center gap-2 h-9"
+                  role="tab"
+                  aria-selected={activeTab === "review"}
+                  aria-label="Review and submit step"
+                >
                   Review
                 </TabsTrigger>
               </TabsList>
@@ -329,58 +293,33 @@ export function ReceiptUpload() {
                   {/* Receipt Image Upload */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium">Receipt Image</h3>
-                    {isMobile ? (
-                      <div className="grid grid-cols-2 gap-3">
+                    <UniversalUploadSheet
+                      trigger={
                         <Button
                           type="button"
                           variant="outline"
-                          className="h-11 flex items-center justify-center gap-2"
-                          onClick={handleCameraCapture}
+                          className={cn("w-full border-dashed border-2 hover:border-primary/50", 
+                            isMobile ? "h-11" : "h-20"
+                          )}
                         >
-                          <Camera className="h-5 w-5" />
-                          Take Photo
+                          {isMobile ? (
+                            <>
+                              <Upload className="h-5 w-5 mr-2" />
+                              Upload Receipt
+                            </>
+                          ) : (
+                            <div className="text-center">
+                              <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm font-medium">Upload Receipt Image</p>
+                              <p className="text-xs text-muted-foreground">Camera, scanner, or file</p>
+                            </div>
+                          )}
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-11 flex items-center justify-center gap-2"
-                          onClick={handleFileInputCapture}
-                        >
-                          <Upload className="h-5 w-5" />
-                          Choose File
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full h-20 border-dashed border-2 hover:border-primary/50"
-                        onClick={handleFileInputCapture}
-                      >
-                        <div className="text-center">
-                          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm font-medium">Upload Receipt Image</p>
-                          <p className="text-xs text-muted-foreground">Click to select image</p>
-                        </div>
-                      </Button>
-                    )}
+                      }
+                      onFilesSelected={handleFileSelect}
+                      context="invoice"
+                    />
                     
-                    {/* Hidden file inputs */}
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={handleFileInputChange}
-                    />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*,.pdf"
-                      className="hidden"
-                      onChange={handleFileInputChange}
-                    />
                     {receiptFile && (
                       <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
                         <div className="flex items-center gap-2">
@@ -495,19 +434,41 @@ export function ReceiptUpload() {
 
             <TabsContent value="allocate" className="mt-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Allocate to Work Orders</CardTitle>
-                  <div className="text-sm text-muted-foreground">
-                    Remaining: ${(watchedAmount - totalAllocated).toFixed(2)}
+                <CardContent className="space-y-4 pt-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Allocate to Work Orders</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveTab("details")}
+                      className="flex items-center gap-2 text-primary"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      Edit Details
+                    </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <WorkOrderSelector
-                    workOrders={availableWorkOrders.data || []}
-                    allocations={allocations}
-                    totalAmount={watchedAmount}
-                    onAllocationChange={setAllocations}
-                  />
+                  
+                  {availableWorkOrders.isLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <Card key={i}>
+                          <CardContent className="p-4">
+                            <Skeleton className="h-4 w-24 mb-2" />
+                            <Skeleton className="h-6 w-full mb-1" />
+                            <Skeleton className="h-4 w-32" />
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <WorkOrderSelector
+                      workOrders={availableWorkOrders.data || []}
+                      allocations={allocations}
+                      totalAmount={watchedAmount}
+                      onAllocationChange={setAllocations}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

@@ -26,6 +26,9 @@ interface WorkOrder {
   title: string;
   store_location?: string;
   status: string;
+  organizations?: {
+    name: string;
+  };
 }
 
 interface Allocation {
@@ -208,6 +211,11 @@ export function WorkOrderSelector({
                               <Badge variant="outline">
                                 {workOrder.work_order_number}
                               </Badge>
+                              {workOrder.organizations?.name && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {workOrder.organizations.name}
+                                </Badge>
+                              )}
                             </div>
                             <p className="font-medium">{workOrder.title}</p>
                             {workOrder.store_location && (
