@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useReceipts } from "@/hooks/useReceipts";
-import { useReceiptFlow } from "@/hooks/useReceiptFlow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
 import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/utils/fileUtils";
@@ -23,7 +23,7 @@ import { InlineEditField } from "./InlineEditField";
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
-import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Loader2, 
   Upload, 
@@ -107,84 +107,25 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 type FlowStage = 'capture' | 'processing' | 'review' | 'manual-entry';
 
-// Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 100,
-      damping: 12
-    }
-  }
-};
-
-const successVariants = {
-  hidden: { scale: 0.8, opacity: 0 },
-  visible: {
-    scale: 1,
-    opacity: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 200,
-      damping: 20
-    }
-  },
-  celebration: {
-    scale: [1, 1.1, 1],
-    transition: {
-      duration: 0.6,
-      times: [0, 0.5, 1]
-    }
-  }
-};
-
-const buttonVariants = {
-  hover: { scale: 1.02, transition: { duration: 0.2 } },
-  tap: { scale: 0.98, transition: { duration: 0.1 } }
-};
-
 export function SmartReceiptFlow() {
   console.log('SmartReceiptFlow component mounted');
   
-  // Use the new state management hook
-  const {
-    state,
-    actions,
-    computed,
-    effects,
-    // Legacy compatibility exports
-    flowStage,
-    receiptFile,
-    imagePreview,
-    isProcessingOCR,
-    ocrData,
-    ocrConfidence,
-    showSuccess,
-    progressStage,
-    progressValue,
-    showDraftSaved,
-    ocrError,
-    showSuccessAnimation,
-    duplicateCheck,
-    imageQuality,
-    errorRecoveryStage,
-    showCameraCapture,
-    cameraStream,
-  } = useReceiptFlow();
+  // Progressive disclosure state
+  const [flowStage, setFlowStage] = useState<FlowStage>('capture');
+  
+  // State management
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
+  const [ocrData, setOcrData] = useState<OCRResult | null>(null);
+  const [ocrConfidence, setOcrConfidence] = useState<Record<string, number>>({});
+  const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Floating components state
+  const [progressStage, setProgressStage] = useState<'uploading' | 'processing' | 'extracting' | 'complete' | 'error'>('uploading');
+  const [progressValue, setProgressValue] = useState(0);
+  const [showDraftSaved, setShowDraftSaved] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
   
   // Hooks
   const isMobile = useIsMobile();
@@ -200,11 +141,20 @@ export function SmartReceiptFlow() {
     checkCameraPermission,
     requestCameraPermission 
   } = useCamera();
+  
+  // Camera state
+  const [showCameraCapture, setShowCameraCapture] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   // File handling functions
   const removeFile = () => {
     onSwipeAction(); // Haptic feedback
-    actions.removeFile();
+    setReceiptFile(null);
+    setImagePreview(null);
+    setOcrData(null);
+    setOcrConfidence({});
+    setOcrError(null);
+    setFlowStage('capture');
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
@@ -228,7 +178,10 @@ export function SmartReceiptFlow() {
     queryKey: ['receipts'],
     onFormReset: () => {
       form.reset();
-      actions.reset();
+      removeFile();
+      setOcrError(null);
+      setFlowStage('capture');
+      setIsProcessingOCR(false);
     },
     enableTouchGesture: isMobile
   });
@@ -272,14 +225,94 @@ export function SmartReceiptFlow() {
 
   // OCR processing function with progress tracking
   const processWithOCR = async (file: File) => {
-    await effects.processOCR(file);
+    setFlowStage('processing');
+    setIsProcessingOCR(true);
+    setOcrError(null);
+    setProgressStage('uploading');
+    setProgressValue(0);
     
-    // Update form values if OCR was successful
-    if (state.receipt.ocrData) {
-      const ocrResult = state.receipt.ocrData;
-      if (ocrResult.vendor) form.setValue('vendor_name', ocrResult.vendor);
-      if (ocrResult.total) form.setValue('amount', ocrResult.total);
-      if (ocrResult.date) form.setValue('receipt_date', ocrResult.date);
+    try {
+      // Stage 1: Upload (0-30%)
+      setProgressValue(10);
+      const timestamp = Date.now();
+      const fileName = `temp_ocr_${timestamp}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('work-order-attachments')
+        .upload(`receipts/temp/${fileName}`, file);
+
+      if (uploadError) throw uploadError;
+      setProgressValue(30);
+
+      // Stage 2: Processing (30-70%)
+      setProgressStage('processing');
+      setProgressValue(40);
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('work-order-attachments')
+        .getPublicUrl(uploadData.path);
+
+      setProgressValue(60);
+
+      // Stage 3: OCR Extraction (70-90%)
+      setProgressStage('extracting');
+      setProgressValue(70);
+      
+      const { data: ocrResult, error: ocrError } = await supabase.functions.invoke('process-receipt', {
+        body: { imageUrl: publicUrl }
+      });
+
+      if (ocrError) throw ocrError;
+      setProgressValue(90);
+
+      // Stage 4: Complete (90-100%)
+      if (ocrResult) {
+        if (ocrResult.vendor) form.setValue('vendor_name', ocrResult.vendor);
+        if (ocrResult.total) form.setValue('amount', ocrResult.total);
+        if (ocrResult.date) form.setValue('receipt_date', ocrResult.date);
+        
+        setOcrData(ocrResult);
+        setOcrConfidence(ocrResult.confidence || {});
+        
+        setProgressStage('complete');
+        setProgressValue(100);
+        
+        const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
+        
+        toast({
+          title: '✨ Receipt Scanned!',
+          description: successMessage,
+        });
+
+        // Transition to review stage
+        setFlowStage('review');
+        
+        // Hide progress after delay
+        setTimeout(() => {
+          setIsProcessingOCR(false);
+        }, 2000);
+      }
+
+      // Clean up temp file
+      await supabase.storage
+        .from('work-order-attachments')
+        .remove([uploadData.path]);
+
+    } catch (error: any) {
+      console.error('OCR processing error:', error);
+      setProgressStage('error');
+      setOcrError(error.message || 'Could not read receipt');
+      
+      toast({
+        title: 'OCR Failed',
+        description: 'Could not read receipt. Please enter details manually.',
+        variant: 'destructive',
+      });
+      
+      // Stay in processing stage to show manual entry option
+      // Hide error progress after delay
+      setTimeout(() => {
+        setIsProcessingOCR(false);
+      }, 3000);
     }
   };
 
@@ -287,16 +320,40 @@ export function SmartReceiptFlow() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!isSupportedFileType(file) && !SUPPORTED_IMAGE_TYPES.includes(file.type) && file.type !== 'application/pdf') {
-      return; // useReceiptFlow will handle the error
+    // File validation
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: 'File Too Large',
+        description: `File size must be less than ${formatFileSize(MAX_FILE_SIZE)}`,
+        variant: 'destructive',
+      });
+      return;
     }
 
-    // Set file and let the hook handle validation and processing
-    await actions.setFile(file);
-    
-    // Process with OCR if file was accepted
-    if (state.receipt.file) {
+    if (!isSupportedFileType(file) && !SUPPORTED_IMAGE_TYPES.includes(file.type) && file.type !== 'application/pdf') {
+      toast({
+        title: 'Unsupported File Type',
+        description: 'Please upload an image (JPEG, PNG, WebP, HEIC) or PDF file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setReceiptFile(file);
+
+    // Create image preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Process with OCR
+      await processWithOCR(file);
+    } else {
+      // For PDFs, no preview but still process OCR
+      setImagePreview(null);
       await processWithOCR(file);
     }
   };
@@ -304,13 +361,19 @@ export function SmartReceiptFlow() {
   const handleCameraCapture = async () => {
     try {
       const permission = await checkCameraPermission();
-      if (!permission?.granted) {
+      if (permission?.state !== 'granted') {
         const granted = await requestCameraPermission();
         if (!granted) {
-          return; // useReceiptFlow will handle error in actions.setCameraCapture
+          toast({
+            title: "Camera access required",
+            description: "Please allow camera access to capture receipts",
+            variant: "destructive"
+          });
+          return;
         }
       }
 
+      setShowCameraCapture(true);
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'environment', // Use rear camera for documents
@@ -318,10 +381,15 @@ export function SmartReceiptFlow() {
           height: { ideal: 1080 }
         } 
       });
-      actions.setCameraCapture(true, stream);
+      setCameraStream(stream);
     } catch (error) {
       console.error('Camera access error:', error);
       onError();
+      toast({
+        title: "Camera error",
+        description: "Unable to access camera. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -332,41 +400,67 @@ export function SmartReceiptFlow() {
       const file = await captureImageFromCamera();
       if (file) {
         onImageCapture();
-        actions.setCameraCapture(false);
-        
-        // Stop camera stream
+        setReceiptFile(file);
+        setShowCameraCapture(false);
         if (cameraStream) {
           cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
         }
         
-        // Set file and process OCR
-        await actions.setFile(file);
-        if (state.receipt.file) {
-          await processWithOCR(file);
-        }
+        // Create image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+        
+        // Process with OCR
+        processWithOCR(file);
       }
     } catch (error) {
       console.error('Image capture error:', error);
       onError();
+      toast({
+        title: "Capture failed",
+        description: "Failed to capture image. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   const closeCameraCapture = () => {
-    actions.setCameraCapture(false);
+    setShowCameraCapture(false);
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
     }
   };
 
   // Manual entry function
   const startManualEntry = () => {
-    actions.startManualEntry();
+    setFlowStage('manual-entry');
+    setOcrError(null);
   };
 
   // Draft save functionality
   const saveDraft = () => {
     onFormSave(); // Haptic feedback
-    effects.saveDraft(form.getValues());
+    const draftData = {
+      ...form.getValues(),
+      receiptFile: receiptFile?.name,
+      savedAt: new Date().toISOString(),
+    };
+    
+    localStorage.setItem('receipt-draft', JSON.stringify(draftData));
+    setShowDraftSaved(true);
+    
+    toast({
+      title: 'Draft Saved',
+      description: 'Your receipt draft has been saved locally.',
+    });
+    
+    // Hide draft saved indicator after 3 seconds
+    setTimeout(() => setShowDraftSaved(false), 3000);
   };
 
   // OCR retry function
@@ -379,8 +473,6 @@ export function SmartReceiptFlow() {
   // Form submission
   const onSubmit = async (data: SmartReceiptFormData) => {
     try {
-      actions.startSubmission();
-      
       const receiptData = {
         vendor_name: data.vendor_name,
         amount: data.amount,
@@ -398,22 +490,29 @@ export function SmartReceiptFlow() {
       
       onSubmitSuccess(); // Haptic feedback
 
-      // Success state with celebration animation
-      actions.setSuccessState(true);
-      
+      // Success state
+      setShowSuccess(true);
       setTimeout(() => {
-        actions.setSuccessState(false);
-      }, 1000);
-      
-      // Reset will be handled by the action after delay
-      actions.completeSubmission();
-      
-      // Reset form
-      form.reset();
+        // Reset form and state
+        form.reset();
+        removeFile();
+        setShowSuccess(false);
+        setFlowStage('capture');
+      }, 2000);
+
+      toast({
+        title: 'Receipt Saved!',
+        description: 'Your receipt has been processed and saved.',
+      });
 
     } catch (error: any) {
       console.error('Receipt submission error:', error);
       onError(); // Haptic feedback
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save receipt',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -441,64 +540,20 @@ export function SmartReceiptFlow() {
 
   if (showSuccess) {
     return (
-      <motion.div
-        variants={successVariants}
-        initial="hidden"
-        animate={showSuccessAnimation ? "celebration" : "visible"}
-        className="flex items-center justify-center min-h-[60vh]"
-      >
-        <Card className="max-w-md mx-auto">
-          <CardContent className="pt-6 text-center">
-            <motion.div 
-              className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4"
-              animate={{
-                boxShadow: showSuccessAnimation 
-                  ? "0 0 30px rgba(34, 197, 94, 0.4)" 
-                  : "0 0 0px rgba(34, 197, 94, 0.4)"
-              }}
-              transition={{ duration: 0.6 }}
-            >
-              <motion.div
-                animate={showSuccessAnimation ? { 
-                  scale: [1, 1.2, 1],
-                  rotate: [0, 5, -5, 0]
-                } : {}}
-                transition={{ duration: 0.6 }}
-              >
-                <CheckCircle className="h-8 w-8 text-success" />
-              </motion.div>
-            </motion.div>
-            <motion.h3 
-              className="text-lg font-semibold mb-2"
-              animate={showSuccessAnimation ? { 
-                scale: [1, 1.1, 1]
-              } : {}}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              Receipt Saved!
-            </motion.h3>
-            <motion.p 
-              className="text-muted-foreground"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              Your receipt has been processed and saved successfully.
-            </motion.p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <Card className="max-w-md mx-auto mt-8">
+        <CardContent className="pt-6 text-center">
+          <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-success" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Receipt Saved!</h3>
+          <p className="text-muted-foreground">Your receipt has been processed and saved successfully.</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <motion.div 
-      ref={containerRef as any} 
-      className="max-w-2xl mx-auto space-y-6 relative"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div ref={containerRef as any} className="max-w-2xl mx-auto space-y-6 relative">
       {/* Pull-to-refresh indicator for mobile */}
       <AnimatePresence>
         {isPulling && (
@@ -524,8 +579,7 @@ export function SmartReceiptFlow() {
       </AnimatePresence>
 
       {/* Camera/Upload Capture Section */}
-      <motion.div variants={itemVariants}>
-        <Card>
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
@@ -538,32 +592,28 @@ export function SmartReceiptFlow() {
               {/* Mobile-optimized capture buttons */}
               {isMobile ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="h-20 flex-col min-h-[80px] w-full"
-                      onClick={cameraSupported ? handleCameraCapture : () => cameraInputRef.current?.click()}
-                    >
-                      <Camera className="h-6 w-6 mb-2" />
-                      <span className="text-sm">
-                        {cameraSupported ? "Camera Preview" : "Camera"}
-                      </span>
-                    </Button>
-                  </motion.div>
-                  <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="h-20 flex-col min-h-[80px] w-full"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload className="h-6 w-6 mb-2" />
-                      <span className="text-sm">Upload</span>
-                    </Button>
-                  </motion.div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="h-20 flex-col min-h-[80px]"
+                    onClick={cameraSupported ? handleCameraCapture : () => cameraInputRef.current?.click()}
+                  >
+                    <Camera className="h-6 w-6 mb-2" />
+                    <span className="text-sm">
+                      {cameraSupported ? "Camera Preview" : "Camera"}
+                    </span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="h-20 flex-col min-h-[80px]"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-6 w-6 mb-2" />
+                    <span className="text-sm">Upload</span>
+                  </Button>
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-border rounded-lg p-8 text-center space-y-4">
@@ -600,31 +650,10 @@ export function SmartReceiptFlow() {
               <p className="text-xs text-muted-foreground text-center">
                 Supports images (JPEG, PNG, WebP, HEIC) and PDF files up to {formatFileSize(MAX_FILE_SIZE)}
               </p>
-              
-              {/* Manual Entry Option for capture stage */}
-              <div className="text-center pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={startManualEntry}
-                  className="gap-2 text-muted-foreground hover:text-foreground"
-                >
-                  <Edit className="h-4 w-4" />
-                  Enter Details Manually
-                </Button>
-              </div>
             </div>
           ) : (
             /* Image Preview Section */
-            <div 
-              className="space-y-4" 
-              {...(isMobile ? {
-                onTouchStart: swipeGesture.onTouchStart,
-                onTouchMove: swipeGesture.onTouchMove,
-                onTouchEnd: swipeGesture.onTouchEnd
-              } : {})}
-            >
+            <div className="space-y-4" {...(isMobile ? swipeGesture : {})}>
               {imagePreview ? (
                 <div className="relative">
                   <img
@@ -707,6 +736,20 @@ export function SmartReceiptFlow() {
                 </div>
               )}
 
+              {/* Manual Entry Option - Always available in capture stage */}
+              {flowStage === 'capture' && !receiptFile && (
+                <div className="text-center pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={startManualEntry}
+                    className="gap-2 text-muted-foreground"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Skip OCR - Enter Manually
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -785,32 +828,25 @@ export function SmartReceiptFlow() {
           />
         </CardContent>
       </Card>
-      </motion.div>
 
-      {/* Progressive Review Form Section - Only show in reviewing stage */}
+      {/* Progressive Review Form Section - Only show in review or manual-entry stages */}
       <AnimatePresence>
-        {computed.isFormVisible && (
+        {(flowStage === 'review' || flowStage === 'manual-entry') && (
           <motion.div
-            variants={itemVariants}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ 
-              duration: 0.4, 
-              ease: [0.4, 0, 0.2, 1],
-              staggerChildren: 0.1
-            }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
             style={{ overflow: 'hidden' }}
           >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Essential Details - Always Open */}
-            <motion.div variants={itemVariants}>
-              <FieldGroup
-                title="Essential Details"
-                icon={<FileText className="h-4 w-4" />}
-                defaultOpen={true}
-              >
+            <FieldGroup
+              title="Essential Details"
+              icon={<FileText className="h-4 w-4" />}
+              defaultOpen={true}
+            >
               <div className="space-y-4">
                 <InlineEditField
                   value={form.watch('vendor_name') || ''}
@@ -870,20 +906,18 @@ export function SmartReceiptFlow() {
                 />
               </div>
             </FieldGroup>
-            </motion.div>
 
             {/* Assign to Project */}
             {availableWorkOrders.data && availableWorkOrders.data.length > 0 && (
-              <motion.div variants={itemVariants}>
-                <FieldGroup
-                  title="Assign to Project"
-                  icon={<Briefcase className="h-4 w-4" />}
-                  badge={form.watch('work_order_id') && (
-                    <Badge variant="secondary" className="ml-2">
-                      Assigned
-                    </Badge>
-                  )}
-                >
+              <FieldGroup
+                title="Assign to Project"
+                icon={<Briefcase className="h-4 w-4" />}
+                badge={form.watch('work_order_id') && (
+                  <Badge variant="secondary" className="ml-2">
+                    Assigned
+                  </Badge>
+                )}
+              >
                 <FormField
                   control={form.control}
                   name="work_order_id"
@@ -901,7 +935,6 @@ export function SmartReceiptFlow() {
                   )}
                 />
               </FieldGroup>
-              </motion.div>
             )}
 
             {/* Line Items */}
@@ -971,8 +1004,13 @@ export function SmartReceiptFlow() {
                         const item = prompt('Enter item description:');
                         const price = prompt('Enter price:');
                         if (item && price) {
-                          // Note: This would need to be implemented in the reducer for proper state management
-                          console.log('Add item functionality needs reducer implementation');
+                          setOcrData(prev => ({
+                            ...prev!,
+                            lineItems: [...(prev?.lineItems || []), {
+                              description: item,
+                              total_price: parseFloat(price)
+                            }]
+                          }));
                         }
                       }}
                     >
@@ -988,6 +1026,7 @@ export function SmartReceiptFlow() {
                         if (ocrData?.subtotal && ocrData?.tax) {
                           const correct = ocrData.subtotal + ocrData.tax;
                           form.setValue('amount', correct, { shouldValidate: true });
+                          setOcrData(prev => ({ ...prev!, total: correct }));
                           toast({
                             title: 'Total Recalculated',
                             description: `New total: $${correct.toFixed(2)}`,
@@ -1033,28 +1072,26 @@ export function SmartReceiptFlow() {
             </FieldGroup>
 
             {/* Submit Button */}
-            <motion.div className="pt-4" variants={itemVariants}>
-              <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  size="lg"
-                  disabled={isUploading || isProcessingOCR}
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving Receipt...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Save Receipt
-                    </>
-                  )}
-                </Button>
-              </motion.div>
-            </motion.div>
+            <div className="pt-4">
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={isUploading || isProcessingOCR}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving Receipt...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Save Receipt
+                  </>
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
           </motion.div>
@@ -1071,21 +1108,10 @@ export function SmartReceiptFlow() {
           ocrError || undefined
         }
         onRetry={retryOCR}
-        onManualEntry={startManualEntry}
-        confidence={ocrConfidence.vendor ? {
-          vendor: ocrConfidence.vendor || 0,
-          total: ocrConfidence.total || 0,
-          date: ocrConfidence.date || 0,
-          lineItems: ocrConfidence.lineItems || 0
-        } : undefined}
-        duplicateInfo={duplicateCheck ? { 
-          matches: duplicateCheck.matches.length, 
-          confidence: duplicateCheck.confidence 
-        } : undefined}
       />
 
-      {/* Floating Action Bar - Only show in reviewing stage */}
-      {computed.shouldShowFloatingBar && (
+      {/* Floating Action Bar - Only show in review or manual-entry stages */}
+      {(flowStage === 'review' || flowStage === 'manual-entry') && (
         <FloatingActionBar
           vendorName={watchedValues.vendor_name}
           amount={watchedValues.amount}
@@ -1100,6 +1126,6 @@ export function SmartReceiptFlow() {
         />
       )}
 
-    </motion.div>
+    </div>
   );
 }
