@@ -90,8 +90,8 @@ interface OCRResult {
   subtotal?: number;
   tax?: number;
   lineItems: LineItem[];
-  from_cache?: boolean;
-  processing_time?: number;
+  from_cache?: boolean;        // ADD THIS LINE
+  processing_time?: number;     // ADD THIS LINE
 }
 
 interface SmartReceiptFormData {
