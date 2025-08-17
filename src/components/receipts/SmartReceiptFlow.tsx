@@ -145,12 +145,33 @@ export function SmartReceiptFlow() {
   // Camera state
   const [showCameraCapture, setShowCameraCapture] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  
+
+  // File handling functions
+  const removeFile = () => {
+    onSwipeAction(); // Haptic feedback
+    setReceiptFile(null);
+    setImagePreview(null);
+    setOcrData(null);
+    setOcrConfidence({});
+    setOcrError(null);
+    setFlowStage('capture');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
   // Swipe gesture for image removal
   const swipeGesture = useSwipeGesture({
-    onSwipeLeft: removeFile,
-    onSwipeRight: removeFile
+    threshold: 75,
+    verticalCancelThreshold: 10
   });
+
+  // Handle swipe gesture completion
+  useEffect(() => {
+    if (!swipeGesture.isSwipeing && swipeGesture.distance > 75 && swipeGesture.direction) {
+      // Swipe completed with sufficient distance
+      removeFile();
+    }
+  }, [swipeGesture.isSwipeing, swipeGesture.distance, swipeGesture.direction]);
   
   // Pull to refresh for form reset
   const { containerRef, pullDistance, isPulling, isRefreshable } = usePullToRefresh({
@@ -295,7 +316,6 @@ export function SmartReceiptFlow() {
     }
   };
 
-  // File handling functions
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -338,23 +358,10 @@ export function SmartReceiptFlow() {
     }
   };
 
-  const removeFile = () => {
-    onSwipeAction(); // Haptic feedback
-    setReceiptFile(null);
-    setImagePreview(null);
-    setOcrData(null);
-    setOcrConfidence({});
-    setOcrError(null);
-    setFlowStage('capture');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-  };
-
-  // Enhanced camera capture with preview
   const handleCameraCapture = async () => {
     try {
       const permission = await checkCameraPermission();
-      if (permission?.state !== 'granted') {
+      if (permission?.name !== 'granted') {
         const granted = await requestCameraPermission();
         if (!granted) {
           toast({
@@ -570,6 +577,7 @@ export function SmartReceiptFlow() {
           </motion.div>
         )}
       </AnimatePresence>
+
       {/* Camera/Upload Capture Section */}
       <Card>
         <CardHeader>
@@ -652,6 +660,15 @@ export function SmartReceiptFlow() {
                     src={imagePreview}
                     alt="Receipt preview"
                     className="w-full max-h-64 object-contain rounded-lg border"
+                    style={{
+                      transform: isMobile && swipeGesture.isSwipeing 
+                        ? `translateX(${swipeGesture.direction === 'left' ? -swipeGesture.distance : swipeGesture.distance}px)` 
+                        : 'none',
+                      opacity: isMobile && swipeGesture.isSwipeing && swipeGesture.distance > 50 
+                        ? Math.max(0.3, 1 - swipeGesture.distance / 200) 
+                        : 1,
+                      transition: swipeGesture.isSwipeing ? 'none' : 'transform 0.2s ease-out, opacity 0.2s ease-out'
+                    }}
                   />
                   <Button
                     type="button"
