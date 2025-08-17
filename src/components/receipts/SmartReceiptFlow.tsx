@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
 import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/utils/fileUtils";
+import { checkForDuplicates, type DuplicationCheckResult } from "@/utils/receiptDuplication";
+import { analyzeImageQuality, type ImageQualityResult } from "@/utils/imageQuality";
 import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
@@ -177,6 +179,11 @@ export function SmartReceiptFlow() {
   const [showDraftSaved, setShowDraftSaved] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  
+  // Error recovery states
+  const [duplicateCheck, setDuplicateCheck] = useState<DuplicationCheckResult | null>(null);
+  const [imageQuality, setImageQuality] = useState<ImageQualityResult | null>(null);
+  const [errorRecoveryStage, setErrorRecoveryStage] = useState<'none' | 'quality-check' | 'duplicate-detection' | 'partial-extraction'>('none');
   
   // Hooks
   const isMobile = useIsMobile();
@@ -370,6 +377,20 @@ export function SmartReceiptFlow() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Image quality check
+    const qualityResult = await analyzeImageQuality(file);
+    setImageQuality(qualityResult);
+    
+    if (qualityResult.recommendation === 'retake') {
+      setErrorRecoveryStage('quality-check');
+      toast({
+        title: 'Image Quality Too Low',
+        description: qualityResult.suggestions[0],
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // File validation
     if (file.size > MAX_FILE_SIZE) {
@@ -1226,6 +1247,17 @@ export function SmartReceiptFlow() {
           ocrError || undefined
         }
         onRetry={retryOCR}
+        onManualEntry={startManualEntry}
+        confidence={ocrConfidence.vendor ? {
+          vendor: ocrConfidence.vendor || 0,
+          total: ocrConfidence.total || 0,
+          date: ocrConfidence.date || 0,
+          lineItems: ocrConfidence.lineItems || 0
+        } : undefined}
+        duplicateInfo={duplicateCheck ? { 
+          matches: duplicateCheck.matches.length, 
+          confidence: duplicateCheck.confidence 
+        } : undefined}
       />
 
       {/* Floating Action Bar - Only show in review or manual-entry stages */}
