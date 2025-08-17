@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResponsiveTableWrapper } from '@/components/ui/responsive-table-wrapper';
 import { WorkOrderStatusBadge } from '@/components/ui/work-order-status-badge';
+import { ReportStatusBadge, FinancialStatusBadge, ComputedFinancialStatusBadge } from '@/components/ui/status-badge';
 import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { OrganizationSelector } from '@/components/admin/OrganizationSelector';
@@ -35,19 +36,11 @@ import {
 interface PipelineMobileCardProps {
   item: any;
   onSelect: (item: any) => void;
-  getOperationalBadge: (item: any) => React.ReactNode;
-  getReportStatusBadge: (item: any) => React.ReactNode;
-  getInvoiceStatusBadge: (item: any) => React.ReactNode;
-  getFinancialBadge: (item: any) => React.ReactNode;
 }
 
 function PipelineMobileCard({
   item,
-  onSelect,
-  getOperationalBadge,
-  getReportStatusBadge,
-  getInvoiceStatusBadge,
-  getFinancialBadge
+  onSelect
 }: PipelineMobileCardProps) {
   return (
     <Card 
@@ -77,19 +70,19 @@ function PipelineMobileCard({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Status</p>
-              {getOperationalBadge(item)}
+              <WorkOrderStatusBadge status={item.status} showEstimateIndicator workOrder={item} />
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Report</p>
-              {getReportStatusBadge(item)}
+              <ReportStatusBadge status={item.report_status || "not_submitted"} />
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Invoice</p>
-              {getInvoiceStatusBadge(item)}
+              <FinancialStatusBadge status={item.invoice_status || "pending"} />
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Billing</p>
-              {getFinancialBadge(item)}
+              <ComputedFinancialStatusBadge status={item.financial_status || "not_billed"} />
             </div>
           </div>
         </div>
@@ -191,110 +184,6 @@ export default function PipelineDashboard() {
     return filtered;
   }, [pipelineData, filters]);
 
-  // Get status badge for each pipeline stage
-  const getOperationalBadge = (item: any) => {
-    if (item.status === 'estimate_needed' && !item.subcontractor_estimate_amount) {
-      return <Badge variant="warning">Awaiting SC Estimate</Badge>;
-    }
-    if (item.status === 'estimate_needed' && item.subcontractor_estimate_amount && !item.internal_estimate_amount) {
-      return <Badge variant="warning">Needs Internal Markup</Badge>;
-    }
-    if (item.status === 'estimate_needed' && item.internal_estimate_amount && !item.partner_estimate_approved) {
-      return <Badge variant="warning">Awaiting Partner Approval</Badge>;
-    }
-    return <WorkOrderStatusBadge status={item.status} />;
-  };
-
-  const getReportStatusBadge = (item: any) => {
-    if (!item.report_status) {
-      return <Badge variant="outline">-</Badge>;
-    }
-    
-    switch (item.report_status) {
-      case 'submitted':
-        return <Badge variant="warning">Submitted</Badge>;
-      case 'reviewed':
-        return <Badge variant="warning">Reviewed</Badge>;
-      case 'approved':
-        return <Badge variant="success">Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{item.report_status}</Badge>;
-    }
-  };
-
-  const getInvoiceStatusBadge = (item: any) => {
-    // Debug logging for BB-525-001
-    if (item.work_order_number === 'BB-525-001') {
-      console.log('BB-525-001 Fixed Badge Debug:', {
-        invoice_status: item.invoice_status,
-        report_status: item.report_status,
-        status: item.status,
-        financial_status: item.financial_status
-      });
-    }
-    
-    if (!item.invoice_status) {
-      // Show different message based on work order status
-      if (item.status === 'completed' && item.report_status === 'approved') {
-        return <Badge variant="warning">Invoice Needed</Badge>;
-      }
-      return <Badge variant="outline">No Invoice</Badge>;
-    }
-    
-    switch (item.invoice_status) {
-      case 'submitted':
-        return <Badge variant="warning">Submitted</Badge>;
-      case 'approved':
-        return <Badge variant="success">Approved</Badge>;
-      case 'paid':
-        return <Badge variant="success">Paid</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{item.invoice_status}</Badge>;
-    }
-  };
-
-  const getFinancialBadge = (item: any) => {
-    // Not ready for billing
-    if (item.status !== 'completed') {
-      return <Badge variant="outline">Not Started</Badge>;
-    }
-    
-    // Report stage
-    if (!item.report_status) {
-      return <Badge variant="destructive">Report Missing</Badge>;
-    }
-    if (item.report_status === 'submitted' || item.report_status === 'reviewed') {
-      return <Badge variant="warning">Report Pending</Badge>;
-    }
-    if (item.report_status === 'rejected') {
-      return <Badge variant="destructive">Report Rejected</Badge>;
-    }
-    
-    // Invoice stage
-    if (!item.invoice_status) {
-      return <Badge variant="warning">Invoice Needed</Badge>;
-    }
-    if (item.invoice_status === 'submitted') {
-      return <Badge variant="warning">Invoice Pending</Badge>;
-    }
-    if (item.invoice_status === 'rejected') {
-      return <Badge variant="destructive">Invoice Rejected</Badge>;
-    }
-    
-    // Billing stage
-    if (item.invoice_status === 'approved' && !item.partner_billed_at) {
-      return <Badge variant="success">Ready to Bill</Badge>;
-    }
-    if (item.partner_billed_at) {
-      return <Badge variant="success">Billed</Badge>;
-    }
-    
-    return <Badge variant="outline">Unknown</Badge>;
-  };
 
   if (isLoading) return <TableSkeleton />;
   
@@ -457,13 +346,21 @@ export default function PipelineDashboard() {
                         </div>
                       </TableCell>
                       
-                      <TableCell>{getOperationalBadge(item)}</TableCell>
+                      <TableCell>
+                        <WorkOrderStatusBadge status={item.status} showEstimateIndicator workOrder={item} />
+                      </TableCell>
                       
-                      <TableCell>{getReportStatusBadge(item)}</TableCell>
+                      <TableCell>
+                        <ReportStatusBadge status={item.report_status || "not_submitted"} />
+                      </TableCell>
                       
-                      <TableCell>{getInvoiceStatusBadge(item)}</TableCell>
+                      <TableCell>
+                        <FinancialStatusBadge status={item.invoice_status || "pending"} />
+                      </TableCell>
                       
-                      <TableCell>{getFinancialBadge(item)}</TableCell>
+                      <TableCell>
+                        <ComputedFinancialStatusBadge status={item.financial_status || "not_billed"} />
+                      </TableCell>
                       
                       <TableCell>
                         <p className="text-sm text-muted-foreground">
@@ -513,15 +410,11 @@ export default function PipelineDashboard() {
             </div>
           ) : (
             filteredData.map((item) => (
-              <PipelineMobileCard
-                key={item.id}
-                item={item}
-                onSelect={(item) => navigate(`/admin/work-orders/${item.id}`)}
-                getOperationalBadge={getOperationalBadge}
-                getReportStatusBadge={getReportStatusBadge}
-                getInvoiceStatusBadge={getInvoiceStatusBadge}
-                getFinancialBadge={getFinancialBadge}
-              />
+                      <PipelineMobileCard
+                        key={item.id}
+                        item={item}
+                        onSelect={(item) => navigate(`/admin/work-orders/${item.id}`)}
+                      />
             ))
           )}
         </div>
