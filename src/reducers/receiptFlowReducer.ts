@@ -71,6 +71,25 @@ export interface ReceiptFlowState {
   };
 }
 
+// MediaStream cleanup utility
+const cleanupMediaStream = (stream: MediaStream | null): void => {
+  if (!stream) return;
+  
+  try {
+    // Stop all tracks
+    stream.getTracks().forEach(track => {
+      try {
+        track.stop();
+        console.log('Stopped media track:', track.kind);
+      } catch (error) {
+        console.warn('Error stopping media track:', error);
+      }
+    });
+  } catch (error) {
+    console.warn('Error cleaning up MediaStream:', error);
+  }
+};
+
 // Action types
 export type ReceiptFlowAction = 
   | { type: 'START_CAPTURE' }
@@ -87,6 +106,7 @@ export type ReceiptFlowAction =
   | { type: 'SHOW_SUCCESS'; payload: { show: boolean } }
   | { type: 'SHOW_DRAFT_SAVED'; payload: { show: boolean } }
   | { type: 'SET_CAMERA_STATE'; payload: { show: boolean; stream?: MediaStream | null } }
+  | { type: 'CLEANUP_CAMERA_STREAM' }
   | { type: 'RESET_FLOW' }
   | { type: 'HYDRATE_STATE'; payload: Partial<ReceiptFlowState> };
 
@@ -130,6 +150,8 @@ export function receiptFlowReducer(
   const newState: ReceiptFlowState = (() => {
     switch (action.type) {
       case 'START_CAPTURE':
+        // Clean up any existing camera stream
+        cleanupMediaStream(state.ui.cameraStream);
         return {
           ...state,
           stage: 'capture' as FlowStage,
@@ -173,6 +195,8 @@ export function receiptFlowReducer(
         };
 
       case 'REMOVE_FILE':
+        // Clean up camera stream when removing file
+        cleanupMediaStream(state.ui.cameraStream);
         return {
           ...state,
           stage: 'capture' as FlowStage,
@@ -332,16 +356,32 @@ export function receiptFlowReducer(
         };
 
       case 'SET_CAMERA_STATE':
+        // Clean up previous stream when setting a new one or closing camera
+        if (!action.payload.show || action.payload.stream) {
+          cleanupMediaStream(state.ui.cameraStream);
+        }
         return {
           ...state,
           ui: {
             ...state.ui,
             showCameraCapture: action.payload.show,
-            cameraStream: action.payload.stream || state.ui.cameraStream,
+            cameraStream: action.payload.stream || null,
+          },
+        };
+
+      case 'CLEANUP_CAMERA_STREAM':
+        cleanupMediaStream(state.ui.cameraStream);
+        return {
+          ...state,
+          ui: {
+            ...state.ui,
+            cameraStream: null,
           },
         };
 
       case 'RESET_FLOW':
+        // Clean up camera stream when resetting flow
+        cleanupMediaStream(state.ui.cameraStream);
         return {
           ...initialReceiptFlowState,
           meta: {

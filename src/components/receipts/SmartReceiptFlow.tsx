@@ -146,10 +146,15 @@ export function SmartReceiptFlow() {
     trackFormInteraction 
   } = useAnalytics();
   
-  // Track component mount
+  // Track component mount and cleanup MediaStream on unmount
   useEffect(() => {
     track('receipt_flow_started');
-  }, []); // Empty deps - only track on initial mount
+    
+    // Cleanup function to stop all MediaStream tracks on unmount
+    return () => {
+      actions.cleanupCameraStream();
+    };
+  }, []); // Empty deps - only track on initial mount and cleanup on unmount
   const { showTour, hasCompletedTour, completeTour, skipTour, startTour } = useReceiptTour();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -481,10 +486,8 @@ export function SmartReceiptFlow() {
       const file = await captureImageFromCamera();
       if (file) {
         onImageCapture();
+        // Camera cleanup is handled by the reducer
         actions.setCameraState(false);
-        if (cameraStream) {
-          cameraStream.getTracks().forEach(track => track.stop());
-        }
         
         // Compress captured image
         try {
@@ -531,11 +534,9 @@ export function SmartReceiptFlow() {
   }, [cameraStream, captureImageFromCamera, onImageCapture, onError, toast, actions, processWithOCR]);
 
   const closeCameraCapture = useCallback(() => {
+    // Camera cleanup is handled by the reducer
     actions.setCameraState(false);
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-    }
-  }, [actions, cameraStream]);
+  }, [actions]);
 
   // Memoized manual entry function
   const startManualEntry = useCallback(() => {

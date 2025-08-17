@@ -176,6 +176,10 @@ export function useReceiptFlow() {
       });
     },
 
+    cleanupCameraStream: () => {
+      dispatch({ type: 'CLEANUP_CAMERA_STREAM' });
+    },
+
     resetFlow: () => {
       dispatch({ type: 'RESET_FLOW' });
       clearStateFromStorage();
