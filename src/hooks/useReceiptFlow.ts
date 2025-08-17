@@ -192,6 +192,31 @@ export function useReceiptFlow() {
       dispatch({ type: 'CANCEL_OCR_PROCESSING' });
     },
 
+    setAllocationMode: (mode: 'single' | 'split') => {
+      dispatch({
+        type: 'SET_ALLOCATION_MODE',
+        payload: { mode }
+      });
+    },
+    
+    updateAllocations: (allocations: Array<{work_order_id: string; allocated_amount: number; allocation_notes?: string}>) => {
+      dispatch({
+        type: 'UPDATE_ALLOCATIONS',
+        payload: { allocations }
+      });
+    },
+    
+    setSingleAllocation: (workOrderId: string, amount: number) => {
+      dispatch({
+        type: 'SET_SINGLE_ALLOCATION',
+        payload: { workOrderId, amount }
+      });
+    },
+    
+    resetAllocations: () => {
+      dispatch({ type: 'RESET_ALLOCATIONS' });
+    },
+
     resetFlow: () => {
       dispatch({ type: 'RESET_FLOW' });
       clearStateFromStorage();

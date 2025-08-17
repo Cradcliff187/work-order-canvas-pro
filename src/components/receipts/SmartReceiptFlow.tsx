@@ -28,6 +28,7 @@ import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
+import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
 import { ReceiptTour, useReceiptTour } from "./ReceiptTour";
@@ -193,6 +194,10 @@ export function SmartReceiptFlow() {
   const ocrError = state.ocr.error;
   const showCameraCapture = state.ui.showCameraCapture;
   const cameraStream = state.ui.cameraStream;
+  
+  // Allocation state
+  const allocationMode = state.allocation.mode;
+  const allocations = state.allocation.allocations;
 
   // Debug logging for form visibility and stage transitions
   useEffect(() => {
@@ -283,6 +288,35 @@ export function SmartReceiptFlow() {
   }, [debouncedValues, ocrConfidence]);
   
   const isDirty = form.formState.isDirty || computed.hasReceiptFile;
+  
+  // Determine if allocation mode toggle should be shown
+  const currentAmount = form.watch('amount') || 0;
+  const showAllocationToggle = useMemo(() => {
+    return currentAmount > 100 || (availableWorkOrders.data && availableWorkOrders.data.length > 1);
+  }, [currentAmount, availableWorkOrders.data]);
+  
+  // Handle allocation changes
+  const handleAllocationModeChange = useCallback((mode: 'single' | 'split') => {
+    actions.setAllocationMode(mode);
+  }, [actions]);
+  
+  const handleAllocationsChange = useCallback((newAllocations: typeof allocations) => {
+    actions.updateAllocations(newAllocations);
+  }, [actions]);
+  
+  const handleSingleAllocationChange = useCallback((workOrderId: string) => {
+    actions.setSingleAllocation(workOrderId, currentAmount);
+  }, [actions, currentAmount]);
+  
+  // Update allocation amount when form amount changes
+  useEffect(() => {
+    if (allocationMode === 'single' && allocations.length > 0 && currentAmount > 0) {
+      actions.updateAllocations([{
+        ...allocations[0],
+        allocated_amount: currentAmount,
+      }]);
+    }
+  }, [currentAmount, allocationMode, allocations, actions]);
 
   // AbortController for cancelling OCR
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -657,16 +691,21 @@ export function SmartReceiptFlow() {
   const onSubmit = useCallback(async (data: SmartReceiptFormData) => {
     const submitStartTime = Date.now();
     try {
+      // Use allocation system for work order assignment
+      const finalAllocations = allocations.length > 0 
+        ? allocations 
+        : (data.work_order_id ? [{ 
+            work_order_id: data.work_order_id, 
+            allocated_amount: data.amount 
+          }] : []);
+      
       const receiptData = {
         vendor_name: data.vendor_name,
         amount: data.amount,
         description: data.description || '',
         receipt_date: data.receipt_date,
         notes: data.notes || '',
-        allocations: data.work_order_id ? [{ 
-          work_order_id: data.work_order_id, 
-          allocated_amount: data.amount 
-        }] : [],
+        allocations: finalAllocations,
         receipt_image: receiptFile,
       };
 
@@ -1158,53 +1197,21 @@ export function SmartReceiptFlow() {
               </div>
             </FieldGroup>
 
-            {/* Assign to Project */}
+            {/* Enhanced Work Order Assignment */}
             {availableWorkOrders.data && availableWorkOrders.data.length > 0 && (
-              <FieldGroup
-                title="Assign to Project"
-                icon={<Briefcase className="h-4 w-4" />}
-                badge={form.watch('work_order_id') && (
-                  <Badge variant="secondary" className="ml-2">
-                    Assigned
-                  </Badge>
-                )}
-              >
-                <FormField
-                  control={form.control}
-                  name="work_order_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-2">
-                        <FormLabel>Work Order (Optional)</FormLabel>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Link this receipt to a specific work order for better organization</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <div data-tour="work-order-section">
-                        <SmartWorkOrderSelector
-                          availableWorkOrders={availableWorkOrders.data || []}
-                          recentWorkOrders={recentWorkOrders}
-                          selectedWorkOrderId={field.value}
-                          onSelect={(value) => {
-                            field.onChange(value);
-                            trackFormInteraction('work_order_id', 'edit', { 
-                              hasWorkOrder: !!value,
-                              workOrderId: value 
-                            });
-                          }}
-                          isLoading={availableWorkOrders.isLoading}
-                        />
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div data-tour="work-order-section">
+                <EnhancedAllocationPanel
+                  availableWorkOrders={availableWorkOrders.data}
+                  recentWorkOrders={recentWorkOrders}
+                  totalAmount={currentAmount}
+                  mode={allocationMode}
+                  allocations={allocations}
+                  onModeChange={handleAllocationModeChange}
+                  onAllocationsChange={handleAllocationsChange}
+                  onSingleAllocationChange={handleSingleAllocationChange}
+                  showModeToggle={showAllocationToggle}
                 />
-              </FieldGroup>
+              </div>
             )}
 
             {/* Line Items */}

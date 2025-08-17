@@ -27,6 +27,13 @@ export type FlowStage = 'idle' | 'capture' | 'processing' | 'review' | 'manual-e
 // Progress stage definitions
 export type ProgressStage = 'uploading' | 'processing' | 'extracting' | 'complete' | 'error';
 
+// Allocation interface
+export interface WorkOrderAllocation {
+  work_order_id: string;
+  allocated_amount: number;
+  allocation_notes?: string;
+}
+
 // Receipt flow state interface
 export interface ReceiptFlowState {
   // Core state machine
@@ -55,6 +62,12 @@ export interface ReceiptFlowState {
     stage: ProgressStage;
     value: number;
     message?: string;
+  };
+  
+  // Allocation state
+  allocation: {
+    mode: 'single' | 'split';
+    allocations: WorkOrderAllocation[];
   };
   
   // UI state
@@ -111,6 +124,10 @@ export type ReceiptFlowAction =
   | { type: 'SHOW_DRAFT_SAVED'; payload: { show: boolean } }
   | { type: 'SET_CAMERA_STATE'; payload: { show: boolean; stream?: MediaStream | null } }
   | { type: 'CLEANUP_CAMERA_STREAM' }
+  | { type: 'SET_ALLOCATION_MODE'; payload: { mode: 'single' | 'split' } }
+  | { type: 'UPDATE_ALLOCATIONS'; payload: { allocations: WorkOrderAllocation[] } }
+  | { type: 'SET_SINGLE_ALLOCATION'; payload: { workOrderId: string; amount: number } }
+  | { type: 'RESET_ALLOCATIONS' }
   | { type: 'RESET_FLOW' }
   | { type: 'HYDRATE_STATE'; payload: Partial<ReceiptFlowState> };
 
@@ -134,6 +151,10 @@ export const initialReceiptFlowState: ReceiptFlowState = {
   progress: {
     stage: 'uploading',
     value: 0,
+  },
+  allocation: {
+    mode: 'single',
+    allocations: [],
   },
   ui: {
     showSuccess: false,
@@ -434,6 +455,47 @@ export function receiptFlowReducer(
           meta: {
             lastUpdated: new Date().toISOString(),
             sessionId: crypto.randomUUID(),
+          },
+        };
+
+      case 'SET_ALLOCATION_MODE':
+        return {
+          ...state,
+          allocation: {
+            ...state.allocation,
+            mode: action.payload.mode,
+            // Reset allocations when switching modes
+            allocations: action.payload.mode === 'single' ? [] : state.allocation.allocations,
+          },
+        };
+
+      case 'UPDATE_ALLOCATIONS':
+        return {
+          ...state,
+          allocation: {
+            ...state.allocation,
+            allocations: action.payload.allocations,
+          },
+        };
+
+      case 'SET_SINGLE_ALLOCATION':
+        return {
+          ...state,
+          allocation: {
+            mode: 'single',
+            allocations: [{
+              work_order_id: action.payload.workOrderId,
+              allocated_amount: action.payload.amount,
+            }],
+          },
+        };
+
+      case 'RESET_ALLOCATIONS':
+        return {
+          ...state,
+          allocation: {
+            mode: 'single',
+            allocations: [],
           },
         };
 
