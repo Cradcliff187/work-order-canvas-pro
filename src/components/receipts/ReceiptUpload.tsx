@@ -172,18 +172,64 @@ export function ReceiptUpload() {
 
       if (ocrError) throw ocrError;
 
+      // Debug OCR response
+      console.group('🔍 OCR Debug');
+      console.log('Raw OCR Response:', ocrData);
+      console.log('Vendor:', ocrData?.vendor, 'Type:', typeof ocrData?.vendor);
+      console.log('Total:', ocrData?.total, 'Type:', typeof ocrData?.total);
+      console.log('Date:', ocrData?.date, 'Type:', typeof ocrData?.date);
+      console.log('Confidence:', ocrData?.confidence);
+      console.groupEnd();
+
       // Auto-fill form with OCR results
       if (ocrData && !ocrData.error) {
-        if (ocrData.vendor) form.setValue('vendor_name', ocrData.vendor);
-        if (ocrData.total) form.setValue('amount', ocrData.total);
-        if (ocrData.date) form.setValue('receipt_date', ocrData.date);
+        // Fix vendor matching with normalization
+        if (ocrData.vendor) {
+          const normalizedVendor = COMMON_VENDORS.find(
+            v => v.toLowerCase() === ocrData.vendor.toLowerCase()
+          ) || ocrData.vendor;
+          
+          form.setValue('vendor_name', normalizedVendor, { 
+            shouldValidate: true, 
+            shouldDirty: true,
+            shouldTouch: true 
+          });
+        }
+        
+        if (ocrData.total) {
+          form.setValue('amount', ocrData.total, { 
+            shouldValidate: true, 
+            shouldDirty: true 
+          });
+        }
+        
+        if (ocrData.date) {
+          form.setValue('receipt_date', ocrData.date, { 
+            shouldValidate: true, 
+            shouldDirty: true 
+          });
+        }
         
         setOcrConfidence(ocrData.confidence || {});
+        
+        // Add haptic feedback on successful OCR
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
         
         toast({
           title: '✨ Receipt Scanned!',
           description: 'Please verify the extracted information',
         });
+
+        // Debug form values after setting
+        setTimeout(() => {
+          console.group('📝 Form Values After OCR');
+          console.log('Form Vendor:', form.getValues('vendor_name'));
+          console.log('Form Amount:', form.getValues('amount'));
+          console.log('Form Date:', form.getValues('receipt_date'));
+          console.groupEnd();
+        }, 100);
       }
 
       // Clean up temp file
