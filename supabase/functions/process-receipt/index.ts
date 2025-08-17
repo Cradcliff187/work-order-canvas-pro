@@ -8,7 +8,8 @@ const corsHeaders = {
 interface LineItem {
   description: string;
   quantity?: number;
-  price: number;
+  unit_price?: number;
+  total_price: number;
 }
 
 interface OCRResult {
@@ -285,7 +286,8 @@ function parseReceiptText(text: string): OCRResult {
         lineItems.push({
           description: cleanDescription,
           quantity: quantity,
-          price: price
+          unit_price: quantity ? price / quantity : undefined,
+          total_price: price
         });
         console.log(`Found item: ${quantity ? quantity + 'x ' : ''}${cleanDescription} - $${price}`);
       }

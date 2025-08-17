@@ -679,7 +679,7 @@ export function ReceiptUpload() {
                                   )}
                                   <span className="text-muted-foreground">{item.description}</span>
                                 </div>
-                                <span className="font-medium">${item.price.toFixed(2)}</span>
+                                <span className="font-medium">${item.total_price.toFixed(2)}</span>
                               </div>
                             ))}
                             
