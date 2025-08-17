@@ -22,6 +22,7 @@ import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Loader2, 
   Upload, 
@@ -38,7 +39,8 @@ import {
   Calculator,
   Briefcase,
   List,
-  PenTool
+  PenTool,
+  Edit
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -97,8 +99,14 @@ const QUICK_AMOUNTS = [20, 50, 100, 200, 500];
 // File size limit (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+type FlowStage = 'capture' | 'processing' | 'review' | 'manual-entry';
+
 export function SmartReceiptFlow() {
   console.log('SmartReceiptFlow component mounted');
+  
+  // Progressive disclosure state
+  const [flowStage, setFlowStage] = useState<FlowStage>('capture');
+  
   // State management
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -141,6 +149,7 @@ export function SmartReceiptFlow() {
 
   // OCR processing function with progress tracking
   const processWithOCR = async (file: File) => {
+    setFlowStage('processing');
     setIsProcessingOCR(true);
     setOcrError(null);
     setProgressStage('uploading');
@@ -198,6 +207,9 @@ export function SmartReceiptFlow() {
           description: successMessage,
         });
 
+        // Transition to review stage
+        setFlowStage('review');
+        
         // Hide progress after delay
         setTimeout(() => {
           setIsProcessingOCR(false);
@@ -220,6 +232,7 @@ export function SmartReceiptFlow() {
         variant: 'destructive',
       });
       
+      // Stay in processing stage to show manual entry option
       // Hide error progress after delay
       setTimeout(() => {
         setIsProcessingOCR(false);
@@ -276,8 +289,15 @@ export function SmartReceiptFlow() {
     setOcrData(null);
     setOcrConfidence({});
     setOcrError(null);
+    setFlowStage('capture');
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  // Manual entry function
+  const startManualEntry = () => {
+    setFlowStage('manual-entry');
+    setOcrError(null);
   };
 
   // Draft save functionality
@@ -332,6 +352,7 @@ export function SmartReceiptFlow() {
         form.reset();
         removeFile();
         setShowSuccess(false);
+        setFlowStage('capture');
       }, 2000);
 
       toast({
@@ -507,6 +528,40 @@ export function SmartReceiptFlow() {
                   <span>Reading receipt with AI...</span>
                 </div>
               )}
+
+              {/* Manual Entry Option - Show when OCR fails or processing stage */}
+              {(flowStage === 'processing' && !isProcessingOCR && ocrError) && (
+                <div className="text-center py-4 space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm">OCR couldn't read this receipt</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={startManualEntry}
+                    className="gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Enter Details Manually
+                  </Button>
+                </div>
+              )}
+
+              {/* Manual Entry Option - Always available in capture stage */}
+              {flowStage === 'capture' && !receiptFile && (
+                <div className="text-center pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={startManualEntry}
+                    className="gap-2 text-muted-foreground"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Skip OCR - Enter Manually
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -529,8 +584,16 @@ export function SmartReceiptFlow() {
         </CardContent>
       </Card>
 
-      {/* Progressive Review Form Section - Only show after file selection */}
-      {(ocrData || receiptFile) && (
+      {/* Progressive Review Form Section - Only show in review or manual-entry stages */}
+      <AnimatePresence>
+        {(flowStage === 'review' || flowStage === 'manual-entry') && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            style={{ overflow: 'hidden' }}
+          >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Essential Details - Always Open */}
@@ -795,7 +858,9 @@ export function SmartReceiptFlow() {
             </div>
           </form>
         </Form>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Progress Indicator */}
       <FloatingProgress
@@ -809,18 +874,21 @@ export function SmartReceiptFlow() {
         onRetry={retryOCR}
       />
 
-      {/* Floating Action Bar */}
-      <FloatingActionBar
-        vendorName={watchedValues.vendor_name}
-        amount={watchedValues.amount}
-        workOrderAssigned={!!watchedValues.work_order_id}
-        isFormValid={!!isFormValid}
-        isDirty={isDirty}
-        isSubmitting={isUploading}
-        onSaveDraft={saveDraft}
-        onSubmit={form.handleSubmit(onSubmit)}
-        showDraftSaved={showDraftSaved}
-      />
+      {/* Floating Action Bar - Only show in review or manual-entry stages */}
+      {(flowStage === 'review' || flowStage === 'manual-entry') && (
+        <FloatingActionBar
+          vendorName={watchedValues.vendor_name}
+          amount={watchedValues.amount}
+          workOrderAssigned={!!watchedValues.work_order_id}
+          isFormValid={!!isFormValid}
+          isDirty={isDirty}
+          isSubmitting={isUploading}
+          onSaveDraft={saveDraft}
+          onSubmit={form.handleSubmit(onSubmit)}
+          showDraftSaved={showDraftSaved}
+          flowStage={flowStage}
+        />
+      )}
 
     </div>
   );

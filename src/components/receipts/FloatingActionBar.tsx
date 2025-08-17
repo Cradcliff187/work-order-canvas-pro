@@ -15,6 +15,7 @@ interface FloatingActionBarProps {
   onSubmit: () => void;
   showDraftSaved?: boolean;
   className?: string;
+  flowStage?: 'capture' | 'processing' | 'review' | 'manual-entry';
 }
 
 export function FloatingActionBar({
@@ -27,9 +28,11 @@ export function FloatingActionBar({
   onSaveDraft,
   onSubmit,
   showDraftSaved,
-  className
+  className,
+  flowStage
 }: FloatingActionBarProps) {
-  if (!isDirty && !vendorName && !amount) {
+  // Only show when in review or manual-entry stages with meaningful data
+  if ((flowStage !== 'review' && flowStage !== 'manual-entry') || (!isDirty && !vendorName && !amount)) {
     return null;
   }
 
