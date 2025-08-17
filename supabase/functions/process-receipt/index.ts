@@ -29,7 +29,7 @@ serve(async (req) => {
       throw new Error('Missing imageUrl parameter');
     }
 
-    const apiKey = Deno.env.get('GOOGLE_CLOUD_VISION_API_KEY');
+    const apiKey = Deno.env.get('GOOGLE_VISION_API_KEY');
     if (!apiKey) {
       throw new Error('Google Cloud Vision API key not configured');
     }

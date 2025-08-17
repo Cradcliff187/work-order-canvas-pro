@@ -301,27 +301,49 @@ export function QuickReceiptCapture() {
                       )}
                     </FormLabel>
                     <FormControl>
-                      <div className="space-y-3">
-                        <Input
-                          placeholder="Enter vendor name"
-                          className="h-11"
-                          {...field}
-                        />
-                        {/* Quick vendor buttons */}
-                        <div className="flex gap-2 flex-wrap">
-                          {COMMON_VENDORS.slice(0, 6).map(vendor => (
-                            <Button
-                              key={vendor}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => field.onChange(vendor)}
-                            >
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select vendor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COMMON_VENDORS.map(vendor => (
+                            <SelectItem key={vendor} value={vendor}>
                               {vendor}
-                            </Button>
+                            </SelectItem>
                           ))}
-                        </div>
-                      </div>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Receipt Date */}
+          <Card>
+            <CardContent className="p-4">
+              <FormField
+                control={form.control}
+                name="receipt_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4" />
+                      Receipt Date
+                      {ocrConfidence.date && (
+                        <Badge variant={ocrConfidence.date > 0.6 ? 'default' : 'secondary'}>
+                          {Math.round(ocrConfidence.date * 100)}%
+                        </Badge>
+                      )}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        className="h-11"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
