@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/useDebounce";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
@@ -155,13 +156,13 @@ export function SmartReceiptFlow() {
   const showCameraCapture = state.ui.showCameraCapture;
   const cameraStream = state.ui.cameraStream;
 
-  // File handling functions
-  const removeFile = () => {
+  // Memoized file handling functions
+  const removeFile = useCallback(() => {
     onSwipeAction(); // Haptic feedback
     actions.resetFlow();
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
-  };
+  }, [onSwipeAction, actions]);
 
   // Swipe gesture for image removal
   const swipeGesture = useSwipeGesture({
@@ -189,8 +190,8 @@ export function SmartReceiptFlow() {
   
   const { receipts, availableWorkOrders, createReceipt, isUploading } = useReceipts();
 
-  // Get recent work orders from receipts data for smart suggestions
-  const getRecentWorkOrders = () => {
+  // Memoize recent work orders calculation for performance
+  const recentWorkOrders = useMemo(() => {
     if (!receipts.data || !availableWorkOrders.data) return [];
     
     // Extract work order IDs from recent receipts
@@ -204,7 +205,7 @@ export function SmartReceiptFlow() {
       .map(id => availableWorkOrders.data?.find(wo => wo.id === id))
       .filter(Boolean) // Remove undefined
       .slice(0, 3); // Top 3
-  };
+  }, [receipts.data, availableWorkOrders.data]);
 
   // Form setup
   const form = useForm<SmartReceiptFormData>({
@@ -219,16 +220,22 @@ export function SmartReceiptFlow() {
     },
   });
 
-  // Watch form values for floating action bar with progressive validation
+  // Watch form values with debounce for performance
   const watchedValues = form.watch();
-  const isFormValid = canSubmitForm(watchedValues, ocrConfidence) && 
-                     watchedValues.vendor_name && 
-                     watchedValues.amount > 0 && 
-                     watchedValues.receipt_date;
+  const debouncedValues = useDebounce(watchedValues, 300);
+  
+  // Memoize form validation for performance
+  const isFormValid = useMemo(() => {
+    return canSubmitForm(debouncedValues, ocrConfidence) && 
+           debouncedValues.vendor_name && 
+           debouncedValues.amount > 0 && 
+           debouncedValues.receipt_date;
+  }, [debouncedValues, ocrConfidence]);
+  
   const isDirty = form.formState.isDirty || computed.hasReceiptFile;
 
-  // OCR processing function with progress tracking
-  const processWithOCR = async (file: File) => {
+  // Memoized OCR processing function with progress tracking
+  const processWithOCR = useCallback(async (file: File) => {
     actions.startOCRProcessing();
     
     try {
@@ -300,9 +307,9 @@ export function SmartReceiptFlow() {
       
       // Don't show toast - let the FloatingProgress handle error display
     }
-  };
+  }, [actions, form, toast]);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -341,9 +348,9 @@ export function SmartReceiptFlow() {
       actions.setFile(file);
       await processWithOCR(file);
     }
-  };
+  }, [toast, actions, processWithOCR]);
 
-  const handleCameraCapture = async () => {
+  const handleCameraCapture = useCallback(async () => {
     try {
       const permission = await checkCameraPermission();
       if (!permission.granted) {
@@ -375,9 +382,9 @@ export function SmartReceiptFlow() {
         variant: "destructive"
       });
     }
-  };
+  }, [checkCameraPermission, requestCameraPermission, toast, onError, actions]);
 
-  const captureFromCamera = async () => {
+  const captureFromCamera = useCallback(async () => {
     try {
       if (!cameraStream) return;
       
@@ -409,22 +416,22 @@ export function SmartReceiptFlow() {
         variant: "destructive"
       });
     }
-  };
+  }, [cameraStream, captureImageFromCamera, onImageCapture, onError, toast, actions, processWithOCR]);
 
-  const closeCameraCapture = () => {
+  const closeCameraCapture = useCallback(() => {
     actions.setCameraState(false);
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
     }
-  };
+  }, [actions, cameraStream]);
 
-  // Manual entry function
-  const startManualEntry = () => {
+  // Memoized manual entry function
+  const startManualEntry = useCallback(() => {
     actions.startManualEntry();
-  };
+  }, [actions]);
 
-  // Draft save functionality
-  const saveDraft = () => {
+  // Memoized draft save functionality
+  const saveDraft = useCallback(() => {
     onFormSave(); // Haptic feedback
     persistence.saveDraft();
     actions.showDraftSaved(true);
@@ -436,18 +443,18 @@ export function SmartReceiptFlow() {
     
     // Hide draft saved indicator after 3 seconds
     setTimeout(() => actions.showDraftSaved(false), 3000);
-  };
+  }, [onFormSave, persistence, actions, toast]);
 
-  // OCR retry function
-  const retryOCR = () => {
+  // Memoized OCR retry function
+  const retryOCR = useCallback(() => {
     if (receiptFile) {
       actions.retryOCR();
       processWithOCR(receiptFile);
     }
-  };
+  }, [receiptFile, actions, processWithOCR]);
 
-  // Form submission
-  const onSubmit = async (data: SmartReceiptFormData) => {
+  // Memoized form submission
+  const onSubmit = useCallback(async (data: SmartReceiptFormData) => {
     try {
       const receiptData = {
         vendor_name: data.vendor_name,
@@ -488,15 +495,15 @@ export function SmartReceiptFlow() {
         variant: 'destructive',
       });
     }
-  };
+  }, [receiptFile, createReceipt, onSubmitSuccess, actions, form, toast, onError]);
 
-  // Get confidence indicator
-  const getConfidenceColor = (field: string) => {
+  // Memoized confidence indicator
+  const getConfidenceColor = useCallback((field: string) => {
     const confidence = ocrConfidence[field] || 0;
     if (confidence >= 0.8) return 'text-success';
     if (confidence >= 0.5) return 'text-warning';
     return 'text-destructive';
-  };
+  }, [ocrConfidence]);
 
   // Render confidence badge
   const renderConfidenceBadge = (field: string, value: any) => {
@@ -914,7 +921,7 @@ export function SmartReceiptFlow() {
                       <FormLabel>Work Order (Optional)</FormLabel>
                       <SmartWorkOrderSelector
                         availableWorkOrders={availableWorkOrders.data || []}
-                        recentWorkOrders={getRecentWorkOrders()}
+                        recentWorkOrders={recentWorkOrders}
                         selectedWorkOrderId={field.value}
                         onSelect={field.onChange}
                       />

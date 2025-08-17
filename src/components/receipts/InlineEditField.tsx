@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { SmartInput } from './SmartInput';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { Button } from '@/components/ui/button';
 import { Check, Loader2, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDebounce } from '@/hooks/useDebounce';
 import { 
   validateField, 
   getFormatExamples, 
@@ -31,7 +32,7 @@ interface InlineEditFieldProps {
   enableRealtimeValidation?: boolean;
 }
 
-export const InlineEditField: React.FC<InlineEditFieldProps> = ({
+const InlineEditFieldComponent: React.FC<InlineEditFieldProps> = ({
   value,
   onSave,
   inputType,
@@ -57,6 +58,9 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Debounce edit value for validation to improve performance
+  const debouncedEditValue = useDebounce(editValue, 300);
+
   useEffect(() => {
     setEditValue(value);
     // Reset validation when value changes
@@ -66,24 +70,20 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     }
   }, [value, fieldType, confidence, enableRealtimeValidation]);
 
-  // Real-time validation as user types
+  // Real-time validation with improved debouncing
   useEffect(() => {
     if (isEditing && fieldType && enableRealtimeValidation) {
-      const debounceTimer = setTimeout(() => {
-        const result = validateField(fieldType, editValue, confidence);
-        setValidationResult(result);
-        
-        // Only set error for severe issues to avoid blocking
-        if (result.severity === 'error') {
-          setError(result.message);
-        } else {
-          setError(null);
-        }
-      }, 300); // Debounce validation
-
-      return () => clearTimeout(debounceTimer);
+      const result = validateField(fieldType, debouncedEditValue, confidence);
+      setValidationResult(result);
+      
+      // Only set error for severe issues to avoid blocking
+      if (result.severity === 'error') {
+        setError(result.message);
+      } else {
+        setError(null);
+      }
     }
-  }, [editValue, isEditing, fieldType, confidence, enableRealtimeValidation]);
+  }, [debouncedEditValue, isEditing, fieldType, confidence, enableRealtimeValidation]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -98,24 +98,24 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     }
   }, [isEditing, editValue]);
 
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
     if (disabled) return;
     setIsEditing(true);
     setError(null);
     setShowSuggestions(false);
     setShowFormatExample(true);
-  };
+  }, [disabled]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setIsEditing(false);
     setEditValue(value);
     setError(null);
     setShowSuggestions(false);
     setShowFormatExample(false);
     setValidationResult(null);
-  };
+  }, [value]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     // Progressive validation - allow save even with warnings
     if (fieldType && enableRealtimeValidation) {
       const result = validateField(fieldType, editValue, confidence);
@@ -153,7 +153,7 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [fieldType, enableRealtimeValidation, editValue, confidence, validation, value, onSave]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
@@ -168,7 +168,7 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     }
   };
 
-  const handleSuggestionClick = async (suggestion: string) => {
+  const handleSuggestionClick = useCallback(async (suggestion: string) => {
     setEditValue(suggestion);
     // Auto-save when suggestion is selected
     if (validation) {
@@ -192,9 +192,9 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [validation, onSave]);
 
-  const getDisplayValue = () => {
+  const getDisplayValue = useMemo(() => {
     if (formatDisplay) {
       return formatDisplay(value);
     }
@@ -207,20 +207,23 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
       default:
         return value?.toString() || 'No value';
     }
-  };
+  }, [formatDisplay, value, inputType]);
 
-  // Get smart suggestions based on field type and current value
-  const smartSuggestions = fieldType 
-    ? getFieldSuggestions(fieldType, typeof editValue === 'string' ? editValue : '') 
-    : suggestions;
-  const topSuggestions = smartSuggestions.slice(0, 4);
+  // Memoize expensive computations for performance
+  const smartSuggestions = useMemo(() => {
+    return fieldType 
+      ? getFieldSuggestions(fieldType, typeof editValue === 'string' ? editValue : '') 
+      : suggestions;
+  }, [fieldType, editValue, suggestions]);
   
-  // Get format examples for the field type
-  const formatExamples = fieldType ? getFormatExamples(fieldType) : [];
+  const topSuggestions = useMemo(() => smartSuggestions.slice(0, 4), [smartSuggestions]);
   
-  // Determine if field should be highlighted based on confidence
-  const shouldHighlight = shouldHighlightField(confidence);
-  const confidenceHighlight = getConfidenceHighlight(confidence);
+  const formatExamples = useMemo(() => {
+    return fieldType ? getFormatExamples(fieldType) : [];
+  }, [fieldType]);
+  
+  const shouldHighlight = useMemo(() => shouldHighlightField(confidence), [confidence]);
+  const confidenceHighlight = useMemo(() => getConfidenceHighlight(confidence), [confidence]);
 
   if (isEditing) {
     return (
@@ -373,7 +376,7 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
             !value && "text-muted-foreground",
             shouldHighlight && "border-warning/40"
           )}>
-            {value ? getDisplayValue() : placeholder || 'Click to edit'}
+            {value ? getDisplayValue : placeholder || 'Click to edit'}
           </span>
           
           {/* Low confidence indicator */}
@@ -434,3 +437,16 @@ export const InlineEditField: React.FC<InlineEditFieldProps> = ({
     </div>
   );
 };
+
+// Memoize component with custom comparison for performance
+export const InlineEditField = React.memo(InlineEditFieldComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.confidence === nextProps.confidence &&
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.inputType === nextProps.inputType &&
+    prevProps.fieldType === nextProps.fieldType &&
+    prevProps.enableRealtimeValidation === nextProps.enableRealtimeValidation &&
+    JSON.stringify(prevProps.suggestions) === JSON.stringify(nextProps.suggestions)
+  );
+});

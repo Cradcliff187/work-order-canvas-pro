@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Save, Send, DollarSign, Building2, Clock, GripHorizontal } from "lucide-react";
@@ -20,7 +20,7 @@ interface FloatingActionBarProps {
   flowStage?: 'capture' | 'processing' | 'review' | 'manual-entry';
 }
 
-export function FloatingActionBar({
+const FloatingActionBarComponent: React.FC<FloatingActionBarProps> = ({
   vendorName,
   amount,
   workOrderAssigned,
@@ -32,7 +32,7 @@ export function FloatingActionBar({
   showDraftSaved,
   className,
   flowStage
-}: FloatingActionBarProps) {
+}) => {
   const isMobile = useIsMobile();
   const { onFormSave, onSubmitSuccess } = useHapticFeedback();
   
@@ -41,15 +41,15 @@ export function FloatingActionBar({
     return null;
   }
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = useCallback(() => {
     onFormSave();
     onSaveDraft();
-  };
+  }, [onFormSave, onSaveDraft]);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     onSubmitSuccess();
     onSubmit();
-  };
+  }, [onSubmitSuccess, onSubmit]);
 
   return (
     <div className={cn(
@@ -150,4 +150,18 @@ export function FloatingActionBar({
       </div>
     </div>
   );
-}
+};
+
+// Memoize component for performance
+export const FloatingActionBar = React.memo(FloatingActionBarComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.vendorName === nextProps.vendorName &&
+    prevProps.amount === nextProps.amount &&
+    prevProps.workOrderAssigned === nextProps.workOrderAssigned &&
+    prevProps.isFormValid === nextProps.isFormValid &&
+    prevProps.isDirty === nextProps.isDirty &&
+    prevProps.isSubmitting === nextProps.isSubmitting &&
+    prevProps.showDraftSaved === nextProps.showDraftSaved &&
+    prevProps.flowStage === nextProps.flowStage
+  );
+});

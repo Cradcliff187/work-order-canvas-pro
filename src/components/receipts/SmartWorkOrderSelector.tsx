@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, Clock, CheckCircle, Hash } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface WorkOrder {
   id: string;
@@ -26,7 +27,7 @@ interface SmartWorkOrderSelectorProps {
   className?: string;
 }
 
-export const SmartWorkOrderSelector: React.FC<SmartWorkOrderSelectorProps> = ({
+const SmartWorkOrderSelectorComponent: React.FC<SmartWorkOrderSelectorProps> = ({
   availableWorkOrders,
   recentWorkOrders = [],
   selectedWorkOrderId,
@@ -35,8 +36,11 @@ export const SmartWorkOrderSelector: React.FC<SmartWorkOrderSelectorProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Debounce search query for better performance
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Get the 3 most recent work orders for suggestions
+  // Memoize suggested work orders with optimized sorting
   const suggestedWorkOrders = useMemo(() => {
     const recent = recentWorkOrders.slice(0, 3);
     // If we don't have enough recent orders, fill with latest available
@@ -50,26 +54,29 @@ export const SmartWorkOrderSelector: React.FC<SmartWorkOrderSelectorProps> = ({
     return recent;
   }, [recentWorkOrders, availableWorkOrders]);
 
-  // Filter work orders based on search
+  // Filter work orders based on debounced search for better performance
   const filteredWorkOrders = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!debouncedSearchQuery.trim()) return [];
     
-    const query = searchQuery.toLowerCase();
+    const query = debouncedSearchQuery.toLowerCase();
     return availableWorkOrders.filter(wo =>
       wo.work_order_number.toLowerCase().includes(query) ||
       wo.title.toLowerCase().includes(query) ||
       wo.store_location?.toLowerCase().includes(query) ||
       wo.city?.toLowerCase().includes(query)
     );
-  }, [availableWorkOrders, searchQuery]);
+  }, [availableWorkOrders, debouncedSearchQuery]);
 
-  const handleWorkOrderSelect = (workOrderId: string) => {
+  const handleWorkOrderSelect = useCallback((workOrderId: string) => {
     onSelect(workOrderId === selectedWorkOrderId ? undefined : workOrderId);
     setSearchQuery('');
     setIsSearching(false);
-  };
+  }, [onSelect, selectedWorkOrderId]);
 
-  const selectedWorkOrder = availableWorkOrders.find(wo => wo.id === selectedWorkOrderId);
+  const selectedWorkOrder = useMemo(() => 
+    availableWorkOrders.find(wo => wo.id === selectedWorkOrderId), 
+    [availableWorkOrders, selectedWorkOrderId]
+  );
 
   const WorkOrderCard = ({ workOrder, isSelected = false, isSuggested = false }: {
     workOrder: WorkOrder;
@@ -271,3 +278,14 @@ export const SmartWorkOrderSelector: React.FC<SmartWorkOrderSelectorProps> = ({
     </div>
   );
 };
+
+// Memoize component for performance
+export const SmartWorkOrderSelector = React.memo(SmartWorkOrderSelectorComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.selectedWorkOrderId === nextProps.selectedWorkOrderId &&
+    prevProps.availableWorkOrders.length === nextProps.availableWorkOrders.length &&
+    prevProps.recentWorkOrders?.length === nextProps.recentWorkOrders?.length &&
+    prevProps.availableWorkOrders === nextProps.availableWorkOrders &&
+    prevProps.recentWorkOrders === nextProps.recentWorkOrders
+  );
+});
