@@ -69,7 +69,7 @@ export function useOCRProcessor({
       const fileName = `receipt-${Date.now()}.${fileExt}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('receipts')
+        .from('work-order-attachments')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
@@ -87,7 +87,7 @@ export function useOCRProcessor({
 
       // Get public URL for the uploaded file
       const { data: { publicUrl } } = supabase.storage
-        .from('receipts')
+        .from('work-order-attachments')
         .getPublicUrl(fileName);
 
       console.log('📄 Processing receipt at URL:', publicUrl);
@@ -136,7 +136,7 @@ export function useOCRProcessor({
 
       // Clean up uploaded file after processing
       const { error: deleteError } = await supabase.storage
-        .from('receipts')
+        .from('work-order-attachments')
         .remove([fileName]);
 
       if (deleteError) {

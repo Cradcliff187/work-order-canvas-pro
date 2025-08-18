@@ -3,38 +3,25 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
+import { Form } from "@/components/ui/form";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAnalytics } from "@/utils/analytics";
 import { ErrorDisplay, getErrorForToast } from '@/components/receipts/ErrorDisplay';
-import { getErrorMessage, canRetryError, shouldOfferManualEntry } from '@/utils/errorMessages';
-import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/utils/imageCompression";
+import { validateField } from "@/utils/receiptValidation";
+import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { cn } from "@/lib/utils";
-import { validateField, type FieldType } from "@/utils/receiptValidation";
-import { compressImage, isSupportedImageType, isValidFileSize } from "@/utils/imageCompression";
-import { FieldGroup } from "./FieldGroup";
-import { ConfidenceBadge } from "./ConfidenceBadge";
-import { InlineEditField } from "./InlineEditField";
-import { mapOCRConfidenceToForm, type OCRConfidence, type FormConfidence } from '@/utils/ocr-confidence-mapper';
-import { formatConfidencePercent, getFieldConfidence } from '@/utils/confidence-display';
 import { DebugPanel } from "./DebugPanel";
 import { FileUploadSection } from "./FileUploadSection";
 import { CameraCapture } from "./CameraCapture";
 import { FilePreview } from "./FilePreview";
 import { ReceiptFormFields } from "./ReceiptFormFields";
 import { useOCRProcessor } from '@/hooks/useOCRProcessor';
-import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
@@ -43,22 +30,7 @@ import { ReceiptSuccessCard } from "./ReceiptSuccessCard";
 import { LineItemsDisplay } from "./LineItemsDisplay";
 import { useReceiptFlow } from "@/hooks/useReceiptFlow";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Loader2, 
-  DollarSign, 
-  FileText, 
-  Calendar,
-  Building2,
-  AlertCircle,
-  Briefcase,
-  PenTool,
-  Edit,
-  RefreshCw,
-  Info,
-  Zap,
-  Target,
-  Copy
-} from "lucide-react";
+import { RefreshCw, Edit } from "lucide-react";
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
