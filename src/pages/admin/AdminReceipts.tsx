@@ -156,7 +156,7 @@ export default function AdminReceipts() {
   const filtered = useMemo(() => {
     const list = receiptsQuery.data || [];
     return list.filter((r) => {
-      const hay = `${r.vendor_name} ${r.description || ''} ${r.receipt_work_orders.map(a => a.work_orders?.work_order_number || '').join(' ')}`.toLowerCase();
+      const hay = `${r.vendor_name || ''} ${r.description || ''} ${(r.receipt_work_orders || []).map(a => a?.work_orders?.work_order_number || '').join(' ')}`.toLowerCase();
       const q = search.toLowerCase().trim();
       const matchesSearch = q ? hay.includes(q) : true;
       const d = r.receipt_date ? String(r.receipt_date).slice(0, 10) : '';
