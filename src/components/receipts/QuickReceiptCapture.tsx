@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { ConfidenceBadge } from './ConfidenceBadge';
 
 // Icons
 import { 
@@ -297,9 +298,7 @@ export function QuickReceiptCapture() {
                       <Building2 className="h-4 w-4" />
                       Vendor
                       {ocrConfidence.vendor_name && (
-                        <Badge variant={ocrConfidence.vendor_name > 0.7 ? 'default' : 'secondary'}>
-                          {Math.round(ocrConfidence.vendor_name * 100)}%
-                        </Badge>
+                        <ConfidenceBadge confidence={ocrConfidence.vendor_name} />
                       )}
                     </FormLabel>
                     <FormControl>
@@ -335,9 +334,7 @@ export function QuickReceiptCapture() {
                       <Receipt className="h-4 w-4" />
                       Receipt Date
                       {ocrConfidence.receipt_date && (
-                        <Badge variant={ocrConfidence.receipt_date > 0.6 ? 'default' : 'secondary'}>
-                          {Math.round(ocrConfidence.receipt_date * 100)}%
-                        </Badge>
+                        <ConfidenceBadge confidence={ocrConfidence.receipt_date} />
                       )}
                     </FormLabel>
                     <FormControl>
@@ -366,9 +363,7 @@ export function QuickReceiptCapture() {
                       <DollarSign className="h-4 w-4" />
                       Amount
                       {ocrConfidence.amount && (
-                        <Badge variant={ocrConfidence.amount > 0.7 ? 'default' : 'secondary'}>
-                          {Math.round(ocrConfidence.amount * 100)}%
-                        </Badge>
+                        <ConfidenceBadge confidence={ocrConfidence.amount} />
                       )}
                     </FormLabel>
                     <FormControl>

@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ConfidenceBadge } from "./ConfidenceBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -570,12 +571,7 @@ export function ReceiptUpload() {
                                 <Building2 className="h-4 w-4" />
                                 Vendor Name *
                                 {ocrConfidence.vendor_name && (
-                                  <Badge 
-                                    variant={ocrConfidence.vendor_name > 0.7 ? 'default' : 'secondary'}
-                                    className="text-xs"
-                                  >
-                                    {Math.round(ocrConfidence.vendor_name * 100)}% confident
-                                  </Badge>
+                                  <ConfidenceBadge confidence={ocrConfidence.vendor_name} />
                                 )}
                               </FormLabel>
                               <FormControl>
@@ -623,12 +619,7 @@ export function ReceiptUpload() {
                               <DollarSign className="h-4 w-4" />
                               Total Amount *
                               {ocrConfidence.amount && (
-                                <Badge 
-                                  variant={ocrConfidence.amount > 0.7 ? 'default' : 'secondary'}
-                                  className="text-xs"
-                                >
-                                  {Math.round(ocrConfidence.amount * 100)}% confident
-                                </Badge>
+                                <ConfidenceBadge confidence={ocrConfidence.amount} />
                               )}
                             </FormLabel>
                             <FormControl>
@@ -672,12 +663,7 @@ export function ReceiptUpload() {
                               {ocrData.lineItems.length} items
                             </Badge>
                             {ocrData.confidence?.lineItems && (
-                              <Badge 
-                                variant={ocrData.confidence.lineItems > 0.6 ? 'default' : 'secondary'}
-                                className="text-xs"
-                              >
-                                {Math.round(ocrData.confidence.lineItems * 100)}% confident
-                              </Badge>
+                              <ConfidenceBadge confidence={ocrData.confidence.lineItems} />
                             )}
                           </CardTitle>
                         </CardHeader>

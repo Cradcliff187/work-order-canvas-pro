@@ -837,19 +837,6 @@ export function SmartReceiptFlow() {
     return 'text-destructive';
   }, [ocrConfidence]);
 
-  // Render confidence badge
-  const renderConfidenceBadge = (field: string, value: any) => {
-    if (!ocrData || !ocrConfidence[field]) return null;
-    
-    const confidence = ocrConfidence[field];
-    const variant = confidence >= 0.8 ? 'default' : confidence >= 0.5 ? 'secondary' : 'destructive';
-    
-    return (
-      <Badge variant={variant} className="ml-2 text-xs">
-        {Math.round(confidence * 100)}% confident
-      </Badge>
-    );
-  };
 
   if (showSuccess) {
     return (
@@ -1181,7 +1168,7 @@ export function SmartReceiptFlow() {
                     {Object.entries(ocrConfidence).map(([field, confidence]) => (
                       <Badge
                         key={field}
-                        variant={confidence > 0.7 ? 'default' : confidence > 0.4 ? 'secondary' : 'destructive'}
+                        variant={confidence >= 0.8 ? 'default' : confidence >= 0.5 ? 'secondary' : 'destructive'}
                         className="text-xs"
                       >
                         {field}: {Math.round(confidence * 100)}%
