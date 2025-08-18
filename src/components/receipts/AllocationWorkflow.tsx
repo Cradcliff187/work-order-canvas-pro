@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useMobileAllocation } from "@/hooks/useMobileAllocation";
 import { cn } from "@/lib/utils";
 import { 
   CheckCircle2, 
@@ -45,7 +45,7 @@ interface AllocationWorkflowProps {
   className?: string;
 }
 
-export function AllocationWorkflow({
+export const AllocationWorkflow = memo(function AllocationWorkflow({
   workOrders,
   totalAmount,
   allocations,
@@ -54,7 +54,24 @@ export function AllocationWorkflow({
   className
 }: AllocationWorkflowProps) {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+  
+  // Mobile optimization hook
+  const { 
+    isMobile, 
+    hapticFeedback, 
+    useSwipeToRemove, 
+    useDebouncedAmountChange,
+    getTouchTargetClass,
+    getInputProps,
+    getFloatingActionClass
+  } = useMobileAllocation({
+    onRemoveAllocation: (workOrderId: string) => {
+      const updatedAllocations = allocations.filter(a => a.work_order_id !== workOrderId);
+      onAllocationsChange(updatedAllocations);
+      setSelectedWorkOrderIds(prev => prev.filter(id => id !== workOrderId));
+    },
+    debounceDelay: 300
+  });
   
   // Selection state
   const [selectedWorkOrderIds, setSelectedWorkOrderIds] = useState<string[]>(
@@ -133,8 +150,15 @@ export function AllocationWorkflow({
     return [];
   }, [vendor, workOrders, selectedWorkOrderIds.length]);
   
-  // Handle work order selection with smart suggestions
+  // Handle work order selection with haptic feedback
   const handleWorkOrderToggle = useCallback((workOrderId: string, checked: boolean) => {
+    // Trigger haptic feedback
+    if (checked) {
+      hapticFeedback.onSelection();
+    } else {
+      hapticFeedback.onDeselection();
+    }
+    
     setSelectedWorkOrderIds(prev => {
       const newSelection = checked 
         ? [...prev, workOrderId]
@@ -151,7 +175,7 @@ export function AllocationWorkflow({
       
       return newSelection;
     });
-  }, [allocations, onAllocationsChange]);
+  }, [allocations, onAllocationsChange, hapticFeedback]);
   
   // Apply smart suggestions
   const handleApplySuggestion = useCallback((suggestedAllocations: Array<{ work_order_id: string; allocated_amount: number }>) => {
@@ -166,9 +190,10 @@ export function AllocationWorkflow({
     });
   }, [onAllocationsChange, toast]);
   
-  // Handle amount changes
+  // Handle amount changes with haptic feedback and validation
   const handleAmountChange = useCallback((workOrderId: string, amount: number) => {
     if (amount < 0) {
+      hapticFeedback.onValidationError();
       toast({
         title: "Invalid Amount",
         description: "Amount cannot be negative",
@@ -176,6 +201,8 @@ export function AllocationWorkflow({
       });
       return;
     }
+    
+    hapticFeedback.onAmountInput();
     
     const updatedAllocations = allocations.map(a =>
       a.work_order_id === workOrderId 
@@ -195,11 +222,18 @@ export function AllocationWorkflow({
     const filteredAllocations = updatedAllocations.filter(a => a.allocated_amount > 0);
     
     onAllocationsChange(filteredAllocations);
-  }, [allocations, onAllocationsChange, toast]);
+    
+    // Check for perfect allocation and trigger success haptic
+    const total = filteredAllocations.reduce((sum, a) => sum + a.allocated_amount, 0);
+    if (Math.abs(total - totalAmount) < 0.01) {
+      hapticFeedback.onPerfectAllocation();
+    }
+  }, [allocations, onAllocationsChange, toast, hapticFeedback, totalAmount]);
   
-  // Enhanced split evenly with preview
+  // Enhanced split evenly with haptic feedback
   const handleSplitEvenly = useCallback(() => {
     if (selectedWorkOrderIds.length === 0) {
+      hapticFeedback.onValidationError();
       toast({
         title: "Select Work Orders First",
         description: "Please select the work orders you want to split this receipt between",
@@ -208,6 +242,7 @@ export function AllocationWorkflow({
       return;
     }
     
+    hapticFeedback.onSplit();
     const amountPerOrder = Math.round((totalAmount / selectedWorkOrderIds.length) * 100) / 100;
     const suggestedAllocations = validator.getSuggestedAllocations(selectedWorkOrderIds);
     onAllocationsChange(suggestedAllocations);
@@ -216,11 +251,12 @@ export function AllocationWorkflow({
       title: "Split Applied",
       description: `$${totalAmount.toFixed(2)} ÷ ${selectedWorkOrderIds.length} = $${amountPerOrder.toFixed(2)} each`,
     });
-  }, [selectedWorkOrderIds, validator, onAllocationsChange, totalAmount, toast]);
+  }, [selectedWorkOrderIds, validator, onAllocationsChange, totalAmount, toast, hapticFeedback]);
   
-  // Auto-allocate to first selected
+  // Auto-allocate with haptic feedback
   const handleAutoAllocate = useCallback(() => {
     if (selectedWorkOrderIds.length === 0) {
+      hapticFeedback.onValidationError();
       toast({
         title: "Select Work Orders First",
         description: "Please select at least one work order",
@@ -229,6 +265,7 @@ export function AllocationWorkflow({
       return;
     }
     
+    hapticFeedback.onAutoAllocate();
     const firstWorkOrderId = selectedWorkOrderIds[0];
     const newAllocations: WorkflowAllocation[] = [{
       work_order_id: firstWorkOrderId,
@@ -242,7 +279,7 @@ export function AllocationWorkflow({
       title: "Auto-Allocation Complete",
       description: `Full amount allocated to ${workOrder?.work_order_number || 'selected work order'}`,
     });
-  }, [selectedWorkOrderIds, workOrders, totalAmount, onAllocationsChange, toast]);
+  }, [selectedWorkOrderIds, workOrders, totalAmount, onAllocationsChange, toast, hapticFeedback]);
   
   // Clear all allocations
   const handleClearAllocations = useCallback(() => {
@@ -394,7 +431,7 @@ export function AllocationWorkflow({
                       onCheckedChange={(checked) => 
                         handleWorkOrderToggle(workOrder.id, checked as boolean)
                       }
-                      className="mt-1"
+                      className={cn("mt-1", getTouchTargetClass())}
                     />
                     
                     <div className="flex-1 min-w-0">
@@ -430,28 +467,18 @@ export function AllocationWorkflow({
                     </div>
                     
                     {isSelected && (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max={totalAmount}
-                          value={allocation?.allocated_amount || ""}
-                          onChange={(e) => 
-                            handleAmountChange(workOrder.id, parseFloat(e.target.value) || 0)
-                          }
-                          placeholder="$0.00"
-                          className={cn("w-20 text-xs", isMobile && "w-24")}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleWorkOrderToggle(workOrder.id, false)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <MobileAllocationControls
+                        workOrder={workOrder}
+                        allocation={allocation}
+                        totalAmount={totalAmount}
+                        onAmountChange={handleAmountChange}
+                        onRemove={() => handleWorkOrderToggle(workOrder.id, false)}
+                        isMobile={isMobile}
+                        getTouchTargetClass={getTouchTargetClass}
+                        getInputProps={getInputProps}
+                        useSwipeToRemove={useSwipeToRemove}
+                        hapticFeedback={hapticFeedback}
+                      />
                     )}
                   </div>
                 );
@@ -645,4 +672,94 @@ export function AllocationWorkflow({
       )}
     </div>
   );
-}
+});
+
+// Optimized mobile allocation controls component
+const MobileAllocationControls = memo(function MobileAllocationControls({
+  workOrder,
+  allocation,
+  totalAmount,
+  onAmountChange,
+  onRemove,
+  isMobile,
+  getTouchTargetClass,
+  getInputProps,
+  useSwipeToRemove,
+  hapticFeedback
+}: {
+  workOrder: any;
+  allocation: any;
+  totalAmount: number;
+  onAmountChange: (workOrderId: string, amount: number) => void;
+  onRemove: () => void;
+  isMobile: boolean;
+  getTouchTargetClass: (baseClass?: string) => string;
+  getInputProps: () => any;
+  useSwipeToRemove: (workOrderId: string) => any;
+  hapticFeedback: any;
+}) {
+  const swipeGesture = useSwipeToRemove(workOrder.id);
+  
+  const handleSwipeEnd = useCallback(() => {
+    if (!swipeGesture.isSwipeing && swipeGesture.direction === 'left' && swipeGesture.distance > 75) {
+      hapticFeedback.onSwipeAction();
+      onRemove();
+      swipeGesture.onReset();
+    }
+  }, [swipeGesture, hapticFeedback, onRemove]);
+
+  return (
+    <div 
+      className={cn(
+        "flex items-center gap-2 transition-transform",
+        swipeGesture.isSwipeing && swipeGesture.direction === 'left' && "transform -translate-x-2"
+      )}
+      {...(isMobile && {
+        onTouchStart: swipeGesture.onTouchStart,
+        onTouchMove: swipeGesture.onTouchMove,
+        onTouchEnd: (e) => {
+          swipeGesture.onTouchEnd(e);
+          handleSwipeEnd();
+        }
+      })}
+    >
+      <Input
+        type="number"
+        step="0.01"
+        min="0"
+        max={totalAmount}
+        value={allocation?.allocated_amount || ""}
+        onChange={(e) => 
+          onAmountChange(workOrder.id, parseFloat(e.target.value) || 0)
+        }
+        placeholder="$0.00"
+        className={cn(
+          "text-xs",
+          isMobile ? "w-24 min-h-[44px]" : "w-20",
+          getTouchTargetClass()
+        )}
+        {...getInputProps()}
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className={cn(
+          "p-0",
+          isMobile ? "h-11 w-11" : "h-8 w-8",
+          getTouchTargetClass()
+        )}
+        aria-label="Remove allocation"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+      
+      {/* Swipe indicator for mobile */}
+      {isMobile && swipeGesture.isSwipeing && swipeGesture.direction === 'left' && (
+        <div className="text-xs text-muted-foreground animate-pulse">
+          Swipe to remove
+        </div>
+      )}
+    </div>
+  );
+});
