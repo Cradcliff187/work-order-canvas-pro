@@ -117,8 +117,27 @@ export default function PipelineDashboard() {
     billingStatus: [] as string[],
     partnerId: '',
     subcontractorId: '',
+    location: [] as string[],
     showOnlyActionable: false
   });
+
+  // Extract unique locations for filter options
+  const locationOptions = useMemo(() => {
+    if (!pipelineData) return [];
+    
+    const locations = new Set<string>();
+    pipelineData.forEach(item => {
+      if (item.store_location) {
+        locations.add(item.store_location);
+      } else {
+        locations.add('No location');
+      }
+    });
+    
+    return Array.from(locations)
+      .sort()
+      .map(location => ({ value: location, label: location }));
+  }, [pipelineData]);
 
   // Calculate pipeline metrics
   const metrics = useMemo(() => {
@@ -169,6 +188,14 @@ export default function PipelineDashboard() {
     // Status filters
     if (filters.operationalStatus.length > 0) {
       filtered = filtered.filter(item => filters.operationalStatus.includes(item.status));
+    }
+    
+    // Location filter
+    if (filters.location.length > 0) {
+      filtered = filtered.filter(item => {
+        const itemLocation = item.store_location || 'No location';
+        return filters.location.includes(itemLocation);
+      });
     }
     
     if (filters.showOnlyActionable) {
@@ -261,6 +288,7 @@ export default function PipelineDashboard() {
           billingStatus: [],
           partnerId: '',
           subcontractorId: '',
+          location: [],
           showOnlyActionable: false
         })}
       >
@@ -269,6 +297,14 @@ export default function PipelineDashboard() {
           value={filters.search}
           onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
           className="w-full md:w-64"
+        />
+
+        <MultiSelectFilter
+          options={locationOptions}
+          selectedValues={filters.location}
+          onSelectionChange={(values) => setFilters(prev => ({ ...prev, location: values }))}
+          placeholder="All locations"
+          maxDisplayCount={2}
         />
         
         <MultiSelectFilter
