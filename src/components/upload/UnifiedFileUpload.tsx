@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileIcon, ImageIcon, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, X, File, ImageIcon, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -253,15 +253,15 @@ export function UnifiedFileUpload({
                         {/* File icon/preview */}
                         <div className="flex-shrink-0">
                           {preview.fileType === 'image' && preview.previewUrl ? (
-                            <img
-                              src={preview.previewUrl}
-                              alt={preview.file.name}
-                              className="w-12 h-12 object-cover rounded border"
-                            />
+                             <img
+                               src={preview.previewUrl}
+                               alt={preview.file.name}
+                               className="w-20 h-20 object-cover rounded border"
+                             />
                           ) : (
-                            <div className="w-12 h-12 bg-muted rounded border flex items-center justify-center">
-                              <FileIcon className="w-6 h-6 text-muted-foreground" />
-                            </div>
+                             <div className="w-20 h-20 bg-muted rounded border flex items-center justify-center">
+                               <File className="w-8 h-8 text-muted-foreground" />
+                             </div>
                           )}
                         </div>
 
@@ -274,12 +274,19 @@ export function UnifiedFileUpload({
                           
                           {/* Progress */}
                           {progress.status !== 'pending' && (
-                            <div className="mt-1">
-                              <Progress value={progress.progress} className="h-1" />
-                              <p className="text-xs text-muted-foreground mt-1 capitalize">
-                                {progress.status}
-                              </p>
-                            </div>
+                             <div className="mt-1">
+                               <Progress value={progress.progress} className="h-2" />
+                               <p className="text-xs text-muted-foreground mt-1">
+                                 {progress.status === 'uploading' 
+                                   ? `Uploading... ${progress.progress}%`
+                                   : progress.status === 'completed'
+                                   ? 'Completed'
+                                   : progress.status === 'error'
+                                   ? 'Error'
+                                   : 'Pending'
+                                 }
+                               </p>
+                             </div>
                           )}
                         </div>
 
@@ -377,9 +384,9 @@ export function UnifiedFileUpload({
                             alt={preview.file.name}
                             className="w-full h-full object-cover"
                           />
-                        ) : (
-                          <FileIcon className="w-8 h-8 text-muted-foreground" />
-                        )}
+                         ) : (
+                           <File className="w-8 h-8 text-muted-foreground" />
+                         )}
                       </div>
 
                       {/* File details */}
@@ -394,12 +401,19 @@ export function UnifiedFileUpload({
 
                       {/* Progress */}
                       {progress.status !== 'pending' && (
-                        <div className="space-y-1">
-                          <Progress value={progress.progress} className="h-2" />
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {progress.status}
-                          </p>
-                        </div>
+                         <div className="space-y-1">
+                           <Progress value={progress.progress} className="h-3" />
+                           <p className="text-xs text-muted-foreground">
+                             {progress.status === 'uploading' 
+                               ? `Uploading... ${progress.progress}%`
+                               : progress.status === 'completed'
+                               ? 'Completed'
+                               : progress.status === 'error'
+                               ? 'Error'
+                               : 'Pending'
+                             }
+                           </p>
+                         </div>
                       )}
 
                       {/* Remove button */}
