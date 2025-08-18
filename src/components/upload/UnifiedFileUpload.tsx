@@ -61,20 +61,28 @@ interface UnifiedFileUploadProps {
   mode?: 'immediate' | 'staged';
   
   /**
+   * How to handle multiple file selections:
+   * - 'replace': New files replace all previous selections (default, predictable behavior)
+   * - 'accumulate': New files add to existing selection
+   * @default 'replace' for predictable behavior
+   */
+  selectionMode?: 'accumulate' | 'replace';
+  
+  /**
    * Legacy callback - called immediately when files are selected in 'immediate' mode
-   * Not called in 'staged' mode
+   * Not called in 'staged' mode. Always receives the FULL file list.
    */
   onFilesSelected?: (files: File[]) => void;
   
   /**
    * Called when files are selected and staged (only in 'staged' mode)
-   * Use this to update UI to show selected files awaiting upload
+   * Use this to update UI to show selected files awaiting upload. Always receives the FULL file list.
    */
   onFilesStaged?: (files: File[]) => void;
   
   /**
    * Called when user explicitly requests upload (only in 'staged' mode)
-   * This is when you should start the actual upload process
+   * This is when you should start the actual upload process. Always receives the FULL file list.
    */
   onUploadRequested?: (files: File[]) => void;
   
@@ -89,6 +97,7 @@ interface UnifiedFileUploadProps {
 
 export function UnifiedFileUpload({
   mode = 'immediate', // Default to immediate for backward compatibility
+  selectionMode = 'replace', // Default to replace for predictable behavior
   onFilesSelected,
   onFilesStaged,
   onUploadRequested,
@@ -132,21 +141,33 @@ export function UnifiedFileUpload({
     return isSupportedFileType(file);
   };
 
-  const validateFiles = useCallback((files: File[]): { valid: File[]; errors: ValidationError[] } => {
+  const validateFiles = useCallback((files: File[], existingFiles: File[] = []): { valid: File[]; errors: ValidationError[] } => {
     const errors: ValidationError[] = [];
     const valid: File[] = [];
-    const currentCount = stagedFiles.length;
+    
+    // For validation, consider the total that would exist after this selection
+    const totalAfterSelection = selectionMode === 'accumulate' ? existingFiles.length + files.length : files.length;
 
-    // Check file count
-    if (currentCount + files.length > maxFiles) {
-      const remaining = maxFiles - currentCount;
-      errors.push({
-        id: `maxFiles_${Date.now()}`,
-        type: 'maxFiles',
-        message: `You can only upload ${remaining} more file${remaining === 1 ? '' : 's'}`,
-        guidance: `You currently have ${currentCount} files selected out of ${maxFiles} maximum.`,
-        isDismissible: true
-      });
+    // Check file count against total after selection
+    if (totalAfterSelection > maxFiles) {
+      const remaining = selectionMode === 'accumulate' ? maxFiles - existingFiles.length : maxFiles;
+      if (remaining <= 0) {
+        errors.push({
+          id: `maxFiles_${Date.now()}`,
+          type: 'maxFiles',
+          message: `Maximum ${maxFiles} files reached`,
+          guidance: `Remove some files before adding more.`,
+          isDismissible: true
+        });
+      } else {
+        errors.push({
+          id: `maxFiles_${Date.now()}`,
+          type: 'maxFiles',
+          message: `You can only add ${remaining} more file${remaining === 1 ? '' : 's'}`,
+          guidance: `You currently have ${existingFiles.length} files selected out of ${maxFiles} maximum.`,
+          isDismissible: true
+        });
+      }
       return { valid: [], errors };
     }
 
@@ -182,9 +203,9 @@ export function UnifiedFileUpload({
         return;
       }
 
-      // Check for duplicates  
-      const isDuplicate = stagedFiles.some(sf => 
-        sf.file.name === file.name && sf.file.size === file.size
+      // Check for duplicates against existing files
+      const isDuplicate = existingFiles.some(existingFile => 
+        existingFile.name === file.name && existingFile.size === file.size
       );
       if (isDuplicate) {
         errors.push({
@@ -202,26 +223,29 @@ export function UnifiedFileUpload({
     });
 
     return { valid, errors };
-  }, [stagedFiles, maxFiles, maxSizeBytes, acceptedTypes]);
+  }, [maxFiles, maxSizeBytes, acceptedTypes, selectionMode]);
 
   // ============= DUAL MODE FILE MANAGEMENT =============
   // Support both immediate and staged modes for backward compatibility
   const handleFilesSelected = useCallback((newFiles: File[]) => {
-    console.log(`[UnifiedFileUpload] Files selected in ${mode} mode:`, newFiles.length);
+    console.log(`[UnifiedFileUpload] Files selected in ${mode} mode, ${selectionMode} selection:`, newFiles.length);
     
-    const { valid, errors } = validateFiles(newFiles);
+    // Get existing files for validation and accumulation logic
+    const existingFiles = mode === 'staged' ? stagedFiles.map(sf => sf.file) : [];
+    const { valid, errors } = validateFiles(newFiles, existingFiles);
     
     // Update validation errors
     setValidationErrors(errors);
     
     if (valid.length > 0) {
       if (mode === 'immediate') {
-        // Legacy immediate mode: call onFilesSelected right away
-        console.log(`[UnifiedFileUpload] Immediate mode - calling onFilesSelected`);
-        onFilesSelected?.(valid);
+        // Legacy immediate mode: call onFilesSelected with full file list
+        console.log(`[UnifiedFileUpload] Immediate mode - calling onFilesSelected with full list`);
+        const allFiles = selectionMode === 'accumulate' ? [...existingFiles, ...valid] : valid;
+        onFilesSelected?.(allFiles);
       } else {
-        // Staged mode: hold files internally and call onFilesStaged
-        console.log(`[UnifiedFileUpload] Staged mode - adding to internal state`);
+        // Staged mode: update internal state and call onFilesStaged with full file list
+        console.log(`[UnifiedFileUpload] Staged mode - updating internal state`);
         
         const newStagedFiles: StagedFile[] = valid.map(file => {
           const id = `${Date.now()}_${Math.random()}`;
@@ -242,18 +266,30 @@ export function UnifiedFileUpload({
           };
         });
 
-        // Add to staged files in staged mode
         setStagedFiles(prev => {
-          const updated = [...prev, ...newStagedFiles];
-          console.log(`[UnifiedFileUpload] Added ${valid.length} files to staging. Total staged: ${updated.length}`);
+          // Apply selection mode logic
+          const updated = selectionMode === 'accumulate' ? [...prev, ...newStagedFiles] : [...newStagedFiles];
+          console.log(`[UnifiedFileUpload] ${selectionMode} mode - Total staged: ${updated.length}`);
+          
+          // Clean up old object URLs if replacing
+          if (selectionMode === 'replace') {
+            prev.forEach(stagedFile => {
+              if (stagedFile.previewUrl) {
+                URL.revokeObjectURL(stagedFile.previewUrl);
+                objectURLsRef.current.delete(stagedFile.previewUrl);
+              }
+            });
+          }
+          
+          // Notify parent with full file list
+          const allFiles = updated.map(sf => sf.file);
+          onFilesStaged?.(allFiles);
+          
           return updated;
         });
-
-        // Notify parent about staged files
-        onFilesStaged?.(valid);
       }
     }
-  }, [mode, validateFiles, onFilesSelected, onFilesStaged]);
+  }, [mode, selectionMode, validateFiles, stagedFiles, onFilesSelected, onFilesStaged]);
 
   const removeFile = useCallback((id: string) => {
     console.log(`[UnifiedFileUpload] Removing staged file with id: ${id}`);
@@ -402,7 +438,7 @@ export function UnifiedFileUpload({
           {getUploadStatusAnnouncement()}
         </div>
 
-        {/* File restrictions */}
+        {/* File restrictions and selection mode */}
         <div className="text-sm text-muted-foreground bg-muted/30 rounded-xl p-4 border">
           <div className="space-y-2">
             <p className="font-medium text-foreground">Upload Requirements</p>
@@ -410,6 +446,14 @@ export function UnifiedFileUpload({
               <span>Formats: {getFileRestrictions().types}</span>
               <span>Max size: {getFileRestrictions().size} per file</span>
               <span>Max files: {getFileRestrictions().count}</span>
+              {mode === 'staged' && previews.length > 0 && (
+                <span className="text-primary font-medium">
+                  {selectionMode === 'accumulate' 
+                    ? `Adding to ${previews.length} existing files` 
+                    : 'New selection will replace existing files'
+                  }
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -568,6 +612,32 @@ export function UnifiedFileUpload({
               })}
             </div>
           </div>
+        )}
+
+        {/* Upload trigger for staged mode */}
+        {mode === 'staged' && previews.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <Button
+                onClick={() => {
+                  const allFiles = stagedFiles.map(sf => sf.file);
+                  onUploadRequested?.(allFiles);
+                }}
+                disabled={disabled || isUploading || previews.length === 0}
+                className="w-full"
+                size="lg"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading {previews.length} file{previews.length === 1 ? '' : 's'}...
+                  </>
+                ) : (
+                  `Upload ${previews.length} file${previews.length === 1 ? '' : 's'}`
+                )}
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
     );
@@ -771,6 +841,32 @@ export function UnifiedFileUpload({
               );
             })}
           </div>
+
+          {/* Upload trigger for staged mode */}
+          {mode === 'staged' && (
+            <Card>
+              <CardContent className="p-4">
+                <Button
+                  onClick={() => {
+                    const allFiles = stagedFiles.map(sf => sf.file);
+                    onUploadRequested?.(allFiles);
+                  }}
+                  disabled={disabled || isUploading || previews.length === 0}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading {previews.length} file{previews.length === 1 ? '' : 's'}...
+                    </>
+                  ) : (
+                    `Upload ${previews.length} file${previews.length === 1 ? '' : 's'}`
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>
