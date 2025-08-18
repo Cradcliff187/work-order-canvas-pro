@@ -140,16 +140,27 @@ export function SmartReceiptFlow() {
   const allocationMode = state.allocation.mode;
   const allocations = state.allocation.allocations;
 
-  // Debug logging for form visibility and stage transitions
+  // Debug logging for form visibility and stage transitions (debounced)
   useEffect(() => {
-    console.log('🔍 Form visibility state:', {
-      flowStage,
-      isFormVisible: computed.isFormVisible,
-      hasOCRData: computed.hasOCRData,
-      ocrData: ocrData ? 'Present' : 'None',
-      ocrError: ocrError ? 'Present' : 'None',
-      confidence: ocrConfidence
-    });
+    let mounted = true;
+    
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.log('🔍 Form visibility state:', {
+          flowStage,
+          isFormVisible: computed.isFormVisible,
+          hasOCRData: computed.hasOCRData,
+          ocrData: ocrData ? 'Present' : 'None',
+          ocrError: ocrError ? 'Present' : 'None',
+          confidence: ocrConfidence
+        });
+      }
+    }, 300); // 300ms debounce
+    
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [flowStage, computed.isFormVisible, computed.hasOCRData, ocrData, ocrError, ocrConfidence]);
 
   // Memoized file handling functions
@@ -165,13 +176,23 @@ export function SmartReceiptFlow() {
     verticalCancelThreshold: 10
   });
 
-  // Handle swipe gesture completion
+  // Handle swipe gesture completion (stabilized)
   useEffect(() => {
+    let mounted = true;
+    
     if (!swipeGesture.isSwipeing && swipeGesture.distance > 75 && swipeGesture.direction) {
-      // Swipe completed with sufficient distance
-      removeFile();
+      const timeoutId = setTimeout(() => {
+        if (mounted) {
+          removeFile();
+        }
+      }, 50); // Small delay to prevent rapid firing
+      
+      return () => {
+        mounted = false;
+        clearTimeout(timeoutId);
+      };
     }
-  }, [swipeGesture.isSwipeing, swipeGesture.distance, swipeGesture.direction]);
+  }, [swipeGesture.isSwipeing, swipeGesture.distance, swipeGesture.direction, removeFile]);
   
   // Pull to refresh for form reset
   const { containerRef, pullDistance, isPulling, isRefreshable } = usePullToRefresh({
@@ -249,13 +270,24 @@ export function SmartReceiptFlow() {
     actions.setSingleAllocation(workOrderId, currentAmount);
   }, [actions, currentAmount]);
   
-  // Update allocation amount when form amount changes
+  // Update allocation amount when form amount changes (debounced)
   useEffect(() => {
+    let mounted = true;
+    
     if (allocationMode === 'single' && (allocations || []).length > 0 && currentAmount > 0) {
-      actions.updateAllocations([{
-        ...(allocations || [])[0],
-        allocated_amount: currentAmount,
-      }]);
+      const timeoutId = setTimeout(() => {
+        if (mounted) {
+          actions.updateAllocations([{
+            ...(allocations || [])[0],
+            allocated_amount: currentAmount,
+          }]);
+        }
+      }, 200); // 200ms debounce for form updates
+      
+      return () => {
+        mounted = false;
+        clearTimeout(timeoutId);
+      };
     }
   }, [currentAmount, allocationMode, allocations, actions]);
 
@@ -474,8 +506,9 @@ export function SmartReceiptFlow() {
       description: 'Your receipt draft has been saved locally.',
     });
     
-    // Hide draft saved indicator after 3 seconds
-    setTimeout(() => actions.showDraftSaved(false), 3000);
+    // Hide draft saved indicator after 3 seconds (with cleanup)
+    const timeoutId = setTimeout(() => actions.showDraftSaved(false), 3000);
+    return () => clearTimeout(timeoutId);
   }, [onFormSave, persistence, actions, toast]);
 
   // Memoized OCR retry function
