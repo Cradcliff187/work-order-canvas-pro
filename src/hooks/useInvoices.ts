@@ -117,9 +117,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
   return useQuery({
     queryKey: stableQueryKey,
     queryFn: async () => {
-      console.log('📡 Fetching invoices with filters:', filters);
       const { page = 1, limit = 10, ...otherFilters } = filters;
-      const offset = (page - 1) * limit;
 
       let query = supabase
         .from('invoices')
@@ -259,7 +257,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
       if (otherFilters.report_status && otherFilters.report_status.length > 0) {
         filteredData = filteredData.filter(invoice =>
           invoice.invoice_work_orders.some(iwo => {
-            const reportStatus = iwo.work_order.latest_report?.status || 'not_submitted';
+            const reportStatus = iwo.work_order.latest_report?.[0]?.status || 'not_submitted';
             return otherFilters.report_status!.includes(reportStatus);
           })
         );
