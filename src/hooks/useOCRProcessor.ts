@@ -41,8 +41,12 @@ export function useOCRProcessor({
 }: UseOCRProcessorProps) {
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const currentProcessIdRef = useRef<string | null>(null);
 
   const processWithOCR = useCallback(async (file: File) => {
+    // Generate unique process ID for deduplication
+    const processId = `ocr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     // Check if already processing
     if (isProcessingLocked) {
       console.warn('OCR processing rejected - already locked');
@@ -54,12 +58,24 @@ export function useOCRProcessor({
       return;
     }
 
-    // Create new AbortController for this processing session
+    // Cancel any existing OCR process before starting new one
+    if (abortControllerRef.current) {
+      console.log('🔄 Cancelling previous OCR process before starting new one');
+      abortControllerRef.current.abort('New process started');
+    }
+
+    // Set current process ID and create new AbortController
+    currentProcessIdRef.current = processId;
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
+    console.log(`🚀 Starting OCR processing [${processId}] for file:`, file.name);
+
     try {
-      console.log('🚀 Starting OCR processing for file:', file.name);
+      // Check if this process was cancelled before we even started
+      if (signal.aborted || currentProcessIdRef.current !== processId) {
+        throw new Error('Processing cancelled before start');
+      }
       
       onOCRStart();
       onOCRProgress('Uploading', 10);
@@ -75,14 +91,16 @@ export function useOCRProcessor({
           upsert: false
         });
 
-      if (signal.aborted) throw new Error('Processing cancelled');
+      if (signal.aborted || currentProcessIdRef.current !== processId) {
+        throw new Error('Processing cancelled');
+      }
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      console.log('✅ File uploaded successfully:', uploadData);
+      console.log(`✅ [${processId}] File uploaded successfully:`, uploadData);
       onOCRProgress('Processing', 50);
 
       // Get public URL for the uploaded file
@@ -90,7 +108,7 @@ export function useOCRProcessor({
         .from('work-order-attachments')
         .getPublicUrl(fileName);
 
-      console.log('📄 Processing receipt at URL:', publicUrl);
+      console.log(`📄 [${processId}] Processing receipt at URL:`, publicUrl);
 
       // Call the edge function for OCR processing
       const { data: ocrData, error: ocrError } = await supabase.functions.invoke('process-receipt', {
@@ -101,7 +119,9 @@ export function useOCRProcessor({
         }
       });
 
-      if (signal.aborted) throw new Error('Processing cancelled');
+      if (signal.aborted || currentProcessIdRef.current !== processId) {
+        throw new Error('Processing cancelled');
+      }
 
       if (ocrError) {
         console.error('OCR processing error:', ocrError);
@@ -110,7 +130,7 @@ export function useOCRProcessor({
 
       onOCRProgress('Analyzing', 85);
 
-      console.log('📊 Raw OCR Response:', ocrData);
+      console.log(`📊 [${processId}] Raw OCR Response:`, ocrData);
 
       // Store raw OCR response for debugging
       setRawOCRText(ocrData?.rawText || 'No raw text available');
@@ -125,7 +145,12 @@ export function useOCRProcessor({
         confidence: ocrData?.confidence || {}
       };
 
-      console.log('✅ Processed OCR Result:', ocrResult);
+      console.log(`✅ [${processId}] Processed OCR Result:`, ocrResult);
+
+      // Final check before success - ensure this process wasn't cancelled
+      if (signal.aborted || currentProcessIdRef.current !== processId) {
+        throw new Error('Processing cancelled before completion');
+      }
 
       // Map confidence values to form field names
       const mappedConfidence = mapOCRConfidenceToForm(ocrResult.confidence || {});
@@ -148,21 +173,31 @@ export function useOCRProcessor({
       }
 
     } catch (error: any) {
-      console.error('OCR processing error:', error);
+      console.error(`❌ [${processId}] OCR processing error:`, error);
       
       if (error.name === 'AbortError' || error.message?.includes('cancelled')) {
-        console.log('OCR processing was cancelled by user');
+        console.log(`🔄 [${processId}] OCR processing was cancelled by user or superseded`);
         return;
       }
 
-      const toastError = getErrorForToast(error);
-      onOCRError(error);
-      
-      toast({
-        title: toastError.title,
-        description: toastError.description,
-        variant: toastError.variant,
-      });
+      // Only trigger error handling if this is still the current process
+      if (currentProcessIdRef.current === processId) {
+        const toastError = getErrorForToast(error);
+        onOCRError(error);
+        
+        toast({
+          title: toastError.title,
+          description: toastError.description,
+          variant: toastError.variant,
+        });
+      } else {
+        console.log(`🔄 [${processId}] Ignoring error from superseded process`);
+      }
+    } finally {
+      // Clear current process ID if this was the current process
+      if (currentProcessIdRef.current === processId) {
+        currentProcessIdRef.current = null;
+      }
     }
   }, [
     isProcessingLocked, 
@@ -177,7 +212,9 @@ export function useOCRProcessor({
 
   const cancelOCR = useCallback(() => {
     if (abortControllerRef.current) {
+      console.log(`🛑 User cancelled OCR process [${currentProcessIdRef.current}]`);
       abortControllerRef.current.abort('User cancelled');
+      currentProcessIdRef.current = null;
     }
   }, []);
 

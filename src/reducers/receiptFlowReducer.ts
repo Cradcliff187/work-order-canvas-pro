@@ -373,7 +373,7 @@ export function receiptFlowReducer(
           },
           progress: {
             stage: 'error',
-            value: 0,
+            value: 0, // Reset progress to 0 on error
             message: action.payload.error,
           },
         };

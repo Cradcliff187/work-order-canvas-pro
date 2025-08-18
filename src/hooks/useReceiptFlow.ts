@@ -275,9 +275,15 @@ export function useReceiptFlow() {
     },
 
     hydrateState: (partialState: Partial<ReceiptFlowState>) => {
-      // Prevent hydration during active OCR processing
-      if (state.ocr.isProcessing || state.progress.stage === 'processing' || state.progress.stage === 'uploading') {
-        console.log('🚫 Hydration blocked - OCR processing active');
+      // Prevent hydration during active OCR processing or intermediate states
+      if (state.ocr.isProcessing || 
+          state.progress.stage === 'processing' || 
+          state.progress.stage === 'uploading' ||
+          state.progress.stage === 'extracting') {
+        console.log('🚫 Hydration blocked - OCR processing active:', {
+          isProcessing: state.ocr.isProcessing,
+          progressStage: state.progress.stage
+        });
         return;
       }
       

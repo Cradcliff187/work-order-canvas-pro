@@ -330,9 +330,13 @@ export function SmartReceiptFlow() {
       });
     },
     onOCRError: (error) => {
-      // Prevent error state after successful completion
-      if (progressStage === 'complete') {
-        console.log('OCR error blocked - processing already completed successfully');
+      // Prevent error state after successful completion or if success was achieved
+      if (progressStage === 'complete' || computed.hasOCRData) {
+        console.log('OCR error blocked - processing already completed successfully or has OCR data:', {
+          progressStage,
+          hasOCRData: computed.hasOCRData,
+          ocrData: !!ocrData
+        });
         return;
       }
       
@@ -351,6 +355,7 @@ export function SmartReceiptFlow() {
         errorMessage = 'Processing took too long - try a clearer image';
       }
       
+      console.log('🚨 Setting OCR error state:', errorMessage);
       actions.setOCRError(errorMessage);
     },
     setRawOCRText: () => {}, // No-op, handled by DebugPanel
