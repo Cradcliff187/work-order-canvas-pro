@@ -134,13 +134,17 @@ export function useOCRProcessor({
       onOCRProgress('Complete', 100);
       onOCRSuccess(ocrResult);
 
-      // Clean up uploaded file after processing
-      const { error: deleteError } = await supabase.storage
-        .from('work-order-attachments')
-        .remove([fileName]);
+      // Clean up uploaded file after processing (don't trigger onOCRError for cleanup failures)
+      try {
+        const { error: deleteError } = await supabase.storage
+          .from('work-order-attachments')
+          .remove([fileName]);
 
-      if (deleteError) {
-        console.warn('Failed to clean up uploaded file:', deleteError);
+        if (deleteError) {
+          console.warn('Failed to clean up uploaded file:', deleteError);
+        }
+      } catch (cleanupError) {
+        console.warn('Cleanup error (non-critical):', cleanupError);
       }
 
     } catch (error: any) {

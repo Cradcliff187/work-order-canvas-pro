@@ -330,6 +330,12 @@ export function SmartReceiptFlow() {
       });
     },
     onOCRError: (error) => {
+      // Prevent error state after successful completion
+      if (progressStage === 'complete') {
+        console.log('OCR error blocked - processing already completed successfully');
+        return;
+      }
+      
       trackOCRPerformance('failed', { 
         errorMessage: error.message,
         errorType: error.code || 'unknown'
@@ -354,9 +360,20 @@ export function SmartReceiptFlow() {
 
   // File selection handler for extracted components
   const handleFileSelect = useCallback(async (file: File, preview?: string) => {
+    // Prevent duplicate OCR processing
+    if (isProcessingLocked) {
+      console.warn('File selection rejected - OCR already processing');
+      toast({
+        title: 'Processing in Progress',
+        description: 'Please wait for current processing to complete',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     actions.setFile(file, preview);
     await processWithOCR(file);
-  }, [actions, processWithOCR]);
+  }, [actions, processWithOCR, isProcessingLocked, toast]);
 
   const handleCameraCapture = useCallback(async () => {
     // Prevent camera capture if processing is locked
@@ -773,12 +790,12 @@ export function SmartReceiptFlow() {
 
       {/* Floating Progress Indicator */}
       <FloatingProgress
-        isVisible={isProcessingOCR}
+        isVisible={isProcessingOCR && progressStage !== 'complete'}
         stage={progressStage}
         progress={progressValue}
         message={progressStage === 'complete' && ocrData ? 
           `Found ${ocrData.vendor || 'vendor'} - $${ocrData.total || 0}` : 
-          ocrError || undefined
+          (progressStage === 'error' ? ocrError : undefined)
         }
         onRetry={retryOCR}
         onManualEntry={startManualEntry}

@@ -232,6 +232,12 @@ export function receiptFlowReducer(
             ...state.ocr,
             error: null,
             retryCount: 0,
+            data: null,
+            confidence: {},
+          },
+          progress: {
+            stage: 'uploading',
+            value: 0,
           },
         };
 
@@ -349,6 +355,12 @@ export function receiptFlowReducer(
         };
 
       case 'SET_OCR_ERROR':
+        // Prevent error state if OCR already succeeded
+        if (state.progress.stage === 'complete' && state.ocr.data) {
+          console.log('SET_OCR_ERROR blocked - OCR already completed successfully');
+          return state;
+        }
+        
         return {
           ...state,
           stage: 'review' as FlowStage,
