@@ -22,6 +22,7 @@ import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
+import { PartnerLocationFilters } from '@/components/admin/partner-locations/PartnerLocationFilters';
 export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
@@ -295,71 +296,23 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
-            <div className="flex-1">
-              <div className="relative" role="search">
-                <SmartSearchInput
-                  placeholder="Search locations, organizations, or cities..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onSearchSubmit={(q) => setSearchTerm(q)}
-                  storageKey="admin-partner-locations-search"
-                  aria-label="Search partner locations"
-                />
-              </div>
-            </div>
-            
-            <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="All Organizations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Organizations</SelectItem>
-                {organizations
-                  .filter(org => org.organization_type === 'partner')
-                  .map(org => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[150px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(searchTerm || selectedOrganization !== 'all' || statusFilter !== 'all') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Clear filters"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedOrganization('all');
-                  setStatusFilter('all');
-                  try {
-                    localStorage.removeItem('admin-partner-locations-filters-v1');
-                    localStorage.removeItem('admin-partner-locations-search');
-                  } catch {}
-                }}
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <PartnerLocationFilters
+        searchTerm={searchTerm}
+        selectedOrganization={selectedOrganization}
+        statusFilter={statusFilter}
+        onSearchChange={setSearchTerm}
+        onOrganizationChange={setSelectedOrganization}
+        onStatusChange={setStatusFilter}
+        onClearFilters={() => {
+          setSearchTerm('');
+          setSelectedOrganization('all');
+          setStatusFilter('all');
+          try {
+            localStorage.removeItem('admin-partner-locations-filters-v1');
+            localStorage.removeItem('admin-partner-locations-search');
+          } catch {}
+        }}
+      />
 
       {/* Locations Table */}
       <Card>

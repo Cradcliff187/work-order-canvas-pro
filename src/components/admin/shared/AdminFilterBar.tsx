@@ -13,29 +13,52 @@ export interface AdminFilterBarProps {
   className?: string;
   children?: React.ReactNode;
   collapsible?: boolean;
+  searchSlot?: React.ReactNode;
+  sheetSide?: 'left' | 'right' | 'bottom';
+  sections?: {
+    essential?: React.ReactNode;
+    advanced?: React.ReactNode;
+  };
 }
 
-// AdminFilterBar: A lightweight, reusable wrapper that provides the same responsive
-// filter UX pattern as Work Orders (mobile sheet + desktop grid).
-// It renders no data-fetching logic; consumers pass their filter controls as children.
-export function AdminFilterBar({ title = 'Filters', filterCount = 0, onClear, className, children, collapsible = false }: AdminFilterBarProps) {
+// AdminFilterBar: Enhanced, reusable wrapper that provides consistent responsive
+// filter UX across all admin pages. Supports search persistence, section grouping,
+// and flexible Sheet positioning for optimal mobile experience.
+export function AdminFilterBar({ 
+  title = 'Filters', 
+  filterCount = 0, 
+  onClear, 
+  className, 
+  children, 
+  collapsible = false,
+  searchSlot,
+  sheetSide = 'right',
+  sections
+}: AdminFilterBarProps) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const hasActive = filterCount > 0;
 
   return (
     <div className={clsx('w-full', className)}>
-      {/* Mobile: Sheet trigger */}
-      <div className="flex items-center justify-between sm:hidden">
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)} aria-label="Open filters">
-          {title}
-          {hasActive ? ` (${filterCount})` : ''}
-        </Button>
-        {hasActive && (
-          <Button variant="ghost" size="sm" onClick={onClear} aria-label="Clear filters">
-            Clear
-          </Button>
+      {/* Mobile: Search always visible + sheet trigger */}
+      <div className="space-y-3 sm:hidden">
+        {searchSlot && (
+          <div className="w-full">
+            {searchSlot}
+          </div>
         )}
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)} aria-label="Open filters">
+            {title}
+            {hasActive ? ` (${filterCount})` : ''}
+          </Button>
+          {hasActive && (
+            <Button variant="ghost" size="sm" onClick={onClear} aria-label="Clear filters">
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -43,12 +66,41 @@ export function AdminFilterBar({ title = 'Filters', filterCount = 0, onClear, cl
           {/* Hidden trigger; we control via state to ensure accessibility */}
           <span className="hidden" />
         </SheetTrigger>
-        <SheetContent side="right" className="w-full sm:w-[420px]">
+        <SheetContent 
+          side={sheetSide} 
+          className={clsx(
+            'w-full',
+            sheetSide === 'bottom' ? 'h-[85vh]' : 'sm:w-[420px]'
+          )}
+        >
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-4">
-            {children}
+          <div className="mt-4 space-y-6 flex-1 overflow-y-auto">
+            {sections ? (
+              <>
+                {sections.essential && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-muted-foreground">Essential Filters</h4>
+                    <div className="space-y-3">
+                      {sections.essential}
+                    </div>
+                  </div>
+                )}
+                {sections.advanced && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-muted-foreground">Advanced Filters</h4>
+                    <div className="space-y-3">
+                      {sections.advanced}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-3">
+                {children}
+              </div>
+            )}
           </div>
           <SheetFooter className="mt-6 flex items-center justify-between">
             <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
@@ -60,42 +112,91 @@ export function AdminFilterBar({ title = 'Filters', filterCount = 0, onClear, cl
       </Sheet>
 
       {/* Desktop: Inline card with header and actions */}
-      {collapsible ? (
-        <Collapsible open={!collapsed} onOpenChange={(open) => setCollapsed(!open)} className="hidden sm:block mt-3">
+      <div className="hidden sm:block mt-3 space-y-4">
+        {searchSlot && (
+          <div className="w-full">
+            {searchSlot}
+          </div>
+        )}
+        {collapsible ? (
+          <Collapsible open={!collapsed} onOpenChange={(open) => setCollapsed(!open)}>
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-medium text-sm text-muted-foreground">{title}</div>
+                <div className="flex items-center gap-2">
+                  {hasActive && (
+                    <Button variant="ghost" size="sm" onClick={onClear}>Clear All</Button>
+                  )}
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="p-1 h-6 w-6">
+                      <ChevronDown className={clsx("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+              </div>
+              <CollapsibleContent>
+                {sections ? (
+                  <div className="space-y-6">
+                    {sections.essential && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Essential</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {sections.essential}
+                        </div>
+                      </div>
+                    )}
+                    {sections.advanced && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Advanced</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {sections.advanced}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {children}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        ) : (
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="font-medium text-sm text-muted-foreground">{title}</div>
-              <div className="flex items-center gap-2">
-                {hasActive && (
-                  <Button variant="ghost" size="sm" onClick={onClear}>Clear All</Button>
-                )}
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="p-1 h-6 w-6">
-                    <ChevronDown className={clsx("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
+              {hasActive && (
+                <Button variant="ghost" size="sm" onClick={onClear}>Clear All</Button>
+              )}
             </div>
-            <CollapsibleContent>
+            {sections ? (
+              <div className="space-y-6">
+                {sections.essential && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Essential</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {sections.essential}
+                    </div>
+                  </div>
+                )}
+                {sections.advanced && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Advanced</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {sections.advanced}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {children}
               </div>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      ) : (
-        <Card className="hidden sm:block p-4 mt-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-medium text-sm text-muted-foreground">{title}</div>
-            {hasActive && (
-              <Button variant="ghost" size="sm" onClick={onClear}>Clear All</Button>
             )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {children}
-          </div>
-        </Card>
-      )}
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,35 +1,97 @@
 import React from 'react';
-import clsx from 'clsx';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-// PartnerLocationFilters: base shell following WorkOrders standard
-// TODO (Phase 2): Replace placeholders with SmartSearchInput, MultiSelectFilter, DateRange, etc.
+import { SmartSearchInput } from '@/components/ui/smart-search-input';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { useOrganizations } from '@/hooks/useOrganizations';
+import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 
 export interface PartnerLocationFiltersProps {
-  value?: Record<string, unknown>;
-  onChange?: (next: Record<string, unknown>) => void;
+  searchTerm: string;
+  selectedOrganization: string;
+  statusFilter: string;
+  onSearchChange: (value: string) => void;
+  onOrganizationChange: (value: string) => void;
+  onStatusChange: (value: string) => void;
+  onClearFilters: () => void;
   className?: string;
 }
 
-export function PartnerLocationFilters({ value, onChange, className }: PartnerLocationFiltersProps) {
+export function PartnerLocationFilters({ 
+  searchTerm,
+  selectedOrganization,
+  statusFilter,
+  onSearchChange,
+  onOrganizationChange,
+  onStatusChange,
+  onClearFilters,
+  className
+}: PartnerLocationFiltersProps) {
+  const { data: organizations = [] } = useOrganizations();
+  
+  const partnerOrgs = organizations.filter(org => org.organization_type === 'partner');
+  
+  const organizationOptions = [
+    { value: 'all', label: 'All Organizations' },
+    ...partnerOrgs.map(org => ({ value: org.id, label: org.name }))
+  ];
+  
+  const statusOptions = [
+    { value: 'all', label: 'All Status' },
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' }
+  ];
+
+  // Calculate filter count
+  const filterCount = [
+    searchTerm,
+    selectedOrganization !== 'all' ? selectedOrganization : null,
+    statusFilter !== 'all' ? statusFilter : null
+  ].filter(Boolean).length;
+
+  const searchSlot = (
+    <SmartSearchInput
+      placeholder="Search locations, organizations, or cities..."
+      value={searchTerm}
+      onChange={(e) => onSearchChange(e.target.value)}
+      onSearchSubmit={onSearchChange}
+      storageKey="admin-partner-locations-search"
+      aria-label="Search partner locations"
+      className="w-full"
+    />
+  );
+
   return (
-    <div className={clsx('w-full', className)}>
-      <Card className="p-3 flex items-center gap-2">
-        {/* TODO: Wire to debounced search + server filters. Keep parity with WorkOrders UX. */}
-        <Input
-          placeholder="Search locations... (placeholder)"
-          aria-label="Search partner locations"
-          onChange={() => {
-            /* no-op placeholder: implement in Phase 2 */
-          }}
-        />
-        <Button type="button" variant="outline" disabled>
-          Filters
-        </Button>
-      </Card>
-    </div>
+    <AdminFilterBar
+      title="Filters"
+      filterCount={filterCount}
+      onClear={onClearFilters}
+      className={className}
+      searchSlot={searchSlot}
+      sheetSide="bottom"
+    >
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Organization</label>
+          <MultiSelectFilter
+            placeholder="Select organization"
+            options={organizationOptions}
+            selectedValues={selectedOrganization === 'all' ? [] : [selectedOrganization]}
+            onSelectionChange={(values) => onOrganizationChange(values[0] || 'all')}
+            maxDisplayCount={1}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Status</label>
+          <MultiSelectFilter
+            placeholder="Select status"
+            options={statusOptions}
+            selectedValues={statusFilter === 'all' ? [] : [statusFilter]}
+            onSelectionChange={(values) => onStatusChange(values[0] || 'all')}
+            maxDisplayCount={1}
+          />
+        </div>
+      </div>
+    </AdminFilterBar>
   );
 }
 
