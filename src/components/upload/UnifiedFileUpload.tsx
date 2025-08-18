@@ -25,6 +25,7 @@ interface StagedFile {
   previewUrl?: string;
   fileType: 'image' | 'document';
   stage: FileStage;
+  uploadState: 'staged' | 'uploading' | 'completed' | 'error';
 }
 
 // Legacy interface for backward compatibility  
@@ -262,7 +263,8 @@ export function UnifiedFileUpload({
             id,
             fileType,
             previewUrl,
-            stage: 'staged' as FileStage
+            stage: 'staged' as FileStage,
+            uploadState: 'staged' as const
           };
         });
 
@@ -296,6 +298,13 @@ export function UnifiedFileUpload({
     
     setStagedFiles(prev => {
       const fileToRemove = prev.find(sf => sf.id === id);
+      
+      // Don't allow removing files that are currently uploading
+      if (fileToRemove?.uploadState === 'uploading') {
+        console.log(`[UnifiedFileUpload] Cannot remove file currently uploading: ${fileToRemove.file.name}`);
+        return prev;
+      }
+      
       const updated = prev.filter(sf => sf.id !== id);
       
       // Clean up object URL to prevent memory leaks
@@ -370,6 +379,35 @@ export function UnifiedFileUpload({
   const getFileProgress = (fileName: string) => {
     return uploadProgress[fileName] || { progress: 0, status: 'pending' as const };
   };
+
+  // Sync uploadProgress prop with internal file states
+  useEffect(() => {
+    if (mode === 'staged' && Object.keys(uploadProgress).length > 0) {
+      setStagedFiles(prev => {
+        return prev.map(file => {
+          const progress = uploadProgress[file.file.name];
+          if (progress) {
+            let newUploadState: 'staged' | 'uploading' | 'completed' | 'error';
+            switch (progress.status) {
+              case 'uploading':
+                newUploadState = 'uploading';
+                break;
+              case 'completed':
+                newUploadState = 'completed';
+                break;
+              case 'error':
+                newUploadState = 'error';
+                break;
+              default:
+                newUploadState = file.uploadState; // Keep current state
+            }
+            return { ...file, uploadState: newUploadState };
+          }
+          return file;
+        });
+      });
+    }
+  }, [uploadProgress, mode]);
 
   // Cleanup all object URLs on unmount to prevent memory leaks
   useEffect(() => {
@@ -571,39 +609,66 @@ export function UnifiedFileUpload({
                                 {(preview.file.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeFile(preview.id)}
-                              className="h-11 w-11 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
-                              aria-label={`Remove ${preview.file.name}`}
-                            >
-                              <X className="h-5 w-5" />
-                            </Button>
+                            {(() => {
+                              const stagedFile = stagedFiles.find(sf => sf.id === preview.id);
+                              const uploadState = stagedFile?.uploadState || 'staged';
+                              const isUploading = uploadState === 'uploading';
+                              
+                              return (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFile(preview.id)}
+                                  disabled={isUploading}
+                                  className={cn(
+                                    "h-11 w-11 p-0 flex-shrink-0",
+                                    isUploading 
+                                      ? "text-muted-foreground cursor-not-allowed" 
+                                      : "text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  )}
+                                  aria-label={isUploading ? `Cannot remove ${preview.file.name} while uploading` : `Remove ${preview.file.name}`}
+                                >
+                                  <X className="h-5 w-5" />
+                                </Button>
+                              );
+                            })()}
                           </div>
 
-                          {/* Progress */}
-                          {progress.status !== 'pending' && (
-                            <div className="space-y-2" aria-describedby={progressId}>
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground" id={progressId}>
-                                  {progress.status === 'uploading' && `Uploading...`}
-                                  {progress.status === 'completed' && 'Upload complete'}
-                                  {progress.status === 'error' && 'Upload failed'}
-                                </span>
-                                {progress.status === 'uploading' && (
-                                  <span className="font-medium">{progress.progress}%</span>
+                          {/* Progress and upload state */}
+                          {(() => {
+                            const stagedFile = stagedFiles.find(sf => sf.id === preview.id);
+                            const uploadState = stagedFile?.uploadState || 'staged';
+                            
+                            // Only show progress for files actively being uploaded or completed/error
+                            if (uploadState === 'staged') return null;
+                            
+                            return (
+                              <div className="space-y-2" aria-describedby={progressId}>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className={cn(
+                                    "font-medium",
+                                    uploadState === 'uploading' && "text-primary",
+                                    uploadState === 'completed' && "text-emerald-600",
+                                    uploadState === 'error' && "text-destructive"
+                                  )} id={progressId}>
+                                    {uploadState === 'uploading' && `Uploading...`}
+                                    {uploadState === 'completed' && 'Upload complete'}
+                                    {uploadState === 'error' && 'Upload failed'}
+                                  </span>
+                                  {uploadState === 'uploading' && (
+                                    <span className="font-medium text-primary">{progress.progress}%</span>
+                                  )}
+                                </div>
+                                {uploadState === 'uploading' && (
+                                  <Progress 
+                                    value={progress.progress} 
+                                    className="h-2"
+                                    aria-label={`Upload progress: ${progress.progress}%`}
+                                  />
                                 )}
                               </div>
-                              {progress.status === 'uploading' && (
-                                <Progress 
-                                  value={progress.progress} 
-                                  className="h-2"
-                                  aria-label={`Upload progress: ${progress.progress}%`}
-                                />
-                              )}
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       </div>
                     </CardContent>
@@ -802,39 +867,62 @@ export function UnifiedFileUpload({
                         </p>
                       </div>
 
-                      {/* Progress */}
-                      {progress.status !== 'pending' && (
-                         <div className="space-y-1" role="group" aria-labelledby={progressId}>
-                           <Progress 
-                             value={progress.progress} 
-                             className="h-3" 
-                             aria-label={`Upload progress for ${preview.file.name}: ${progress.progress}%`}
-                           />
-                           <p id={progressId} className="text-xs text-muted-foreground" aria-live="polite">
-                             {progress.status === 'uploading' 
-                               ? `Uploading ${preview.file.name}: ${progress.progress}%`
-                               : progress.status === 'completed'
-                               ? `${preview.file.name} uploaded successfully`
-                               : progress.status === 'error'
-                               ? `Error uploading ${preview.file.name}`
-                               : `${preview.file.name} pending upload`
-                             }
-                           </p>
-                         </div>
-                      )}
+                       {/* Progress and upload state */}
+                       {(() => {
+                         const stagedFile = stagedFiles.find(sf => sf.id === preview.id);
+                         const uploadState = stagedFile?.uploadState || 'staged';
+                         
+                         // Only show progress for files actively being uploaded or completed/error
+                         if (uploadState === 'staged') return null;
+                         
+                         return (
+                           <div className="space-y-1" role="group" aria-labelledby={progressId}>
+                             {uploadState === 'uploading' && (
+                               <Progress 
+                                 value={progress.progress} 
+                                 className="h-3" 
+                                 aria-label={`Upload progress for ${preview.file.name}: ${progress.progress}%`}
+                               />
+                             )}
+                             <p id={progressId} className={cn(
+                               "text-xs font-medium",
+                               uploadState === 'uploading' && "text-primary",
+                               uploadState === 'completed' && "text-emerald-600", 
+                               uploadState === 'error' && "text-destructive"
+                             )} aria-live="polite">
+                               {uploadState === 'uploading' 
+                                 ? `Uploading: ${progress.progress}%`
+                                 : uploadState === 'completed'
+                                 ? 'Upload complete'
+                                 : uploadState === 'error'
+                                 ? 'Upload failed'
+                                 : 'Ready to upload'
+                               }
+                             </p>
+                           </div>
+                         );
+                       })()}
 
-                      {/* Remove button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => removeFile(preview.id)}
-                        disabled={progress.status === 'uploading'}
-                        aria-label={`Remove ${preview.file.name} from upload queue`}
-                      >
-                        <X className="w-4 h-4 mr-1" aria-hidden="true" />
-                        Remove
-                      </Button>
+                       {/* Remove button */}
+                       {(() => {
+                         const stagedFile = stagedFiles.find(sf => sf.id === preview.id);
+                         const uploadState = stagedFile?.uploadState || 'staged';
+                         const isUploading = uploadState === 'uploading';
+                         
+                         return (
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="w-full"
+                             onClick={() => removeFile(preview.id)}
+                             disabled={isUploading}
+                             aria-label={isUploading ? `Cannot remove ${preview.file.name} while uploading` : `Remove ${preview.file.name} from upload queue`}
+                           >
+                             <X className="w-4 h-4 mr-1" aria-hidden="true" />
+                             {isUploading ? 'Uploading...' : 'Remove'}
+                           </Button>
+                         );
+                       })()}
                     </div>
                   </CardContent>
                 </Card>
