@@ -39,11 +39,11 @@ import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
 import { FloatingActionBar } from "./FloatingActionBar";
 import { FloatingProgress } from "./FloatingProgress";
 import { ReceiptTour, useReceiptTour } from "./ReceiptTour";
+import { ReceiptSuccessCard } from "./ReceiptSuccessCard";
 import { useReceiptFlow } from "@/hooks/useReceiptFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Loader2, 
-  CheckCircle, 
   DollarSign, 
   FileText, 
   Calendar,
@@ -637,17 +637,7 @@ export function SmartReceiptFlow() {
 
 
   if (showSuccess) {
-    return (
-      <Card className="max-w-md mx-auto mt-8">
-        <CardContent className="pt-6 text-center">
-          <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-success" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Receipt Saved!</h3>
-          <p className="text-muted-foreground">Your receipt has been processed and saved successfully.</p>
-        </CardContent>
-      </Card>
-    );
+    return <ReceiptSuccessCard />;
   }
 
   return (
