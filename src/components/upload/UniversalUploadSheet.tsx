@@ -168,18 +168,43 @@ export function UniversalUploadSheet({
   const renderOptionCard = (option: UploadOption) => {
     if (!option.available) return null;
 
+    const getOptionDescription = () => {
+      switch (option.id) {
+        case 'camera':
+          return 'Capture photos directly with your device camera';
+        case 'scanner':
+          return 'Enhanced document scanning with automatic edge detection';
+        case 'gallery':
+          return 'Select existing photos from your device gallery';
+        case 'files':
+          return 'Browse and select any file type from your device';
+        default:
+          return option.description;
+      }
+    };
+
     return (
       <Card
         key={option.id}
         className={cn(
-          "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]",
+          "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "border-2 hover:border-primary/20",
           (isProcessing || showSuccess) && "opacity-50 cursor-not-allowed"
         )}
         onClick={() => !isProcessing && !showSuccess && triggerFileInput(option.id)}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !isProcessing && !showSuccess) {
+            e.preventDefault();
+            triggerFileInput(option.id);
+          }
+        }}
+        tabIndex={isProcessing || showSuccess ? -1 : 0}
+        role="button"
+        aria-label={isProcessing ? "Processing files" : showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected successfully` : `${option.title}: ${getOptionDescription()}`}
+        aria-describedby={`${option.id}-description`}
       >
         <CardContent className="p-4 text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center" aria-hidden="true">
             {isProcessing ? (
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
             ) : showSuccess ? (
@@ -192,7 +217,7 @@ export function UniversalUploadSheet({
             <h3 className="font-medium text-sm">
               {isProcessing ? "Processing..." : showSuccess ? "Selected!" : option.title}
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p id={`${option.id}-description`} className="text-xs text-muted-foreground">
               {showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected` : option.description}
             </p>
           </div>
@@ -222,17 +247,19 @@ export function UniversalUploadSheet({
       variant="outline"
       className="w-full h-20 border-dashed border-2 hover:border-primary/50 transition-colors duration-200"
       disabled={disabled || isProcessing}
+      aria-label={isProcessing ? "Processing files, please wait" : `Open file selection dialog. ${selectedFileCount > 0 ? `${selectedFileCount} file${selectedFileCount !== 1 ? 's' : ''} currently selected.` : 'No files selected.'}`}
+      aria-describedby="upload-trigger-description"
     >
       <div className="text-center">
         {isProcessing ? (
-          <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" />
+          <Loader2 className="h-6 w-6 mx-auto mb-2 text-primary animate-spin" aria-hidden="true" />
         ) : (
-          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+          <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" aria-hidden="true" />
         )}
         <p className="text-sm font-medium">
           {isProcessing ? "Processing..." : (buttonText || (selectedFileCount > 0 ? `${selectedFileCount} file${selectedFileCount !== 1 ? 's' : ''} selected` : "Select Files"))}
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p id="upload-trigger-description" className="text-xs text-muted-foreground">
           {isProcessing ? "Please wait..." : "Click to select files"}
         </p>
       </div>
@@ -255,6 +282,8 @@ export function UniversalUploadSheet({
           type="file"
           className="hidden"
           onChange={handleFileChange}
+          aria-label={`${option.title} file input`}
+          aria-describedby={`${option.id}-description`}
           {...option.inputProps}
         />
       ))}
@@ -270,28 +299,40 @@ export function UniversalUploadSheet({
             "p-0",
             isMobile ? "h-[85vh] rounded-t-lg" : "w-[400px] sm:w-[540px]"
           )}
+          role="dialog"
+          aria-label="File upload options"
         >
           {/* Mobile handle bar */}
           {isMobile && (
-            <div className="flex justify-center pt-3 pb-2">
+            <div className="flex justify-center pt-3 pb-2" aria-hidden="true">
               <div className="w-8 h-1 bg-muted-foreground/30 rounded-full" />
             </div>
           )}
           
           <div className="p-6 space-y-6">
             <SheetHeader>
-              <SheetTitle>
+              <SheetTitle id="upload-sheet-title">
                 {showSuccess ? "Files Selected!" : "Upload Files"}
               </SheetTitle>
-              <SheetDescription>
+              <SheetDescription id="upload-sheet-description">
                 {showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} ready for upload` : getSheetDescription()}
               </SheetDescription>
             </SheetHeader>
 
-            <div className={cn(
-              "grid gap-3",
-              isMobile ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"
-            )}>
+            {/* Live region for status updates */}
+            <div aria-live="polite" aria-atomic="true" className="sr-only">
+              {showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected successfully` : ''}
+            </div>
+
+            <div 
+              className={cn(
+                "grid gap-3",
+                isMobile ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"
+              )}
+              role="group"
+              aria-labelledby="upload-sheet-title"
+              aria-describedby="upload-sheet-description"
+            >
               {uploadOptions.map(renderOptionCard)}
             </div>
 
@@ -300,6 +341,7 @@ export function UniversalUploadSheet({
                 variant="outline"
                 className="w-full"
                 onClick={() => setIsOpen(false)}
+                aria-label="Cancel file selection and close dialog"
               >
                 Cancel
               </Button>

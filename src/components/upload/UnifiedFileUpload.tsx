@@ -183,10 +183,33 @@ export function UnifiedFileUpload({
     multiple: maxFiles > 1
   });
 
+  // Calculate upload status for aria announcements
+  const getUploadStatusAnnouncement = () => {
+    const uploadingFiles = previews.filter(p => getFileProgress(p.file.name).status === 'uploading');
+    const completedFiles = previews.filter(p => getFileProgress(p.file.name).status === 'completed');
+    const errorFiles = previews.filter(p => getFileProgress(p.file.name).status === 'error');
+    
+    if (uploadingFiles.length > 0) {
+      return `Uploading ${uploadingFiles.length} of ${previews.length} files`;
+    }
+    if (errorFiles.length > 0) {
+      return `${errorFiles.length} files failed to upload`;
+    }
+    if (completedFiles.length === previews.length && previews.length > 0) {
+      return `All ${completedFiles.length} files uploaded successfully`;
+    }
+    return '';
+  };
+
   // Mobile UI
   if (isMobile) {
     return (
-      <div className={cn("space-y-4", className)}>
+      <div className={cn("space-y-4", className)} role="region" aria-label="File upload">
+        {/* Live region for status announcements */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {getUploadStatusAnnouncement()}
+        </div>
+
         {/* Upload trigger */}
         <UniversalUploadSheet
           trigger={
@@ -194,18 +217,20 @@ export function UnifiedFileUpload({
               variant="outline"
               className="w-full h-32 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50"
               disabled={disabled || isUploading}
+              aria-label={isUploading ? "Processing files, please wait" : `Upload files. Maximum ${maxFiles} files allowed.`}
+              aria-describedby="upload-instructions"
             >
               <div className="text-center space-y-2">
                 {isUploading ? (
-                  <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin" />
+                  <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin" aria-hidden="true" />
                 ) : (
-                  <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
+                  <Upload className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
                 )}
                 <div>
                   <p className="text-sm font-medium">
                     {isUploading ? "Processing Files..." : "Upload Files"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p id="upload-instructions" className="text-xs text-muted-foreground">
                     {isUploading ? "Please wait..." : "Tap to choose files"}
                   </p>
                 </div>
@@ -221,12 +246,12 @@ export function UnifiedFileUpload({
 
         {/* Validation errors */}
         {validationErrors.length > 0 && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+          <Alert variant="destructive" role="alert" aria-live="assertive">
+            <AlertCircle className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>
-              <ul className="list-disc list-inside space-y-1">
+              <ul className="list-disc list-inside space-y-1" role="list">
                 {validationErrors.map((error, index) => (
-                  <li key={index} className="text-sm">{error}</li>
+                  <li key={index} className="text-sm" role="listitem">{error}</li>
                 ))}
               </ul>
             </AlertDescription>
@@ -235,55 +260,65 @@ export function UnifiedFileUpload({
 
         {/* File previews */}
         {previews.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-2" role="region" aria-label="Selected files" aria-describedby="file-count">
             <div className="flex justify-between items-center">
-              <p className="text-sm font-medium">Selected Files ({previews.length})</p>
-              <Button variant="ghost" size="sm" onClick={clearAll}>
+              <p id="file-count" className="text-sm font-medium">Selected Files ({previews.length})</p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearAll}
+                aria-label={`Clear all ${previews.length} selected files`}
+              >
                 Clear All
               </Button>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2" role="list" aria-label="File list">
               {previews.map((preview) => {
                 const progress = getFileProgress(preview.file.name);
+                const progressId = `progress-${preview.id}`;
                 return (
-                  <Card key={preview.id}>
+                  <Card key={preview.id} role="listitem">
                     <CardContent className="p-3">
                       <div className="flex items-center space-x-3">
                         {/* File icon/preview */}
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0" role="img" aria-label={`${preview.fileType} file preview`}>
                           {preview.fileType === 'image' && preview.previewUrl ? (
                              <img
                                src={preview.previewUrl}
-                               alt={preview.file.name}
+                               alt={`Preview of ${preview.file.name}`}
                                className="w-20 h-20 object-cover rounded border"
                              />
                           ) : (
                              <div className="w-20 h-20 bg-muted rounded border flex items-center justify-center">
-                               <File className="w-8 h-8 text-muted-foreground" />
+                               <File className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
                              </div>
                           )}
                         </div>
 
                         {/* File details */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{preview.file.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-sm font-medium truncate" title={preview.file.name}>{preview.file.name}</p>
+                          <p className="text-xs text-muted-foreground" aria-label={`File size: ${(preview.file.size / 1024 / 1024).toFixed(2)} megabytes`}>
                             {(preview.file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                           
                           {/* Progress */}
                           {progress.status !== 'pending' && (
-                             <div className="mt-1">
-                               <Progress value={progress.progress} className="h-2" />
-                               <p className="text-xs text-muted-foreground mt-1">
+                             <div className="mt-1" role="group" aria-labelledby={progressId}>
+                               <Progress 
+                                 value={progress.progress} 
+                                 className="h-2" 
+                                 aria-label={`Upload progress for ${preview.file.name}: ${progress.progress}%`}
+                               />
+                               <p id={progressId} className="text-xs text-muted-foreground mt-1" aria-live="polite">
                                  {progress.status === 'uploading' 
-                                   ? `Uploading... ${progress.progress}%`
+                                   ? `Uploading ${preview.file.name}: ${progress.progress}%`
                                    : progress.status === 'completed'
-                                   ? 'Completed'
+                                   ? `${preview.file.name} uploaded successfully`
                                    : progress.status === 'error'
-                                   ? 'Error'
-                                   : 'Pending'
+                                   ? `Error uploading ${preview.file.name}`
+                                   : `${preview.file.name} pending upload`
                                  }
                                </p>
                              </div>
@@ -296,8 +331,9 @@ export function UnifiedFileUpload({
                           size="sm"
                           onClick={() => removeFile(preview.id)}
                           disabled={progress.status === 'uploading'}
+                          aria-label={`Remove ${preview.file.name} from upload queue`}
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-4 h-4" aria-hidden="true" />
                         </Button>
                       </div>
                     </CardContent>
@@ -313,30 +349,51 @@ export function UnifiedFileUpload({
 
   // Desktop UI with drag-and-drop
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-4", className)} role="region" aria-label="File upload">
+      {/* Live region for status announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {getUploadStatusAnnouncement()}
+      </div>
+
       {/* Drag and drop zone */}
       <Card
         {...getRootProps()}
         className={cn(
-          "border-2 border-dashed transition-colors cursor-pointer",
+          "border-2 border-dashed transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25",
           disabled && "opacity-50 cursor-not-allowed"
         )}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={isDragActive ? "Drop files to upload" : `Click to upload files or drag and drop. Maximum ${maxFiles} files allowed, ${Math.round(maxSizeBytes / 1024 / 1024)}MB each.`}
+        aria-describedby="upload-zone-instructions"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            const input = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement;
+            input?.click();
+          }
+        }}
       >
         <CardContent className="p-8 text-center">
-          <input {...getInputProps()} />
-          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <input {...getInputProps()} aria-hidden="true" />
+          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" aria-hidden="true" />
           <h3 className="text-lg font-medium mb-2">
             {isDragActive ? "Drop files here" : "Drag & drop files here"}
           </h3>
-          <p className="text-muted-foreground mb-4">
+          <p id="upload-zone-instructions" className="text-muted-foreground mb-4">
             or click to browse files
           </p>
-          <Button variant="outline" type="button" disabled={disabled || isUploading}>
+          <Button 
+            variant="outline" 
+            type="button" 
+            disabled={disabled || isUploading}
+            aria-label={isUploading ? "Processing files, please wait" : "Browse and select files to upload"}
+          >
             {isUploading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Processing...
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
+                {getUploadStatusAnnouncement() || "Processing files..."}
               </>
             ) : (
               "Browse Files"
@@ -347,12 +404,12 @@ export function UnifiedFileUpload({
 
       {/* Validation errors */}
       {validationErrors.length > 0 && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert variant="destructive" role="alert" aria-live="assertive">
+          <AlertCircle className="h-4 w-4" aria-hidden="true" />
           <AlertDescription>
-            <ul className="list-disc list-inside space-y-1">
+            <ul className="list-disc list-inside space-y-1" role="list">
               {validationErrors.map((error, index) => (
-                <li key={index} className="text-sm">{error}</li>
+                <li key={index} className="text-sm" role="listitem">{error}</li>
               ))}
             </ul>
           </AlertDescription>
@@ -361,31 +418,41 @@ export function UnifiedFileUpload({
 
       {/* File previews */}
       {previews.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-4" role="region" aria-label="Selected files" aria-describedby="desktop-file-count">
           <div className="flex justify-between items-center">
-            <h4 className="font-medium">Selected Files ({previews.length})</h4>
-            <Button variant="outline" size="sm" onClick={clearAll}>
+            <h4 id="desktop-file-count" className="font-medium">Selected Files ({previews.length})</h4>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearAll}
+              aria-label={`Clear all ${previews.length} selected files`}
+            >
               Clear All
             </Button>
           </div>
           
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="File grid">
             {previews.map((preview) => {
               const progress = getFileProgress(preview.file.name);
+              const progressId = `desktop-progress-${preview.id}`;
               return (
-                <Card key={preview.id}>
+                <Card key={preview.id} role="listitem">
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       {/* File preview */}
-                      <div className="aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                      <div 
+                        className="aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden"
+                        role="img" 
+                        aria-label={`${preview.fileType} file preview`}
+                      >
                         {preview.fileType === 'image' && preview.previewUrl ? (
                           <img
                             src={preview.previewUrl}
-                            alt={preview.file.name}
+                            alt={`Preview of ${preview.file.name}`}
                             className="w-full h-full object-cover"
                           />
                          ) : (
-                           <File className="w-8 h-8 text-muted-foreground" />
+                           <File className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
                          )}
                       </div>
 
@@ -394,23 +461,27 @@ export function UnifiedFileUpload({
                         <p className="font-medium text-sm truncate" title={preview.file.name}>
                           {preview.file.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground" aria-label={`File size: ${(preview.file.size / 1024 / 1024).toFixed(2)} megabytes`}>
                           {(preview.file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
 
                       {/* Progress */}
                       {progress.status !== 'pending' && (
-                         <div className="space-y-1">
-                           <Progress value={progress.progress} className="h-3" />
-                           <p className="text-xs text-muted-foreground">
+                         <div className="space-y-1" role="group" aria-labelledby={progressId}>
+                           <Progress 
+                             value={progress.progress} 
+                             className="h-3" 
+                             aria-label={`Upload progress for ${preview.file.name}: ${progress.progress}%`}
+                           />
+                           <p id={progressId} className="text-xs text-muted-foreground" aria-live="polite">
                              {progress.status === 'uploading' 
-                               ? `Uploading... ${progress.progress}%`
+                               ? `Uploading ${preview.file.name}: ${progress.progress}%`
                                : progress.status === 'completed'
-                               ? 'Completed'
+                               ? `${preview.file.name} uploaded successfully`
                                : progress.status === 'error'
-                               ? 'Error'
-                               : 'Pending'
+                               ? `Error uploading ${preview.file.name}`
+                               : `${preview.file.name} pending upload`
                              }
                            </p>
                          </div>
@@ -423,8 +494,9 @@ export function UnifiedFileUpload({
                         className="w-full"
                         onClick={() => removeFile(preview.id)}
                         disabled={progress.status === 'uploading'}
+                        aria-label={`Remove ${preview.file.name} from upload queue`}
                       >
-                        <X className="w-4 h-4 mr-1" />
+                        <X className="w-4 h-4 mr-1" aria-hidden="true" />
                         Remove
                       </Button>
                     </div>
