@@ -251,9 +251,9 @@ export function SmartReceiptFlow() {
   
   // Update allocation amount when form amount changes
   useEffect(() => {
-    if (allocationMode === 'single' && allocations.length > 0 && currentAmount > 0) {
+    if (allocationMode === 'single' && (allocations || []).length > 0 && currentAmount > 0) {
       actions.updateAllocations([{
-        ...allocations[0],
+        ...(allocations || [])[0],
         allocated_amount: currentAmount,
       }]);
     }

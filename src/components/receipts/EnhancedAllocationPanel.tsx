@@ -86,7 +86,7 @@ export function EnhancedAllocationPanel({
   // Enhanced allocation summary with percentages
   const allocationSummary = useMemo(() => {
     const calculationState = allocationCalculator.calculateState(
-      allocations.map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount })),
+      (allocations || []).map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount })),
       totalAmount
     );
     
@@ -106,7 +106,7 @@ export function EnhancedAllocationPanel({
 
   // Convert allocations for WorkOrderSelector component
   const workOrderAllocations = useMemo(() => 
-    allocations.map(allocation => ({
+    (allocations || []).map(allocation => ({
       work_order_id: allocation.work_order_id,
       allocated_amount: allocation.allocated_amount,
     })),
@@ -118,13 +118,13 @@ export function EnhancedAllocationPanel({
     const updatedAllocations = newAllocations.map(allocation => ({
       work_order_id: allocation.work_order_id,
       allocated_amount: allocation.allocated_amount,
-      allocation_notes: allocations.find(a => a.work_order_id === allocation.work_order_id)?.allocation_notes,
+      allocation_notes: (allocations || []).find(a => a.work_order_id === allocation.work_order_id)?.allocation_notes,
     }));
     onAllocationsChange(updatedAllocations);
   }, [allocations, onAllocationsChange]);
 
   // Get single allocation work order ID
-  const singleWorkOrderId = mode === 'single' && allocations.length > 0 ? allocations[0].work_order_id : "";
+  const singleWorkOrderId = mode === 'single' && allocations && allocations.length > 0 ? allocations[0].work_order_id : "";
 
   // Handle single allocation change
   const handleSingleWorkOrderChange = useCallback((workOrderId: string) => {
@@ -137,7 +137,7 @@ export function EnhancedAllocationPanel({
     const updatedAllocations = suggestedAllocations.map(alloc => ({
       work_order_id: alloc.work_order_id,
       allocated_amount: alloc.allocated_amount,
-      allocation_notes: allocations.find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
+      allocation_notes: (allocations || []).find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
     }));
     
     onFormSave(); // Haptic feedback
@@ -160,7 +160,7 @@ export function EnhancedAllocationPanel({
     const updatedAllocations = evenAllocations.map(alloc => ({
       work_order_id: alloc.work_order_id,
       allocated_amount: alloc.allocated_amount,
-      allocation_notes: allocations.find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
+      allocation_notes: (allocations || []).find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
     }));
     
     onAllocationsChange(updatedAllocations);
@@ -169,14 +169,14 @@ export function EnhancedAllocationPanel({
 
   const handleRoundToNearest = useCallback(() => {
     const rounded = allocationCalculator.roundToNearest(
-      allocations.map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount })),
+      (allocations || []).map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount })),
       5
     );
     
     const updatedAllocations = rounded.map(alloc => ({
       work_order_id: alloc.work_order_id,
       allocated_amount: alloc.allocated_amount,
-      allocation_notes: allocations.find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
+      allocation_notes: (allocations || []).find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
     }));
     
     onAllocationsChange(updatedAllocations);
@@ -185,14 +185,14 @@ export function EnhancedAllocationPanel({
 
   const handleDistributeRemaining = useCallback(() => {
     const distributed = allocationCalculator.distributeRemainder(
-      allocations.map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount })),
+      (allocations || []).map(a => ({ work_order_id: a.work_order_id, allocated_amount: a.allocated_amount })),
       totalAmount
     );
     
     const updatedAllocations = distributed.map(alloc => ({
       work_order_id: alloc.work_order_id,
       allocated_amount: alloc.allocated_amount,
-      allocation_notes: allocations.find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
+      allocation_notes: (allocations || []).find(a => a.work_order_id === alloc.work_order_id)?.allocation_notes,
     }));
     
     onAllocationsChange(updatedAllocations);
@@ -202,14 +202,14 @@ export function EnhancedAllocationPanel({
   // Auto-suggest when conditions change
   useEffect(() => {
     if (mode === 'split' && availableWorkOrders.length >= 2 && totalAmount > 0) {
-      const hasAllocations = allocations.length > 0;
+      const hasAllocations = (allocations || []).length > 0;
       setShowSuggestions(!hasAllocations || allocationSummary.remaining > 0.01);
     }
-  }, [mode, availableWorkOrders.length, totalAmount, allocations.length, allocationSummary.remaining]);
+  }, [mode, availableWorkOrders.length, totalAmount, (allocations || []).length, allocationSummary.remaining]);
 
   // Confetti effect for perfect splits
   useEffect(() => {
-    if (showConfetti && allocationSummary.isValid && allocations.length > 1) {
+    if (showConfetti && allocationSummary.isValid && (allocations || []).length > 1) {
       // Trigger confetti animation
       const celebration = () => {
         // This would integrate with a confetti library
@@ -217,7 +217,7 @@ export function EnhancedAllocationPanel({
       };
       celebration();
     }
-  }, [showConfetti, allocationSummary.isValid, allocations.length]);
+  }, [showConfetti, allocationSummary.isValid, (allocations || []).length]);
 
   return (
     <motion.div
@@ -250,7 +250,7 @@ export function EnhancedAllocationPanel({
             </CardTitle>
             
             {/* Visual mode selector for split mode */}
-            {mode === 'split' && allocations.length > 0 && (
+            {mode === 'split' && (allocations || []).length > 0 && (
               <Select value={visualMode} onValueChange={(value: 'pie' | 'bar' | 'progress') => setVisualMode(value)}>
                 <SelectTrigger className="w-32 h-8">
                   <SelectValue />
@@ -402,7 +402,7 @@ export function EnhancedAllocationPanel({
                 </AnimatePresence>
 
                 {/* Quick Actions Bar */}
-                {mode === 'split' && allocations.length > 0 && (
+                {mode === 'split' && (allocations || []).length > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -484,7 +484,7 @@ export function EnhancedAllocationPanel({
 
                 {/* Visual Allocation Summary */}
                 <AnimatePresence>
-                  {allocations.length > 0 && (
+                  {(allocations || []).length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -493,7 +493,7 @@ export function EnhancedAllocationPanel({
                     >
                       <AllocationVisualizer
                         workOrders={availableWorkOrders}
-                        allocations={allocations.map(a => ({
+                        allocations={(allocations || []).map(a => ({
                           work_order_id: a.work_order_id,
                           allocated_amount: a.allocated_amount
                         }))}
@@ -505,7 +505,7 @@ export function EnhancedAllocationPanel({
                 </AnimatePresence>
 
                 {/* Empty state for split mode */}
-                {allocations.length === 0 && (
+                {(allocations || []).length === 0 && (
                   <motion.div 
                     className="text-center py-8 text-muted-foreground"
                     initial={{ opacity: 0 }}
