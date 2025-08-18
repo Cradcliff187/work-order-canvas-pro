@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, File, ImageIcon, AlertCircle, Loader2, Info, FileText, Image as ImageIconSolid } from 'lucide-react';
+import { Upload, X, File, ImageIcon, AlertCircle, Loader2, Info, FileText, Image as ImageIconSolid, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -352,53 +352,39 @@ export function UnifiedFileUpload({
         </div>
 
         {/* File restrictions */}
-        <Card className="bg-muted/30 border-muted">
-          <CardContent className="p-4">
-            <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" aria-hidden="true" />
-              <div className="space-y-2 text-sm">
-                <p className="font-medium text-foreground">Upload Requirements</p>
-                <div className="grid grid-cols-1 gap-2 text-muted-foreground">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="w-4 h-4" aria-hidden="true" />
-                    <span>Formats: {getFileRestrictions().types}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <ImageIconSolid className="w-4 h-4" aria-hidden="true" />
-                    <span>Max size: {getFileRestrictions().size} per file</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Upload className="w-4 h-4" aria-hidden="true" />
-                    <span>Max files: {getFileRestrictions().count}</span>
-                  </div>
-                </div>
-              </div>
+        <div className="text-sm text-muted-foreground bg-muted/30 rounded-xl p-4 border">
+          <div className="space-y-2">
+            <p className="font-medium text-foreground">Upload Requirements</p>
+            <div className="grid grid-cols-1 gap-2">
+              <span>Formats: {getFileRestrictions().types}</span>
+              <span>Max size: {getFileRestrictions().size} per file</span>
+              <span>Max files: {getFileRestrictions().count}</span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Upload trigger */}
         <UniversalUploadSheet
           trigger={
             <Button
               variant="outline"
-              className="w-full h-32 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50"
+              className="w-full h-20 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-all duration-200"
               disabled={disabled || isUploading}
               aria-label={isUploading ? "Processing files, please wait" : `Upload files. Maximum ${maxFiles} files allowed.`}
               aria-describedby="upload-instructions"
             >
               <div className="text-center space-y-2">
                 {isUploading ? (
-                  <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin" aria-hidden="true" />
+                  <Loader2 className="mx-auto h-6 w-6 text-primary animate-spin" aria-hidden="true" />
                 ) : (
-                  <Upload className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                  <Upload className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
                 )}
                 <div>
                   <p className="text-sm font-medium">
-                    {isUploading ? "Processing Files..." : "Upload Files"}
+                    {isUploading ? "Processing Files..." : "Choose Files"}
                   </p>
                   <p id="upload-instructions" className="text-xs text-muted-foreground">
-                    {isUploading ? "Please wait..." : "Tap to choose files"}
+                    {isUploading ? "Please wait..." : "Tap to browse"}
                   </p>
                 </div>
               </div>
@@ -445,77 +431,85 @@ export function UnifiedFileUpload({
             <div className="flex justify-between items-center">
               <p id="file-count" className="text-sm font-medium">Selected Files ({previews.length})</p>
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm" 
                 onClick={clearAll}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 min-w-[44px]"
                 aria-label={`Clear all ${previews.length} selected files`}
               >
+                <Trash2 className="h-4 w-4 mr-2" />
                 Clear All
               </Button>
             </div>
             
-            <div className="space-y-2" role="list" aria-label="File list">
+            <div className="grid grid-cols-1 gap-4" role="list" aria-label="File list">
               {previews.map((preview) => {
                 const progress = getFileProgress(preview.file.name);
                 const progressId = `progress-${preview.id}`;
                 return (
-                  <Card key={preview.id} role="listitem">
-                    <CardContent className="p-3">
-                      <div className="flex items-center space-x-3">
-                        {/* File icon/preview */}
-                        <div className="flex-shrink-0" role="img" aria-label={`${preview.fileType} file preview`}>
+                  <Card key={preview.id} role="listitem" className="hover:shadow-sm transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* File preview */}
+                        <div role="img" aria-label={`${preview.fileType} file preview`}>
                           {preview.fileType === 'image' && preview.previewUrl ? (
-                             <img
-                               src={preview.previewUrl}
-                               alt={`Preview of ${preview.file.name}`}
-                               className="w-20 h-20 object-cover rounded border"
-                             />
+                            <img
+                              src={preview.previewUrl}
+                              alt={`Preview of ${preview.file.name}`}
+                              className="w-full h-48 object-cover rounded-lg border"
+                            />
                           ) : (
-                             <div className="w-20 h-20 bg-muted rounded border flex items-center justify-center">
-                               <File className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
-                             </div>
+                            <div className="w-full h-48 bg-muted rounded-lg border flex items-center justify-center">
+                              <FileText className="h-12 w-12 text-muted-foreground" />
+                            </div>
                           )}
                         </div>
 
-                        {/* File details */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate" title={preview.file.name}>{preview.file.name}</p>
-                          <p className="text-xs text-muted-foreground" aria-label={`File size: ${(preview.file.size / 1024 / 1024).toFixed(2)} megabytes`}>
-                            {(preview.file.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                          
+                        {/* File info and actions */}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate" title={preview.file.name}>
+                                {preview.file.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {(preview.file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFile(preview.id)}
+                              className="h-11 w-11 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                              aria-label={`Remove ${preview.file.name}`}
+                            >
+                              <X className="h-5 w-5" />
+                            </Button>
+                          </div>
+
                           {/* Progress */}
                           {progress.status !== 'pending' && (
-                             <div className="mt-1" role="group" aria-labelledby={progressId}>
-                               <Progress 
-                                 value={progress.progress} 
-                                 className="h-2" 
-                                 aria-label={`Upload progress for ${preview.file.name}: ${progress.progress}%`}
-                               />
-                               <p id={progressId} className="text-xs text-muted-foreground mt-1" aria-live="polite">
-                                 {progress.status === 'uploading' 
-                                   ? `Uploading ${preview.file.name}: ${progress.progress}%`
-                                   : progress.status === 'completed'
-                                   ? `${preview.file.name} uploaded successfully`
-                                   : progress.status === 'error'
-                                   ? `Error uploading ${preview.file.name}`
-                                   : `${preview.file.name} pending upload`
-                                 }
-                               </p>
-                             </div>
+                            <div className="space-y-2" aria-describedby={progressId}>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground" id={progressId}>
+                                  {progress.status === 'uploading' && `Uploading...`}
+                                  {progress.status === 'completed' && 'Upload complete'}
+                                  {progress.status === 'error' && 'Upload failed'}
+                                </span>
+                                {progress.status === 'uploading' && (
+                                  <span className="font-medium">{progress.progress}%</span>
+                                )}
+                              </div>
+                              {progress.status === 'uploading' && (
+                                <Progress 
+                                  value={progress.progress} 
+                                  className="h-2"
+                                  aria-label={`Upload progress: ${progress.progress}%`}
+                                />
+                              )}
+                            </div>
                           )}
                         </div>
-
-                        {/* Remove button */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile(preview.id)}
-                          disabled={progress.status === 'uploading'}
-                          aria-label={`Remove ${preview.file.name} from upload queue`}
-                        >
-                          <X className="w-4 h-4" aria-hidden="true" />
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>

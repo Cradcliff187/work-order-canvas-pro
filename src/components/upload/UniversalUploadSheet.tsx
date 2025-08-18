@@ -187,38 +187,46 @@ export function UniversalUploadSheet({
       <Card
         key={option.id}
         className={cn(
-          "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          "border-2 hover:border-primary/20",
-          (isProcessing || showSuccess) && "opacity-50 cursor-not-allowed"
+          "cursor-pointer transition-all duration-200 hover:shadow-md active:scale-95",
+          "border-2 hover:border-primary/50 min-h-[120px]",
+          !option.available && "opacity-50 cursor-not-allowed",
+          (isProcessing || showSuccess) && "border-primary bg-primary/5"
         )}
-        onClick={() => !isProcessing && !showSuccess && triggerFileInput(option.id)}
+        onClick={() => !isProcessing && !showSuccess && option.available && triggerFileInput(option.id)}
         onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !isProcessing && !showSuccess) {
+          if ((e.key === 'Enter' || e.key === ' ') && !isProcessing && !showSuccess && option.available) {
             e.preventDefault();
             triggerFileInput(option.id);
           }
         }}
-        tabIndex={isProcessing || showSuccess ? -1 : 0}
+        tabIndex={isProcessing || showSuccess || !option.available ? -1 : 0}
         role="button"
         aria-label={isProcessing ? "Processing files" : showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected successfully` : `${option.title}: ${getOptionDescription()}`}
         aria-describedby={`${option.id}-description`}
       >
-        <CardContent className="p-4 text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center" aria-hidden="true">
+        <CardContent className="p-4 text-center space-y-3 h-full flex flex-col justify-center">
+          <div className={cn(
+            "mx-auto w-12 h-12 rounded-full flex items-center justify-center",
+            (isProcessing || showSuccess) 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-primary/10 text-primary"
+          )} aria-hidden="true">
             {isProcessing ? (
-              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              <Loader2 className="w-6 h-6 animate-spin" />
             ) : showSuccess ? (
-              <CheckCircle2 className="w-6 h-6 text-green-600 animate-scale-in" />
+              <CheckCircle2 className="w-6 h-6" />
             ) : (
-              <option.icon className="w-6 h-6 text-primary" />
+              <option.icon className="w-6 h-6" />
             )}
           </div>
           <div>
-            <h3 className="font-medium text-sm">
+            <h3 className="font-medium text-sm leading-tight">
               {isProcessing ? "Processing..." : showSuccess ? "Selected!" : option.title}
             </h3>
-            <p id={`${option.id}-description`} className="text-xs text-muted-foreground">
-              {showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected` : option.description}
+            <p id={`${option.id}-description`} className="text-xs text-muted-foreground mt-1 leading-tight">
+              {showSuccess 
+                ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} selected` 
+                : option.description || getOptionDescription()}
             </p>
           </div>
         </CardContent>
@@ -311,12 +319,23 @@ export function UniversalUploadSheet({
           
           <div className="p-6 space-y-6">
             <SheetHeader>
-              <SheetTitle id="upload-sheet-title">
-                {showSuccess ? "Files Selected!" : "Upload Files"}
+              <SheetTitle id="upload-sheet-title" className="text-lg">
+                {showSuccess ? "Files Selected!" : "Choose Upload Method"}
               </SheetTitle>
-              <SheetDescription id="upload-sheet-description">
+              <SheetDescription id="upload-sheet-description" className="text-sm">
                 {showSuccess ? `${successFileCount} file${successFileCount !== 1 ? 's' : ''} ready for upload` : getSheetDescription()}
               </SheetDescription>
+              
+              {/* File restrictions display */}
+              {!showSuccess && (
+                <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 border mt-4">
+                  <div className="space-y-1">
+                    <div className="font-medium">File requirements:</div>
+                    <div>Images and documents supported</div>
+                    <div>Max size: 10 MB per file</div>
+                  </div>
+                </div>
+              )}
             </SheetHeader>
 
             {/* Live region for status updates */}
@@ -326,7 +345,7 @@ export function UniversalUploadSheet({
 
             <div 
               className={cn(
-                "grid gap-3",
+                "grid gap-4",
                 isMobile ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"
               )}
               role="group"
@@ -339,7 +358,7 @@ export function UniversalUploadSheet({
             {isMobile && (
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full min-h-[44px]"
                 onClick={() => setIsOpen(false)}
                 aria-label="Cancel file selection and close dialog"
               >
