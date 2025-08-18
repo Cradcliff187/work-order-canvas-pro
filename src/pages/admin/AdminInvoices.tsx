@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useInvoices, Invoice } from '@/hooks/useInvoices';
 import { InvoiceFilters } from '@/components/admin/invoices/InvoiceFilters';
-import { AdminFilterBar } from '@/components/admin/shared/AdminFilterBar';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { createInvoiceColumns } from '@/components/admin/invoices/InvoiceColumns';
