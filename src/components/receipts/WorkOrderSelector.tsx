@@ -126,22 +126,6 @@ export function WorkOrderSelector({
 
   return (
     <div className="space-y-4">
-      {/* Header with amount summary */}
-      <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-        <div>
-          <p className="text-sm text-muted-foreground">Total Receipt</p>
-          <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-muted-foreground">Remaining</p>
-          <p className={cn(
-            "text-2xl font-bold",
-            isFullyAllocated ? "text-green-600" : "text-amber-600"
-          )}>
-            ${remaining.toFixed(2)}
-          </p>
-        </div>
-      </div>
 
       {/* Quick Actions */}
       {!isFullyAllocated && workOrders.length > 0 && (
@@ -277,34 +261,6 @@ export function WorkOrderSelector({
         </Alert>
       )}
 
-      {/* Allocation Summary */}
-      {allocations.length > 0 && (
-        <Card className="bg-muted/50">
-          <CardContent className="p-4">
-            <p className="font-medium mb-2">Allocation Summary</p>
-            <div className="space-y-1">
-              {allocations.map(allocation => {
-                const wo = workOrders.find(w => w.id === allocation.work_order_id);
-                return (
-                  <div key={allocation.work_order_id} className="flex justify-between text-sm">
-                    <span>{wo?.work_order_number}</span>
-                    <span className="font-medium">${allocation.allocated_amount.toFixed(2)}</span>
-                  </div>
-                );
-              })}
-              <Separator className="my-2" />
-              <div className="flex justify-between font-medium">
-                <span>Total Allocated</span>
-                <span className={cn(
-                  isFullyAllocated ? "text-green-600" : ""
-                )}>
-                  ${totalAllocated.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
