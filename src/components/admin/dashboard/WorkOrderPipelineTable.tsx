@@ -605,23 +605,35 @@ export function WorkOrderPipelineTable() {
           </Button>
           
           <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-            <SheetContent side="right" className="w-[480px]">
-              <SheetHeader>
+            <SheetContent side="right" className="w-[520px] overflow-y-auto">
+              <SheetHeader className="space-y-1">
                 <SheetTitle>Pipeline Filters</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6">
-                <AdminFilterBar
-                  title="Filters"
-                  filterCount={filterCount}
-                  onClear={handleClearFilters}
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="absolute right-12 top-4"
                 >
+                  Clear All
+                </Button>
+              </SheetHeader>
+              
+              <div className="mt-6 space-y-4">
+                {/* Search */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Search</label>
                   <SmartSearchInput
                     value={filters.search || ''}
                     onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                     placeholder="Search work orders, partners, locations..."
                     storageKey="pipeline-table-search"
+                    className="w-full"
                   />
-                  
+                </div>
+                
+                {/* Locations */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Locations</label>
                   <MultiSelectFilter
                     options={locationOptions}
                     selectedValues={filters.location_filter || []}
@@ -630,18 +642,28 @@ export function WorkOrderPipelineTable() {
                     }
                     placeholder="All locations"
                     maxDisplayCount={2}
+                    className="w-full"
                   />
+                </div>
 
+                {/* Operational Status */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Operational Status</label>
                   <MultiSelectFilter
                     options={operationalStatusOptions}
                     selectedValues={filters.operational_status || []}
                     onSelectionChange={(values) => 
                       setFilters({ ...filters, operational_status: values })
                     }
-                    placeholder="Show actionable items"
+                    placeholder="All statuses"
                     maxDisplayCount={2}
+                    className="w-full"
                   />
-                  
+                </div>
+                
+                {/* Financial Status */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Invoice Status</label>
                   <MultiSelectFilter
                     options={financialStatusOptions}
                     selectedValues={filters.financial_status || []}
@@ -650,8 +672,13 @@ export function WorkOrderPipelineTable() {
                     }
                     placeholder="All invoice statuses"
                     maxDisplayCount={2}
+                    className="w-full"
                   />
+                </div>
 
+                {/* Partner Billing Status */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Billing Status</label>
                   <MultiSelectFilter
                     options={partnerBillingStatusOptions}
                     selectedValues={filters.partner_billing_status || []}
@@ -660,8 +687,13 @@ export function WorkOrderPipelineTable() {
                     }
                     placeholder="All billing statuses"
                     maxDisplayCount={2}
+                    className="w-full"
                   />
+                </div>
 
+                {/* Report Status */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Report Status</label>
                   <MultiSelectFilter
                     options={reportStatusOptions}
                     selectedValues={filters.report_status || []}
@@ -670,8 +702,13 @@ export function WorkOrderPipelineTable() {
                     }
                     placeholder="All report statuses"
                     maxDisplayCount={2}
+                    className="w-full"
                   />
+                </div>
 
+                {/* Partner Organization */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Partner Organization</label>
                   <OrganizationSelector
                     value={filters.partner_organization_id || ''}
                     onChange={(value) => 
@@ -679,8 +716,13 @@ export function WorkOrderPipelineTable() {
                     }
                     organizationType="partner"
                     placeholder="All partners"
+                    className="w-full"
                   />
+                </div>
 
+                {/* Priority */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Priority</label>
                   <MultiSelectFilter
                     options={priorityOptions}
                     selectedValues={filters.priority || []}
@@ -689,8 +731,13 @@ export function WorkOrderPipelineTable() {
                     }
                     placeholder="All priorities"
                     maxDisplayCount={2}
+                    className="w-full"
                   />
+                </div>
 
+                {/* Assigned Organization */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Assigned Organization</label>
                   <OrganizationSelector
                     value={filters.assigned_organization_id?.[0] || ''}
                     onChange={(value) => 
@@ -698,20 +745,23 @@ export function WorkOrderPipelineTable() {
                     }
                     organizationType="subcontractor"
                     placeholder="All subcontractors"
+                    className="w-full"
                   />
+                </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={filters.overdue || false}
-                      onCheckedChange={(checked) => 
-                        setFilters({ ...filters, overdue: checked })
-                      }
-                    />
-                    <Label htmlFor="overdue-switch" className="text-sm font-medium">
-                      Overdue Only
-                    </Label>
-                  </div>
-                </AdminFilterBar>
+                {/* Overdue Only */}
+                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/50">
+                  <Switch
+                    id="overdue-switch"
+                    checked={filters.overdue || false}
+                    onCheckedChange={(checked) => 
+                      setFilters({ ...filters, overdue: checked })
+                    }
+                  />
+                  <Label htmlFor="overdue-switch" className="text-sm font-medium flex-1">
+                    Overdue Only
+                  </Label>
+                </div>
               </div>
             </SheetContent>
           </Sheet>

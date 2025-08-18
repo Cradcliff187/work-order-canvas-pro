@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { KPICard } from '@/components/analytics/KPICard';
-import PipelineDashboard from '@/pages/admin/PipelineDashboard';
+import { WorkOrderPipelineTable } from '@/components/admin/dashboard/WorkOrderPipelineTable';
 import { InvoiceDetailModal } from '@/components/admin/invoices/InvoiceDetailModal';
 import { Invoice } from '@/hooks/useInvoices';
 
@@ -638,7 +638,7 @@ if (error) {
         </TabsContent>
 
         <TabsContent value="pipeline" className="space-y-6">
-          <PipelineDashboard />
+          <WorkOrderPipelineTable />
         </TabsContent>
       </Tabs>
 
