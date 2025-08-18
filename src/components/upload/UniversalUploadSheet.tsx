@@ -27,8 +27,23 @@ interface UploadOption {
   available: boolean;
 }
 
+/**
+ * UniversalUploadSheet - Mobile-optimized sheet-based file selection
+ * 
+ * Ideal for:
+ * - Mobile uploads requiring camera/gallery access
+ * - Modal contexts where space is limited
+ * - Camera/scanner integration workflows
+ * 
+ * Features:
+ * - Native camera and gallery integration
+ * - Mobile-first responsive design
+ * - Various input method options (camera, scanner, gallery, files)
+ * - Haptic feedback on mobile devices
+ */
 interface UniversalUploadSheetProps {
   trigger?: React.ReactNode;
+  
   /**
    * Upload mode controls the file handling behavior:
    * - 'immediate': Files are sent to parent immediately on selection (legacy behavior)
@@ -38,28 +53,51 @@ interface UniversalUploadSheetProps {
   mode?: 'immediate' | 'staged';
   
   /**
-   * Legacy callback - called immediately when files are selected in 'immediate' mode
-   * Not called in 'staged' mode
+   * How to handle multiple file selections:
+   * - 'replace': New files replace all previous selections (default, predictable behavior)
+   * - 'accumulate': New files add to existing selection
+   * @default 'replace' for predictable behavior
+   */
+  selectionMode?: 'accumulate' | 'replace';
+  
+  /**
+   * Called immediately when files are selected in 'immediate' mode
+   * Not called in 'staged' mode. Always receives the FULL file list.
    */
   onFilesSelected?: (files: File[]) => void;
   
   /**
    * Called when files are selected and staged (only in 'staged' mode)
+   * Always receives the FULL file list.
    */
   onFilesStaged?: (files: File[]) => void;
   
   /**
    * Called when user explicitly requests upload (only in 'staged' mode)
+   * Always receives the FULL file list.
    */
   onUploadRequested?: (files: File[]) => void;
   
+  // File constraints - consistent with other upload components
+  maxFiles?: number;
+  maxSizeBytes?: number;
+  acceptedTypes?: string[];
+  
+  // Legacy props for backward compatibility
   accept?: string;
   multiple?: boolean;
+  
+  // Control props
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  
+  // State props
   isProcessing?: boolean;
+  uploadProgress?: { [fileName: string]: { progress: number; status: 'pending' | 'uploading' | 'completed' | 'error' } };
   selectedFileCount?: number;
+  
+  // UI customization
   buttonText?: string;
   context?: 'work-order' | 'general' | 'invoice' | 'report';
 }
@@ -67,15 +105,20 @@ interface UniversalUploadSheetProps {
 export function UniversalUploadSheet({
   trigger,
   mode = 'immediate', // Default to immediate for backward compatibility
+  selectionMode = 'replace', // Default to replace for predictable behavior
   onFilesSelected,
   onFilesStaged,
   onUploadRequested,
-  accept = "*/*",
-  multiple = true,
+  maxFiles = 10,
+  maxSizeBytes = 50 * 1024 * 1024, // 50MB
+  acceptedTypes = [],
+  accept = "*/*", // Legacy prop
+  multiple = true, // Legacy prop
   disabled = false,
   open,
   onOpenChange,
   isProcessing = false,
+  uploadProgress = {},
   selectedFileCount = 0,
   buttonText,
   context = 'general'
@@ -84,6 +127,7 @@ export function UniversalUploadSheet({
   const [internalOpen, setInternalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successFileCount, setSuccessFileCount] = useState(0);
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   
   // Use controlled state if provided, otherwise use internal state
   const isOpen = open !== undefined ? open : internalOpen;
@@ -153,22 +197,30 @@ export function UniversalUploadSheet({
   ];
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length > 0) {
+    const newFiles = Array.from(event.target.files || []);
+    if (newFiles.length > 0) {
       // Add haptic feedback on mobile
       if (isMobile && 'vibrate' in navigator) {
         navigator.vibrate(50);
       }
       
+      // Apply selection mode logic
+      const allFiles = selectionMode === 'accumulate' 
+        ? [...stagedFiles, ...newFiles]
+        : [...newFiles];
+      
+      // Update internal state for both modes
+      setStagedFiles(allFiles);
+      
       // Show success state with animation
-      setSuccessFileCount(files.length);
+      setSuccessFileCount(allFiles.length);
       setShowSuccess(true);
       
-      // Call appropriate handler based on mode
+      // Call appropriate handler based on mode - always send FULL file list
       if (mode === 'immediate') {
-        onFilesSelected?.(files);
+        onFilesSelected?.(allFiles);
       } else {
-        onFilesStaged?.(files);
+        onFilesStaged?.(allFiles);
       }
       
       // Delay closing the sheet to show success confirmation
@@ -359,10 +411,22 @@ export function UniversalUploadSheet({
               {/* File restrictions display */}
               {!showSuccess && (
                 <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 border mt-4">
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <div className="font-medium">File requirements:</div>
-                    <div>Images and documents supported</div>
-                    <div>Max size: 10 MB per file</div>
+                    <div>Formats: {acceptedTypes.length > 0 
+                      ? acceptedTypes.map(t => t.split('/')[1]?.toUpperCase()).join(', ')
+                      : 'Images and documents supported'
+                    }</div>
+                    <div>Max size: {Math.round(maxSizeBytes / 1024 / 1024)}MB per file</div>
+                    <div>Max files: {maxFiles}</div>
+                    {mode === 'staged' && stagedFiles.length > 0 && (
+                      <div className="text-primary font-medium">
+                        {selectionMode === 'accumulate' 
+                          ? `Adding to ${stagedFiles.length} existing files` 
+                          : 'New selection will replace existing files'
+                        }
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

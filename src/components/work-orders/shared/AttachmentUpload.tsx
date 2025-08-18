@@ -11,22 +11,68 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { Progress } from '@/components/ui/progress';
 import type { UploadProgress } from '@/hooks/useFileUpload';
 
+/**
+ * AttachmentUpload - Form-integrated upload with business logic
+ * 
+ * Ideal for:
+ * - Work orders, invoices, and form submissions
+ * - Business workflows requiring internal/external file controls
+ * - Admin-controlled upload processes
+ * 
+ * Features:
+ * - Form integration with staged/immediate modes
+ * - Admin-only internal/external file toggles
+ * - Business-specific upload workflows
+ * - Progress tracking for form submissions
+ */
 interface AttachmentUploadProps {
   onUpload: (files: File[], isInternal?: boolean) => Promise<void>;
-  maxFileSize?: number; // in bytes
+  
+  /**
+   * Upload mode controls the file handling behavior:
+   * - 'immediate': Files are sent to parent immediately on selection (legacy behavior)
+   * - 'staged': Files are held internally until explicit upload action (new behavior)
+   * @default 'staged' for form contexts, 'immediate' for standalone
+   */
+  mode?: 'immediate' | 'staged';
+  
+  /**
+   * How to handle multiple file selections:
+   * - 'replace': New files replace all previous selections (default, predictable behavior)
+   * - 'accumulate': New files add to existing selection
+   * @default 'replace' for predictable behavior
+   */
+  selectionMode?: 'accumulate' | 'replace';
+  
+  // File constraints - standardized across all upload components
   maxFiles?: number;
+  maxSizeBytes?: number; // renamed from maxFileSize for consistency
+  acceptedTypes?: string[];
+  
+  // Legacy prop for backward compatibility
+  maxFileSize?: number; // in bytes - deprecated, use maxSizeBytes
+  
+  // Upload state
   isUploading?: boolean;
-  uploadProgress?: UploadProgress[];
+  uploadProgress?: UploadProgress[]; // Will be converted internally to standardized format
+  
+  // Control props
   disabled?: boolean;
   className?: string;
+  
+  // Business-specific features
   showInternalToggle?: boolean; // Only show for admins/employees
   isFormContext?: boolean; // true for work order forms, false for standalone uploads
 }
 
 export function AttachmentUpload({
   onUpload,
-  maxFileSize = 50 * 1024 * 1024, // 50MB default
+  mode = 'staged', // Default to staged for form contexts
+  selectionMode = 'replace', // Default to replace for predictable behavior
   maxFiles = 10,
+  maxSizeBytes = 50 * 1024 * 1024, // 50MB default
+  acceptedTypes = [],
+  maxFileSize, // Legacy prop - deprecated
   isUploading = false,
   uploadProgress = [],
   disabled = false,
@@ -35,11 +81,13 @@ export function AttachmentUpload({
   isFormContext = false
 }: AttachmentUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [hasFilesToUpload, setHasFilesToUpload] = useState(false);
   const [isInternal, setIsInternal] = useState(false);
   const { profile: userProfile, isAdmin } = useUserProfile();
 
-  // Convert UploadProgress[] to the format expected by UnifiedFileUpload
+  // Use legacy maxFileSize if provided, otherwise use maxSizeBytes
+  const effectiveMaxSizeBytes = maxFileSize || maxSizeBytes;
+
+  // Convert UploadProgress[] to the format expected by UniversalUploadSheet
   const formattedProgress = uploadProgress.reduce((acc, progress) => {
     acc[progress.fileName] = {
       progress: progress.progress,
@@ -48,28 +96,39 @@ export function AttachmentUpload({
     return acc;
   }, {} as { [fileName: string]: { progress: number; status: 'pending' | 'uploading' | 'completed' | 'error' } });
 
+  // Unified file selection handler for both immediate and staged modes
   const handleFilesSelected = useCallback((files: File[]) => {
     setSelectedFiles(files);
-    setHasFilesToUpload(files.length > 0);
-  }, []);
+    
+    // In immediate mode, trigger upload right away (if not in form context)
+    if (mode === 'immediate' && !isFormContext) {
+      onUpload(files, isInternal);
+    }
+  }, [mode, isFormContext, onUpload, isInternal]);
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length > 0) {
       await onUpload(selectedFiles, isInternal);
       setSelectedFiles([]);
-      setHasFilesToUpload(false);
       setIsInternal(false);
     }
   }, [selectedFiles, onUpload, isInternal]);
 
+  const clearSelection = useCallback(() => {
+    setSelectedFiles([]);
+    setIsInternal(false);
+  }, []);
+
   return (
     <div className={cn("space-y-4", className)}>
       <UniversalUploadSheet
+        mode={mode}
+        selectionMode={selectionMode}
         trigger={
           <Button
             type="button"
             variant="outline"
-            className="w-full h-20 border-dashed border-2 hover:border-primary/50"
+            className="w-full h-20 border-dashed border-2 hover:border-primary/50 transition-colors duration-200"
             disabled={disabled || isUploading}
           >
             <div className="text-center">
@@ -81,7 +140,7 @@ export function AttachmentUpload({
               <p className="text-sm font-medium">
                 {isUploading ? "Processing Files..." : (selectedFiles.length > 0 ? (
                   <span className="flex items-center gap-2 justify-center">
-                    Select Files
+                    {selectionMode === 'accumulate' ? 'Add Files' : 'Select Files'}
                     <Badge variant="secondary" className="text-xs">
                       {selectedFiles.length}
                     </Badge>
@@ -89,28 +148,41 @@ export function AttachmentUpload({
                 ) : "Select Files")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isUploading ? "Please wait..." : "Click to select files"}
+                {isUploading ? "Please wait..." : (
+                  mode === 'staged' && selectedFiles.length > 0 ? 
+                    (selectionMode === 'accumulate' ? 'Adding to selection' : 'New selection will replace existing') :
+                    "Click to select files"
+                )}
               </p>
             </div>
           </Button>
         }
-        onFilesSelected={handleFilesSelected}
-        accept="*/*"
+        onFilesSelected={mode === 'immediate' ? handleFilesSelected : undefined}
+        onFilesStaged={mode === 'staged' ? handleFilesSelected : undefined}
+        maxFiles={maxFiles}
+        maxSizeBytes={effectiveMaxSizeBytes}
+        acceptedTypes={acceptedTypes}
+        accept="*/*" // Legacy fallback
         multiple={true}
         isProcessing={isUploading}
+        uploadProgress={formattedProgress}
         selectedFileCount={selectedFiles.length}
+        context="work-order"
       />
 
-      {/* Alert for form context explaining when files will be uploaded */}
-      {selectedFiles.length > 0 && isFormContext && !isUploading && (
+      {/* Mode-specific alerts */}
+      {selectedFiles.length > 0 && !isUploading && (
         <Alert>
           <AlertDescription>
-            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected. Files will be uploaded when you submit the form.
+            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected.
+            {isFormContext && mode === 'staged' ? ' Files will be uploaded when you submit the form.' : 
+             mode === 'staged' ? ' Click upload when ready.' : 
+             ' Files uploaded immediately on selection.'}
           </AlertDescription>
         </Alert>
       )}
       
-      {hasFilesToUpload && !isUploading && (
+      {selectedFiles.length > 0 && !isUploading && (
         <div className="space-y-3">
           {showInternalToggle && isAdmin && (
             <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
@@ -134,15 +206,11 @@ export function AttachmentUpload({
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => {
-                  setSelectedFiles([]);
-                  setHasFilesToUpload(false);
-                  setIsInternal(false);
-                }}
+                onClick={clearSelection}
               >
                 Clear
               </Button>
-              {!isFormContext && (
+              {mode === 'staged' && !isFormContext && (
                 <Button 
                   size="sm"
                   onClick={handleUpload}
