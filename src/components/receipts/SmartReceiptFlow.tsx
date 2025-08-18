@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { useReceipts } from "@/hooks/useReceipts";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,8 +21,6 @@ import { ErrorDisplay, getErrorForToast } from '@/components/receipts/ErrorDispl
 import { getErrorMessage, canRetryError, shouldOfferManualEntry } from '@/utils/errorMessages';
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { isIOS, isAndroid, getCameraAttribute } from "@/utils/mobileDetection";
-import { isSupportedFileType, formatFileSize, SUPPORTED_IMAGE_TYPES } from "@/utils/fileUtils";
 import { validateField, type FieldType } from "@/utils/receiptValidation";
 import { compressImage, isSupportedImageType, isValidFileSize } from "@/utils/imageCompression";
 import { FieldGroup } from "./FieldGroup";
@@ -31,6 +29,9 @@ import { InlineEditField } from "./InlineEditField";
 import { mapOCRConfidenceToForm, type OCRConfidence, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { formatConfidencePercent, getFieldConfidence } from '@/utils/confidence-display';
 import { DebugPanel } from "./DebugPanel";
+import { FileUploadSection } from "./FileUploadSection";
+import { CameraCapture } from "./CameraCapture";
+import { FilePreview } from "./FilePreview";
 import { useOCRProcessor } from '@/hooks/useOCRProcessor';
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
@@ -41,14 +42,10 @@ import { useReceiptFlow } from "@/hooks/useReceiptFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Loader2, 
-  Upload, 
   CheckCircle, 
   DollarSign, 
   FileText, 
   Calendar,
-  Camera,
-  X,
-  Sparkles,
   Building2,
   AlertCircle,
   Plus,
@@ -58,14 +55,10 @@ import {
   PenTool,
   Edit,
   RefreshCw,
-  HelpCircle,
   Info,
   Zap,
   Target,
-  Copy,
-  Bug,
-  Eye,
-  EyeOff
+  Copy
 } from "lucide-react";
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -181,8 +174,6 @@ export function SmartReceiptFlow() {
   }, []); // Empty deps - only track on initial mount and cleanup on unmount
   
   const { showTour, hasCompletedTour, completeTour, skipTour, startTour } = useReceiptTour();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { onImageCapture, onFormSave, onSubmitSuccess, onError, onSwipeAction } = useHapticFeedback();
   
   // Camera functionality
@@ -230,8 +221,6 @@ export function SmartReceiptFlow() {
     onSwipeAction(); // Haptic feedback
     actions.resetFlow();
     // Debug data handled by DebugPanel
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
   }, [onSwipeAction, actions]);
 
   // Swipe gesture for image removal
@@ -420,97 +409,11 @@ export function SmartReceiptFlow() {
     isProcessingLocked,
   });
 
-  // OCR processing is now handled by the useOCRProcessor hook
-
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Debug data handled by DebugPanel
-
-    // File validation
-    if (!isValidFileSize(file, MAX_FILE_SIZE)) {
-      toast({
-        title: 'File Too Large',
-        description: `File size must be less than ${formatFileSize(MAX_FILE_SIZE)}`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!isSupportedImageType(file) && file.type !== 'application/pdf') {
-      toast({
-        title: 'Unsupported File Type',
-        description: 'Please upload an image (JPEG, PNG, WebP, HEIC) or PDF file',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // For images, compress before processing
-    if (file.type.startsWith('image/')) {
-      try {
-        // Show compression progress
-        actions.updateOCRProgress('uploading', 5);
-        
-        const compressionStartTime = Date.now();
-        const compressionResult = await compressImage(file, {
-          maxWidth: 1920,
-          maxHeight: 1080,
-          quality: 0.8
-        }, (progress) => {
-          // Map compression progress to 5-25% of total progress
-          actions.updateOCRProgress('uploading', 5 + (progress * 0.2));
-        });
-
-        const compressedFile = compressionResult.file;
-        const compressionTime = Date.now() - compressionStartTime;
-        
-        // Track compression performance
-        trackImageCompression(file.size, compressedFile.size, compressionTime);
-        
-        // Show compression results
-        if (compressionResult.compressionRatio > 1.1) {
-          toast({
-            title: 'Image Optimized',
-            description: `Reduced size by ${Math.round((1 - 1/compressionResult.compressionRatio) * 100)}%`,
-          });
-        }
-
-        // Create image preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const preview = e.target?.result as string;
-          actions.setFile(compressedFile, preview);
-        };
-        reader.readAsDataURL(compressedFile);
-
-        // Process with OCR using compressed file
-        await processWithOCR(compressedFile);
-      } catch (error: any) {
-        console.error('Image compression error:', error);
-        const toastError = getErrorForToast(error);
-        toast({
-          title: toastError.title,
-          description: toastError.description,
-          variant: toastError.variant,
-        });
-        
-        // Fall back to original file if compression fails
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const preview = e.target?.result as string;
-          actions.setFile(file, preview);
-        };
-        reader.readAsDataURL(file);
-        await processWithOCR(file);
-      }
-    } else {
-      // For PDFs, no preview but still process OCR
-      actions.setFile(file);
-      await processWithOCR(file);
-    }
-  }, [toast, actions, processWithOCR, isProcessingLocked]);
+  // File selection handler for extracted components
+  const handleFileSelect = useCallback(async (file: File, preview?: string) => {
+    actions.setFile(file, preview);
+    await processWithOCR(file);
+  }, [actions, processWithOCR]);
 
   const handleCameraCapture = useCallback(async () => {
     // Prevent camera capture if processing is locked
@@ -782,308 +685,92 @@ export function SmartReceiptFlow() {
         confidenceValues={ocrConfidence}
       />
 
-      {/* Camera/Upload Capture Section */}
-      <Card data-tour="upload-section">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              Smart Receipt Capture
-            </div>
-            {hasCompletedTour && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={startTour}
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Restart tutorial</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(!imagePreview && !computed.hasReceiptFile) ? (
-            <div className="space-y-4">
-              {/* Mobile-optimized capture buttons */}
-              {isMobile ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="h-20 flex-col min-h-[80px]"
-                    onClick={cameraSupported ? handleCameraCapture : () => cameraInputRef.current?.click()}
-                    disabled={isProcessingLocked}
-                  >
-                    <Camera className="h-6 w-6 mb-2" />
-                    <span className="text-sm">
-                      {cameraSupported ? "Camera Preview" : "Camera"}
-                    </span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="h-20 flex-col min-h-[80px]"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-6 w-6 mb-2" />
-                    <span className="text-sm">Upload</span>
-                  </Button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center space-y-4">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-2">Upload Receipt or Invoice</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Drag and drop or click to select files
-                    </p>
-                    <div className="space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Browse Files
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => cameraInputRef.current?.click()}
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Take Photo
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
+      {/* File Upload Section */}
+      <FileUploadSection
+        onFileSelect={handleFileSelect}
+        onCameraCapture={handleCameraCapture}
+        cameraSupported={cameraSupported}
+        isProcessingLocked={isProcessingLocked}
+        hasFile={computed.hasReceiptFile}
+        hasCompletedTour={hasCompletedTour}
+        onStartTour={startTour}
+        dataTour="upload-section"
+      />
 
-              <p className="text-xs text-muted-foreground text-center">
-                Supports images (JPEG, PNG, WebP, HEIC) and PDF files up to {formatFileSize(MAX_FILE_SIZE)}
-              </p>
-            </div>
-          ) : (
-            /* Image Preview Section */
-            <div className="space-y-4" {...(isMobile ? swipeGesture : {})}>
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Receipt preview"
-                    className="w-full max-h-64 object-contain rounded-lg border"
-                    style={{
-                      transform: isMobile && swipeGesture.isSwipeing 
-                        ? `translateX(${swipeGesture.direction === 'left' ? -swipeGesture.distance : swipeGesture.distance}px)` 
-                        : 'none',
-                      opacity: isMobile && swipeGesture.isSwipeing && swipeGesture.distance > 50 
-                        ? Math.max(0.3, 1 - swipeGesture.distance / 200) 
-                        : 1,
-                      transition: swipeGesture.isSwipeing ? 'none' : 'transform 0.2s ease-out, opacity 0.2s ease-out'
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2 min-h-[48px] min-w-[48px]"
-                    onClick={removeFile}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  {/* Swipe instruction for mobile */}
-                  {isMobile && (
-                    <p className="text-xs text-muted-foreground text-center mt-2">
-                      Swipe left or right to remove
-                    </p>
-                  )}
-                </div>
-              ) : receiptFile ? (
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{receiptFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatFileSize(receiptFile.size)}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeFile}
-                    className="min-h-[48px] min-w-[48px]"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : null}
+      {/* File Preview Section */}
+      {(imagePreview || receiptFile) && (
+        <Card>
+          <CardContent className="pt-6">
+            <FilePreview
+              file={receiptFile}
+              imagePreview={imagePreview}
+              onRemove={removeFile}
+              swipeGesture={isMobile ? swipeGesture : undefined}
+              ocrConfidence={ocrConfidence}
+            />
 
-              {/* Debug info handled by DebugPanel component */}
-
-              {/* Enhanced Confidence Display */}
-              {ocrConfidence && Object.keys(ocrConfidence).length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    OCR Confidence
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(ocrConfidence).map(([field, confidence]) => (
-                      <Badge
-                        key={field}
-                        variant={confidence >= 0.8 ? 'default' : confidence >= 0.5 ? 'secondary' : 'destructive'}
-                        className="text-xs"
-                      >
-                        {field}: {Math.round(confidence * 100)}%
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Enhanced Error Recovery Section - Show when OCR fails */}
-              {computed.isInErrorState && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="border border-destructive/20 bg-destructive/5 rounded-lg p-4 space-y-4"
-                >
+            {/* Enhanced Error Recovery Section - Show when OCR fails */}
+            {computed.isInErrorState && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="border border-destructive/20 bg-destructive/5 rounded-lg p-4 space-y-4 mt-4"
+              >
                 <ErrorDisplay
                   error={ocrError}
                   onRetry={retryOCR}
                   onManualEntry={startManualEntry}
                   className="border-0 p-0"
                 />
-                  
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={retryOCR}
-                      className="flex-1 gap-2 bg-background hover:bg-muted"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Try Again
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={startManualEntry}
-                      className="flex-1 gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Enter Manually
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Manual Entry Option - Always available in capture stage */}
-              {flowStage === 'capture' && !computed.hasReceiptFile && (
-                <div className="text-center pt-4">
+                
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
+                    onClick={retryOCR}
+                    className="flex-1 gap-2 bg-background hover:bg-muted"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Try Again
+                  </Button>
+                  <Button
+                    type="button"
                     onClick={startManualEntry}
-                    className="gap-2 text-muted-foreground"
+                    className="flex-1 gap-2"
                   >
                     <Edit className="h-4 w-4" />
-                    Skip OCR - Enter Manually
+                    Enter Manually
                   </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Camera Viewfinder Modal for Mobile */}
-          <AnimatePresence>
-            {showCameraCapture && cameraStream && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-black"
-              >
-                <div className="relative w-full h-full">
-                  <video
-                    ref={(video) => {
-                      if (video && cameraStream) {
-                        video.srcObject = cameraStream;
-                        video.play();
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                    autoPlay
-                    playsInline
-                    muted
-                  />
-                  
-                  {/* Camera controls overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-                    <div className="flex items-center justify-center gap-6">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="lg"
-                        onClick={closeCameraCapture}
-                        className="bg-black/50 border-white/20 text-white hover:bg-black/70 min-h-[56px] min-w-[56px]"
-                      >
-                        <X className="h-6 w-6" />
-                      </Button>
-                      
-                      <Button
-                        type="button"
-                        size="lg"
-                        onClick={captureFromCamera}
-                        className="bg-primary text-primary-foreground min-w-[80px] min-h-[80px] rounded-full"
-                      >
-                        <Camera className="h-8 w-8" />
-                      </Button>
-                      
-                      <div className="w-16" /> {/* Spacer for symmetry */}
-                    </div>
-                    
-                    <p className="text-center text-white/80 text-sm mt-4">
-                      Position receipt in frame and tap to capture
-                    </p>
-                  </div>
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
 
-          {/* Hidden file inputs */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept="image/*,application/pdf"
-            onChange={handleFileSelect}
-          />
-          <input
-            ref={cameraInputRef}
-            type="file"
-            className="hidden"
-            accept="image/*"
-            capture={getCameraAttribute() === 'camera' ? 'user' : getCameraAttribute() === 'environment' ? 'environment' : undefined}
-            onChange={handleFileSelect}
-          />
-        </CardContent>
-      </Card>
+            {/* Manual Entry Option - Always available in capture stage */}
+            {flowStage === 'capture' && !computed.hasReceiptFile && (
+              <div className="text-center pt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={startManualEntry}
+                  className="gap-2 text-muted-foreground"
+                >
+                  <Edit className="h-4 w-4" />
+                  Skip OCR - Enter Manually
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Camera Capture Modal */}
+      <CameraCapture
+        isOpen={showCameraCapture}
+        cameraStream={cameraStream}
+        onCapture={captureFromCamera}
+        onClose={closeCameraCapture}
+      />
 
       {/* Form sections remain the same... */}
       {/* Progressive Review Form Section - Only show in review or manual-entry stages */}
