@@ -3,6 +3,8 @@ import { Plus, MapPin, Building2, Search, Filter, Edit, Trash2, RotateCcw, Arrow
 import { usePartnerLocations } from '@/hooks/usePartnerLocations';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Label } from '@/components/ui/label';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +24,6 @@ import { SmartSearchInput } from '@/components/ui/smart-search-input';
 import { EmptyTableState } from '@/components/ui/empty-table-state';
 import { exportToCSV, exportToExcel, generateFilename, ExportColumn } from '@/lib/utils/export';
 import { SwipeableListItem } from '@/components/ui/swipeable-list-item';
-import { PartnerLocationFilters } from '@/components/admin/partner-locations/PartnerLocationFilters';
 export default function AdminPartnerLocations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState('all');
@@ -30,6 +31,8 @@ export default function AdminPartnerLocations() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [deletingLocation, setDeletingLocation] = useState<any>(null);
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Persist filters
   useEffect(() => {
@@ -67,6 +70,16 @@ export default function AdminPartnerLocations() {
     acc[org.id] = org;
     return acc;
   }, {} as Record<string, any>);
+
+  // Filter partner organizations
+  const partnerOrganizations = organizations.filter(org => org.organization_type === 'partner');
+
+  // Calculate active filter count
+  const filterCount = useMemo(() => [
+    searchTerm,
+    selectedOrganization !== 'all' ? selectedOrganization : null,
+    statusFilter !== 'all' ? statusFilter : null
+  ].filter(Boolean).length, [searchTerm, selectedOrganization, statusFilter]);
 
   // Filter locations based on search term, organization, and status
   const filteredLocations = allLocations.filter(location => {
@@ -295,24 +308,138 @@ const { columnVisibility, toggleColumn, resetToDefaults, getAllColumns, getVisib
         </Card>
       </div>
 
-      {/* Filters */}
-      <PartnerLocationFilters
-        searchTerm={searchTerm}
-        selectedOrganization={selectedOrganization}
-        statusFilter={statusFilter}
-        onSearchChange={setSearchTerm}
-        onOrganizationChange={setSelectedOrganization}
-        onStatusChange={setStatusFilter}
-        onClearFilters={() => {
-          setSearchTerm('');
-          setSelectedOrganization('all');
-          setStatusFilter('all');
-          try {
-            localStorage.removeItem('admin-partner-locations-filters-v1');
-            localStorage.removeItem('admin-partner-locations-search');
-          } catch {}
-        }}
-      />
+      {/* Mobile Filter Button */}
+      <div className="lg:hidden mb-4">
+        <Button variant="outline" onClick={() => setIsMobileFilterOpen(true)} className="w-full">
+          <Filter className="h-4 w-4 mr-2" />
+          Filters {filterCount > 0 && `(${filterCount})`}
+        </Button>
+      </div>
+
+      {/* Desktop Filter Button */}
+      <div className="hidden lg:block mb-6">
+        <Button variant="outline" onClick={() => setIsDesktopFilterOpen(true)}>
+          <Filter className="h-4 w-4 mr-2" />
+          Filters {filterCount > 0 && `(${filterCount})`}
+        </Button>
+      </div>
+
+      {/* Mobile Bottom Sheet */}
+      <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <SheetContent side="bottom" className="h-[85vh]">
+          <SheetHeader>
+            <SheetTitle>Location Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4 overflow-y-auto">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Search</Label>
+              <SmartSearchInput
+                placeholder="Search locations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onSearchSubmit={setSearchTerm}
+                storageKey="admin-partner-locations-search"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Organization</Label>
+              <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All organizations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Organizations</SelectItem>
+                  {partnerOrganizations.map(org => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => setIsMobileFilterOpen(false)} className="w-full">
+              Apply Filters
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Right Sidebar */}
+      <Sheet open={isDesktopFilterOpen} onOpenChange={setIsDesktopFilterOpen}>
+        <SheetContent side="right" className="w-[420px]">
+          <SheetHeader>
+            <SheetTitle>Location Filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4 overflow-y-auto">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Search</Label>
+              <SmartSearchInput
+                placeholder="Search locations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onSearchSubmit={setSearchTerm}
+                storageKey="admin-partner-locations-search"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Organization</Label>
+              <Select value={selectedOrganization} onValueChange={setSelectedOrganization}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All organizations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Organizations</SelectItem>
+                  {partnerOrganizations.map(org => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedOrganization('all');
+                setStatusFilter('all');
+                try {
+                  localStorage.removeItem('admin-partner-locations-filters-v1');
+                  localStorage.removeItem('admin-partner-locations-search');
+                } catch {}
+              }}
+              disabled={filterCount === 0}
+              className="w-full"
+            >
+              Clear All Filters
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Locations Table */}
       <Card>
