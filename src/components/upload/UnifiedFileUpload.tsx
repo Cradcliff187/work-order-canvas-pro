@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, File, ImageIcon, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, X, File, ImageIcon, AlertCircle, Loader2, Info, FileText, Image as ImageIconSolid } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +15,15 @@ interface FilePreview {
   id: string;
   previewUrl?: string;
   fileType: 'image' | 'document';
+}
+
+interface ValidationError {
+  id: string;
+  type: 'fileSize' | 'fileType' | 'duplicate' | 'maxFiles';
+  fileName?: string;
+  message: string;
+  guidance: string;
+  isDismissible: boolean;
 }
 
 interface UploadProgress {
@@ -47,7 +56,7 @@ export function UnifiedFileUpload({
 }: UnifiedFileUploadProps) {
   const isMobile = useIsMobile();
   const [previews, setPreviews] = useState<FilePreview[]>([]);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
   const getFileType = (file: File): 'image' | 'document' => {
     return file.type.startsWith('image/') ? 'image' : 'document';
@@ -60,31 +69,53 @@ export function UnifiedFileUpload({
     return isSupportedFileType(file);
   };
 
-  const validateFiles = useCallback((files: File[]): { valid: File[]; errors: string[] } => {
-    const errors: string[] = [];
+  const validateFiles = useCallback((files: File[]): { valid: File[]; errors: ValidationError[] } => {
+    const errors: ValidationError[] = [];
     const valid: File[] = [];
     const currentCount = previews.length;
 
     // Check file count
     if (currentCount + files.length > maxFiles) {
-      errors.push(`Maximum ${maxFiles} files allowed (currently have ${currentCount})`);
+      const remaining = maxFiles - currentCount;
+      errors.push({
+        id: `maxFiles_${Date.now()}`,
+        type: 'maxFiles',
+        message: `You can only upload ${remaining} more file${remaining === 1 ? '' : 's'}`,
+        guidance: `You currently have ${currentCount} files selected out of ${maxFiles} maximum.`,
+        isDismissible: true
+      });
       return { valid: [], errors };
     }
 
     files.forEach(file => {
       // Check file type
       if (!isValidFileType(file)) {
-        const allowedTypes = acceptedTypes.length > 0 
-          ? acceptedTypes.join(', ')
-          : getSupportedFormatsText();
-        errors.push(`${file.name}: Unsupported file type. Allowed: ${allowedTypes}`);
+        const allowedFormats = acceptedTypes.length > 0 
+          ? acceptedTypes.map(type => type.split('/')[1]?.toUpperCase()).join(', ')
+          : 'JPEG, PNG, PDF, Word documents';
+        errors.push({
+          id: `fileType_${file.name}_${Date.now()}`,
+          type: 'fileType',
+          fileName: file.name,
+          message: `${file.name} isn't supported`,
+          guidance: `Try uploading ${allowedFormats} files instead.`,
+          isDismissible: true
+        });
         return;
       }
 
       // Check file size
       if (file.size > maxSizeBytes) {
         const maxMB = Math.round(maxSizeBytes / 1024 / 1024);
-        errors.push(`${file.name}: File size exceeds ${maxMB}MB limit`);
+        const fileMB = (file.size / 1024 / 1024).toFixed(1);
+        errors.push({
+          id: `fileSize_${file.name}_${Date.now()}`,
+          type: 'fileSize',
+          fileName: file.name,
+          message: `${file.name} (${fileMB}MB) exceeds the ${maxMB}MB limit`,
+          guidance: 'Please compress the file and try again.',
+          isDismissible: true
+        });
         return;
       }
 
@@ -93,7 +124,14 @@ export function UnifiedFileUpload({
         p.file.name === file.name && p.file.size === file.size
       );
       if (isDuplicate) {
-        errors.push(`${file.name}: File already selected`);
+        errors.push({
+          id: `duplicate_${file.name}_${Date.now()}`,
+          type: 'duplicate',
+          fileName: file.name,
+          message: `${file.name} is already selected`,
+          guidance: 'Choose a different file or rename it.',
+          isDismissible: true
+        });
         return;
       }
 
@@ -136,16 +174,28 @@ export function UnifiedFileUpload({
         URL.revokeObjectURL(fileToRemove.previewUrl);
       }
       
+      // Auto-clear related validation errors
+      if (fileToRemove) {
+        setValidationErrors(currentErrors => 
+          currentErrors.filter(error => 
+            error.fileName !== fileToRemove.file.name
+          )
+        );
+        
+        // Clear max files error if we're now under the limit
+        const newCount = updated.length;
+        if (newCount < maxFiles) {
+          setValidationErrors(currentErrors => 
+            currentErrors.filter(error => error.type !== 'maxFiles')
+          );
+        }
+      }
+      
       // Update parent with remaining files
       onFilesSelected(updated.map(p => p.file));
       return updated;
     });
-    
-    // Clear any errors when files are removed
-    if (previews.length <= maxFiles) {
-      setValidationErrors([]);
-    }
-  }, [previews.length, maxFiles, onFilesSelected]);
+  }, [maxFiles, onFilesSelected]);
 
   const clearAll = useCallback(() => {
     // Revoke all object URLs
@@ -159,6 +209,29 @@ export function UnifiedFileUpload({
     setValidationErrors([]);
     onFilesSelected([]);
   }, [previews, onFilesSelected]);
+
+  const dismissError = useCallback((errorId: string) => {
+    setValidationErrors(prev => prev.filter(error => error.id !== errorId));
+  }, []);
+
+  const getFileRestrictions = () => {
+    const maxMB = Math.round(maxSizeBytes / 1024 / 1024);
+    const supportedTypes = acceptedTypes.length > 0 
+      ? acceptedTypes.map(type => {
+          if (type.includes('image')) return 'Images';
+          if (type.includes('pdf')) return 'PDFs'; 
+          if (type.includes('word') || type.includes('document')) return 'Word docs';
+          if (type.includes('sheet') || type.includes('excel')) return 'Excel files';
+          return type.split('/')[1]?.toUpperCase();
+        }).filter(Boolean).join(', ')
+      : 'Images, PDFs, Word docs, Excel files';
+    
+    return {
+      types: supportedTypes,
+      size: `${maxMB}MB`,
+      count: maxFiles
+    };
+  };
 
   const getFileProgress = (fileName: string) => {
     return uploadProgress[fileName] || { progress: 0, status: 'pending' as const };
@@ -210,6 +283,32 @@ export function UnifiedFileUpload({
           {getUploadStatusAnnouncement()}
         </div>
 
+        {/* File restrictions */}
+        <Card className="bg-muted/30 border-muted">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-3">
+              <Info className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" aria-hidden="true" />
+              <div className="space-y-2 text-sm">
+                <p className="font-medium text-foreground">Upload Requirements</p>
+                <div className="grid grid-cols-1 gap-2 text-muted-foreground">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="w-4 h-4" aria-hidden="true" />
+                    <span>Formats: {getFileRestrictions().types}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <ImageIconSolid className="w-4 h-4" aria-hidden="true" />
+                    <span>Max size: {getFileRestrictions().size} per file</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Upload className="w-4 h-4" aria-hidden="true" />
+                    <span>Max files: {getFileRestrictions().count}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Upload trigger */}
         <UniversalUploadSheet
           trigger={
@@ -246,16 +345,30 @@ export function UnifiedFileUpload({
 
         {/* Validation errors */}
         {validationErrors.length > 0 && (
-          <Alert variant="destructive" role="alert" aria-live="assertive">
-            <AlertCircle className="h-4 w-4" aria-hidden="true" />
-            <AlertDescription>
-              <ul className="list-disc list-inside space-y-1" role="list">
-                {validationErrors.map((error, index) => (
-                  <li key={index} className="text-sm" role="listitem">{error}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
+          <div className="space-y-2" role="region" aria-live="assertive" aria-label="Upload errors">
+            {validationErrors.map((error) => (
+              <Alert key={error.id} variant="destructive" role="alert">
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                <AlertDescription className="flex items-start justify-between space-x-2">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{error.message}</p>
+                    <p className="text-xs opacity-90">{error.guidance}</p>
+                  </div>
+                  {error.isDismissible && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => dismissError(error.id)}
+                      className="h-6 w-6 p-0 text-destructive-foreground hover:bg-destructive/20"
+                      aria-label={`Dismiss error for ${error.fileName || 'upload'}`}
+                    >
+                      <X className="h-3 w-3" aria-hidden="true" />
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
         )}
 
         {/* File previews */}
@@ -355,6 +468,32 @@ export function UnifiedFileUpload({
         {getUploadStatusAnnouncement()}
       </div>
 
+      {/* File restrictions */}
+      <Card className="bg-muted/30 border-muted">
+        <CardContent className="p-4">
+          <div className="flex items-start space-x-3">
+            <Info className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <div className="space-y-2 text-sm">
+              <p className="font-medium text-foreground">Upload Requirements</p>
+              <div className="grid grid-cols-3 gap-4 text-muted-foreground">
+                <div className="flex items-center space-x-2">
+                  <FileText className="w-4 h-4" aria-hidden="true" />
+                  <span>Formats: {getFileRestrictions().types}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <ImageIconSolid className="w-4 h-4" aria-hidden="true" />
+                  <span>Max size: {getFileRestrictions().size} per file</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Upload className="w-4 h-4" aria-hidden="true" />
+                  <span>Max files: {getFileRestrictions().count}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Drag and drop zone */}
       <Card
         {...getRootProps()}
@@ -404,16 +543,30 @@ export function UnifiedFileUpload({
 
       {/* Validation errors */}
       {validationErrors.length > 0 && (
-        <Alert variant="destructive" role="alert" aria-live="assertive">
-          <AlertCircle className="h-4 w-4" aria-hidden="true" />
-          <AlertDescription>
-            <ul className="list-disc list-inside space-y-1" role="list">
-              {validationErrors.map((error, index) => (
-                <li key={index} className="text-sm" role="listitem">{error}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-2" role="region" aria-live="assertive" aria-label="Upload errors">
+          {validationErrors.map((error) => (
+            <Alert key={error.id} variant="destructive" role="alert">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              <AlertDescription className="flex items-start justify-between space-x-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{error.message}</p>
+                  <p className="text-xs opacity-90">{error.guidance}</p>
+                </div>
+                {error.isDismissible && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => dismissError(error.id)}
+                    className="h-6 w-6 p-0 text-destructive-foreground hover:bg-destructive/20"
+                    aria-label={`Dismiss error for ${error.fileName || 'upload'}`}
+                  >
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </Button>
+                )}
+              </AlertDescription>
+            </Alert>
+          ))}
+        </div>
       )}
 
       {/* File previews */}
