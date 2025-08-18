@@ -58,30 +58,36 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
   mode,
   className
 }) => {
-  // Prepare visualization data
-  const visualData = useMemo(() => {
+  // Prepare visualization data with optimized filtering and calculations
+  const { visualData, totalAllocated } = useMemo(() => {
     if (!allocations || !Array.isArray(allocations) || !workOrders || !Array.isArray(workOrders)) {
-      return [];
+      return { visualData: [], totalAllocated: 0 };
     }
     
-    // Filter out invalid allocations early
+    // Enhanced filtering: remove invalid allocations with zero/negative amounts
     const validAllocations = allocations.filter(allocation => {
-      const isValid = allocation && 
-                     allocation.work_order_id && 
-                     (typeof allocation.allocated_amount === 'number' || !isNaN(Number(allocation.allocated_amount)));
-      
-      // Silently skip invalid allocations - no console logs in render
-      return isValid;
+      if (!allocation || !allocation.work_order_id) return false;
+      const amount = Number(allocation.allocated_amount);
+      return !isNaN(amount) && amount > 0;
     });
+
+    if (validAllocations.length === 0) {
+      return { visualData: [], totalAllocated: 0 };
+    }
+
+    // Calculate total allocated amount
+    const totalAllocated = validAllocations.reduce((sum, alloc) => {
+      return sum + Number(alloc.allocated_amount);
+    }, 0);
 
     const data = validAllocations.map((allocation, index) => {
       const workOrder = workOrders.find(wo => wo.id === allocation.work_order_id);
-      const allocatedAmount = Number(allocation.allocated_amount) || 0;
+      const allocatedAmount = Number(allocation.allocated_amount);
       const percentage = totalAmount > 0 ? (allocatedAmount / totalAmount) * 100 : 0;
       
       return {
         id: allocation.work_order_id,
-        name: workOrder?.work_order_number || (allocation.work_order_id ? `WO-${String(allocation.work_order_id).slice(0, 6)}` : 'WO-Unknown'),
+        name: workOrder?.work_order_number || `WO-${String(allocation.work_order_id).slice(0, 6)}`,
         title: workOrder?.title || 'Unknown Work Order',
         value: allocatedAmount,
         percentage: Math.round(percentage * 10) / 10,
@@ -91,12 +97,7 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
     });
 
     // Add remaining amount if under-allocated
-    const totalAllocated = validAllocations.reduce((sum, alloc) => {
-      const amount = Number(alloc?.allocated_amount) || 0;
-      return sum + amount;
-    }, 0);
     const remaining = totalAmount - totalAllocated;
-    
     if (remaining > 0.01) {
       data.push({
         id: 'remaining',
@@ -109,13 +110,8 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
       });
     }
 
-    return data;
+    return { visualData: data, totalAllocated };
   }, [workOrders, allocations, totalAmount]);
-
-  const totalAllocated = (allocations || []).reduce((sum, alloc) => {
-    const amount = Number(alloc?.allocated_amount) || 0;
-    return sum + amount;
-  }, 0);
   const completionPercentage = totalAmount > 0 ? (totalAllocated / totalAmount) * 100 : 0;
   const isComplete = Math.abs(totalAmount - totalAllocated) < 0.01;
   const isOverAllocated = totalAllocated > totalAmount + 0.01;
