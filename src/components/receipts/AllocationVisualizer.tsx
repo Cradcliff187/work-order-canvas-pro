@@ -70,7 +70,7 @@ const AllocationVisualizer: React.FC<AllocationVisualizerProps> = ({
       
       return {
         id: allocation.work_order_id,
-        name: workOrder?.work_order_number || `WO-${allocation.work_order_id.slice(0, 6)}`,
+        name: workOrder?.work_order_number || (allocation.work_order_id ? `WO-${String(allocation.work_order_id).slice(0, 6)}` : 'WO-Unknown'),
         title: workOrder?.title || 'Unknown Work Order',
         value: allocation.allocated_amount,
         percentage: Math.round(percentage * 10) / 10,
