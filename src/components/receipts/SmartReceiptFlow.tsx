@@ -143,7 +143,7 @@ export function SmartReceiptFlow() {
   // Centralized state management with useReceiptFlow hook
   const { state, actions, computed, persistence } = useReceiptFlow();
   
-  // ADD DEBUG MODE STATE
+  // ADD DEBUG MODE STATE - only available in development
   const [debugMode, setDebugMode] = useState(false);
   const [rawOCRText, setRawOCRText] = useState<string | null>(null);
   const [debugOCRData, setDebugOCRData] = useState<any>(null);
@@ -891,7 +891,7 @@ export function SmartReceiptFlow() {
       </AnimatePresence>
 
       {/* DEBUG MODE TOGGLE - Only show in development */}
-      {true && (
+      {import.meta.env.MODE === 'development' && (
         <Card className="border-dashed border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
           <CardContent className="py-3">
             <div className="flex items-center justify-between">
@@ -900,9 +900,13 @@ export function SmartReceiptFlow() {
                 <span className="text-sm font-medium">Debug OCR Mode</span>
                 <Badge variant="outline" className="text-xs">Dev Only</Badge>
               </div>
-              <Switch
+               <Switch
                 checked={debugMode}
-                onCheckedChange={setDebugMode}
+                onCheckedChange={(checked) => {
+                  if (import.meta.env.MODE === 'development') {
+                    setDebugMode(checked);
+                  }
+                }}
                 className="data-[state=checked]:bg-yellow-600"
               />
             </div>
@@ -1067,7 +1071,7 @@ export function SmartReceiptFlow() {
               ) : null}
 
               {/* DEBUG: Raw OCR Text Display */}
-              {debugMode && rawOCRText && (
+              {import.meta.env.MODE === 'development' && debugMode && rawOCRText && (
                 <Card className="border-dashed border-blue-400 bg-blue-50 dark:bg-blue-900/20">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -1330,7 +1334,7 @@ export function SmartReceiptFlow() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-tour="form-section">
             
             {/* Enhanced Debug Panel with Better Info */}
-            {debugMode && (
+            {import.meta.env.MODE === 'development' && debugMode && (
               <Card className="border-dashed border-orange-400 bg-orange-50 dark:bg-orange-900/20">
                 <CardHeader className="pb-3">
                   <h3 className="font-semibold text-orange-800 dark:text-orange-200 flex items-center gap-2">
