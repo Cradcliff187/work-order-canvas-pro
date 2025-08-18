@@ -78,6 +78,7 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   const isMobile = useIsMobile();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isDesktopSheetOpen, setIsDesktopSheetOpen] = useState(false);
   const [locationTextInput, setLocationTextInput] = useState('');
 
   // Calculate active filter count for display
@@ -452,41 +453,101 @@ export function WorkOrderFilters({ filters, searchTerm, onFiltersChange, onSearc
   }
 
   return (
-    <div className="space-y-4 p-6 border rounded-lg bg-card/50 backdrop-blur-sm shadow-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium flex items-center gap-2">
-          <Filter className="h-5 w-5" />
-          Filters
-          {hasActiveFilters && (
-            <Badge variant="secondary" className="ml-2">
-              {Object.values(filters).filter(value => 
-                Array.isArray(value) ? value.length > 0 : Boolean(value)
-              ).length}
-            </Badge>
-          )}
-        </h3>
-        {hasActiveFilters && (
-          <Button variant="outline" size="sm" onClick={onClearFilters} className="h-10">
-            <X className="h-4 w-4 mr-2" />
-            Clear All
-          </Button>
-        )}
+    <div className="space-y-4">
+      {/* Desktop search bar always visible */}
+      <div className="p-4 border rounded-lg bg-card/50 backdrop-blur-sm">
+        {renderSearchFilter()}
       </div>
 
-      <div className={cn(
-        "grid gap-4",
-        shouldShowSelector 
-          ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
-          : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-      )}>
-        {renderSearchFilter()}
-        {renderStatusFilter()}
-        {renderOrganizationFilter()}
-        {renderCompletedByFilter()}
-        {renderLocationFilter()}
-        {renderTradeFilter()}
-        {renderDateRangeFilter()}
-      </div>
+      {/* Desktop filter sidebar */}
+      <Sheet open={isDesktopSheetOpen} onOpenChange={setIsDesktopSheetOpen}>
+        <SheetTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="w-full h-12 justify-between px-4"
+            aria-label={`Open filters${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
+          >
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <Badge variant="secondary" className="h-5">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </div>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </SheetTrigger>
+
+        <SheetContent side="right" className="w-[420px] p-0 max-w-full overflow-x-hidden">
+          <SheetHeader className="p-4 border-b sticky top-0 bg-background z-10">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </SheetTitle>
+              {hasActiveFilters && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    onClearFilters();
+                    setIsDesktopSheetOpen(false);
+                  }}
+                  className="h-8"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Essential filters */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                Essential
+              </h3>
+              <div className="space-y-4">
+                {renderStatusFilter()}
+              </div>
+            </div>
+
+            {/* Advanced filters */}
+            {(shouldShowSelector || true) && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                  Advanced
+                </h3>
+                <div className="space-y-4">
+                  {renderOrganizationFilter()}
+                  {renderCompletedByFilter()}
+                  {renderLocationFilter()}
+                  {renderTradeFilter()}
+                  {renderDateRangeFilter()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <SheetFooter className="p-4 border-t bg-background">
+            <Button 
+              onClick={() => setIsDesktopSheetOpen(false)}
+              className="w-full h-11"
+            >
+              Apply Filters
+              {activeFilterCount > 0 && ` (${activeFilterCount})`}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
