@@ -553,7 +553,7 @@ const table = useReactTable({
                       >
                         <MobileTableCard
                           title={`Invoice #${invoice.internal_invoice_number || 'N/A'}`}
-                          subtitle={`${invoice.submitted_by_user?.first_name || ''} ${invoice.submitted_by_user?.last_name || ''} • ${formatCurrency(Number(invoice.total_amount), true)}`}
+                          subtitle={`${invoice.subcontractor_organization?.name || 'Unknown Organization'} • ${formatCurrency(Number(invoice.total_amount), true)}`}
                           status={
                             <div className="flex flex-col items-end gap-1">
                               <StatusBadge type="financialStatus" status={invoice.status} size="sm" />
