@@ -668,40 +668,19 @@ export function SmartReceiptFlow() {
               ocrConfidence={ocrConfidence}
             />
 
-            {/* Enhanced Error Recovery Section - Show when OCR fails */}
+            {/* Error Recovery Section - Show when OCR fails */}
             {computed.isInErrorState && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="border border-destructive/20 bg-destructive/5 rounded-lg p-4 space-y-4 mt-4"
+                className="mt-4"
               >
                 <ErrorDisplay
                   error={ocrError}
                   onRetry={retryOCR}
                   onManualEntry={startManualEntry}
-                  className="border-0 p-0"
                 />
-                
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={retryOCR}
-                    className="flex-1 gap-2 bg-background hover:bg-muted"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Try Again
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={startManualEntry}
-                    className="flex-1 gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Enter Manually
-                  </Button>
-                </div>
               </motion.div>
             )}
 
