@@ -33,7 +33,7 @@ const SubcontractorInvoices = () => {
 
   const { data: invoicesData, isLoading, error, refetch } = useInvoices(filters);
   const invoices = invoicesData?.data || [];
-  const totalCount = invoicesData?.count || 0;
+  const totalCount = invoicesData?.totalCount || 0;
 
   const hasFilters = statusFilter !== "all" || searchQuery || initialPayment;
 

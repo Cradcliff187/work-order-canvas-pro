@@ -266,7 +266,7 @@ export default function AdminInvoices() {
   }));
 
 const table = useReactTable({
-  data: data?.data || [],
+  data: (data?.data || []) as Invoice[],
   columns,
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
@@ -349,7 +349,7 @@ const table = useReactTable({
     setPage(newPage);
   };
 
-  const totalPages = Math.ceil((data?.count || 0) / limit);
+  const totalPages = Math.ceil((data?.totalCount || 0) / limit);
 
   return error ? (
     <div className="p-6">
@@ -441,7 +441,7 @@ const table = useReactTable({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>
-              {data?.count || 0} Invoice{(data?.count || 0) !== 1 ? 's' : ''}
+              {data?.totalCount || 0} Invoice{(data?.totalCount || 0) !== 1 ? 's' : ''}
             </CardTitle>
             <div className="text-sm text-muted-foreground">
               Page {page} of {totalPages}

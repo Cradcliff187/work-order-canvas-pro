@@ -170,8 +170,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
           ),
           attachment_count:invoice_attachments(count)
         `, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+        .order('created_at', { ascending: false });
 
       // Apply invoice status filter (direct on invoice.status field)
       if (otherFilters.invoice_status && otherFilters.invoice_status.length > 0) {
@@ -241,9 +240,7 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
       if (otherFilters.location_filter && otherFilters.location_filter.length > 0) {
         filteredData = filteredData.filter(invoice =>
           invoice.invoice_work_orders.some(iwo =>
-            otherFilters.location_filter!.some(location =>
-              iwo.work_order.store_location?.toLowerCase().includes(location.toLowerCase())
-            )
+            otherFilters.location_filter!.includes(iwo.work_order.store_location || '')
           )
         );
       }
@@ -276,9 +273,19 @@ export const useInvoices = (filters: InvoiceFilters = {}) => {
         });
       }
 
+      // Calculate totals AFTER all filtering
+      const totalFiltered = filteredData.length;
+      const pageCount = Math.ceil(totalFiltered / limit);
+
+      // Apply pagination to filtered results
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = filteredData.slice(startIndex, endIndex);
+
       return {
-        data: filteredData as any[],
-        count: filteredData.length,
+        data: paginatedData,
+        totalCount: totalFiltered,
+        pageCount: pageCount
       };
     },
     enabled: true,
