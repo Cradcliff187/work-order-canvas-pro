@@ -1347,21 +1347,24 @@ export function SmartReceiptFlow() {
                     <div>Stage: <strong>{flowStage}</strong></div>
                     <div>Form Visible: <strong>{computed.isFormVisible ? 'YES' : 'NO'}</strong></div>
                     <div>Has OCR Data: <strong>{computed.hasOCRData ? 'YES' : 'NO'}</strong></div>
-                    <div>OCR Error: <strong>{ocrError ? 'YES' : 'NO'}</strong></div>
-                    {ocrData && (
-                      <div className="mt-2 border-t pt-2">
-                        <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> ({(ocrConfidence.vendor * 100).toFixed(1)}%)</div>
-                        <div>Amount: <strong>${ocrData.total || 'None'}</strong> ({((ocrConfidence.total || 0) * 100).toFixed(1)}%)</div>
-                        <div>Date: <strong>{ocrData.date || 'None'}</strong> ({((ocrConfidence.date || 0) * 100).toFixed(1)}%)</div>
-                        <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
-                        {(ocrData as any).from_cache && (
-                          <div className="text-green-600 dark:text-green-400 font-medium">✅ From Cache</div>
-                        )}
-                        {(ocrData as any).processing_time && (
-                          <div>Processing Time: <strong>{(ocrData as any).processing_time}ms</strong></div>
-                        )}
-                      </div>
-                    )}
+                     <div>OCR Error: <strong>{ocrError ? 'YES' : 'NO'}</strong></div>
+                     {ocrData && (
+                       <div className="mt-2 border-t pt-2">
+                         <div className="mb-2 text-sm font-medium text-orange-700 dark:text-orange-300">OCR Detected vs Form Values</div>
+                         <div className="space-y-1 text-xs">
+                           <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> → <em>{form.watch('vendor_name') || 'Empty'}</em> ({((ocrConfidence.vendor || 0) * 100).toFixed(1)}%)</div>
+                           <div>Amount: <strong>${ocrData.total || 'None'}</strong> → <em>${form.watch('amount') || '0'}</em> ({((ocrConfidence.total || 0) * 100).toFixed(1)}%)</div>
+                           <div>Date: <strong>{ocrData.date || 'None'}</strong> → <em>{form.watch('receipt_date') || 'Empty'}</em> ({((ocrConfidence.date || 0) * 100).toFixed(1)}%)</div>
+                           <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
+                         </div>
+                         {(ocrData as any).from_cache && (
+                           <div className="text-green-600 dark:text-green-400 font-medium text-xs mt-1">✅ From Cache</div>
+                         )}
+                         {(ocrData as any).processing_time && (
+                           <div className="text-xs">Processing Time: <strong>{(ocrData as any).processing_time}ms</strong></div>
+                         )}
+                       </div>
+                     )}
                   </div>
                 </CardContent>
               </Card>
@@ -1402,18 +1405,18 @@ export function SmartReceiptFlow() {
                   enableRealtimeValidation={true}
                 />
 
-                <InlineEditField
-                  value={form.watch('receipt_date') || format(new Date(), "yyyy-MM-dd")}
-                  onSave={(value) => {
-                    const dateStr = value instanceof Date ? value.toISOString().split('T')[0] : value;
-                    form.setValue('receipt_date', dateStr, { shouldValidate: true });
-                  }}
-                  inputType="date"
-                  fieldType="date"
-                  label="Receipt Date"
-                  confidence={ocrConfidence.date}
-                  enableRealtimeValidation={true}
-                />
+                 <InlineEditField
+                   value={form.watch('receipt_date') || (ocrData?.date ? ocrData.date : format(new Date(), "yyyy-MM-dd"))}
+                   onSave={(value) => {
+                     const dateStr = value instanceof Date ? value.toISOString().split('T')[0] : value;
+                     form.setValue('receipt_date', dateStr, { shouldValidate: true });
+                   }}
+                   inputType="date"
+                   fieldType="date"
+                   label="Receipt Date"
+                   confidence={ocrConfidence.date}
+                   enableRealtimeValidation={true}
+                 />
               </div>
             </FieldGroup>
 
