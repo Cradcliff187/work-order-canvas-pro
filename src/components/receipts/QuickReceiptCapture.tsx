@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useReceipts } from '@/hooks/useReceipts';
@@ -40,7 +41,7 @@ export function QuickReceiptCapture() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [ocrConfidence, setOcrConfidence] = useState<Record<string, number>>({});
+  const [ocrConfidence, setOcrConfidence] = useState<FormConfidence>({});
   
   const { availableWorkOrders, createReceipt, isUploading } = useReceipts();
 
@@ -94,7 +95,8 @@ export function QuickReceiptCapture() {
         if (ocrData.total) form.setValue('amount', ocrData.total);
         if (ocrData.date) form.setValue('receipt_date', ocrData.date);
         
-        setOcrConfidence(ocrData.confidence || {});
+        const mappedConfidence = mapOCRConfidenceToForm(ocrData.confidence || {});
+        setOcrConfidence(mappedConfidence);
         
         toast({
           title: '✨ Receipt Scanned!',
@@ -294,9 +296,9 @@ export function QuickReceiptCapture() {
                     <FormLabel className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" />
                       Vendor
-                      {ocrConfidence.vendor && (
-                        <Badge variant={ocrConfidence.vendor > 0.7 ? 'default' : 'secondary'}>
-                          {Math.round(ocrConfidence.vendor * 100)}%
+                      {ocrConfidence.vendor_name && (
+                        <Badge variant={ocrConfidence.vendor_name > 0.7 ? 'default' : 'secondary'}>
+                          {Math.round(ocrConfidence.vendor_name * 100)}%
                         </Badge>
                       )}
                     </FormLabel>
@@ -332,9 +334,9 @@ export function QuickReceiptCapture() {
                     <FormLabel className="flex items-center gap-2">
                       <Receipt className="h-4 w-4" />
                       Receipt Date
-                      {ocrConfidence.date && (
-                        <Badge variant={ocrConfidence.date > 0.6 ? 'default' : 'secondary'}>
-                          {Math.round(ocrConfidence.date * 100)}%
+                      {ocrConfidence.receipt_date && (
+                        <Badge variant={ocrConfidence.receipt_date > 0.6 ? 'default' : 'secondary'}>
+                          {Math.round(ocrConfidence.receipt_date * 100)}%
                         </Badge>
                       )}
                     </FormLabel>
@@ -363,9 +365,9 @@ export function QuickReceiptCapture() {
                     <FormLabel className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
                       Amount
-                      {ocrConfidence.total && (
-                        <Badge variant={ocrConfidence.total > 0.7 ? 'default' : 'secondary'}>
-                          {Math.round(ocrConfidence.total * 100)}%
+                      {ocrConfidence.amount && (
+                        <Badge variant={ocrConfidence.amount > 0.7 ? 'default' : 'secondary'}>
+                          {Math.round(ocrConfidence.amount * 100)}%
                         </Badge>
                       )}
                     </FormLabel>

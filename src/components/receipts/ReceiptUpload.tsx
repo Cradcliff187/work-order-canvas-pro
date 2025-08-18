@@ -18,6 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { mapOCRConfidenceToForm, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { 
   Loader2, 
   Upload, 
@@ -72,7 +73,7 @@ export function ReceiptUpload() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isProcessingOCR, setIsProcessingOCR] = useState(false);
-  const [ocrConfidence, setOcrConfidence] = useState<Record<string, number>>({});
+  const [ocrConfidence, setOcrConfidence] = useState<FormConfidence>({});
   const [ocrData, setOcrData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -232,7 +233,8 @@ export function ReceiptUpload() {
           });
         }
         
-        setOcrConfidence(ocrData.confidence || {});
+        const mappedConfidence = mapOCRConfidenceToForm(ocrData.confidence || {});
+        setOcrConfidence(mappedConfidence);
         setOcrData(ocrData);
         
         // Add haptic feedback on successful OCR
@@ -403,7 +405,7 @@ export function ReceiptUpload() {
                   Scanning...
                 </Badge>
               )}
-              {ocrConfidence.vendor && (
+              {ocrConfidence.vendor_name && (
                 <Badge variant="default" className="bg-green-600">
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Scanned
@@ -567,12 +569,12 @@ export function ReceiptUpload() {
                               <FormLabel className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4" />
                                 Vendor Name *
-                                {ocrConfidence.vendor && (
+                                {ocrConfidence.vendor_name && (
                                   <Badge 
-                                    variant={ocrConfidence.vendor > 0.7 ? 'default' : 'secondary'}
+                                    variant={ocrConfidence.vendor_name > 0.7 ? 'default' : 'secondary'}
                                     className="text-xs"
                                   >
-                                    {Math.round(ocrConfidence.vendor * 100)}% confident
+                                    {Math.round(ocrConfidence.vendor_name * 100)}% confident
                                   </Badge>
                                 )}
                               </FormLabel>
@@ -620,12 +622,12 @@ export function ReceiptUpload() {
                             <FormLabel className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4" />
                               Total Amount *
-                              {ocrConfidence.total && (
+                              {ocrConfidence.amount && (
                                 <Badge 
-                                  variant={ocrConfidence.total > 0.7 ? 'default' : 'secondary'}
+                                  variant={ocrConfidence.amount > 0.7 ? 'default' : 'secondary'}
                                   className="text-xs"
                                 >
-                                  {Math.round(ocrConfidence.total * 100)}% confident
+                                  {Math.round(ocrConfidence.amount * 100)}% confident
                                 </Badge>
                               )}
                             </FormLabel>

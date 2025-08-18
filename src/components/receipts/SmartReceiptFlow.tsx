@@ -28,6 +28,7 @@ import { compressImage, isSupportedImageType, isValidFileSize } from "@/utils/im
 import { FieldGroup } from "./FieldGroup";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { InlineEditField } from "./InlineEditField";
+import { mapOCRConfidenceToForm, type OCRConfidence, type FormConfidence } from '@/utils/ocr-confidence-mapper';
 import { SmartWorkOrderSelector } from "./SmartWorkOrderSelector";
 import { EnhancedAllocationPanel } from "./EnhancedAllocationPanel";
 import { FloatingActionBar } from "./FloatingActionBar";
@@ -461,7 +462,8 @@ export function SmartReceiptFlow() {
         if (ocrResult.total) form.setValue('amount', ocrResult.total);
         if (ocrResult.date) form.setValue('receipt_date', ocrResult.date);
         
-        actions.setOCRSuccess(ocrResult, ocrResult.confidence || {});
+        const mappedConfidence = mapOCRConfidenceToForm(ocrResult.confidence || {});
+        actions.setOCRSuccess(ocrResult, mappedConfidence);
         
         const successMessage = `Found ${ocrResult.vendor || 'vendor'} - $${ocrResult.total || 0}`;
         
@@ -1352,9 +1354,9 @@ export function SmartReceiptFlow() {
                        <div className="mt-2 border-t pt-2">
                          <div className="mb-2 text-sm font-medium text-orange-700 dark:text-orange-300">OCR Detected vs Form Values</div>
                          <div className="space-y-1 text-xs">
-                           <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> → <em>{form.watch('vendor_name') || 'Empty'}</em> ({((ocrConfidence.vendor || 0) * 100).toFixed(1)}%)</div>
-                           <div>Amount: <strong>${ocrData.total || 'None'}</strong> → <em>${form.watch('amount') || '0'}</em> ({((ocrConfidence.total || 0) * 100).toFixed(1)}%)</div>
-                           <div>Date: <strong>{ocrData.date || 'None'}</strong> → <em>{form.watch('receipt_date') || 'Empty'}</em> ({((ocrConfidence.date || 0) * 100).toFixed(1)}%)</div>
+                           <div>Vendor: <strong>{ocrData.vendor || 'None'}</strong> → <em>{form.watch('vendor_name') || 'Empty'}</em> ({((ocrConfidence.vendor_name || 0) * 100).toFixed(1)}%)</div>
+                           <div>Amount: <strong>${ocrData.total || 'None'}</strong> → <em>${form.watch('amount') || '0'}</em> ({((ocrConfidence.amount || 0) * 100).toFixed(1)}%)</div>
+                           <div>Date: <strong>{ocrData.date || 'None'}</strong> → <em>{form.watch('receipt_date') || 'Empty'}</em> ({((ocrConfidence.receipt_date || 0) * 100).toFixed(1)}%)</div>
                            <div>Line Items: <strong>{ocrData.lineItems?.length || 0}</strong></div>
                          </div>
                          {(ocrData as any).from_cache && (
@@ -1387,7 +1389,7 @@ export function SmartReceiptFlow() {
                   fieldType="vendor"
                   label="Vendor Name"
                   placeholder="Enter vendor name"
-                  confidence={ocrConfidence.vendor}
+                  confidence={ocrConfidence.vendor_name}
                   suggestions={COMMON_VENDORS}
                   enableRealtimeValidation={true}
                 />
@@ -1401,7 +1403,7 @@ export function SmartReceiptFlow() {
                   fieldType="amount"
                   label="Amount"
                   placeholder="0.00"
-                  confidence={ocrConfidence.total}
+                  confidence={ocrConfidence.amount}
                   enableRealtimeValidation={true}
                 />
 
@@ -1414,7 +1416,7 @@ export function SmartReceiptFlow() {
                    inputType="date"
                    fieldType="date"
                    label="Receipt Date"
-                   confidence={ocrConfidence.date}
+                   confidence={ocrConfidence.receipt_date}
                    enableRealtimeValidation={true}
                  />
               </div>
