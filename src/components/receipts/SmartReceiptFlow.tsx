@@ -95,6 +95,9 @@ export function SmartReceiptFlow() {
   useEffect(() => {
     track('receipt_flow_started');
     
+    // Debug logging for page refresh investigation
+    console.log('🔄 SmartReceiptFlow component mounted');
+    
     // Safety timeout to clear processing locks (prevent permanent locks)
     const lockSafetyTimeout = setTimeout(() => {
       if (computed.isProcessingLocked) {
@@ -103,10 +106,38 @@ export function SmartReceiptFlow() {
       }
     }, 45000); // 45 seconds safety timeout
     
+    // Listen for beforeunload event to track unexpected refreshes
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      console.warn('🔄 Page about to unload/refresh - reason unknown');
+      console.warn('📊 Current state during refresh:', {
+        flowStage,
+        isProcessingOCR,
+        hasOCRData: computed.hasOCRData,
+        showSuccess,
+        progressStage,
+        timestamp: new Date().toISOString()
+      });
+    };
+    
+    // Listen for visibilitychange to track when page becomes hidden
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('📱 Page visibility changed to hidden');
+      } else {
+        console.log('📱 Page visibility changed to visible');
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     // Cleanup function
     return () => {
+      console.log('🔄 SmartReceiptFlow component unmounting');
       actions.cleanupCameraStream();
       clearTimeout(lockSafetyTimeout);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []); // Empty deps - only track on initial mount and cleanup on unmount
   
@@ -601,7 +632,10 @@ export function SmartReceiptFlow() {
 
       // Success state
       actions.completeSubmission();
+      
+      console.log('✅ Receipt submission successful - scheduling reset in 2 seconds');
       setTimeout(() => {
+        console.log('🔄 Executing scheduled form reset after successful submission');
         // Reset form and state
         form.reset();
         actions.resetFlow();
@@ -795,7 +829,7 @@ export function SmartReceiptFlow() {
 
       {/* Floating Progress Indicator */}
       <FloatingProgress
-        isVisible={isProcessingOCR && progressStage !== 'complete'}
+        isVisible={isProcessingOCR && progressStage !== 'complete' && !(ocrData && progressStage === 'error')}
         stage={progressStage}
         progress={progressValue}
         message={progressStage === 'complete' && ocrData ? 
