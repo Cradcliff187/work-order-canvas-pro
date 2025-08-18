@@ -461,6 +461,15 @@ export function findVendor(text) {
     console.log(`  ${i}: "${line}"`);
   });
   
+  // Context keywords for disambiguation
+  const hardwareKeywords = ['HARDWARE', 'HOME', 'IMPROVEMENT', 'LUMBER', 'GARDEN', 'TOOL', 'APPLIANCE', 'PAINT', 'RENTAL', 'BUILDING', 'SUPPLY', 'DEPOT'];
+  const gasStationKeywords = ['FUEL', 'GAS', 'GASOLINE', 'TRAVEL', 'TRUCK', 'STOP', 'DIESEL', 'ETHANOL', 'GALLON', 'GAL'];
+  
+  const hasHardwareContext = hardwareKeywords.some(keyword => normalizedText.includes(keyword));
+  const hasGasContext = gasStationKeywords.some(keyword => normalizedText.includes(keyword));
+  
+  console.log(`[VENDOR] Context - Hardware: ${hasHardwareContext}, Gas: ${hasGasContext}`);
+  
   // Priority 1: Check for vendor slogans (most reliable)
   for (const [vendor, slogans] of Object.entries(VENDOR_SLOGANS)) {
     for (const slogan of slogans) {
@@ -471,7 +480,10 @@ export function findVendor(text) {
     }
   }
   
-  // Priority 2: Enhanced multi-line vendor detection (for "HO\nDEPOT" cases)
+  // Priority 2: Context-aware vendor detection with scoring
+  const vendorMatches = [];
+  
+  // Enhanced multi-line vendor detection (for "HO\nDEPOT" cases)
   const multiLineText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ');
   const multiLineNormalized = normalizeVendorText(multiLineText);
   
@@ -479,10 +491,47 @@ export function findVendor(text) {
     for (const alias of aliases) {
       const normalizedAlias = normalizeVendorText(alias);
       if (multiLineNormalized.includes(normalizedAlias)) {
-        console.log(`[VENDOR] ✅ Found multi-line match: ${vendor} ("${alias}")`);
-        return { name: vendor, confidence: 0.9 };
+        let confidence = 0.9;
+        let contextBonus = 0;
+        
+        // Apply context-based scoring for Lowe's vs Love's disambiguation
+        if (vendor === 'Lowes' && hasHardwareContext) {
+          contextBonus = 0.15; // Strong boost for Lowe's with hardware context
+          console.log(`[VENDOR] Lowes match with hardware context boost`);
+        } else if (vendor === 'Lowes' && hasGasContext) {
+          contextBonus = -0.3; // Penalty for Lowe's with gas context (likely Love's)
+          console.log(`[VENDOR] Lowes match with gas context penalty`);
+        } else if (vendor === 'Love\'s Travel Stops' && hasGasContext) {
+          contextBonus = 0.15; // Strong boost for Love's with gas context
+          console.log(`[VENDOR] Love's match with gas context boost`);
+        } else if (vendor === 'Love\'s Travel Stops' && hasHardwareContext) {
+          contextBonus = -0.3; // Penalty for Love's with hardware context (likely Lowe's)
+          console.log(`[VENDOR] Love's match with hardware context penalty`);
+        }
+        
+        // Handle specific OCR confusion cases
+        if ((alias === 'LOVES' || alias === 'LOWES') && normalizedAlias === 'LOVES') {
+          if (hasHardwareContext && !hasGasContext) {
+            // Likely "LOWES" misread as "LOVES"
+            vendor = 'Lowes';
+            contextBonus = 0.1;
+            console.log(`[VENDOR] OCR correction: LOVES -> Lowes (hardware context)`);
+          }
+        }
+        
+        const finalConfidence = Math.min(0.99, confidence + contextBonus);
+        vendorMatches.push({ vendor, alias, confidence: finalConfidence });
+        
+        console.log(`[VENDOR] Found match: ${vendor} ("${alias}") - confidence: ${finalConfidence.toFixed(2)}`);
       }
     }
+  }
+  
+  // Return the highest confidence match
+  if (vendorMatches.length > 0) {
+    const bestMatch = vendorMatches.sort((a, b) => b.confidence - a.confidence)[0];
+    console.log(`[VENDOR] ✅ Best match: ${bestMatch.vendor} (confidence: ${bestMatch.confidence.toFixed(2)})`);
+    return { name: bestMatch.vendor, confidence: bestMatch.confidence };
   }
 
   // Priority 3: Fallback to first non-empty line as vendor name
