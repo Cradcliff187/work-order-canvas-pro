@@ -159,7 +159,7 @@ export default function AdminReceipts() {
       const hay = `${r.vendor_name} ${r.description || ''} ${r.receipt_work_orders.map(a => a.work_orders?.work_order_number || '').join(' ')}`.toLowerCase();
       const q = search.toLowerCase().trim();
       const matchesSearch = q ? hay.includes(q) : true;
-      const d = r.receipt_date ? r.receipt_date.slice(0,10) : '';
+      const d = r.receipt_date ? String(r.receipt_date).slice(0, 10) : '';
       const matchesDate = (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
       const matchesAmount = (!amountMin || r.amount >= Number(amountMin)) && (!amountMax || r.amount <= Number(amountMax));
       const matchesAttachment = hasAttachment === 'all' ? true : (hasAttachment === 'with' ? !!r.receipt_image_url : !r.receipt_image_url);

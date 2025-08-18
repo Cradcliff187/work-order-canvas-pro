@@ -191,14 +191,14 @@ export function SmartReceiptFlow() {
     if (!receipts.data || !availableWorkOrders.data) return [];
     
     // Extract work order IDs from recent receipts
-    const recentWorkOrderIds = receipts.data
+    const recentWorkOrderIds = (receipts.data || [])
       .slice(0, 10) // Last 10 receipts
       .flatMap(receipt => receipt.receipt_work_orders?.map(rwo => rwo.work_order_id) || [])
       .filter((id, index, arr) => arr.indexOf(id) === index); // Remove duplicates
     
     // Map to actual work order objects
     return recentWorkOrderIds
-      .map(id => availableWorkOrders.data?.find(wo => wo.id === id))
+      .map(id => (availableWorkOrders.data || []).find(wo => wo.id === id))
       .filter(Boolean) // Remove undefined
       .slice(0, 3); // Top 3
   }, [receipts.data, availableWorkOrders.data]);

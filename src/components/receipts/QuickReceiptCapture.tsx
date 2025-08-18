@@ -418,7 +418,7 @@ export function QuickReceiptCapture() {
                             <SelectValue placeholder="Select work order" />
                           </SelectTrigger>
                           <SelectContent>
-                            {availableWorkOrders.data?.slice(0, 5).map(wo => (
+                            {(availableWorkOrders.data || []).slice(0, 5).map(wo => (
                               <SelectItem key={wo.id} value={wo.id}>
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">
